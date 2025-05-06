@@ -2,8 +2,7 @@ import React, { createContext, useState, useEffect, useCallback, useContext } fr
 import axios from 'axios';
 import { useToast } from './ToastContext';
 import { useApi } from './ApiContext';
-import websocketService from '../services/common/websocketService';
-
+import websocketService from '../services/common/webSocketService';
 // Types for notification preferences and notification objects
 interface Notification {
   id: string;
