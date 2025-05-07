@@ -1,3 +1,62 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+  --bg-primary: #ffffff;
+  --text-primary: #111827;
+  --sidebar-bg: #15171E;
+  --header-bg: #ffffff;
+  --header-text: #111827;
+  --footer-bg: #f9fafb;
+  --footer-text: #374151;
+}
+
+.theme-dark {
+  --bg-primary: #1a1a1a;
+  --text-primary: #ffffff;
+  --sidebar-bg: #111111;
+  --header-bg: #1a1a1a;
+  --header-text: #ffffff;
+  --footer-bg: #111827;
+  --footer-text: #f3f4f6;
+}
+
+.theme-neutral {
+  --bg-primary: #f4f4f5;
+  --text-primary: #18181b;
+  --sidebar-bg: #27272a;
+  --header-bg: #f4f4f5;
+  --header-text: #18181b;
+  --footer-bg: #e4e4e7;
+  --footer-text: #27272a;
+}
+
+.theme-custom {
+  --bg-primary: #f0f9ff;
+  --text-primary: #0c4a6e;
+  --sidebar-bg: #0369a1;
+  --header-bg: #f0f9ff;
+  --header-text: #0c4a6e;
+  --footer-bg: #e0f2fe;
+  --footer-text: #075985;
+}
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+.bg-sidebar {
+  background-color: var(--sidebar-bg);
+}
+
+.header-theme {
+  background-color: var(--header-bg);
+  color: var(--header-text);
+}
+
+.footer-theme {
+  background-color: var(--footer-bg);
+  color: var(--footer-text);
+}
