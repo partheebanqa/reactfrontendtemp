@@ -91,25 +91,42 @@ const authService = {
 
   login: async (credentials: Credentials): Promise<any> => {
     try {
-      console.log('Sending login request with credentials:', {
-        email: credentials.email,
-        passwordLength: credentials.password.length,
+      const response = await fetch('https://apibackenddev.onrender.com/user/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(credentials),
       });
-
-      return await tryAllUrls<any>('post', '/login', credentials);
-    } catch (error: any) {
+      const data = await response.json();
+      localStorage.setItem("userDetails", JSON.stringify(data));
+      return data;
+    }
+    catch (error: any) {
       console.error('Login error:', error);
-      if (error.response) {
-        console.error('Error response:', error.response.data);
-        console.error('Error status:', error.response.status);
-      } else if (error.request) {
-        console.error('No response received:', error.request);
-      } else {
-        console.error('Error setting up request:', error.message);
-      }
       throw error;
     }
   },
+
+  // export const login = async (username: string, password: string) => {
+  //   try {
+  //     const response = await fetch('https://yourapi.com/login', {
+  //       method: 'POST',
+  //       headers: {
+  //         'Content-Type': 'application/json',
+  //       },
+  //       body: JSON.stringify({ username, password }),
+  //     });
+  
+  //     if (!response.ok) {
+  //       throw new Error('Login failed');
+  //     }
+  
+  //     const data = await response.json();
+  //     return data; // e.g. token, user info
+  //   } catch (error) {
+  //     throw error;
+  //   }
 
   register: async (userData: UserData): Promise<any> => {
     try {

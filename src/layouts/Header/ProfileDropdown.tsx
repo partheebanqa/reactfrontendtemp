@@ -2,6 +2,7 @@ import React, { useRef } from 'react';
 import { User, Settings, HelpCircle, LogOut, Sun, Moon, Ghost, Palette } from 'lucide-react';
 import { useClickOutside } from '../../hooks/useClickOutside';
 import { useTheme } from '../../context/ThemeContext';
+import { useNavigate } from 'react-router-dom';
 
 interface ProfileDropdownProps {
   isOpen: boolean;
@@ -12,6 +13,12 @@ const ProfileDropdown: React.FC<ProfileDropdownProps> = ({ isOpen, onClose }) =>
   const dropdownRef = useRef<HTMLDivElement>(null);
   const { theme, setTheme } = useTheme();
   useClickOutside(dropdownRef, onClose);
+  const navigate = useNavigate();
+
+  const logOut = () => {
+    localStorage.clear();
+    navigate('/');
+  }
 
   if (!isOpen) return null;
 
@@ -69,7 +76,8 @@ const ProfileDropdown: React.FC<ProfileDropdownProps> = ({ isOpen, onClose }) =>
           <HelpCircle size={16} className="mr-3" />
           Help & Support
         </button>
-        <button className="flex w-full items-center px-4 py-2 text-sm text-red-600 hover:bg-gray-100">
+        <button className="flex w-full items-center px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
+            onClick={logOut}>
           <LogOut size={16} className="mr-3" />
           Sign Out
         </button>

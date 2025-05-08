@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import authService from '../../services/auth/auth-service';
+import { useNavigate } from 'react-router-dom';
 
 interface AuthModalProps {
   // onClose: () => void;
@@ -14,6 +15,7 @@ const AuthModal: React.FC<AuthModalProps> = ({}) => {
   const [validated, setValidated] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [directUrl, setDirectUrl] = useState('http://localhost:8080');
+  const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
     email: 'admin@apitest.com',
@@ -78,22 +80,23 @@ const AuthModal: React.FC<AuthModalProps> = ({}) => {
           email: formData.email,
           password: formData.password,
         });
-        setSuccessMessage('Login successful! Redirecting...');
-      } else {
-        let tenantId = formData.tenantId;
-        if (formData.tenantName && !tenantId) {
-          const tenantService = (await import('../../services/auth/tenantService')).default;
-          const tenantResponse = await tenantService.createTenant({ name: formData.tenantName });
-          tenantId = String(tenantResponse.id);
-        }
-        user = await authService.register({
-          name: formData.name,
-          email: formData.email,
-          password: formData.password,
-          tenantId,
-        });
-        setSuccessMessage('Account created successfully! Redirecting...');
+        if(user.message) navigate('/api-test');
       }
+      //  else {
+      //   let tenantId = formData.tenantId;
+      //   if (formData.tenantName && !tenantId) {
+      //     const tenantService = (await import('../../services/auth/tenantService')).default;
+      //     const tenantResponse = await tenantService.createTenant({ name: formData.tenantName });
+      //     tenantId = String(tenantResponse.id);
+      //   }
+      //   user = await authService.register({
+      //     name: formData.name,
+      //     email: formData.email,
+      //     password: formData.password,
+      //     tenantId,
+      //   });
+      //   setSuccessMessage('Account created successfully! Redirecting...');
+      // }
 
       setTimeout(() => {
         // onLoginSuccess(user);
