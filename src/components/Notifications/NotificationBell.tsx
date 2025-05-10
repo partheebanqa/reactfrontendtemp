@@ -4,6 +4,7 @@ import styled from 'styled-components';
 import { useNotification } from '../../context/NotificationContext';
 import NotificationDropdown from './NotificationDropdown';
 import { FaBell } from 'react-icons/fa';
+import { Bell } from 'lucide-react';
 
 // Styled Components
 const BellContainer = styled.div`
@@ -62,14 +63,13 @@ const NotificationBell: React.FC = () => {
 
   return (
     <BellContainer>
-      <FaBell onClick={toggleDropdown} className="text-black hover:text-gray-400" size={20}>
-        <IoMdNotifications />
+      <Bell onClick={toggleDropdown} className="h-5 w-5 text-gray-400">
         {unreadCount > 0 && (
           <NotificationBadge>
             {unreadCount > 99 ? '99+' : unreadCount}
           </NotificationBadge>
         )}
-      </FaBell>
+      </Bell>
       
       {isDropdownOpen && (
         <NotificationDropdown 

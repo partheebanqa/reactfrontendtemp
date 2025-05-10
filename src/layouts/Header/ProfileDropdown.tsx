@@ -19,6 +19,10 @@ const ProfileDropdown: React.FC<ProfileDropdownProps> = ({ isOpen, onClose }) =>
     localStorage.clear();
     navigate('/');
   }
+  
+  const accountSettings = () => {
+    navigate('/settings');
+  }
 
   if (!isOpen) return null;
 
@@ -68,7 +72,8 @@ const ProfileDropdown: React.FC<ProfileDropdownProps> = ({ isOpen, onClose }) =>
           <User size={16} className="mr-3" />
           Your Profile
         </button>
-        <button className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+        <button className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+            onClick={accountSettings}>
           <Settings size={16} className="mr-3" />
           Account Settings
         </button>
