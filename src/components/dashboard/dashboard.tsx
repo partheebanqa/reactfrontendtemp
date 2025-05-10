@@ -3,7 +3,7 @@ import { MoreHorizontal, Pencil } from 'lucide-react';
 
 const Dashboard: React.FC = () => {
   return (
-    <div className="p-8 bg-gray-100 min-h-screen overflow-y-auto">
+    <div className="p-8 bg-gray-100 h-full overflow-y-auto">
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-2xl font-semibold text-gray-800">Welcome to your Dashboard</h1>
         <div className="flex items-center">

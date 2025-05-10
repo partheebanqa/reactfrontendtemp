@@ -80,7 +80,7 @@ const AuthModal: React.FC<AuthModalProps> = ({}) => {
           email: formData.email,
           password: formData.password,
         });
-        if(user.message) navigate('/api-test');
+        if(user.message) navigate('/dashboard');
       }
       //  else {
       //   let tenantId = formData.tenantId;

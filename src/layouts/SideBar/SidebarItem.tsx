@@ -1,11 +1,13 @@
 import React from 'react';
 import { DivideIcon as LucideIcon } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 interface SidebarItemProps {
   icon: LucideIcon;
   label: string;
   isExpanded: boolean;
   hasSubmenu?: boolean;
+  path?: string;
   active?: boolean;
   onClick?: () => void;
 }
@@ -15,12 +17,19 @@ const SidebarItem: React.FC<SidebarItemProps> = ({
   label,
   isExpanded,
   hasSubmenu = false,
+  path,
   active = false,
   onClick,
 }) => {
+  const navigate = useNavigate();
+
+  const handleClick = () => {
+    if (onClick) onClick();
+    if (path) navigate(path);
+  };
   return (
     <div
-      onClick={onClick}
+      onClick={handleClick}
       className={`
         flex items-center py-3 px-4 cursor-pointer transition-all duration-200
         ${active ? 'bg-gray-800' : 'hover:bg-gray-800'}
