@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ChevronDown, Bell, Menu } from 'lucide-react';
 import ProfileDropdown from './ProfileDropdown';
-import { NotificationBell } from '../../components/notifications';
+import NotificationBell from '../../components/Notifications/NotificationBell';
 // import NotificationDropdown from './NotificationDropdown';
 
 interface HeaderProps {

@@ -2,9 +2,9 @@ import React from 'react';
 import { IoMdNotifications } from 'react-icons/io';
 import styled from 'styled-components';
 import { useNotification } from '../../context/NotificationContext';
-import NotificationDropdown from './NotificationDropdown';
 import { FaBell } from 'react-icons/fa';
 import { Bell } from 'lucide-react';
+import NotificationDropdown from './NotificationDropdown';
 
 // Styled Components
 const BellContainer = styled.div`

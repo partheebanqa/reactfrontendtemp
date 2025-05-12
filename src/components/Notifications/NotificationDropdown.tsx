@@ -2,9 +2,9 @@ import React, { useState } from 'react';
 import styled from 'styled-components';
 import { FaSlidersH, FaCheck } from 'react-icons/fa';
 import { useNotification } from '../../context/NotificationContext';
+import './NotificationDropdown.css';
 import NotificationItem from './NotificationItem';
 import NotificationPreferences from './NotificationPreferences';
-import './NotificationDropdown.css';
 
 const EmptyState = styled.div`
   display: flex;
