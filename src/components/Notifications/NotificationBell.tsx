@@ -63,7 +63,8 @@ const NotificationBell: React.FC = () => {
 
   return (
     <BellContainer>
-      <Bell onClick={toggleDropdown} className="h-5 w-5 text-gray-400">
+      {/* <Bell onClick={toggleDropdown} className="h-5 w-5 text-gray-400"> */}
+      <Bell className="h-5 w-5 text-gray-400">
         {unreadCount > 0 && (
           <NotificationBadge>
             {unreadCount > 99 ? '99+' : unreadCount}

@@ -1,3 +1,6 @@
+import { ENV } from "../../config/env";
+import { apiClient } from "./apiClient";
+
 interface Credentials {
   email: string;
   password: string;
@@ -11,22 +14,18 @@ interface Register {
     password: string,
 }
 
-const API_URL = "https://apibackenddev.onrender.com";
-
 export const authService = {
 
   login: async (credentials: Credentials): Promise<any> => {
     try {
-      const response = await fetch(`${API_URL}/users/login`, {
+      const response = await apiClient(`${ENV.API_URL}/users/login`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        requiresAuth: false,
         body: JSON.stringify(credentials),
       });
-      const data = await response.json();
-      localStorage.setItem("userDetails", JSON.stringify(data));
-      return data;
+
+      localStorage.setItem("userDetails", JSON.stringify(response));
+      return response;
     }
     catch (error: any) {
       throw error;
@@ -35,15 +34,12 @@ export const authService = {
 
   register: async (register: Register): Promise<any> => {
     try {
-      const response = await fetch(`${API_URL}/users/register`, {
+      const response = await apiClient(`${ENV.API_URL}/users/register`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        requiresAuth: false,
         body: JSON.stringify(register),
       });
-      const data = await response.json();
-      return data;
+      return response;
     }
     catch (error: any) {
       throw error;

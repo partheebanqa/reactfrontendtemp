@@ -17,37 +17,44 @@ import AccountProfile from "./components/profile/AccountProfile";
 import AccountSecurity from "./components/profile/AccountSecurity";
 import AccountPreferences from "./components/profile/AccountPreferences";
 import AccountBilling from "./components/profile/AccountBilling";
+import { SnackbarProvider } from "./context/SnackBarContext";
+import TermsPage from "./components/auth/TermsPage";
+import PrivacyPage from "./components/auth/PrivacyPolicy";
 
 function App() {
   return (
     <BrowserRouter>
      <ThemeProvider>
         <ToastProvider>
-          <ApiProvider>
-            <NotificationProvider userId={1}>
-              <Routes>
-                {/* Public Route */}
-                <Route path="/" element={<HomePage/>} />
-                <Route path="/login" element={<LoginPage />} />
-                <Route path="/signup" element={<SignupPage />} />
-                <Route path="/forgot-password" element={<ForgotPassword />} />
-                <Route path="/reset-password" element={<ResetPasswordPage />} />
-                {/* Protected Routes */}
-                <Route element={<MainLayout />}>
-                  <Route path="/dashboard" element={<Dashboard />} />
-                  <Route path="/api-test" element={<SingleRequest/>} />
-                  <Route path="/request-chain" element={<ChainRequestComponent/>} />
-                  <Route path="/settings" element={<AccountSettingsPage />}>
-                    <Route index element={<Navigate to="profile" replace />} />
-                    <Route path="profile" element={<AccountProfile />} />
-                    <Route path="security" element={<AccountSecurity />} />
-                    <Route path="preferences" element={<AccountPreferences />} />
-                    <Route path="billing" element={<AccountBilling />} />
+          <SnackbarProvider>
+            <ApiProvider>
+              <NotificationProvider userId={1}>
+                <Routes>
+                  {/* Public Route */}
+                  <Route path="/" element={<HomePage/>} />
+                  <Route path="/login" element={<LoginPage />} />
+                  <Route path="/signup" element={<SignupPage />} />
+                  <Route path="/forgot-password" element={<ForgotPassword />} />
+                  <Route path="/reset-password" element={<ResetPasswordPage />} />
+                  <Route path="/terms" element={<TermsPage />} />
+                  <Route path="/privacy" element={<PrivacyPage />} />
+                  {/* Protected Routes */}
+                  <Route element={<MainLayout />}>
+                    <Route path="/dashboard" element={<Dashboard />} />
+                    <Route path="/api-test" element={<SingleRequest/>} />
+                    <Route path="/request-chain" element={<ChainRequestComponent/>} />
+                    <Route path="/settings" element={<AccountSettingsPage />}>
+                      <Route index element={<Navigate to="profile" replace />} />
+                      <Route path="profile" element={<AccountProfile />} />
+                      <Route path="security" element={<AccountSecurity />} />
+                      <Route path="preferences" element={<AccountPreferences />} />
+                      <Route path="billing" element={<AccountBilling />} />
+                    </Route>
                   </Route>
-                </Route>
-              </Routes>
-            </NotificationProvider>
-          </ApiProvider>
+                </Routes>
+              </NotificationProvider>
+            </ApiProvider>
+          </SnackbarProvider>
         </ToastProvider>
       </ThemeProvider>
     </BrowserRouter>

@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff } from 'lucide-react';
 import { authService } from '../../shared/services/authService';
 import Loader from '../../shared/ui/loader';
+import { showSnackbar } from '../../shared/services/snackbarService';
 
 const SignupPage = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -24,7 +25,10 @@ const SignupPage = () => {
         const user = await authService.register(
           formData
         );
-        if(user.message) navigate('/login');
+        if(user.message) {
+          navigate('/login');
+          showSnackbar(user.message, 'success');
+        }
       } catch (err: any) {
         throw err
         // setError(`Direct login failed: ${err.message}`);
@@ -160,14 +164,14 @@ const SignupPage = () => {
                 </div>
               </div>
 
-              {/* <div className="flex items-center">
+              <div className="flex items-center">
                 <input
                   id="agreeToTerms"
                   name="agreeToTerms"
                   type="checkbox"
                   required
-                  checked={formData.agreeToTerms}
-                  onChange={handleChange}
+                  // checked={formData.agreeToTerms}
+                  // onChange={handleChange}
                   className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                 />
                 <label htmlFor="agreeToTerms" className="ml-2 block text-sm text-gray-900">
@@ -181,7 +185,7 @@ const SignupPage = () => {
                   </Link>
                   .
                 </label>
-              </div> */}
+              </div>
 
               <div>
                 <button

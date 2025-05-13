@@ -26,11 +26,11 @@ const ProfileDropdown: React.FC<ProfileDropdownProps> = ({ isOpen, onClose }) =>
 
   if (!isOpen) return null;
 
-  const themes = [
-    { id: 'light', icon: Sun, label: 'Light Theme' },
-    { id: 'dark', icon: Moon, label: 'Dark Theme' },
-    { id: 'neutral', icon: Ghost, label: 'Neutral Theme' },
-    { id: 'custom', icon: Palette, label: 'Custom Brand Colors' },
+   const themes = [
+    { id: 'light', icon: Sun, tooltip: 'Light Theme' },
+    { id: 'dark', icon: Moon, tooltip: 'Dark Theme' },
+    { id: 'neutral', icon: Ghost, tooltip: 'Neutral Theme' },
+    { id: 'custom', icon: Palette, tooltip: 'Custom Theme' }
   ];
 
   return (
@@ -49,19 +49,22 @@ const ProfileDropdown: React.FC<ProfileDropdownProps> = ({ isOpen, onClose }) =>
 
       <div className="py-2 border-b border-gray-100">
         <div className="px-4 py-2">
-          <p className="text-xs font-medium text-gray-500">THEMES</p>
-          <div className="grid grid-cols-2 gap-2 mt-2">
+          <p className="text-xs font-medium text-gray-500 mb-2">Theme</p>
+          <div className="flex items-center justify-between">
             {themes.map((themeOption) => (
-              <button
-                key={themeOption.id}
-                onClick={() => setTheme(themeOption.id as any)}
-                className={`flex items-center justify-center p-2 rounded-md hover:bg-gray-100 ${
-                  theme === themeOption.id ? 'bg-gray-100 text-blue-600' : 'text-gray-700'
-                }`}
-              >
-                <themeOption.icon size={16} className="mr-2" />
-                <span className="text-xs">{themeOption.label}</span>
-              </button>
+              <div key={themeOption.id} className="relative group">
+                <button
+                  onClick={() => setTheme(themeOption.id as any)}
+                  className={`p-2 rounded-full hover:bg-gray-100 transition-colors ${
+                    theme === themeOption.id ? 'bg-gray-100 text-blue-600' : 'text-gray-600'
+                  }`}
+                >
+                  <themeOption.icon size={20} />
+                </button>
+                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                  {themeOption.tooltip}
+                </div>
+              </div>
             ))}
           </div>
         </div>
