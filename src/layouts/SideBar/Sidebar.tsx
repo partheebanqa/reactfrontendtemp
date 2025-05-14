@@ -5,12 +5,6 @@ import {
   Settings,
   Pencil,
   ChevronRight,
-  ChevronLeft,
-  Folder,
-  Database,
-  Calendar,
-  PieChart,
-  Send,
   Plus,
   DollarSign,
   Box,
@@ -21,7 +15,6 @@ import {
   BarChart,
   Zap
 } from 'lucide-react';
-import { FaChartBar } from 'react-icons/fa';
 import { useLocation } from 'react-router-dom';
 
 interface SidebarProps {

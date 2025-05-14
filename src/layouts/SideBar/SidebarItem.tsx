@@ -1,6 +1,7 @@
 import React from 'react';
 import { DivideIcon as LucideIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import Tooltip from '@mui/material/Tooltip';
 
 interface SidebarItemProps {
   icon: LucideIcon;
@@ -27,6 +28,7 @@ const SidebarItem: React.FC<SidebarItemProps> = ({
     if (onClick) onClick();
     if (path) navigate(path);
   };
+
   return (
     <div
       onClick={handleClick}
@@ -36,9 +38,18 @@ const SidebarItem: React.FC<SidebarItemProps> = ({
         ${isExpanded ? 'justify-start' : 'justify-center'}
       `}
     >
-      <div className="text-gray-400">
-        <Icon size={20} />
-      </div>
+      <Tooltip title={label} placement="right-start" arrow>
+        <div className="text-gray-400">
+          {!isExpanded ? (
+                <span>
+                  <Icon size={20} />
+                </span>
+          ) : (
+            <Icon size={20} />
+          )}
+        </div>
+      </Tooltip>
+      
       {isExpanded && (
         <div className="flex justify-between items-center w-full">
           <span className="ml-3 text-sm text-white">{label}</span>
