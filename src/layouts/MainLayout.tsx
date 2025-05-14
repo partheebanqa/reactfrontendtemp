@@ -10,16 +10,6 @@ const MainLayout: React.FC = () => {
         setIsExpanded(!isExpanded);
     };
     return (
-        // <div className="flex h-screen overflow-hidden">
-        //     <Header isExpanded={isExpanded} toggleSidebar={toggleSidebar} />
-        //     <div className="flex flex-col flex-1">
-        //     <Sidebar isExpanded={isExpanded} toggleSidebar={toggleSidebar}/>
-        //         <main className="flex-1 overflow-auto p-4">
-        //             <Outlet />
-        //         </main>
-        //         <Footer/>
-        //     </div>
-        // </div>
         <div className="flex flex-col min-h-screen">
             <Header isExpanded={isExpanded} toggleSidebar={toggleSidebar} />
             <div className="flex flex-1">
