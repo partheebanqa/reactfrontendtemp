@@ -38,17 +38,18 @@ const SidebarItem: React.FC<SidebarItemProps> = ({
         ${isExpanded ? 'justify-start' : 'justify-center'}
       `}
     >
-      <Tooltip title={label} placement="right-start" arrow>
+      
         <div className="text-gray-400">
           {!isExpanded ? (
+            <Tooltip title={label} placement="right-start" arrow>
                 <span>
                   <Icon size={20} />
                 </span>
+            </Tooltip>
           ) : (
             <Icon size={20} />
           )}
         </div>
-      </Tooltip>
       
       {isExpanded && (
         <div className="flex justify-between items-center w-full">
