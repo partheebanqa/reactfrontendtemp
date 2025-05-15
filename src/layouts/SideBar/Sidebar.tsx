@@ -27,7 +27,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isExpanded, toggleSidebar }) => {
   return (
     <div 
       className={`
-        bg-sidebar h-[calc(100vh-4rem)] flex flex-col justify-between transition-all duration-300 ease-in-out relative
+        bg-sidebar h-[calc(100vh-9.5rem)] flex flex-col justify-between transition-all duration-300 ease-in-out relative
         ${isExpanded ? 'w-64' : 'w-16'}
       `}
     >
@@ -196,22 +196,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isExpanded, toggleSidebar }) => {
           />
         </div>
       </div>
-
-      {/* Design site button */}
-      {isExpanded ? (
-        <div className="px-4 py-3 bg-gray-900">
-          <button className="w-full py-2 text-sm font-medium text-white flex items-center justify-center">
-            <Pencil size={16} className="mr-2" />
-            <span>Design Site</span>
-          </button>
-        </div>
-      ) : (
-        <div className="py-3 bg-gray-900 flex justify-center">
-          <button className="text-white">
-            <Pencil size={20} />
-          </button>
-        </div>
-      )}
     </div>
   );
 };

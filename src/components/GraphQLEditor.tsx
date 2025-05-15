@@ -54,7 +54,7 @@ const GraphQLEditor: React.FC<GraphQLEditorProps> = ({
     <div className="space-y-4">
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-medium text-gray-700">GraphQL Query</h3>
+          <h3 className="text-sm font-medium">GraphQL Query</h3>
           <button
             onClick={formatQuery}
             className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1"
@@ -83,7 +83,7 @@ const GraphQLEditor: React.FC<GraphQLEditorProps> = ({
 
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-medium text-gray-700">Query Variables (Optional)</h3>
+          <h3 className="text-sm font-medium">Query Variables (Optional)</h3>
           <button
             onClick={formatVariables}
             className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1"

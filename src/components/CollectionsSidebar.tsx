@@ -196,7 +196,7 @@ const CollectionsSidebar: React.FC<CollectionsSidebarProps> = ({
   }, [showMenu]);
 
   return (
-    <div className="w-64 bg-white border-r border-gray-200 flex flex-col">
+    <div className="w-64 border-r border-gray-200 flex flex-col">
       <div className="p-4 border-b border-gray-200">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-lg font-semibold">Collections</h2>
@@ -243,7 +243,7 @@ const CollectionsSidebar: React.FC<CollectionsSidebarProps> = ({
                   <MoreVertical size={16} />
                 </button>
                 {showMenu === collection.id && (
-                  <div className="absolute right-0 mt-1 w-48 bg-white rounded-md shadow-lg z-10 border border-gray-200">
+                  <div className="absolute right-0 mt-1 w-48 rounded-md shadow-lg z-10 border border-gray-200">
                     <div className="py-1">
                       <button
                         onClick={() => {
@@ -297,7 +297,7 @@ const CollectionsSidebar: React.FC<CollectionsSidebarProps> = ({
                         <MoreVertical size={16} />
                       </button>
                       {showMenu === `request-${request.id}` && (
-                        <div className="absolute right-0 mt-1 w-48 bg-white rounded-md shadow-lg z-10 border border-gray-200">
+                        <div className="absolute right-0 mt-1 w-48 rounded-md shadow-lg z-10 border border-gray-200">
                           <div className="py-1">
                             <button
                               onClick={() => {

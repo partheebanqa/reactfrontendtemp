@@ -30,7 +30,7 @@ const RequestParams: React.FC<RequestParamsProps> = ({ params, onChange }) => {
   return (
     <div className="space-y-2">
       <div className="flex justify-between items-center">
-        <h3 className="text-sm font-medium text-gray-700">Query Parameters</h3>
+        <h3 className="text-sm font-medium">Query Parameters</h3>
         <button
           onClick={addParam}
           className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1"

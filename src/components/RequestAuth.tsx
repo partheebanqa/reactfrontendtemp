@@ -10,7 +10,7 @@ const RequestAuth: React.FC<RequestAuthProps> = ({ auth = { type: 'none' }, onCh
   return (
     <div className="space-y-4">
       <div>
-        <h3 className="text-sm font-medium text-gray-700 mb-2">Authorization</h3>
+        <h3 className="text-sm font-medium mb-2">Authorization</h3>
         <select
           value={auth.type}
           onChange={(e) => onChange({ type: e.target.value as Request['auth']['type'] })}

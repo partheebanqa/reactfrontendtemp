@@ -11,16 +11,18 @@ const MainLayout: React.FC = () => {
     };
     return (
         <div className="flex flex-col min-h-screen">
-            <Header isExpanded={isExpanded} toggleSidebar={toggleSidebar} />
+            <header className="sticky top-0 z-10 bg-white shadow">
+                <Header isExpanded={isExpanded} toggleSidebar={toggleSidebar} />
+            </header>
             <div className="flex flex-1">
                 <Sidebar isExpanded={isExpanded} toggleSidebar={toggleSidebar} />
                 <main className="flex-1 flex flex-col">
                     <div className="flex-1">
                         <Outlet />
                     </div>
-                    <Footer />
                 </main>
             </div>
+            <Footer />
         </div>
     );
 };

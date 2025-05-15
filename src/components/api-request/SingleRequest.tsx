@@ -384,7 +384,7 @@ function SingleRequest() {
 
   return (
     <div className="h-full">
-      <div className="flex bg-gray-50 overflow-y-auto h-full">
+      <div className="flex overflow-y-auto h-full">
         <CollectionsSidebar
           collections={collections}
           onCollectionCreate={handleCollectionCreate}
