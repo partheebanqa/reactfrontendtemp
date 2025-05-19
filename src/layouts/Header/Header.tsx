@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ChevronDown, Bell, Menu } from 'lucide-react';
 import ProfileDropdown from './ProfileDropdown';
-import NotificationBell from '../../components/notifications/NotificationBell';
+// import NotificationBell from '../../components/notifications/NotificationBell';
 // import NotificationDropdown from './NotificationDropdown';
 
 interface HeaderProps {
@@ -49,7 +49,7 @@ const Header: React.FC<HeaderProps> = ({ isExpanded, toggleSidebar }) => {
             onClose={() => setIsNotificationOpen(false)}
           /> */}
         {/* </div> */}
-        <NotificationBell/>
+        {/* <NotificationBell/> */}
         <div className="relative">
           <button
             onClick={() => {
