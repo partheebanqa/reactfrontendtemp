@@ -57,31 +57,31 @@ const AssertionsPanel: React.FC<AssertionsPanelProps> = ({
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <h3 className="text-sm font-medium text-gray-700">Status Code</h3>
+        <h3 className="text-sm font-medium">Status Code</h3>
         <input
           type="number"
           value={assertions.status || ''}
           onChange={(e) => updateAssertions({ status: parseInt(e.target.value) || undefined })}
-          className="w-full text-sm px-2 py-1.5 border border-gray-200 rounded"
+          className="w-full text-sm px-2 py-1.5 border border-gray-200 rounded text-black"
           placeholder="Expected status code (e.g., 200)"
         />
       </div>
 
       <div className="space-y-2">
-        <h3 className="text-sm font-medium text-gray-700">Response Time (seconds)</h3>
+        <h3 className="text-sm font-medium">Response Time (seconds)</h3>
         <input
           type="number"
           step="0.1"
           value={assertions.responseTime || ''}
           onChange={(e) => updateAssertions({ responseTime: parseFloat(e.target.value) || undefined })}
-          className="w-full text-sm px-2 py-1.5 border border-gray-200 rounded"
+          className="w-full text-sm px-2 py-1.5 border border-gray-200 rounded text-black"
           placeholder="Maximum response time in seconds"
         />
       </div>
 
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-medium text-gray-700">Headers</h3>
+          <h3 className="text-sm font-medium">Headers</h3>
           <button
             onClick={() => updateAssertions({ headers: { ...assertions.headers, '': '' } })}
             className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1"
@@ -102,7 +102,7 @@ const AssertionsPanel: React.FC<AssertionsPanelProps> = ({
                   newHeaders[e.target.value] = value;
                   updateAssertions({ headers: newHeaders });
                 }}
-                className="flex-1 text-sm px-2 py-1.5 border border-gray-200 rounded"
+                className="flex-1 text-sm px-2 py-1.5 border border-gray-200 rounded text-black"
                 placeholder="Header name"
               />
               <input
@@ -113,7 +113,7 @@ const AssertionsPanel: React.FC<AssertionsPanelProps> = ({
                     headers: { ...assertions.headers, [key]: e.target.value }
                   });
                 }}
-                className="flex-1 text-sm px-2 py-1.5 border border-gray-200 rounded"
+                className="flex-1 text-sm px-2 py-1.5 border border-gray-200 rounded text-black"
                 placeholder="Expected value"
               />
               <button
@@ -133,7 +133,7 @@ const AssertionsPanel: React.FC<AssertionsPanelProps> = ({
 
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-medium text-gray-700">Body Assertions</h3>
+          <h3 className="text-sm font-medium">Body Assertions</h3>
           <button
             onClick={addBodyAssertion}
             className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1"
@@ -177,7 +177,7 @@ const AssertionsPanel: React.FC<AssertionsPanelProps> = ({
               <select
                 value={assertion.operator}
                 onChange={(e) => updateBodyAssertion(index, { operator: e.target.value as AssertionOperator })}
-                className="text-sm px-2 py-1.5 border border-gray-200 rounded"
+                className="text-sm px-2 py-1.5 border border-gray-200 rounded bg-[var(--bg-primary)] text-[var(--text-primary)]"
               >
                 {OPERATORS.map(op => (
                   <option key={op.value} value={op.value}>{op.label}</option>
@@ -188,7 +188,7 @@ const AssertionsPanel: React.FC<AssertionsPanelProps> = ({
                   type="text"
                   value={assertion.value}
                   onChange={(e) => updateBodyAssertion(index, { value: e.target.value })}
-                  className="flex-1 text-sm px-2 py-1.5 border border-gray-200 rounded"
+                  className="flex-1 text-sm px-2 py-1.5 border border-gray-200 rounded text-black"
                   placeholder="Expected value"
                 />
               )}

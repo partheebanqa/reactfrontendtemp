@@ -82,7 +82,7 @@ const RequestPanel: React.FC<RequestPanelProps> = ({
   };
 
   return (
-    <div className="rounded-lg shadow mb-4">
+    <div className="rounded-lg shadow-lg  mb-4">
       <div className="p-4">
         <div className="flex items-center space-x-2">
           <div className="relative">
@@ -108,7 +108,7 @@ const RequestPanel: React.FC<RequestPanelProps> = ({
           <input
             type="text"
             placeholder="Enter URL or paste text"
-            className="flex-1 border border-gray-200 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="flex-1 border border-gray-200 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
             value={request.url}
             onChange={(e) => setRequest({ ...request, url: e.target.value })}
           />
@@ -137,7 +137,7 @@ const RequestPanel: React.FC<RequestPanelProps> = ({
       <div className="border-t border-gray-200">
         <div className="flex">
           <button 
-            className={`px-4 py-2 text-sm  hover:text-gray-800 border-b-2 ${
+            className={`px-4 py-2 text-sm  border-b-2 ${
               activeTab === 'params' ? 'border-blue-500' : 'border-transparent'
             }`}
             onClick={() => setActiveTab('params')}
@@ -145,7 +145,7 @@ const RequestPanel: React.FC<RequestPanelProps> = ({
             Params
           </button>
           <button 
-            className={`px-4 py-2 text-sm  hover:text-gray-800 border-b-2 ${
+            className={`px-4 py-2 text-sm border-b-2 ${
               activeTab === 'auth' ? 'border-blue-500' : 'border-transparent'
             }`}
             onClick={() => setActiveTab('auth')}
@@ -153,7 +153,7 @@ const RequestPanel: React.FC<RequestPanelProps> = ({
             Authorization
           </button>
           <button 
-            className={`px-4 py-2 text-sm  hover:text-gray-800 border-b-2 ${
+            className={`px-4 py-2 text-sm  border-b-2 ${
               activeTab === 'headers' ? 'border-blue-500' : 'border-transparent'
             }`}
             onClick={() => setActiveTab('headers')}
@@ -162,7 +162,7 @@ const RequestPanel: React.FC<RequestPanelProps> = ({
           </button>
           {!request.isGraphQL && request.method !== 'GET' && (
             <button 
-              className={`px-4 py-2 text-sm  hover:text-gray-800 border-b-2 ${
+              className={`px-4 py-2 text-sm border-b-2 ${
                 activeTab === 'body' ? 'border-blue-500' : 'border-transparent'
               }`}
               onClick={() => setActiveTab('body')}
@@ -171,7 +171,7 @@ const RequestPanel: React.FC<RequestPanelProps> = ({
             </button>
           )}
           <button 
-            className={`px-4 py-2 text-sm  hover:text-gray-800 border-b-2 ${
+            className={`px-4 py-2 text-sm border-b-2 ${
               activeTab === 'tests' ? 'border-blue-500' : 'border-transparent'
             }`}
             onClick={() => setActiveTab('tests')}
@@ -179,7 +179,7 @@ const RequestPanel: React.FC<RequestPanelProps> = ({
             Tests
           </button>
           <button 
-            className={`px-4 py-2 text-sm  hover:text-gray-800 border-b-2 ${
+            className={`px-4 py-2 text-sm border-b-2 ${
               activeTab === 'ai_tests' ? 'border-blue-500' : 'border-transparent'
             }`}
             onClick={() => setActiveTab('ai_tests')}
@@ -187,7 +187,7 @@ const RequestPanel: React.FC<RequestPanelProps> = ({
             AI Tests
           </button>
           <button 
-            className={`px-4 py-2 text-sm  hover:text-gray-800 border-b-2 ${
+            className={`px-4 py-2 text-sm border-b-2 ${
               activeTab === 'parametrization' ? 'border-blue-500' : 'border-transparent'
             }`}
             onClick={() => setActiveTab('parametrization')}

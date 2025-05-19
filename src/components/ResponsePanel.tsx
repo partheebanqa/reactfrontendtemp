@@ -169,8 +169,8 @@ const ResponsePanel: React.FC<ResponsePanelProps> = ({ response }) => {
   if (!response) return null;
 
   const containerClasses = fullscreen
-    ? 'fixed inset-0 z-50 bg-white overflow-hidden flex flex-col'
-    : 'bg-white rounded-lg shadow';
+    ? 'fixed inset-0 z-50 overflow-hidden flex flex-col shadow'
+    : 'rounded-lg shadow';
 
   const contentMaxHeight = fullscreen
     ? 'calc(100vh - 120px)'  // Account for header in fullscreen mode
@@ -226,14 +226,14 @@ const ResponsePanel: React.FC<ResponsePanelProps> = ({ response }) => {
       </div>
 
       {response.assertions && (
-        <div className="p-4 border-b border-gray-200">
+        <div className="p-4 border-b border-gray-200 text-bla">
           <AssertionResults results={response.assertions} />
         </div>
       )}
 
       <div className={`p-4 ${fullscreen ? 'flex-1 overflow-hidden' : ''}`}>
         <div 
-          className={`bg-gray-50 p-4 rounded-lg overflow-auto text-sm font-mono`}
+          className={` p-4 rounded-lg overflow-auto text-sm font-mono`}
           style={{ maxHeight: contentMaxHeight }}
         >
           {viewMode === 'raw' ? (

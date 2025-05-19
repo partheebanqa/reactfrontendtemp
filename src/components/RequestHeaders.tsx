@@ -30,7 +30,7 @@ const RequestHeaders: React.FC<RequestHeadersProps> = ({ headers, onChange }) =>
   return (
     <div className="space-y-2">
       <div className="flex justify-between items-center">
-        <h3 className="text-sm font-medium text-gray-700">Headers</h3>
+        <h3 className="text-sm font-medium">Headers</h3>
         <button
           onClick={addHeader}
           className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1"
@@ -47,14 +47,14 @@ const RequestHeaders: React.FC<RequestHeadersProps> = ({ headers, onChange }) =>
               type="text"
               value={key}
               onChange={(e) => updateHeader(key, e.target.value, value)}
-              className="flex-1 text-sm px-2 py-1 border border-gray-200 rounded"
+              className="flex-1 text-sm px-2 py-1 border border-gray-200 rounded text-black"
               placeholder="Key"
             />
             <input
               type="text"
               value={value}
               onChange={(e) => updateHeader(key, key, e.target.value)}
-              className="flex-1 text-sm px-2 py-1 border border-gray-200 rounded"
+              className="flex-1 text-sm px-2 py-1 border border-gray-200 rounded text-black"
               placeholder="Value"
             />
             <button

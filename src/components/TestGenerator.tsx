@@ -139,7 +139,7 @@ const TestGenerator: React.FC<TestGeneratorProps> = ({ request, onRunTest }) => 
           <select
             value={generationType}
             onChange={(e) => setGenerationType(e.target.value as 'manual' | 'ai')}
-            className="text-sm border border-gray-200 rounded px-3 py-1.5"
+            className="text-sm border border-gray-200 rounded px-3 py-1.5 bg-[var(--bg-primary)] text-[var(--text-primary)]"
           >
             <option value="manual">Manual Generation</option>
             <option value="ai">AI Generation</option>
@@ -173,10 +173,10 @@ const TestGenerator: React.FC<TestGeneratorProps> = ({ request, onRunTest }) => 
 
       {testCases.length > 0 && (
         <div className="border border-gray-200 rounded-lg">
-          <div className="p-4 border-b border-gray-200 bg-gray-50">
+          <div className="p-4 border-b border-gray-200">
             <div className="flex items-center gap-2">
               <Filter size={16} className="text-gray-500" />
-              <span className="text-sm font-medium text-gray-700">Filter by Test Type</span>
+              <span className="text-sm font-medium">Filter by Test Type</span>
             </div>
             <div className="mt-2 flex flex-wrap gap-2">
               {Object.entries(TEST_TYPE_LABELS).map(([type, label]) => (
@@ -186,7 +186,7 @@ const TestGenerator: React.FC<TestGeneratorProps> = ({ request, onRunTest }) => 
                   className={`px-3 py-1.5 text-xs rounded-full border ${
                     selectedTypes.has(type as TestType)
                       ? 'bg-blue-50 border-blue-200 text-blue-700'
-                      : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                      : 'border-gray-200 text-gray-600'
                   }`}
                 >
                   {label}
@@ -205,7 +205,7 @@ const TestGenerator: React.FC<TestGeneratorProps> = ({ request, onRunTest }) => 
                 <div className="space-y-3">
                   {tests.map((testCase) => (
                     <div key={testCase.name} className="space-y-2">
-                      <div className="flex items-center justify-between bg-white p-4 rounded-lg border border-gray-200">
+                      <div className="flex items-center justify-between p-4 rounded-lg border border-gray-200">
                         <div className="flex items-center gap-4">
                           <input
                             type="checkbox"

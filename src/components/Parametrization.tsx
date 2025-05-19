@@ -168,7 +168,7 @@ const Parametrization: React.FC<ParametrizationProps> = ({
         <div className="space-y-4">
           <div className="flex gap-4">
             <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-mediummb-2">
                 Upload CSV File
               </label>
               <div className="flex items-center gap-2">
@@ -189,7 +189,7 @@ const Parametrization: React.FC<ParametrizationProps> = ({
               </div>
             </div>
             <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium mb-2">
                 Upload JSON File
               </label>
               <div className="flex items-center gap-2">

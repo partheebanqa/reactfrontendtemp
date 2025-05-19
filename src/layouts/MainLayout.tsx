@@ -16,7 +16,7 @@ const MainLayout: React.FC = () => {
             </header>
             <div className="flex flex-1">
                 <Sidebar isExpanded={isExpanded} toggleSidebar={toggleSidebar} />
-                <main className="flex-1 flex flex-col">
+                <main className="flex-1 flex flex-col h-[calc(100vh-9.5rem)] overflow-y-auto">
                     <div className="flex-1">
                         <Outlet />
                     </div>

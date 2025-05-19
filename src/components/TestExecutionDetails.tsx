@@ -32,7 +32,7 @@ const TestExecutionDetails: React.FC<TestExecutionDetailsProps> = ({
     <div className="border border-gray-200 rounded-lg">
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-50"
+        className="w-full px-4 py-3 flex items-center justify-between"
       >
         <div>
           <h4 className="font-medium text-left">{name}</h4>
@@ -48,7 +48,7 @@ const TestExecutionDetails: React.FC<TestExecutionDetailsProps> = ({
               className={`px-4 py-2 text-sm ${
                 activeTab === 'request'
                   ? 'text-blue-600 border-b-2 border-blue-500'
-                  : 'text-gray-600 hover:text-gray-800'
+                  : 'text-gray-600'
               }`}
               onClick={() => setActiveTab('request')}
             >
@@ -58,7 +58,7 @@ const TestExecutionDetails: React.FC<TestExecutionDetailsProps> = ({
               className={`px-4 py-2 text-sm ${
                 activeTab === 'response'
                   ? 'text-blue-600 border-b-2 border-blue-500'
-                  : 'text-gray-600 hover:text-gray-800'
+                  : ''
               }`}
               onClick={() => setActiveTab('response')}
             >
@@ -68,7 +68,7 @@ const TestExecutionDetails: React.FC<TestExecutionDetailsProps> = ({
               className={`px-4 py-2 text-sm ${
                 activeTab === 'headers'
                   ? 'text-blue-600 border-b-2 border-blue-500'
-                  : 'text-gray-600 hover:text-gray-800'
+                  : 'text-gray-600'
               }`}
               onClick={() => setActiveTab('headers')}
             >
@@ -78,7 +78,7 @@ const TestExecutionDetails: React.FC<TestExecutionDetailsProps> = ({
               className={`px-4 py-2 text-sm ${
                 activeTab === 'auth'
                   ? 'text-blue-600 border-b-2 border-blue-500'
-                  : 'text-gray-600 hover:text-gray-800'
+                  : 'text-gray-600'
               }`}
               onClick={() => setActiveTab('auth')}
             >
@@ -89,7 +89,7 @@ const TestExecutionDetails: React.FC<TestExecutionDetailsProps> = ({
                 className={`px-4 py-2 text-sm ${
                   activeTab === 'body'
                     ? 'text-blue-600 border-b-2 border-blue-500'
-                    : 'text-gray-600 hover:text-gray-800'
+                    : 'text-gray-600'
                 }`}
                 onClick={() => setActiveTab('body')}
               >
@@ -140,15 +140,15 @@ const TestExecutionDetails: React.FC<TestExecutionDetailsProps> = ({
             {activeTab === 'headers' && (
               <div className="space-y-2">
                 <div>
-                  <h5 className="text-sm font-medium text-gray-700 mb-1">Request Headers</h5>
-                  <pre className="bg-gray-50 p-2 rounded text-sm overflow-auto">
+                  <h5 className="text-sm font-medium mb-1">Request Headers</h5>
+                  <pre className="bg-gray-50 p-2 rounded text-sm overflow-auto text-black">
                     {formatJson(request.headers)}
                   </pre>
                 </div>
                 {response && (
                   <div>
-                    <h5 className="text-sm font-medium text-gray-700 mb-1">Response Headers</h5>
-                    <pre className="bg-gray-50 p-2 rounded text-sm overflow-auto">
+                    <h5 className="text-sm font-medium mb-1">Response Headers</h5>
+                    <pre className="bg-gray-50 p-2 rounded text-sm overflow-auto text-black">
                       {formatJson(response.headers)}
                     </pre>
                   </div>
@@ -158,11 +158,11 @@ const TestExecutionDetails: React.FC<TestExecutionDetailsProps> = ({
 
             {activeTab === 'auth' && (
               <div className="space-y-2">
-                <h5 className="text-sm font-medium text-gray-700 mb-1">Authentication</h5>
+                <h5 className="text-sm font-medium mb-1">Authentication</h5>
                 {request.auth?.type === 'none' ? (
                   <p className="text-sm text-gray-600">No authentication</p>
                 ) : (
-                  <pre className="bg-gray-50 p-2 rounded text-sm overflow-auto">
+                  <pre className="bg-gray-50 p-2 rounded text-sm overflow-auto text-black">
                     {formatJson({
                       type: request.auth?.type,
                       ...(request.auth?.username && { username: request.auth.username }),
