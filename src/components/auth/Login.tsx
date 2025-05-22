@@ -22,7 +22,6 @@ const LoginPage = () => {
           email: email,
           password: password,
         });
-        console.log(user)
         if(user.message) navigate('/dashboard');
       } catch (err: any) {
         setError(`Direct login failed: ${err.message}`);

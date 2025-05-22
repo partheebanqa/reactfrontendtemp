@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import SidebarItem from './SidebarItem';
 import { 
   Home, 
@@ -16,6 +16,7 @@ import {
   Zap
 } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
+import { WorkSpace, workspaceService } from '../../shared/services/workspaceServcie';
 
 interface SidebarProps {
   isExpanded: boolean;
@@ -24,6 +25,18 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ isExpanded, toggleSidebar }) => {
   const location = useLocation();
+  const [workspaces, setWorkspaces] = useState<WorkSpace[]>([]);
+
+  useEffect(() => {
+  const fetchWorkspaces = async () => {
+    const data = await workspaceService.getWorkspaces();
+    setWorkspaces(data);
+  };
+
+  fetchWorkspaces();
+}, []);
+
+
   return (
     <div 
       className={`
@@ -79,7 +92,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isExpanded, toggleSidebar }) => {
         {/* Quick action button */}
         {isExpanded ? (
           <div className="p-4">
-            <button className="bg-white text-black rounded px-4 py-2 w-full text-sm font-medium flex items-center justify-center">
+            {/* <button className="bg-white text-black rounded px-4 py-2 w-full text-sm font-medium flex items-center justify-center">
               <span>Quick Actions</span>
               <svg 
                 xmlns="http://www.w3.org/2000/svg" 
@@ -95,7 +108,14 @@ const Sidebar: React.FC<SidebarProps> = ({ isExpanded, toggleSidebar }) => {
               >
                 <path d="m6 9 6 6 6-6" />
               </svg>
-            </button>
+            </button> */}
+
+          <select
+            className="text-sm border border-gray-200 rounded px-3 py-1.5 bg-[var(--bg-primary)] text-[var(--text-primary)] w-full"
+          >
+            <option value="manual">Manual Generation</option>
+            <option value="ai">AI Generation</option>
+          </select>
           </div>
         ) : (
           <div className="py-4 flex justify-center">

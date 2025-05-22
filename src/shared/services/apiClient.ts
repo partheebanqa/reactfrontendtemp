@@ -13,11 +13,8 @@ export const apiClient = async (
   endpoint: string,
   options: RequestOptions = {}
 ): Promise<any> => {
-
   let token = "";
   const userDetails = localStorage.getItem('userDetails');
-  
-
   if (userDetails) {
     try {
       const details = JSON.parse(userDetails);
@@ -31,7 +28,6 @@ export const apiClient = async (
     'Content-Type': 'application/json',
   };
 
-  // Only attach token if required and exists
   if (options.requiresAuth && token) {
     defaultHeaders['Authorization'] = `Bearer ${token}`;
   }
@@ -43,35 +39,23 @@ export const apiClient = async (
         ...defaultHeaders,
         ...options.headers,
       },
-      body: options.body ? options.body : undefined,
+      body:
+        options.body && options.method !== 'GET'
+          ? options.body
+          : undefined,
     });
 
-    const data = await response.json();
+    const data = response.status !== 204 ? await response.json() : null;
 
     if (!response.ok) {
-      showSnackbar('Something went wrong', 'error');
-      throw new Error(data.message || 'API request failed');
+      const errorMsg = data?.error || data?.message || 'Something went wrong';
+      showSnackbar(errorMsg, 'error');
+      throw new Error(errorMsg);
     }
     return data;
   } catch (error: any) {
-    showSnackbar('something went wrong', 'error');
+    console.log(error);
+    showSnackbar(error.message || 'Something went wrong', 'error');
     throw error;
   }
 };
-
-
-
-// import { apiClient } from './apiClient';
-
-// export const UserService = {
-//   getProfile: () => apiClient('https://api.example.com/user/profile', {
-//     method: 'GET',
-//     requiresAuth: true,
-//   }),
-
-//   updateProfile: (data: any) => apiClient('https://api.example.com/user/profile', {
-//     method: 'PUT',
-//     body: data,
-//     requiresAuth: true,
-//   }),
-// };

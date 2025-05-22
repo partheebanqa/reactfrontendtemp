@@ -18,7 +18,7 @@ export const authService = {
 
   login: async (credentials: Credentials): Promise<any> => {
     try {
-      const response = await apiClient(`${ENV.API_URL}/users/login`, {
+      const response = await apiClient(`${ENV.API_URL}/auth/login`, {
         method: 'POST',
         requiresAuth: false,
         body: JSON.stringify(credentials),
@@ -34,7 +34,7 @@ export const authService = {
 
   register: async (register: Register): Promise<any> => {
     try {
-      const response = await apiClient(`${ENV.API_URL}/users/register`, {
+      const response = await apiClient(`${ENV.API_URL}/auth/register`, {
         method: 'POST',
         requiresAuth: false,
         body: JSON.stringify(register),

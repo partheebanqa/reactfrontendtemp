@@ -33,7 +33,6 @@ const SignupPage = () => {
         throw err
         // setError(`Direct login failed: ${err.message}`);
       } finally {
-        // setLoading(false);
         setLoading(false);
       }
     console.log(formData)

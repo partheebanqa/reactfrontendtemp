@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Save } from 'lucide-react';
 import { Collection } from '../types';
 import { v4 as uuidv4 } from 'uuid';
+import { collectionService } from '../shared/services/collectionService';
 
 interface CollectionModalProps {
   isOpen: boolean;
@@ -29,29 +30,35 @@ const CollectionModal: React.FC<CollectionModalProps> = ({
   if (!isOpen) return null;
 
   const handleSave = () => {
-    const newCollection: Collection = {
-      id: collection?.id || uuidv4(),
-      name,
-      description,
-      folders: collection?.folders || [],
-      requests: collection?.requests || [],
-      createdAt: collection?.createdAt || new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      changelog: [
-        ...(collection?.changelog || []),
-        {
-          id: uuidv4(),
-          action: collection ? 'update' : 'create',
-          itemType: 'collection',
-          itemId: collection?.id || uuidv4(),
-          itemName: name,
-          timestamp: new Date().toISOString(),
-          details: collection ? 'Collection updated' : 'Collection created'
-        }
-      ]
-    };
+    collectionService.addCollection({
+      name:name,
+      isImportant:true,
+      workspaceId:"f927321f-2e5a-48e9-920a-09a871dd9152"
+    });
+    // const newCollection: Collection = {
+    //   id: collection?.id || uuidv4(),
+    //   name,
+    //   description,
+    //   folders: collection?.folders || [],
+    //   requests: collection?.requests || [],
+    //   createdAt: collection?.createdAt || new Date().toISOString(),
+    //   updatedAt: new Date().toISOString(),
+    //   changelog: [
+    //     ...(collection?.changelog || []),
+    //     {
+    //       id: uuidv4(),
+    //       action: collection ? 'update' : 'create',
+    //       itemType: 'collection',
+    //       itemId: collection?.id || uuidv4(),
+    //       itemName: name,
+    //       timestamp: new Date().toISOString(),
+    //       details: collection ? 'Collection updated' : 'Collection created'
+    //     }
+    //   ]
+    // };
 
-    onSave(newCollection);
+    // onSave(newCollection);
+    
     onClose();
   };
 
@@ -84,7 +91,7 @@ const CollectionModal: React.FC<CollectionModalProps> = ({
             />
           </div>
 
-          <div>
+          {/* <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Description (optional)
             </label>
@@ -94,7 +101,7 @@ const CollectionModal: React.FC<CollectionModalProps> = ({
               className="w-full px-3 py-2 border border-gray-300 rounded-md h-32"
               placeholder="Describe your collection..."
             />
-          </div>
+          </div> */}
         </div>
 
         <div className="flex justify-end gap-2 p-4 border-t border-gray-200">
