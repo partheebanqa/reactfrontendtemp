@@ -1,45 +1,48 @@
 import React, { useState } from 'react';
-import { workspaceService } from '../../shared/services/workspaceServcie';
-import Loader from '../../shared/ui/loader';
+import { WorkSpace, workspaceService } from '../../shared/services/workspaceService';
+import { showSnackbar } from '../../shared/services/snackbarService';
+import { useWorkspace } from '../../context/WorkspaceContext';
 
 interface CreateWorkspaceModalProps {
   open: boolean;
   onClose: () => void;
-  onCreate: (name: string, description: string) => void;
 }
 
 const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
   open,
   onClose,
-  onCreate,
 }) => {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [isLoading, setLoading] = useState(false);
+  const { setCreatedWorkspace } = useWorkspace(); 
+  
 
   if (!open) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
+  const handleSubmit = async (e: React.FormEvent) => {
+      e.preventDefault();
+      const response = await workspaceService.addWorkspace({
+        name:name,
+        description:description
+      });
 
-    workspaceService.addWorkspace({
-      name:name,
-      description:description
-    });
-    
-    setLoading(false);
-    
-
-    // onCreate(name, description);
-    // setName('');
-    // setDescription('');
-    // onClose();
-  };
+      const workspace : WorkSpace = {
+        Id:response.workspaceId,
+        TenantID: "efe6f044-dff8-40e4-bd86-2d62c9ac98f6",
+        Name:name,
+        Description:description,
+        CreatedAt:"",
+        UpdatedAt:"",
+        CreatedBy:"",
+        DeletedAt:null,
+      } 
+      
+      showSnackbar(response.message, 'success');
+      setCreatedWorkspace(workspace)
+      onClose();
+    };
 
   return (
-    <div className="">
-      {isLoading ? <Loader /> : 
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
       <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
         <h2 className="text-lg font-semibold mb-4">Create Workspace</h2>
@@ -80,7 +83,6 @@ const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
           </div>
         </form>
       </div>
-    </div>}
     </div>
   );
 };

@@ -37,10 +37,13 @@ export const SnackbarProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     <SnackbarContext.Provider value={{ showSnackbar }}>
       {children}
       {visible && (
-        <div className={`fixed bottom-5 left-1/2 transform -translate-x-1/2 z-50 px-4 py-2 rounded shadow-lg text-white text-sm 
-          ${type === 'success' ? 'bg-green-600' : 'bg-red-600'}`}>
+        <div
+          className={`fixed top-5 right-5 z-50 px-6 py-4 rounded-md shadow-xl text-white text-base
+            ${type === 'success' ? 'bg-green-600' : 'bg-red-600'}`}
+        >
           {message}
         </div>
+
       )}
     </SnackbarContext.Provider>
   );

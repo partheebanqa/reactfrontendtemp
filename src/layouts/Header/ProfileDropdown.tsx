@@ -1,9 +1,9 @@
 import React, { useRef, useState } from 'react';
-import { User, Settings, HelpCircle, LogOut, Sun, Moon, Ghost, Palette } from 'lucide-react';
+import { User, Settings, HelpCircle, LogOut, Sun, Moon, Ghost, Palette, Plus } from 'lucide-react';
 import { useClickOutside } from '../../hooks/useClickOutside';
 import { useTheme } from '../../context/ThemeContext';
 import { useNavigate } from 'react-router-dom';
-import CreateWorkspaceModal from '../../components/workspace/Workspace';
+import CreateWorkspaceModal from '../../components/workspace/CreateWorkspace';
 
 interface ProfileDropdownProps {
   isOpen: boolean;
@@ -85,23 +85,18 @@ const ProfileDropdown: React.FC<ProfileDropdownProps> = ({ isOpen, onClose }) =>
           <User size={16} className="mr-3" />
           Your Profile
         </button>
-        {/* <button className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-          <User size={16} className="mr-3" />
-          Create Workspace
-        </button> */}
         <button
         className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
         onClick={() => setModalOpen(true)}
       >
-        <User size={16} className="mr-3" />
+        <Plus size={16} className="mr-3" />
         Create Workspace
       </button>
 
-      <CreateWorkspaceModal
-        open={modalOpen}
-        onClose={() => setModalOpen(false)}
-        onCreate={handleCreateWorkspace}
-      />
+        <CreateWorkspaceModal
+          open={modalOpen}
+          onClose={() => setModalOpen(false)}
+        />
 
         <button className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
             onClick={accountSettings}>

@@ -5,9 +5,12 @@ import CollectionModal from './CollectionModal';
 import FolderModal from './FolderModal';
 import RequestModal from './RequestModal';
 import MoveRequestModal from './MoveRequestModal';
+import { useWorkspace } from '../context/WorkspaceContext';
+import { CollectionList, collectionService } from '../shared/services/collectionService';
+import { showSnackbar } from '../shared/services/snackbarService';
 
 interface CollectionsSidebarProps {
-  collections: Collection[];
+  collections: any[];
   onCollectionCreate: (collection: Collection) => void;
   onCollectionUpdate: (collection: Collection) => void;
   onCollectionDelete: (collectionId: string) => void;
@@ -37,6 +40,11 @@ const CollectionsSidebar: React.FC<CollectionsSidebarProps> = ({
   const [selectedFolderForRequest, setSelectedFolderForRequest] = useState<string | null>(null);
   const [selectedRequest, setSelectedRequest] = useState<CollectionRequest | null>(null);
 
+  //latest code
+  const { selectedWorkspaceId } = useWorkspace();
+  const [localCollections, setLocalCollections] = useState<CollectionList[]>([]);
+  const [localCollection, editLocalCollection] = useState<CollectionList>();
+  
   const toggleCollection = (collectionId: string) => {
     setExpandedCollections(prev => {
       const next = new Set(prev);
@@ -68,8 +76,33 @@ const CollectionsSidebar: React.FC<CollectionsSidebarProps> = ({
     setShowMenu(null);
   };
 
+  useEffect(() => {
+  const fetchCollections = async () => {
+    try {
+      const response = await collectionService.getCollections(selectedWorkspaceId);
+      setLocalCollections(response.collections);
+    } catch (err) {
+      console.error("Failed to fetch collections", err);
+    }
+  };
+
+  if (selectedWorkspaceId) {
+    fetchCollections();
+  }
+  }, [selectedWorkspaceId]);
+
+  const onSaveCollection = (collection:any) => {
+    setLocalCollections([...localCollections,collection ])
+  }
+
+  const deleteCollections = async (id:string) => {
+    const response = await collectionService.deleteCollections(id);
+    showSnackbar(response.message, 'success');
+    setLocalCollections(prev => prev.filter(localCollections => localCollections.Id !== id));
+  }
+
   const handleSaveRequest = (request: CollectionRequest) => {
-    const collection = collections.find(c => c.id === request.collectionId);
+    const collection = localCollections.find(c => c.id === request.collectionId);
     if (!collection) return;
 
     const updatedCollection = { ...collection };
@@ -220,34 +253,35 @@ const CollectionsSidebar: React.FC<CollectionsSidebarProps> = ({
       </div>
 
       <div className="flex-1 overflow-auto p-2">
-        {collections.map(collection => (
-          <div key={collection.id} className="mb-2">
+        {localCollections?.map(collection => (
+          <div key={collection.Id} className="mb-2">
             <div className="flex items-center group">
               <button
-                onClick={() => toggleCollection(collection.id)}
+                onClick={() => toggleCollection(collection.Id)}
                 className="p-1 text-gray-500 hover:text-gray-700"
               >
                 <FolderTree size={16} />
               </button>
               <button
                 className="flex-1 px-2 py-1 text-sm text-left hover:bg-gray-100 rounded"
-                onClick={() => toggleCollection(collection.id)}
+                onClick={() => toggleCollection(collection.Id)}
               >
-                {collection.name}
+                {collection.Name}
               </button>
               <div className="relative" ref={menuRef}>
                 <button
-                  onClick={() => setShowMenu(showMenu === collection.id ? null : collection.id)}
+                  onClick={() => setShowMenu(showMenu === collection.Id ? null : collection.Id)}
                   className="p-1 text-gray-400 hover:text-gray-600 opacity-0 group-hover:opacity-100"
                 >
                   <MoreVertical size={16} />
                 </button>
-                {showMenu === collection.id && (
-                  <div className="absolute right-0 mt-1 w-48 rounded-md shadow-lg z-10 border border-gray-200">
+                {showMenu === collection.Id && (
+                  <div className="absolute right-0 mt-1 w-48 rounded-md shadow-lg z-10 border border-gray-200 bg-white">
                     <div className="py-1">
                       <button
                         onClick={() => {
-                          setSelectedCollection(collection);
+                          // setSelectedCollection(collection);
+                          editLocalCollection(collection)
                           setShowCollectionModal(true);
                           setShowMenu(null);
                         }}
@@ -257,7 +291,7 @@ const CollectionsSidebar: React.FC<CollectionsSidebarProps> = ({
                         Edit Collection
                       </button>
                       <button
-                        onClick={() => handleAddRequest(collection.id)}
+                        onClick={() => handleAddRequest(collection.Id)}
                         className="w-full px-4 py-2 text-sm text-left text-gray-700 hover:bg-gray-100 flex items-center gap-2"
                       >
                         <Plus size={14} />
@@ -265,13 +299,14 @@ const CollectionsSidebar: React.FC<CollectionsSidebarProps> = ({
                       </button>
                       <button
                         onClick={() => {
-                          onCollectionDelete(collection.id);
+                          // onCollectionDelete(collection.Id);
+                          deleteCollections(collection.Id)
                           setShowMenu(null);
                         }}
                         className="w-full px-4 py-2 text-sm text-left text-red-600 hover:bg-red-50 flex items-center gap-2"
                       >
                         <Trash2 size={14} />
-                        Delete Collection
+                          Delete Collection
                       </button>
                     </div>
                   </div>
@@ -279,7 +314,7 @@ const CollectionsSidebar: React.FC<CollectionsSidebarProps> = ({
               </div>
             </div>
 
-            {expandedCollections.has(collection.id) && (
+            {/* {expandedCollections.has(collection.id) && (
               <div className="ml-4 mt-1 space-y-1">
                 {collection.requests.map(request => (
                   <div key={request.id} className="flex items-center group">
@@ -327,12 +362,13 @@ const CollectionsSidebar: React.FC<CollectionsSidebarProps> = ({
                   </div>
                 ))}
               </div>
-            )}
+            )} */}
           </div>
         ))}
       </div>
 
-      {showCollectionModal && (
+      {/* prev */}
+      {/* {showCollectionModal && (
         <CollectionModal
           isOpen={showCollectionModal}
           onClose={() => {
@@ -350,6 +386,20 @@ const CollectionsSidebar: React.FC<CollectionsSidebarProps> = ({
           }}
           collection={selectedCollection || undefined}
         />
+      )} */}
+
+      {showCollectionModal && (
+        <CollectionModal
+          isOpen={showCollectionModal}
+          onClose={() => {
+            setShowCollectionModal(false);
+            setSelectedCollection(null);
+          }}
+          onSaveCollection={(collection) => {
+            onSaveCollection(collection)
+          }}
+          collection={selectedCollection || undefined}
+        />
       )}
 
       {showRequestModal && (
@@ -364,7 +414,7 @@ const CollectionsSidebar: React.FC<CollectionsSidebarProps> = ({
         />
       )}
 
-      {showMoveModal && selectedRequest && (
+      {/* {showMoveModal && selectedRequest && (
         <MoveRequestModal
           isOpen={showMoveModal}
           onClose={() => {
@@ -376,7 +426,7 @@ const CollectionsSidebar: React.FC<CollectionsSidebarProps> = ({
           currentCollectionId={selectedRequest.collectionId}
           currentFolderId={selectedRequest.folderId}
         />
-      )}
+      )} */}
     </div>
   );
 };

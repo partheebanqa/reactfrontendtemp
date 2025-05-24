@@ -2,23 +2,27 @@ import React, { useState, useEffect } from 'react';
 import { X, Save } from 'lucide-react';
 import { Collection } from '../types';
 import { v4 as uuidv4 } from 'uuid';
-import { collectionService } from '../shared/services/collectionService';
+import { CollectionList, collectionService } from '../shared/services/collectionService';
+import { useWorkspace } from '../context/WorkspaceContext';
+import { showSnackbar } from '../shared/services/snackbarService';
 
 interface CollectionModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (collection: Collection) => void;
+  // onSave: (collection: Collection) => void;
+  onSaveCollection: (collection: CollectionList) => void;
   collection?: Collection;
 }
 
 const CollectionModal: React.FC<CollectionModalProps> = ({
   isOpen,
   onClose,
-  onSave,
+  onSaveCollection,
   collection
 }) => {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const { selectedWorkspaceId } = useWorkspace();
 
   useEffect(() => {
     if (isOpen) {
@@ -29,11 +33,11 @@ const CollectionModal: React.FC<CollectionModalProps> = ({
 
   if (!isOpen) return null;
 
-  const handleSave = () => {
-    collectionService.addCollection({
+  const handleSave = async () => {
+    const response = await collectionService.addCollection({
       name:name,
       isImportant:true,
-      workspaceId:"f927321f-2e5a-48e9-920a-09a871dd9152"
+      workspaceId:selectedWorkspaceId
     });
     // const newCollection: Collection = {
     //   id: collection?.id || uuidv4(),
@@ -56,9 +60,17 @@ const CollectionModal: React.FC<CollectionModalProps> = ({
     //     }
     //   ]
     // };
+    const newCollection : CollectionList = {
+      Id:response.collectionId,
+      CreatedAt:String(new Date()),
+      Name:name,
+      IsImportant:false,
+      UpdatedAt:String(new Date()),
+      WorkspaceId:selectedWorkspaceId
+    }
 
-    // onSave(newCollection);
-    
+    onSaveCollection(newCollection);
+    showSnackbar(response.message, 'success');
     onClose();
   };
 
