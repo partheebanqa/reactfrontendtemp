@@ -394,11 +394,12 @@ const CollectionsSidebar: React.FC<CollectionsSidebarProps> = ({
           onClose={() => {
             setShowCollectionModal(false);
             setSelectedCollection(null);
+            editLocalCollection(undefined);
           }}
           onSaveCollection={(collection) => {
             onSaveCollection(collection)
           }}
-          collection={selectedCollection || undefined}
+          collection={localCollection || undefined}
         />
       )}
 

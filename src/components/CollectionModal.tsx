@@ -11,7 +11,8 @@ interface CollectionModalProps {
   onClose: () => void;
   // onSave: (collection: Collection) => void;
   onSaveCollection: (collection: CollectionList) => void;
-  collection?: Collection;
+  // collection?: Collection;
+  collection?: CollectionList;
 }
 
 const CollectionModal: React.FC<CollectionModalProps> = ({
@@ -23,13 +24,23 @@ const CollectionModal: React.FC<CollectionModalProps> = ({
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const { selectedWorkspaceId } = useWorkspace();
-
+  
   useEffect(() => {
-    if (isOpen) {
-      setName(collection?.name || '');
-      setDescription(collection?.description || '');
+    if (collection) {
+      setName(collection.Name);
+      // setDescription(collection.Description || '');
+    } else {
+      setName('');
+      // setDescription('');
     }
-  }, [isOpen, collection]);
+  }, [collection]);
+
+  // useEffect(() => {
+  //   if (isOpen) {
+  //     setName(collection?.name || '');
+  //     setDescription(collection?.description || '');
+  //   }
+  // }, [isOpen, collection]);
 
   if (!isOpen) return null;
 
