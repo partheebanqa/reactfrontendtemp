@@ -46,6 +46,20 @@ export const collectionService = {
       throw error;
     }
   },
+  
+  updateCollection:async ({id,name} : {id:string, name:string}): Promise<any> => {
+    try {
+      const response = await apiClient(`${ENV.API_URL}/collections/${id}/rename`, {
+        method: 'PUT',
+        requiresAuth: true,
+        body:JSON.stringify({name:name})
+      });
+      return response;
+    }
+    catch (error: any) {
+      throw error;
+    }
+  },
 
   deleteCollections:async (collectionId:string): Promise<any> => {
     try {

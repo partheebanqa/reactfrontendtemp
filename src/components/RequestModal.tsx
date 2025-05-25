@@ -3,6 +3,7 @@ import { X, Save, Plus, FolderTree } from 'lucide-react';
 import { CollectionRequest, Request, Collection, CollectionFolder } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import CollectionModal from './CollectionModal';
+import { CollectionList } from '../shared/services/collectionService';
 
 interface RequestModalProps {
   isOpen: boolean;
@@ -10,8 +11,9 @@ interface RequestModalProps {
   onSave: (request: CollectionRequest) => void;
   request?: CollectionRequest;
   currentRequest?: Request;
-  collections?: Collection[];
-  onCollectionCreate?: (collection: Collection) => void;
+  collections?: any[];
+  // onCollectionCreate?: (collection: Collection) => void;
+  onCollectionCreate?: (collection: CollectionList) => void;
   collectionId?: string; // Add this prop for pre-selecting collection
 }
 
@@ -79,9 +81,9 @@ const RequestModal: React.FC<RequestModalProps> = ({
     onClose();
   };
 
-  const handleNewCollectionCreate = (collection: Collection) => {
+  const handleNewCollectionCreate = (collection: CollectionList) => {
     onCollectionCreate?.(collection);
-    setSelectedCollectionId(collection.id);
+    setSelectedCollectionId(collection.Id);
     setShowNewCollectionModal(false);
   };
 
@@ -176,8 +178,8 @@ const RequestModal: React.FC<RequestModalProps> = ({
               >
                 <option value="">Select a collection</option>
                 {collections.map(collection => (
-                  <option key={collection.id} value={collection.id}>
-                    {collection.name}
+                  <option key={collection.Id} value={collection.Id}>
+                    {collection.Name}
                   </option>
                 ))}
               </select>
@@ -188,7 +190,7 @@ const RequestModal: React.FC<RequestModalProps> = ({
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Folder (Optional)
                 </label>
-                <div className="border border-gray-300 rounded-md max-h-48 overflow-y-auto">
+                {/* <div className="border border-gray-300 rounded-md max-h-48 overflow-y-auto">
                   <div className="p-2">
                     <button
                       onClick={() => setSelectedFolderId('')}
@@ -199,7 +201,7 @@ const RequestModal: React.FC<RequestModalProps> = ({
                       Root Level
                     </button>
                     {collections
-                      .find(c => c.id === selectedCollectionId)
+                      .find(c => c.Id === selectedCollectionId)
                       ?.folders.map(folder => (
                         <div key={folder.id}>
                           <div className="flex items-center py-1">
@@ -224,7 +226,7 @@ const RequestModal: React.FC<RequestModalProps> = ({
                         </div>
                       ))}
                   </div>
-                </div>
+                </div> */}
               </div>
             )}
           </div>
@@ -252,7 +254,7 @@ const RequestModal: React.FC<RequestModalProps> = ({
         <CollectionModal
           isOpen={showNewCollectionModal}
           onClose={() => setShowNewCollectionModal(false)}
-          onSave={handleNewCollectionCreate}
+          onSaveCollection={handleNewCollectionCreate}
         />
       )}
     </>

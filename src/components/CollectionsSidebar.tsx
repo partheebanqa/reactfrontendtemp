@@ -91,7 +91,19 @@ const CollectionsSidebar: React.FC<CollectionsSidebarProps> = ({
   }
   }, [selectedWorkspaceId]);
 
-  const onSaveCollection = (collection:any) => {
+  const onSaveCollection = (collection:CollectionList) => {
+    const isCollection = localCollections.find((x) => x.Id == collection.Id);
+     if (isCollection) {
+      console.log(collection)
+       setLocalCollections(prev =>
+        prev.map(c =>
+          c.Id === collection.Id
+            ? { ...c, Name: collection.Name } // Only update the name
+            : c
+          )
+        );
+        return ;
+    }
     setLocalCollections([...localCollections,collection ])
   }
 
@@ -211,18 +223,18 @@ const CollectionsSidebar: React.FC<CollectionsSidebarProps> = ({
     setSelectedRequest(null);
   };
 
-  const menuRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setShowMenu(null); // close the menu
-      }
+  const handleClickOutside = (event: MouseEvent) => {
+    const target = event.target as HTMLElement;
+    if (!target.closest('.collection-menu')) {
+      setShowMenu(null);
+    }
     };
-  
+
     if (showMenu) {
       document.addEventListener('mousedown', handleClickOutside);
     }
-  
+
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
@@ -268,7 +280,7 @@ const CollectionsSidebar: React.FC<CollectionsSidebarProps> = ({
               >
                 {collection.Name}
               </button>
-              <div className="relative" ref={menuRef}>
+              <div className="relative collection-menu">
                 <button
                   onClick={() => setShowMenu(showMenu === collection.Id ? null : collection.Id)}
                   className="p-1 text-gray-400 hover:text-gray-600 opacity-0 group-hover:opacity-100"
@@ -291,7 +303,9 @@ const CollectionsSidebar: React.FC<CollectionsSidebarProps> = ({
                         Edit Collection
                       </button>
                       <button
-                        onClick={() => handleAddRequest(collection.Id)}
+                        onClick={() => {
+                          handleAddRequest(collection.Id)
+                        }}
                         className="w-full px-4 py-2 text-sm text-left text-gray-700 hover:bg-gray-100 flex items-center gap-2"
                       >
                         <Plus size={14} />
@@ -409,8 +423,9 @@ const CollectionsSidebar: React.FC<CollectionsSidebarProps> = ({
           onClose={() => setShowRequestModal(false)}
           onSave={handleSaveRequest}
           currentRequest={currentRequest}
-          collections={collections}
-          onCollectionCreate={onCollectionCreate}
+          collections={localCollections}
+          // onCollectionCreate={onCollectionCreate}
+          onCollectionCreate={onSaveCollection}
           collectionId={selectedCollectionForRequest}
         />
       )}

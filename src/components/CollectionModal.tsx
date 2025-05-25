@@ -35,16 +35,23 @@ const CollectionModal: React.FC<CollectionModalProps> = ({
     }
   }, [collection]);
 
-  // useEffect(() => {
-  //   if (isOpen) {
-  //     setName(collection?.name || '');
-  //     setDescription(collection?.description || '');
-  //   }
-  // }, [isOpen, collection]);
-
   if (!isOpen) return null;
 
   const handleSave = async () => {
+    if(collection) {
+      const response = await collectionService.updateCollection({
+        name:name,
+        id:collection.Id
+      });
+      showSnackbar(response.message, 'success');
+       onSaveCollection({
+        ...collection,
+        Name: name,
+      });
+      onClose();
+      return;
+    }
+
     const response = await collectionService.addCollection({
       name:name,
       isImportant:true,
