@@ -13,7 +13,8 @@ import {
   Users,
   Megaphone,
   BarChart,
-  Zap
+  Zap,
+  Layers
 } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import { WorkSpace, workspaceService } from '../../shared/services/workspaceService';
@@ -182,6 +183,14 @@ const Sidebar: React.FC<SidebarProps> = ({ isExpanded, toggleSidebar }) => {
             active={location.pathname === '/request-chain'}
           />
           <SidebarItem 
+            icon={Layers} 
+            label="Test Suites" 
+            isExpanded={isExpanded} 
+            hasSubmenu={true} 
+            path="/test-suites"
+            active={location.pathname === '/test-suites'}
+          />
+          <SidebarItem 
             icon={Inbox} 
             label="Datasources" 
             isExpanded={isExpanded} 
@@ -190,7 +199,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isExpanded, toggleSidebar }) => {
             icon={Users} 
             label="Schedules" 
             isExpanded={isExpanded} 
-            hasSubmenu={true} 
           />
           <SidebarItem 
             icon={Megaphone} 
@@ -211,6 +219,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isExpanded, toggleSidebar }) => {
             icon={Settings} 
             label="Settings" 
             isExpanded={isExpanded} 
+            path="/setting"
+            active={location.pathname === '/setting'}
           />
         </div>
       </div>

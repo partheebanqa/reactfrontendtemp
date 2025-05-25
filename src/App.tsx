@@ -23,6 +23,9 @@ import PrivacyPage from "./components/auth/PrivacyPolicy";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./utils/queryClient";
 import { WorkspaceProvider } from "./context/WorkspaceContext";
+import Settings from "./components/settings/Settings";
+import TestSuites from "./components/testsuites/TestSuites";
+import CreateTestSuite from "./components/testsuites/CreateTestSuite";
 
 function App() {
   return (
@@ -48,6 +51,8 @@ function App() {
                         <Route path="/dashboard" element={<Dashboard />} />
                         <Route path="/api-test" element={<SingleRequest/>} />
                         <Route path="/request-chain" element={<ChainRequestComponent/>} />
+                        <Route path="/test-suites" element={<TestSuites />}/>
+                        <Route path="test-suites/create" element={<CreateTestSuite />} />
                         <Route path="/settings" element={<AccountSettingsPage />}>
                           <Route index element={<Navigate to="profile" replace />} />
                           <Route path="profile" element={<AccountProfile />} />
@@ -55,6 +60,7 @@ function App() {
                           <Route path="preferences" element={<AccountPreferences />} />
                           <Route path="billing" element={<AccountBilling />} />
                         </Route>
+                        <Route path="/setting" element={<Settings/>}></Route>
                       </Route>
                     </Routes>
                   </QueryClientProvider>
