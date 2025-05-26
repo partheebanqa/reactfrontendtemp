@@ -50,13 +50,28 @@ const CollectionModal: React.FC<CollectionModalProps> = ({
       });
       onClose();
       return;
+    }else {
+        const response = await collectionService.addCollection({
+        name:name,
+        isImportant:true,
+        workspaceId:selectedWorkspaceId
+      });
+
+      const newCollection : CollectionList = {
+        Id:response.collectionId,
+        CreatedAt:String(new Date()),
+        Name:name,
+        IsImportant:false,
+        UpdatedAt:String(new Date()),
+        WorkspaceId:selectedWorkspaceId
+      }
+
+      onSaveCollection(newCollection);
+      showSnackbar(response.message, 'success');
+      onClose();
     }
 
-    const response = await collectionService.addCollection({
-      name:name,
-      isImportant:true,
-      workspaceId:selectedWorkspaceId
-    });
+    
     // const newCollection: Collection = {
     //   id: collection?.id || uuidv4(),
     //   name,
@@ -78,18 +93,7 @@ const CollectionModal: React.FC<CollectionModalProps> = ({
     //     }
     //   ]
     // };
-    const newCollection : CollectionList = {
-      Id:response.collectionId,
-      CreatedAt:String(new Date()),
-      Name:name,
-      IsImportant:false,
-      UpdatedAt:String(new Date()),
-      WorkspaceId:selectedWorkspaceId
-    }
-
-    onSaveCollection(newCollection);
-    showSnackbar(response.message, 'success');
-    onClose();
+    
   };
 
   return (

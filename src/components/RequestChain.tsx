@@ -597,20 +597,6 @@ const RequestChain: React.FC<RequestChainProps> = ({
                                     placeholder="Enter URL"
                                   />
                                 </div>
-                                {index > 0 && (
-                                  <select
-                                    multiple
-                                    value={request.dependsOn || []}
-                                    onChange={(e) => updateRequest(request.id, {
-                                      dependsOn: Array.from(e.target.selectedOptions, option => option.value)
-                                    })}
-                                    className="px-3 py-2 border border-gray-200 rounded"
-                                  >
-                                    {requests.slice(0, index).map(prev => (
-                                      <option key={prev.id} value={prev.id}>{prev.name}</option>
-                                    ))}
-                                  </select>
-                                )}
                               </div>
 
                               <RequestChainTabs
