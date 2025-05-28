@@ -113,7 +113,7 @@ const RequestPanel: React.FC<RequestPanelProps> = ({
             onChange={(e) => setRequest({ ...request, url: e.target.value })}
           />
           <div className="flex items-center gap-2">
-            <label className="flex items-center gap-2 text-sm">
+            {/* <label className="flex items-center gap-2 text-sm">
               <input
                 type="checkbox"
                 checked={request.isGraphQL}
@@ -121,7 +121,7 @@ const RequestPanel: React.FC<RequestPanelProps> = ({
                 className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
               />
               GraphQL
-            </label>
+            </label> */}
             <button
               className="bg-blue-500 text-white px-4 py-2 rounded-md flex items-center space-x-2 hover:bg-blue-600"
               onClick={onSend}

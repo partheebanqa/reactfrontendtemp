@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { ChevronDown } from 'lucide-react';
+import Footer from '../../layouts/Footer/Footer';
 
 const HomePage = () => {
   return (
@@ -50,7 +51,7 @@ const HomePage = () => {
       </nav>
 
       {/* Hero Section */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 h-[calc(100vh-14.5rem)]">
         <div className="text-center">
           <h1 className="text-6xl font-bold text-gray-900 mb-8">
             Test the API's<br />without limits
@@ -70,6 +71,10 @@ const HomePage = () => {
             </p>
           </div>
         </div>
+      </div>
+
+      <div>
+        <Footer/>
       </div>
     </div>
   );

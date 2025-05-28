@@ -52,7 +52,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isExpanded, toggleSidebar }) => {
   return (
     <div 
       className={`
-        bg-sidebar h-[calc(100vh-9.5rem)] flex flex-col justify-between transition-all duration-300 ease-in-out relative
+        bg-sidebar h-[calc(100vh-1.5rem)] flex flex-col justify-between transition-all duration-300 ease-in-out relative
         ${isExpanded ? 'w-64' : 'w-16'}
       `}
     >

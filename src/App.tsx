@@ -26,6 +26,9 @@ import { WorkspaceProvider } from "./context/WorkspaceContext";
 import Settings from "./components/settings/Settings";
 import TestSuites from "./components/testsuites/TestSuites";
 import CreateTestSuite from "./components/testsuites/CreateTestSuite";
+import RequestBuilderPage from "./components/singlerequest/RequestBuilderPage";
+import { RequestProvider } from "./context/RequestContext";
+import { SchemaProvider } from "./context/SchemaContext";
 
 function App() {
   return (
@@ -35,6 +38,8 @@ function App() {
           <SnackbarProvider>
             <ApiProvider>
               <WorkspaceProvider>
+                <SchemaProvider>
+                <RequestProvider>
                 <NotificationProvider userId={1}>
                   <QueryClientProvider client={queryClient}>
                     <Routes>
@@ -49,7 +54,8 @@ function App() {
                       {/* Protected Routes */}
                       <Route element={<MainLayout />}>
                         <Route path="/dashboard" element={<Dashboard />} />
-                        <Route path="/api-test" element={<SingleRequest/>} />
+                        {/* <Route path="/api-test" element={<SingleRequest/>} /> */}
+                        <Route path="/api-test" element={<RequestBuilderPage/>} />
                         <Route path="/request-chain" element={<ChainRequestComponent/>} />
                         <Route path="/test-suites" element={<TestSuites />}/>
                         <Route path="test-suites/create" element={<CreateTestSuite />} />
@@ -65,6 +71,8 @@ function App() {
                     </Routes>
                   </QueryClientProvider>
                 </NotificationProvider>
+                </RequestProvider>
+                </SchemaProvider>
               </WorkspaceProvider>
             </ApiProvider>
           </SnackbarProvider>
