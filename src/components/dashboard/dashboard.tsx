@@ -34,7 +34,7 @@ export default function Dashboard() {
   ];
 
   return (
-    <div className="container py-6 px-4">
+    <div className="py-6 px-4">
       <div className="mb-8 space-y-2">
         <h1 className="text-3xl font-bold">Dashboard</h1>
         <p className="text-muted-foreground">
