@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Plus, MoreVertical, Upload, FolderTree, Trash2, Edit, Move } from 'lucide-react';
+import { Plus, MoreVertical, Upload, FolderTree, Trash2, Edit, Move, PlusIcon, Folder, PencilIcon, Copy, Download } from 'lucide-react';
 import { Collection, CollectionRequest, Request } from '../types';
 import CollectionModal from './CollectionModal';
 import FolderModal from './FolderModal';
@@ -265,7 +265,8 @@ const CollectionsSidebar: React.FC<CollectionsSidebarProps> = ({
       </div>
 
       <div className="flex-1 overflow-auto p-2">
-        {localCollections?.map(collection => (
+        {localCollections?.length > 0 ? (
+        localCollections?.map(collection => (
           <div key={collection.Id} className="mb-2">
             <div className="flex items-center group">
               <button
@@ -283,45 +284,61 @@ const CollectionsSidebar: React.FC<CollectionsSidebarProps> = ({
               <div className="relative collection-menu">
                 <button
                   onClick={() => setShowMenu(showMenu === collection.Id ? null : collection.Id)}
-                  className="p-1 text-gray-400 hover:text-gray-600 opacity-0 group-hover:opacity-100"
+                  className="p-1 text-gray-400 hover:text-gray-600"
                 >
                   <MoreVertical size={16} />
                 </button>
                 {showMenu === collection.Id && (
-                  <div className="absolute right-0 mt-1 w-48 rounded-md shadow-lg z-10 border border-gray-200 bg-white">
-                    <div className="py-1">
-                      <button
-                        onClick={() => {
+                  <div className="absolute right-0 mt-1 w-44 bg-white shadow-sm rounded border z-[100]">
+                    <div
+                      className="px-3 py-2 flex items-center hover:bg-gray-100 cursor-pointer"
+                       onClick={() => {
+                          handleAddRequest(collection.Id)
+                        }}
+                    >
+                      <PlusIcon size={12} className="text-gray-500" />
+                      <span className="ml-2 text-sm">Add Request</span>
+                    </div>
+                    <div
+                      className="px-3 py-2 flex items-center hover:bg-gray-100 cursor-pointer"
+                    >
+                      <Folder size={12} className="text-gray-500" />
+                      <span className="ml-2 text-sm">Add Folder</span>
+                    </div>
+                    <div
+                      className="px-3 py-2 flex items-center hover:bg-gray-100 cursor-pointer"
+                       onClick={() => {
                           // setSelectedCollection(collection);
                           editLocalCollection(collection)
                           setShowCollectionModal(true);
                           setShowMenu(null);
                         }}
-                        className="w-full px-4 py-2 text-sm text-left text-gray-700 hover:bg-gray-100 flex items-center gap-2"
-                      >
-                        <Edit size={14} />
-                        Edit Collection
-                      </button>
-                      <button
-                        onClick={() => {
-                          handleAddRequest(collection.Id)
-                        }}
-                        className="w-full px-4 py-2 text-sm text-left text-gray-700 hover:bg-gray-100 flex items-center gap-2"
-                      >
-                        <Plus size={14} />
-                        Add Request
-                      </button>
-                      <button
-                        onClick={() => {
+                    >
+                      <PencilIcon size={12} className="text-gray-500" />
+                      <span className="ml-2 text-sm">Edit</span>
+                    </div>
+                    <div
+                      className="px-3 py-2 flex items-center hover:bg-gray-100 cursor-pointer"
+                    >
+                      <Copy size={12} className="text-gray-500" />
+                      <span className="ml-2 text-sm">Duplicate</span>
+                    </div>
+                    <div
+                      className="px-3 py-2 flex items-center hover:bg-gray-100 cursor-pointer"
+                    >
+                      <Download size={12} className="text-gray-500" />
+                      <span className="ml-2 text-sm">Export</span>
+                    </div>
+                    <div
+                      className="px-3 py-2 flex items-center hover:bg-gray-100 cursor-pointer"
+                      onClick={() => {
                           // onCollectionDelete(collection.Id);
                           deleteCollections(collection.Id)
                           setShowMenu(null);
                         }}
-                        className="w-full px-4 py-2 text-sm text-left text-red-600 hover:bg-red-50 flex items-center gap-2"
-                      >
-                        <Trash2 size={14} />
-                          Delete Collection
-                      </button>
+                    >
+                      <Trash2 size={12} className="text-red-500" />
+                      <span className="ml-2 text-sm">Delete</span>
                     </div>
                   </div>
                 )}
@@ -378,7 +395,25 @@ const CollectionsSidebar: React.FC<CollectionsSidebarProps> = ({
               </div>
             )} */}
           </div>
-        ))}
+        ))
+        ) : (
+          <div className="p-3 text-center text-gray-500">
+            <p>No collections yet</p>
+            <button
+              className="mb-2 inline-flex items-center px-3 py-1.5 text-sm border border-blue-500 text-blue-500 rounded hover:bg-blue-50"
+              onClick={() => setShowCollectionModal(true)}
+            >
+              <Plus className="mr-1 w-4 h-4" /> Create Collection
+            </button>
+            <br />
+            <button
+              className="inline-flex items-center px-3 py-1.5 text-sm border border-gray-400 text-gray-700 rounded hover:bg-gray-100"
+              onClick={onImport}
+            >
+              <Upload className="mr-1 w-4 h-4" /> Import Collection
+            </button>
+          </div>
+        )}
       </div>
 
       {/* prev */}

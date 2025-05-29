@@ -335,7 +335,7 @@ function ChainRequestComponent() {
   return (
         <div className="h-full">
             <div className="flex bg-gray-50 overflow-y-auto h-full">
-                <CollectionsSidebar
+                {/* <CollectionsSidebar
                   collections={collections}
                   onCollectionCreate={handleCollectionCreate}
                   onCollectionUpdate={handleCollectionUpdate}
@@ -343,7 +343,7 @@ function ChainRequestComponent() {
                   onRequestSelect={handleRequestSelect}
                   onImport={() => setShowImportModal(true)}
                   currentRequest={activeRequest}
-                />
+                /> */}
 
                 <div className="flex-1 overflow-auto p-4">
                     <RequestChain
