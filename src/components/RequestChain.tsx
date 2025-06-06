@@ -384,365 +384,357 @@ const RequestChain: React.FC<RequestChainProps> = ({
 
   return (
     <div>
-    <div className="mt-3 sm:mt-0 mb-4 rounded-md">
-      <Link
-        to="/request-chain/create"
-        className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-500 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-      >
-        <Plus className="h-4 w-4 mr-2" />
-        Create Request Chain
-      </Link>
-    </div>
-<div className="bg-white rounded-lg shadow mb-4">
-      <div className="p-4 border-b border-gray-200">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Request Chain</h2>
-          <div className="flex space-x-2">
-            <button
-              onClick={() => setShowVariableTable(!showVariableTable)}
-              className={`px-3 py-1.5 text-sm rounded-md flex items-center gap-1 ${
-                showVariableTable 
-                  ? 'bg-blue-600 text-white hover:bg-blue-700'
-                  : 'bg-blue-50 text-blue-600 hover:bg-blue-100'
-              }`}
-            >
-              <Table size={16} />
-              Variables Table
-            </button>
-            <button
-              onClick={() => setShowCollectionSelector(true)}
-              className="px-3 py-1.5 text-sm bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100 flex items-center gap-1"
-            >
-              <FolderTree size={16} />
-              Import from Collections
-            </button>
-            <button
-              onClick={addRequest}
-              className="px-3 py-1.5 text-sm bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100 flex items-center gap-1"
-            >
-              <Plus size={16} />
-              Add Request
-            </button>
-            <button
-              onClick={executeChain}
-              disabled={requests.length === 0}
-              className="px-3 py-1.5 text-sm bg-green-50 text-green-600 rounded-md hover:bg-green-100 flex items-center gap-1"
-            >
-              <Play size={16} />
-              Execute Chain
-            </button>
+      <div className="bg-white rounded-lg shadow mb-4">
+        <div className="flex items-center justify-between pt-3 pl-2 pr-2">
+            {/* Left Side Buttons */}
+            <div className="flex space-x-2">
+              <button
+                onClick={() => setShowCollectionSelector(true)}
+                className="px-3 py-1.5 text-sm bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100 flex items-center gap-1"
+              >
+                <FolderTree size={16} />
+                Import from Collections
+              </button>
+              <button
+                onClick={addRequest}
+                className="px-3 py-1.5 text-sm bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100 flex items-center gap-1"
+              >
+                <Plus size={16} />
+                Add Request
+              </button>
+            </div>
+
+            {/* Right Side Buttons */}
+            <div className="flex space-x-2">
+              <button
+                onClick={() => setShowVariableTable(!showVariableTable)}
+                className={`px-3 py-1.5 text-sm rounded-md flex items-center gap-1 ${
+                  showVariableTable
+                    ? 'bg-blue-600 text-white hover:bg-blue-700'
+                    : 'bg-blue-50 text-blue-600 hover:bg-blue-100'
+                }`}
+              >
+                <Table size={16} />
+                Variables Table
+              </button>
+              <button
+                onClick={executeChain}
+                disabled={requests.length === 0}
+                className="px-3 py-1.5 text-sm bg-green-50 text-green-600 rounded-md hover:bg-green-100 flex items-center gap-1 disabled:opacity-50"
+              >
+                <Play size={16} />
+                Execute Chain
+              </button>
+            </div>
           </div>
-        </div>
-      </div>
+        {showVariableTable && (
+          <div className="p-4 border-b border-gray-200">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      #
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Request
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Variable Name
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Path
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Value
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Status
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {Object.entries(variables).map(([varId, variable], index) => {
+                    const request = requests.find(r => r.id === variable.requestId);
+                    const response = responses.find(r => r.requestId === variable.requestId);
+                    const value = response?.data ? getValueFromPath(response.data, variable.path) : undefined;
 
-      {showVariableTable && (
-        <div className="p-4 border-b border-gray-200">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    #
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Request
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Variable Name
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Path
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Value
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {Object.entries(variables).map(([varId, variable], index) => {
-                  const request = requests.find(r => r.id === variable.requestId);
-                  const response = responses.find(r => r.requestId === variable.requestId);
-                  const value = response?.data ? getValueFromPath(response.data, variable.path) : undefined;
+                    return (
+                      <tr key={varId}>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {index + 1}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {request?.name}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          ${variable.name}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {variable.path}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {value !== undefined ? JSON.stringify(value) : ''}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {variable.isValid !== undefined && (
+                            variable.isValid ? (
+                              <CheckCircle2 className="text-green-500" size={18} />
+                            ) : (
+                              <XCircle className="text-red-500" size={18} />
+                            )
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
 
+        <DragDropContext onDragEnd={handleDragEnd}>
+          <Droppable droppableId="requests">
+            {(provided) => (
+              <div 
+                ref={provided.innerRef}
+                {...provided.droppableProps}
+                className="p-4"
+              >
+                {requests.map((request, index) => {
+                  const response = responses.find(res => res.requestId === request.id);
+                  
                   return (
-                    <tr key={varId}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {index + 1}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {request?.name}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        ${variable.name}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {variable.path}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {value !== undefined ? JSON.stringify(value) : ''}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {variable.isValid !== undefined && (
-                          variable.isValid ? (
-                            <CheckCircle2 className="text-green-500" size={18} />
-                          ) : (
-                            <XCircle className="text-red-500" size={18} />
-                          )
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      <DragDropContext onDragEnd={handleDragEnd}>
-        <Droppable droppableId="requests">
-          {(provided) => (
-            <div 
-              ref={provided.innerRef}
-              {...provided.droppableProps}
-              className="p-4"
-            >
-              {requests.map((request, index) => {
-                const response = responses.find(res => res.requestId === request.id);
-                
-                return (
-                  <Draggable 
-                    key={request.id} 
-                    draggableId={request.id} 
-                    index={index}
-                  >
-                    {(provided, snapshot) => (
-                      <div
-                        ref={provided.innerRef}
-                        {...provided.draggableProps}
-                        className={`mb-6 last:mb-0 border border-gray-200 rounded-lg ${
-                          snapshot.isDragging ? 'shadow-lg' : ''
-                        }`}
-                      >
-                        <div className="border-b border-gray-200">
-                          <div className="flex items-center">
-                            <div
-                              {...provided.dragHandleProps}
-                              className="px-4 py-4 cursor-grab hover:bg-gray-50 text-gray-400"
-                            >
-                              <GripVertical size={16} />
-                            </div>
-                            <button
-                              onClick={() => toggleRequestExpansion(request.id)}
-                              className="flex-1 flex items-center justify-between p-4 hover:bg-gray-50"
-                            >
-                              <div className="flex items-center gap-4">
-                                <ChevronRight
-                                  size={16}
-                                  className={`transform transition-transform ${
-                                    expandedRequests[request.id] ? 'rotate-90' : ''
-                                  }`}
-                                />
-                                <input
-                                  type="text"
-                                  value={request.name}
-                                  onChange={(e) => updateRequest(request.id, { name: e.target.value })}
-                                  className="text-sm font-medium px-2 py-1 border border-gray-200 rounded"
-                                  placeholder="Request Name"
-                                  onClick={(e) => e.stopPropagation()}
-                                />
-                                <div className="flex items-center gap-2">
-                                  <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs font-medium">
-                                    {request.method}
-                                  </span>
-                                  <span className="text-sm text-gray-600">{request.url}</span>
-                                </div>
+                    <Draggable 
+                      key={request.id} 
+                      draggableId={request.id} 
+                      index={index}
+                    >
+                      {(provided, snapshot) => (
+                        <div
+                          ref={provided.innerRef}
+                          {...provided.draggableProps}
+                          className={`mb-6 last:mb-0 border border-gray-200 rounded-lg ${
+                            snapshot.isDragging ? 'shadow-lg' : ''
+                          }`}
+                        >
+                          <div className="border-b border-gray-200">
+                            <div className="flex items-center">
+                              <div
+                                {...provided.dragHandleProps}
+                                className="px-4 py-4 cursor-grab hover:bg-gray-50 text-gray-400"
+                              >
+                                <GripVertical size={16} />
                               </div>
-                              {response && (
-                                <div className="flex items-center gap-2">
-                                  <div className={`flex items-center gap-1 ${getStatusColor(response.status)}`}>
-                                    {response.status >= 200 && response.status < 300 ? (
-                                      <CheckCircle2 size={16} />
-                                    ) : (
-                                      <XCircle size={16} />
-                                    )}
-                                    <span className="text-sm font-medium">{response.status}</span>
-                                  </div>
-                                  {response.responseTime && (
-                                    <span className="text-sm text-gray-500">
-                                      {response.responseTime.toFixed(2)}s
-                                    </span>
-                                  )}
-                                </div>
-                              )}
-                            </button>
-                            <button
-                              onClick={() => removeRequest(request.id)}
-                              className="px-4 text-red-500 hover:text-red-600"
-                            >
-                              <Trash2 size={16} />
-                            </button>
-                          </div>
-
-                          {expandedRequests[request.id] && (
-                            <div className="p-4 border-t border-gray-200">
-                              <div className="flex gap-4 mb-4">
-                                <select
-                                  value={request.method}
-                                  onChange={(e) => updateRequest(request.id, { method: e.target.value })}
-                                  className="text-sm bg-blue-50 text-blue-600 px-2 py-1 rounded"
-                                >
-                                  {['GET', 'POST', 'PUT', 'PATCH', 'DELETE'].map(method => (
-                                    <option key={method} value={method}>{method}</option>
-                                  ))}
-                                </select>
-                                <div className="flex-1">
+                              <button
+                                onClick={() => toggleRequestExpansion(request.id)}
+                                className="flex-1 flex items-center justify-between p-4 hover:bg-gray-50"
+                              >
+                                <div className="flex items-center gap-4">
+                                  <ChevronRight
+                                    size={16}
+                                    className={`transform transition-transform ${
+                                      expandedRequests[request.id] ? 'rotate-90' : ''
+                                    }`}
+                                  />
                                   <input
                                     type="text"
-                                    value={request.url}
-                                    onChange={(e) => updateRequest(request.id, { url: e.target.value })}
-                                    className="w-full px-3 py-2 border border-gray-200 rounded"
-                                    placeholder="Enter URL"
+                                    value={request.name}
+                                    onChange={(e) => updateRequest(request.id, { name: e.target.value })}
+                                    className="text-sm font-medium px-2 py-1 border border-gray-200 rounded"
+                                    placeholder="Request Name"
+                                    onClick={(e) => e.stopPropagation()}
                                   />
+                                  <div className="flex items-center gap-2">
+                                    <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs font-medium">
+                                      {request.method}
+                                    </span>
+                                    <span className="text-sm text-gray-600">{request.url}</span>
+                                  </div>
                                 </div>
-                              </div>
+                                {response && (
+                                  <div className="flex items-center gap-2">
+                                    <div className={`flex items-center gap-1 ${getStatusColor(response.status)}`}>
+                                      {response.status >= 200 && response.status < 300 ? (
+                                        <CheckCircle2 size={16} />
+                                      ) : (
+                                        <XCircle size={16} />
+                                      )}
+                                      <span className="text-sm font-medium">{response.status}</span>
+                                    </div>
+                                    {response.responseTime && (
+                                      <span className="text-sm text-gray-500">
+                                        {response.responseTime.toFixed(2)}s
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
+                              </button>
+                              <button
+                                onClick={() => removeRequest(request.id)}
+                                className="px-4 text-red-500 hover:text-red-600"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
 
-                              <RequestChainTabs
-                                request={request}
-                                onUpdate={(updates) => updateRequest(request.id, updates)}
-                                activeTab={activeRequestTabs[request.id] || 'params'}
-                                onTabChange={(tab) => setActiveRequestTabs(prev => ({ ...prev, [request.id]: tab }))}
-                                variables={variables}
-                              />
-
-                              <div className="mt-4 border-t border-gray-200 pt-4">
-                                <div className="flex items-center justify-between mb-2">
-                                  <h3 className="text-sm font-medium text-gray-700">Extract Variables</h3>
-                                  <button
-                                    onClick={() => addVariable(request.id)}
-                                    className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1"
-                                    disabled={!responses.find(res => res.requestId === request.id)?.data}
+                            {expandedRequests[request.id] && (
+                              <div className="p-4 border-t border-gray-200">
+                                <div className="flex gap-4 mb-4">
+                                  <select
+                                    value={request.method}
+                                    onChange={(e) => updateRequest(request.id, { method: e.target.value })}
+                                    className="text-sm bg-blue-50 text-blue-600 px-2 py-1 rounded"
                                   >
-                                    <PlusIcon size={14} />
-                                    Add Variable
-                                  </button>
+                                    {['GET', 'POST', 'PUT', 'PATCH', 'DELETE'].map(method => (
+                                      <option key={method} value={method}>{method}</option>
+                                    ))}
+                                  </select>
+                                  <div className="flex-1">
+                                    <input
+                                      type="text"
+                                      value={request.url}
+                                      onChange={(e) => updateRequest(request.id, { url: e.target.value })}
+                                      className="w-full px-3 py-2 border border-gray-200 rounded"
+                                      placeholder="Enter URL"
+                                    />
+                                  </div>
                                 </div>
-                                
-                                <div className="space-y-2">
-                                  {Object.entries(variables)
-                                    .filter(([_, value]) => value.requestId === request.id)
-                                    .map(([varId, value]) => (
-                                      <div key={varId} className="flex items-center gap-2 bg-gray-50 p-2 rounded">
-                                        <input
-                                          type="text"
-                                          value={value.name}
-                                          onChange={(e) => updateVariable(varId, { name: e.target.value })}
-                                          className="text-sm px-2 py-1 border border-gray-200 rounded w-32"
-                                          placeholder="Name"
-                                        />
-                                        <code className="text-sm bg-gray-100 px-2 py-1 rounded w-32 truncate">
-                                          ${value.name}
-                                        </code>
-                                        <div className="flex-1 relative" ref={pathSelectorRef}>
+
+                                <RequestChainTabs
+                                  request={request}
+                                  onUpdate={(updates) => updateRequest(request.id, updates)}
+                                  activeTab={activeRequestTabs[request.id] || 'params'}
+                                  onTabChange={(tab) => setActiveRequestTabs(prev => ({ ...prev, [request.id]: tab }))}
+                                  variables={variables}
+                                />
+
+                                <div className="mt-4 border-t border-gray-200 pt-4">
+                                  <div className="flex items-center justify-between mb-2">
+                                    <h3 className="text-sm font-medium text-gray-700">Extract Variables</h3>
+                                    <button
+                                      onClick={() => addVariable(request.id)}
+                                      className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1"
+                                      disabled={!responses.find(res => res.requestId === request.id)?.data}
+                                    >
+                                      <PlusIcon size={14} />
+                                      Add Variable
+                                    </button>
+                                  </div>
+                                  
+                                  <div className="space-y-2">
+                                    {Object.entries(variables)
+                                      .filter(([_, value]) => value.requestId === request.id)
+                                      .map(([varId, value]) => (
+                                        <div key={varId} className="flex items-center gap-2 bg-gray-50 p-2 rounded">
                                           <input
                                             type="text"
-                                            value={value.path}
-                                            onChange={(e) => updateVariable(varId, { path: e.target.value })}
-                                            onClick={() => togglePathSelector(varId)}
-                                            className="w-full text-sm px-2 py-1 border border-gray-200 rounded cursor-pointer"
-                                            placeholder="Click to select path"
-                                            readOnly
+                                            value={value.name}
+                                            onChange={(e) => updateVariable(varId, { name: e.target.value })}
+                                            className="text-sm px-2 py-1 border border-gray-200 rounded w-32"
+                                            placeholder="Name"
                                           />
-                                          {value.isSelecting && availablePaths[request.id] && (
-                                            <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-48 overflow-y-auto">
-                                              {availablePaths[request.id].map((path) => (
-                                                <button
-                                                  key={path}
-                                                  onClick={() => updateVariable(varId, { path })}
-                                                  className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center justify-between"
-                                                >
-                                                  <span>{path}</span>
-                                                  <span className="text-gray-500">
-                                                    {getValueFromPath(response?.data, path)} 
-                                                  </span>
-                                                </button>
-                                              ))}
-                                            </div>
-                                          )}
-                                        </div>
-                                        <div className="w-32 text-sm text-gray-500 truncate">
-                                          {getValueFromPath(response?.data, value.path)}
-                                        </div>
-                                        {value.isValid !== undefined && (
-                                          <div className="w-6">
-                                            {value.isValid ? (
-                                              <CheckCircle2 className="text-green-500" size={18} />
-                                            ) : (
-                                              <XCircle className="text-red-500" size={18} />
+                                          <code className="text-sm bg-gray-100 px-2 py-1 rounded w-32 truncate">
+                                            ${value.name}
+                                          </code>
+                                          <div className="flex-1 relative" ref={pathSelectorRef}>
+                                            <input
+                                              type="text"
+                                              value={value.path}
+                                              onChange={(e) => updateVariable(varId, { path: e.target.value })}
+                                              onClick={() => togglePathSelector(varId)}
+                                              className="w-full text-sm px-2 py-1 border border-gray-200 rounded cursor-pointer"
+                                              placeholder="Click to select path"
+                                              readOnly
+                                            />
+                                            {value.isSelecting && availablePaths[request.id] && (
+                                              <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-48 overflow-y-auto">
+                                                {availablePaths[request.id].map((path) => (
+                                                  <button
+                                                    key={path}
+                                                    onClick={() => updateVariable(varId, { path })}
+                                                    className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center justify-between"
+                                                  >
+                                                    <span>{path}</span>
+                                                    <span className="text-gray-500">
+                                                      {getValueFromPath(response?.data, path)} 
+                                                    </span>
+                                                  </button>
+                                                ))}
+                                              </div>
                                             )}
                                           </div>
-                                        )}
-                                        <button
-                                          onClick={() => removeVariable(varId)}
-                                          className="text-red-500 hover:text-red-600"
-                                        >
-                                          <Trash2 size={14} />
-                                        </button>
-                                      </div>
-                                    ))}
+                                          <div className="w-32 text-sm text-gray-500 truncate">
+                                            {getValueFromPath(response?.data, value.path)}
+                                          </div>
+                                          {value.isValid !== undefined && (
+                                            <div className="w-6">
+                                              {value.isValid ? (
+                                                <CheckCircle2 className="text-green-500" size={18} />
+                                              ) : (
+                                                <XCircle className="text-red-500" size={18} />
+                                              )}
+                                            </div>
+                                          )}
+                                          <button
+                                            onClick={() => removeVariable(varId)}
+                                            className="text-red-500 hover:text-red-600"
+                                          >
+                                            <Trash2 size={14} />
+                                          </button>
+                                        </div>
+                                      ))}
+                                  </div>
                                 </div>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-
-                        {response && (
-                          <div>
-                            <button
-                              onClick={() => toggleResponseExpansion(request.id)}
-                              className="flex items-center gap-2 w-full p-4 hover:bg-gray-50"
-                            >
-                              <ChevronRight
-                                size={16}
-                                className={`transform transition-transform ${
-                                  expandedResponses[request.id] ? 'rotate-90' : ''
-                                }`}
-                              />
-                              <span className="font-medium">Response</span>
-                              <div className={`flex items-center gap-1 ${getStatusColor(response.status)}`}>
-                                {response.status >= 200 && response.status < 300 ? (
-                                  <CheckCircle2 size={16} />
-                                ) : (
-                                  <XCircle size={16} />
-                                )}
-                                <span className="text-sm font-medium">{response.status}</span>
-                              </div>
-                            </button>
-                            {expandedResponses[request.id] && (
-                              <div className="p-4 border-t border-gray-200">
-                                <pre className="whitespace-pre-wrap bg-gray-50 p-4 rounded text-sm overflow-auto max-h-96">
-                                  {JSON.stringify(response.data, null, 2)}
-                                </pre>
                               </div>
                             )}
                           </div>
-                        )}
-                      </div>
-                    )}
-                  </Draggable>
-                );
-              })}
-              {provided.placeholder}
-            </div>
-          )}
-        </Droppable>
-      </DragDropContext>
 
-      {renderCollectionSelector()}
-    </div>
+                          {response && (
+                            <div>
+                              <button
+                                onClick={() => toggleResponseExpansion(request.id)}
+                                className="flex items-center gap-2 w-full p-4 hover:bg-gray-50"
+                              >
+                                <ChevronRight
+                                  size={16}
+                                  className={`transform transition-transform ${
+                                    expandedResponses[request.id] ? 'rotate-90' : ''
+                                  }`}
+                                />
+                                <span className="font-medium">Response</span>
+                                <div className={`flex items-center gap-1 ${getStatusColor(response.status)}`}>
+                                  {response.status >= 200 && response.status < 300 ? (
+                                    <CheckCircle2 size={16} />
+                                  ) : (
+                                    <XCircle size={16} />
+                                  )}
+                                  <span className="text-sm font-medium">{response.status}</span>
+                                </div>
+                              </button>
+                              {expandedResponses[request.id] && (
+                                <div className="p-4 border-t border-gray-200">
+                                  <pre className="whitespace-pre-wrap bg-gray-50 p-4 rounded text-sm overflow-auto max-h-96">
+                                    {JSON.stringify(response.data, null, 2)}
+                                  </pre>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </Draggable>
+                  );
+                })}
+                {provided.placeholder}
+              </div>
+            )}
+          </Droppable>
+        </DragDropContext>
+
+        {renderCollectionSelector()}
+      </div>
     </div>
   );
 };

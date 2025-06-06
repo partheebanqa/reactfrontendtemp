@@ -46,8 +46,7 @@ function SingleRequest() {
   const [showImportModal, setShowImportModal] = useState(false);
   //   const [showCollections, setShowCollections] = useState(false);
   const [showSaveRequestModal, setShowSaveRequestModal] = useState(false);
-  // const { requestData, responseData } = useRequest();
-  // const { executeRequest } = useRequest();
+   const { updateRequestData } = useRequest();
  
 
   useEffect(() => {
@@ -329,6 +328,7 @@ function SingleRequest() {
 
   const handleRequestSelect = (request: CollectionRequest) => {
     setActiveRequest(request.request);
+    updateRequestData({ url: request.request.url});
   };
 
   const handleImport = (importedCollections: Collection[]) => {

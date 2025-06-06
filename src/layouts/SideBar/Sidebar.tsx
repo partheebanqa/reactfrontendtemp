@@ -139,7 +139,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isExpanded, toggleSidebar }) => {
             icon={Layers} 
             label="Test Suites" 
             isExpanded={isExpanded} 
-            hasSubmenu={true} 
             path="/test-suites"
             active={location.pathname === '/test-suites'}
           />
@@ -167,6 +166,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isExpanded, toggleSidebar }) => {
             icon={Zap} 
             label="Data Management" 
             isExpanded={isExpanded} 
+            path="/data-management"
+            active={location.pathname === '/data-management'}
           />
           <SidebarItem 
             icon={Settings} 

@@ -5,7 +5,7 @@ import { ApiProvider } from "./context/ApiContext";
 import Dashboard from "./components/dashboard/dashboard";
 import MainLayout from "./layouts/MainLayout";
 import { ThemeProvider } from "./context/ThemeContext";
-import ChainRequestComponent from "./components/api-request/ChainRequest";
+// import ChainRequestComponent from "./components/api-request/ChainRequest";
 import HomePage from "./components/homepage/HomePage";
 import AccountSettingsPage from "./components/profile/AccountSettings";
 import LoginPage from "./components/auth/Login";
@@ -27,9 +27,11 @@ import TestSuites from "./components/testsuites/TestSuites";
 import CreateTestSuite from "./components/testsuites/CreateTestSuite";
 import { RequestProvider } from "./context/RequestContext";
 import { SchemaProvider } from "./context/SchemaContext";
-import RequestChainForm from "./components/api-request/RequestChainForm";
+import RequestChainForm from "./components/request-chain/RequestChainForm";
 import SingleRequest from "./components/single-request2/SingleRequest";
 import RequestBuilderPage from "./components/singlerequest/RequestBuilderPage";
+import DataManager from "./components/data-management/DataManager";
+import RequestChainList from "./components/request-chain/RequestChainList";
 
 function App() {
   return (
@@ -55,12 +57,13 @@ function App() {
                       {/* Protected Routes */}
                       <Route element={<MainLayout />}>
                         <Route path="/dashboard" element={<Dashboard />} />
-                        <Route path="/a" element={<RequestBuilderPage/>} />
+                        {/* <Route path="/a" element={<RequestBuilderPage/>} /> */}
                         <Route path="/api-test" element={<SingleRequest/>} />
-                        <Route path="/request-chain" element={<ChainRequestComponent/>}/>
+                        <Route path="/request-chain" element={<RequestChainList/>}/>
                         <Route path="/request-chain/create" element={<RequestChainForm />}/>
                         <Route path="/test-suites" element={<TestSuites />}/>
                         <Route path="test-suites/create" element={<CreateTestSuite />} />
+                        <Route path="data-management" element={<DataManager />} />
                         <Route path="/settings" element={<AccountSettingsPage />}>
                           <Route index element={<Navigate to="profile" replace />} />
                           <Route path="profile" element={<AccountProfile />} />

@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChainRequest, Collection, CollectionRequest } from '../../types';
 import { useRequest } from '../../context/RequestContext';
+import ChainRequestComponent from '../api-request/ChainRequest';
 
 interface RequestChainFormProps {
   initialName?: string;
@@ -240,7 +241,7 @@ const RequestChainForm: React.FC<RequestChainFormProps> = ({
             </div>
         </div>
       </form>
-      <div className="flex space-x-2 p-3">
+      {/* <div className="flex space-x-2 p-3">
             <button
               onClick={() => setShowCollectionSelector(true)}
               className="px-3 py-1.5 text-sm bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100 flex items-center gap-1"
@@ -255,9 +256,11 @@ const RequestChainForm: React.FC<RequestChainFormProps> = ({
               <Plus size={16} />
               Add Request
             </button>
+        </div> */}
+        <div className="space-x-2 p-3 w-full">
+            <ChainRequestComponent/>
         </div>
-
-      <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end">
+        <div className="px-6 py-4 border-t flex justify-end">
             <button
               type="button"
               onClick={() => navigate('/request-chain')}
