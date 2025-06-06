@@ -1,9 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import SidebarItem from './SidebarItem';
 import { 
   Home, 
   Settings,
-  Pencil,
   ChevronRight,
   Plus,
   DollarSign,
@@ -17,8 +16,6 @@ import {
   Layers
 } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
-import { WorkSpace, workspaceService } from '../../shared/services/workspaceService';
-import { useWorkspace } from '../../context/WorkspaceContext';
 
 interface SidebarProps {
   isExpanded: boolean;
@@ -27,27 +24,6 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ isExpanded, toggleSidebar }) => {
   const location = useLocation();
-  const [workspaces, setWorkspaces] = useState<WorkSpace[]>([]);
-  const { selectedWorkspaceId, createdWorkspace, setSelectedWorkspaceId } = useWorkspace(); 
-
-  useEffect(() => {
-  const fetchWorkspaces = async () => {
-    const data = await workspaceService.getWorkspaces();
-    setWorkspaces(data.workspaces);
-    if (data.workspaces.length > 0) {
-      setSelectedWorkspaceId(data.workspaces[0].Id);
-    }
-  };
-
-    fetchWorkspaces();
-  }, []);
-
-  useEffect(() => {
-    if (createdWorkspace) {
-      setWorkspaces(prev => [...prev, createdWorkspace]);
-    }
-  }, [createdWorkspace]);
-
 
   return (
     <div 
@@ -100,29 +76,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isExpanded, toggleSidebar }) => {
             </div>
           )}
         </div>
-
-        {/* Quick action button */}
-        {isExpanded ? (
-           <div className="p-4">
-            <select
-              className="text-sm border border-gray-200 rounded px-3 py-1.5 bg-[var(--bg-primary)] text-[var(--text-primary)] w-full"
-              value={selectedWorkspaceId}
-              onChange={(e) => setSelectedWorkspaceId(e.target.value)}
-            >
-              {workspaces.map((workspace) => (
-                <option key={workspace.Id} value={workspace.Id}>
-                  {workspace.Name}
-                </option>
-              ))}
-            </select>
-          </div>
-        ) : (
-          <div className="py-4 flex justify-center">
-            <button className="w-8 h-8 bg-gray-700 rounded-full flex items-center justify-center text-gray-400">
-              <Plus size={16} />
-            </button>
-          </div>
-        )}
         
         {/* Progress section */}
         {isExpanded && (

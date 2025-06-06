@@ -11,6 +11,7 @@ import {
   Collection,
   CollectionRequest,
 } from "../../types";
+import ImportModal from '../ImportModal';
 
 const RequestBuilderPage: React.FC = () => {
   const { requestData, responseData } = useRequest();
@@ -47,6 +48,10 @@ const RequestBuilderPage: React.FC = () => {
     const handleRequestSelect = (request: CollectionRequest) => {
         setActiveRequest(request.request);
       };
+
+    const handleImport = (importedCollections: Collection[]) => {
+    setCollections(prev => [...prev, ...importedCollections]);
+  };
   
   return (
     <div className="h-full">
@@ -60,6 +65,11 @@ const RequestBuilderPage: React.FC = () => {
           onImport={() => setShowImportModal(true)}
           currentRequest={activeRequest}
         />
+        <ImportModal
+          isOpen={showImportModal}
+          onClose={() => setShowImportModal(false)}
+          onImport={handleImport}/>
+          
         <div className="flex-1 overflow-auto p-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-6 px-4">
             <div className="md:col-span-2 space-y-6">

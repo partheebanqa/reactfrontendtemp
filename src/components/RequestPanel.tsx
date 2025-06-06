@@ -9,6 +9,11 @@ import AssertionResults from './AssertionResults';
 import GraphQLEditor from './GraphQLEditor';
 import TestGenerator from './TestGenerator';
 import Parametrization from './Parametrization';
+import SchemaPage from './singlerequest/SchemaPage';
+import ResponsePanel from './singlerequest/ResponsePanel';
+import { useRequest } from '../context/RequestContext';
+import { RequestMethod } from '../shared/types/request';
+import SchemaGeneratorPanel from './singlerequest/schema/SchemaGeneratorPanel';
 
 interface RequestPanelProps {
   request: Request;
@@ -18,7 +23,7 @@ interface RequestPanelProps {
   response?: any;
 }
 
-type TabType = 'params' | 'auth' | 'headers' | 'body' | 'tests' | 'ai_tests' | 'parametrization';
+type TabType = 'params' | 'auth' | 'headers' | 'body' | 'tests' | 'ai_tests' | 'parametrization' | 'schemas';
 
 const HTTP_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'];
 
@@ -31,6 +36,13 @@ const RequestPanel: React.FC<RequestPanelProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>('params');
   const [jsonError, setJsonError] = useState<string | null>(null);
+  const [showSchemaPanel, setShowSchemaPanel] = useState(false);
+  const { requestData, updateRequestData, executeRequest } = useRequest();
+
+  const sendRequest = () => {
+    executeRequest()
+  }
+
 
   const updateAuth = (auth: Request['auth']) => {
     setRequest({ ...request, auth });
@@ -43,6 +55,55 @@ const RequestPanel: React.FC<RequestPanelProps> = ({
   const updateParams = (params: Record<string, string>) => {
     setRequest({ ...request, params });
   };
+
+  const handleMethodChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        updateRequestData({ method: e.target.value as RequestMethod });
+      };
+    
+      const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        updateRequestData({ url: e.target.value });
+      };
+    
+      const handleAddParam = () => {
+        updateRequestData({
+          params: [...requestData.params, { key: '', value: '' }]
+        });
+      };
+    
+      const handleAddHeader = () => {
+        updateRequestData({
+          headers: [...requestData.headers, { key: '', value: '' }]
+        });
+      };
+    
+      const handleParamChange = (index: number, field: 'key' | 'value', value: string) => {
+        const newParams = [...requestData.params];
+        newParams[index][field] = value;
+        updateRequestData({ params: newParams });
+      };
+    
+      const handleHeaderChange = (index: number, field: 'key' | 'value', value: string) => {
+        const newHeaders = [...requestData.headers];
+        newHeaders[index][field] = value;
+        updateRequestData({ headers: newHeaders });
+      };
+    
+      const handleRemoveParam = (index: number) => {
+        const newParams = [...requestData.params];
+        newParams.splice(index, 1);
+        updateRequestData({ params: newParams });
+      };
+    
+      const handleRemoveHeader = (index: number) => {
+        const newHeaders = [...requestData.headers];
+        newHeaders.splice(index, 1);
+        updateRequestData({ headers: newHeaders });
+      };
+    
+      const handleBodyChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+        updateRequestData({ body: e.target.value });
+      };
+    
 
   const formatJson = () => {
     try {
@@ -89,9 +150,10 @@ const RequestPanel: React.FC<RequestPanelProps> = ({
             <select
               className="appearance-none bg-blue-50 text-blue-600 font-semibold px-4 py-2 rounded-md pr-8"
               value={request.method}
-              onChange={(e) =>
-                setRequest({ ...request, method: e.target.value })
-              }
+              onChange={(e) => {
+                handleMethodChange(e);
+                setRequest({ ...request, method: e.target.value });
+              }}
               disabled={request.isGraphQL}
             >
               {HTTP_METHODS.map((method) => (
@@ -110,7 +172,10 @@ const RequestPanel: React.FC<RequestPanelProps> = ({
             placeholder="Enter URL or paste text"
             className="flex-1 border border-gray-200 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
             value={request.url}
-            onChange={(e) => setRequest({ ...request, url: e.target.value })}
+            onChange={(e) => {
+              handleUrlChange(e);
+              setRequest({ ...request, url: e.target.value })
+            }}
           />
           <div className="flex items-center gap-2">
             {/* <label className="flex items-center gap-2 text-sm">
@@ -124,7 +189,10 @@ const RequestPanel: React.FC<RequestPanelProps> = ({
             </label> */}
             <button
               className="bg-blue-500 text-white px-4 py-2 rounded-md flex items-center space-x-2 hover:bg-blue-600"
-              onClick={onSend}
+               onClick={() => {
+                onSend();
+                sendRequest();
+              }}
               disabled={loading || !request.url || (request.method !== 'GET' && jsonError !== null)}
             >
               <Send size={16} />
@@ -193,6 +261,14 @@ const RequestPanel: React.FC<RequestPanelProps> = ({
             onClick={() => setActiveTab('parametrization')}
           >
             Parametrization
+          </button>
+          <button 
+            className={`px-4 py-2 text-sm border-b-2 ${
+              activeTab === 'schemas' ? 'border-blue-500' : 'border-transparent'
+            }`}
+            onClick={() => setActiveTab('schemas')}
+          >
+            Schemas
           </button>
         </div>
         <div className="p-4">
@@ -274,8 +350,47 @@ const RequestPanel: React.FC<RequestPanelProps> = ({
               onChange={updateGraphQL}
             />
           )}
+
+           {activeTab === 'schemas' && (
+              <div>
+                <SchemaPage/>
+              </div>
+            )}
         </div>
       </div>
+
+      {/* <ResponsePanel response={response} /> */}
+        {response && (
+        <div className="bg-white rounded-lg shadow-md p-4">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold">Response</h2>
+              <button 
+                className="px-3 py-1 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors"
+                onClick={() => setShowSchemaPanel(true)}
+              >
+                Generate Schema
+              </button>
+            </div>
+            <ResponsePanel />
+
+            {showSchemaPanel && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div className="bg-white rounded-lg shadow-lg max-w-2xl w-full relative">
+                  <button
+                    onClick={() => setShowSchemaPanel(false)}
+                    className="absolute top-2 right-2 text-gray-500 hover:text-gray-700 text-2xl"
+                  >
+                    ✕
+                  </button>
+                  <SchemaGeneratorPanel 
+                    response={response.data}
+                    onClose={() => setShowSchemaPanel(false)}
+                  />
+                </div>
+              </div>
+            )}
+        </div>
+      )}
     </div>
   );
 };

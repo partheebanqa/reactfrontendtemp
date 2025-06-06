@@ -1,10 +1,9 @@
 import { useState, useEffect } from "react";
-import RequestPanel from "../../components/RequestPanel";
-import ResponsePanel from "../../components/ResponsePanel";
-import RequestChain from "../../components/RequestChain";
-import CollectionsSidebar from "../../components/CollectionsSidebar";
-import ImportModal from "../../components/ImportModal";
-import RequestModal from "../../components/RequestModal";
+import RequestPanel from "../RequestPanel";
+import RequestChain from "../RequestChain";
+import CollectionsSidebar from "../CollectionsSidebar";
+import ImportModal from "../ImportModal";
+import RequestModal from "../RequestModal";
 import {
   Request,
   ChainRequest,
@@ -16,15 +15,14 @@ import {
 import { processVariables } from "../../utils/variableProcessor";
 import { validateResponse } from "../../utils/assertions";
 import { v4 as uuidv4 } from "uuid";
-import TopBar from "../../features/api-test/Topbar";
 import {
   createUrlWithParams,
   fetchWithTimeout,
-  mergeHeaders,
   prepareRequestBody,
   prepareRequestOptions,
   RequestError,
 } from "../../utils/requestDefaults";
+import { useRequest } from "../../context/RequestContext";
 
 const COLLECTIONS_STORAGE_KEY = "api_collections";
 
@@ -48,6 +46,9 @@ function SingleRequest() {
   const [showImportModal, setShowImportModal] = useState(false);
   //   const [showCollections, setShowCollections] = useState(false);
   const [showSaveRequestModal, setShowSaveRequestModal] = useState(false);
+  // const { requestData, responseData } = useRequest();
+  // const { executeRequest } = useRequest();
+ 
 
   useEffect(() => {
     const savedCollections = localStorage.getItem(COLLECTIONS_STORAGE_KEY);
@@ -177,6 +178,8 @@ function SingleRequest() {
 
       setResponse(errorResponse);
     }
+
+
     setLoading(false);
   };
 
@@ -326,7 +329,6 @@ function SingleRequest() {
 
   const handleRequestSelect = (request: CollectionRequest) => {
     setActiveRequest(request.request);
-    setActiveTab("single");
   };
 
   const handleImport = (importedCollections: Collection[]) => {
@@ -402,14 +404,16 @@ function SingleRequest() {
             loading={loading}
             response={response}
         />
-        <ResponsePanel response={response} />
+        
         </div>
         <ImportModal
             isOpen={showImportModal}
             onClose={() => setShowImportModal(false)}
             onImport={handleImport}
         />
+        
       </div>
+      
     </div>
   );
 }

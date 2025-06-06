@@ -1,16 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Plus, MoreVertical, Upload, FolderTree, Trash2, Edit, Move, PlusIcon, Folder, PencilIcon, Copy, Download } from 'lucide-react';
+import { Plus, MoreVertical, Upload, FolderTree, Trash2, Edit, Move } from 'lucide-react';
 import { Collection, CollectionRequest, Request } from '../types';
 import CollectionModal from './CollectionModal';
 import FolderModal from './FolderModal';
 import RequestModal from './RequestModal';
 import MoveRequestModal from './MoveRequestModal';
-import { useWorkspace } from '../context/WorkspaceContext';
-import { CollectionList, collectionService } from '../shared/services/collectionService';
-import { showSnackbar } from '../shared/services/snackbarService';
 
 interface CollectionsSidebarProps {
-  collections: any[];
+  collections: Collection[];
   onCollectionCreate: (collection: Collection) => void;
   onCollectionUpdate: (collection: Collection) => void;
   onCollectionDelete: (collectionId: string) => void;
@@ -40,11 +37,6 @@ const CollectionsSidebar: React.FC<CollectionsSidebarProps> = ({
   const [selectedFolderForRequest, setSelectedFolderForRequest] = useState<string | null>(null);
   const [selectedRequest, setSelectedRequest] = useState<CollectionRequest | null>(null);
 
-  //latest code
-  const { selectedWorkspaceId } = useWorkspace();
-  const [localCollections, setLocalCollections] = useState<CollectionList[]>([]);
-  const [localCollection, editLocalCollection] = useState<CollectionList>();
-  
   const toggleCollection = (collectionId: string) => {
     setExpandedCollections(prev => {
       const next = new Set(prev);
@@ -76,45 +68,8 @@ const CollectionsSidebar: React.FC<CollectionsSidebarProps> = ({
     setShowMenu(null);
   };
 
-  useEffect(() => {
-  const fetchCollections = async () => {
-    try {
-      const response = await collectionService.getCollections(selectedWorkspaceId);
-      setLocalCollections(response.collections);
-    } catch (err) {
-      console.error("Failed to fetch collections", err);
-    }
-  };
-
-  if (selectedWorkspaceId) {
-    fetchCollections();
-  }
-  }, [selectedWorkspaceId]);
-
-  const onSaveCollection = (collection:CollectionList) => {
-    const isCollection = localCollections.find((x) => x.Id == collection.Id);
-     if (isCollection) {
-      console.log(collection)
-       setLocalCollections(prev =>
-        prev.map(c =>
-          c.Id === collection.Id
-            ? { ...c, Name: collection.Name } // Only update the name
-            : c
-          )
-        );
-        return ;
-    }
-    setLocalCollections([...localCollections,collection ])
-  }
-
-  const deleteCollections = async (id:string) => {
-    const response = await collectionService.deleteCollections(id);
-    showSnackbar(response.message, 'success');
-    setLocalCollections(prev => prev.filter(localCollections => localCollections.Id !== id));
-  }
-
   const handleSaveRequest = (request: CollectionRequest) => {
-    const collection = localCollections.find(c => c.id === request.collectionId);
+    const collection = collections.find(c => c.id === request.collectionId);
     if (!collection) return;
 
     const updatedCollection = { ...collection };
@@ -223,25 +178,25 @@ const CollectionsSidebar: React.FC<CollectionsSidebarProps> = ({
     setSelectedRequest(null);
   };
 
+  const menuRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
-  const handleClickOutside = (event: MouseEvent) => {
-    const target = event.target as HTMLElement;
-    if (!target.closest('.collection-menu')) {
-      setShowMenu(null);
-    }
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setShowMenu(null); // close the menu
+      }
     };
-
+  
     if (showMenu) {
       document.addEventListener('mousedown', handleClickOutside);
     }
-
+  
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [showMenu]);
 
   return (
-    <div className="w-64 border-r border-gray-200 flex flex-col">
+    <div className="w-64 bg-white border-r border-gray-200 flex flex-col">
       <div className="p-4 border-b border-gray-200">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-lg font-semibold">Collections</h2>
@@ -265,87 +220,66 @@ const CollectionsSidebar: React.FC<CollectionsSidebarProps> = ({
       </div>
 
       <div className="flex-1 overflow-auto p-2">
-        {localCollections?.length > 0 ? (
-        localCollections?.map(collection => (
-          <div key={collection.Id} className="mb-2">
+        {collections.map(collection => (
+          <div key={collection.id} className="mb-2">
             <div className="flex items-center group">
               <button
-                onClick={() => toggleCollection(collection.Id)}
+                onClick={() => toggleCollection(collection.id)}
                 className="p-1 text-gray-500 hover:text-gray-700"
               >
                 <FolderTree size={16} />
               </button>
               <button
                 className="flex-1 px-2 py-1 text-sm text-left hover:bg-gray-100 rounded"
-                onClick={() => toggleCollection(collection.Id)}
+                onClick={() => toggleCollection(collection.id)}
               >
-                {collection.Name}
+                {collection.name}
               </button>
-              <div className="relative collection-menu">
+              <div className="relative" ref={menuRef}>
                 <button
-                  onClick={() => setShowMenu(showMenu === collection.Id ? null : collection.Id)}
-                  className="p-1 text-gray-400 hover:text-gray-600"
+                  onClick={() => setShowMenu(showMenu === collection.id ? null : collection.id)}
+                  className="p-1 text-gray-400 hover:text-gray-600 opacity-0 group-hover:opacity-100"
                 >
                   <MoreVertical size={16} />
                 </button>
-                {showMenu === collection.Id && (
-                  <div className="absolute right-0 mt-1 w-44 bg-white shadow-sm rounded border z-[100]">
-                    <div
-                      className="px-3 py-2 flex items-center hover:bg-gray-100 cursor-pointer"
-                       onClick={() => {
-                          handleAddRequest(collection.Id)
-                        }}
-                    >
-                      <PlusIcon size={12} className="text-gray-500" />
-                      <span className="ml-2 text-sm">Add Request</span>
-                    </div>
-                    <div
-                      className="px-3 py-2 flex items-center hover:bg-gray-100 cursor-pointer"
-                    >
-                      <Folder size={12} className="text-gray-500" />
-                      <span className="ml-2 text-sm">Add Folder</span>
-                    </div>
-                    <div
-                      className="px-3 py-2 flex items-center hover:bg-gray-100 cursor-pointer"
-                       onClick={() => {
-                          // setSelectedCollection(collection);
-                          editLocalCollection(collection)
+                {showMenu === collection.id && (
+                  <div className="absolute right-0 mt-1 w-48 bg-white rounded-md shadow-lg z-10 border border-gray-200">
+                    <div className="py-1">
+                      <button
+                        onClick={() => {
+                          setSelectedCollection(collection);
                           setShowCollectionModal(true);
                           setShowMenu(null);
                         }}
-                    >
-                      <PencilIcon size={12} className="text-gray-500" />
-                      <span className="ml-2 text-sm">Edit</span>
-                    </div>
-                    <div
-                      className="px-3 py-2 flex items-center hover:bg-gray-100 cursor-pointer"
-                    >
-                      <Copy size={12} className="text-gray-500" />
-                      <span className="ml-2 text-sm">Duplicate</span>
-                    </div>
-                    <div
-                      className="px-3 py-2 flex items-center hover:bg-gray-100 cursor-pointer"
-                    >
-                      <Download size={12} className="text-gray-500" />
-                      <span className="ml-2 text-sm">Export</span>
-                    </div>
-                    <div
-                      className="px-3 py-2 flex items-center hover:bg-gray-100 cursor-pointer"
-                      onClick={() => {
-                          // onCollectionDelete(collection.Id);
-                          deleteCollections(collection.Id)
+                        className="w-full px-4 py-2 text-sm text-left text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                      >
+                        <Edit size={14} />
+                        Edit Collection
+                      </button>
+                      <button
+                        onClick={() => handleAddRequest(collection.id)}
+                        className="w-full px-4 py-2 text-sm text-left text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                      >
+                        <Plus size={14} />
+                        Add Request
+                      </button>
+                      <button
+                        onClick={() => {
+                          onCollectionDelete(collection.id);
                           setShowMenu(null);
                         }}
-                    >
-                      <Trash2 size={12} className="text-red-500" />
-                      <span className="ml-2 text-sm">Delete</span>
+                        className="w-full px-4 py-2 text-sm text-left text-red-600 hover:bg-red-50 flex items-center gap-2"
+                      >
+                        <Trash2 size={14} />
+                        Delete Collection
+                      </button>
                     </div>
                   </div>
                 )}
               </div>
             </div>
 
-            {/* {expandedCollections.has(collection.id) && (
+            {expandedCollections.has(collection.id) && (
               <div className="ml-4 mt-1 space-y-1">
                 {collection.requests.map(request => (
                   <div key={request.id} className="flex items-center group">
@@ -363,7 +297,7 @@ const CollectionsSidebar: React.FC<CollectionsSidebarProps> = ({
                         <MoreVertical size={16} />
                       </button>
                       {showMenu === `request-${request.id}` && (
-                        <div className="absolute right-0 mt-1 w-48 rounded-md shadow-lg z-10 border border-gray-200">
+                        <div className="absolute right-0 mt-1 w-48 bg-white rounded-md shadow-lg z-10 border border-gray-200">
                           <div className="py-1">
                             <button
                               onClick={() => {
@@ -393,31 +327,12 @@ const CollectionsSidebar: React.FC<CollectionsSidebarProps> = ({
                   </div>
                 ))}
               </div>
-            )} */}
+            )}
           </div>
-        ))
-        ) : (
-          <div className="p-3 text-center text-gray-500">
-            <p>No collections yet</p>
-            <button
-              className="mb-2 inline-flex items-center px-3 py-1.5 text-sm border border-blue-500 text-blue-500 rounded hover:bg-blue-50"
-              onClick={() => setShowCollectionModal(true)}
-            >
-              <Plus className="mr-1 w-4 h-4" /> Create Collection
-            </button>
-            <br />
-            <button
-              className="inline-flex items-center px-3 py-1.5 text-sm border border-gray-400 text-gray-700 rounded hover:bg-gray-100"
-              onClick={onImport}
-            >
-              <Upload className="mr-1 w-4 h-4" /> Import Collection
-            </button>
-          </div>
-        )}
+        ))}
       </div>
 
-      {/* prev */}
-      {/* {showCollectionModal && (
+      {showCollectionModal && (
         <CollectionModal
           isOpen={showCollectionModal}
           onClose={() => {
@@ -435,21 +350,6 @@ const CollectionsSidebar: React.FC<CollectionsSidebarProps> = ({
           }}
           collection={selectedCollection || undefined}
         />
-      )} */}
-
-      {showCollectionModal && (
-        <CollectionModal
-          isOpen={showCollectionModal}
-          onClose={() => {
-            setShowCollectionModal(false);
-            setSelectedCollection(null);
-            editLocalCollection(undefined);
-          }}
-          onSaveCollection={(collection) => {
-            onSaveCollection(collection)
-          }}
-          collection={localCollection || undefined}
-        />
       )}
 
       {showRequestModal && (
@@ -458,14 +358,13 @@ const CollectionsSidebar: React.FC<CollectionsSidebarProps> = ({
           onClose={() => setShowRequestModal(false)}
           onSave={handleSaveRequest}
           currentRequest={currentRequest}
-          collections={localCollections}
-          // onCollectionCreate={onCollectionCreate}
-          onCollectionCreate={onSaveCollection}
+          collections={collections}
+          onCollectionCreate={onCollectionCreate}
           collectionId={selectedCollectionForRequest}
         />
       )}
 
-      {/* {showMoveModal && selectedRequest && (
+      {showMoveModal && selectedRequest && (
         <MoveRequestModal
           isOpen={showMoveModal}
           onClose={() => {
@@ -477,7 +376,7 @@ const CollectionsSidebar: React.FC<CollectionsSidebarProps> = ({
           currentCollectionId={selectedRequest.collectionId}
           currentFolderId={selectedRequest.folderId}
         />
-      )} */}
+      )}
     </div>
   );
 };

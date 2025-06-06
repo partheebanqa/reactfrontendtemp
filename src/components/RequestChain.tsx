@@ -6,6 +6,7 @@ import { getAllPaths, getValueFromPath } from '../utils/jsonPaths';
 import { processVariables } from '../utils/variableProcessor';
 import RequestChainTabs from './RequestChainTabs';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+import { Link } from 'react-router-dom';
 
 interface RequestChainProps {
   onExecuteChain: (requests: ChainRequest[]) => Promise<void>;
@@ -382,7 +383,17 @@ const RequestChain: React.FC<RequestChainProps> = ({
   };
 
   return (
-    <div className="bg-white rounded-lg shadow mb-4">
+    <div>
+    <div className="mt-3 sm:mt-0 mb-4 rounded-md">
+      <Link
+        to="/request-chain/create"
+        className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-500 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+      >
+        <Plus className="h-4 w-4 mr-2" />
+        Create Request Chain
+      </Link>
+    </div>
+<div className="bg-white rounded-lg shadow mb-4">
       <div className="p-4 border-b border-gray-200">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold">Request Chain</h2>
@@ -731,6 +742,7 @@ const RequestChain: React.FC<RequestChainProps> = ({
       </DragDropContext>
 
       {renderCollectionSelector()}
+    </div>
     </div>
   );
 };

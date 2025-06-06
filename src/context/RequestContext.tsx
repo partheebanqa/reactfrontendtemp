@@ -25,6 +25,7 @@ export const RequestProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [responseData, setResponseData] = useState<ResponseData | null>(null);
   
   const updateRequestData = useCallback((data: Partial<RequestData>) => {
+    console.log(data)
     setRequestData(prev => ({ ...prev, ...data }));
   }, []);
   
@@ -40,6 +41,7 @@ export const RequestProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return urlObj.toString();
   }, []);
   
+  console.log(requestData)
   const executeRequest = useCallback(async () => {
     try {
       const headers: Record<string, string> = {};
@@ -57,6 +59,7 @@ export const RequestProvider: React.FC<{ children: React.ReactNode }> = ({ child
         headers,
         body: requestData.method !== 'GET' && requestData.body ? requestData.body : undefined
       });
+
       
       const endTime = Date.now();
       
