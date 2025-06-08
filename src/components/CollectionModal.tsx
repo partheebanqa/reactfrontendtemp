@@ -44,18 +44,19 @@ const CollectionModal: React.FC<CollectionModalProps> = ({
         id:collection.Id
       });
       showSnackbar(response.message, 'success');
-       onSaveCollection({
+      onSaveCollection({
         ...collection,
         Name: name,
       });
       onClose();
       return;
-    }else {
-        const response = await collectionService.addCollection({
-        name:name,
-        isImportant:true,
-        workspaceId:selectedWorkspaceId
-      });
+    }
+    else {
+      const response = await collectionService.addCollection({
+      name:name,
+      isImportant:true,
+      workspaceId:selectedWorkspaceId
+    });
 
       const newCollection : CollectionList = {
         Id:response.collectionId,

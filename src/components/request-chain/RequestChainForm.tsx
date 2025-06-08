@@ -257,10 +257,10 @@ const RequestChainForm: React.FC<RequestChainFormProps> = ({
               Add Request
             </button>
         </div> */}
-        <div className="space-x-2 p-3 w-full">
+        <div className="space-x-2 w-full">
             <ChainRequestComponent/>
         </div>
-        <div className="px-6 py-4 border-t flex justify-end">
+        <div className="px-6 py-4 flex justify-end">
             <button
               type="button"
               onClick={() => navigate('/request-chain')}
@@ -270,7 +270,7 @@ const RequestChainForm: React.FC<RequestChainFormProps> = ({
             </button>
             <button
               type="submit"
-              className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-500 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+              className="inline-flex items-center px-4 py-2 rounded-md shadow-sm text-sm font-medium text-white bg-blue-500 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
             >
               <Save className="h-4 w-4 mr-2" />
               Save Request Chain

@@ -408,6 +408,7 @@ const RequestChain: React.FC<RequestChainProps> = ({
             <div className="flex space-x-2">
               <button
                 onClick={() => setShowVariableTable(!showVariableTable)}
+                disabled={requests.length === 0}
                 className={`px-3 py-1.5 text-sm rounded-md flex items-center gap-1 ${
                   showVariableTable
                     ? 'bg-blue-600 text-white hover:bg-blue-700'

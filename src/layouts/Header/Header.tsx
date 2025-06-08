@@ -14,26 +14,26 @@ interface HeaderProps {
 const Header: React.FC<HeaderProps> = ({ isExpanded, toggleSidebar }) => {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
-    const [workspaces, setWorkspaces] = useState<WorkSpace[]>([]);
-    const { selectedWorkspaceId, createdWorkspace, setSelectedWorkspaceId } = useWorkspace(); 
+  const [workspaces, setWorkspaces] = useState<WorkSpace[]>([]);
+  const { selectedWorkspaceId, createdWorkspace, setSelectedWorkspaceId } = useWorkspace(); 
   
-    useEffect(() => {
-    const fetchWorkspaces = async () => {
-      const data = await workspaceService.getWorkspaces();
-      setWorkspaces(data.workspaces);
-      if (data.workspaces.length > 0) {
-        setSelectedWorkspaceId(data.workspaces[0].Id);
-      }
-    };
+  useEffect(() => {
+  const fetchWorkspaces = async () => {
+    const data = await workspaceService.getWorkspaces();
+    setWorkspaces(data.workspaces);
+    if (data.workspaces.length > 0) {
+      setSelectedWorkspaceId(data.workspaces[0].Id);
+    }
+  };
   
-      fetchWorkspaces();
-    }, []);
+  fetchWorkspaces();
+  }, []);
   
-    useEffect(() => {
-      if (createdWorkspace) {
-        setWorkspaces(prev => [...prev, createdWorkspace]);
-      }
-    }, [createdWorkspace]);
+  useEffect(() => {
+    if (createdWorkspace) {
+      setWorkspaces(prev => [...prev, createdWorkspace]);
+    }
+  }, [createdWorkspace]);
 
   return (
     <div className="flex items-center justify-between h-14 px-4 header-theme border-b border-gray-200">
@@ -51,7 +51,7 @@ const Header: React.FC<HeaderProps> = ({ isExpanded, toggleSidebar }) => {
           {/* <span className="text-sm">doorstepshop</span>
           <ChevronDown size={16} className="ml-1" /> */}
           {isExpanded ? (
-           <div className="p-4">
+           <div className="w-48">
             <select
               className="text-sm border border-gray-200 rounded px-3 py-1.5 bg-[var(--bg-primary)] text-[var(--text-primary)] w-full"
               value={selectedWorkspaceId}

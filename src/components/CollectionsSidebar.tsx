@@ -1,10 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Plus, MoreVertical, Upload, FolderTree, Trash2, Edit, Move } from 'lucide-react';
+import { Plus, MoreVertical, Upload, FolderTree, Trash2, Edit, Move, StarIcon, Star, MoveRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Collection, CollectionRequest, Request } from '../types';
 import CollectionModal from './CollectionModal';
 import FolderModal from './FolderModal';
 import RequestModal from './RequestModal';
 import MoveRequestModal from './MoveRequestModal';
+import { useWorkspace } from '../context/WorkspaceContext';
+import { collectionService } from '../shared/services/collectionService';
 
 interface CollectionsSidebarProps {
   collections: Collection[];
@@ -36,6 +38,9 @@ const CollectionsSidebar: React.FC<CollectionsSidebarProps> = ({
   const [selectedCollectionForRequest, setSelectedCollectionForRequest] = useState<string>('');
   const [selectedFolderForRequest, setSelectedFolderForRequest] = useState<string | null>(null);
   const [selectedRequest, setSelectedRequest] = useState<CollectionRequest | null>(null);
+  const { selectedWorkspaceId } = useWorkspace(); 
+  const [activeSubMenu, setActiveSubMenu] = useState<string | null>(null);
+  
 
   const toggleCollection = (collectionId: string) => {
     setExpandedCollections(prev => {
@@ -60,6 +65,15 @@ const CollectionsSidebar: React.FC<CollectionsSidebarProps> = ({
       return next;
     });
   };
+
+  useEffect(() => {
+    if (!selectedWorkspaceId) return;
+    const fetchCollections = async () => {
+      const data = await collectionService.getCollections(selectedWorkspaceId);
+      console.log(data.collections)
+    }
+    fetchCollections();
+  }, [selectedWorkspaceId]);
 
   const handleAddRequest = (collectionId: string, folderId?: string) => {
     setSelectedCollectionForRequest(collectionId);
@@ -219,7 +233,7 @@ const CollectionsSidebar: React.FC<CollectionsSidebarProps> = ({
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto p-2">
+      <div className="flex-1 p-2">
         {collections.map(collection => (
           <div key={collection.id} className="mb-2">
             <div className="flex items-center group">
@@ -236,43 +250,83 @@ const CollectionsSidebar: React.FC<CollectionsSidebarProps> = ({
                 {collection.name}
               </button>
               <div className="relative" ref={menuRef}>
+                <button className='text-gray-400 hover:text-gray-600'>
+                  <Star size={16} fill={collection.isImportant ? 'currentColor' : 'none'}  />
+                </button>
                 <button
                   onClick={() => setShowMenu(showMenu === collection.id ? null : collection.id)}
-                  className="p-1 text-gray-400 hover:text-gray-600 opacity-0 group-hover:opacity-100"
+                  className="p-1 text-gray-400 hover:text-gray-600"
                 >
                   <MoreVertical size={16} />
                 </button>
                 {showMenu === collection.id && (
                   <div className="absolute right-0 mt-1 w-48 bg-white rounded-md shadow-lg z-10 border border-gray-200">
-                    <div className="py-1">
-                      <button
-                        onClick={() => {
-                          setSelectedCollection(collection);
-                          setShowCollectionModal(true);
-                          setShowMenu(null);
-                        }}
-                        className="w-full px-4 py-2 text-sm text-left text-gray-700 hover:bg-gray-100 flex items-center gap-2"
-                      >
-                        <Edit size={14} />
-                        Edit Collection
-                      </button>
+                    <div className="p-1">
                       <button
                         onClick={() => handleAddRequest(collection.id)}
-                        className="w-full px-4 py-2 text-sm text-left text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                        className="w-full px-4 py-2 text-sm text-left text-gray-70 flex items-center gap-2"
                       >
-                        <Plus size={14} />
+                        {/* <Plus size={14} /> */}
                         Add Request
+                      </button>
+                      <button className="w-full px-4 py-2 text-sm text-left text-gray-700 flex items-center gap-2">
+                        Add folder
+                      </button>
+                      <hr />
+                      <button className="w-full px-4 py-2 text-sm text-left text-gray-700 flex items-center gap-2">
+                        Share
+                      </button>
+                      <button className="w-full px-4 py-2 text-sm text-left text-gray-700 flex items-center gap-2">
+                        Move
+                      </button>
+                      <hr />
+                      <button
+                        // onClick={() => {
+                        //   setSelectedCollection(collection);
+                        //   setShowCollectionModal(true);
+                        //   setShowMenu(null);
+                        // }}
+                        className="w-full px-4 py-2 text-sm text-left text-gray-700 flex items-center gap-2"
+                      >
+                        {/* <Edit size={14} /> */}
+                        Rename
+                      </button>
+                      <button className="w-full px-4 py-2 text-sm text-left text-gray-700 flex items-center gap-2">
+                        Duplicate
                       </button>
                       <button
                         onClick={() => {
                           onCollectionDelete(collection.id);
                           setShowMenu(null);
                         }}
-                        className="w-full px-4 py-2 text-sm text-left text-red-600 hover:bg-red-50 flex items-center gap-2"
+                        className="w-full px-4 py-2 text-sm text-left text-red-600 flex items-center gap-2"
                       >
-                        <Trash2 size={14} />
-                        Delete Collection
+                        {/* <Trash2 size={14} /> */}
+                        Delete
                       </button>
+                      <hr />
+                      <div className="flex relative group">
+                        <button
+                          onClick={() => setActiveSubMenu(activeSubMenu === collection.id ? null : collection.id)}
+                          className="w-full px-4 py-2 text-sm text-left text-gray-700 flex items-center gap-2"
+                        >
+                          More
+                          <ChevronRight size={16} className="ml-auto mt-[2px]" />
+                        </button>
+
+                        {activeSubMenu === collection.id && (
+                          <div className="absolute left-full top-0 ml-1 w-40 bg-white border border-gray-200 rounded-md shadow z-20 p-2">
+                            <button className="w-full px-4 py-2 text-sm text-left text-gray-70">
+                              Generate Test
+                            </button>
+                            <hr />
+                            <button className="w-full px-4 py-2 text-sm text-left text-gray-70">
+                              Export
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                     
                     </div>
                   </div>
                 )}
@@ -347,6 +401,10 @@ const CollectionsSidebar: React.FC<CollectionsSidebarProps> = ({
             }
             setShowCollectionModal(false);
             setSelectedCollection(null);
+          }}
+          onSaveCollection={(collection) => {
+            // your logic to update state or UI
+            console.log('Saved:', collection);
           }}
           collection={selectedCollection || undefined}
         />

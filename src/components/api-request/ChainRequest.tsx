@@ -278,7 +278,6 @@ function ChainRequestComponent() {
 
   const handleRequestSelect = (request: CollectionRequest) => {
     setActiveRequest(request.request);
-    setActiveTab('single');
   };
 
   const handleImport = (importedCollections: Collection[]) => {
@@ -334,7 +333,7 @@ function ChainRequestComponent() {
 
   return (
         <div className="h-full">
-            <div className="flex bg-gray-50 overflow-y-auto h-full">
+            <div className="flex overflow-y-auto h-full">
                 {/* <CollectionsSidebar
                   collections={collections}
                   onCollectionCreate={handleCollectionCreate}
