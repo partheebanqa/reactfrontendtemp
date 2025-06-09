@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Send, ChevronDown, Code } from 'lucide-react';
+import { Send, ChevronDown, Code, Save } from 'lucide-react';
 import { Request } from '../types';
 import RequestParams from './RequestParams';
 import RequestHeaders from './RequestHeaders';
@@ -43,6 +43,10 @@ const RequestPanel: React.FC<RequestPanelProps> = ({
     executeRequest()
   }
 
+  const saveRequest = () => {
+    console.log(requestData)
+    console.log(request)
+  }
 
   const updateAuth = (auth: Request['auth']) => {
     setRequest({ ...request, auth });
@@ -57,25 +61,25 @@ const RequestPanel: React.FC<RequestPanelProps> = ({
   };
 
   const handleMethodChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        updateRequestData({ method: e.target.value as RequestMethod });
-      };
+    updateRequestData({ method: e.target.value as RequestMethod });
+  };
     
-      const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        updateRequestData({ url: e.target.value });
-      };
+  const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    updateRequestData({ url: e.target.value });
+  };
     
-      const handleAddParam = () => {
-        updateRequestData({
-          params: [...requestData.params, { key: '', value: '' }]
-        });
-      };
+  const handleAddParam = () => {
+    updateRequestData({
+      params: [...requestData.params, { key: '', value: '' }]
+    });
+  };
     
-      const handleAddHeader = () => {
-        updateRequestData({
-          headers: [...requestData.headers, { key: '', value: '' }]
-        });
-      };
-    
+  const handleAddHeader = () => {
+    updateRequestData({
+      headers: [...requestData.headers, { key: '', value: '' }]
+    });
+  };
+
       const handleParamChange = (index: number, field: 'key' | 'value', value: string) => {
         const newParams = [...requestData.params];
         newParams[index][field] = value;
@@ -100,9 +104,9 @@ const RequestPanel: React.FC<RequestPanelProps> = ({
         updateRequestData({ headers: newHeaders });
       };
     
-      const handleBodyChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-        updateRequestData({ body: e.target.value });
-      };
+  const handleBodyChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    updateRequestData({ body: e.target.value });
+  };
     
 
   const formatJson = () => {
@@ -198,6 +202,16 @@ const RequestPanel: React.FC<RequestPanelProps> = ({
               <Send size={16} />
               <span>Send</span>
             </button>
+             <button
+              className="bg-blue-500 text-white px-4 py-2 rounded-md flex items-center space-x-2 hover:bg-blue-600"
+              disabled={!request.url}
+              onClick={() => {
+                saveRequest();
+              }}
+            >
+              <Save size={16} />
+              <span>Save</span>
+            </button>
           </div>
         </div>
       </div>
@@ -228,7 +242,7 @@ const RequestPanel: React.FC<RequestPanelProps> = ({
           >
             Headers
           </button>
-          {!request.isGraphQL && request.method !== 'GET' && (
+          {/* {!request.isGraphQL && request.method !== 'GET' && ( */}
             <button 
               className={`px-4 py-2 text-sm border-b-2 ${
                 activeTab === 'body' ? 'border-blue-500' : 'border-transparent'
@@ -237,7 +251,7 @@ const RequestPanel: React.FC<RequestPanelProps> = ({
             >
               Body
             </button>
-          )}
+          {/* )} */}
           <button 
             className={`px-4 py-2 text-sm border-b-2 ${
               activeTab === 'tests' ? 'border-blue-500' : 'border-transparent'
@@ -290,7 +304,29 @@ const RequestPanel: React.FC<RequestPanelProps> = ({
               onChange={updateHeaders}
             />
           )}
-          {activeTab === 'body' && !request.isGraphQL && request.method !== 'GET' && (
+          {activeTab === 'body' && (
+            <div className="relative">
+                <textarea
+                  value={request.body}
+                  onChange={(e) => {
+                    updateBody(e.target.value);
+                    handleBodyChange(e);
+                  }}
+                  className={`w-full h-48 px-3 py-2 text-sm font-mono border rounded ${
+                    jsonError ? 'border-red-500' : 'border-gray-200'
+                  }`}
+                  placeholder="Enter JSON body"
+                  spellCheck={false}
+                />
+                {jsonError && (
+                  <div className="absolute bottom-2 right-2 text-sm text-red-500 px-2 py-1 rounded-md shadow">
+                    {jsonError}
+                  </div>
+                )}
+              </div>
+          )}
+
+          {/* {activeTab === 'body' && !request.isGraphQL && request.method !== 'GET' && (
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-medium text-gray-700">Request Body (JSON)</h3>
@@ -318,7 +354,7 @@ const RequestPanel: React.FC<RequestPanelProps> = ({
                 )}
               </div>
             </div>
-          )}
+          )} */}
           {activeTab === 'tests' && (
             <AssertionsPanel
               assertions={request.assertions || {}}

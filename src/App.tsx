@@ -28,8 +28,7 @@ import CreateTestSuite from "./components/testsuites/CreateTestSuite";
 import { RequestProvider } from "./context/RequestContext";
 import { SchemaProvider } from "./context/SchemaContext";
 import RequestChainForm from "./components/request-chain/RequestChainForm";
-import SingleRequest from "./components/single-request2/SingleRequest";
-import RequestBuilderPage from "./components/singlerequest/RequestBuilderPage";
+import SingleRequest from "./components/singlerequest/SingleRequest";
 import DataManager from "./components/data-management/DataManager";
 import RequestChainList from "./components/request-chain/RequestChainList";
 

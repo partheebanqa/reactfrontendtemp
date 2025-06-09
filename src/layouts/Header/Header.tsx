@@ -47,7 +47,7 @@ const Header: React.FC<HeaderProps> = ({ isExpanded, toggleSidebar }) => {
           </button>
         )}
         <div className="font-bold text-xl">WIX</div>
-        <div className="ml-4 flex items-center">
+        <div className="ml-60 flex items-center">
           {/* <span className="text-sm">doorstepshop</span>
           <ChevronDown size={16} className="ml-1" /> */}
           {isExpanded ? (

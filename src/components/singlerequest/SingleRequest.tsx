@@ -11,6 +11,7 @@ import {
   ChainResponse,
   Collection,
   CollectionRequest,
+  CollectionFolder,
 } from "../../types";
 import { processVariables } from "../../utils/variableProcessor";
 import { validateResponse } from "../../utils/assertions";

@@ -12,8 +12,8 @@ interface RequestModalProps {
   request?: CollectionRequest;
   currentRequest?: Request;
   collections?: any[];
-  // onCollectionCreate?: (collection: Collection) => void;
-  onCollectionCreate?: (collection: CollectionList) => void;
+  onCollectionCreate?: (collection: Collection) => void;
+  // onCollectionCreate?: (collection: CollectionList) => void;
   collectionId?: string; // Add this prop for pre-selecting collection
 }
 

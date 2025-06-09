@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import RequestChain from '../../components/RequestChain';
-import CollectionsSidebar from '../../components/CollectionsSidebar';
-import ImportModal from '../../components/ImportModal';
-import RequestModal from '../../components/RequestModal';
-import { Request, ChainRequest, Response, ChainResponse, Collection, CollectionRequest } from '../../types';
+import RequestChain from '../RequestChain';
+import CollectionsSidebar from '../CollectionsSidebar';
+import ImportModal from '../ImportModal';
+import RequestModal from '../RequestModal';
+import { Request, ChainRequest, Response, ChainResponse, Collection, CollectionRequest, CollectionFolder } from '../../types';
 import { processVariables } from '../../utils/variableProcessor';
 import { validateResponse } from '../../utils/assertions';
 import { v4 as uuidv4 } from 'uuid';
@@ -334,17 +334,7 @@ function ChainRequestComponent() {
   return (
         <div className="h-full">
             <div className="flex overflow-y-auto h-full">
-                {/* <CollectionsSidebar
-                  collections={collections}
-                  onCollectionCreate={handleCollectionCreate}
-                  onCollectionUpdate={handleCollectionUpdate}
-                  onCollectionDelete={handleCollectionDelete}
-                  onRequestSelect={handleRequestSelect}
-                  onImport={() => setShowImportModal(true)}
-                  currentRequest={activeRequest}
-                /> */}
-
-                <div className="flex-1 overflow-auto p-4">
+                <div className="flex-1 overflow-auto">
                     <RequestChain
                       onExecuteChain={executeChain}
                       responses={chainResponses}

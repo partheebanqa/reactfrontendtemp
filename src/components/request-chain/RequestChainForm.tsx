@@ -1,15 +1,12 @@
-import { FolderTree, Plus, Save, X } from 'lucide-react';
+import { Save} from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChainRequest, Collection, CollectionRequest } from '../../types';
-import { useRequest } from '../../context/RequestContext';
-import ChainRequestComponent from '../api-request/ChainRequest';
+import { Collection } from '../../types';
+import ChainRequestComponent from './ChainRequest';
 
 interface RequestChainFormProps {
   initialName?: string;
   initialDescription?: string;
-//   collections?: Collection[];
-//   onSubmit: (data: { name: string; description: string }) => void;
 }
 
 const COLLECTIONS_STORAGE_KEY = 'api_collections';
@@ -23,19 +20,16 @@ const RequestChainForm: React.FC<RequestChainFormProps> = ({
   const navigate = useNavigate();
   const [name, setName] = useState(initialName);
   const [description, setDescription] = useState(initialDescription);
-  const [requests, setRequests] = useState<ChainRequest[]>([]);
-  const [showCollectionSelector, setShowCollectionSelector] = useState(false);
-  const [expandedCollections, setExpandedCollections] = useState<Set<string>>(new Set());
-  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
   const [collections, setCollections] = useState<Collection[]>([]);
-  const [expandedRequests, setExpandedRequests] = useState<Record<string, boolean>>({});
-  const [activeRequestTabs, setActiveRequestTabs] = useState<Record<string, 'params' | 'auth' | 'headers' | 'body'>>({});
-   
   
-  
+  const handleCollectionsUpdate = (newCollections:any) => {
+    setCollections(newCollections);
+    console.log('Received from child:', newCollections);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('Saving with collections:', collections);
     // onSubmit({ name, description });
   };
 
@@ -46,158 +40,6 @@ const RequestChainForm: React.FC<RequestChainFormProps> = ({
         setCollections(JSON.parse(savedCollections));
     }
     }, []);
-
-  const toggleCollection = (collectionId: string) => {
-    setExpandedCollections(prev => {
-      const next = new Set(prev);
-      if (next.has(collectionId)) {
-        next.delete(collectionId);
-      } else {
-        next.add(collectionId);
-      }
-      return next;
-    });
-  };
-
-  const addRequest = () => {
-      const newRequest: ChainRequest = {
-        id: uuidv4(),
-        name: `Request ${requests.length + 1}`,
-        method: 'GET',
-        url: '',
-        headers: {},
-        params: {},
-        body: '',
-        variables: {},
-        dependsOn: []
-      };
-      setRequests([...requests, newRequest]);
-      setExpandedRequests(prev => ({ ...prev, [newRequest.id]: true }));
-      setActiveRequestTabs(prev => ({ ...prev, [newRequest.id]: 'params' }));
-    };
-
-    const handleRequestSelect = (request: CollectionRequest) => {
-      const chainRequest: ChainRequest = {
-        id: uuidv4(),
-        name: request.name,
-        method: request.request.method,
-        url: request.request.url,
-        headers: request.request.headers,
-        params: request.request.params,
-        body: request.request.body,
-        variables: {},
-        dependsOn: []
-      };
-  
-      setRequests([...requests, chainRequest]);
-      setShowCollectionSelector(false);
-    };
-
-    const toggleFolder = (folderId: string) => {
-    setExpandedFolders(prev => {
-      const next = new Set(prev);
-      if (next.has(folderId)) {
-        next.delete(folderId);
-      } else {
-        next.add(folderId);
-      }
-      return next;
-    });
-  };
-
-  const renderCollectionSelector = () => {
-      if (!showCollectionSelector) return null;
-  
-      return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
-            <div className="flex items-center justify-between p-4 border-b border-gray-200">
-              <h2 className="text-xl font-semibold">Import from Collections</h2>
-              <button
-                onClick={() => setShowCollectionSelector(false)}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                <X size={20} />
-              </button>
-            </div>
-  
-            <div className="flex-1 overflow-auto p-4">
-              {collections.map(collection => (
-                <div key={collection.id} className="mb-4">
-                  <div className="flex items-center group">
-                    <button
-                      onClick={() => toggleCollection(collection.id)}
-                      className="p-1 text-gray-500 hover:text-gray-700"
-                    >
-                      <FolderTree size={16} />
-                    </button>
-                    <button
-                      className="flex-1 px-2 py-1 text-sm text-left hover:bg-gray-100 rounded font-medium"
-                      onClick={() => toggleCollection(collection.id)}
-                    >
-                      {collection.name}
-                    </button>
-                  </div>
-  
-                  {expandedCollections.has(collection.id) && (
-                    <div className="ml-6 mt-2 space-y-2">
-                      {collection.requests.map(request => (
-                        <button
-                          key={request.id}
-                          onClick={() => handleRequestSelect(request)}
-                          className="w-full px-2 py-1 text-sm text-left hover:bg-gray-100 rounded flex items-center gap-2"
-                        >
-                          <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs">
-                            {request.request.method}
-                          </span>
-                          <span>{request.name}</span>
-                        </button>
-                      ))}
-  
-                      {collection.folders.map(folder => (
-                        <div key={folder.id}>
-                          <div className="flex items-center group">
-                            <button
-                              onClick={() => toggleFolder(folder.id)}
-                              className="p-1 text-gray-500 hover:text-gray-700"
-                            >
-                              <FolderTree size={16} />
-                            </button>
-                            <button
-                              className="flex-1 px-2 py-1 text-sm text-left hover:bg-gray-100 rounded"
-                              onClick={() => toggleFolder(folder.id)}
-                            >
-                              {folder.name}
-                            </button>
-                          </div>
-  
-                          {expandedFolders.has(folder.id) && (
-                            <div className="ml-6 mt-2 space-y-2">
-                              {folder.requests.map(request => (
-                                <button
-                                  key={request.id}
-                                  onClick={() => handleRequestSelect(request)}
-                                  className="w-full px-2 py-1 text-sm text-left hover:bg-gray-100 rounded flex items-center gap-2"
-                                >
-                                  <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs">
-                                    {request.request.method}
-                                  </span>
-                                  <span>{request.name}</span>
-                                </button>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      );
-    };
 
   return (
     <div className="space-y-6 py-6 px-4">
@@ -241,24 +83,8 @@ const RequestChainForm: React.FC<RequestChainFormProps> = ({
             </div>
         </div>
       </form>
-      {/* <div className="flex space-x-2 p-3">
-            <button
-              onClick={() => setShowCollectionSelector(true)}
-              className="px-3 py-1.5 text-sm bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100 flex items-center gap-1"
-            >
-              <FolderTree size={16} />
-              Import from Collections
-            </button>
-            <button
-              onClick={addRequest}
-              className="px-3 py-1.5 text-sm bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100 flex items-center gap-1"
-            >
-              <Plus size={16} />
-              Add Request
-            </button>
-        </div> */}
         <div className="space-x-2 w-full">
-            <ChainRequestComponent/>
+            <ChainRequestComponent onCollectionsChange={handleCollectionsUpdate}/>
         </div>
         <div className="px-6 py-4 flex justify-end">
             <button
@@ -276,8 +102,6 @@ const RequestChainForm: React.FC<RequestChainFormProps> = ({
               Save Request Chain
             </button>
           </div>
-
-          {renderCollectionSelector()}
     </div>
     
   );

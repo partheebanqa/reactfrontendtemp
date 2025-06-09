@@ -88,29 +88,30 @@ const CollectionsSidebar: React.FC<CollectionsSidebarProps> = ({
 
     const updatedCollection = { ...collection };
     
-    if (request.folderId) {
-      const updateFolders = (folders: CollectionFolder[]): CollectionFolder[] => {
-        return folders.map(f => {
-          if (f.id === request.folderId) {
-            return {
-              ...f,
-              requests: [...f.requests, request]
-            };
-          }
-          if (f.folders.length > 0) {
-            return {
-              ...f,
-              folders: updateFolders(f.folders)
-            };
-          }
-          return f;
-        });
-      };
+    // if (request.folderId) {
+    //   const updateFolders = (folders: CollectionFolder[]): CollectionFolder[] => {
+    //     return folders.map(f => {
+    //       if (f.id === request.folderId) {
+    //         return {
+    //           ...f,
+    //           requests: [...f.requests, request]
+    //         };
+    //       }
+    //       if (f.folders.length > 0) {
+    //         return {
+    //           ...f,
+    //           folders: updateFolders(f.folders)
+    //         };
+    //       }
+    //       return f;
+    //     });
+    //   };
 
-      updatedCollection.folders = updateFolders(updatedCollection.folders);
-    } else {
-      updatedCollection.requests = [...updatedCollection.requests, request];
-    }
+    //   updatedCollection.folders = updateFolders(updatedCollection.folders);
+    // } else {
+    //   updatedCollection.requests = [...updatedCollection.requests, request];
+    // }
+    updatedCollection.requests = [...updatedCollection.requests, request];
 
     onCollectionUpdate(updatedCollection);
     setShowRequestModal(false);
@@ -124,31 +125,34 @@ const CollectionsSidebar: React.FC<CollectionsSidebarProps> = ({
     if (!sourceCollection) return;
 
     const updatedSourceCollection = { ...sourceCollection };
-    if (selectedRequest.folderId) {
-      const removeFolderRequest = (folders: CollectionFolder[]): CollectionFolder[] => {
-        return folders.map(f => {
-          if (f.id === selectedRequest.folderId) {
-            return {
-              ...f,
-              requests: f.requests.filter(r => r.id !== selectedRequest.id)
-            };
-          }
-          if (f.folders.length > 0) {
-            return {
-              ...f,
-              folders: removeFolderRequest(f.folders)
-            };
-          }
-          return f;
-        });
-      };
-
-      updatedSourceCollection.folders = removeFolderRequest(updatedSourceCollection.folders);
-    } else {
-      updatedSourceCollection.requests = updatedSourceCollection.requests.filter(
+    updatedSourceCollection.requests = updatedSourceCollection.requests.filter(
         r => r.id !== selectedRequest.id
       );
-    }
+    // if (selectedRequest.folderId) {
+    //   const removeFolderRequest = (folders: CollectionFolder[]): CollectionFolder[] => {
+    //     return folders.map(f => {
+    //       if (f.id === selectedRequest.folderId) {
+    //         return {
+    //           ...f,
+    //           requests: f.requests.filter(r => r.id !== selectedRequest.id)
+    //         };
+    //       }
+    //       if (f.folders.length > 0) {
+    //         return {
+    //           ...f,
+    //           folders: removeFolderRequest(f.folders)
+    //         };
+    //       }
+    //       return f;
+    //     });
+    //   };
+
+    //   updatedSourceCollection.folders = removeFolderRequest(updatedSourceCollection.folders);
+    // } else {
+    //   updatedSourceCollection.requests = updatedSourceCollection.requests.filter(
+    //     r => r.id !== selectedRequest.id
+    //   );
+    // }
 
     onCollectionUpdate(updatedSourceCollection);
 
@@ -260,7 +264,7 @@ const CollectionsSidebar: React.FC<CollectionsSidebarProps> = ({
                   <MoreVertical size={16} />
                 </button>
                 {showMenu === collection.id && (
-                  <div className="absolute right-0 mt-1 w-48 bg-white rounded-md shadow-lg z-10 border border-gray-200">
+                  <div className="absolute mt-1 w-48 bg-white rounded-md shadow-lg z-10 border border-gray-200">
                     <div className="p-1">
                       <button
                         onClick={() => handleAddRequest(collection.id)}

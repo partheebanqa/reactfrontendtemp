@@ -20,7 +20,7 @@ export interface Request {
   };
   assertions?: ResponseAssertions;
 }
-
+  
 export interface ChainRequest extends Request {
   id: string;
   name: string;
