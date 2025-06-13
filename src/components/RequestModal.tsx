@@ -3,14 +3,13 @@ import { X, Save, Plus, FolderTree } from 'lucide-react';
 import { CollectionRequest, Request, Collection, CollectionFolder } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import CollectionModal from './CollectionModal';
-import { CollectionList } from '../shared/services/collectionService';
 
 interface RequestModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (request: CollectionRequest) => void;
   request?: CollectionRequest;
-  currentRequest?: Request;
+  currentRequest?: CollectionRequest;
   collections?: any[];
   onCollectionCreate?: (collection: Collection) => void;
   // onCollectionCreate?: (collection: CollectionList) => void;
@@ -64,26 +63,32 @@ const RequestModal: React.FC<RequestModalProps> = ({
       id: request?.id || uuidv4(),
       name,
       description,
-      request: request?.request || currentRequest || {
-        method: 'GET',
-        url: '',
-        headers: {},
-        params: {},
-        body: ''
-      },
       collectionId: selectedCollectionId, // Add this to track the collection
-      folderId: selectedFolderId || undefined, // Add this to track the folder
+      // folderId: selectedFolderId || undefined, // Add this to track the folder
       createdAt: request?.createdAt || new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
+      order: 0,
+      method: '',
+      bodyType: '',
+      authorizationType: '',
+      authorization: {
+        token: undefined
+      },
+      variables: {
+        userId: ''
+      },
+      createdBy: '',
+      url: ''
     };
 
-    onSave(newRequest);
+    console.log(newRequest)
+    // onSave(newRequest);
     onClose();
   };
 
-  const handleNewCollectionCreate = (collection: CollectionList) => {
+  const handleNewCollectionCreate = (collection: Collection) => {
     onCollectionCreate?.(collection);
-    setSelectedCollectionId(collection.Id);
+    setSelectedCollectionId(collection.id);
     setShowNewCollectionModal(false);
   };
 
@@ -106,9 +111,9 @@ const RequestModal: React.FC<RequestModalProps> = ({
             {folder.name}
           </button>
         </div>
-        {expandedFolders.has(folder.id) && folder.folders.length > 0 && (
+        {/* {expandedFolders.has(folder.id) && folder.folders.length > 0 && (
           renderFolders(folder.folders, level + 1)
-        )}
+        )} */}
       </div>
     ));
   };

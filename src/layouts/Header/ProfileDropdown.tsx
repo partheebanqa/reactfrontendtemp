@@ -13,14 +13,6 @@ interface ProfileDropdownProps {
 const ProfileDropdown: React.FC<ProfileDropdownProps> = ({ isOpen, onClose }) => {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const { theme, setTheme } = useTheme();
-
-  const [modalOpen, setModalOpen] = useState(false);
-
-  const handleCreateWorkspace = (name: string, description: string) => {
-    // Handle creation logic here (API call, state update, etc.)
-    alert(`Workspace Created:\nName: ${name}\nDescription: ${description}`);
-  };
-
   
   useClickOutside(dropdownRef, onClose);
   const navigate = useNavigate();
@@ -85,18 +77,6 @@ const ProfileDropdown: React.FC<ProfileDropdownProps> = ({ isOpen, onClose }) =>
           <User size={16} className="mr-3" />
           Your Profile
         </button>
-        <button
-        className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-        onClick={() => setModalOpen(true)}
-      >
-        <Plus size={16} className="mr-3" />
-        Create Workspace
-      </button>
-
-        <CreateWorkspaceModal
-          open={modalOpen}
-          onClose={() => setModalOpen(false)}
-        />
 
         <button className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
             onClick={accountSettings}>

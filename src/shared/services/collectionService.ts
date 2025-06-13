@@ -7,16 +7,16 @@ export interface CreateCollection{
     isImportant:boolean
 }
 
-export interface CollectionList {
-  CreatedAt: string,
-  DeletedAt?: string ,
-  Id: string
-  IsImportant: boolean
-  Name: string,
-  UpdatedAt: string,
-  Variables?: string,
-  WorkspaceId: string
-}
+// export interface CollectionList {
+//   CreatedAt: string,
+//   DeletedAt?: string ,
+//   Id: string
+//   IsImportant: boolean
+//   Name: string,
+//   UpdatedAt: string,
+//   Variables?: string,
+//   WorkspaceId: string
+// }
 
 export const collectionService = {
 
@@ -34,7 +34,7 @@ export const collectionService = {
     }
   },
 
-  getCollections:async (worspaceId:string): Promise<{collections: CollectionList[]}> => {
+  getCollections:async (worspaceId:string): Promise<{collections: any}> => {
     try {
       const response = await apiClient(`${ENV.API_URL}/collections?ws=${worspaceId}`, {
         method: 'GET',
@@ -73,5 +73,18 @@ export const collectionService = {
       throw error;
     }
   },
+
+  getCollectionRequests:async (collectionId:string) : Promise<any> => {
+     try {
+      const response = await apiClient(`${ENV.API_URL}/collections/${collectionId}/requests`, {
+        method: 'GET',
+        requiresAuth: true,
+      });
+      return response;
+    }
+    catch (error: any) {
+      throw error;
+    }
+  }
 
 }

@@ -109,7 +109,7 @@ export interface AuthExtractionState {
 export interface KeyValuePair {
   key: string;
   value: string;
-  description?: string;
+  enabled?: boolean;
 }
 
 export type DataVariableType = 
@@ -162,14 +162,15 @@ export interface GraphQLValidationResult {
 
 export interface Collection {
   id: string;
+  workspaceId:string;
   name: string;
-  description?: string;
   isImportant?: boolean;
-  folders: CollectionFolder[];
+  variables?:string;
   requests: CollectionRequest[];
+  hasFetchedRequests?:boolean;
   createdAt: string;
-  updatedAt: string;
-  changelog: ChangelogEntry[];
+  deletedAt: string;
+  updatedAt:string;
 }
 
 export interface CollectionFolder {
@@ -178,18 +179,38 @@ export interface CollectionFolder {
   description?: string;
   parentId?: string;
   requests: CollectionRequest[];
-  folders: CollectionFolder[];
+  // folders: CollectionFolder[];
 }
 
 export interface CollectionRequest {
-  id: string;
-  name: string;
-  request: Request;
-  description?: string;
-  createdAt: string;
-  updatedAt: string;
-  collectionId?: string;
-  folderId?: string;
+    id: string,
+    collectionId: string,
+    description: string,
+    name: string,
+    order: number,
+    method: string,
+    url: string,
+    bodyType: string,
+    bodyFormData?: string,
+    bodyRawContent?: string,
+    authorizationType: string,
+    authorization: {
+        token?: string; // bearer
+        username?: string; // basic
+        password?: string; // basic
+        key?: string;      // apiKey
+        value?: string;    // apiKey
+        addTo?: 'header' | 'query'; // apiKey
+    },
+    headers?: { key: string; value: string; enabled: boolean }[];
+    params?: { key: string; value: string; enabled: boolean }[];
+    variables: {
+        userId: string
+    },
+    createdBy: string,
+    createdAt: string,
+    updatedAt: string
+
 }
 
 export interface ChangelogEntry {

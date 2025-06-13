@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { ChevronDown, Bell, Menu, Plus } from 'lucide-react';
+import { ChevronDown, Trash2, Pencil, Plus } from 'lucide-react';
 import ProfileDropdown from './ProfileDropdown';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { WorkSpace, workspaceService } from '../../shared/services/workspaceService';
+import { showSnackbar } from '../../shared/services/snackbarService';
+import CreateWorkspaceModal from '../../components/workspace/CreateWorkspace';
 // import NotificationBell from '../../components/notifications/NotificationBell';
 // import NotificationDropdown from './NotificationDropdown';
 
@@ -11,70 +13,147 @@ interface HeaderProps {
   toggleSidebar: () => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ isExpanded, toggleSidebar }) => {
+const Header: React.FC<HeaderProps> = () => {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [workspaces, setWorkspaces] = useState<WorkSpace[]>([]);
-  const { selectedWorkspaceId, createdWorkspace, setSelectedWorkspaceId } = useWorkspace(); 
-  
+  const { selectedWorkspaceId, createdWorkspace, setSelectedWorkspaceId } = useWorkspace();
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingWorkspace, setEditingWorkspace] = useState<WorkSpace | null>(null);
+
+
+  // Fetch workspaces on mount
   useEffect(() => {
-  const fetchWorkspaces = async () => {
-    const data = await workspaceService.getWorkspaces();
-    setWorkspaces(data.workspaces);
-    if (data.workspaces.length > 0) {
-      setSelectedWorkspaceId(data.workspaces[0].Id);
+    const fetchWorkspaces = async () => {
+      try {
+        const data = await workspaceService.getWorkspaces();
+        // Support both array and object response (adjust as per your API)
+        const ws = Array.isArray(data) ? data : data.workspaces || [];
+        setWorkspaces(ws);
+        if (ws.length > 0) {
+          setSelectedWorkspaceId(ws[0].Id);
+        }
+      } catch (error: any) {
+        showSnackbar(error?.message || 'Failed to fetch workspaces', 'error');
+      }
+    };
+    fetchWorkspaces();
+    // eslint-disable-next-line
+  }, []);
+
+  // Add newly created workspace to the list
+  useEffect(() => {
+     if (createdWorkspace) {
+      setWorkspaces(prev => {
+        const existingIndex = prev.findIndex(ws => ws.Id === createdWorkspace.Id);
+
+        if (existingIndex !== -1) {
+          // Update name if workspace already exists
+          const updated = [...prev];
+          updated[existingIndex] = {
+            ...updated[existingIndex],
+            Name: createdWorkspace.Name,
+          };
+          return updated;
+        }
+
+      // Add new workspace if not found
+      return [...prev, createdWorkspace];
+    });
+  }
+  }, [createdWorkspace]);
+
+  // Delete workspace handler
+  const deleteWorkspace = async (workspaceId: string) => {
+    try {
+      const response = await workspaceService.deleteWorkspace(workspaceId);
+      if (response.message) {
+        setWorkspaces(prev => prev.filter(ws => ws.Id !== workspaceId));
+        showSnackbar('Workspace deleted successfully', 'success');
+
+        if (selectedWorkspaceId === workspaceId && workspaces.length > 1) {
+          const fallback = workspaces.find(ws => ws.Id !== workspaceId);
+          if (fallback) {
+            setSelectedWorkspaceId(fallback.Id);
+          }
+        }
+      } 
+    } catch (err: any) {
+      showSnackbar(err?.message || 'Error deleting workspace', 'error');
     }
   };
-  
-  fetchWorkspaces();
-  }, []);
-  
-  useEffect(() => {
-    if (createdWorkspace) {
-      setWorkspaces(prev => [...prev, createdWorkspace]);
-    }
-  }, [createdWorkspace]);
 
   return (
     <div className="flex items-center justify-between h-14 px-4 header-theme border-b border-gray-200">
       <div className="flex items-center">
-        {!isExpanded && (
-          <button 
-            onClick={toggleSidebar}
-            className="mr-4 opacity-75 hover:opacity-100 transition-opacity"
-          >
-            <Menu size={20} />
-          </button>
-        )}
         <div className="font-bold text-xl">WIX</div>
-        <div className="ml-60 flex items-center">
-          {/* <span className="text-sm">doorstepshop</span>
-          <ChevronDown size={16} className="ml-1" /> */}
-          {isExpanded ? (
-           <div className="w-48">
-            <select
-              className="text-sm border border-gray-200 rounded px-3 py-1.5 bg-[var(--bg-primary)] text-[var(--text-primary)] w-full"
-              value={selectedWorkspaceId}
-              onChange={(e) => setSelectedWorkspaceId(e.target.value)}
+        <div className="ml-52 flex items-center">
+          <div className="relative w-60">
+            <button
+              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+              className="text-sm border border-gray-200 rounded px-3 py-1.5 bg-[var(--bg-primary)] text-[var(--text-primary)] w-full flex justify-between items-center"
             >
-              {workspaces.map((workspace) => (
-                <option key={workspace.Id} value={workspace.Id}>
-                  {workspace.Name}
-                </option>
-              ))}
-            </select>
-          </div>
-        ) : (
-          <div className="py-4 flex justify-center">
-            <button className="w-8 h-8 bg-gray-700 rounded-full flex items-center justify-center text-gray-400">
-              <Plus size={16} />
+              {workspaces.find(ws => ws.Id === selectedWorkspaceId)?.Name || 'Select Workspace'}
+              <ChevronDown size={16} />
             </button>
+
+            {isDropdownOpen && (
+              <div className="absolute mt-1 w-full bg-white border border-gray-200 rounded shadow z-10 max-h-60 overflow-auto">
+                {workspaces.map((workspace) => (
+                  <div
+                    key={workspace.Id}
+                    className="flex items-center justify-between px-3 py-2 hover:bg-gray-100 cursor-pointer"
+                    onClick={() => {
+                      setSelectedWorkspaceId(workspace.Id);
+                      setIsDropdownOpen(false);
+                    }}
+                  >
+                    <span className="text-sm flex-1 truncate">{workspace.Name}</span>
+                    <div className="flex items-center gap-2 ml-2">
+                      <button
+                        onClick={e => {
+                          e.stopPropagation();
+                          setEditingWorkspace(workspace);
+                          setModalOpen(true)
+                        }}
+                        className="text-blue-500 hover:text-blue-700"
+                      >
+                        <Pencil size={16} />
+                      </button>
+                      <button
+                        onClick={e => {
+                          e.stopPropagation();
+                          deleteWorkspace(workspace.Id);
+                        }}
+                        className="text-red-500 hover:text-red-700"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-        )}
         </div>
+
+        <button 
+            className="bg-gray-100 ml-1 px-3 py-1 rounded-md flex items-center space-x-2"
+            onClick={e =>{setModalOpen(true); 
+              setEditingWorkspace(null)}}
+          >
+          <Plus size={16} />
+          <span>Add</span>
+        </button>
+
+        <CreateWorkspaceModal
+          open={modalOpen}
+          onClose={() => setModalOpen(false)}
+          Workspace={editingWorkspace}
+        />
       </div>
-      <div className="flex items-center">
-        {/* <div className="relative">
+           {/* <div className="relative">
           <button
             onClick={() => {
               setIsNotificationOpen(!isNotificationOpen);
@@ -93,6 +172,7 @@ const Header: React.FC<HeaderProps> = ({ isExpanded, toggleSidebar }) => {
           /> */}
         {/* </div> */}
         {/* <NotificationBell/> */}
+      <div className="flex items-center">
         <div className="relative">
           <button
             onClick={() => {

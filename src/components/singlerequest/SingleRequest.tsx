@@ -28,15 +28,13 @@ import { useRequest } from "../../context/RequestContext";
 const COLLECTIONS_STORAGE_KEY = "api_collections";
 
 function SingleRequest() {
-  const [activeRequest, setActiveRequest] = useState<Request>({
+  const [activeRequest, setActiveRequest] = useState<CollectionRequest>({
     method: "GET",
     url: "",
-    headers: {},
-    params: {},
-    body: "",
-    isGraphQL: false,
-    graphQLQuery: "",
-    graphQLVariables: "",
+    headers: [],
+    params: [],
+    bodyFormData: "",
+    name: ""
   });
 
   const [response, setResponse] = useState<Response | null>(null);
@@ -93,18 +91,18 @@ function SingleRequest() {
 
       const body = prepareRequestBody({
         method: activeRequest.method,
-        body: activeRequest.body,
-        isGraphQL: activeRequest.isGraphQL,
-        graphQLQuery: processVariables(
-          activeRequest.graphQLQuery || "",
-          {},
-          dataRepoVariables
-        ),
-        graphQLVariables: processVariables(
-          activeRequest.graphQLVariables || "",
-          {},
-          dataRepoVariables
-        ),
+        body: activeRequest.bodyFormData ? activeRequest.bodyFormData : "",
+        // isGraphQL: activeRequest.isGraphQL,
+        // graphQLQuery: processVariables(
+        //   activeRequest.graphQLQuery || "",
+        //   {},
+        //   dataRepoVariables
+        // ),
+        // graphQLVariables: processVariables(
+        //   activeRequest.graphQLVariables || "",
+        //   {},
+        //   dataRepoVariables
+        // ),
       });
 
       const url = createUrlWithParams(processedUrl, processedParams);
@@ -113,7 +111,7 @@ function SingleRequest() {
         activeRequest.method,
         processedHeaders,
         body,
-        activeRequest.isGraphQL
+        // activeRequest.isGraphQL
       );
 
       const startTime = performance.now();
@@ -134,15 +132,15 @@ function SingleRequest() {
         statusText: response.statusText,
         headers: Object.fromEntries(response.headers),
         data,
-        responseTime,
+        // responseTime,
       };
 
-      if (activeRequest.assertions) {
-        responseObj.assertions = validateResponse(
-          responseObj,
-          activeRequest.assertions
-        );
-      }
+      // if (activeRequest.assertions) {
+      //   responseObj.assertions = validateResponse(
+      //     responseObj,
+      //     activeRequest.assertions
+      //   );
+      // }
 
       setResponse(responseObj);
     } catch (error: any) {
@@ -323,80 +321,78 @@ function SingleRequest() {
     );
   };
 
-  const handleCollectionDelete = (collectionId: string) => {
-    setCollections((prev) => prev.filter((c) => c.id !== collectionId));
-  };
+  // const handleCollectionDelete = (collectionId: string) => {
+  //   setCollections((prev) => prev.filter((c) => c.id !== collectionId));
+  // };
 
   const handleRequestSelect = (request: CollectionRequest) => {
-    setActiveRequest(request.request);
-    updateRequestData({ url: request.request.url});
+    setActiveRequest(request);
+    updateRequestData({ url: request.url});
   };
 
   const handleImport = (importedCollections: Collection[]) => {
     setCollections((prev) => [...prev, ...importedCollections]);
   };
 
-  const handleSaveRequest = (request: CollectionRequest) => {
-    const collection = collections.find((c) => c.id === request.collectionId);
-    if (!collection) return;
+  // const handleSaveRequest = (request: CollectionRequest) => {
+  //   const collection = collections.find((c) => c.id === request.collectionId);
+  //   if (!collection) return;
 
-    const updatedCollection = { ...collection };
+  //   const updatedCollection = { ...collection };
 
-    if (request.folderId) {
-      const updateFolders = (
-        folders: CollectionFolder[]
-      ): CollectionFolder[] => {
-        return folders.map((f) => {
-          if (f.id === request.folderId) {
-            return {
-              ...f,
-              requests: [...f.requests, request],
-            };
-          }
-          if (f.folders.length > 0) {
-            return {
-              ...f,
-              folders: updateFolders(f.folders),
-            };
-          }
-          return f;
-        });
-      };
+  //   if (request.folderId) {
+  //     const updateFolders = (
+  //       folders: CollectionFolder[]
+  //     ): CollectionFolder[] => {
+  //       return folders.map((f) => {
+  //         if (f.id === request.folderId) {
+  //           return {
+  //             ...f,
+  //             requests: [...f.requests, request],
+  //           };
+  //         }
+  //         if (f.folders.length > 0) {
+  //           return {
+  //             ...f,
+  //             folders: updateFolders(f.folders),
+  //           };
+  //         }
+  //         return f;
+  //       });
+  //     };
 
-      updatedCollection.folders = updateFolders(updatedCollection.folders);
-    } else {
-      updatedCollection.requests = [...updatedCollection.requests, request];
-    }
+  //     updatedCollection.folders = updateFolders(updatedCollection.folders);
+  //   } else {
+  //     updatedCollection.requests = [...updatedCollection.requests, request];
+  //   }
 
-    updatedCollection.changelog = [
-      ...updatedCollection.changelog,
-      {
-        id: uuidv4(),
-        action: "create",
-        itemType: "request",
-        itemId: request.id,
-        itemName: request.name,
-        timestamp: new Date().toISOString(),
-        details: "Request saved to collection",
-      },
-    ];
+  //   updatedCollection.changelog = [
+  //     ...updatedCollection.changelog,
+  //     {
+  //       id: uuidv4(),
+  //       action: "create",
+  //       itemType: "request",
+  //       itemId: request.id,
+  //       itemName: request.name,
+  //       timestamp: new Date().toISOString(),
+  //       details: "Request saved to collection",
+  //     },
+  //   ];
 
-    handleCollectionUpdate(updatedCollection);
-    setShowSaveRequestModal(false);
-  };
+  //   handleCollectionUpdate(updatedCollection);
+  //   setShowSaveRequestModal(false);
+  // };
 
   return (
     <div className="h-full">
       <div className="flex overflow-y-auto h-full">
         <CollectionsSidebar
-          collections={collections}
+          // collections={collections}
           onCollectionCreate={handleCollectionCreate}
           onCollectionUpdate={handleCollectionUpdate}
-          onCollectionDelete={handleCollectionDelete}
           onRequestSelect={handleRequestSelect}
           onImport={() => setShowImportModal(true)}
-          currentRequest={activeRequest}
-        />
+          currentRequest={activeRequest} collections={[]}        />
         <div className="flex-1 overflow-auto p-4">
         <RequestPanel
             request={activeRequest}

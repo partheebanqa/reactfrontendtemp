@@ -52,4 +52,31 @@ export const workspaceService = {
     }
   },
 
+  deleteWorkspace:async (workSpaceId:string): Promise<any> => {
+    try {
+      const response = await apiClient(`${ENV.API_URL}/workspaces/${workSpaceId}`, {
+        method: 'DELETE',
+        requiresAuth: true,
+      });
+        return response;
+      }
+      catch (error: any) {
+        throw error;
+      }
+  },
+
+  updateWorkspace:async (workSpace:CreateWorkSpace, workspaceId:string): Promise<any> => {
+    try {
+      const response = await apiClient(`${ENV.API_URL}/workspaces/${workspaceId}`, {
+        method: 'PUT',
+        requiresAuth: true,
+        body: JSON.stringify(workSpace),
+      });
+        return response;
+      }
+      catch (error: any) {
+        throw error;
+      }
+  },
+
 }

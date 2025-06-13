@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Save } from 'lucide-react';
 import { Collection } from '../types';
 import { v4 as uuidv4 } from 'uuid';
-import { CollectionList, collectionService } from '../shared/services/collectionService';
+import { collectionService } from '../shared/services/collectionService';
 import { useWorkspace } from '../context/WorkspaceContext';
 import { showSnackbar } from '../shared/services/snackbarService';
 
@@ -10,9 +10,9 @@ interface CollectionModalProps {
   isOpen: boolean;
   onClose: () => void;
   // onSave: (collection: Collection) => void;
-  onSaveCollection: (collection: CollectionList) => void;
-  // collection?: Collection;
-  collection?: CollectionList;
+  onSaveCollection: (collection: Collection) => void;
+  collection?: Collection;
+  // collection?: CollectionList;
 }
 
 const CollectionModal: React.FC<CollectionModalProps> = ({
@@ -27,7 +27,7 @@ const CollectionModal: React.FC<CollectionModalProps> = ({
   
   useEffect(() => {
     if (collection) {
-      setName(collection.Name);
+      setName(collection.name);
       // setDescription(collection.Description || '');
     } else {
       setName('');
@@ -41,12 +41,12 @@ const CollectionModal: React.FC<CollectionModalProps> = ({
     if(collection) {
       const response = await collectionService.updateCollection({
         name:name,
-        id:collection.Id
+        id:collection.id
       });
       showSnackbar(response.message, 'success');
       onSaveCollection({
         ...collection,
-        Name: name,
+        name
       });
       onClose();
       return;
@@ -54,17 +54,19 @@ const CollectionModal: React.FC<CollectionModalProps> = ({
     else {
       const response = await collectionService.addCollection({
       name:name,
-      isImportant:true,
+      isImportant:false,
       workspaceId:selectedWorkspaceId
     });
 
-      const newCollection : CollectionList = {
-        Id:response.collectionId,
-        CreatedAt:String(new Date()),
-        Name:name,
-        IsImportant:false,
-        UpdatedAt:String(new Date()),
-        WorkspaceId:selectedWorkspaceId
+      const newCollection : Collection = {
+        id: response.collectionId,
+        createdAt: String(new Date()),
+        name: name,
+        isImportant: false,
+        updatedAt: String(new Date()),
+        workspaceId: selectedWorkspaceId,
+        requests: [],
+        deletedAt: ''
       }
 
       onSaveCollection(newCollection);
@@ -152,7 +154,7 @@ const CollectionModal: React.FC<CollectionModalProps> = ({
             className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:opacity-50 flex items-center gap-2"
           >
             <Save size={16} />
-            Save Collection
+              Save Collection
           </button>
         </div>
       </div>
