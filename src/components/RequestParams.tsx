@@ -79,29 +79,33 @@ import { Plus, Trash2 } from 'lucide-react';
 import { KeyValuePair } from '../types';
 
 interface RequestParamsProps {
-  params: KeyValuePair[];
-  onChange: (params: KeyValuePair[]) => void;
+  params?: KeyValuePair[];
+  onChange: (params?: KeyValuePair[]) => void;
 }
 
 const RequestParams: React.FC<RequestParamsProps> = ({ params, onChange }) => {
   const addParam = () => {
     // Prevent adding another empty param
-    const hasEmpty = params.some(p => p.key.trim() === '' && p.value.trim() === '');
-    if (!hasEmpty) {
+    const hasEmpty = params?.some(p => p.key.trim() === '' && p.value.trim() === '');
+    if (!hasEmpty && params) {
       onChange([...params, { key: '', value: '' }]);
     }
   };
 
   const updateParam = (index: number, field: 'key' | 'value', newValue: string) => {
-    const updated = [...params];
-    updated[index] = { ...updated[index], [field]: newValue };
-    onChange(updated);
+    if(params){
+      const updated = [...params];
+      updated[index] = { ...updated[index], [field]: newValue };
+      onChange(updated);
+    }
   };
 
   const removeParam = (index: number) => {
-    const updatedParams = [...params];
-    updatedParams.splice(index, 1);
-    onChange(updatedParams);
+    if(params){
+      const updatedParams = [...params];
+      updatedParams.splice(index, 1);
+      onChange(updatedParams);
+    }
   };
 
   return (
@@ -118,7 +122,7 @@ const RequestParams: React.FC<RequestParamsProps> = ({ params, onChange }) => {
       </div>
 
       <div className="space-y-2">
-        {params.map((param, index) => (
+        {params?.map((param, index) => (
         <div key={index} className="flex items-center gap-2">
           <input
             type="text"

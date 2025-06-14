@@ -202,8 +202,8 @@ export interface CollectionRequest {
         value?: string;    // apiKey
         addTo?: 'header' | 'query'; // apiKey
     },
-    headers?: { key: string; value: string; enabled: boolean }[];
-    params?: { key: string; value: string; enabled: boolean }[];
+    headers?: KeyValuePair[];
+    params?: KeyValuePair[];
     variables: {
         userId: string
     },

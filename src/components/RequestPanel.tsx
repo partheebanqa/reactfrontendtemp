@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Send, ChevronDown, Code, Save } from 'lucide-react';
-import { Request } from '../types';
+import { CollectionRequest, KeyValuePair, Request } from '../types';
 import RequestParams from './RequestParams';
 import RequestHeaders from './RequestHeaders';
 import RequestAuth from './RequestAuth';
@@ -16,8 +16,8 @@ import { RequestMethod } from '../shared/types/request';
 import SchemaGeneratorPanel from './singlerequest/schema/SchemaGeneratorPanel';
 
 interface RequestPanelProps {
-  request: Request;
-  setRequest: (request: Request) => void;
+  request: CollectionRequest;
+  setRequest: (request: CollectionRequest) => void;
   onSend: () => void;
   loading: boolean;
   response?: any;
@@ -48,15 +48,15 @@ const RequestPanel: React.FC<RequestPanelProps> = ({
     console.log(request)
   }
 
-  const updateAuth = (auth: Request['auth']) => {
+  const updateAuth = (auth: CollectionRequest['authorization']) => {
     setRequest({ ...request, auth });
   };
 
-  const updateHeaders = (headers: Record<string, string>) => {
+  const updateHeaders = (headers: KeyValuePair[]) => {
     setRequest({ ...request, headers });
   };
 
-  const updateParams = (params: Record<string, string>) => {
+  const updateParams = (params?: KeyValuePair[]) => {
     setRequest({ ...request, params });
   };
 
@@ -294,7 +294,7 @@ const RequestPanel: React.FC<RequestPanelProps> = ({
           )}
           {activeTab === 'auth' && (
             <RequestAuth
-              auth={request.auth}
+              auth={request.authorization}
               onChange={updateAuth}
             />
           )}
@@ -307,7 +307,7 @@ const RequestPanel: React.FC<RequestPanelProps> = ({
           {activeTab === 'body' && (
             <div className="relative">
                 <textarea
-                  value={request.body}
+                  value={request.bodyFormData}
                   onChange={(e) => {
                     updateBody(e.target.value);
                     handleBodyChange(e);
@@ -379,13 +379,13 @@ const RequestPanel: React.FC<RequestPanelProps> = ({
               onSend={onSend}
             />
           )}
-          {request.isGraphQL && (
+          {/* {request.isGraphQL && (
             <GraphQLEditor
               query={request.graphQLQuery || ''}
               variables={request.graphQLVariables || ''}
               onChange={updateGraphQL}
             />
-          )}
+          )} */}
 
            {activeTab === 'schemas' && (
               <div>
