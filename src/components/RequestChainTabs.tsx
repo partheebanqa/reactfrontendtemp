@@ -1,13 +1,13 @@
 import React, { useRef, useState } from 'react';
-import { ChainRequest } from '../types';
+import { ChainRequest, CollectionRequest } from '../types';
 import RequestParams from './RequestParams';
 import RequestHeaders from './RequestHeaders';
 import RequestAuth from './RequestAuth';
 import VariableSuggestions from './VariableSuggestions';
 
 interface RequestChainTabsProps {
-  request: ChainRequest;
-  onUpdate: (updates: Partial<ChainRequest>) => void;
+  request: CollectionRequest;
+  onUpdate: (updates: Partial<CollectionRequest>) => void;
   activeTab: 'params' | 'auth' | 'headers' | 'body';
   onTabChange: (tab: 'params' | 'auth' | 'headers' | 'body') => void;
   variables?: Record<string, any>;
@@ -120,10 +120,16 @@ const RequestChainTabs: React.FC<RequestChainTabsProps> = ({
           />
         )}
         {activeTab === 'auth' && (
-          <RequestAuth
-            auth={request.auth}
-            onChange={(auth) => onUpdate({ auth })}
-          />
+            <RequestAuth
+              authorizationType={request.authorizationType}
+              authorization={request.authorization}
+              onChange={(authType, auth) => 
+                onUpdate({
+                  authorizationType: authType,
+                  authorization: auth
+                })
+              }
+            />
         )}
         {activeTab === 'headers' && (
           <RequestHeaders

@@ -14,6 +14,9 @@ import ResponsePanel from './singlerequest/ResponsePanel';
 import { useRequest } from '../context/RequestContext';
 import { RequestMethod } from '../shared/types/request';
 import SchemaGeneratorPanel from './singlerequest/schema/SchemaGeneratorPanel';
+import { collectionService } from '../shared/services/collectionService';
+import { showSnackbar } from '../shared/services/snackbarService';
+import { useCollectionRequest } from '../context/CollectionRequestContext';
 
 interface RequestPanelProps {
   request: CollectionRequest;
@@ -38,19 +41,25 @@ const RequestPanel: React.FC<RequestPanelProps> = ({
   const [jsonError, setJsonError] = useState<string | null>(null);
   const [showSchemaPanel, setShowSchemaPanel] = useState(false);
   const { requestData, updateRequestData, executeRequest } = useRequest();
+  const { setCollectionRequest } = useCollectionRequest();
 
   const sendRequest = () => {
     executeRequest()
   }
 
-  const saveRequest = () => {
-    console.log(requestData)
+  const saveRequest = async (e: React.FormEvent) => {
+    e.preventDefault();
+    // const response = await collectionService.saveCollectionRequest(request);
+    // showSnackbar(response.message, 'success');
+    // if(response){
+    //   setCollectionRequest(request);
+    // }
     console.log(request)
   }
 
-  const updateAuth = (auth: CollectionRequest['authorization']) => {
-    setRequest({ ...request, auth });
-  };
+  // const updateAuth = (auth: CollectionRequest['authorization']) => {
+  //   setRequest({ ...request, auth });
+  // };
 
   const updateHeaders = (headers: KeyValuePair[]) => {
     setRequest({ ...request, headers });
@@ -104,27 +113,27 @@ const RequestPanel: React.FC<RequestPanelProps> = ({
         updateRequestData({ headers: newHeaders });
       };
     
-  const handleBodyChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    updateRequestData({ body: e.target.value });
-  };
+  // const handleBodyChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+  //   updateRequestData({ body: e.target.value });
+  // };
     
 
-  const formatJson = () => {
-    try {
-      const parsed = JSON.parse(request.body);
-      const formatted = JSON.stringify(parsed, null, 2);
-      setRequest({ ...request, body: formatted });
-      setJsonError(null);
-    } catch (err) {
-      setJsonError('Invalid JSON format');
-    }
-  };
+  // const formatJson = () => {
+  //   try {
+  //     const parsed = JSON.parse(request.body);
+  //     const formatted = JSON.stringify(parsed, null, 2);
+  //     setRequest({ ...request, body: formatted });
+  //     setJsonError(null);
+  //   } catch (err) {
+  //     setJsonError('Invalid JSON format');
+  //   }
+  // };
 
-  const updateBody = (body: string) => {
-    setRequest({ ...request, body });
+  const updateBody = (bodyRawContent: string) => {
+    setRequest({ ...request, bodyRawContent });
     try {
-      if (body.trim()) {
-        JSON.parse(body);
+      if (bodyRawContent.trim()) {
+        JSON.parse(bodyRawContent);
         setJsonError(null);
       } else {
         setJsonError(null);
@@ -134,17 +143,18 @@ const RequestPanel: React.FC<RequestPanelProps> = ({
     }
   };
 
-  const updateAssertions = (assertions: Request['assertions']) => {
-    setRequest({ ...request, assertions });
-  };
 
-  const updateGraphQL = (updates: { query?: string; variables?: string }) => {
-    setRequest({
-      ...request,
-      graphQLQuery: updates.query ?? request.graphQLQuery,
-      graphQLVariables: updates.variables ?? request.graphQLVariables,
-    });
-  };
+  // const updateAssertions = (assertions: Request['assertions']) => {
+  //   setRequest({ ...request, assertions });
+  // };
+
+  // const updateGraphQL = (updates: { query?: string; variables?: string }) => {
+  //   setRequest({
+  //     ...request,
+  //     graphQLQuery: updates.query ?? request.graphQLQuery,
+  //     graphQLVariables: updates.variables ?? request.graphQLVariables,
+  //   });
+  // };
 
   return (
     <div className="rounded-lg shadow-lg  mb-4">
@@ -158,7 +168,7 @@ const RequestPanel: React.FC<RequestPanelProps> = ({
                 handleMethodChange(e);
                 setRequest({ ...request, method: e.target.value });
               }}
-              disabled={request.isGraphQL}
+              // disabled={request.isGraphQL}
             >
               {HTTP_METHODS.map((method) => (
                 <option key={method} value={method}>
@@ -202,13 +212,13 @@ const RequestPanel: React.FC<RequestPanelProps> = ({
               <Send size={16} />
               <span>Send</span>
             </button>
-             <button
-              className="bg-blue-500 text-white px-4 py-2 rounded-md flex items-center space-x-2 hover:bg-blue-600"
-              disabled={!request.url}
-              onClick={() => {
-                saveRequest();
-              }}
-            >
+              <button
+                className="bg-blue-500 text-white px-4 py-2 rounded-md flex items-center space-x-2 hover:bg-blue-600"
+                disabled={!request.url}
+                onClick={(e) => {
+                  saveRequest(e);
+                }}
+              >
               <Save size={16} />
               <span>Save</span>
             </button>
@@ -252,7 +262,7 @@ const RequestPanel: React.FC<RequestPanelProps> = ({
               Body
             </button>
           {/* )} */}
-          <button 
+          {/* <button 
             className={`px-4 py-2 text-sm border-b-2 ${
               activeTab === 'tests' ? 'border-blue-500' : 'border-transparent'
             }`}
@@ -275,7 +285,7 @@ const RequestPanel: React.FC<RequestPanelProps> = ({
             onClick={() => setActiveTab('parametrization')}
           >
             Parametrization
-          </button>
+          </button> */}
           <button 
             className={`px-4 py-2 text-sm border-b-2 ${
               activeTab === 'schemas' ? 'border-blue-500' : 'border-transparent'
@@ -293,9 +303,12 @@ const RequestPanel: React.FC<RequestPanelProps> = ({
             />
           )}
           {activeTab === 'auth' && (
-            <RequestAuth
-              auth={request.authorization}
-              onChange={updateAuth}
+           <RequestAuth
+              authorizationType={request.authorizationType}
+              authorization={request.authorization}
+              onChange={(authType, auth) => {
+                setRequest({ ...request, authorizationType: authType, authorization: auth });
+              }}
             />
           )}
           {activeTab === 'headers' && (
@@ -307,10 +320,10 @@ const RequestPanel: React.FC<RequestPanelProps> = ({
           {activeTab === 'body' && (
             <div className="relative">
                 <textarea
-                  value={request.bodyFormData}
+                  value={request.bodyRawContent}
                   onChange={(e) => {
                     updateBody(e.target.value);
-                    handleBodyChange(e);
+                    // handleBodyChange(e);
                   }}
                   className={`w-full h-48 px-3 py-2 text-sm font-mono border rounded ${
                     jsonError ? 'border-red-500' : 'border-gray-200'
@@ -355,7 +368,7 @@ const RequestPanel: React.FC<RequestPanelProps> = ({
               </div>
             </div>
           )} */}
-          {activeTab === 'tests' && (
+          {/* {activeTab === 'tests' && (
             <AssertionsPanel
               assertions={request.assertions || {}}
               onChange={updateAssertions}
@@ -378,7 +391,7 @@ const RequestPanel: React.FC<RequestPanelProps> = ({
               onRequestChange={setRequest}
               onSend={onSend}
             />
-          )}
+          )} */}
           {/* {request.isGraphQL && (
             <GraphQLEditor
               query={request.graphQLQuery || ''}

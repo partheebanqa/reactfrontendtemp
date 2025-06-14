@@ -7,6 +7,7 @@ import RequestModal from './RequestModal';
 import MoveRequestModal from './MoveRequestModal';
 import { useWorkspace } from '../context/WorkspaceContext';
 import { collectionService } from '../shared/services/collectionService';
+import { useCollectionRequest } from '../context/CollectionRequestContext';
 
 interface CollectionsSidebarProps {
   collections: Collection[];
@@ -38,7 +39,7 @@ const CollectionsSidebar: React.FC<CollectionsSidebarProps> = ({
   const { selectedWorkspaceId } = useWorkspace(); 
   const [activeSubMenu, setActiveSubMenu] = useState<string | null>(null);
   const [collections, setCollections] = useState<Collection[]>([]);
-  
+  const { collectionRequest } = useCollectionRequest();
 
 const toggleCollection = (collectionId: string) => {
   // Expand/collapse first
@@ -82,8 +83,6 @@ const toggleCollection = (collectionId: string) => {
   fetchCollectionRequests();
 };
 
-  
-
 
   const toggleFolder = (folderId: string) => {
     setExpandedFolders(prev => {
@@ -111,7 +110,7 @@ const toggleCollection = (collectionId: string) => {
       createdAt: c.CreatedAt,
       updatedAt: c.UpdatedAt,
       deletedAt: c.DeletedAt,
-      requests: [] // Set requests to empty array as per your requirement
+      requests: []
     }));
     setCollections(mappedCollections);
     }
@@ -140,6 +139,25 @@ const toggleCollection = (collectionId: string) => {
         }
       });
   }
+
+  useEffect(() => {
+  if (!collectionRequest) return;
+
+    setCollections(prevCollections =>
+      prevCollections.map(collection =>
+        collection.id === collectionRequest.collectionId
+          ? {
+              ...collection,
+              requests: [
+                ...(collection.requests || []),
+                collectionRequest
+              ]
+            }
+          : collection
+      )
+    );
+  }, [collectionRequest]);
+
   
   const handleAddRequest = (collectionId: string, folderId?: string) => {
     setSelectedCollectionForRequest(collectionId);
@@ -428,41 +446,50 @@ const toggleCollection = (collectionId: string) => {
                     >
                       {request.name}
                     </button>
-                    {/* <div className="relative">
+                    <div className="relative">
                       <button
                         onClick={() => setShowMenu(`request-${request.id}`)}
                         className="p-1 text-gray-400 hover:text-gray-600 opacity-0 group-hover:opacity-100"
                       >
                         <MoreVertical size={16} />
                       </button>
-                      {showMenu && (
+                      {showMenu === `request-${request.id}` && (
                         <div className="absolute right-0 mt-1 w-48 bg-white rounded-md shadow-lg z-10 border border-gray-200">
                           <div className="py-1">
-                            <button
+                            {/* <button
                               onClick={() => {
                                 setSelectedRequest(request);
                                 setShowMoveModal(true);
-                                setShowMenu(false);
+                                setShowMenu(null);
                               }}
                               className="w-full px-4 py-2 text-sm text-left text-gray-700 hover:bg-gray-100 flex items-center gap-2"
                             >
                               <Move size={14} />
                               Move Request
+                            </button> */}
+                            <button
+                              className="w-full px-4 py-2 text-sm text-left flex items-center gap-2"
+                            >
+                              Duplicate
+                            </button>
+                            <button
+                              className="w-full px-4 py-2 text-sm text-left flex items-center gap-2"
+                            >
+                              Rename
                             </button>
                             <button
                               onClick={() => {
                                 // Handle delete request
                                 setShowMenu(null);
                               }}
-                              className="w-full px-4 py-2 text-sm text-left text-red-600 hover:bg-red-50 flex items-center gap-2"
+                              className="w-full px-4 py-2 text-sm text-left flex items-center gap-2"
                             >
-                              <Trash2 size={14} />
-                              Delete Request
+                              Delete
                             </button>
                           </div>
                         </div>
                       )}
-                    </div> */}
+                    </div>
                   </div>
                 ))}
               </div>

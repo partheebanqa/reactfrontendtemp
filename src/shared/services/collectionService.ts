@@ -1,4 +1,5 @@
 import { ENV } from "../../config/env";
+import { CollectionRequest } from "../../types";
 import { apiClient } from "./apiClient";
 
 export interface CreateCollection{
@@ -79,6 +80,24 @@ export const collectionService = {
       const response = await apiClient(`${ENV.API_URL}/collections/${collectionId}/requests`, {
         method: 'GET',
         requiresAuth: true,
+      });
+      return response;
+    }
+    catch (error: any) {
+      throw error;
+    }
+  },
+
+  saveCollectionRequest:async (collectionRequest:CollectionRequest) : Promise<any> => {
+     try {
+      var test = {
+        ...collectionRequest,
+        order:7
+      }
+      const response = await apiClient(`${ENV.API_URL}/requests`, {
+        method: 'POST',
+        requiresAuth: true,
+        body:JSON.stringify(test)
       });
       return response;
     }

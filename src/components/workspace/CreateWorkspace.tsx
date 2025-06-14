@@ -35,7 +35,6 @@ const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
       if ( Workspace) {
-        console.log('edit')
         const response = await workspaceService.updateWorkspace( {
           name,
           description
