@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Plus, MoreVertical, Upload, FolderTree, Trash2, Edit, Move, StarIcon, Star, MoveRight, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, MoreVertical, Upload, FolderTree, Trash2, Edit, Move, StarIcon, Star, MoveRight, ChevronLeft, ChevronRight, X, Save } from 'lucide-react';
 import { Collection, CollectionFolder, CollectionRequest, Request } from '../types';
 import CollectionModal from './CollectionModal';
 import FolderModal from './FolderModal';
@@ -16,6 +16,7 @@ interface CollectionsSidebarProps {
   onRequestSelect: (request: CollectionRequest) => void;
   onImport: () => void;
   currentRequest?: CollectionRequest;
+  order?:number;
 }
 
 const CollectionsSidebar: React.FC<CollectionsSidebarProps> = ({
@@ -23,7 +24,8 @@ const CollectionsSidebar: React.FC<CollectionsSidebarProps> = ({
   onCollectionUpdate,
   onRequestSelect,
   onImport,
-  currentRequest
+  currentRequest,
+  order
 }) => {
   const [expandedCollections, setExpandedCollections] = useState<Set<string>>(new Set());
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
@@ -40,6 +42,11 @@ const CollectionsSidebar: React.FC<CollectionsSidebarProps> = ({
   const [activeSubMenu, setActiveSubMenu] = useState<string | null>(null);
   const [collections, setCollections] = useState<Collection[]>([]);
   const { collectionRequest } = useCollectionRequest();
+
+  const [showRequestRenameModal, setShowRequestRenameModal] = useState(false);
+  const [showRequestMenu, setShowRequestMenu] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState('');
+  const [requestId, setRequestId] = useState('');
 
 const toggleCollection = (collectionId: string) => {
   // Expand/collapse first
@@ -65,23 +72,48 @@ const toggleCollection = (collectionId: string) => {
       const response = await collectionService.getCollectionRequests(collectionId); // may be empty []
 
       setCollections(prevCollections =>
-        prevCollections.map(collection =>
-          collection.id === collectionId
-            ? {
-                ...collection,
-                requests: response,
-                hasFetchedRequests: true, // mark as fetched
-              }
-            : collection
-        )
-      );
-    } catch (error) {
-      console.error('Failed to fetch requests for collection:', error);
-    }
+          prevCollections.map(collection =>
+            collection.id === collectionId
+              ? {
+                  ...collection,
+                  requests: response,
+                  hasFetchedRequests: true, // mark as fetched
+                }
+              : collection
+          )
+        );
+
+      } catch (error) {
+        console.error('Failed to fetch requests for collection:', error);
+      }
+    };
+
+    fetchCollectionRequests();
   };
 
-  fetchCollectionRequests();
-};
+  const renameRequest = async () => {
+    try {
+      const response = await collectionService.renameRequest(renameValue, requestId); 
+      if (response) {
+          setCollections(prevCollections =>
+            prevCollections.map(collection => {
+              const updatedRequests = (collection.requests || []).map(req =>
+                req.id === requestId ? { ...req, name: renameValue } : req
+              );
+              return {
+                ...collection,
+                requests: updatedRequests,
+                hasFetchedRequests: true,
+              };
+            })
+          );
+        }
+        setShowRequestRenameModal(false);
+        
+      } catch (error) {
+        console.error('Failed to fetch requests for collection:', error);
+      }
+    };
 
 
   const toggleFolder = (folderId: string) => {
@@ -110,7 +142,7 @@ const toggleCollection = (collectionId: string) => {
       createdAt: c.CreatedAt,
       updatedAt: c.UpdatedAt,
       deletedAt: c.DeletedAt,
-      requests: []
+      requests: [],
     }));
     setCollections(mappedCollections);
     }
@@ -201,6 +233,27 @@ const toggleCollection = (collectionId: string) => {
     setShowRequestModal(false);
   };
 
+  const deleteRequest = async (collectionId: string, requestId: string) => {
+    try {
+      const response = await collectionService.deleteRequest(requestId);
+      if (response) {
+        setCollections(prevCollections =>
+          prevCollections.map(collection =>
+            collection.id === collectionId
+              ? {
+                  ...collection,
+                  requests: (collection.requests || []).filter(req => req.id !== requestId),
+                }
+              : collection
+          )
+        );
+      }
+    } catch (error) {
+      console.error('Failed to delete request from collection:', error);
+    }
+  };
+
+
   const handleMoveRequest = (targetCollectionId: string, targetFolderId?: string) => {
     if (!selectedRequest) return;
 
@@ -281,10 +334,29 @@ const toggleCollection = (collectionId: string) => {
   };
 
   const menuRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setShowMenu(null); // close the menu
+        setShowRequestMenu(null); 
+      }
+    };
+  
+    if (showRequestMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+  
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showRequestMenu]);
+
+  const requestMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (requestMenuRef.current && !requestMenuRef.current.contains(event.target as Node)) {
+        setShowMenu(null)
       }
     };
   
@@ -337,18 +409,18 @@ const toggleCollection = (collectionId: string) => {
               >
                 {collection.name}
               </button>
-              <div className="relative" ref={menuRef}>
+              <div className="relative">
                 <button className='text-gray-400 hover:text-gray-600'>
                   <Star size={16} fill={collection.isImportant ? 'currentColor' : 'none'}  />
                 </button>
                 <button
-                  onClick={() => setShowMenu(showMenu === collection.id ? null : collection.id)}
+                  onClick={() => setShowRequestMenu(showRequestMenu === collection.id ? null : collection.id)}
                   className="p-1 text-gray-400 hover:text-gray-600"
                 >
                   <MoreVertical size={16} />
                 </button>
-                { showMenu === collection.id && (
-                  <div className="absolute mt-1 w-48 bg-white rounded-md shadow-lg z-10 border border-gray-200">
+                { showRequestMenu === collection.id && (
+                  <div className="absolute mt-1 w-48 bg-white rounded-md shadow-lg z-10 border border-gray-200" ref={menuRef}>
                     <div className="p-1">
                       <button
                         onClick={() => handleAddRequest(collection.id)}
@@ -454,33 +526,23 @@ const toggleCollection = (collectionId: string) => {
                         <MoreVertical size={16} />
                       </button>
                       {showMenu === `request-${request.id}` && (
-                        <div className="absolute right-0 mt-1 w-48 bg-white rounded-md shadow-lg z-10 border border-gray-200">
+                        <div className="absolute right-0 mt-1 w-48 bg-white rounded-md shadow-lg z-10 border border-gray-200" ref={requestMenuRef}>
                           <div className="py-1">
-                            {/* <button
-                              onClick={() => {
-                                setSelectedRequest(request);
-                                setShowMoveModal(true);
+                            {/* Add this Rename button */}
+                            <button
+                               onClick={() => {
+                                setRenameValue(request.name);
+                                setShowRequestRenameModal(true);
                                 setShowMenu(null);
+                                setRequestId(request.id)
                               }}
                               className="w-full px-4 py-2 text-sm text-left text-gray-700 hover:bg-gray-100 flex items-center gap-2"
-                            >
-                              <Move size={14} />
-                              Move Request
-                            </button> */}
-                            <button
-                              className="w-full px-4 py-2 text-sm text-left flex items-center gap-2"
-                            >
-                              Duplicate
-                            </button>
-                            <button
-                              className="w-full px-4 py-2 text-sm text-left flex items-center gap-2"
                             >
                               Rename
                             </button>
                             <button
                               onClick={() => {
-                                // Handle delete request
-                                setShowMenu(null);
+                                deleteRequest(collection.id,request.id)
                               }}
                               className="w-full px-4 py-2 text-sm text-left flex items-center gap-2"
                             >
@@ -518,6 +580,64 @@ const toggleCollection = (collectionId: string) => {
           collection={selectedCollection || undefined}
         />
       )}
+
+
+      {showRequestRenameModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" >
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
+            <div className="flex items-center justify-between p-4 border-b border-gray-200">
+              <h2 className="text-xl font-semibold">
+                Request Name
+              </h2>
+              <button
+                onClick={() => {
+                  setShowRequestRenameModal(false)
+                }}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-4 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Name
+                </label>
+                <input
+                  type="text"
+                  value={renameValue}
+                  onChange={(e) => setRenameValue(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  placeholder="Collection name"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 p-4 border-t border-gray-200">
+              <button
+                onClick={() => {
+                  setShowRequestRenameModal(false)
+                }}
+                className="px-4 py-2 text-gray-700 hover:text-gray-900"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  renameRequest()
+                }}
+                disabled={!renameValue.trim()}
+                className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:opacity-50 flex items-center gap-2"
+              >
+                <Save size={16} />
+                  Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
 
       {showRequestModal && (
         <RequestModal

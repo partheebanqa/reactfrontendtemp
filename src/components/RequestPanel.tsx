@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Send, ChevronDown, Code, Save } from 'lucide-react';
-import { CollectionRequest, KeyValuePair, Request } from '../types';
+import { Send, ChevronDown, Code, Save, ShieldCloseIcon, Cross, Variable } from 'lucide-react';
+import { Collection, CollectionRequest, KeyValuePair, Request } from '../types';
 import RequestParams from './RequestParams';
 import RequestHeaders from './RequestHeaders';
 import RequestAuth from './RequestAuth';
@@ -17,6 +17,9 @@ import SchemaGeneratorPanel from './singlerequest/schema/SchemaGeneratorPanel';
 import { collectionService } from '../shared/services/collectionService';
 import { showSnackbar } from '../shared/services/snackbarService';
 import { useCollectionRequest } from '../context/CollectionRequestContext';
+import { CloseButton } from 'react-toastify';
+import { IoMdClose } from 'react-icons/io';
+import { useWorkspace } from '../context/WorkspaceContext';
 
 interface RequestPanelProps {
   request: CollectionRequest;
@@ -24,6 +27,7 @@ interface RequestPanelProps {
   onSend: () => void;
   loading: boolean;
   response?: any;
+  order?:string;
 }
 
 type TabType = 'params' | 'auth' | 'headers' | 'body' | 'tests' | 'ai_tests' | 'parametrization' | 'schemas';
@@ -35,7 +39,8 @@ const RequestPanel: React.FC<RequestPanelProps> = ({
   setRequest,
   onSend,
   loading,
-  response
+  response,
+  order
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>('params');
   const [jsonError, setJsonError] = useState<string | null>(null);
@@ -43,23 +48,48 @@ const RequestPanel: React.FC<RequestPanelProps> = ({
   const { requestData, updateRequestData, executeRequest } = useRequest();
   const { setCollectionRequest } = useCollectionRequest();
 
+  const [showNamePopup, setShowNamePopup] = useState(false);
+  const [requestName, setrequestName] = useState('');
+  const [description, setDescription] = useState("");
+  const [selectedCollectionId, setSelectedCollectionId] = useState<string>('');
+  const [collections, setCollections] = useState([]);
+  const { selectedWorkspaceId } = useWorkspace(); 
+  const [ bodyRawContent, setbodyRawContent ] = useState("");
+
+
   const sendRequest = () => {
     executeRequest()
   }
 
   const saveRequest = async (e: React.FormEvent) => {
+    // const collection = collections.find((x: Collection) => x.id === selectedCollectionId) as Collection | undefined;
+    // const nextOrder = collection && collection.requests.length > 0
+    //   ? Math.max(...collection.requests.map(req => req.order || 0)) + 1
+    //   : 1;
+
     e.preventDefault();
-    // const response = await collectionService.saveCollectionRequest(request);
-    // showSnackbar(response.message, 'success');
-    // if(response){
-    //   setCollectionRequest(request);
-    // }
-    console.log(request)
+    const updatedRequest : CollectionRequest = { 
+      ...request,
+      name: requestName,
+      description:description,
+      collectionId:selectedCollectionId,
+      variables:{},
+      bodyType: "none",
+      bodyFormData: null,
+      bodyRawContent: bodyRawContent,
+      order:10
+     };
+    const response = await collectionService.saveCollectionRequest(updatedRequest);
+    showSnackbar(response.message, 'success');
+    if(response){
+      setCollectionRequest(updatedRequest);
+      setShowNamePopup(false)
+    }
   }
 
-  // const updateAuth = (auth: CollectionRequest['authorization']) => {
-  //   setRequest({ ...request, auth });
-  // };
+  const updateAuth = (authType:string, auth: CollectionRequest['authorization']) => {
+    setRequest({ ...request,authorizationType:authType, authorization : auth });
+  };
 
   const updateHeaders = (headers: KeyValuePair[]) => {
     setRequest({ ...request, headers });
@@ -143,6 +173,14 @@ const RequestPanel: React.FC<RequestPanelProps> = ({
     }
   };
 
+  const fetchCollections = async () => {
+      const response = await collectionService.getCollections(selectedWorkspaceId);
+      if(response){
+        setCollections(response.collections)
+      }
+  }
+
+
 
   // const updateAssertions = (assertions: Request['assertions']) => {
   //   setRequest({ ...request, assertions });
@@ -215,9 +253,11 @@ const RequestPanel: React.FC<RequestPanelProps> = ({
               <button
                 className="bg-blue-500 text-white px-4 py-2 rounded-md flex items-center space-x-2 hover:bg-blue-600"
                 disabled={!request.url}
-                onClick={(e) => {
-                  saveRequest(e);
-                }}
+                onClick={() =>{
+                  setShowNamePopup(true);
+                  fetchCollections()
+                } 
+                }
               >
               <Save size={16} />
               <span>Save</span>
@@ -225,6 +265,59 @@ const RequestPanel: React.FC<RequestPanelProps> = ({
           </div>
         </div>
       </div>
+
+      {showNamePopup && (
+        <div className="fixed inset-0 z-50 bg-black bg-opacity-40 flex items-center justify-center">
+          <div className="bg-white rounded-lg shadow p-6 w-full max-w-sm relative space-y-4">
+            <h2 className="text-lg font-semibold">Enter Request Name</h2>
+            <input
+              type="text"
+              value={requestName}
+              onChange={(e) => setrequestName(e.target.value)}
+              placeholder="Request Name"
+              className="w-full px-3 py-2 border border-gray-300 rounded text-sm"
+            />
+            <div className="mb-4">
+              <label className="block mb-1 text-sm font-medium text-gray-700">Description</label>
+                <textarea
+                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring focus:ring-blue-200"
+                  value={description}
+                  onChange={e => setDescription(e.target.value)}
+                  maxLength={200}
+                />
+            </div>
+            <select
+                value={selectedCollectionId}
+                onChange={(e) => {
+                  setSelectedCollectionId(e.target.value);
+                }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              >
+                <option value="">Select a collection</option>
+                {collections.map((collection:any) => (
+                  <option key={collection.Id} value={collection.Id}>
+                    {collection.Name}
+                  </option>
+                ))}
+              </select>
+            <div className="flex justify-end gap-2 p-4">
+              <button
+                onClick={() => setShowNamePopup(false)}
+                className="px-4 py-2 text-gray-700 hover:text-gray-900"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={saveRequest}
+                className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:opacity-50 flex items-center gap-2"
+              >
+                  Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
 
       <div className="border-t border-gray-200">
         <div className="flex">
@@ -308,6 +401,7 @@ const RequestPanel: React.FC<RequestPanelProps> = ({
               authorization={request.authorization}
               onChange={(authType, auth) => {
                 setRequest({ ...request, authorizationType: authType, authorization: auth });
+                updateAuth
               }}
             />
           )}
@@ -323,6 +417,7 @@ const RequestPanel: React.FC<RequestPanelProps> = ({
                   value={request.bodyRawContent}
                   onChange={(e) => {
                     updateBody(e.target.value);
+                    setbodyRawContent(e.target.value)
                     // handleBodyChange(e);
                   }}
                   className={`w-full h-48 px-3 py-2 text-sm font-mono border rounded ${

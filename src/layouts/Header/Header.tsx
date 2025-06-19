@@ -87,7 +87,7 @@ const Header: React.FC<HeaderProps> = () => {
   return (
     <div className="flex items-center justify-between h-14 px-4 header-theme border-b border-gray-200">
       <div className="flex items-center">
-        <div className="font-bold text-xl">WIX</div>
+        <div className="font-bold text-xl">Optraflow</div>
         <div className="ml-52 flex items-center">
           <div className="relative w-60">
             <button

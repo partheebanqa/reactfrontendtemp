@@ -8,17 +8,6 @@ export interface CreateCollection{
     isImportant:boolean
 }
 
-// export interface CollectionList {
-//   CreatedAt: string,
-//   DeletedAt?: string ,
-//   Id: string
-//   IsImportant: boolean
-//   Name: string,
-//   UpdatedAt: string,
-//   Variables?: string,
-//   WorkspaceId: string
-// }
-
 export const collectionService = {
 
   addCollection: async (collection: CreateCollection): Promise<any> => {
@@ -90,20 +79,60 @@ export const collectionService = {
 
   saveCollectionRequest:async (collectionRequest:CollectionRequest) : Promise<any> => {
      try {
-      var test = {
-        ...collectionRequest,
-        order:7
-      }
       const response = await apiClient(`${ENV.API_URL}/requests`, {
         method: 'POST',
         requiresAuth: true,
-        body:JSON.stringify(test)
+        body:JSON.stringify(collectionRequest)
       });
       return response;
     }
     catch (error: any) {
       throw error;
     }
-  }
+  },
+
+  deleteCollectionRequest:async (requestId:string) : Promise<any> => {
+     try {
+      const response = await apiClient(`${ENV.API_URL}/requests/${requestId}`, {
+        method: 'DELETE',
+        requiresAuth: true,
+      });
+      return response;
+    }
+    catch (error: any) {
+      throw error;
+    }
+  },
+
+  renameRequest:async (name:string, requestId:string) : Promise<any> => {
+    const rename = {
+      name:name
+    }
+     try {
+      const response = await apiClient(`${ENV.API_URL}/requests/${requestId}/rename`, {
+        method: 'PUT',
+        requiresAuth: true,
+        body:JSON.stringify(rename)
+      });
+      return response;
+    }
+    catch (error: any) {
+      throw error;
+    }
+  },
+
+   deleteRequest:async (requestId:string) : Promise<any> => {
+     try {
+      const response = await apiClient(`${ENV.API_URL}/requests/${requestId}`, {
+        method: 'DELETE',
+        requiresAuth: true,
+      });
+      return response;
+    }
+    catch (error: any) {
+      throw error;
+    }
+  },
+
 
 }

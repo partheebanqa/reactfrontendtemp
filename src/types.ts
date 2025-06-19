@@ -191,7 +191,7 @@ export interface CollectionRequest {
     method: string,
     url: string,
     bodyType: string,
-    bodyFormData?: string,
+    bodyFormData: string | null,
     bodyRawContent?: string,
     authorizationType: string,
     authorization: {
@@ -204,9 +204,7 @@ export interface CollectionRequest {
     },
     headers?: KeyValuePair[];
     params?: KeyValuePair[];
-    variables: {
-        userId: string
-    },
+    variables: { },
     createdBy: string,
     createdAt: string,
     updatedAt: string

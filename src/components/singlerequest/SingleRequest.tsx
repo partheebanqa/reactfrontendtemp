@@ -28,6 +28,7 @@ import { useRequest } from "../../context/RequestContext";
 const COLLECTIONS_STORAGE_KEY = "api_collections";
 
 function SingleRequest() {
+
   const [activeRequest, setActiveRequest] = useState<CollectionRequest>({
     method: "GET",
     url: "",
@@ -46,6 +47,7 @@ function SingleRequest() {
   //   const [showCollections, setShowCollections] = useState(false);
   const [showSaveRequestModal, setShowSaveRequestModal] = useState(false);
    const { updateRequestData } = useRequest();
+   const [order] = useState();
  
 
   useEffect(() => {
@@ -392,7 +394,8 @@ function SingleRequest() {
           onCollectionUpdate={handleCollectionUpdate}
           onRequestSelect={handleRequestSelect}
           onImport={() => setShowImportModal(true)}
-          currentRequest={activeRequest} collections={[]}        />
+          currentRequest={activeRequest} collections={[]}
+          />
         <div className="flex-1 overflow-auto p-4">
         <RequestPanel
             request={activeRequest}
@@ -400,6 +403,7 @@ function SingleRequest() {
             onSend={handleSend}
             loading={loading}
             response={response}
+            order={order}
         />
         
         </div>

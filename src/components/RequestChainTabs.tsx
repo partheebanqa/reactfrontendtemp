@@ -121,8 +121,8 @@ const RequestChainTabs: React.FC<RequestChainTabsProps> = ({
         )}
         {activeTab === 'auth' && (
             <RequestAuth
-              authorizationType={request.authorizationType}
-              authorization={request.authorization}
+              authorizationType={request.authorizationType ? request.authorizationType : "none"}
+              authorization={request.authorization ? request.authorization:{}}
               onChange={(authType, auth) => 
                 onUpdate({
                   authorizationType: authType,
