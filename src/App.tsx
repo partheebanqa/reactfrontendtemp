@@ -23,8 +23,6 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./utils/queryClient";
 import { WorkspaceProvider } from "./context/WorkspaceContext";
 import Settings from "./components/settings/Settings";
-import TestSuites from "./components/testsuites/TestSuites";
-import CreateTestSuite from "./components/testsuites/CreateTestSuite";
 import { RequestProvider } from "./context/RequestContext";
 import { SchemaProvider } from "./context/SchemaContext";
 import RequestChainForm from "./components/request-chain/RequestChainForm";
@@ -32,6 +30,8 @@ import SingleRequest from "./components/singlerequest/SingleRequest";
 import DataManager from "./components/data-management/DataManager";
 import RequestChainList from "./components/request-chain/RequestChainList";
 import { CollectionRequestProvider } from "./context/CollectionRequestContext";
+import CreateTestSuite from "./components/testsuites/CreateTestSuite";
+import TestSuites from "./components/testsuites/TestSuites";
 
 function App() {
   return (
