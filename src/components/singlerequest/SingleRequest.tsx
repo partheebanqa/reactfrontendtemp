@@ -389,12 +389,12 @@ function SingleRequest() {
     <div className="h-full">
       <div className="flex overflow-y-auto h-full">
         <CollectionsSidebar
-          // collections={collections}
+          collections={collections}
           onCollectionCreate={handleCollectionCreate}
           onCollectionUpdate={handleCollectionUpdate}
           onRequestSelect={handleRequestSelect}
           onImport={() => setShowImportModal(true)}
-          currentRequest={activeRequest} collections={[]}
+          currentRequest={activeRequest}
           />
         <div className="flex-1 overflow-auto p-4">
         <RequestPanel

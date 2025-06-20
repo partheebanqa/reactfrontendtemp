@@ -226,3 +226,13 @@ export interface ImportResult {
   errors?: string[];
   warnings?: string[];
 }
+
+export interface ImportCollection {
+  name:string;
+  workspaceId:string;
+  inputMethod:string;
+  specificationType:string;
+  raw:string;
+  url:string;
+  file:File;
+}

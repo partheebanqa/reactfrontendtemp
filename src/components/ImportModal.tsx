@@ -1,9 +1,12 @@
 import React, { useState, useRef } from 'react';
 import { X, Upload, AlertCircle, Link as LinkIcon, FileText } from 'lucide-react';
-import { Collection, ImportResult } from '../types';
+import { Collection, ImportCollection, ImportResult } from '../types';
 import { importPostmanCollection } from '../utils/importers/postmanImporter';
 import { importSwaggerCollection } from '../utils/importers/swaggerImporter';
 import { importCurlCommand } from '../utils/importers/curlImporter';
+import { collectionService } from '../shared/services/collectionService';
+import { useWorkspace } from '../context/WorkspaceContext';
+import { showSnackbar } from '../shared/services/snackbarService';
 
 interface ImportModalProps {
   isOpen: boolean;
@@ -19,6 +22,7 @@ const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, onImport }) 
   const [importType, setImportType] = useState<'text' | 'url' | 'file'>('text');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { selectedWorkspaceId } = useWorkspace(); 
 
   if (!isOpen) return null;
 
@@ -46,6 +50,27 @@ const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, onImport }) 
         textToImport = await response.text();
       } else if (importType === 'file' && selectedFile) {
         textToImport = await selectedFile.text();
+        const json = JSON.parse(textToImport);
+        if (json.info?.schema?.includes('schema.getpostman.com')) {
+          const importedCollection : ImportCollection = {
+            name: json.info?.name,
+            workspaceId: selectedWorkspaceId,
+            inputMethod: 'file',
+            specificationType: 'postman',
+            file: selectedFile,
+            raw: '',
+            url: ''
+          }
+          // try{
+          //   const response = await collectionService.importCollectionFile(importedCollection); 
+          //   if (response) {
+          //     showSnackbar(response.data.message, 'success');
+          //   }
+          // }catch (err){
+          //   setError(err instanceof Error ? err.message : 'Failed to import collection');
+          // }
+          
+        }
       }
 
       // Try to parse as JSON first (Postman collection)
@@ -53,7 +78,7 @@ const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, onImport }) 
         const json = JSON.parse(textToImport);
         if (json.info?.schema?.includes('schema.getpostman.com')) {
           const result = await importPostmanCollection(json);
-          onImport(result.collections);
+          // onImport(result.collections);
           onClose();
           return;
         }

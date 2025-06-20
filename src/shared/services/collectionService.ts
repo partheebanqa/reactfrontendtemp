@@ -1,5 +1,6 @@
+import axios from "axios";
 import { ENV } from "../../config/env";
-import { CollectionRequest } from "../../types";
+import { CollectionRequest, ImportCollection } from "../../types";
 import { apiClient } from "./apiClient";
 
 export interface CreateCollection{
@@ -128,6 +129,41 @@ export const collectionService = {
         requiresAuth: true,
       });
       return response;
+    }
+    catch (error: any) {
+      throw error;
+    }
+  },
+
+  importCollectionFile:async (importCollection:ImportCollection) : Promise<any> => {
+    try {
+    const formData = new FormData();
+
+    // Add metadata fields
+    formData.append('name', importCollection.name);
+    formData.append('workspaceId', importCollection.workspaceId);
+    formData.append('inputMethod', importCollection.inputMethod);
+    formData.append('specificationType', importCollection.specificationType);
+    formData.append('url', importCollection.url);
+    formData.append('raw', importCollection.raw);
+    formData.append('file', importCollection.file);
+
+    const userDetails = localStorage.getItem('userDetails');
+    let token = ''
+    if (userDetails) {
+      const details = JSON.parse(userDetails);
+      token = details.token;
+    }
+
+    const response = await axios.post(`${ENV.API_URL}/collections/import`, formData, {
+      headers: {
+        "content-type": "multipart/form-data",
+        Authorization: `Bearer ${token}`,
+      },
+      
+    });
+    
+    return response;
     }
     catch (error: any) {
       throw error;
