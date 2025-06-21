@@ -78,7 +78,7 @@ const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, onImport }) 
         const json = JSON.parse(textToImport);
         if (json.info?.schema?.includes('schema.getpostman.com')) {
           const result = await importPostmanCollection(json);
-          // onImport(result.collections);
+          onImport(result.collections);
           onClose();
           return;
         }

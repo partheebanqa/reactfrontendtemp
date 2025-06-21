@@ -332,8 +332,8 @@ function SingleRequest() {
     updateRequestData({ url: request.url});
   };
 
-  const handleImport = (importedCollections: Collection[]) => {
-    setCollections((prev) => [...prev, ...importedCollections]);
+  const handleImport = (importedCollections: Collection) => {
+    setCollections((prev) => [...prev, importedCollections]);
   };
 
   // const handleSaveRequest = (request: CollectionRequest) => {

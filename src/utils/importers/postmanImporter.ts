@@ -42,22 +42,13 @@ export async function importPostmanCollection(json: any): Promise<ImportResult> 
     }
 
     const result: Collection = {
-      id: collection.info._postman_id || uuidv4(),
+      id: "",
       name: collection.info.name,
-      description: collection.info.description,
-      folders: [],
       requests: [],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      changelog: [{
-        id: uuidv4(),
-        action: 'create',
-        itemType: 'collection',
-        itemId: collection.info._postman_id || uuidv4(),
-        itemName: collection.info.name,
-        timestamp: new Date().toISOString(),
-        details: 'Imported from Postman collection'
-      }]
+      workspaceId: '',
+      deletedAt: ''
     };
 
     // Convert Postman items to our format
@@ -65,21 +56,47 @@ export async function importPostmanCollection(json: any): Promise<ImportResult> 
       const request: CollectionRequest = {
         id: uuidv4(),
         name: item.name,
-        request: {
-          method: item.request.method,
-          url: item.request.url.raw,
-          headers: item.request.header?.reduce((acc, h) => ({
-            ...acc,
-            [h.key]: h.value
-          }), {}) || {},
-          params: item.request.url.query?.reduce((acc, q) => ({
-            ...acc,
-            [q.key]: q.value
-          }), {}) || {},
-          body: item.request.body?.raw || ''
-        },
+        url: item.request.url.raw,
+        headers: item.request.header?.map((h: any) => ({
+          key: h.key,
+          value: h.value
+        })) || [],
+        params: item.request.url.query?.map((q: any) => ({
+          key: q.key,
+          value: q.value,
+        })) || [],
+        // request: {
+        //   method: item.request.method,
+        //   url: item.request.url.raw,
+        //   headers: item.request.header?.reduce((acc, h) => ({
+        //     ...acc,
+        //     [h.key]: h.value
+        //   }), {}) || {},
+        //   params: item.request.url.query?.reduce((acc, q) => ({
+        //     ...acc,
+        //     [q.key]: q.value
+        //   }), {}) || {},
+        //   body: item.request.body?.raw || ''
+        // },
         createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
+        collectionId: '',
+        description: '',
+        order: 0,
+        method: item.request.method,
+        bodyType: '',
+        bodyFormData: item.request.body?.raw || '',
+        authorizationType: '',
+        authorization: {
+          token: undefined,
+          username: undefined,
+          password: undefined,
+          key: undefined,
+          value: undefined,
+          addTo: undefined
+        },
+        variables: {},
+        createdBy: ''
       };
 
       result.requests.push(request);
