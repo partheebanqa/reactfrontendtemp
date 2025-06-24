@@ -61,14 +61,14 @@ const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, onImport }) 
             raw: '',
             url: ''
           }
-          // try{
-          //   const response = await collectionService.importCollectionFile(importedCollection); 
-          //   if (response) {
-          //     showSnackbar(response.data.message, 'success');
-          //   }
-          // }catch (err){
-          //   setError(err instanceof Error ? err.message : 'Failed to import collection');
-          // }
+          try{
+            const response = await collectionService.importCollectionFile(importedCollection); 
+            if (response) {
+              showSnackbar(response.data.message, 'success');
+            }
+          }catch (err){
+            setError(err instanceof Error ? err.message : 'Failed to import collection');
+          }
           
         }
       }

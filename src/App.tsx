@@ -32,6 +32,7 @@ import RequestChainList from "./components/request-chain/RequestChainList";
 import { CollectionRequestProvider } from "./context/CollectionRequestContext";
 import CreateTestSuite from "./components/testsuites/CreateTestSuite";
 import TestSuites from "./components/testsuites/TestSuites";
+import { CollectionProvider } from "./context/CollectionContext";
 
 function App() {
   return (
@@ -41,45 +42,47 @@ function App() {
           <SnackbarProvider>
             <ApiProvider>
               <WorkspaceProvider>
-                <SchemaProvider>
-                <RequestProvider>
-                  <CollectionRequestProvider>
-                    <NotificationProvider userId={1}>
-                      <QueryClientProvider client={queryClient}>
-                        <Routes>
-                          {/* Public Route */}
-                          <Route path="/" element={<HomePage/>} />
-                          <Route path="/login" element={<LoginPage />} />
-                          <Route path="/signup" element={<SignupPage />} />
-                          <Route path="/forgot-password" element={<ForgotPassword />} />
-                          <Route path="/reset-password" element={<ResetPasswordPage />} />
-                          <Route path="/terms" element={<TermsPage />} />
-                          <Route path="/privacy" element={<PrivacyPage />} />
-                          {/* Protected Routes */}
-                          <Route element={<MainLayout />}>
-                            <Route path="/dashboard" element={<Dashboard />} />
-                            {/* <Route path="/a" element={<RequestBuilderPage/>} /> */}
-                            <Route path="/api-test" element={<SingleRequest/>} />
-                            <Route path="/request-chain" element={<RequestChainList/>}/>
-                            <Route path="/request-chain/create" element={<RequestChainForm />}/>
-                            <Route path="/test-suites" element={<TestSuites />}/>
-                            <Route path="test-suites/create" element={<CreateTestSuite />} />
-                            <Route path="data-management" element={<DataManager />} />
-                            <Route path="/settings" element={<AccountSettingsPage />}>
-                              <Route index element={<Navigate to="profile" replace />} />
-                              <Route path="profile" element={<AccountProfile />} />
-                              <Route path="security" element={<AccountSecurity />} />
-                              <Route path="preferences" element={<AccountPreferences />} />
-                              <Route path="billing" element={<AccountBilling />} />
+                <CollectionProvider>
+                  <SchemaProvider>
+                  <RequestProvider>
+                    <CollectionRequestProvider>
+                      <NotificationProvider userId={1}>
+                        <QueryClientProvider client={queryClient}>
+                          <Routes>
+                            {/* Public Route */}
+                            <Route path="/" element={<HomePage/>} />
+                            <Route path="/login" element={<LoginPage />} />
+                            <Route path="/signup" element={<SignupPage />} />
+                            <Route path="/forgot-password" element={<ForgotPassword />} />
+                            <Route path="/reset-password" element={<ResetPasswordPage />} />
+                            <Route path="/terms" element={<TermsPage />} />
+                            <Route path="/privacy" element={<PrivacyPage />} />
+                            {/* Protected Routes */}
+                            <Route element={<MainLayout />}>
+                              <Route path="/dashboard" element={<Dashboard />} />
+                              {/* <Route path="/a" element={<RequestBuilderPage/>} /> */}
+                              <Route path="/api-test" element={<SingleRequest/>} />
+                              <Route path="/request-chain" element={<RequestChainList/>}/>
+                              <Route path="/request-chain/create" element={<RequestChainForm />}/>
+                              <Route path="/test-suites" element={<TestSuites />}/>
+                              <Route path="test-suites/create" element={<CreateTestSuite />} />
+                              <Route path="data-management" element={<DataManager />} />
+                              <Route path="/settings" element={<AccountSettingsPage />}>
+                                <Route index element={<Navigate to="profile" replace />} />
+                                <Route path="profile" element={<AccountProfile />} />
+                                <Route path="security" element={<AccountSecurity />} />
+                                <Route path="preferences" element={<AccountPreferences />} />
+                                <Route path="billing" element={<AccountBilling />} />
+                              </Route>
+                              <Route path="/setting" element={<Settings/>}></Route>
                             </Route>
-                            <Route path="/setting" element={<Settings/>}></Route>
-                          </Route>
-                        </Routes>
-                      </QueryClientProvider>
-                    </NotificationProvider>
-                  </CollectionRequestProvider>
-                </RequestProvider>
-                </SchemaProvider>
+                          </Routes>
+                        </QueryClientProvider>
+                      </NotificationProvider>
+                    </CollectionRequestProvider>
+                  </RequestProvider>
+                  </SchemaProvider>
+                </CollectionProvider>
               </WorkspaceProvider>
             </ApiProvider>
           </SnackbarProvider>

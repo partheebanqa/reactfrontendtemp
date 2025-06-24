@@ -1,10 +1,10 @@
-// CollectionRequestContext.tsx
 import React, { createContext, useContext, useState } from 'react';
 import { CollectionRequest } from '../types'; 
 
 type CollectionRequestContextType = {
   collectionRequest: CollectionRequest | null;
   setCollectionRequest: (req: CollectionRequest) => void;
+  
 };
 
 const CollectionRequestContext = createContext<CollectionRequestContextType | undefined>(undefined);

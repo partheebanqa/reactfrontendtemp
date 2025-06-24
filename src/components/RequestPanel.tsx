@@ -20,6 +20,7 @@ import { useCollectionRequest } from '../context/CollectionRequestContext';
 import { CloseButton } from 'react-toastify';
 import { IoMdClose } from 'react-icons/io';
 import { useWorkspace } from '../context/WorkspaceContext';
+import { useCollection } from '../context/CollectionContext';
 
 interface RequestPanelProps {
   request: CollectionRequest;
@@ -27,7 +28,7 @@ interface RequestPanelProps {
   onSend: () => void;
   loading: boolean;
   response?: any;
-  order?:string;
+  currentCollections?:Collection[];
 }
 
 type TabType = 'params' | 'auth' | 'headers' | 'body' | 'tests' | 'ai_tests' | 'parametrization' | 'schemas';
@@ -40,7 +41,7 @@ const RequestPanel: React.FC<RequestPanelProps> = ({
   onSend,
   loading,
   response,
-  order
+  currentCollections
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>('params');
   const [jsonError, setJsonError] = useState<string | null>(null);
@@ -55,6 +56,7 @@ const RequestPanel: React.FC<RequestPanelProps> = ({
   const [collections, setCollections] = useState([]);
   const { selectedWorkspaceId } = useWorkspace(); 
   const [ bodyRawContent, setbodyRawContent ] = useState("");
+  const {collection} = useCollection();
 
 
   const sendRequest = () => {
@@ -62,10 +64,12 @@ const RequestPanel: React.FC<RequestPanelProps> = ({
   }
 
   const saveRequest = async (e: React.FormEvent) => {
-    // const collection = collections.find((x: Collection) => x.id === selectedCollectionId) as Collection | undefined;
-    // const nextOrder = collection && collection.requests.length > 0
-    //   ? Math.max(...collection.requests.map(req => req.order || 0)) + 1
-    //   : 1;
+    const result = collection?.find((x: Collection) => x.id === selectedCollectionId) as Collection | undefined;
+    const nextOrder = result && result.requests.length > 0
+      ? result.requests[result.requests.length-1].order
+      : 1;
+
+    console.log(currentCollections);
 
     e.preventDefault();
     const updatedRequest : CollectionRequest = { 
@@ -77,7 +81,7 @@ const RequestPanel: React.FC<RequestPanelProps> = ({
       bodyType: "none",
       bodyFormData: null,
       bodyRawContent: bodyRawContent,
-      order:10
+      order:nextOrder+1
      };
     const response = await collectionService.saveCollectionRequest(updatedRequest);
     showSnackbar(response.message, 'success');

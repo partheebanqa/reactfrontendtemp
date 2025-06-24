@@ -47,7 +47,6 @@ function SingleRequest() {
   //   const [showCollections, setShowCollections] = useState(false);
   const [showSaveRequestModal, setShowSaveRequestModal] = useState(false);
    const { updateRequestData } = useRequest();
-   const [order] = useState();
  
 
   useEffect(() => {
@@ -403,7 +402,7 @@ function SingleRequest() {
             onSend={handleSend}
             loading={loading}
             response={response}
-            order={order}
+            currentCollections={collections}
         />
         
         </div>

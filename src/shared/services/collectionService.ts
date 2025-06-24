@@ -162,7 +162,7 @@ export const collectionService = {
       },
       
     });
-    
+
     return response;
     }
     catch (error: any) {
@@ -170,5 +170,16 @@ export const collectionService = {
     }
   },
 
-
+   duplicateRequest:async (requestId:string) : Promise<any> => {
+     try {
+      const response = await apiClient(`${ENV.API_URL}/requests/${requestId}/duplicate`, {
+        method: 'POST',
+        requiresAuth: true,
+      });
+      return response;
+    }
+    catch (error: any) {
+      throw error;
+    }
+  },
 }

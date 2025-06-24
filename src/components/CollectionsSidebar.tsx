@@ -8,6 +8,7 @@ import MoveRequestModal from './MoveRequestModal';
 import { useWorkspace } from '../context/WorkspaceContext';
 import { collectionService } from '../shared/services/collectionService';
 import { useCollectionRequest } from '../context/CollectionRequestContext';
+import { useCollection } from '../context/CollectionContext';
 
 interface CollectionsSidebarProps {
   collections: Collection[];
@@ -47,6 +48,8 @@ const CollectionsSidebar: React.FC<CollectionsSidebarProps> = ({
   const [showRequestMenu, setShowRequestMenu] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
   const [requestId, setRequestId] = useState('');
+  const {setCollection} = useCollection();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
 const toggleCollection = (collectionId: string) => {
   // Expand/collapse first
@@ -90,6 +93,8 @@ const toggleCollection = (collectionId: string) => {
 
     fetchCollectionRequests();
   };
+
+  setCollection(collections);
 
   const renameRequest = async () => {
     try {
@@ -253,6 +258,39 @@ const toggleCollection = (collectionId: string) => {
     }
   };
 
+  const duplicateRequest = async (collectionId:string, requestId: string) => {
+    try {
+      setIsSubmitting(true);
+      const response = await collectionService.duplicateRequest(requestId);
+      if (response) {
+        setCollections(prevCollections =>
+          prevCollections.map(collection => {
+            if (collection.id !== collectionId) return collection;
+
+            const originalRequest = collection.requests?.find(req => req.id === requestId);
+            if (!originalRequest) return collection;
+
+            const duplicatedRequest = {
+              ...originalRequest,
+              id: response.requestId, 
+              name: `${originalRequest.name} Copy`,
+            };
+
+            return {
+              ...collection,
+              requests: [...(collection.requests || []), duplicatedRequest],
+            };
+          })
+        );
+        setShowMenu(null);
+      }
+    } catch (error) {
+      console.error('Failed to delete request from collection:', error);
+    } finally{
+      setIsSubmitting(false);
+    }
+  };
+
 
   const handleMoveRequest = (targetCollectionId: string, targetFolderId?: string) => {
     if (!selectedRequest) return;
@@ -304,29 +342,29 @@ const toggleCollection = (collectionId: string) => {
       folderId: targetFolderId
     };
 
-    if (targetFolderId) {
-      const addFolderRequest = (folders: CollectionFolder[]): CollectionFolder[] => {
-        return folders.map(f => {
-          if (f.id === targetFolderId) {
-            return {
-              ...f,
-              requests: [...f.requests, movedRequest]
-            };
-          }
-          if (f.folders.length > 0) {
-            return {
-              ...f,
-              folders: addFolderRequest(f.folders)
-            };
-          }
-          return f;
-        });
-      };
+    // if (targetFolderId) {
+    //   const addFolderRequest = (folders: CollectionFolder[]): CollectionFolder[] => {
+    //     return folders.map(f => {
+    //       if (f.id === targetFolderId) {
+    //         return {
+    //           ...f,
+    //           requests: [...f.requests, movedRequest]
+    //         };
+    //       }
+    //       if (f.folders.length > 0) {
+    //         return {
+    //           ...f,
+    //           folders: addFolderRequest(f.folders)
+    //         };
+    //       }
+    //       return f;
+    //     });
+    //   };
 
-      updatedTargetCollection.folders = addFolderRequest(updatedTargetCollection.folders);
-    } else {
-      updatedTargetCollection.requests = [...updatedTargetCollection.requests, movedRequest];
-    }
+    //   updatedTargetCollection.folders = addFolderRequest(updatedTargetCollection.folders);
+    // } else {
+    //   updatedTargetCollection.requests = [...updatedTargetCollection.requests, movedRequest];
+    // }
 
     onCollectionUpdate(updatedTargetCollection);
     setShowMoveModal(false);
@@ -541,10 +579,19 @@ const toggleCollection = (collectionId: string) => {
                               Rename
                             </button>
                             <button
+                              disabled={isSubmitting}
+                              onClick={() => {
+                                duplicateRequest(collection.id,request.id);
+                              }}
+                              className="w-full px-4 py-2 text-sm text-left text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                            >
+                              Duplicate
+                            </button>
+                            <button
                               onClick={() => {
                                 deleteRequest(collection.id,request.id)
                               }}
-                              className="w-full px-4 py-2 text-sm text-left flex items-center gap-2"
+                              className="w-full px-4 py-2 text-sm text-left text-gray-700 hover:bg-gray-100 flex items-center gap-2"
                             >
                               Delete
                             </button>
