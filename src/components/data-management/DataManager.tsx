@@ -1,11 +1,15 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useApiStore } from '../../shared/store/apiStore';
 import { Database, Trash2, Plus, Variable, RefreshCw, Edit2, Copy } from 'lucide-react';
 import { faker } from '@faker-js/faker';
 import Select from 'react-select';
+import { dataManagementService } from '../../shared/services/dataManagementService';
+import { StaticVariable } from '../../shared/types/dataManagementtypes';
+import { useWorkspace } from '../../context/WorkspaceContext';
+import { showSnackbar } from '../../shared/services/snackbarService';
 
 const DataManager: React.FC = () => {
-  const { extractedData, deleteExtractedData, variables, addVariable, deleteVariable, updateVariable, requests } = useApiStore();
+  const { extractedData, deleteExtractedData, variables, setVariables, addVariable, deleteVariable, updateVariable, requests } = useApiStore();
   const [showAddModal, setShowAddModal] = useState(false);
   const [showDynamicModal, setShowDynamicModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -13,6 +17,8 @@ const DataManager: React.FC = () => {
   const [dynamicVariable, setDynamicVariable] = useState({ name: '', type: 'string' });
   const [editingVariable, setEditingVariable] = useState<any>(null);
   const [listValues, setListValues] = useState<string[]>([]);
+  const [isSubmitting , setIsSubmitting] = useState(false);
+  const {selectedWorkspaceId} = useWorkspace();
 
   const generateDynamicValue = (type: string): string => {
     switch (type) {
@@ -53,21 +59,57 @@ const DataManager: React.FC = () => {
     }
   };
 
-  const handleAddStatic = (e: React.FormEvent) => {
+  useEffect(() => {
+    const getStaticVariable = async () => {
+      const response = await dataManagementService.getStaticVariables(selectedWorkspaceId);
+      if (response) {
+        setVariables(response.variables);
+      }
+    };
+
+    if (selectedWorkspaceId) {
+      getStaticVariable();
+    }
+  }, [selectedWorkspaceId]);
+
+  const addStaticVariable =  async (staticVariable:StaticVariable) => {
+    try {
+      setIsSubmitting(true);
+      const response = await dataManagementService.addStaticVariables(staticVariable);
+      showSnackbar(response.message, 'success');
+      return response.variableId;
+    } catch (error) {
+        console.error('Failed to fetch requests for collection:', error);
+      }
+      finally{
+        setIsSubmitting(false);
+      }
+    };
+  
+  const handleAddStatic = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newVariable.name) return;
 
-    const id = crypto.randomUUID();
-    const value = newVariable.type === 'list' 
+    const value = newVariable.type === 'list'
       ? JSON.stringify(listValues)
       : newVariable.value;
 
+    const variableToSend: StaticVariable = {
+      name: newVariable.name,
+      workspaceId: selectedWorkspaceId,
+      type: newVariable.type,
+      category: "phone",
+      value: newVariable.type == "number" ? Number(newVariable.value) : newVariable.value
+    };
+
+    const newId = await addStaticVariable(variableToSend);
+    if (!newId) return;
+
     addVariable({
-      id,
-      ...newVariable,
-      value,
-      description: '',
-      isSecret: false
+      id: newId,
+      name: newVariable.name,
+      value: value,
+      type: newVariable.type
     });
 
     setNewVariable({ name: '', value: '', type: 'string' });
@@ -156,14 +198,25 @@ const DataManager: React.FC = () => {
     navigator.clipboard.writeText(`${name}`);
   };
 
-  const handleDuplicateVariable = (variable: any) => {
-    const id = crypto.randomUUID();
-    const newVariable = {
-      ...variable,
-      id,
-      name: `${variable.name} (Copy)`,
+  const handleDuplicateVariable = async (variable: any) => {
+    if (!variable.name) return;
+
+    const variableToSend: StaticVariable = {
+      name: variable.name,
+      workspaceId: selectedWorkspaceId,
+      type: variable.type,
+      category: "phone",
+      value: variable.type == "number" ? Number(variable.value) : variable.value
     };
-    addVariable(newVariable);
+
+    const newId = await addStaticVariable(variableToSend);
+
+    addVariable({
+      id: newId,
+      name: variable.name,
+      value: variable.type,
+      type: variable.type
+    });
   };
 
   const dataTypeOptions = [
@@ -357,6 +410,7 @@ const DataManager: React.FC = () => {
               Cancel
             </button>
             <button
+              disabled={isSubmitting}
               type="submit"
               className="px-4 py-2 text-sm bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
             >

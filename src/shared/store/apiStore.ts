@@ -35,6 +35,7 @@ interface ApiState {
   updateTestSuite: (id: string, updates: Partial<TestSuite>) => void;
   deleteTestSuite: (id: string) => void;
   executeTestSuite: (id: string) => Promise<void>;
+  setVariables:(variable: DataVariable[]) => void;
   addVariable: (variable: DataVariable) => void;
   updateVariable: (id: string, variable: Partial<DataVariable>) => void;
   deleteVariable: (id: string) => void;
@@ -243,6 +244,10 @@ export const useApiStore = create<ApiState>((set, get) => ({
 
     toast.success(`Test suite "${suite.name}" execution completed`);
   },
+
+  setVariables:(variables) => set(produce((state: ApiState) => {
+    state.variables = variables;
+  })),
 
   addVariable: (variable) => set(produce((state: ApiState) => {
     state.variables.push(variable);

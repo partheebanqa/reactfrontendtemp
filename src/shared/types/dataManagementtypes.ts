@@ -64,10 +64,8 @@ export interface E2ETest {
 export interface DataVariable {
   id: string;
   name: string;
-  type: DataType;
+  type: string;
   value: string;
-  description?: string;
-  isSecret?: boolean;
 }
 
 // Update existing ApiRequest interface
@@ -81,4 +79,12 @@ export interface ApiRequest {
   body: string;
   category?: string;
   authToken?: string;
+}
+
+export interface StaticVariable{
+  name: string,
+  workspaceId: string,
+  type: string,
+  category: string,
+  value: any
 }

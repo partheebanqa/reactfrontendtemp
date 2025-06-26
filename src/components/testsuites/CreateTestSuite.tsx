@@ -4,6 +4,8 @@ import { Save, Download, Info, AlertCircle } from 'lucide-react';
 import ImportCollectionModal from './ImportCollectionModal';
 import TestCaseSelectionModal from './TestCaseSelectionModal';
 import ImportedRequestItem from './ImportedRequestItem';
+import { testSuiteService } from '../../shared/services/testSuiteService';
+import { useWorkspace } from '../../context/WorkspaceContext';
 
 interface ImportedRequest {
   id: string;
@@ -29,6 +31,8 @@ const CreateTestSuite: React.FC = () => {
   const [currentRequest, setCurrentRequest] = useState<ImportedRequest | null>(null);
   const [showCicdInfo, setShowCicdInfo] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const {selectedWorkspaceId} = useWorkspace();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Generate UUID for the test suite
   const generateUUID = () => {
@@ -95,7 +99,9 @@ const CreateTestSuite: React.FC = () => {
     if (!validateForm()) {
       return;
     }
-    
+    createTestSuite();
+
+    return;
     // Convert imported requests to test cases
     const requestTestCases = importedRequests.flatMap(request => 
       request.testCases.map(testCase => ({
@@ -145,6 +151,26 @@ const CreateTestSuite: React.FC = () => {
     // Navigate to the test suites list
     navigate('/test-suites');
   };
+
+  const createTestSuite = async () => {
+    const createTestSuite = {
+      name: name,
+      description:description,
+      workspaceId: selectedWorkspaceId
+    }
+    try {
+      setIsSubmitting(true);
+      const response = await testSuiteService.createTestSuite(createTestSuite); 
+      if (response) {
+          console.log(response);
+      }
+    } catch (error) {
+      console.error('Failed to cretate test suite', error);
+    }finally{
+      setIsSubmitting(false);
+    }
+  }
+
 
   // Calculate total test cases from imported requests
   const totalImportedTestCases = importedRequests.reduce((acc, req) => acc + req.testCases.length, 0);
@@ -309,6 +335,7 @@ const CreateTestSuite: React.FC = () => {
                 Cancel
               </button>
               <button
+                disabled={isSubmitting}
                 type="submit"
                 className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
               >
