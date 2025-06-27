@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { X, Search, Check, ChevronDown, ChevronUp } from 'lucide-react';
+import { testSuiteService } from '../../shared/services/testSuiteService';
+import { useWorkspace } from '../../context/WorkspaceContext';
 
 interface Request {
   id: string;
@@ -10,8 +12,8 @@ interface Request {
 }
 
 interface Collection {
-  id: string;
-  name: string;
+  collectionId: string;
+  collectionName: string;
   requests: Request[];
 }
 
@@ -29,44 +31,26 @@ const ImportCollectionModal: React.FC<ImportCollectionModalProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedRequests, setSelectedRequests] = useState<Set<string>>(new Set());
   const [expandedCollections, setExpandedCollections] = useState<Set<string>>(new Set());
+  const [collections , setCollections] = useState<Collection[]>([]);
+  const {selectedWorkspaceId} = useWorkspace();
 
-  // Mock collections data
-  const collections: Collection[] = [
-    {
-      id: 'col1',
-      name: 'User Management API',
-      requests: [
-        { id: 'req1', name: 'Get User Profile', method: 'GET', url: '/api/users/profile', description: 'Retrieve user profile information' },
-        { id: 'req2', name: 'Update User Profile', method: 'PUT', url: '/api/users/profile', description: 'Update user profile data' },
-        { id: 'req3', name: 'Delete User Account', method: 'DELETE', url: '/api/users/account', description: 'Delete user account' },
-      ]
-    },
-    {
-      id: 'col2',
-      name: 'Authentication API',
-      requests: [
-        { id: 'req4', name: 'User Login', method: 'POST', url: '/api/auth/login', description: 'Authenticate user credentials' },
-        { id: 'req5', name: 'User Logout', method: 'POST', url: '/api/auth/logout', description: 'End user session' },
-        { id: 'req6', name: 'Refresh Token', method: 'POST', url: '/api/auth/refresh', description: 'Refresh authentication token' },
-      ]
-    },
-    {
-      id: 'col3',
-      name: 'Payment API',
-      requests: [
-        { id: 'req7', name: 'Process Payment', method: 'POST', url: '/api/payments/process', description: 'Process payment transaction' },
-        { id: 'req8', name: 'Get Payment History', method: 'GET', url: '/api/payments/history', description: 'Retrieve payment history' },
-        { id: 'req9', name: 'Refund Payment', method: 'POST', url: '/api/payments/refund', description: 'Process payment refund' },
-      ]
-    }
-  ];
+  useEffect(() => {
+    const collectionRequests = async () => {
+      const response = await testSuiteService.getAllCollectionsRequest(selectedWorkspaceId);
+      if (response) {
+        setCollections(response.collections);
+      }
+    };
+    if(selectedWorkspaceId)
+      collectionRequests();
+  }, [selectedWorkspaceId]);
 
-  const filteredCollections = collections.map(collection => ({
+  const filteredCollections = collections?.map((collection) => ({
     ...collection,
     requests: collection.requests.filter(request =>
       request.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      request.url.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      request.method.toLowerCase().includes(searchTerm.toLowerCase())
+      request.url?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      request.method?.toLowerCase().includes(searchTerm.toLowerCase())
     )
   })).filter(collection => collection.requests.length > 0);
 
@@ -156,20 +140,20 @@ const ImportCollectionModal: React.FC<ImportCollectionModalProps> = ({
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6">
           <div className="space-y-4">
-            {filteredCollections.map((collection) => (
-              <div key={collection.id} className="border border-gray-200 rounded-lg">
+            {filteredCollections?.map((collection) => (
+              <div key={collection.collectionId} className="border border-gray-200 rounded-lg">
                 <div className="flex items-center justify-between p-4 bg-gray-50 rounded-t-lg">
                   <button
-                    onClick={() => toggleCollection(collection.id)}
+                    onClick={() => toggleCollection(collection.collectionId)}
                     className="flex items-center flex-1 text-left"
                   >
                     <div className="flex items-center">
-                      {expandedCollections.has(collection.id) ? (
+                      {expandedCollections.has(collection.collectionId) ? (
                         <ChevronDown className="h-5 w-5 text-gray-500 mr-2" />
                       ) : (
                         <ChevronUp className="h-5 w-5 text-gray-500 mr-2" />
                       )}
-                      <h4 className="text-sm font-medium text-gray-900">{collection.name}</h4>
+                      <h4 className="text-sm font-medium text-gray-900">{collection.collectionName}</h4>
                       <span className="ml-2 text-xs text-gray-500">
                         ({collection.requests.length} requests)
                       </span>
@@ -183,7 +167,7 @@ const ImportCollectionModal: React.FC<ImportCollectionModalProps> = ({
                   </button>
                 </div>
 
-                {expandedCollections.has(collection.id) && (
+                {expandedCollections.has(collection.collectionId) && (
                   <div className="p-4 space-y-2">
                     {collection.requests.map((request) => (
                       <div

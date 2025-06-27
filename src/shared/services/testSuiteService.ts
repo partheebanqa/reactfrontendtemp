@@ -32,5 +32,18 @@ export const testSuiteService = {
     }
   },
 
+  getAllCollectionsRequest: async (workspaceId:string): Promise<any> => {
+    try {
+      const response = await apiClient(`${ENV.API_URL}/collections/with-requests?ws=${workspaceId}`, {
+        method: 'GET',
+        requiresAuth: true
+      });
+      return response;
+    }
+    catch (error: any) {
+      throw error;
+    }
+  },
+
 }
 
