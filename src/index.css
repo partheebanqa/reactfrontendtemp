@@ -3,60 +3,115 @@
 @tailwind utilities;
 
 :root {
-  --bg-primary: #ffffff;
-  --text-primary: #111827;
-  --sidebar-bg: #15171E;
-  --header-bg: #ffffff;
-  --header-text: #111827;
-  --footer-bg: #f9fafb;
-  --footer-text: #374151;
+  --background: hsl(0, 0%, 100%);
+  --foreground: hsl(240, 10%, 3.9%);
+  --muted: hsl(240, 4.8%, 95.9%);
+  --muted-foreground: hsl(240, 3.8%, 46.1%);
+  --popover: hsl(0, 0%, 100%);
+  --popover-foreground: hsl(240, 10%, 3.9%);
+  --card: hsl(0, 0%, 100%);
+  --card-foreground: hsl(240, 10%, 3.9%);
+  --border: hsl(240, 5.9%, 90%);
+  --input: hsl(240, 5.9%, 90%);
+  --primary: hsl(207, 90%, 54%);
+  --primary-foreground: hsl(210, 40%, 98%);
+  --secondary: hsl(240, 4.8%, 95.9%);
+  --secondary-foreground: hsl(240, 5.9%, 10%);
+  --accent: hsl(240, 4.8%, 95.9%);
+  --accent-foreground: hsl(240, 5.9%, 10%);
+  --destructive: hsl(0, 84.2%, 60.2%);
+  --destructive-foreground: hsl(0, 0%, 98%);
+  --ring: hsl(207, 90%, 54%);
+  --radius: 0.5rem;
+  --chart-1: hsl(207, 90%, 54%);
+  --chart-2: hsl(199, 89%, 48%);
+  --chart-3: hsl(187, 85%, 53%);
+  --chart-4: hsl(172, 66%, 50%);
+  --chart-5: hsl(162, 63%, 41%);
+  --sidebar-background: hsl(0, 0%, 98%);
+  --sidebar-foreground: hsl(240, 5.3%, 26.1%);
+  --sidebar-primary: hsl(207, 90%, 54%);
+  --sidebar-primary-foreground: hsl(0, 0%, 98%);
+  --sidebar-accent: hsl(240, 4.8%, 95.9%);
+  --sidebar-accent-foreground: hsl(240, 5.9%, 10%);
+  --sidebar-border: hsl(240, 5.9%, 90%);
+  --sidebar-ring: hsl(207, 90%, 54%);
 }
 
-.theme-dark {
-  --bg-primary: #1a1a1a;
-  --text-primary: #ffffff;
-  --sidebar-bg: #111111;
-  --header-bg: #1a1a1a;
-  --header-text: #ffffff;
-  --footer-bg: #111827;
-  --footer-text: #f3f4f6;
+.dark {
+  --background: hsl(240, 10%, 3.9%);
+  --foreground: hsl(0, 0%, 98%);
+  --muted: hsl(240, 3.7%, 15.9%);
+  --muted-foreground: hsl(240, 5%, 64.9%);
+  --popover: hsl(240, 10%, 3.9%);
+  --popover-foreground: hsl(0, 0%, 98%);
+  --card: hsl(240, 10%, 3.9%);
+  --card-foreground: hsl(0, 0%, 98%);
+  --border: hsl(240, 3.7%, 15.9%);
+  --input: hsl(240, 3.7%, 15.9%);
+  --primary: hsl(207, 90%, 54%);
+  --primary-foreground: hsl(210, 40%, 98%);
+  --secondary: hsl(240, 3.7%, 15.9%);
+  --secondary-foreground: hsl(0, 0%, 98%);
+  --accent: hsl(240, 3.7%, 15.9%);
+  --accent-foreground: hsl(0, 0%, 98%);
+  --destructive: hsl(0, 62.8%, 30.6%);
+  --destructive-foreground: hsl(0, 0%, 98%);
+  --ring: hsl(240, 4.9%, 83.9%);
+  --chart-1: hsl(207, 90%, 54%);
+  --chart-2: hsl(199, 89%, 48%);
+  --chart-3: hsl(187, 85%, 53%);
+  --chart-4: hsl(172, 66%, 50%);
+  --chart-5: hsl(162, 63%, 41%);
+  --sidebar-background: hsl(240, 5.9%, 10%);
+  --sidebar-foreground: hsl(240, 4.8%, 95.9%);
+  --sidebar-primary: hsl(207, 90%, 54%);
+  --sidebar-primary-foreground: hsl(0, 0%, 98%);
+  --sidebar-accent: hsl(240, 3.7%, 15.9%);
+  --sidebar-accent-foreground: hsl(0, 0%, 98%);
+  --sidebar-border: hsl(240, 3.7%, 15.9%);
+  --sidebar-ring: hsl(207, 90%, 54%);
 }
 
-.theme-neutral {
-  --bg-primary: #f4f4f5;
-  --text-primary: #18181b;
-  --sidebar-bg: #27272a;
-  --header-bg: #f4f4f5;
-  --header-text: #18181b;
-  --footer-bg: #e4e4e7;
-  --footer-text: #27272a;
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
 }
 
-.theme-custom {
-  --bg-primary: #f0f9ff;
-  --text-primary: #0c4a6e;
-  --sidebar-bg: #0369a1;
-  --header-bg: #f0f9ff;
-  --header-text: #0c4a6e;
-  --footer-bg: #e0f2fe;
-  --footer-text: #075985;
+/* Custom styles for APIFlow */
+.feature-gated-disabled {
+  @apply opacity-50 cursor-not-allowed;
 }
 
-body {
-  background-color: var(--bg-primary);
-  color: var(--text-primary);
+.trial-banner {
+  background: linear-gradient(135deg, hsl(45, 93%, 47%) 0%, hsl(45, 93%, 42%) 100%);
 }
 
-.bg-sidebar {
-  background-color: var(--sidebar-bg);
+.pro-gradient {
+  background: linear-gradient(135deg, hsl(207, 90%, 54%) 0%, hsl(199, 89%, 48%) 100%);
 }
 
-.header-theme {
-  background-color: var(--header-bg);
-  color: var(--header-text);
+.enterprise-gradient {
+  background: linear-gradient(135deg, hsl(271, 91%, 65%) 0%, hsl(271, 91%, 55%) 100%);
 }
 
-.footer-theme {
-  background-color: var(--footer-bg);
-  color: var(--footer-text);
+.success-state {
+  @apply text-green-600 bg-green-50 border-green-200;
+}
+
+.error-state {
+  @apply text-red-600 bg-red-50 border-red-200;
+}
+
+.warning-state {
+  @apply text-yellow-600 bg-yellow-50 border-yellow-200;
+}
+
+.running-state {
+  @apply text-blue-600 bg-blue-50 border-blue-200;
 }
