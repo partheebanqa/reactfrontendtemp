@@ -28,7 +28,7 @@ import { API_WORKSPACES } from "@/config/apiRoutes";
 import { useLocation } from "wouter";
 import { Workspace } from "@/shared/types/workspace";
 import { create } from "domain";
-import { createWorkspace, updateWorkspace } from "@/services/workspace.service";
+import { createWorkspace, updateWorkspace } from "@/service/workspace.service";
 import WorkspaceModal from "../WorkspaceModal";
 import WorkspaceDropdown from "./WorkspaceDropdown";
 

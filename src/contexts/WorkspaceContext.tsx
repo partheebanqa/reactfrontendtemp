@@ -7,7 +7,7 @@ import React, {
 } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
-import { fetchWorkspaces } from "@/services/workspace.service";
+import { fetchWorkspaces } from "@/service/workspace.service";
 import { Workspace } from "@/shared/types/workspace";
 
 

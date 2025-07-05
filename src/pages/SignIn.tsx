@@ -19,7 +19,7 @@ import { setEncryptedCookie } from "@/lib/cookieUtils";
 import { USER_COOKIE_NAME } from "@/lib/constants";
 import { API_LOGIN } from "@/config/apiRoutes";
 import { useAuth } from "@/hooks/useAuth";
-import { updateAuthState } from "@/services/auth.service";
+import { updateAuthState } from "@/service/auth.service";
 
 interface ILoginResponse{
   token: string;

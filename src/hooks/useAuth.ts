@@ -6,7 +6,7 @@ import {
   removeCookie,
 } from "@/lib/cookieUtils";
 import { USER_COOKIE_NAME } from "@/lib/constants";
-import { refreshUserData } from "@/services/auth.service";
+import { refreshUserData } from "@/service/auth.service";
 
 export function useAuth() {
   const queryClient = useQueryClient();
