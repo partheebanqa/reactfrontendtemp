@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import React, { useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,31 +22,37 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Search, Filter, Play } from 'lucide-react';
 import TestSuiteCard from './TestSuiteCard';
-
-interface TestSuite {
-  id: string;
-  name: string;
-  description: string;
-  createdAt: string;
-  suiteId: string;
-  functionalTests: number;
-  performanceTests: number;
-  securityTests: number;
-  status: 'Not Run' | 'Running' | 'Passed' | 'Failed';
-}
+import { getTestSuites } from '@/services/testSuites.service';
+import { TestSuite } from '@/models/TestSuite.model';
 
 const TestSuites: React.FC = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [location, setLocation] = useLocation();
-
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [newSuiteName, setNewSuiteName] = useState('');
   const [newSuiteDescription, setNewSuiteDescription] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All statuses');
 
-  // ... keep existing code (mockSuites array)
+  const {
+    data: apiData,
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ['testSuites'],
+    queryFn: getTestSuites,
+  });
+
+  useEffect(() => {
+    if (error) {
+      console.error('❌ Error fetching test suites:', error);
+    }
+    if (apiData) {
+      console.log('✅ Test suites from API:', apiData);
+    }
+  }, [apiData, error]);
+
   const mockSuites: TestSuite[] = [
     {
       id: '1751609029834',
@@ -83,7 +89,6 @@ const TestSuites: React.FC = () => {
     },
   ];
 
-  // ... keep existing code (createSuiteMutation and handleCreateSuite)
   const createSuiteMutation = useMutation({
     mutationFn: async (suiteData: any) => {
       await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -97,6 +102,7 @@ const TestSuites: React.FC = () => {
         title: 'Test suite created',
         description: 'Your test suite has been created successfully',
       });
+      queryClient.invalidateQueries({ queryKey: ['testSuites'] });
     },
   });
 
@@ -124,7 +130,6 @@ const TestSuites: React.FC = () => {
 
   return (
     <div className='p-6 space-y-6'>
-      {/* Header */}
       <div className='flex items-center justify-between'>
         <h1 className='text-2xl font-bold'>Test Suites</h1>
 
@@ -179,7 +184,6 @@ const TestSuites: React.FC = () => {
         </Dialog>
       </div>
 
-      {/* Search and Filter */}
       <div className='flex items-center space-x-4'>
         <div className='relative flex-1 max-w-md'>
           <Search className='w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400' />
@@ -211,7 +215,6 @@ const TestSuites: React.FC = () => {
         </Button>
       </div>
 
-      {/* List */}
       <div className='bg-white rounded-lg border'>
         {filteredSuites.length === 0 ? (
           <div className='text-center py-12'>
