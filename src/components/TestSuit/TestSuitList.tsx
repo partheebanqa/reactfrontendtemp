@@ -16,7 +16,10 @@ import { useToast } from '@/hooks/use-toast';
 import { Plus, Search, Filter, Play } from 'lucide-react';
 import TestSuiteCard from './TestSuiteCard';
 import CreateTestSuiteDialog from '@/components/TestSuit/CreateTestSuiteDialog';
-import { getTestSuites, deleteTestSuite } from '@/services/testSuites.service';
+import {
+  getAllTestSuites,
+  deleteTestSuite,
+} from '@/services/testSuites.service';
 import { TestSuite } from '@/models/TestSuite.model';
 
 const TestSuites: React.FC = () => {
@@ -35,12 +38,12 @@ const TestSuites: React.FC = () => {
     error,
   } = useQuery({
     queryKey: ['testSuites'],
-    queryFn: getTestSuites,
+    queryFn: getAllTestSuites,
   });
 
   useEffect(() => {
     if (error) {
-      console.error('❌ Error fetching test suites:', error);
+      console.error('Error fetching test suites:', error);
     }
     if (apiData) {
       console.log('Test suites from API:', apiData);

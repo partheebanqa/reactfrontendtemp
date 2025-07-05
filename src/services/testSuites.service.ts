@@ -5,7 +5,7 @@ const BEARER_TOKEN = `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJvcmdJZCI6IjFhZTZjM
 
 const workspaceId = '510cdffe-4262-438c-a5a6-c42c72a705ab';
 
-export const getTestSuites = async (): Promise<TestSuite[]> => {
+export const getAllTestSuites = async (): Promise<TestSuite[]> => {
   const response = await fetch(
     `${API_BASE_URL}/test-suites?ws=${workspaceId}`,
     {
@@ -16,12 +16,10 @@ export const getTestSuites = async (): Promise<TestSuite[]> => {
       },
     }
   );
-
   if (!response.ok) {
     throw new Error('Failed to fetch test suites');
   }
   const data = await response.json();
-  console.log('✅ API Response:', data);
   return data.testSuites;
 };
 
@@ -39,12 +37,10 @@ export const createTestSuite = async (
       workspaceId,
     }),
   });
-
   if (!response.ok) {
     const error = await response.json();
     throw new Error(error.message || 'Failed to create test suite');
   }
-
   return response.json();
 };
 
@@ -60,4 +56,21 @@ export const deleteTestSuite = async (id: string): Promise<void> => {
     const error = await response.json();
     throw new Error(error.message || 'Failed to delete test suite');
   }
+};
+
+export const getTestSuites = async (id: string): Promise<TestSuite> => {
+  const response = await fetch(`${API_BASE_URL}/test-suites/${id}`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${BEARER_TOKEN}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch test suite');
+  }
+
+  const data = await response.json();
+  return data; // ✅ backend returns the object directly
 };
