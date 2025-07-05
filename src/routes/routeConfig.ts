@@ -16,265 +16,323 @@ export interface RouteConfig {
 
 export const routeConfig: RouteConfig[] = [
   {
-    path: "/",
-    name: "Dashboard",
-    component: "DashboardPage",
-    icon: "BarChart3",
+    path: '/',
+    name: 'Dashboard',
+    component: 'DashboardPage',
+    icon: 'BarChart3',
     requiresAuth: true,
     meta: {
-      title: "Dashboard - APIFlow",
-      description: "Overview of your API testing activities and performance metrics",
-      keywords: ["dashboard", "overview", "metrics", "api testing"]
-    }
+      title: 'Dashboard - APIFlow',
+      description:
+        'Overview of your API testing activities and performance metrics',
+      keywords: ['dashboard', 'overview', 'metrics', 'api testing'],
+    },
   },
   {
-    path: "/request-builder",
-    name: "Request Builder",
-    component: "RequestBuilderPage",
-    icon: "Code",
+    path: '/request-builder',
+    name: 'Request Builder',
+    component: 'RequestBuilderPage',
+    icon: 'Code',
     requiresAuth: true,
-    feature: "request_builder",
+    feature: 'request_builder',
     meta: {
-      title: "Request Builder - APIFlow",
-      description: "Visual no-code API request builder and testing interface",
-      keywords: ["request builder", "api testing", "no-code", "visual editor"]
-    }
+      title: 'Request Builder - APIFlow',
+      description: 'Visual no-code API request builder and testing interface',
+      keywords: ['request builder', 'api testing', 'no-code', 'visual editor'],
+    },
   },
   {
-    path: "/test-suites",
-    name: "Test Suites",
-    component: "TestSuitesPage",
-    icon: "FolderOpen",
+    path: '/test-suites',
+    name: 'Test Suites',
+    component: 'TestSuitesPage',
+    icon: 'FolderOpen',
     requiresAuth: true,
-    feature: "test_suites",
+    feature: 'test_suites',
     meta: {
-      title: "Test Suites - APIFlow",
-      description: "Organize and manage collections of related API tests",
-      keywords: ["test suites", "test collections", "organization", "api tests"]
-    }
+      title: 'Test Suites - APIFlow',
+      description: 'Organize and manage collections of related API tests',
+      keywords: [
+        'test suites',
+        'test collections',
+        'organization',
+        'api tests',
+      ],
+    },
   },
   {
-    path: "/request-chains",
-    name: "Request Chains",
-    component: "RequestChainsPage",
-    icon: "GitBranch",
+    path: '/test-suites',
+    name: 'Test Suites',
+    component: 'TestSuitesPage',
+    icon: 'FolderOpen',
     requiresAuth: true,
-    feature: "request_chains",
+    feature: 'test_suites',
     meta: {
-      title: "Request Chains - APIFlow",
-      description: "Create sequential API request workflows and dependencies",
-      keywords: ["request chains", "workflows", "sequential testing", "dependencies"]
-    }
+      title: 'Test Suites - APIFlow',
+      description: 'Organize and manage collections of related API tests',
+      keywords: [
+        'test suites',
+        'test collections',
+        'organization',
+        'api tests',
+      ],
+    },
   },
   {
-    path: "/scheduler",
-    name: "Scheduler",
-    component: "SchedulerPage",
-    icon: "Calendar",
+    path: '/request-chains',
+    name: 'Request Chains',
+    component: 'RequestChainsPage',
+    icon: 'GitBranch',
     requiresAuth: true,
-    feature: "scheduler",
+    feature: 'request_chains',
     meta: {
-      title: "Scheduler - APIFlow",
-      description: "Schedule automated API tests and monitoring",
-      keywords: ["scheduler", "automation", "cron jobs", "monitoring"]
-    }
+      title: 'Request Chains - APIFlow',
+      description: 'Create sequential API request workflows and dependencies',
+      keywords: [
+        'request chains',
+        'workflows',
+        'sequential testing',
+        'dependencies',
+      ],
+    },
   },
   {
-    path: "/executions",
-    name: "Executions",
-    component: "ExecutionsPage",
-    icon: "Play",
+    path: '/scheduler',
+    name: 'Scheduler',
+    component: 'SchedulerPage',
+    icon: 'Calendar',
     requiresAuth: true,
+    feature: 'scheduler',
     meta: {
-      title: "Executions - APIFlow",
-      description: "Monitor test execution history and results",
-      keywords: ["executions", "test results", "history", "monitoring"]
-    }
+      title: 'Scheduler - APIFlow',
+      description: 'Schedule automated API tests and monitoring',
+      keywords: ['scheduler', 'automation', 'cron jobs', 'monitoring'],
+    },
   },
   {
-    path: "/cicd",
-    name: "CI/CD Integration",
-    component: "CicdIntegrationPage",
-    icon: "Zap",
+    path: '/executions',
+    name: 'Executions',
+    component: 'ExecutionsPage',
+    icon: 'Play',
     requiresAuth: true,
-    feature: "cicd_integrations",
-    roles: ["admin", "developer"],
     meta: {
-      title: "CI/CD Integration - APIFlow",
-      description: "Connect your CI/CD pipelines for automated testing",
-      keywords: ["cicd", "integration", "automation", "pipelines", "github", "gitlab"]
-    }
+      title: 'Executions - APIFlow',
+      description: 'Monitor test execution history and results',
+      keywords: ['executions', 'test results', 'history', 'monitoring'],
+    },
   },
   {
-    path: "/reports",
-    name: "Reports",
-    component: "ReportsPage",
-    icon: "BarChart3",
+    path: '/cicd',
+    name: 'CI/CD Integration',
+    component: 'CicdIntegrationPage',
+    icon: 'Zap',
     requiresAuth: true,
-    feature: "advanced_reporting",
+    feature: 'cicd_integrations',
+    roles: ['admin', 'developer'],
     meta: {
-      title: "Reports - APIFlow",
-      description: "Generate comprehensive testing analytics and insights",
-      keywords: ["reports", "analytics", "insights", "performance", "statistics"]
-    }
+      title: 'CI/CD Integration - APIFlow',
+      description: 'Connect your CI/CD pipelines for automated testing',
+      keywords: [
+        'cicd',
+        'integration',
+        'automation',
+        'pipelines',
+        'github',
+        'gitlab',
+      ],
+    },
   },
   {
-    path: "/data-management",
-    name: "Data Management",
-    component: "DataManagementPage",
-    icon: "Database",
+    path: '/reports',
+    name: 'Reports',
+    component: 'ReportsPage',
+    icon: 'BarChart3',
     requiresAuth: true,
-    feature: "data_management",
-    roles: ["admin"],
+    feature: 'advanced_reporting',
     meta: {
-      title: "Data Management - APIFlow",
-      description: "Manage data retention, exports, and cleanup policies",
-      keywords: ["data management", "retention", "exports", "cleanup", "compliance"]
-    }
+      title: 'Reports - APIFlow',
+      description: 'Generate comprehensive testing analytics and insights',
+      keywords: [
+        'reports',
+        'analytics',
+        'insights',
+        'performance',
+        'statistics',
+      ],
+    },
   },
   {
-    path: "/utilities",
-    name: "Utilities",
-    component: "UtilitiesPage",
-    icon: "Wrench",
+    path: '/data-management',
+    name: 'Data Management',
+    component: 'DataManagementPage',
+    icon: 'Database',
     requiresAuth: true,
+    feature: 'data_management',
+    roles: ['admin'],
     meta: {
-      title: "Utilities - APIFlow",
-      description: "Developer tools and utilities for API testing",
-      keywords: ["utilities", "tools", "encoder", "decoder", "jwt", "hash"]
-    }
+      title: 'Data Management - APIFlow',
+      description: 'Manage data retention, exports, and cleanup policies',
+      keywords: [
+        'data management',
+        'retention',
+        'exports',
+        'cleanup',
+        'compliance',
+      ],
+    },
   },
   {
-    path: "/notifications",
-    name: "Notifications",
-    component: "NotificationsPage",
-    icon: "Bell",
+    path: '/utilities',
+    name: 'Utilities',
+    component: 'UtilitiesPage',
+    icon: 'Wrench',
     requiresAuth: true,
     meta: {
-      title: "Notifications - APIFlow",
-      description: "Configure notification rules and alert preferences",
-      keywords: ["notifications", "alerts", "rules", "integrations", "slack", "email"]
-    }
+      title: 'Utilities - APIFlow',
+      description: 'Developer tools and utilities for API testing',
+      keywords: ['utilities', 'tools', 'encoder', 'decoder', 'jwt', 'hash'],
+    },
   },
   {
-    path: "/profile",
-    name: "Profile",
-    component: "ProfilePage",
-    icon: "User",
+    path: '/notifications',
+    name: 'Notifications',
+    component: 'NotificationsPage',
+    icon: 'Bell',
     requiresAuth: true,
     meta: {
-      title: "Profile - APIFlow",
-      description: "Manage your account settings and preferences",
-      keywords: ["profile", "account", "settings", "preferences", "api keys"]
-    }
+      title: 'Notifications - APIFlow',
+      description: 'Configure notification rules and alert preferences',
+      keywords: [
+        'notifications',
+        'alerts',
+        'rules',
+        'integrations',
+        'slack',
+        'email',
+      ],
+    },
   },
   {
-    path: "/settings",
-    name: "Settings",
-    component: "SettingsPage",
-    icon: "Settings",
+    path: '/profile',
+    name: 'Profile',
+    component: 'ProfilePage',
+    icon: 'User',
     requiresAuth: true,
-    roles: ["admin"],
     meta: {
-      title: "Settings - APIFlow",
-      description: "Workspace configuration and team management",
-      keywords: ["settings", "workspace", "team", "configuration", "billing"]
-    }
-  }
+      title: 'Profile - APIFlow',
+      description: 'Manage your account settings and preferences',
+      keywords: ['profile', 'account', 'settings', 'preferences', 'api keys'],
+    },
+  },
+  {
+    path: '/settings',
+    name: 'Settings',
+    component: 'SettingsPage',
+    icon: 'Settings',
+    requiresAuth: true,
+    roles: ['admin'],
+    meta: {
+      title: 'Settings - APIFlow',
+      description: 'Workspace configuration and team management',
+      keywords: ['settings', 'workspace', 'team', 'configuration', 'billing'],
+    },
+  },
 ];
 
 export const publicRoutes: RouteConfig[] = [
   {
-    path: "/landing",
-    name: "Landing",
-    component: "LandingPage",
+    path: '/landing',
+    name: 'Landing',
+    component: 'LandingPage',
     requiresAuth: false,
     meta: {
-      title: "APIFlow - No-Code API Testing Platform",
-      description: "The most comprehensive no-code API testing platform for teams",
-      keywords: ["api testing", "no-code", "automation", "monitoring", "saas"]
-    }
+      title: 'APIFlow - No-Code API Testing Platform',
+      description:
+        'The most comprehensive no-code API testing platform for teams',
+      keywords: ['api testing', 'no-code', 'automation', 'monitoring', 'saas'],
+    },
   },
   {
-    path: "/pricing",
-    name: "Pricing",
-    component: "PricingPage",
+    path: '/pricing',
+    name: 'Pricing',
+    component: 'PricingPage',
     requiresAuth: false,
     meta: {
-      title: "Pricing - APIFlow",
-      description: "Choose the perfect plan for your API testing needs",
-      keywords: ["pricing", "plans", "subscription", "features", "comparison"]
-    }
+      title: 'Pricing - APIFlow',
+      description: 'Choose the perfect plan for your API testing needs',
+      keywords: ['pricing', 'plans', 'subscription', 'features', 'comparison'],
+    },
   },
   {
-    path: "/privacy",
-    name: "Privacy Policy",
-    component: "PrivacyPage",
+    path: '/privacy',
+    name: 'Privacy Policy',
+    component: 'PrivacyPage',
     requiresAuth: false,
     meta: {
-      title: "Privacy Policy - APIFlow",
-      description: "How we protect and handle your data and privacy",
-      keywords: ["privacy policy", "data protection", "gdpr", "compliance"]
-    }
+      title: 'Privacy Policy - APIFlow',
+      description: 'How we protect and handle your data and privacy',
+      keywords: ['privacy policy', 'data protection', 'gdpr', 'compliance'],
+    },
   },
   {
-    path: "/terms",
-    name: "Terms of Service",
-    component: "TermsPage",
+    path: '/terms',
+    name: 'Terms of Service',
+    component: 'TermsPage',
     requiresAuth: false,
     meta: {
-      title: "Terms of Service - APIFlow",
-      description: "Terms and conditions for using the APIFlow platform",
-      keywords: ["terms of service", "legal", "conditions", "agreement"]
-    }
-  }
+      title: 'Terms of Service - APIFlow',
+      description: 'Terms and conditions for using the APIFlow platform',
+      keywords: ['terms of service', 'legal', 'conditions', 'agreement'],
+    },
+  },
 ];
 
 // Navigation groups for sidebar organization
 export const navigationGroups = [
   {
-    name: "Core",
-    routes: ["/", "/request-builder", "/test-suites", "/request-chains"]
+    name: 'Core',
+    routes: ['/', '/request-builder', '/test-suites', '/request-chains'],
   },
   {
-    name: "Automation",
-    routes: ["/scheduler", "/executions", "/cicd"]
+    name: 'Automation',
+    routes: ['/scheduler', '/executions', '/cicd'],
   },
   {
-    name: "Analytics",
-    routes: ["/reports", "/data-management"]
+    name: 'Analytics',
+    routes: ['/reports', '/data-management'],
   },
   {
-    name: "Tools",
-    routes: ["/utilities", "/notifications"]
+    name: 'Tools',
+    routes: ['/utilities', '/notifications'],
   },
   {
-    name: "Account",
-    routes: ["/profile", "/settings"]
-  }
+    name: 'Account',
+    routes: ['/profile', '/settings'],
+  },
 ];
 
 // Helper functions
 export function getRouteByPath(path: string): RouteConfig | undefined {
-  return [...routeConfig, ...publicRoutes].find(route => route.path === path);
+  return [...routeConfig, ...publicRoutes].find((route) => route.path === path);
 }
 
 export function getRoutesForRole(userRole: string): RouteConfig[] {
-  return routeConfig.filter(route => 
-    !route.roles || route.roles.includes(userRole)
+  return routeConfig.filter(
+    (route) => !route.roles || route.roles.includes(userRole)
   );
 }
 
 export function getRoutesForFeature(features: string[]): RouteConfig[] {
-  return routeConfig.filter(route => 
-    !route.feature || features.includes(route.feature)
+  return routeConfig.filter(
+    (route) => !route.feature || features.includes(route.feature)
   );
 }
 
-export function generateBreadcrumbs(currentPath: string): Array<{name: string, path: string}> {
+export function generateBreadcrumbs(
+  currentPath: string
+): Array<{ name: string; path: string }> {
   const parts = currentPath.split('/').filter(Boolean);
   const breadcrumbs = [{ name: 'Dashboard', path: '/' }];
-  
+
   let currentRoute = '';
   for (const part of parts) {
     currentRoute += '/' + part;
@@ -283,6 +341,6 @@ export function generateBreadcrumbs(currentPath: string): Array<{name: string, p
       breadcrumbs.push({ name: route.name, path: currentRoute });
     }
   }
-  
+
   return breadcrumbs;
 }
