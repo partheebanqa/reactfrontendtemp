@@ -20,9 +20,14 @@ interface TestSuite {
 interface TestSuiteCardProps {
   suite: TestSuite;
   onEdit: (suite: TestSuite) => void;
+  onDelete: (id: string) => void;
 }
 
-const TestSuiteCard: React.FC<TestSuiteCardProps> = ({ suite, onEdit }) => {
+const TestSuiteCard: React.FC<TestSuiteCardProps> = ({
+  suite,
+  onEdit,
+  onDelete,
+}) => {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'Not Run':
@@ -134,6 +139,7 @@ const TestSuiteCard: React.FC<TestSuiteCardProps> = ({ suite, onEdit }) => {
             variant='ghost'
             size='icon'
             className='text-gray-600 hover:text-red-600'
+            onClick={() => onDelete(suite.id)}
           >
             <Trash2 className='w-4 h-4' />
           </Button>

@@ -13,6 +13,7 @@ import {
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import { Plus } from 'lucide-react';
+import { createTestSuite } from '@/services/testSuites.service';
 
 interface CreateTestSuiteDialogProps {}
 
@@ -25,9 +26,11 @@ const CreateTestSuiteDialog: React.FC<CreateTestSuiteDialogProps> = () => {
   const [newSuiteDescription, setNewSuiteDescription] = useState('');
 
   const createSuiteMutation = useMutation({
-    mutationFn: async (suiteData: any) => {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      return { success: true };
+    mutationFn: async () => {
+      return createTestSuite({
+        name: newSuiteName,
+        description: newSuiteDescription,
+      });
     },
     onSuccess: () => {
       setIsOpen(false);
@@ -35,18 +38,22 @@ const CreateTestSuiteDialog: React.FC<CreateTestSuiteDialogProps> = () => {
       setNewSuiteDescription('');
       toast({
         title: 'Test suite created',
-        description: 'Your test suite has been created successfully',
+        description: 'Your test suite has been created successfully.',
       });
       queryClient.invalidateQueries({ queryKey: ['testSuites'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Failed to create test suite',
+        description: error.message || 'Something went wrong.',
+        variant: 'destructive',
+      });
     },
   });
 
   const handleCreateSuite = () => {
     if (!newSuiteName.trim()) return;
-    createSuiteMutation.mutate({
-      name: newSuiteName,
-      description: newSuiteDescription,
-    });
+    createSuiteMutation.mutate();
   };
 
   return (
@@ -88,7 +95,7 @@ const CreateTestSuiteDialog: React.FC<CreateTestSuiteDialogProps> = () => {
               onClick={handleCreateSuite}
               disabled={!newSuiteName.trim() || createSuiteMutation.isPending}
             >
-              Create Suite
+              {createSuiteMutation.isPending ? 'Creating...' : 'Create Suite'}
             </Button>
           </div>
         </div>

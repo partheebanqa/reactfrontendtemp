@@ -8,3 +8,8 @@ export interface TestSuite {
   securityTests: number;
   status: 'Not Run' | 'Running' | 'Passed' | 'Failed';
 }
+
+export interface CreateTestSuitePayload {
+  name: string;
+  description?: string;
+}

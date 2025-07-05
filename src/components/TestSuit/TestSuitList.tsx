@@ -6,13 +6,6 @@ import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -22,8 +15,8 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Search, Filter, Play } from 'lucide-react';
 import TestSuiteCard from './TestSuiteCard';
-import { getTestSuites } from '@/services/testSuites.service';
 import CreateTestSuiteDialog from '@/components/TestSuit/CreateTestSuiteDialog';
+import { getTestSuites, deleteTestSuite } from '@/services/testSuites.service';
 import { TestSuite } from '@/models/TestSuite.model';
 
 const TestSuites: React.FC = () => {
@@ -33,9 +26,6 @@ const TestSuites: React.FC = () => {
   const [testSuitListData, setTestSuitListData] = useState<
     TestSuite[] | undefined
   >(undefined);
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [newSuiteName, setNewSuiteName] = useState('');
-  const [newSuiteDescription, setNewSuiteDescription] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All statuses');
 
@@ -58,62 +48,26 @@ const TestSuites: React.FC = () => {
     }
   }, [apiData, error]);
 
-  const mockSuites: TestSuite[] = [
-    {
-      id: '363bb6ab-e785-444f-8f1a-798ca21fc890',
-      name: 'test123',
-      description: 'test description',
-      createdAt: '04/07/2025',
-      functionalTests: 13,
-      performanceTests: 0,
-      securityTests: 0,
-      status: 'Not Run',
-    },
-    {
-      id: '363bb6ab-e785-444f-8f1a-798ca21fc890',
-      name: 'test456',
-      description: 'adfasdf',
-      createdAt: '04/07/2025',
-      functionalTests: 15,
-      performanceTests: 0,
-      securityTests: 0,
-      status: 'Not Run',
-    },
-    {
-      id: '363bb6ab-e785-444f-8f1a-798ca21fc890',
-      name: 'ZXCZX',
-      description: 'sdfds',
-      createdAt: '04/07/2025',
-      functionalTests: 16,
-      performanceTests: 0,
-      securityTests: 0,
-      status: 'Not Run',
-    },
-  ];
-
-  const createSuiteMutation = useMutation({
-    mutationFn: async (suiteData: any) => {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      return { success: true };
-    },
+  const deleteSuiteMutation = useMutation({
+    mutationFn: deleteTestSuite,
     onSuccess: () => {
-      setIsCreateOpen(false);
-      setNewSuiteName('');
-      setNewSuiteDescription('');
       toast({
-        title: 'Test suite created',
-        description: 'Your test suite has been created successfully',
+        title: 'Deleted',
+        description: 'Test suite deleted successfully.',
       });
       queryClient.invalidateQueries({ queryKey: ['testSuites'] });
     },
+    onError: (error: any) => {
+      toast({
+        title: 'Delete failed',
+        description: error.message || 'Something went wrong.',
+        variant: 'destructive',
+      });
+    },
   });
 
-  const handleCreateSuite = () => {
-    if (!newSuiteName.trim()) return;
-    createSuiteMutation.mutate({
-      name: newSuiteName,
-      description: newSuiteDescription,
-    });
+  const handleDeleteSuite = (id: string) => {
+    deleteSuiteMutation.mutate(id);
   };
 
   const handleEditSuite = (suite: TestSuite) => {
@@ -180,6 +134,7 @@ const TestSuites: React.FC = () => {
                 key={suite.id}
                 suite={suite}
                 onEdit={handleEditSuite}
+                onDelete={handleDeleteSuite}
               />
             ))}
           </div>
