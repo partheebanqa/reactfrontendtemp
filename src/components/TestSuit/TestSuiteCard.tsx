@@ -1,14 +1,16 @@
+'use client';
+
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Play, Edit, Copy, Trash2, Info } from 'lucide-react';
+import { formatDate } from '@/utils/formatDate';
 
 interface TestSuite {
   id: string;
   name: string;
   description: string;
   createdAt: string;
-  suiteId: string;
   functionalTests: number;
   performanceTests: number;
   securityTests: number;
@@ -72,14 +74,17 @@ const TestSuiteCard: React.FC<TestSuiteCardProps> = ({ suite, onEdit }) => {
             <h3 className='font-semibold text-lg'>{suite.name}</h3>
             {getStatusBadge(suite.status)}
           </div>
+
           <p className='text-gray-600 text-sm mb-3'>{suite.description}</p>
+
           <div className='flex items-center space-x-6 text-sm text-gray-500 mb-3'>
-            <span>Created: {suite.createdAt}</span>
+            <span>Created: {formatDate(suite.createdAt)}</span>
             <div className='flex items-center space-x-1'>
-              <span>ID: {suite.suiteId}</span>
+              <span>ID: {suite.id}</span>
               <Info className='w-3 h-3' />
             </div>
           </div>
+
           <div className='flex items-center space-x-4'>
             <Badge
               variant='outline'
@@ -101,6 +106,7 @@ const TestSuiteCard: React.FC<TestSuiteCardProps> = ({ suite, onEdit }) => {
             </Badge>
           </div>
         </div>
+
         <div className='flex items-center space-x-2'>
           <Button
             variant='ghost'

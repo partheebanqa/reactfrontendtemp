@@ -23,12 +23,16 @@ import { useToast } from '@/hooks/use-toast';
 import { Plus, Search, Filter, Play } from 'lucide-react';
 import TestSuiteCard from './TestSuiteCard';
 import { getTestSuites } from '@/services/testSuites.service';
+import CreateTestSuiteDialog from '@/components/TestSuit/CreateTestSuiteDialog';
 import { TestSuite } from '@/models/TestSuite.model';
 
 const TestSuites: React.FC = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [location, setLocation] = useLocation();
+  const [testSuitListData, setTestSuitListData] = useState<
+    TestSuite[] | undefined
+  >(undefined);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [newSuiteName, setNewSuiteName] = useState('');
   const [newSuiteDescription, setNewSuiteDescription] = useState('');
@@ -49,39 +53,37 @@ const TestSuites: React.FC = () => {
       console.error('❌ Error fetching test suites:', error);
     }
     if (apiData) {
-      console.log('✅ Test suites from API:', apiData);
+      console.log('Test suites from API:', apiData);
+      setTestSuitListData(apiData);
     }
   }, [apiData, error]);
 
   const mockSuites: TestSuite[] = [
     {
-      id: '1751609029834',
+      id: '363bb6ab-e785-444f-8f1a-798ca21fc890',
       name: 'test123',
       description: 'test description',
       createdAt: '04/07/2025',
-      suiteId: 'd97c2edf-bcb1-437b-8224-4b627d65ab06',
       functionalTests: 13,
       performanceTests: 0,
       securityTests: 0,
       status: 'Not Run',
     },
     {
-      id: '1751609029835',
+      id: '363bb6ab-e785-444f-8f1a-798ca21fc890',
       name: 'test456',
       description: 'adfasdf',
       createdAt: '04/07/2025',
-      suiteId: '413569f6-956c-4fcb-8e07-762180183fca',
       functionalTests: 15,
       performanceTests: 0,
       securityTests: 0,
       status: 'Not Run',
     },
     {
-      id: '1751609029836',
+      id: '363bb6ab-e785-444f-8f1a-798ca21fc890',
       name: 'ZXCZX',
       description: 'sdfds',
       createdAt: '04/07/2025',
-      suiteId: '363bb6ab-e785-444f-8f1a-798ca21fc890',
       functionalTests: 16,
       performanceTests: 0,
       securityTests: 0,
@@ -115,11 +117,11 @@ const TestSuites: React.FC = () => {
   };
 
   const handleEditSuite = (suite: TestSuite) => {
-    console.log('Navigating to edit suite with ID:', suite.suiteId);
-    setLocation(`/test-suites/${suite.suiteId}/edit`);
+    console.log('Navigating to edit suite with ID:', suite.id);
+    setLocation(`/test-suites/${suite.id}/edit`);
   };
 
-  const filteredSuites = mockSuites.filter((suite) => {
+  const filteredSuites = (testSuitListData ?? []).filter((suite) => {
     const matchesSearch =
       suite.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       suite.description.toLowerCase().includes(searchQuery.toLowerCase());
@@ -132,56 +134,7 @@ const TestSuites: React.FC = () => {
     <div className='p-6 space-y-6'>
       <div className='flex items-center justify-between'>
         <h1 className='text-2xl font-bold'>Test Suites</h1>
-
-        <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-          <DialogTrigger asChild>
-            <Button className='bg-blue-600 hover:bg-blue-700'>
-              <Plus className='w-4 h-4 mr-2' />
-              Create Test Suite
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Create Test Suite</DialogTitle>
-            </DialogHeader>
-            <div className='space-y-4'>
-              <div>
-                <label className='text-sm font-medium'>Suite Name</label>
-                <Input
-                  placeholder='Enter suite name'
-                  value={newSuiteName}
-                  onChange={(e) => setNewSuiteName(e.target.value)}
-                />
-              </div>
-              <div>
-                <label className='text-sm font-medium'>
-                  Description (Optional)
-                </label>
-                <Input
-                  placeholder='Describe what this suite tests'
-                  value={newSuiteDescription}
-                  onChange={(e) => setNewSuiteDescription(e.target.value)}
-                />
-              </div>
-              <div className='flex justify-end space-x-2'>
-                <Button
-                  variant='outline'
-                  onClick={() => setIsCreateOpen(false)}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={handleCreateSuite}
-                  disabled={
-                    !newSuiteName.trim() || createSuiteMutation.isPending
-                  }
-                >
-                  Create Suite
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <CreateTestSuiteDialog />
       </div>
 
       <div className='flex items-center space-x-4'>

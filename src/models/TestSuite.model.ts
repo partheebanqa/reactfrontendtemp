@@ -3,7 +3,6 @@ export interface TestSuite {
   name: string;
   description: string;
   createdAt: string;
-  suiteId: string;
   functionalTests: number;
   performanceTests: number;
   securityTests: number;
