@@ -30,7 +30,7 @@ import ForgotPassword from "@/pages/ForgotPassword";
 import NotFound from "@/pages/not-found";
 
 function Router() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
   console.log("🚀 ~ Router ~ isAuthenticated:", isAuthenticated)
 
   if (isLoading) {
@@ -54,6 +54,7 @@ function Router() {
     );
   }
 
+  console.log("User authenticated, rendering protected routes", user);
   return (
     <WorkspaceProvider>
       <FeatureGateProvider>

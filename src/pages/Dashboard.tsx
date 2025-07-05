@@ -1,5 +1,4 @@
 import React from "react";
-import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,28 +27,15 @@ import {
   Zap,
   Check
 } from "lucide-react";
-import { apiRequest } from "@/lib/queryClient";
-import { API_WORKSPACES } from "@/config/apiRoutes";
 
 const Dashboard: React.FC = () => {
-  const { currentWorkspace } = useWorkspace();
+  const { currentWorkspace, workspaces } = useWorkspace();
   const { subscriptionPlan } = useFeatureGate();
   const { isTrialActive, canStartTrial } = useTrialManagement();
 
-  const { data: projectData } = useQuery({
-    queryKey: ["/workspaces"],
-    enabled: !!currentWorkspace?.id,
-    queryFn: async () => {
-      const response = await apiRequest('GET', API_WORKSPACES)
-      if (!response.ok) {
-        throw new Error('Failed to fetch project data');
-      }
-      return response.json();
-    }
-  });
-  console.log("🚀 ~ projectData:", projectData)
-
-  const projects = projectData?.projects || [];
+  // Use the workspace data directly from the context
+  const projects = workspaces || [];
+  console.log("🚀 ~ workspaces:", workspaces)
 
   // Mock stats - in real app, these would come from API
   const stats = {
