@@ -1,7 +1,7 @@
 import { CreateTestSuitePayload, TestSuite } from '@/models/TestSuite.model';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
-const BEARER_TOKEN = `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJvcmdJZCI6IjFhZTZjMjY1LWU1MDItNGFlZC1hYWRjLTQ4MzM3ZTYyMDgwNyIsInRlbmFudElkIjoiYzE1ZDQ4OWItOGMxZS00NmZiLWFlYzgtMDlmMDBmZjUyMTNjIiwicm9sZXMiOlsiT3JnIEFkbWluIl0sInN1YiI6IjM1YmI2NzBkLTcyNTYtNDg0MC1iOTI1LTJkYjk1M2ZmYmVlNCIsImV4cCI6MTc1MTc3OTcwMiwibmJmIjoxNzUxNjkzMzAyLCJpYXQiOjE3NTE2OTMzMDJ9.Mqn4OJaSAQvnd5E_xv3beffXQ1WS33_QioVW6B6VQSc`;
+const BEARER_TOKEN = `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJvcmdJZCI6IjFhZTZjMjY1LWU1MDItNGFlZC1hYWRjLTQ4MzM3ZTYyMDgwNyIsInRlbmFudElkIjoiYzE1ZDQ4OWItOGMxZS00NmZiLWFlYzgtMDlmMDBmZjUyMTNjIiwicm9sZXMiOlsiT3JnIEFkbWluIl0sInN1YiI6IjM1YmI2NzBkLTcyNTYtNDg0MC1iOTI1LTJkYjk1M2ZmYmVlNCIsImV4cCI6MTc1MTg4MTU1MCwibmJmIjoxNzUxNzk1MTUwLCJpYXQiOjE3NTE3OTUxNTB9.iGp8Znf0qoI7zchLOOH80pazuvdY6FeDSzvD3E2DtNk`;
 
 const workspaceId = '510cdffe-4262-438c-a5a6-c42c72a705ab';
 
@@ -72,5 +72,31 @@ export const getTestSuites = async (id: string): Promise<TestSuite> => {
   }
 
   const data = await response.json();
-  return data; // ✅ backend returns the object directly
+  console.log('data000:', data);
+  return data;
+};
+
+export const addRequestsToTestSuite = async (
+  testSuiteId: string,
+  payload: any
+): Promise<any> => {
+  const response = await fetch(
+    `${API_BASE_URL}/test-suites/${testSuiteId}/requests`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${BEARER_TOKEN}`,
+      },
+      body: JSON.stringify({
+        ...payload,
+        workspaceId,
+      }),
+    }
+  );
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to add requests to test suite');
+  }
+  return response.json();
 };

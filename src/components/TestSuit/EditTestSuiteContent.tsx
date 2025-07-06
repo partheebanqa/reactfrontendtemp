@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useParams, useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -10,6 +11,8 @@ import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, Download } from 'lucide-react';
 import { ManageRequests } from '@/components/TestSuit/ManageRequests';
 import { ImportModal } from '@/components/TestSuit/ImportModal';
+import { useQuery } from '@tanstack/react-query';
+import { getTestSuites } from '@/services/testSuites.service';
 
 interface Request {
   id: string;
@@ -23,46 +26,45 @@ interface Request {
   };
 }
 
-interface EditTestSuiteContentProps {
-  id: string;
-  onBack: () => void;
-}
-
-const EditTestSuiteContent: React.FC<EditTestSuiteContentProps> = ({
-  id,
-  onBack,
-}) => {
+const EditTestSuiteContent: React.FC = () => {
+  const params = useParams<{ id: string }>();
+  const id = params.id;
   const { toast } = useToast();
+  const [location, setLocation] = useLocation();
 
   const [testSuiteName, setTestSuiteName] = useState('');
   const [description, setDescription] = useState('');
   const [requests, setRequests] = useState<Request[]>([]);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  // const [isLoading, setIsLoading] = useState(true);
 
-  // Simulate loading test suite data
+  const {
+    data: testSuite,
+    isLoading,
+    error,
+    isError,
+  } = useQuery({
+    queryKey: ['testSuite', id],
+    queryFn: () => getTestSuites(id!),
+    enabled: !!id,
+  });
+
   useEffect(() => {
-    const loadTestSuiteData = async () => {
-      setIsLoading(true);
-      // Simulate API call delay
-      await new Promise((resolve) => setTimeout(resolve, 500));
+    if (testSuite) {
+      setTestSuiteName(testSuite.name || '');
+      setDescription(testSuite.description || '');
+    }
+  }, [testSuite]);
 
-      // Mock test suite data - replace with actual API call
-      const mockTestSuite = {
-        id: id,
-        name: 'API Integration Test Suite',
-        description:
-          'Comprehensive test suite for API endpoint validation and integration testing',
-      };
-
-      setTestSuiteName(mockTestSuite.name);
-      setDescription(mockTestSuite.description);
-      setIsLoading(false);
-    };
-
-    loadTestSuiteData();
-  }, [id]);
-
+  useEffect(() => {
+    if (isError && error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to load test suite data. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  }, [isError, error, toast]);
   const handleImportRequests = (selectedRequests: Request[]) => {
     setRequests((prev) => [...prev, ...selectedRequests]);
     setIsImportModalOpen(false);
@@ -79,28 +81,9 @@ const EditTestSuiteContent: React.FC<EditTestSuiteContentProps> = ({
     });
   };
 
-  const EmptyRequestsState = () => (
-    <Card className='border-2 border-dashed border-border'>
-      <CardContent className='flex flex-col items-center justify-center py-16 px-6'>
-        <div className='w-16 h-16 mb-6 rounded-full bg-muted flex items-center justify-center'>
-          <Download className='w-8 h-8 text-muted-foreground' />
-        </div>
-        <h3 className='text-xl font-semibold mb-2'>No requests added yet</h3>
-        <p className='text-muted-foreground text-center mb-6 max-w-md'>
-          Import API requests from your collections to start configuring test
-          cases for this test suite.
-        </p>
-        <Button
-          variant='outline'
-          size='lg'
-          onClick={() => setIsImportModalOpen(true)}
-        >
-          <Download className='w-4 h-4 mr-2' />
-          Import Requests
-        </Button>
-      </CardContent>
-    </Card>
-  );
+  const handleBack = () => {
+    setLocation('/test-suites');
+  };
 
   return (
     <div className='min-h-screen bg-background'>
@@ -110,7 +93,7 @@ const EditTestSuiteContent: React.FC<EditTestSuiteContentProps> = ({
             <Button
               variant='ghost'
               size='sm'
-              onClick={onBack}
+              onClick={handleBack}
               className='text-muted-foreground hover:text-foreground'
             >
               <ArrowLeft className='w-4 h-4 mr-2' />
@@ -127,7 +110,7 @@ const EditTestSuiteContent: React.FC<EditTestSuiteContentProps> = ({
             </div>
           </div>
           <div className='flex items-center space-x-2'>
-            <Button variant='outline' onClick={onBack}>
+            <Button variant='outline' onClick={handleBack}>
               Cancel
             </Button>
             <Button onClick={handleSaveChanges}>Save Changes</Button>
@@ -166,7 +149,28 @@ const EditTestSuiteContent: React.FC<EditTestSuiteContentProps> = ({
         </Card>
 
         {requests.length === 0 ? (
-          <EmptyRequestsState />
+          <Card className='border-2 border-dashed border-border'>
+            <CardContent className='flex flex-col items-center justify-center py-16 px-6'>
+              <div className='w-16 h-16 mb-6 rounded-full bg-muted flex items-center justify-center'>
+                <Download className='w-8 h-8 text-muted-foreground' />
+              </div>
+              <h3 className='text-xl font-semibold mb-2'>
+                No requests added yet
+              </h3>
+              <p className='text-muted-foreground text-center mb-6 max-w-md'>
+                Import API requests from your collections to start configuring
+                test cases for this test suite.
+              </p>
+              <Button
+                variant='outline'
+                size='lg'
+                onClick={() => setIsImportModalOpen(true)}
+              >
+                <Download className='w-4 h-4 mr-2' />
+                Import Requests
+              </Button>
+            </CardContent>
+          </Card>
         ) : (
           <ManageRequests
             requests={requests}

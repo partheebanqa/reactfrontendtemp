@@ -7,105 +7,67 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Search, ChevronDown, ChevronUp } from 'lucide-react';
-import { Request } from './APITestWorkbench';
 import { MethodBadge } from './MethodBadge';
-
-interface Collection {
-  id: string;
-  name: string;
-  requestCount: number;
-  requests: Request[];
-}
+import { useQuery } from '@tanstack/react-query';
+import { getCollectionsWithRequests } from '../../services/collection.service';
+import {
+  ExtendedRequest,
+  TransformedCollection,
+} from '../../models/collection.model';
 
 interface ImportModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onImport: (requests: Request[]) => void;
+  onImport: (requests: ExtendedRequest[]) => void;
 }
-
-// Mock data for collections
-const mockCollections: Collection[] = [
-  {
-    id: '1',
-    name: 'User Management API',
-    requestCount: 3,
-    requests: [
-      {
-        id: '1',
-        method: 'GET',
-        name: 'Get User Profile',
-        endpoint: '/api/users/profile',
-        description: 'Retrieve user profile information',
-        testCases: { functional: 0, total: 0 },
-      },
-      {
-        id: '2',
-        method: 'PUT',
-        name: 'Update User Profile',
-        endpoint: '/api/users/profile',
-        description: 'Update user profile data',
-        testCases: { functional: 0, total: 0 },
-      },
-      {
-        id: '3',
-        method: 'DELETE',
-        name: 'Delete User Account',
-        endpoint: '/api/users/account',
-        description: 'Delete user account',
-        testCases: { functional: 0, total: 0 },
-      },
-    ],
-  },
-  {
-    id: '2',
-    name: 'Authentication API',
-    requestCount: 3,
-    requests: [
-      {
-        id: '4',
-        method: 'POST',
-        name: 'User Login',
-        endpoint: '/api/auth/login',
-        description: 'Authenticate user credentials',
-        testCases: { functional: 0, total: 0 },
-      },
-      {
-        id: '5',
-        method: 'POST',
-        name: 'User Registration',
-        endpoint: '/api/auth/register',
-        description: 'Register new user account',
-        testCases: { functional: 0, total: 0 },
-      },
-      {
-        id: '6',
-        method: 'POST',
-        name: 'Password Reset',
-        endpoint: '/api/auth/reset-password',
-        description: 'Reset user password',
-        testCases: { functional: 0, total: 0 },
-      },
-    ],
-  },
-];
 
 export const ImportModal: React.FC<ImportModalProps> = ({
   isOpen,
   onClose,
   onImport,
 }) => {
+  const {
+    data: apiData,
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ['collections'],
+    queryFn: getCollectionsWithRequests,
+    enabled: isOpen, // Only fetch when modal is open
+  });
+
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedRequests, setSelectedRequests] = useState<string[]>([]);
-  const [expandedCollections, setExpandedCollections] = useState<string[]>([
-    '1',
-    '2',
-  ]);
+  const [expandedCollections, setExpandedCollections] = useState<string[]>([]);
 
-  const filteredCollections = mockCollections.filter(
-    (collection) =>
+  // Transform API data to match the component's expected structure
+  const collections: TransformedCollection[] = React.useMemo(() => {
+    if (!apiData?.collections) return [];
+
+    return apiData.collections.map((collection) => ({
+      id: collection.collectionId,
+      name: collection.collectionName,
+      requestCount: collection.requests.length,
+      requests: collection.requests.map((request) => ({
+        ...request,
+        endpoint: request.url,
+        description: `${request.method} ${request.url}`,
+        testCases: { functional: 0, total: 0 },
+      })),
+    }));
+  }, [apiData]);
+
+  // Initialize expanded collections when data is loaded
+  React.useEffect(() => {
+    if (collections.length > 0 && expandedCollections.length === 0) {
+      setExpandedCollections(collections.map((c) => c.id));
+    }
+  }, [collections, expandedCollections.length]);
+
+  const filteredCollections = collections.filter(
+    (collection: TransformedCollection) =>
       collection.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       collection.requests.some((request) =>
         request.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -121,7 +83,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
   };
 
   const handleSelectAll = (collectionId: string) => {
-    const collection = mockCollections.find((c) => c.id === collectionId);
+    const collection = collections.find((c) => c.id === collectionId);
     if (!collection) return;
 
     const allSelected = collection.requests.every((req) =>
@@ -151,16 +113,60 @@ export const ImportModal: React.FC<ImportModalProps> = ({
   };
 
   const handleImport = () => {
-    const allRequests = mockCollections.flatMap((c) => c.requests);
+    const allRequests = collections.flatMap((c) => c.requests);
     const requestsToImport = allRequests.filter((req) =>
       selectedRequests.includes(req.id)
     );
     onImport(requestsToImport);
     setSelectedRequests([]);
     setSearchQuery('');
+    onClose();
   };
 
   const selectedCount = selectedRequests.length;
+
+  if (isLoading) {
+    return (
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className='max-w-4xl max-h-[80vh] overflow-hidden flex flex-col'>
+          <DialogHeader>
+            <DialogTitle>Import from Collection</DialogTitle>
+          </DialogHeader>
+          <div className='flex items-center justify-center py-12'>
+            <div className='text-center'>
+              <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4'></div>
+              <p className='text-muted-foreground'>Loading collections...</p>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  if (error) {
+    return (
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className='max-w-4xl max-h-[80vh] overflow-hidden flex flex-col'>
+          <DialogHeader>
+            <DialogTitle>Import from Collection</DialogTitle>
+          </DialogHeader>
+          <div className='flex items-center justify-center py-12'>
+            <div className='text-center'>
+              <p className='text-destructive mb-4'>Error loading collections</p>
+              <p className='text-sm text-muted-foreground'>
+                {error instanceof Error
+                  ? error.message
+                  : 'An unknown error occurred'}
+              </p>
+              <Button variant='outline' onClick={onClose} className='mt-4'>
+                Close
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -185,15 +191,16 @@ export const ImportModal: React.FC<ImportModalProps> = ({
           <div className='flex-1 overflow-y-auto space-y-4'>
             {filteredCollections.length === 0 ? (
               <div className='flex flex-col items-center justify-center py-12'>
-                <p className='text-muted-foreground'>No requests found</p>
+                <p className='text-muted-foreground'>
+                  {collections.length === 0
+                    ? 'No collections found'
+                    : 'No requests found'}
+                </p>
               </div>
             ) : (
-              filteredCollections.map((collection) => {
+              filteredCollections.map((collection: TransformedCollection) => {
                 const isExpanded = expandedCollections.includes(collection.id);
                 const allSelected = collection.requests.every((req) =>
-                  selectedRequests.includes(req.id)
-                );
-                const someSelected = collection.requests.some((req) =>
                   selectedRequests.includes(req.id)
                 );
 
@@ -248,11 +255,13 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                             <div className='flex-1'>
                               <h4 className='font-medium'>{request.name}</h4>
                               <p className='text-sm text-muted-foreground'>
-                                {request.endpoint}
+                                {request.endpoint || request.url}
                               </p>
-                              <p className='text-sm text-muted-foreground mt-1'>
-                                {request.description}
-                              </p>
+                              {request.description && (
+                                <p className='text-sm text-muted-foreground mt-1'>
+                                  {request.description}
+                                </p>
+                              )}
                             </div>
                           </div>
                         ))}

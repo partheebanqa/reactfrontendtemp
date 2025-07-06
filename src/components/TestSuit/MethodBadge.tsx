@@ -1,39 +1,32 @@
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
 
 interface MethodBadgeProps {
   method: string;
-  className?: string;
 }
 
-export const MethodBadge: React.FC<MethodBadgeProps> = ({
-  method,
-  className,
-}) => {
-  const getMethodStyles = (method: string) => {
+export const MethodBadge: React.FC<MethodBadgeProps> = ({ method }) => {
+  const getMethodColor = (method: string) => {
     switch (method.toUpperCase()) {
       case 'GET':
-        return 'bg-success/10 text-success border-success/20 hover:bg-success/20';
+        return 'bg-green-100 text-green-800 border-green-200';
       case 'POST':
-        return 'bg-info/10 text-info border-info/20 hover:bg-info/20';
+        return 'bg-blue-100 text-blue-800 border-blue-200';
       case 'PUT':
-        return 'bg-warning/10 text-warning border-warning/20 hover:bg-warning/20';
+        return 'bg-orange-100 text-orange-800 border-orange-200';
       case 'DELETE':
-        return 'bg-destructive/10 text-destructive border-destructive/20 hover:bg-destructive/20';
+        return 'bg-red-100 text-red-800 border-red-200';
+      case 'PATCH':
+        return 'bg-purple-100 text-purple-800 border-purple-200';
       default:
-        return 'bg-muted/10 text-muted-foreground border-muted/20 hover:bg-muted/20';
+        return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
 
   return (
     <Badge
       variant='outline'
-      className={cn(
-        'font-mono text-xs font-semibold',
-        getMethodStyles(method),
-        className
-      )}
+      className={`${getMethodColor(method)} font-mono text-xs font-semibold`}
     >
       {method.toUpperCase()}
     </Badge>
