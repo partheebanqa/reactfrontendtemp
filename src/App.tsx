@@ -13,6 +13,7 @@ import RequestBuilder from '@/pages/RequestBuilder';
 import RequestChains from '@/pages/RequestChains';
 import TestSuites from '@/pages/TestSuites';
 import EditTestSuite from '@/pages/EditTestSuite';
+import TestSuiteOverView from '@/pages/TestSuiteOverView';
 import Scheduler from '@/pages/Scheduler';
 import CiCdIntegration from '@/pages/CiCdIntegration';
 import Executions from '@/pages/Executions';
@@ -29,6 +30,7 @@ import SignIn from '@/pages/SignIn';
 import SignUp from '@/pages/SignUp';
 import ForgotPassword from '@/pages/ForgotPassword';
 import NotFound from '@/pages/not-found';
+
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -68,6 +70,7 @@ function Router() {
             <Route path='/request-chains' component={RequestChains} />
             <Route path='/test-suites' component={TestSuites} />
             <Route path='/test-suites/:id/edit' component={EditTestSuite} />
+            <Route path='/test-suites/:id/overview' component={TestSuiteOverView} />
             <Route path='/scheduler' component={Scheduler} />
             <Route path='/cicd' component={CiCdIntegration} />
             <Route path='/executions' component={Executions} />
