@@ -50,6 +50,13 @@ const menuItems = [
     icon: FlaskConical,
     feature: "test_suites",
   },
+  {
+    label: "Data Management",
+    path: "/data-management",
+    icon: Database,
+    feature: "test_suites",
+  },
+ 
 ];
 
 const proFeatures = [
@@ -65,18 +72,19 @@ const proFeatures = [
     icon: Play,
     feature: "executions",
   },
-  {
-    label: "Data Management",
-    path: "/data-management",
-    icon: Database,
-    feature: "data_management",
-  },
+
   {
     label: "Reports",
     path: "/reports",
     icon: FileText,
     feature: "reports",
   },
+  // {
+  //   label: "Data Management",
+  //   path: "/data-management",
+  //   icon: Database,
+  //   feature: "data_management",
+  // },
 ];
 
 const enterpriseFeatures = [
