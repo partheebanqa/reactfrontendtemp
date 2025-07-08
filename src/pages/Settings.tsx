@@ -160,7 +160,7 @@ const Settings: React.FC = () => {
     mutationFn: async (settings: NotificationSettings) => {
       return await apiRequest("POST", "/api/notification-settings", {
         ...settings,
-        workspaceId: currentWorkspace?.id,
+        workspaceId: currentWorkspace?.id as string,
       });
     },
     onSuccess: () => {

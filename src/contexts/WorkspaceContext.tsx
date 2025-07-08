@@ -52,7 +52,6 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({
 
   // Set workspaces when data is fetched
   React.useEffect(() => {
-    console.log("🚀 ~ React.useEffect ~ workspaceData:", workspaceData);
     if (workspaceData?.workspaces) {
       // Map API response to Workspace interface
       const mappedWorkspaces = workspaceData.workspaces.map(

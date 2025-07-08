@@ -44,7 +44,7 @@ export async function apiRequest(
 
   
   const res = await fetch(url,{
-    body: options?.body ? JSON.stringify(options.body) : undefined,
+    body: options?.body,
     method,
     headers:{
       "Content-Type": "application/json",
