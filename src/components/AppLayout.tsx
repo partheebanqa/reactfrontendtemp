@@ -1,7 +1,7 @@
 import React from "react";
 import Sidebar from "./Sidebar";
-import Header from "./Header";
 import TrialBanner from "./TrialBanner";
+import Header from "./Header/index";
 
 interface AppLayoutProps {
   children: React.ReactNode;

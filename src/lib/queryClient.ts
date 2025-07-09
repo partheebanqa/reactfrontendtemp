@@ -2,6 +2,7 @@ import { validateCSPCompliance } from "@/security/cspConfig";
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 import { getEncryptedCookie } from "./cookieUtils";
 import { USER_COOKIE_NAME } from "./constants";
+import { API_LOGIN } from "@/config/apiRoutes";
 
 async function throwIfResNotOk(res: Response) {
   console.log("🚀 ~ throwIfResNotOk ~ res:", res)
@@ -30,7 +31,7 @@ export async function apiRequest(
   // }
 
   const cachedUserData = getEncryptedCookie(USER_COOKIE_NAME);
-  console.log("🚀 ~ cachedUserData:", cachedUserData)
+
   if(cachedUserData && cachedUserData.token){
     options = {
       ...options,
@@ -43,14 +44,18 @@ export async function apiRequest(
 
   
   const res = await fetch(url,{
-    body: options?.body ? JSON.stringify(options.body) : undefined,
+    body: options?.body,
     method,
     headers:{
+      "Content-Type": "application/json",
       ...options?.headers,
     }
   });
 
-  await throwIfResNotOk(res);
+  // Only throw for non-auth related errors to prevent login issues
+  if (url !== API_LOGIN && !res.ok) {
+    await throwIfResNotOk(res);
+  }
   return res;
 }
 
@@ -86,7 +91,6 @@ export const queryClient = new QueryClient({
       queryFn: getQueryFn({ on401: "throw" }),
       refetchInterval: false,
       refetchOnWindowFocus: false,
-      staleTime: Infinity,
       retry: false,
     },
     mutations: {

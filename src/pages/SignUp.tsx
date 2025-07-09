@@ -1,7 +1,13 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { useMutation } from "@tanstack/react-query";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,6 +15,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Eye, EyeOff, Lock, Mail, User, Building } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
+import { API_REGISTER } from "@/config/apiRoutes";
 
 export default function SignUp() {
   const [, setLocation] = useLocation();
@@ -21,23 +28,25 @@ export default function SignUp() {
     password: "",
     confirmPassword: "",
     workspaceName: "",
-    agreedToTerms: false
+    agreedToTerms: false,
   });
 
   const signUpMutation = useMutation({
     mutationFn: async (userData: typeof formData) => {
-      const response = await fetch("/api/auth/signup", {
-        method: "POST",
-        body: JSON.stringify(userData),
-        headers: {
-          "Content-Type": "application/json"
-        }
+      const response = await apiRequest("POST", API_REGISTER, {
+        body: {
+          firstName: userData.firstName,
+          lastName: userData.lastName,
+          email: userData.email,
+          password: userData.password,
+          organization: userData.workspaceName,
+        },
       });
-      
+
       if (!response.ok) {
         throw new Error("Failed to create account");
       }
-      
+
       return response.json();
     },
     onSuccess: () => {
@@ -45,16 +54,16 @@ export default function SignUp() {
     },
     onError: (error: any) => {
       console.error("Sign up error:", error);
-    }
+    },
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (formData.password !== formData.confirmPassword) {
       return;
     }
-    
+
     if (!formData.agreedToTerms) {
       return;
     }
@@ -63,9 +72,15 @@ export default function SignUp() {
   };
 
   const passwordsMatch = formData.password === formData.confirmPassword;
-  const isFormValid = formData.firstName && formData.lastName && formData.email && 
-                     formData.password && formData.confirmPassword && formData.workspaceName &&
-                     passwordsMatch && formData.agreedToTerms;
+  const isFormValid =
+    formData.firstName &&
+    formData.lastName &&
+    formData.email &&
+    formData.password &&
+    formData.confirmPassword &&
+    formData.workspaceName &&
+    passwordsMatch &&
+    formData.agreedToTerms;
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
@@ -108,7 +123,9 @@ export default function SignUp() {
                       className="pl-10"
                       placeholder="John"
                       value={formData.firstName}
-                      onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, firstName: e.target.value })
+                      }
                     />
                   </div>
                 </div>
@@ -121,7 +138,9 @@ export default function SignUp() {
                     required
                     placeholder="Doe"
                     value={formData.lastName}
-                    onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, lastName: e.target.value })
+                    }
                   />
                 </div>
               </div>
@@ -137,13 +156,15 @@ export default function SignUp() {
                     className="pl-10"
                     placeholder="john@company.com"
                     value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, email: e.target.value })
+                    }
                   />
                 </div>
               </div>
 
               <div>
-                <Label htmlFor="workspaceName">Workspace name</Label>
+                <Label htmlFor="workspaceName">Organization</Label>
                 <div className="relative">
                   <Building className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                   <Input
@@ -151,9 +172,14 @@ export default function SignUp() {
                     type="text"
                     required
                     className="pl-10"
-                    placeholder="My Company"
+                    placeholder="My Organization Name"
                     value={formData.workspaceName}
-                    onChange={(e) => setFormData({ ...formData, workspaceName: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        workspaceName: e.target.value,
+                      })
+                    }
                   />
                 </div>
               </div>
@@ -169,14 +195,20 @@ export default function SignUp() {
                     className="pl-10 pr-10"
                     placeholder="Create a password"
                     value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, password: e.target.value })
+                    }
                   />
                   <button
                     type="button"
                     className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
                     onClick={() => setShowPassword(!showPassword)}
                   >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
                   </button>
                 </div>
               </div>
@@ -192,18 +224,29 @@ export default function SignUp() {
                     className="pl-10 pr-10"
                     placeholder="Confirm your password"
                     value={formData.confirmPassword}
-                    onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        confirmPassword: e.target.value,
+                      })
+                    }
                   />
                   <button
                     type="button"
                     className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                   >
-                    {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    {showConfirmPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
                   </button>
                 </div>
                 {formData.confirmPassword && !passwordsMatch && (
-                  <p className="text-sm text-red-600 mt-1">Passwords do not match</p>
+                  <p className="text-sm text-red-600 mt-1">
+                    Passwords do not match
+                  </p>
                 )}
               </div>
 
@@ -211,8 +254,11 @@ export default function SignUp() {
                 <Checkbox
                   id="terms"
                   checked={formData.agreedToTerms}
-                  onCheckedChange={(checked) => 
-                    setFormData({ ...formData, agreedToTerms: checked as boolean })
+                  onCheckedChange={(checked) =>
+                    setFormData({
+                      ...formData,
+                      agreedToTerms: checked as boolean,
+                    })
                   }
                 />
                 <Label htmlFor="terms" className="text-sm">
@@ -240,7 +286,9 @@ export default function SignUp() {
                 className="w-full"
                 disabled={signUpMutation.isPending || !isFormValid}
               >
-                {signUpMutation.isPending ? "Creating account..." : "Create account"}
+                {signUpMutation.isPending
+                  ? "Creating account..."
+                  : "Create account"}
               </Button>
             </form>
 

@@ -1,29 +1,26 @@
-import React, { createContext, useContext, useState, useCallback, useEffect } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useEffect,
+} from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { useQuery } from "@tanstack/react-query";
+import { fetchWorkspaces } from "@/service/workspace.service";
+import { Workspace } from "@/shared/types/workspace";
 
-interface Workspace {
-  id: string;
-  name: string;
-  slug: string;
-  subscriptionPlan: "free" | "pro" | "enterprise";
-  trialStartDate?: string;
-  trialEndDate?: string;
-  isTrialActive?: boolean;
-  subscriptionStatus?: string;
-  billingEmail?: string;
-  ownerId: string;
-}
 
 interface WorkspaceContextType {
   currentWorkspace: Workspace | null;
   workspaces: Workspace[];
   setCurrentWorkspace: (workspace: Workspace) => void;
   refreshWorkspaces: () => void;
-  isTrialExpired: boolean;
-  trialDaysLeft: number;
 }
 
-const WorkspaceContext = createContext<WorkspaceContextType | undefined>(undefined);
+const WorkspaceContext = createContext<WorkspaceContextType | undefined>(
+  undefined
+);
 
 export const useWorkspace = () => {
   const context = useContext(WorkspaceContext);
@@ -36,53 +33,54 @@ export const useWorkspace = () => {
 export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const { user } = useAuth();
-  const [currentWorkspace, setCurrentWorkspace] = useState<Workspace | null>(null);
+  const { user, isAuthenticated} = useAuth();
+  const [currentWorkspace, setCurrentWorkspace] = useState<Workspace | null>(
+    null
+  );
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
 
-  // Mock workspace data based on user subscription
-  React.useEffect(() => {
-    if (user && user.id) {
-      const subscriptionPlan = (user as any).subscriptionPlan || "free";
-      const mockWorkspaces: Workspace[] = [
-        {
-          id: "1",
-          name: "Default Workspace",
-          slug: "default",
-          subscriptionPlan: subscriptionPlan as "free" | "pro" | "enterprise",
-          ownerId: user.id,
-        },
-      ];
+  // Fetch workspaces using the fetchWorkspaces function from useAuth
+  const { data: workspaceData, refetch } = useQuery({
+    queryKey: ["/api/workspaces"],
+    enabled: !!isAuthenticated,
+    queryFn: fetchWorkspaces,
+    refetchInterval: false, // Disable automatic refetching
+    staleTime: Infinity, // Consider data fresh indefinitely until manually invalidated
+  });
 
-      setWorkspaces(mockWorkspaces);
-      setCurrentWorkspace(mockWorkspaces[0]);
+  
+
+  // Set workspaces when data is fetched
+  React.useEffect(() => {
+    if (workspaceData?.workspaces) {
+      // Map API response to Workspace interface
+      const mappedWorkspaces = workspaceData.workspaces.map(
+        (workspace: any) => ({
+          id: workspace.Id || workspace.id,
+          tenantId: workspace.TenantID || workspace.tenantId,
+          name: workspace.Name || workspace.name,
+          description: workspace.Description || workspace.description,
+          createdAt: workspace.CreatedAt || workspace.createdAt,
+          updatedAt: workspace.UpdatedAt || workspace.updatedAt,
+          createdBy: workspace.CreatedBy || workspace.createdBy,
+          deletedAt: workspace.DeletedAt || workspace.deletedAt,
+        })
+      );
+
+      setWorkspaces(mappedWorkspaces);
+      if (mappedWorkspaces.length > 0 && !currentWorkspace) {
+        setCurrentWorkspace(mappedWorkspaces[0]);
+      }
     } else {
       setWorkspaces([]);
       setCurrentWorkspace(null);
     }
-  }, [user]);
+  }, [workspaceData, user]);
 
   const refreshWorkspaces = useCallback(() => {
-    // This would typically refetch from the server
-    // For now, we'll use the data from the auth context
-    if (user?.workspaces) {
-      setWorkspaces(user.workspaces);
-    }
-  }, [user]);
-
-  const isTrialExpired = React.useMemo(() => {
-    if (!currentWorkspace?.trialEndDate) return false;
-    return new Date() > new Date(currentWorkspace.trialEndDate);
-  }, [currentWorkspace]);
-
-  const trialDaysLeft = React.useMemo(() => {
-    if (!currentWorkspace?.trialEndDate) return 0;
-    const trialEnd = new Date(currentWorkspace.trialEndDate);
-    const now = new Date();
-    const diffTime = trialEnd.getTime() - now.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return Math.max(0, diffDays);
-  }, [currentWorkspace]);
+    // Use the refetch function from the useQuery hook
+    refetch();
+  }, [refetch]);
 
   return (
     <WorkspaceContext.Provider
@@ -91,8 +89,6 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({
         workspaces,
         setCurrentWorkspace,
         refreshWorkspaces,
-        isTrialExpired,
-        trialDaysLeft,
       }}
     >
       {children}

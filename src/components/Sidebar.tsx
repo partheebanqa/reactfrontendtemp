@@ -111,8 +111,8 @@ const generalItems = [
 
 const Sidebar: React.FC = () => {
   const [location] = useLocation();
-  const { user, logout } = useAuth();
-  const { currentWorkspace, trialDaysLeft } = useWorkspace();
+  const { user, logoutMutation } = useAuth();
+  const { currentWorkspace } = useWorkspace();
   const { hasFeatureAccess, subscriptionPlan } = useFeatureGate();
 
   const NavItem: React.FC<{
@@ -171,7 +171,7 @@ const Sidebar: React.FC = () => {
       </div>
 
       {/* Trial Banner */}
-      {subscriptionPlan === "free" && trialDaysLeft > 0 && (
+      {/* {subscriptionPlan === "free" && trialDaysLeft > 0 && (
         <div className="mx-4 mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
           <div className="flex items-center space-x-2">
             <Clock className="w-4 h-4 text-yellow-600" />
@@ -187,7 +187,7 @@ const Sidebar: React.FC = () => {
             </div>
           </div>
         </div>
-      )}
+      )} */}
 
       {/* Navigation */}
       <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
@@ -271,7 +271,7 @@ const Sidebar: React.FC = () => {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => logout()}
+            onClick={() => logoutMutation.mutate()}
             title="Logout"
           >
             <Settings className="w-4 h-4" />

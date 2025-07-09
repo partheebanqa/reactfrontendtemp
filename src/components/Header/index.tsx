@@ -1,5 +1,15 @@
 import { useState } from "react";
-import { Bell, Search, Settings, User, LogOut, ChevronDown } from "lucide-react";
+import {
+  Bell,
+  Search,
+  Settings,
+  User,
+  LogOut,
+  ChevronDown,
+  PlusCircle,
+  Edit,
+  Trash,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -13,21 +23,38 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { apiRequest } from "@/lib/queryClient";
+import { API_WORKSPACES } from "@/config/apiRoutes";
+import { useLocation } from "wouter";
+import { Workspace } from "@/shared/types/workspace";
+import { create } from "domain";
+import { createWorkspace, updateWorkspace } from "@/service/workspace.service";
+import WorkspaceModal from "../WorkspaceModal";
+import WorkspaceDropdown from "./WorkspaceDropdown";
 
 export default function Header() {
-  const { user, logout, isLoading } = useAuth();
-  const { currentWorkspace } = useWorkspace();
+  const { user, isLoading, logoutMutation } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
+  const {
+    currentWorkspace,
+    workspaces,
+    setCurrentWorkspace,
+    refreshWorkspaces,
+  } = useWorkspace();
+  const [workspaceModalState, setWorkspaceModalState] = useState({
+    isOpen: false,
+    mode: "add" as "add" | "edit",
+    workspace: null as any,
+  });
+  const [location, setLocation] = useLocation();
 
-  // Don't render header if still loading or no user
   if (isLoading || !user) {
     return null;
   }
 
-  const handleLogout = () => {
-    if (logout) {
-      logout();
-    }
+  const handleLogout = async () => {
+    logoutMutation.mutate();
+    setLocation("/");
   };
 
   const getInitials = (firstName?: string, lastName?: string) => {
@@ -35,14 +62,50 @@ export default function Header() {
     return `${firstName?.[0] || ""}${lastName?.[0] || ""}`.toUpperCase();
   };
 
-  const getSubscriptionBadgeColor = (plan: string) => {
-    switch (plan) {
-      case "enterprise":
-        return "bg-purple-100 text-purple-700 border-purple-200";
-      case "pro":
-        return "bg-blue-100 text-blue-700 border-blue-200";
-      default:
-        return "bg-gray-100 text-gray-700 border-gray-200";
+  const handleSaveWorkspace = async (workspaceData: any) => {
+    try {
+      if (workspaceModalState.mode === "add") {
+        const response = await createWorkspace(workspaceData);
+        const currWorkspace = workspaces.find(
+          (ws) => ws.id === response?.workspaceId
+        );
+        setCurrentWorkspace(currWorkspace as Workspace); // Set the newly created workspace as current
+        console.log("Workspace created successfully:", response);
+      } else {
+        // Update existing workspace
+        const response = await updateWorkspace(workspaceData);
+
+        const data = await response.json();
+        const currWorkspace = workspaces.find(
+          (ws) => ws.id === workspaceData.id
+        );
+        setCurrentWorkspace(currWorkspace as Workspace); // Set the newly created workspace as current
+        console.log("Workspace updated successfully:", data);
+      }
+
+      // Refresh the workspaces list
+      refreshWorkspaces();
+
+      return true;
+    } catch (error) {
+      console.error(
+        `Error ${
+          workspaceModalState.mode === "add" ? "creating" : "updating"
+        } workspace:`,
+        error
+      );
+      throw error;
+    }
+  };
+
+  const handleDeleteWorkspace = async () => {
+    if (!currentWorkspace) return;
+    try {
+      await apiRequest("DELETE", `${API_WORKSPACES}/${currentWorkspace.id}`);
+      setCurrentWorkspace(workspaces[0] || null); // Set to first workspace or null if none exist
+      refreshWorkspaces();
+    } catch (error) {
+      console.error("Error deleting workspace:", error);
     }
   };
 
@@ -51,6 +114,7 @@ export default function Header() {
       <div className="flex items-center justify-between">
         {/* Left side - Search */}
         <div className="flex items-center space-x-4 flex-1 max-w-md">
+            <WorkspaceDropdown setWorkspaceModalState={setWorkspaceModalState} handleDeleteWorkspace={handleDeleteWorkspace} />
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
             <Input
@@ -64,23 +128,6 @@ export default function Header() {
 
         {/* Right side - Workspace info & user menu */}
         <div className="flex items-center space-x-4">
-          {/* Workspace Info */}
-          {currentWorkspace && (
-            <div className="flex items-center space-x-2">
-              <div className="text-right">
-                <div className="text-sm font-medium text-gray-900 dark:text-white">
-                  {currentWorkspace.name}
-                </div>
-                <Badge 
-                  variant="outline" 
-                  className={`text-xs ${getSubscriptionBadgeColor(currentWorkspace.subscriptionPlan || "free")}`}
-                >
-                  {(currentWorkspace.subscriptionPlan || "free").toUpperCase()}
-                </Badge>
-              </div>
-            </div>
-          )}
-
           {/* Notifications */}
           <Button variant="ghost" size="sm" className="relative">
             <Bell className="h-5 w-5" />
@@ -92,11 +139,17 @@ export default function Header() {
           {/* User Menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="flex items-center space-x-2 px-2">
+              <Button
+                variant="ghost"
+                className="flex items-center space-x-2 px-2"
+              >
                 <Avatar className="h-8 w-8">
                   <AvatarImage src={(user as any)?.profileImageUrl} />
                   <AvatarFallback>
-                    {getInitials((user as any)?.firstName, (user as any)?.lastName)}
+                    {getInitials(
+                      (user as any)?.firstName,
+                      (user as any)?.lastName
+                    )}
                   </AvatarFallback>
                 </Avatar>
                 <div className="text-left hidden md:block">
@@ -115,10 +168,6 @@ export default function Header() {
                 <User className="mr-2 h-4 w-4" />
                 Profile Settings
               </DropdownMenuItem>
-              <DropdownMenuItem>
-                <Settings className="mr-2 h-4 w-4" />
-                Workspace Settings
-              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleLogout} className="text-red-600">
                 <LogOut className="mr-2 h-4 w-4" />
@@ -128,6 +177,15 @@ export default function Header() {
           </DropdownMenu>
         </div>
       </div>
+      <WorkspaceModal
+        isOpen={workspaceModalState.isOpen}
+        onClose={() =>
+          setWorkspaceModalState({ ...workspaceModalState, isOpen: false })
+        }
+        onSaveWorkspace={handleSaveWorkspace}
+        workspace={workspaceModalState.workspace}
+        mode={workspaceModalState.mode}
+      />
     </header>
   );
 }
