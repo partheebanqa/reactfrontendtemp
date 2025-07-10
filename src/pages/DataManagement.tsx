@@ -48,10 +48,12 @@ interface Variable {
   id: string;
   key: string;
   value: string;
-  type: "string" | "number" | "boolean" | "secret";
+  type: "string" | "number" | "boolean" | "secret" | "environment" | "dynamic";
   description?: string;
   environmentId?: string;
   isGlobal: boolean;
+  generatorFunction?: string; // Added property
+  scope?: "global" | "project" | "environment"; // Added scope property
 }
 
 interface Dataset {
@@ -78,7 +80,14 @@ const DataManagement: React.FC = () => {
   const [isCreateDatasetOpen, setIsCreateDatasetOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
    const [editingEnvironment, setEditingEnvironment] = useState<any>(null);
+
+   const [variableSearch, setVariableSearch] = useState("");
+   const [environmentFilter, setEnvironmentFilter] = useState("all");
+   const [typeFilter, setTypeFilter] = useState("all");
     const [isEditEnvOpen, setIsEditEnvOpen] = useState(false);
+    const [isEditVarOpen, setIsEditVarOpen] = useState(false);
+const [editingVariable, setEditingVariable] = useState<Variable | null>(null);
+
 
   const [newEnvironment, setNewEnvironment] = useState({
     name: "",
@@ -523,6 +532,8 @@ const DataManagement: React.FC = () => {
                                     toast({
                                       title: "Environment Updated",
                                       description: `${newEnvironment.name} has been updated successfully.`,
+                                      variant: 'success',
+
                                     });
                                     setIsEditEnvOpen(false);
                                     setEditingEnvironment(null);
@@ -538,9 +549,52 @@ const DataManagement: React.FC = () => {
           </TabsContent>
 
           {/* Variables Tab */}
-          <TabsContent value="variables" className="space-y-4">
-            <div className="flex justify-between items-center">
+          <TabsContent value="variables" className="space-y-4">   
+              <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
               <h2 className="text-xl font-semibold">Variables</h2>
+              <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                {/* Search Input */}
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                  <Input
+                    placeholder="Search variables..."
+                    value={variableSearch}
+                    onChange={(e) => setVariableSearch(e.target.value)}
+                    className="pl-10 w-full sm:w-64"
+                  />
+                </div>
+                
+                {/* Environment Filter */}
+                <Select value={environmentFilter} onValueChange={setEnvironmentFilter}>
+                  <SelectTrigger className="w-full sm:w-48">
+                    <SelectValue placeholder="Filter by environment" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Environments</SelectItem>
+                    <SelectItem value="global">Global</SelectItem>
+                    {environments.map(env => (
+                      <SelectItem key={env.id} value={env.id}>{env.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                
+                {/* Type Filter */}
+                <Select value={typeFilter} onValueChange={setTypeFilter}>
+                  <SelectTrigger className="w-full sm:w-48">
+                    <SelectValue placeholder="Filter by type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Types</SelectItem>
+                    <SelectItem value="static">Static</SelectItem>
+                    <SelectItem value="dynamic">Dynamic</SelectItem>
+                    <SelectItem value="environment">Environment</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-semibold"></h2>
               <Dialog open={isCreateVarOpen} onOpenChange={setIsCreateVarOpen}>
                 <DialogTrigger asChild>
                   <Button>
@@ -875,7 +929,12 @@ const DataManagement: React.FC = () => {
                       </div>
                       
                       <div className="flex items-center space-x-2">
-                        <Button variant="outline" size="sm">
+                        <Button variant="outline" size="sm"
+                          onClick={() => {
+                            setEditingVariable(variable); // your selected variable
+                            setIsEditVarOpen(true);
+                          }}
+                        >
                           <Edit className="w-4 h-4" />
                           Edit
                         </Button>
@@ -890,6 +949,150 @@ const DataManagement: React.FC = () => {
                 </Card>
               ))}
             </div>
+            <Dialog open={isEditVarOpen} onOpenChange={setIsEditVarOpen}>
+  <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+    <DialogHeader>
+      <DialogTitle>Edit Variable</DialogTitle>
+    </DialogHeader>
+
+    {editingVariable && (
+      <div className="space-y-4">
+        {/* Variable Key */}
+        <div>
+          <label className="text-sm font-medium">Variable Key</label>
+          <Input
+            value={editingVariable.key}
+            onChange={(e) =>
+              setEditingVariable((prev) => prev && { ...prev, key: e.target.value })
+            }
+          />
+        </div>
+
+        {/* Type */}
+        <div>
+          <label className="text-sm font-medium">Variable Type</label>
+          <Select
+            value={editingVariable.type}
+            onValueChange={(value) =>
+              setEditingVariable((prev) => prev && { ...prev, type: value as "string" | "number" | "boolean" | "secret" | "environment" })
+            }
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="static">Static</SelectItem>
+              <SelectItem value="dynamic">Dynamic</SelectItem>
+              <SelectItem value="environment">Environment</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Value */}
+        {editingVariable.type === "string" && (
+          <div>
+            <label className="text-sm font-medium">Static Value</label>
+            <Input
+              value={editingVariable.value}
+              onChange={(e) =>
+                setEditingVariable((prev) => prev && { ...prev, value: e.target.value })
+              }
+            />
+          </div>
+        )}
+
+        {editingVariable.type === "environment" && (
+          <div>
+            <label className="text-sm font-medium">Environment Variable Key</label>
+            <Input
+              value={editingVariable.value}
+              onChange={(e) =>
+                setEditingVariable((prev) => prev && { ...prev, value: e.target.value })
+              }
+            />
+          </div>
+        )}
+
+        {/* Generator function for dynamic */}
+        {editingVariable.type === "dynamic" && (
+          <>
+            <div>
+              <label className="text-sm font-medium">Generator Function</label>
+              <Input
+                value={editingVariable.generatorFunction}
+                onChange={(e) =>
+                  setEditingVariable((prev) =>
+                    prev && { ...prev, generatorFunction: e.target.value }
+                  )
+                }
+              />
+            </div>
+            {/* You can reuse your generatorConfig UI here too */}
+          </>
+        )}
+
+        {/* Scope */}
+        <div>
+          <label className="text-sm font-medium">Scope</label>
+          <Select
+            value={editingVariable.scope}
+            onValueChange={(value) =>
+              setEditingVariable((prev) => prev && { ...prev, scope: value as "environment" | "global" | "project" })
+            }
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="global">Global</SelectItem>
+              <SelectItem value="project">Project</SelectItem>
+              <SelectItem value="environment">Environment</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Description */}
+        <div>
+          <label className="text-sm font-medium">Description</label>
+          <Textarea
+            value={editingVariable.description}
+            onChange={(e) =>
+              setEditingVariable((prev) => prev && { ...prev, description: e.target.value })
+            }
+          />
+        </div>
+
+        {/* Footer Actions */}
+        <div className="flex justify-end space-x-2 border-t pt-4">
+          <Button
+            variant="outline"
+            onClick={() => {
+              setIsEditVarOpen(false);
+              setEditingVariable(null);
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={() => {
+              // TODO: Handle API update mutation here
+              toast({
+                title: "Variable Updated",
+                description: `${editingVariable.key} has been updated successfully.`,
+              });
+              setIsEditVarOpen(false);
+              setEditingVariable(null);
+            }}
+            disabled={!editingVariable.key.trim()}
+          >
+            Update Variable
+          </Button>
+        </div>
+      </div>
+    )}
+  </DialogContent>
+</Dialog>
+
           </TabsContent>
 
           {/* Test Data Tab */}
