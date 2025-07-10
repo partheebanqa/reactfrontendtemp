@@ -11,8 +11,13 @@ import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, Download } from 'lucide-react';
 import { ManageRequests } from '@/components/TestSuit/ManageRequests';
 import { ImportModal } from '@/components/TestSuit/ImportModal';
-import { useQuery } from '@tanstack/react-query';
-import { getTestSuites } from '@/services/testSuites.service';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  getTestSuites,
+  createTestSuite,
+  updateTestSuite,
+} from '@/services/testSuites.service';
+import { ExtendedRequest } from '@/models/collection.model';
 
 interface Request {
   id: string;
@@ -27,46 +32,110 @@ interface Request {
 }
 
 const EditTestSuiteContent: React.FC = () => {
-  const params = useParams<{ id: string }>();
-  const id = params.id;
-  const { toast } = useToast();
+  const params = useParams();
   const [location, setLocation] = useLocation();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  // Get the id from params - wouter provides params as an object
+  const id = params.id;
+
+  // Determine if this is create mode (when path is '/test-suites/create')
+  const isCreateMode = location === '/test-suites/create';
+  const actualId = isCreateMode ? undefined : id;
 
   const [testSuiteName, setTestSuiteName] = useState('');
   const [description, setDescription] = useState('');
   const [requests, setRequests] = useState<Request[]>([]);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
-  // const [isLoading, setIsLoading] = useState(true);
 
   const {
     data: testSuite,
-    isLoading,
+    isLoading: isLoadingTestSuite,
     error,
     isError,
   } = useQuery({
-    queryKey: ['testSuite', id],
-    queryFn: () => getTestSuites(id!),
-    enabled: !!id,
+    queryKey: ['testSuite', actualId],
+    queryFn: () => getTestSuites(actualId!),
+    enabled: !!actualId && !isCreateMode,
+  });
+
+  const createMutation = useMutation({
+    mutationFn: createTestSuite,
+    onSuccess: (data) => {
+      toast({
+        title: 'Test suite created',
+        description: 'Your test suite has been created successfully.',
+      });
+      queryClient.invalidateQueries({ queryKey: ['testSuites'] });
+      setLocation('/test-suites');
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Failed to create test suite',
+        description: error.message || 'Something went wrong.',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: (data: { id: string; name: string; description: string }) =>
+      updateTestSuite(data.id, {
+        name: data.name,
+        description: data.description,
+      }),
+    onSuccess: () => {
+      toast({
+        title: 'Changes saved',
+        description: 'Test suite has been updated successfully',
+      });
+      queryClient.invalidateQueries({ queryKey: ['testSuites'] });
+      queryClient.invalidateQueries({ queryKey: ['testSuite', actualId] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Update failed',
+        description: error.message || 'Something went wrong.',
+        variant: 'destructive',
+      });
+    },
   });
 
   useEffect(() => {
-    if (testSuite) {
+    if (testSuite && !isCreateMode) {
       setTestSuiteName(testSuite.name || '');
       setDescription(testSuite.description || '');
     }
-  }, [testSuite]);
+  }, [testSuite, isCreateMode]);
 
   useEffect(() => {
-    if (isError && error) {
+    if (isError && error && !isCreateMode) {
       toast({
         title: 'Error',
         description: 'Failed to load test suite data. Please try again.',
         variant: 'destructive',
       });
     }
-  }, [isError, error, toast]);
-  const handleImportRequests = (selectedRequests: Request[]) => {
-    setRequests((prev) => [...prev, ...selectedRequests]);
+  }, [isError, error, toast, isCreateMode]);
+
+  const handleImportRequests = (selectedRequests: ExtendedRequest[]) => {
+    // Transform ExtendedRequest to Request format
+    const transformedRequests: Request[] = selectedRequests.map((extReq) => ({
+      id: extReq.id,
+      method: extReq.method,
+      name: extReq.name,
+      endpoint: extReq.endpoint || extReq.url || '', // Handle undefined endpoint
+      description:
+        extReq.description ||
+        `${extReq.method} ${extReq.endpoint || extReq.url}`,
+      testCases: extReq.testCases || {
+        functional: 0,
+        total: 0,
+      },
+    }));
+
+    setRequests((prev) => [...prev, ...transformedRequests]);
     setIsImportModalOpen(false);
     toast({
       title: 'Requests imported',
@@ -75,15 +144,35 @@ const EditTestSuiteContent: React.FC = () => {
   };
 
   const handleSaveChanges = () => {
-    toast({
-      title: 'Changes saved',
-      description: 'Test suite has been updated successfully',
-    });
+    if (!testSuiteName.trim()) {
+      toast({
+        title: 'Validation Error',
+        description: 'Test suite name is required.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (isCreateMode) {
+      createMutation.mutate({
+        name: testSuiteName,
+        description: description,
+      });
+    } else {
+      updateMutation.mutate({
+        id: actualId!,
+        name: testSuiteName,
+        description: description,
+      });
+    }
   };
 
   const handleBack = () => {
     setLocation('/test-suites');
   };
+
+  const isLoading = isCreateMode ? false : isLoadingTestSuite;
+  const isSaving = createMutation.isPending || updateMutation.isPending;
 
   return (
     <div className='min-h-screen bg-background'>
@@ -100,12 +189,23 @@ const EditTestSuiteContent: React.FC = () => {
               Back
             </Button>
             <div>
-              <h1 className='text-2xl font-semibold'>Edit Test Suite</h1>
+              <h1 className='text-2xl font-semibold'>
+                {isCreateMode ? 'Create Test Suite' : 'Edit Test Suite'}
+              </h1>
               <div className='flex items-center space-x-4 mt-1'>
-                <span className='text-sm text-muted-foreground'>
-                  Test Suite ID: {id}
-                </span>
-                <Badge variant='secondary'>CI/CD Integration</Badge>
+                {!isCreateMode && (
+                  <>
+                    <span className='text-sm text-muted-foreground'>
+                      Test Suite ID: {id}
+                    </span>
+                    <Badge variant='secondary'>CI/CD Integration</Badge>
+                  </>
+                )}
+                {isCreateMode && (
+                  <span className='text-sm text-muted-foreground'>
+                    New Test Suite
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -113,7 +213,15 @@ const EditTestSuiteContent: React.FC = () => {
             <Button variant='outline' onClick={handleBack}>
               Cancel
             </Button>
-            <Button onClick={handleSaveChanges}>Save Changes</Button>
+            <Button onClick={handleSaveChanges} disabled={isSaving}>
+              {isSaving
+                ? isCreateMode
+                  ? 'Creating...'
+                  : 'Saving...'
+                : isCreateMode
+                ? 'Create Suite'
+                : 'Save Changes'}
+            </Button>
           </div>
         </div>
       </div>

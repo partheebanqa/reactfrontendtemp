@@ -15,7 +15,6 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Search, Filter, Play } from 'lucide-react';
 import TestSuiteCard from './TestSuiteCard';
-import CreateTestSuiteDialog from '@/components/TestSuit/CreateTestSuiteDialog';
 import {
   getAllTestSuites,
   deleteTestSuite,
@@ -78,6 +77,10 @@ const TestSuites: React.FC = () => {
     setLocation(`/test-suites/${suite.id}/edit`);
   };
 
+  const handleCreateSuite = () => {
+    setLocation('/test-suites/create');
+  };
+
   const filteredSuites = (testSuitListData ?? []).filter((suite) => {
     const matchesSearch =
       suite.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -91,7 +94,13 @@ const TestSuites: React.FC = () => {
     <div className='p-6 space-y-6'>
       <div className='flex items-center justify-between'>
         <h1 className='text-2xl font-bold'>Test Suites</h1>
-        <CreateTestSuiteDialog />
+        <Button
+          className='bg-blue-600 hover:bg-blue-700'
+          onClick={handleCreateSuite}
+        >
+          <Plus className='w-4 h-4 mr-2' />
+          Create Test Suite
+        </Button>
       </div>
 
       <div className='flex items-center space-x-4'>

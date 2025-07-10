@@ -3,7 +3,7 @@ import { CreateTestSuitePayload, TestSuite } from '@/models/TestSuite.model';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
-const BEARER_TOKEN = `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJvcmdJZCI6IjFhZTZjMjY1LWU1MDItNGFlZC1hYWRjLTQ4MzM3ZTYyMDgwNyIsInRlbmFudElkIjoiYzE1ZDQ4OWItOGMxZS00NmZiLWFlYzgtMDlmMDBmZjUyMTNjIiwicm9sZXMiOlsiT3JnIEFkbWluIl0sInN1YiI6IjM1YmI2NzBkLTcyNTYtNDg0MC1iOTI1LTJkYjk1M2ZmYmVlNCIsImV4cCI6MTc1MjExNDA1OSwibmJmIjoxNzUyMDI3NjU5LCJpYXQiOjE3NTIwMjc2NTl9.JJ7AgXVGU7oQQIBNX2Pfm7ykHzE3mdpyL7GDNqSoWk0`;
+const BEARER_TOKEN = `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJvcmdJZCI6IjFhZTZjMjY1LWU1MDItNGFlZC1hYWRjLTQ4MzM3ZTYyMDgwNyIsInRlbmFudElkIjoiYzE1ZDQ4OWItOGMxZS00NmZiLWFlYzgtMDlmMDBmZjUyMTNjIiwicm9sZXMiOlsiT3JnIEFkbWluIl0sInN1YiI6IjM1YmI2NzBkLTcyNTYtNDg0MC1iOTI1LTJkYjk1M2ZmYmVlNCIsImV4cCI6MTc1MjIwMDczMSwibmJmIjoxNzUyMTE0MzMxLCJpYXQiOjE3NTIxMTQzMzF9.ujePXoIe4UMjXNdfDvteAa2Ly1gfatU1oU5FU0nV4ds`;
 
 const workspaceId = '510cdffe-4262-438c-a5a6-c42c72a705ab';
 
@@ -82,4 +82,23 @@ export const addRequestsToTestSuite = async (
       error.response?.data?.message || 'Failed to add requests to test suite'
     );
   }
+};
+
+export const updateTestSuite = async (
+  id: string,
+  data: { name: string; description: string }
+) => {
+  const response = await fetch(`/api/test-suites/${id}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to update test suite');
+  }
+
+  return response.json();
 };
