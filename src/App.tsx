@@ -11,6 +11,7 @@ import Dashboard from '@/pages/Dashboard';
 import RequestChains from '@/pages/RequestChains';
 import TestSuites from '@/pages/TestSuites';
 import EditTestSuite from '@/pages/EditTestSuite';
+import Plan from '@/pages/Plan';
 import TestSuiteOverView from '@/pages/TestSuiteOverView';
 import Scheduler from '@/pages/Scheduler';
 import CiCdIntegration from '@/pages/CiCdIntegration';
@@ -68,6 +69,7 @@ function Router() {
           <Route path='/request-chains' component={RequestChains} />
           <Route path='/reports' component={Reports} />
           <Route path='/test-suites' component={TestSuites} />
+          <Route path='/plan-billing' component={Plan} />
           <Route path='/test-suites/create' component={EditTestSuite} />
           <Route path='/test-suites/:id/edit' component={EditTestSuite} />
           <Route

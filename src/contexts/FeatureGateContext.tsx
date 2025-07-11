@@ -34,6 +34,8 @@ const FEATURE_MAP: Record<string, string[]> = {
     'test_suites',
     'notifications',
     'reports',
+    'data_management',
+    'plan_billing',
   ],
   pro: [
     'dashboard',
@@ -42,7 +44,6 @@ const FEATURE_MAP: Record<string, string[]> = {
     'test_suites',
     'scheduler',
     'executions',
-    'data_management',
     'settings',
     'profile',
     'notifications',

@@ -60,24 +60,6 @@ export const routeConfig: RouteConfig[] = [
     },
   },
   {
-    path: '/test-suites',
-    name: 'Test Suites',
-    component: 'TestSuitesPage',
-    icon: 'FolderOpen',
-    requiresAuth: true,
-    feature: 'test_suites',
-    meta: {
-      title: 'Test Suites - APIFlow',
-      description: 'Organize and manage collections of related API tests',
-      keywords: [
-        'test suites',
-        'test collections',
-        'organization',
-        'api tests',
-      ],
-    },
-  },
-  {
     path: '/request-chains',
     name: 'Request Chains',
     component: 'RequestChainsPage',
@@ -178,6 +160,20 @@ export const routeConfig: RouteConfig[] = [
         'cleanup',
         'compliance',
       ],
+    },
+  },
+  {
+    path: '/plan-billing',
+    name: 'Plans & Billing',
+    component: 'PlanBillingPage',
+    icon: 'DollarSign',
+    requiresAuth: true,
+    feature: 'billing',
+    roles: ['admin'],
+    meta: {
+      title: 'Plans & Billing - APIFlow',
+      description: 'Manage your subscription plans and billing details',
+      keywords: ['plans', 'billing', 'subscriptions', 'payments', 'invoices'],
     },
   },
   {

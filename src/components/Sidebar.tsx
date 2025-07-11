@@ -22,6 +22,7 @@ import {
   User,
   Clock,
   Crown,
+  Receipt,
 } from 'lucide-react';
 import FeatureGate from './FeatureGate';
 
@@ -61,6 +62,12 @@ const menuItems = [
     path: '/reports',
     icon: FileText,
     feature: 'reports',
+  },
+  {
+    label: 'Plan & Billing',
+    path: '/plan-billing',
+    icon: Receipt,
+    feature: 'plan_billing',
   },
 ];
 

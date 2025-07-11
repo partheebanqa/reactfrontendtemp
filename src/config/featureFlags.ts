@@ -6,6 +6,8 @@ export const SUBSCRIPTION_FEATURES = {
     'test_suites',
     'notifications',
     'reports',
+    'plan_billing',
+    'data_management',
   ],
   pro: [
     'dashboard',
@@ -14,7 +16,6 @@ export const SUBSCRIPTION_FEATURES = {
     'test_suites',
     'scheduler',
     'executions',
-    'data_management',
     'settings',
     'profile',
     'notifications',
