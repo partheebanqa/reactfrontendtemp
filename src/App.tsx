@@ -66,6 +66,7 @@ function Router() {
           <Route path='/dashboard' component={Dashboard} />
           <Route path='/request-builder' component={RequestBuilderPage} />
           <Route path='/request-chains' component={RequestChains} />
+          <Route path='/reports' component={Reports} />
           <Route path='/test-suites' component={TestSuites} />
           <Route path='/test-suites/create' component={EditTestSuite} />
           <Route path='/test-suites/:id/edit' component={EditTestSuite} />
@@ -77,7 +78,6 @@ function Router() {
           <Route path='/cicd' component={CiCdIntegration} />
           <Route path='/executions' component={Executions} />
           <Route path='/data-management' component={DataManagement} />
-          <Route path='/reports' component={Reports} />
           <Route path='/settings' component={Settings} />
           <Route path='/profile' component={Profile} />
           <Route path='/notifications' component={Notifications} />

@@ -37,10 +37,8 @@ const EditTestSuiteContent: React.FC = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Get the id from params - wouter provides params as an object
   const id = params.id;
 
-  // Determine if this is create mode (when path is '/test-suites/create')
   const isCreateMode = location === '/test-suites/create';
   const actualId = isCreateMode ? undefined : id;
 
