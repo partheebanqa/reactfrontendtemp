@@ -359,6 +359,7 @@ const EditTestSuiteContent: React.FC = () => {
         ) : (
           <ManageRequests
             requests={requests}
+            testSuiteId={actualId || ''}
             onImport={() => setIsImportModalOpen(true)}
             onDeleteRequest={handleDeleteRequest}
             onUpdateTestCases={handleUpdateTestCases}

@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Dialog,
   DialogContent,
@@ -16,100 +17,197 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Search, ChevronDown, ChevronRight, X, Plus } from 'lucide-react';
+import {
+  Search,
+  ChevronDown,
+  ChevronRight,
+  X,
+  Plus,
+  Loader,
+} from 'lucide-react';
+import {
+  getTestCasesByRequestId,
+  saveTestCasesForRequest,
+} from '@/services/testcase.service';
+import { useToast } from '@/hooks/use-toast';
+import { ApiTestCase } from '@/models/testcase.model';
 
-interface TestCaseSelectionModalProps {
+type TestCase = {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  tags: string[];
+};
+
+type TestCaseCategory = {
+  category: string;
+  count: number;
+  tests: TestCase[];
+};
+
+type TestCaseSelectionModalProps = {
   isOpen: boolean;
   onClose: () => void;
-  onSelect: (selectedCases: string[]) => void;
-  requestName: string;
-  requestMethod: string;
-  requestEndpoint: string;
-}
+  onSelect: (testCaseIds: string[]) => void;
+  request: {
+    id: string;
+    name: string;
+    method: string;
+    endpoint: string;
+    selectedTestCases?: string[];
+  } | null;
+  testSuiteId: string;
+};
 
-const testCaseCategories = [
-  {
-    category: 'Functional',
-    count: 15,
-    tests: [
-      {
-        id: 'func-1',
-        name: 'Successful Response',
-        description:
-          'Verify the request returns a successful response (2xx status code)',
-        tags: ['basic', 'response'],
-      },
-      {
-        id: 'func-2',
-        name: 'Input Validation',
-        description: 'Test request with invalid input parameters',
-        tags: ['validation', 'error'],
-      },
-      {
-        id: 'func-3',
-        name: 'Authentication Required',
-        description: 'Verify request fails without proper authentication',
-        tags: ['auth', 'security'],
-      },
-      {
-        id: 'func-4',
-        name: 'Resource Not Found',
-        description: 'Test request with non-existent resource ID',
-        tags: ['error', 'validation'],
-      },
-    ],
-  },
-  {
-    category: 'Performance',
-    count: 10,
-    tests: [
-      {
-        id: 'perf-1',
-        name: 'Response Time',
-        description: 'Measure API response time',
-        tags: ['timing', 'performance'],
-      },
-      {
-        id: 'perf-2',
-        name: 'Load Testing',
-        description: 'Test under high load',
-        tags: ['load', 'stress'],
-      },
-    ],
-  },
-  {
-    category: 'Security',
-    tests: [
-      {
-        id: 'sec-1',
-        name: 'Authentication',
-        description: 'Test authentication mechanisms',
-        tags: ['auth', 'security'],
-      },
-      {
-        id: 'sec-2',
-        name: 'Authorization',
-        description: 'Verify access controls',
-        tags: ['auth', 'permissions'],
-      },
-    ],
-  },
-];
+// Helper function to map category numbers to category names
+const getCategoryName = (categoryNumber: number): string => {
+  const categoryMap: { [key: number]: string } = {
+    0: 'Performance',
+    1: 'Functional',
+    2: 'Security',
+    3: 'Integration',
+    4: 'Regression',
+  };
+  return categoryMap[categoryNumber] || 'Other';
+};
+
+// Helper function to generate tags based on test case properties
+const generateTags = (testCase: ApiTestCase): string[] => {
+  const tags: string[] = [];
+
+  if (testCase.method) {
+    tags.push(testCase.method.toLowerCase());
+  }
+
+  if (testCase.authorizationType) {
+    tags.push('auth');
+  }
+
+  if (testCase.expectedResponse?.status === 0) {
+    tags.push('success');
+  }
+
+  const categoryName = getCategoryName(testCase.category).toLowerCase();
+  tags.push(categoryName);
+
+  return tags;
+};
+
+// Transform API response to UI format
+const transformTestCases = (
+  apiTestCases: ApiTestCase[]
+): TestCaseCategory[] => {
+  const categoriesMap: { [key: string]: TestCase[] } = {};
+
+  apiTestCases.forEach((apiTestCase) => {
+    const categoryName = getCategoryName(apiTestCase.category);
+    const testCase: TestCase = {
+      id: apiTestCase.id,
+      name: apiTestCase.name,
+      description: apiTestCase.description,
+      category: categoryName,
+      tags: generateTags(apiTestCase),
+    };
+
+    if (!categoriesMap[categoryName]) {
+      categoriesMap[categoryName] = [];
+    }
+    categoriesMap[categoryName].push(testCase);
+  });
+
+  return Object.entries(categoriesMap).map(([category, tests]) => ({
+    category,
+    count: tests.length,
+    tests,
+  }));
+};
 
 export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
   isOpen,
   onClose,
   onSelect,
-  requestName,
-  requestMethod,
-  requestEndpoint,
-}) => {
+  request,
+  testSuiteId,
+}: TestCaseSelectionModalProps) => {
   const [selectedTestCases, setSelectedTestCases] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('All Categories');
   const [expandedCategories, setExpandedCategories] = useState<string[]>([
     'Functional',
   ]);
+  const [testCaseCategories, setTestCaseCategories] = useState<
+    TestCaseCategory[]
+  >([]);
+
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const {
+    data: testCasesData,
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ['testCases', request?.id],
+    queryFn: () => getTestCasesByRequestId(request!.id),
+    enabled: !!request?.id && isOpen,
+  });
+
+  const saveTestCasesMutation = useMutation({
+    mutationFn: ({
+      requestId,
+      selectedTestCaseIds,
+      allTestCaseIds,
+    }: {
+      requestId: string;
+      selectedTestCaseIds: string[];
+      allTestCaseIds: string[];
+    }) =>
+      saveTestCasesForRequest(
+        testSuiteId,
+        requestId,
+        selectedTestCaseIds,
+        allTestCaseIds
+      ),
+    onSuccess: () => {
+      toast({
+        title: 'Success',
+        description: 'Test cases saved successfully!',
+      });
+      queryClient.invalidateQueries({ queryKey: ['testCases'] });
+      onSelect(selectedTestCases);
+      onClose();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to save test cases',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // Initialize selected test cases when modal opens or request changes
+  useEffect(() => {
+    if (isOpen && request?.selectedTestCases) {
+      setSelectedTestCases([...request.selectedTestCases]);
+    } else if (isOpen) {
+      setSelectedTestCases([]);
+    }
+  }, [isOpen, request?.selectedTestCases]);
+
+  // Transform and set test cases when data changes
+  useEffect(() => {
+    if (testCasesData?.testCases) {
+      const transformedCategories = transformTestCases(testCasesData.testCases);
+      setTestCaseCategories(transformedCategories);
+
+      // Expand the first category if it exists
+      if (transformedCategories.length > 0) {
+        setExpandedCategories([transformedCategories[0].category]);
+      }
+    }
+  }, [testCasesData]);
 
   const handleTestCaseToggle = (testId: string, checked: boolean) => {
     if (checked) {
@@ -119,8 +217,8 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
     }
   };
 
-  const handleCategoryToggle = (category: any) => {
-    const testIds = category.tests.map((test: any) => test.id);
+  const handleCategoryToggle = (category: TestCaseCategory) => {
+    const testIds = category.tests.map((test) => test.id);
     const allSelected = testIds.every((id: string) =>
       selectedTestCases.includes(id)
     );
@@ -150,38 +248,83 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
   };
 
   const handleSave = () => {
-    onSelect(selectedTestCases);
-    setSelectedTestCases([]);
-    onClose();
+    if (!request?.id) return;
+
+    // Get all test case IDs from current data
+    const allTestCaseIds = testCaseCategories.flatMap((category) =>
+      category.tests.map((test) => test.id)
+    );
+
+    saveTestCasesMutation.mutate({
+      requestId: request.id,
+      selectedTestCaseIds: selectedTestCases,
+      allTestCaseIds,
+    });
   };
 
   const handleCancel = () => {
-    setSelectedTestCases([]);
+    // Reset to original selection on cancel
+    if (request?.selectedTestCases) {
+      setSelectedTestCases([...request.selectedTestCases]);
+    } else {
+      setSelectedTestCases([]);
+    }
     onClose();
   };
 
   const getTestById = (testId: string) => {
     for (const category of testCaseCategories) {
       const test = category.tests.find((t) => t.id === testId);
-      if (test) return { ...test, category: category.category };
+      if (test) return test;
     }
     return null;
   };
 
-  const filteredCategories = testCaseCategories.filter((category) => {
-    if (
-      categoryFilter !== 'All Categories' &&
-      category.category !== categoryFilter
-    ) {
-      return false;
-    }
-    return true;
-  });
+  const filteredCategories = testCaseCategories
+    .filter((category) => {
+      if (
+        categoryFilter !== 'All Categories' &&
+        category.category !== categoryFilter
+      ) {
+        return false;
+      }
+
+      // Apply search filter
+      if (searchTerm) {
+        const searchLower = searchTerm.toLowerCase();
+        const hasMatchingTests = category.tests.some(
+          (test) =>
+            test.name.toLowerCase().includes(searchLower) ||
+            test.description.toLowerCase().includes(searchLower) ||
+            test.tags.some((tag) => tag.toLowerCase().includes(searchLower))
+        );
+        return hasMatchingTests;
+      }
+
+      return true;
+    })
+    .map((category) => {
+      // Filter tests within category based on search term
+      if (searchTerm) {
+        const searchLower = searchTerm.toLowerCase();
+        const filteredTests = category.tests.filter(
+          (test) =>
+            test.name.toLowerCase().includes(searchLower) ||
+            test.description.toLowerCase().includes(searchLower) ||
+            test.tags.some((tag) => tag.toLowerCase().includes(searchLower))
+        );
+        return { ...category, tests: filteredTests };
+      }
+      return category;
+    });
 
   const totalAvailableTests = testCaseCategories.reduce(
     (sum, cat) => sum + cat.tests.length,
     0
   );
+
+  if (!request) return null;
+  const { name } = request;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -191,7 +334,7 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
           <DialogHeader className='space-y-0'>
             <DialogTitle className='text-xl'>Select Test Cases</DialogTitle>
             <p className='text-sm text-muted-foreground mt-1'>
-              Choose test cases for: {requestName}
+              Choose test cases for: {name}
             </p>
           </DialogHeader>
         </div>
@@ -206,9 +349,14 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className='pl-10'
+                disabled={isLoading}
               />
             </div>
-            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+            <Select
+              value={categoryFilter}
+              onValueChange={setCategoryFilter}
+              disabled={isLoading}
+            >
               <SelectTrigger className='w-48'>
                 <SelectValue />
               </SelectTrigger>
@@ -238,113 +386,147 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
                 </span>
               </div>
 
-              <div className='space-y-2'>
-                {filteredCategories.map((category) => {
-                  const isExpanded = expandedCategories.includes(
-                    category.category
-                  );
-                  const categoryTests = category.tests;
-                  const selectedInCategory = categoryTests.filter((test) =>
-                    selectedTestCases.includes(test.id)
-                  ).length;
+              {isLoading && (
+                <div className='flex items-center justify-center py-8'>
+                  <Loader className='h-6 w-6 animate-spin' />
+                  <span className='ml-2 text-sm text-muted-foreground'>
+                    Loading test cases...
+                  </span>
+                </div>
+              )}
 
-                  return (
-                    <div key={category.category} className='border rounded-lg'>
+              {error && (
+                <div className='text-center py-8'>
+                  <p className='text-sm text-destructive mb-2'>
+                    Failed to load test cases
+                  </p>
+                  <p className='text-xs text-muted-foreground mb-4'>
+                    {(error as Error).message}
+                  </p>
+                </div>
+              )}
+
+              {!isLoading && !error && testCaseCategories.length === 0 && (
+                <div className='text-center py-8'>
+                  <p className='text-sm text-muted-foreground'>
+                    No test cases found for this request
+                  </p>
+                </div>
+              )}
+
+              {!isLoading && !error && (
+                <div className='space-y-2'>
+                  {filteredCategories.map((category) => {
+                    const isExpanded = expandedCategories.includes(
+                      category.category
+                    );
+                    const categoryTests = category.tests;
+                    const selectedInCategory = categoryTests.filter((test) =>
+                      selectedTestCases.includes(test.id)
+                    ).length;
+
+                    return (
                       <div
-                        className='flex items-center justify-between p-3 cursor-pointer hover:bg-muted/50'
-                        onClick={() =>
-                          toggleCategoryExpansion(category.category)
-                        }
+                        key={category.category}
+                        className='border rounded-lg'
                       >
-                        <div className='flex items-center space-x-3'>
-                          {isExpanded ? (
-                            <ChevronDown className='h-4 w-4' />
-                          ) : (
-                            <ChevronRight className='h-4 w-4' />
-                          )}
-                          <span className='font-medium'>
-                            {category.category}
-                          </span>
-                          <Badge variant='outline'>
-                            {category.count || categoryTests.length}
-                          </Badge>
-                          {selectedInCategory > 0 && (
-                            <span className='text-xs text-blue-600 font-medium'>
-                              Select All
-                            </span>
-                          )}
-                        </div>
-                        <Button
-                          variant='ghost'
-                          size='sm'
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleCategoryToggle(category);
-                          }}
-                          className='text-blue-600 hover:text-blue-700'
+                        <div
+                          className='flex items-center justify-between p-3 cursor-pointer hover:bg-muted/50'
+                          onClick={() =>
+                            toggleCategoryExpansion(category.category)
+                          }
                         >
-                          Select All
-                        </Button>
-                      </div>
+                          <div className='flex items-center space-x-3'>
+                            {isExpanded ? (
+                              <ChevronDown className='h-4 w-4' />
+                            ) : (
+                              <ChevronRight className='h-4 w-4' />
+                            )}
+                            <span className='font-medium'>
+                              {category.category}
+                            </span>
+                            <Badge variant='outline'>
+                              {categoryTests.length}
+                            </Badge>
+                            {selectedInCategory > 0 && (
+                              <span className='text-xs text-blue-600 font-medium'>
+                                {selectedInCategory}/{categoryTests.length}{' '}
+                                selected
+                              </span>
+                            )}
+                          </div>
+                          <Button
+                            variant='ghost'
+                            size='sm'
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleCategoryToggle(category);
+                            }}
+                            className='text-blue-600 hover:text-blue-700'
+                          >
+                            Select All
+                          </Button>
+                        </div>
 
-                      {isExpanded && (
-                        <div className='px-3 pb-3 space-y-2'>
-                          {categoryTests.map((test) => (
-                            <div
-                              key={test.id}
-                              className='flex items-start space-x-3 p-3 rounded border hover:bg-muted/30'
-                            >
-                              <Checkbox
-                                checked={selectedTestCases.includes(test.id)}
-                                onCheckedChange={(checked) =>
-                                  handleTestCaseToggle(
-                                    test.id,
-                                    checked as boolean
-                                  )
-                                }
-                              />
-                              <div className='flex-1 min-w-0'>
-                                <div className='flex items-center space-x-2'>
-                                  <h4 className='font-medium text-sm'>
-                                    {test.name}
-                                  </h4>
-                                  {!selectedTestCases.includes(test.id) && (
-                                    <Button
-                                      variant='ghost'
-                                      size='sm'
-                                      onClick={() =>
-                                        handleTestCaseToggle(test.id, true)
-                                      }
-                                      className='h-6 px-2 text-xs'
-                                    >
-                                      <Plus className='h-3 w-3 mr-1' />
-                                      Add
-                                    </Button>
-                                  )}
-                                </div>
-                                <p className='text-xs text-muted-foreground mt-1'>
-                                  {test.description}
-                                </p>
-                                <div className='flex space-x-1 mt-2'>
-                                  {test.tags?.map((tag) => (
-                                    <Badge
-                                      key={tag}
-                                      variant='secondary'
-                                      className='text-xs px-1 py-0'
-                                    >
-                                      {tag}
-                                    </Badge>
-                                  ))}
+                        {isExpanded && (
+                          <div className='px-3 pb-3 space-y-2'>
+                            {categoryTests.map((test) => (
+                              <div
+                                key={test.id}
+                                className='flex items-start space-x-3 p-3 rounded border hover:bg-muted/30'
+                              >
+                                <Checkbox
+                                  checked={selectedTestCases.includes(test.id)}
+                                  onCheckedChange={(checked) =>
+                                    handleTestCaseToggle(
+                                      test.id,
+                                      checked as boolean
+                                    )
+                                  }
+                                />
+                                <div className='flex-1 min-w-0'>
+                                  <div className='flex items-center space-x-2'>
+                                    <h4 className='font-medium text-sm'>
+                                      {test.name}
+                                    </h4>
+                                    {!selectedTestCases.includes(test.id) && (
+                                      <Button
+                                        variant='ghost'
+                                        size='sm'
+                                        onClick={() =>
+                                          handleTestCaseToggle(test.id, true)
+                                        }
+                                        className='h-6 px-2 text-xs'
+                                      >
+                                        <Plus className='h-3 w-3 mr-1' />
+                                        Add
+                                      </Button>
+                                    )}
+                                  </div>
+                                  <p className='text-xs text-muted-foreground mt-1'>
+                                    {test.description}
+                                  </p>
+                                  <div className='flex space-x-1 mt-2'>
+                                    {test.tags?.map((tag) => (
+                                      <Badge
+                                        key={tag}
+                                        variant='secondary'
+                                        className='text-xs px-1 py-0'
+                                      >
+                                        {tag}
+                                      </Badge>
+                                    ))}
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
 
@@ -409,9 +591,20 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
             </Button>
             <Button
               onClick={handleSave}
-              disabled={selectedTestCases.length === 0}
+              disabled={
+                selectedTestCases.length === 0 ||
+                isLoading ||
+                saveTestCasesMutation.isPending
+              }
             >
-              Save Test Cases
+              {saveTestCasesMutation.isPending ? (
+                <>
+                  <Loader className='h-4 w-4 animate-spin mr-2' />
+                  Saving...
+                </>
+              ) : (
+                'Save Test Cases'
+              )}
             </Button>
           </div>
         </div>

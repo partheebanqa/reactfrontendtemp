@@ -20,6 +20,7 @@ interface Request {
 
 interface ManageRequestsProps {
   requests: Request[];
+  testSuiteId: string;
   onImport: () => void;
   onDeleteRequest: (requestId: string) => void;
   onUpdateTestCases: (requestId: string, testCaseIds: string[]) => void;
@@ -44,11 +45,13 @@ const getMethodBadgeColor = (method: string) => {
 
 export const ManageRequests: React.FC<ManageRequestsProps> = ({
   requests,
+  testSuiteId,
   onImport,
   onDeleteRequest,
   onUpdateTestCases,
 }) => {
   const [selectedRequest, setSelectedRequest] = useState<Request | null>(null);
+
   const [isTestCaseModalOpen, setIsTestCaseModalOpen] = useState(false);
 
   const handleConfigureTestCases = (request: Request) => {
@@ -63,6 +66,7 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
     setIsTestCaseModalOpen(false);
     setSelectedRequest(null);
   };
+
   return (
     <Card>
       <CardHeader>
@@ -152,9 +156,11 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
             setSelectedRequest(null);
           }}
           onSelect={handleTestCaseSelection}
-          requestName={selectedRequest.name}
-          requestMethod={selectedRequest.method}
-          requestEndpoint={selectedRequest.endpoint}
+          request={{
+            ...selectedRequest,
+            selectedTestCases: selectedRequest.selectedTestCases || [],
+          }}
+          testSuiteId={testSuiteId}
         />
       )}
     </Card>
