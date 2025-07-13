@@ -16,6 +16,7 @@ interface WorkspaceContextType {
   workspaces: Workspace[];
   setCurrentWorkspace: (workspace: Workspace) => void;
   refreshWorkspaces: () => void;
+  isLoading: boolean;
 }
 
 const WorkspaceContext = createContext<WorkspaceContextType | undefined>(
@@ -89,6 +90,7 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({
         workspaces,
         setCurrentWorkspace,
         refreshWorkspaces,
+        isLoading: !workspaceData && !isAuthenticated,
       }}
     >
       {children}

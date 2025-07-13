@@ -32,6 +32,7 @@ import NotFound from '@/pages/not-found';
 import RequestBuilderPage from './pages/RequestBuilderPage';
 import { ContextWrapper } from './contexts/ContextWrapper';
 import DataManagementPage from '@/pages/DataManaementPage';
+import DashboardPage from '@/pages/DashboardPage';
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -65,7 +66,7 @@ function Router() {
       <AppLayout>
         <Switch>
           <Route path='/' component={Dashboard} />
-          <Route path='/dashboard' component={Dashboard} />
+          <Route path='/dashboard' component={DashboardPage} />
           <Route path='/request-builder' component={RequestBuilderPage} />
           <Route path='/request-chains' component={RequestChains} />
           <Route path='/reports' component={Reports} />

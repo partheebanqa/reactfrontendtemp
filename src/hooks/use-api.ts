@@ -104,3 +104,11 @@ export function useRequestChains() {
     isLoading: false,
   };
 }
+
+export const useExecutions = (limit?: number, workspaceId?: string) => {
+
+  return {
+    data: mockSchedules.slice(0, limit),
+    isLoading: false,
+  };
+};
