@@ -1,4 +1,5 @@
 export interface TestSuite {
+  requests: boolean;
   id: string;
   name: string;
   description: string;
@@ -12,4 +13,5 @@ export interface TestSuite {
 export interface CreateTestSuitePayload {
   name: string;
   description?: string;
+  requestIds: string[];
 }

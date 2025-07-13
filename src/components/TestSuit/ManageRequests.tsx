@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Download, Settings, Trash2 } from 'lucide-react';
-import { MethodBadge } from './MethodBadge';
+import { Download, Trash2, Settings } from 'lucide-react';
 import { TestCaseSelectionModal } from './TestCaseSelectionModal';
 
 interface Request {
@@ -16,175 +15,148 @@ interface Request {
     functional: number;
     total: number;
   };
+  selectedTestCases?: string[];
 }
 
 interface ManageRequestsProps {
   requests: Request[];
   onImport: () => void;
+  onDeleteRequest: (requestId: string) => void;
+  onUpdateTestCases: (requestId: string, testCaseIds: string[]) => void;
 }
+
+const getMethodBadgeColor = (method: string) => {
+  switch (method.toUpperCase()) {
+    case 'GET':
+      return 'bg-green-100 text-green-800 hover:bg-green-200';
+    case 'POST':
+      return 'bg-blue-100 text-blue-800 hover:bg-blue-200';
+    case 'PUT':
+      return 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200';
+    case 'DELETE':
+      return 'bg-red-100 text-red-800 hover:bg-red-200';
+    case 'PATCH':
+      return 'bg-purple-100 text-purple-800 hover:bg-purple-200';
+    default:
+      return 'bg-gray-100 text-gray-800 hover:bg-gray-200';
+  }
+};
 
 export const ManageRequests: React.FC<ManageRequestsProps> = ({
   requests,
   onImport,
+  onDeleteRequest,
+  onUpdateTestCases,
 }) => {
-  const [selectedRequestId, setSelectedRequestId] = useState<string | null>(
-    null
-  );
+  const [selectedRequest, setSelectedRequest] = useState<Request | null>(null);
   const [isTestCaseModalOpen, setIsTestCaseModalOpen] = useState(false);
 
-  const handleSettingsClick = (requestId: string) => {
-    setSelectedRequestId(requestId);
+  const handleConfigureTestCases = (request: Request) => {
+    setSelectedRequest(request);
     setIsTestCaseModalOpen(true);
   };
 
-  const handleTestCaseModalClose = () => {
+  const handleTestCaseSelection = (testCaseIds: string[]) => {
+    if (selectedRequest) {
+      onUpdateTestCases(selectedRequest.id, testCaseIds);
+    }
     setIsTestCaseModalOpen(false);
-    setSelectedRequestId(null);
+    setSelectedRequest(null);
   };
-
-  const handleTestCaseSelection = (selectedCases: string[]) => {
-    console.log(
-      'Selected test cases for request:',
-      selectedRequestId,
-      selectedCases
-    );
-    // Here you would update the request's test cases
-    handleTestCaseModalClose();
-  };
-
-  const selectedRequest = requests.find((r) => r.id === selectedRequestId);
-
   return (
-    <>
-      <Card>
-        <CardHeader className='flex flex-row items-center justify-between space-y-0'>
-          <div>
-            <CardTitle className='flex items-center'>
-              Manage Requests & Test Cases
-              <span className='text-destructive ml-1'>*</span>
-            </CardTitle>
-            <p className='text-sm text-muted-foreground mt-1'>
-              Import additional API requests or modify existing test case
-              configurations
-            </p>
-          </div>
+    <Card>
+      <CardHeader>
+        <div className='flex items-center justify-between'>
+          <CardTitle>Requests ({requests.length})</CardTitle>
           <Button variant='outline' onClick={onImport}>
             <Download className='w-4 h-4 mr-2' />
             Import More Requests
           </Button>
-        </CardHeader>
-
-        <CardContent>
-          <div className='mb-4 p-3 bg-info/5 border border-info/20 rounded-md'>
-            <div className='flex justify-between text-sm'>
-              <span className='text-info'>
-                {requests.length} requests configured
-              </span>
-              <span className='text-info'>
-                {requests.reduce((sum, r) => sum + r.testCases.functional, 0)}{' '}
-                test cases selected
-              </span>
-            </div>
-          </div>
-
-          <div className='space-y-4'>
-            {requests.map((request) => (
-              <div key={request.id} className='border rounded-lg p-4'>
-                <div className='flex items-start justify-between mb-3'>
-                  <div className='flex items-center space-x-3'>
-                    <MethodBadge method={request.method} />
-                    <div>
-                      <h3 className='font-medium'>{request.name}</h3>
-                      <p className='text-sm text-muted-foreground'>
-                        {request.endpoint}
-                      </p>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className='space-y-3'>
+          {requests.map((request) => (
+            <div
+              key={request.id}
+              className='p-4 border rounded-lg hover:bg-muted/50 transition-colors'
+            >
+              <div className='flex items-start justify-between'>
+                <div className='flex items-start space-x-3 flex-1'>
+                  <Badge className={getMethodBadgeColor(request.method)}>
+                    {request.method}
+                  </Badge>
+                  <div className='flex-1 min-w-0'>
+                    <h4 className='font-medium text-base'>{request.name}</h4>
+                    <p className='text-sm text-muted-foreground mt-1'>
+                      {request.endpoint}
+                    </p>
+                    {request.description && (
                       <p className='text-sm text-muted-foreground mt-1'>
                         {request.description}
                       </p>
-                    </div>
-                  </div>
-                  <div className='flex items-center space-x-2'>
-                    <Button
-                      variant='ghost'
-                      size='sm'
-                      onClick={() => handleSettingsClick(request.id)}
-                    >
-                      <Settings className='w-4 h-4' />
-                    </Button>
-                    <Button
-                      variant='ghost'
-                      size='sm'
-                      className='text-destructive hover:text-destructive hover:bg-destructive/10'
-                    >
-                      <Trash2 className='w-4 h-4' />
-                    </Button>
+                    )}
                   </div>
                 </div>
-
-                <div className='space-y-2'>
-                  <div className='flex items-center justify-between'>
-                    <span className='text-sm text-muted-foreground'>
-                      Test Cases:
-                    </span>
-                    <Button
-                      variant='link'
-                      size='sm'
-                      className='text-primary p-0 h-auto'
-                      onClick={() => handleSettingsClick(request.id)}
-                    >
-                      Configure
-                    </Button>
-                  </div>
-                  <div className='flex items-center space-x-2 text-sm'>
-                    <span className='text-muted-foreground'>⚡ Functional</span>
-                    <Badge
-                      variant='outline'
-                      className='text-primary border-primary/20 bg-primary/5'
-                    >
-                      {request.testCases.functional}
-                    </Badge>
-                  </div>
-                  <div className='text-sm text-muted-foreground'>
-                    Total:{' '}
-                    <span className='font-medium'>
-                      {request.testCases.total} test cases
-                    </span>
-                  </div>
-                  {request.testCases.total === 0 && (
-                    <p className='text-sm text-muted-foreground italic'>
-                      No test cases selected. Click "Configure" to add test
-                      cases.
-                    </p>
-                  )}
+                <div className='flex items-center space-x-2'>
+                  <Button
+                    variant='ghost'
+                    size='sm'
+                    onClick={() => handleConfigureTestCases(request)}
+                    className='text-muted-foreground hover:text-primary hover:bg-primary/10'
+                  >
+                    <Settings className='w-4 h-4' />
+                  </Button>
+                  <Button
+                    variant='ghost'
+                    size='sm'
+                    onClick={() => onDeleteRequest(request.id)}
+                    className='text-muted-foreground hover:text-destructive hover:bg-destructive/10'
+                  >
+                    <Trash2 className='w-4 h-4' />
+                  </Button>
                 </div>
               </div>
-            ))}
-          </div>
 
-          <div className='mt-6 pt-4 border-t bg-muted/20 -mx-4 px-4 py-3 rounded-b-lg'>
-            <div className='flex justify-between text-sm'>
-              <span>
-                Configured requests: <strong>{requests.length}</strong>
-              </span>
-              <span>
-                Total test cases:{' '}
-                <strong>
-                  {requests.reduce((sum, r) => sum + r.testCases.functional, 0)}
-                </strong>
-              </span>
+              <div className='mt-4'>
+                <h5 className='text-sm font-medium mb-2'>Test Cases:</h5>
+                <div className='flex items-center space-x-4'>
+                  {(request.selectedTestCases?.length || 0) > 0 && (
+                    <div className='flex items-center space-x-1'>
+                      <span className='text-sm text-muted-foreground'>
+                        🧪 Functional
+                      </span>
+                      <span className='text-sm font-medium'>
+                        {request.selectedTestCases?.length || 0}
+                      </span>
+                    </div>
+                  )}
+                </div>
+                <p className='text-sm text-muted-foreground mt-1'>
+                  Total:{' '}
+                  <span className='font-medium'>
+                    {request.selectedTestCases?.length || 0} test cases
+                  </span>
+                </p>
+              </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          ))}
+        </div>
+      </CardContent>
 
-      <TestCaseSelectionModal
-        isOpen={isTestCaseModalOpen}
-        onClose={handleTestCaseModalClose}
-        onSelect={handleTestCaseSelection}
-        requestName={selectedRequest?.name || ''}
-        requestMethod={selectedRequest?.method || 'GET'}
-        requestEndpoint={selectedRequest?.endpoint || ''}
-      />
-    </>
+      {selectedRequest && (
+        <TestCaseSelectionModal
+          isOpen={isTestCaseModalOpen}
+          onClose={() => {
+            setIsTestCaseModalOpen(false);
+            setSelectedRequest(null);
+          }}
+          onSelect={handleTestCaseSelection}
+          requestName={selectedRequest.name}
+          requestMethod={selectedRequest.method}
+          requestEndpoint={selectedRequest.endpoint}
+        />
+      )}
+    </Card>
   );
 };

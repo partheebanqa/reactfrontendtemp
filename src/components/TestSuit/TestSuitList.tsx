@@ -18,6 +18,7 @@ import TestSuiteCard from './TestSuiteCard';
 import {
   getAllTestSuites,
   deleteTestSuite,
+  executeTestSuite,
 } from '@/services/testSuites.service';
 import { TestSuite } from '@/models/TestSuite.model';
 
@@ -68,8 +69,30 @@ const TestSuites: React.FC = () => {
     },
   });
 
+  const executeSuiteMutation = useMutation({
+    mutationFn: executeTestSuite,
+    onSuccess: () => {
+      toast({
+        title: 'Deleted',
+        description: 'Test suite deleted successfully.',
+      });
+      queryClient.invalidateQueries({ queryKey: ['testSuites'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Delete failed',
+        description: error.message || 'Something went wrong.',
+        variant: 'destructive',
+      });
+    },
+  });
+
   const handleDeleteSuite = (id: string) => {
     deleteSuiteMutation.mutate(id);
+  };
+
+  const handleExecuteSuite = (id: string) => {
+    executeSuiteMutation.mutate({ testSuiteId: id });
   };
 
   const handleEditSuite = (suite: TestSuite) => {
@@ -147,6 +170,7 @@ const TestSuites: React.FC = () => {
                 suite={suite}
                 onEdit={handleEditSuite}
                 onDelete={handleDeleteSuite}
+                onExecute={handleExecuteSuite}
               />
             ))}
           </div>

@@ -8,25 +8,27 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Search, ChevronDown, ChevronUp } from 'lucide-react';
+import { Search, ChevronDown, ChevronUp, Check } from 'lucide-react';
 import { MethodBadge } from './MethodBadge';
 import { useQuery } from '@tanstack/react-query';
-import { getCollectionsWithRequests } from '../../services/collection.service';
+import { getCollectionsWithRequests } from '@/services/collection.service';
 import {
   ExtendedRequest,
   TransformedCollection,
-} from '../../models/collection.model';
+} from '@/models/collection.model';
 
 interface ImportModalProps {
   isOpen: boolean;
   onClose: () => void;
   onImport: (requests: ExtendedRequest[]) => void;
+  importedRequestIds?: string[]; // Already imported request IDs
 }
 
 export const ImportModal: React.FC<ImportModalProps> = ({
   isOpen,
   onClose,
   onImport,
+  importedRequestIds = [],
 }) => {
   const {
     data: apiData,
@@ -74,7 +76,13 @@ export const ImportModal: React.FC<ImportModalProps> = ({
       )
   );
 
+  const isRequestImported = (requestId: string) =>
+    importedRequestIds.includes(requestId);
+
   const handleSelectRequest = (requestId: string, checked: boolean) => {
+    // Don't allow selecting already imported requests
+    if (isRequestImported(requestId)) return;
+
     if (checked) {
       setSelectedRequests((prev) => [...prev, requestId]);
     } else {
@@ -86,18 +94,23 @@ export const ImportModal: React.FC<ImportModalProps> = ({
     const collection = collections.find((c) => c.id === collectionId);
     if (!collection) return;
 
-    const allSelected = collection.requests.every((req) =>
+    // Only consider non-imported requests for selection
+    const availableRequests = collection.requests.filter(
+      (req) => !isRequestImported(req.id)
+    );
+
+    const allAvailableSelected = availableRequests.every((req) =>
       selectedRequests.includes(req.id)
     );
 
-    if (allSelected) {
-      // Deselect all
+    if (allAvailableSelected) {
+      // Deselect all available requests
       setSelectedRequests((prev) =>
-        prev.filter((id) => !collection.requests.some((req) => req.id === id))
+        prev.filter((id) => !availableRequests.some((req) => req.id === id))
       );
     } else {
-      // Select all
-      const newSelections = collection.requests
+      // Select all available requests
+      const newSelections = availableRequests
         .filter((req) => !selectedRequests.includes(req.id))
         .map((req) => req.id);
       setSelectedRequests((prev) => [...prev, ...newSelections]);
@@ -200,9 +213,13 @@ export const ImportModal: React.FC<ImportModalProps> = ({
             ) : (
               filteredCollections.map((collection: TransformedCollection) => {
                 const isExpanded = expandedCollections.includes(collection.id);
-                const allSelected = collection.requests.every((req) =>
+                const availableRequests = collection.requests.filter(
+                  (req) => !isRequestImported(req.id)
+                );
+                const allAvailableSelected = availableRequests.every((req) =>
                   selectedRequests.includes(req.id)
                 );
+                const hasAvailableRequests = availableRequests.length > 0;
 
                 return (
                   <div key={collection.id} className='border rounded-lg'>
@@ -222,49 +239,90 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                           <h3 className='font-medium'>{collection.name}</h3>
                           <p className='text-sm text-muted-foreground'>
                             ({collection.requestCount} requests)
+                            {importedRequestIds.length > 0 && (
+                              <span className='ml-2 text-green-600'>
+                                •{' '}
+                                {
+                                  collection.requests.filter((req) =>
+                                    isRequestImported(req.id)
+                                  ).length
+                                }{' '}
+                                imported
+                              </span>
+                            )}
                           </p>
                         </div>
                       </div>
-                      <Button
-                        variant='link'
-                        size='sm'
-                        onClick={() => handleSelectAll(collection.id)}
-                        className='text-primary'
-                      >
-                        {allSelected ? 'Deselect All' : 'Select All'}
-                      </Button>
+                      {hasAvailableRequests && (
+                        <Button
+                          variant='link'
+                          size='sm'
+                          onClick={() => handleSelectAll(collection.id)}
+                          className='text-primary'
+                        >
+                          {allAvailableSelected
+                            ? 'Deselect All'
+                            : 'Select All Available'}
+                        </Button>
+                      )}
                     </div>
 
                     {isExpanded && (
                       <div className='border-t'>
-                        {collection.requests.map((request) => (
-                          <div
-                            key={request.id}
-                            className='flex items-center space-x-3 p-4 border-b last:border-b-0 hover:bg-muted/50'
-                          >
-                            <Checkbox
-                              checked={selectedRequests.includes(request.id)}
-                              onCheckedChange={(checked) =>
-                                handleSelectRequest(
-                                  request.id,
-                                  checked as boolean
-                                )
-                              }
-                            />
-                            <MethodBadge method={request.method} />
-                            <div className='flex-1'>
-                              <h4 className='font-medium'>{request.name}</h4>
-                              <p className='text-sm text-muted-foreground'>
-                                {request.endpoint || request.url}
-                              </p>
-                              {request.description && (
-                                <p className='text-sm text-muted-foreground mt-1'>
-                                  {request.description}
-                                </p>
+                        {collection.requests.map((request) => {
+                          const imported = isRequestImported(request.id);
+                          const selected = selectedRequests.includes(
+                            request.id
+                          );
+
+                          return (
+                            <div
+                              key={request.id}
+                              className={`flex items-center space-x-3 p-4 border-b last:border-b-0 ${
+                                imported
+                                  ? 'bg-green-50 border-green-100'
+                                  : 'hover:bg-muted/50'
+                              }`}
+                            >
+                              {imported ? (
+                                <div className='w-4 h-4 rounded bg-green-500 flex items-center justify-center'>
+                                  <Check className='w-3 h-3 text-white' />
+                                </div>
+                              ) : (
+                                <Checkbox
+                                  checked={selected}
+                                  onCheckedChange={(checked) =>
+                                    handleSelectRequest(
+                                      request.id,
+                                      checked as boolean
+                                    )
+                                  }
+                                />
                               )}
+                              <MethodBadge method={request.method} />
+                              <div className='flex-1'>
+                                <div className='flex items-center space-x-2'>
+                                  <h4 className='font-medium'>
+                                    {request.name}
+                                  </h4>
+                                  {imported && (
+                                    <span className='text-xs bg-green-100 text-green-700 px-2 py-1 rounded'>
+                                      Already imported
+                                    </span>
+                                  )}
+                                </div>
+                                <p className='text-sm text-muted-foreground'>
+                                  {request.endpoint || request.url}
+                                </p>
+                                {request.description && (
+                                  <p className='text-sm text-muted-foreground mt-1'>
+                                    {request.description}
+                                  </p>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     )}
                   </div>
@@ -276,6 +334,11 @@ export const ImportModal: React.FC<ImportModalProps> = ({
           <div className='flex items-center justify-between pt-4 border-t'>
             <span className='text-sm text-muted-foreground'>
               {selectedCount} request{selectedCount !== 1 ? 's' : ''} selected
+              {importedRequestIds.length > 0 && (
+                <span className='ml-2 text-green-600'>
+                  • {importedRequestIds.length} already imported
+                </span>
+              )}
             </span>
             <div className='flex space-x-2'>
               <Button variant='outline' onClick={onClose}>

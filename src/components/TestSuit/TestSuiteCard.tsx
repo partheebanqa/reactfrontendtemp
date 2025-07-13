@@ -7,6 +7,7 @@ import { Play, Edit, Copy, Trash2, Info } from 'lucide-react';
 import { formatDate } from '@/utils/formatDate';
 
 interface TestSuite {
+  requests: boolean;
   id: string;
   name: string;
   description: string;
@@ -21,12 +22,14 @@ interface TestSuiteCardProps {
   suite: TestSuite;
   onEdit: (suite: TestSuite) => void;
   onDelete: (id: string) => void;
+  onExecute: (id: string) => void;
 }
 
 const TestSuiteCard: React.FC<TestSuiteCardProps> = ({
   suite,
   onEdit,
   onDelete,
+  onExecute,
 }) => {
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -117,6 +120,7 @@ const TestSuiteCard: React.FC<TestSuiteCardProps> = ({
             variant='ghost'
             size='icon'
             className='text-gray-600 hover:text-blue-600'
+            onClick={() => onExecute(suite.id)}
           >
             <Play className='w-4 h-4' />
           </Button>

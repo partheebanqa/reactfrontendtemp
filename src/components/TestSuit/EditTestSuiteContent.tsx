@@ -29,22 +29,28 @@ interface Request {
     functional: number;
     total: number;
   };
+  selectedTestCases?: string[];
 }
 
 const EditTestSuiteContent: React.FC = () => {
   const params = useParams();
-  const [location, setLocation] = useLocation();
+  const navigate = (path: string) => {
+    window.history.pushState({}, '', path);
+    window.dispatchEvent(new PopStateEvent('popstate'));
+  };
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const id = params.id;
 
+  const [location] = useLocation();
   const isCreateMode = location === '/test-suites/create';
   const actualId = isCreateMode ? undefined : id;
 
   const [testSuiteName, setTestSuiteName] = useState('');
   const [description, setDescription] = useState('');
   const [requests, setRequests] = useState<Request[]>([]);
+  const [originalRequestIds, setOriginalRequestIds] = useState<string[]>([]);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
 
   const {
@@ -66,7 +72,7 @@ const EditTestSuiteContent: React.FC = () => {
         description: 'Your test suite has been created successfully.',
       });
       queryClient.invalidateQueries({ queryKey: ['testSuites'] });
-      setLocation('/test-suites');
+      navigate('/test-suites');
     },
     onError: (error: any) => {
       toast({
@@ -78,10 +84,18 @@ const EditTestSuiteContent: React.FC = () => {
   });
 
   const updateMutation = useMutation({
-    mutationFn: (data: { id: string; name: string; description: string }) =>
+    mutationFn: (data: {
+      id: string;
+      name: string;
+      description: string;
+      addRequestIds?: string[];
+      removeRequestIds?: string[];
+    }) =>
       updateTestSuite(data.id, {
         name: data.name,
         description: data.description,
+        addRequestIds: data.addRequestIds,
+        removeRequestIds: data.removeRequestIds,
       }),
     onSuccess: () => {
       toast({
@@ -104,6 +118,26 @@ const EditTestSuiteContent: React.FC = () => {
     if (testSuite && !isCreateMode) {
       setTestSuiteName(testSuite.name || '');
       setDescription(testSuite.description || '');
+
+      // Transform and set existing requests
+      if (Array.isArray(testSuite.requests) && testSuite.requests.length > 0) {
+        const transformedRequests: Request[] = testSuite.requests.map(
+          (req: any) => ({
+            id: req.id,
+            method: req.method,
+            name: req.name,
+            endpoint: req.url,
+            description: req.description || `${req.method} ${req.url}`,
+            testCases: {
+              functional: 0,
+              total: 0,
+            },
+          })
+        );
+        setRequests(transformedRequests);
+        // Store original request IDs for tracking changes
+        setOriginalRequestIds(transformedRequests.map((req) => req.id));
+      }
     }
   }, [testSuite, isCreateMode]);
 
@@ -141,6 +175,42 @@ const EditTestSuiteContent: React.FC = () => {
     });
   };
 
+  const handleDeleteRequest = (requestId: string) => {
+    setRequests((prev) => prev.filter((req) => req.id !== requestId));
+    toast({
+      title: 'Request removed',
+      description: 'Request has been removed from the test suite',
+    });
+  };
+
+  const handleUpdateTestCases = (requestId: string, testCaseIds: string[]) => {
+    setRequests((prev) =>
+      prev.map((req) =>
+        req.id === requestId ? { ...req, selectedTestCases: testCaseIds } : req
+      )
+    );
+    toast({
+      title: 'Test cases updated',
+      description: `${testCaseIds.length} test cases configured for this request`,
+    });
+  };
+
+  const calculateRequestChanges = () => {
+    const currentRequestIds = requests.map((req) => req.id);
+
+    // Find added requests (present in current but not in original)
+    const addRequestIds = currentRequestIds.filter(
+      (id) => !originalRequestIds.includes(id)
+    );
+
+    // Find removed requests (present in original but not in current)
+    const removeRequestIds = originalRequestIds.filter(
+      (id) => !currentRequestIds.includes(id)
+    );
+
+    return { addRequestIds, removeRequestIds };
+  };
+
   const handleSaveChanges = () => {
     if (!testSuiteName.trim()) {
       toast({
@@ -155,22 +225,31 @@ const EditTestSuiteContent: React.FC = () => {
       createMutation.mutate({
         name: testSuiteName,
         description: description,
+        requestIds: requests.map((request) => request.id), // Pass request IDs
       });
     } else {
+      const { addRequestIds, removeRequestIds } = calculateRequestChanges();
+
       updateMutation.mutate({
         id: actualId!,
         name: testSuiteName,
         description: description,
+        addRequestIds: addRequestIds.length > 0 ? addRequestIds : undefined,
+        removeRequestIds:
+          removeRequestIds.length > 0 ? removeRequestIds : undefined,
       });
     }
   };
 
   const handleBack = () => {
-    setLocation('/test-suites');
+    navigate('/test-suites');
   };
 
   const isLoading = isCreateMode ? false : isLoadingTestSuite;
   const isSaving = createMutation.isPending || updateMutation.isPending;
+
+  // Get imported request IDs to pass to ImportModal
+  const importedRequestIds = requests.map((request) => request.id);
 
   return (
     <div className='min-h-screen bg-background'>
@@ -281,6 +360,8 @@ const EditTestSuiteContent: React.FC = () => {
           <ManageRequests
             requests={requests}
             onImport={() => setIsImportModalOpen(true)}
+            onDeleteRequest={handleDeleteRequest}
+            onUpdateTestCases={handleUpdateTestCases}
           />
         )}
 
@@ -288,6 +369,7 @@ const EditTestSuiteContent: React.FC = () => {
           isOpen={isImportModalOpen}
           onClose={() => setIsImportModalOpen(false)}
           onImport={handleImportRequests}
+          importedRequestIds={importedRequestIds}
         />
       </div>
     </div>

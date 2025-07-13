@@ -33,3 +33,9 @@ export interface Collection {
 export interface CollectionsResponse {
   collections: Collection[];
 }
+
+export interface CreateTestSuitePayload {
+  name: string;
+  description?: string;
+  requestIds: string[];
+}

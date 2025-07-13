@@ -17,7 +17,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Search, ChevronDown, ChevronRight, X, Plus } from 'lucide-react';
-import { MethodBadge } from './MethodBadge';
 
 interface TestCaseSelectionModalProps {
   isOpen: boolean;
@@ -226,9 +225,9 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
         </div>
 
         {/* Main Content */}
-        <div className='flex-1 flex overflow-hidden'>
+        <div className='flex-1 flex overflow-hidden flex-col md:flex-row'>
           {/* Left Panel - Available Tests */}
-          <div className='flex-1 overflow-y-auto border-r'>
+          <div className='flex-1 overflow-y-auto border-r md:border-r border-b md:border-b-0'>
             <div className='p-4'>
               <div className='flex items-center justify-between mb-4'>
                 <h3 className='font-medium'>
@@ -350,7 +349,7 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
           </div>
 
           {/* Right Panel - Selected Tests */}
-          <div className='w-80 bg-muted/20 overflow-y-auto'>
+          <div className='flex-1 bg-muted/20 overflow-y-auto'>
             <div className='p-4'>
               <h3 className='font-medium mb-4'>
                 Selected Tests ({selectedTestCases.length})
@@ -400,8 +399,6 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
             </div>
           </div>
         </div>
-
-        {/* Footer */}
         <div className='flex items-center justify-between p-6 border-t bg-muted/20'>
           <span className='text-sm text-muted-foreground'>
             {selectedTestCases.length} test cases selected
