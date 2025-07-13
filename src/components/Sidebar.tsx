@@ -52,6 +52,12 @@ const menuItems = [
     feature: 'test_suites',
   },
   {
+    label: 'Scheduler',
+    path: '/scheduler',
+    icon: Calendar,
+    feature: 'scheduler',
+  },
+  {
     label: 'Data Management',
     path: '/data-management',
     icon: Database,
@@ -72,12 +78,6 @@ const menuItems = [
 ];
 
 const proFeatures = [
-  {
-    label: 'Scheduler',
-    path: '/scheduler',
-    icon: Calendar,
-    feature: 'scheduler',
-  },
   {
     label: 'Executions',
     path: '/executions',

@@ -34,7 +34,7 @@ export const FEATURES: Record<string, FeatureConfig> = {
   scheduler: {
     name: 'Test Scheduler',
     description: 'Schedule automated test execution',
-    plans: ['pro', 'enterprise'],
+    plans: ['free', 'pro', 'enterprise'],
     enabled: true,
   },
 
