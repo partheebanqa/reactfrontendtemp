@@ -931,7 +931,7 @@ const [editingVariable, setEditingVariable] = useState<Variable | null>(null);
                       <div className="flex items-center space-x-2">
                         <Button variant="outline" size="sm"
                           onClick={() => {
-                            setEditingVariable(variable); // your selected variable
+                            setEditingVariable(variable); 
                             setIsEditVarOpen(true);
                           }}
                         >

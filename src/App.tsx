@@ -31,6 +31,7 @@ import ForgotPassword from '@/pages/ForgotPassword';
 import NotFound from '@/pages/not-found';
 import RequestBuilderPage from './pages/RequestBuilderPage';
 import { ContextWrapper } from './contexts/ContextWrapper';
+import DataManagementPage from '@/pages/DataManaementPage';
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -79,7 +80,9 @@ function Router() {
           <Route path='/scheduler' component={Scheduler} />
           <Route path='/cicd' component={CiCdIntegration} />
           <Route path='/executions' component={Executions} />
-          <Route path='/data-management' component={DataManagement} />
+          <Route path='/data-management' component={DataManagementPage} />
+          {/* <Route path='/data-management-page' component={DataManagementPage} /> */}
+          <Route path='/reports' component={Reports} />
           <Route path='/settings' component={Settings} />
           <Route path='/profile' component={Profile} />
           <Route path='/notifications' component={Notifications} />
