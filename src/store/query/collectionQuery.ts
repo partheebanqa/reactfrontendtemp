@@ -1,0 +1,187 @@
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { collectionActions, collectionStore } from "../collectionStore";
+import {
+  addCollection,
+  addRequest,
+  deleteRequest,
+  duplicateRequest,
+  fetchCollectionList,
+  getCollectionRequests,
+  importCollectionFile,
+  renameCollection,
+  renameRequest,
+  setFavouriteCollection,
+  updateCollection,
+} from "@/service/collection.service";
+import { workspaceStore } from "../workspaceStore";
+import {
+  Collection,
+  CollectionRequest,
+  CreateCollection,
+} from "@/shared/types/collection";
+import { queryClient } from "@/lib/queryClient";
+
+// Query to fetch collection data with current workspace context
+export const useCollectionQuery = (enabled = true) => {
+  const currentWorkspace = workspaceStore.state.currentWorkspace;
+  return useQuery({
+    queryKey: ["/collections", currentWorkspace?.id],
+    enabled: enabled && !!currentWorkspace?.id, // Only enable if we have a workspace
+    queryFn: async () => {
+      if (!currentWorkspace?.id) {
+        throw new Error("No active workspace selected");
+      }
+      try {
+        collectionActions.setIsLoading(true);
+        const data = await fetchCollectionList(currentWorkspace?.id as string);
+        if (data) {
+          collectionActions.setCollections(data);
+        } else {
+          collectionActions.setCollections([]);
+        }
+
+        collectionActions.setIsLoading(false);
+        return data;
+      } catch (error) {
+        console.error("Collection fetch error:", error);
+        collectionActions.setIsLoading(false);
+        collectionActions.setError(
+          error instanceof Error ? error.message : "Failed to fetch collections"
+        );
+        return null;
+      }
+    },
+    refetchInterval: false,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes cache time
+  });
+};
+
+export const useAddCollectionMutation = () => {
+  const collectionQuery = useCollectionQuery();
+  return useMutation({
+    mutationFn: addCollection,
+    onSuccess: async (response) => {
+      collectionQuery.refetch();
+      return response;
+    },
+    onError: (error) => {
+      console.error("Error adding collection:", error);
+      throw error;
+    },
+  });
+};
+
+export const useRenameCollectionMutation = () => {
+  return useMutation({
+    mutationFn: renameCollection,
+    onSuccess: (data, variables) => {
+      console.log("🚀 ~ useRenameCollectionMutation ~ data:", data);
+      collectionActions.renameCollection(variables.id, variables.name);
+    },
+  });
+};
+
+export const useSetFavouriteCollectionMutation = () => {
+  return useMutation({
+    mutationFn: setFavouriteCollection,
+    onSuccess: (data, variables) => {
+      collectionActions.setFavouriteCollection(
+        variables.collectionId,
+        variables.IsImportant
+      );
+    },
+  });
+};
+
+export const useCollectionRequestsQuery = () => {
+  const currentWorkspace = workspaceStore.state.currentWorkspace;
+  return useMutation({
+    mutationFn: getCollectionRequests,
+    onSuccess: (requests, collectionId) => {
+      console.log("🚀 ~ useCollectionRequestsQuery ~ requests:", requests);
+      queryClient.setQueryData(
+        ["/collections", currentWorkspace?.id],
+        (oldData: Collection[]) => {
+          console.log("🚀 ~ useCollectionRequestsQuery ~ oldData:", oldData);
+          if (!oldData) return oldData;
+          const updatedCollection: Collection[] = oldData.map(
+            (collection: Collection) => {
+              console.log(
+                "🚀 ~ constoldDatas:Collection[]=oldData.map ~ collection:",
+                collection
+              );
+              if (collection?.id === collectionId) {
+                return {
+                  ...collection,
+                  requests: requests,
+                  hasFetchedRequests: true,
+                };
+              }
+              return collection;
+            }
+          );
+          collectionActions.setCollections(updatedCollection);
+          return updatedCollection;
+        }
+      );
+    },
+  });
+};
+
+export const useImpotPostmanCollectionMutation = () => {
+  return useMutation({
+    mutationFn: importCollectionFile,
+    onSuccess: async (response) => {
+      
+    },
+  });
+};
+
+export const useAddRequestMutation = () => {
+  const fetchCollectionRequests = useCollectionRequestsQuery();
+  return useMutation({
+    mutationFn: addRequest,
+    onSuccess: async (data, variables) => {
+      fetchCollectionRequests.mutateAsync(variables.collectionId);
+     
+    },
+  });
+};
+
+export const useRenameRequestMutation = () => {
+  return useMutation({
+    mutationFn: renameRequest,
+    onSuccess: (data, variables) => {
+      collectionActions.renameRequest(variables?.newName, variables.requestId);
+    },
+  });
+};
+
+export const useDeleteRequestMutation = () => {
+  return useMutation({
+    mutationFn: deleteRequest,
+    onSuccess: (data, variables) => {
+      console.log("🚀 ~ useDeleteRequestMutation ~ data:", data);
+      collectionActions.deleteRequest(variables);
+    },
+    onError: (error) => {
+      console.error("Error deleting request:", error);
+      throw error;
+    },
+  });
+};
+
+export const useDuplicateRequestMutation = () => {
+  const fetchCollectionRequests = useCollectionRequestsQuery();
+  return useMutation({
+    mutationFn: duplicateRequest,
+    onSuccess: (data, variables) => {
+      return data;
+    },
+    onError: (error) => {
+      console.error("Error duplicating request:", error);
+      throw error;
+    },
+  });
+};

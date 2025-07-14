@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { useMutation } from "@tanstack/react-query";
 import {
   Card,
   CardContent,
@@ -14,8 +13,8 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Eye, EyeOff, Lock, Mail, User, Building } from "lucide-react";
-import { apiRequest } from "@/lib/queryClient";
-import { API_REGISTER } from "@/config/apiRoutes";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/useToast";
 
 export default function SignUp() {
   const [, setLocation] = useLocation();
@@ -30,45 +29,31 @@ export default function SignUp() {
     workspaceName: "",
     agreedToTerms: false,
   });
+  const { error: errorToast } = useToast();
+  const { registerMutation } = useAuth();
 
-  const signUpMutation = useMutation({
-    mutationFn: async (userData: typeof formData) => {
-      const response = await apiRequest("POST", API_REGISTER, {
-        body: {
-          firstName: userData.firstName,
-          lastName: userData.lastName,
-          email: userData.email,
-          password: userData.password,
-          organization: userData.workspaceName,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to create account");
-      }
-
-      return response.json();
-    },
-    onSuccess: () => {
-      setLocation("/signin?message=account-created");
-    },
-    onError: (error: any) => {
-      console.error("Sign up error:", error);
-    },
-  });
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (formData.password !== formData.confirmPassword) {
-      return;
-    }
+    try {
+      if (formData.password !== formData.confirmPassword) {
+        return;
+      }
 
-    if (!formData.agreedToTerms) {
-      return;
-    }
+      if (!formData.agreedToTerms) {
+        return;
+      }
 
-    signUpMutation.mutate(formData);
+      const response = await registerMutation.mutateAsync(formData);
+      if (response.message) {
+        setLocation("/signin");
+      }
+    } catch (error) {
+      console.error("Error in handleSubmit:", error);
+      errorToast(
+        error instanceof Error ? error.message : "An unexpected error occurred"
+      );
+    }
   };
 
   const passwordsMatch = formData.password === formData.confirmPassword;
@@ -102,7 +87,7 @@ export default function SignUp() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            {signUpMutation.isError && (
+            {registerMutation.isError && (
               <Alert variant="destructive">
                 <AlertDescription>
                   Failed to create account. Please try again.
@@ -284,9 +269,9 @@ export default function SignUp() {
               <Button
                 type="submit"
                 className="w-full"
-                disabled={signUpMutation.isPending || !isFormValid}
+                disabled={registerMutation.isPending || !isFormValid}
               >
-                {signUpMutation.isPending
+                {registerMutation.isPending
                   ? "Creating account..."
                   : "Create account"}
               </Button>

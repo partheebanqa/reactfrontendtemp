@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { useWorkspace } from "@/contexts/WorkspaceContext";
-import { useToast } from "@/hooks/use-toast";
+import { useWorkspace } from "@/hooks/useWorkspace";
+import { useToast } from "@/hooks/useToast";
 
 export interface SubscriptionPlan {
   id: string;
@@ -29,6 +29,8 @@ function useTrialManagement() {
   // Start trial mutation
   const startTrialMutation = useMutation({
     mutationFn: async ({ planId, durationDays = 15 }: { planId: string; durationDays?: number }) => {
+      console.log("Starting trial with planId:", planId, "for durationDays:", durationDays);
+      
       if (!currentWorkspace) throw new Error("No workspace selected");
       
       return await apiRequest("POST", `/api/workspaces/${currentWorkspace.id}/start-trial`, {

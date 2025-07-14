@@ -1,49 +1,46 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { useEffect } from "react";
+import { useAuthStore, authActions } from "@/store/authStore";
 import {
-  getEncryptedCookie,
-  setEncryptedCookie,
-  removeCookie,
-} from "@/lib/cookieUtils";
-import { USER_COOKIE_NAME } from "@/lib/constants";
-import { refreshUserData } from "@/service/auth.service";
+  useUserQuery,
+  useLoginMutation,
+  useLogoutMutation,
+  useRegisterMutation,
+  useUpdateProfileMutation,
+} from "@/store/query/authQuery";
 
 export function useAuth() {
-  const queryClient = useQueryClient();
+  // Get state from auth store
+  const { user, token, isAuthenticated, isLoading } = useAuthStore();
 
-  const {
-    data: userData,
-    isLoading,
-    error,
-  } = useQuery({
-    queryKey: ["/api/auth/user"],
-    retry: false,
-    queryFn: refreshUserData,
-    refetchInterval: false,
-    staleTime: Infinity,
-  });
+  // Initialize auth from cookies on first load
+  useEffect(() => {
+    authActions.initializeFromCookie();
+  }, []);
 
-  const logoutMutation = useMutation({
-    mutationFn: async () => {
-      const response = await apiRequest("POST", "/api/auth/logout");
-      return response;
-    },
-    onSuccess: async () => {
-      removeCookie(USER_COOKIE_NAME);
-      await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-      queryClient.clear();
-    },
-    onError: async (error: any) => {
-      console.error("Logout error:", error);
-      removeCookie(USER_COOKIE_NAME);
-      await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-    },
-  });
+  // Setup the user query to keep the store in sync
+  const { refetch: refreshUser, error } = useUserQuery();
+
+  // Setup mutations
+  const loginMutation = useLoginMutation();
+  const logoutMutation = useLogoutMutation();
+  const registerMutation = useRegisterMutation();
+  const updateProfileMutation = useUpdateProfileMutation();
 
   return {
-    user: userData?.user,
+    // State
+    user,
+    token,
+    isAuthenticated,
     isLoading,
-    isAuthenticated: !!userData?.token,
+    error,
+
+    // Actions
+    refreshUser,
+
+    // Mutations
+    loginMutation,
     logoutMutation,
+    registerMutation,
+    updateProfileMutation,
   };
 }

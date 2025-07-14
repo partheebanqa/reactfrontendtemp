@@ -5,10 +5,10 @@ import {
   fetchCollectionList,
   getCollectionRequests
 } from "@/service/request-builder.service";
-import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { useWorkspace } from "@/hooks/useWorkspace";
 import { useState, useEffect } from "react";
 import { Collection, CollectionRequest } from "@/shared/types/collection";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/useToast";
 
 export function useRequestBuilder() {
   const queryClient = useQueryClient();
@@ -25,26 +25,7 @@ export function useRequestBuilder() {
 
   const { currentWorkspace } = workspaceContext;
 
-  const [activeRequest, setActiveRequest] = useState<CollectionRequest>({
-    id: "",
-    collectionId: "",
-    description: "",
-    name: "",
-    order: 0,
-    method: "GET",
-    url: "",
-    bodyType: "none",
-    bodyFormData: null,
-    bodyRawContent: "",
-    authorizationType: "none",
-    authorization: {},
-    headers: [],
-    params: [],
-    variables: {},
-    createdBy: "",
-    createdAt: "",
-    updatedAt: ""
-  });
+  const [activeRequest, setActiveRequest] = useState<CollectionRequest | undefined>(undefined);
   const [collectionList, setCollectionList] = useState<Collection[]>([]);
 
   const {

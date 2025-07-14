@@ -5,8 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { useToast } from "@/hooks/use-toast";
-import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { useToast } from "@/hooks/useToast";
+import { useWorkspace } from "@/hooks/useWorkspace";
 import { apiRequest } from "@/lib/queryClient";
 import { 
   Plus, 

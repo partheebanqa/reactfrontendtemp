@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Upload } from 'lucide-react';
 import { detectSchemaType, validateSchema } from '@/lib/schemaUtils';
-import { useSchema } from '@/contexts/SchemaContext';
+import { useSchema } from '@/hooks/useSchema';
 
 const SchemaUploader: React.FC = () => {
   const { addSchema } = useSchema();

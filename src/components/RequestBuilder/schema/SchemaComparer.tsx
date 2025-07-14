@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { SchemaDifference } from '@/shared/types/schema';
-import { useSchema } from '@/contexts/SchemaContext';
+import { useSchema } from '@/hooks/useSchema';
 import { compareSchemas } from '@/lib/schemaUtils';
 
 interface SchemaComparerProps {

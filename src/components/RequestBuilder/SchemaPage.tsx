@@ -4,7 +4,7 @@ import SchemaUploader from './schema/SchemaUploader';
 import SchemaList from './schema/SchemaList';
 import SchemaComparer from './schema/SchemaComparer';
 import JsonTreeViewer from './schema/JsonTreeViewer';
-import { useSchema } from '@/contexts/SchemaContext';
+import { useSchema } from '@/hooks/useSchema';
 
 const SchemaPage: React.FC = () => {
   const { schemas } = useSchema();
