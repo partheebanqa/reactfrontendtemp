@@ -4,12 +4,10 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { useAuth } from '@/hooks/useAuth';
-import { WorkspaceProvider } from '@/contexts/WorkspaceContext';
 import { FeatureGateProvider } from '@/contexts/FeatureGateContext';
 import AppLayout from '@/components/AppLayout';
 import Landing from '@/pages/Landing';
 import Dashboard from '@/pages/Dashboard';
-import RequestBuilder from '@/pages/RequestBuilder';
 import RequestChains from '@/pages/RequestChains';
 import TestSuites from '@/pages/TestSuites';
 import EditTestSuite from '@/pages/EditTestSuite';
@@ -29,6 +27,8 @@ import SignIn from '@/pages/SignIn';
 import SignUp from '@/pages/SignUp';
 import ForgotPassword from '@/pages/ForgotPassword';
 import NotFound from '@/pages/not-found';
+import RequestBuilderPage from './pages/RequestBuilderPage';
+import { ContextWrapper } from './contexts/ContextWrapper';
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -58,13 +58,12 @@ function Router() {
   }
 
   return (
-    <WorkspaceProvider>
-      <FeatureGateProvider>
+    <ContextWrapper>
         <AppLayout>
           <Switch>
             <Route path='/' component={Dashboard} />
             <Route path='/dashboard' component={Dashboard} />
-            <Route path='/request-builder' component={RequestBuilder} />
+            <Route path='/request-builder' component={RequestBuilderPage} />
             <Route path='/request-chains' component={RequestChains} />
             <Route path='/test-suites' component={TestSuites} />
             <Route path='/test-suites/:id/edit' component={EditTestSuite} />
@@ -82,8 +81,7 @@ function Router() {
             <Route component={NotFound} />
           </Switch>
         </AppLayout>
-      </FeatureGateProvider>
-    </WorkspaceProvider>
+    </ContextWrapper>
   );
 }
 

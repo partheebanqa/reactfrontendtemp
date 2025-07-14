@@ -8,8 +8,8 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useToast } from "@/hooks/use-toast";
-import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { useToast } from "@/hooks/useToast";
+import { useWorkspace } from "@/hooks/useWorkspace";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest } from "@/lib/queryClient";
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -160,7 +160,7 @@ const Settings: React.FC = () => {
     mutationFn: async (settings: NotificationSettings) => {
       return await apiRequest("POST", "/api/notification-settings", {
         ...settings,
-        workspaceId: currentWorkspace?.id,
+        workspaceId: currentWorkspace?.id as string,
       });
     },
     onSuccess: () => {

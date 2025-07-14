@@ -1,5 +1,5 @@
 import React from "react";
-import { useFeatureGate } from "@/contexts/FeatureGateContext";
+import { useFeatureGate } from "@/hooks/useFeatureGate";
 import { useAuditLog } from "@/hooks/useAuditLog";
 import UpgradeModal from "./UpgradeModal";
 

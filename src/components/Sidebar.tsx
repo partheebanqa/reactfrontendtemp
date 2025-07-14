@@ -1,27 +1,27 @@
 import React from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
-import { useWorkspace } from "@/contexts/WorkspaceContext";
-import { useFeatureGate } from "@/contexts/FeatureGateContext";
+import { useWorkspace } from "@/hooks/useWorkspace";
+import { useFeatureGate } from "@/hooks/useFeatureGate";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Code, 
-  BarChart3, 
-  Hammer, 
-  Link as LinkIcon, 
-  FlaskConical, 
-  Calendar, 
-  Play, 
-  Database, 
-  FileText, 
-  Settings, 
-  Bell, 
+import {
+  Code,
+  BarChart3,
+  Hammer,
+  Link as LinkIcon,
+  FlaskConical,
+  Calendar,
+  Play,
+  Database,
+  FileText,
+  Settings,
+  Bell,
   Infinity,
   User,
   Clock,
-  Crown
+  Crown,
 } from "lucide-react";
 import FeatureGate from "./FeatureGate";
 
@@ -33,14 +33,14 @@ const menuItems = [
     feature: "dashboard",
   },
   {
-    label: "Request Builder", 
+    label: "Request Builder",
     path: "/request-builder",
     icon: Hammer,
     feature: "request_builder",
   },
   {
     label: "Request Chains",
-    path: "/request-chains", 
+    path: "/request-chains",
     icon: LinkIcon,
     feature: "request_chains",
   },
@@ -61,7 +61,7 @@ const proFeatures = [
   },
   {
     label: "Executions",
-    path: "/executions", 
+    path: "/executions",
     icon: Play,
     feature: "executions",
   },
@@ -111,12 +111,12 @@ const generalItems = [
 
 const Sidebar: React.FC = () => {
   const [location] = useLocation();
-  const { user, logout } = useAuth();
-  const { currentWorkspace, trialDaysLeft } = useWorkspace();
+  const { user, logoutMutation } = useAuth();
+  const { currentWorkspace } = useWorkspace();
   const { hasFeatureAccess, subscriptionPlan } = useFeatureGate();
 
   const NavItem: React.FC<{
-    item: typeof menuItems[0];
+    item: (typeof menuItems)[0];
     isActive: boolean;
     featureType?: "free" | "pro" | "enterprise";
   }> = ({ item, isActive, featureType }) => {
@@ -135,12 +135,18 @@ const Sidebar: React.FC = () => {
           <Icon className="w-4 h-4 mr-3" />
           <span className="flex-1 text-left">{item.label}</span>
           {!hasAccess && featureType === "pro" && (
-            <Badge variant="outline" className="ml-2 text-xs bg-blue-50 text-blue-700 border-blue-200">
+            <Badge
+              variant="outline"
+              className="ml-2 text-xs bg-blue-50 text-blue-700 border-blue-200"
+            >
               PRO
             </Badge>
           )}
           {!hasAccess && featureType === "enterprise" && (
-            <Badge variant="outline" className="ml-2 text-xs bg-purple-50 text-purple-700 border-purple-200">
+            <Badge
+              variant="outline"
+              className="ml-2 text-xs bg-purple-50 text-purple-700 border-purple-200"
+            >
               ENT
             </Badge>
           )}
@@ -163,15 +169,18 @@ const Sidebar: React.FC = () => {
           <div>
             <h1 className="text-xl font-bold">Optraflow</h1>
             <Badge variant="secondary" className="text-xs">
-              {subscriptionPlan === "free" ? "Free" : 
-               subscriptionPlan === "pro" ? "Pro" : "Enterprise"}
+              {subscriptionPlan === "free"
+                ? "Free"
+                : subscriptionPlan === "pro"
+                ? "Pro"
+                : "Enterprise"}
             </Badge>
           </div>
         </div>
       </div>
 
       {/* Trial Banner */}
-      {subscriptionPlan === "free" && trialDaysLeft > 0 && (
+      {/* {subscriptionPlan === "free" && trialDaysLeft > 0 && (
         <div className="mx-4 mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
           <div className="flex items-center space-x-2">
             <Clock className="w-4 h-4 text-yellow-600" />
@@ -187,7 +196,7 @@ const Sidebar: React.FC = () => {
             </div>
           </div>
         </div>
-      )}
+      )} */}
 
       {/* Navigation */}
       <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
@@ -257,7 +266,8 @@ const Sidebar: React.FC = () => {
           <Avatar className="w-10 h-10">
             <AvatarImage src={user?.profileImageUrl} alt={user?.firstName} />
             <AvatarFallback>
-              {user?.firstName?.[0]}{user?.lastName?.[0]}
+              {user?.firstName?.[0]}
+              {user?.lastName?.[0]}
             </AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">
@@ -271,7 +281,7 @@ const Sidebar: React.FC = () => {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => logout()}
+            onClick={() => logoutMutation.mutate()}
             title="Logout"
           >
             <Settings className="w-4 h-4" />

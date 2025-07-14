@@ -7,8 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { useToast } from "@/hooks/use-toast";
-import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { useToast } from "@/hooks/useToast";
+import { useWorkspace } from "@/hooks/useWorkspace";
 import { apiRequest } from "@/lib/queryClient";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { 

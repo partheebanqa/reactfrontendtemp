@@ -1,5 +1,5 @@
 import { ReactNode } from "react";
-import { useFeatureGate } from "@/contexts/FeatureGateContext";
+import { useFeatureGate } from "@/hooks/useFeatureGate";
 import UpgradeModal from "@/components/UpgradeModal";
 import { useState } from "react";
 

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { useWorkspace } from "@/hooks/useWorkspace";
 import { useTrialManagement } from "@/hooks/useTrialManagement";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
