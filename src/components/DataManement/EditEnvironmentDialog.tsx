@@ -17,13 +17,14 @@ type Props = {
   onSave: (env: Environment) => void;
   environment: Environment;
 };
-const { toast } = useToast();
+
 const EditEnvironmentDialog: React.FC<Props> = ({
   open,
   onClose,
   onSave,
   environment,
 }) => {
+  const { toast } = useToast();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [baseUrl, setBaseUrl] = useState('');

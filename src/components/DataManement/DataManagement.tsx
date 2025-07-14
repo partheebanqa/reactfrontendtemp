@@ -9,9 +9,8 @@ import VariablesSection from './VariablesSection';
 import { Environment, Variable } from '@/models/datamanagement';
 import { useToast } from '@/hooks/useToast';
 
-const { toast } = useToast();
-
 const DataManagement: React.FC = () => {
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('environments');
   const [searchTerm, setSearchTerm] = useState('');
 

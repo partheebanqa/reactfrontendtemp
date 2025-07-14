@@ -7,8 +7,6 @@ import CreateEnvironmentDialog from './CreateEnvironmentDialog';
 import EditEnvironmentDialog from './EditEnvironmentDialog';
 import { useToast } from '@/hooks/useToast';
 
-const { toast } = useToast();
-
 const initialEnvironments: Environment[] = [
   {
     id: '1',
@@ -39,6 +37,7 @@ const initialEnvironments: Environment[] = [
 ];
 
 const EnvironmentsSection: React.FC = () => {
+  const { toast } = useToast();
   const [environments, setEnvironments] = useState(initialEnvironments);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingEnvironment, setEditingEnvironment] =

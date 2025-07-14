@@ -13,13 +13,12 @@ type Props = {
   onDelete: (id: string) => void;
 };
 
-const { toast } = useToast();
-
 const EnvironmentCard: React.FC<Props> = ({
   environment,
   onEdit,
   onDelete,
 }) => {
+  const { toast } = useToast();
   const handleCopy = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
     toast({
