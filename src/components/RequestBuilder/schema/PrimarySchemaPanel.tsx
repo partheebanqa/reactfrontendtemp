@@ -1,8 +1,9 @@
 import React from 'react';
 import { AlertTriangle } from 'lucide-react';
-import { useSchema } from '@/contexts/RequestContext';
+import { useSchema } from '@/hooks/useSchema';
 import JsonTreeViewer from './JsonTreeViewer';
-import { useRequest } from '@/contexts/RequestContext';
+import { useRequest } from '@/hooks/useRequest';
+import { SchemaDifference } from '@/shared/types/schema';
 
 const PrimarySchemaPanel: React.FC = () => {
   const { primarySchema, primarySchemaValidation } = useSchema();
@@ -43,7 +44,7 @@ const PrimarySchemaPanel: React.FC = () => {
                 {primarySchemaValidation.differences.length} differences found
               </p>
               <div className="space-y-2 max-h-48 overflow-auto">
-                {primarySchemaValidation.differences.map((diff, index) => (
+                {primarySchemaValidation.differences.map((diff: SchemaDifference, index: number) => (
                   <div 
                     key={index} 
                     className={`text-sm p-2 rounded-md ${

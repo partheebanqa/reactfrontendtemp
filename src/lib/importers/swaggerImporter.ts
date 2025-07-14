@@ -1,6 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import { Collection, CollectionRequest, ImportResult } from '../../types';
-import { OpenAPI } from 'openapi-types';
+import { Collection, CollectionRequest, ImportResult } from '@/shared/types/collection';
 
 export async function importSwaggerCollection(spec: string): Promise<ImportResult> {
   try {
@@ -60,13 +59,14 @@ export async function importSwaggerCollection(spec: string): Promise<ImportResul
           id: uuidv4(),
           name: operation.summary || operation.operationId || `${method.toUpperCase()} ${path}`,
           description: operation.description,
-          request: {
-            method: method.toUpperCase(),
-            url: `${baseUrl}${path}`,
-            headers: {},
-            params: {},
-            body: ''
-          },
+          method: method.toUpperCase(),
+          url: `${baseUrl}${path}`,
+          headers: [],
+          params: [],
+          bodyType: 'none',
+          bodyFormData: null, 
+          bodyRawContent: null,
+          
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
         };

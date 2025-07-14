@@ -4,12 +4,11 @@ import React, {
   useState,
   useCallback,
   useEffect,
-} from "react";
-import { useAuth } from "@/hooks/useAuth";
-import { useQuery } from "@tanstack/react-query";
-import { fetchWorkspaces } from "@/service/workspace.service";
-import { Workspace } from "@/shared/types/workspace";
-
+} from 'react';
+import { useAuth } from '@/hooks/useAuth';
+import { useQuery } from '@tanstack/react-query';
+import { fetchWorkspaces } from '@/service/workspace.service';
+import { Workspace } from '@/shared/types/workspace';
 
 interface WorkspaceContextType {
   currentWorkspace: Workspace | null;
@@ -26,7 +25,7 @@ const WorkspaceContext = createContext<WorkspaceContextType | undefined>(
 export const useWorkspace = () => {
   const context = useContext(WorkspaceContext);
   if (!context) {
-    throw new Error("useWorkspace must be used within a WorkspaceProvider");
+    throw new Error('useWorkspace must be used within a WorkspaceProvider');
   }
   return context;
 };
@@ -34,7 +33,7 @@ export const useWorkspace = () => {
 export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const { user, isAuthenticated} = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const [currentWorkspace, setCurrentWorkspace] = useState<Workspace | null>(
     null
   );
@@ -42,14 +41,12 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({
 
   // Fetch workspaces using the fetchWorkspaces function from useAuth
   const { data: workspaceData, refetch } = useQuery({
-    queryKey: ["/api/workspaces"],
+    queryKey: ['/api/workspaces'],
     enabled: !!isAuthenticated,
     queryFn: fetchWorkspaces,
     refetchInterval: false, // Disable automatic refetching
     staleTime: Infinity, // Consider data fresh indefinitely until manually invalidated
   });
-
-  
 
   // Set workspaces when data is fetched
   React.useEffect(() => {

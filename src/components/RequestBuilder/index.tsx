@@ -1,40 +1,13 @@
-import React, { useState } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import React, { useState, useRef, useEffect } from "react";
+import { useWorkspace } from "@/hooks/useWorkspace";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/hooks/use-toast";
-import { useWorkspace } from "@/contexts/WorkspaceContext";
-import { apiRequest } from "@/lib/queryClient";
-import { API_METHODS } from "@/lib/constants";
-import {
-  Play,
-  Plus,
-  Save,
-  Trash2,
-  Copy,
-  CheckCircle,
-  AlertCircle,
-  Clock,
-  Code,
-  FileText,
+  GripVertical,
+  GripHorizontal,
 } from "lucide-react";
-import CollectionsSidebar from "./CollectionsSidebar";
-import { useRequestBuilder } from "@/hooks/useRequestBuilder";
-import { addCollection } from "@/service/request-builder.service";
-import { Collection, CollectionRequest } from "@/shared/types/collection";
-import RequestPanel from "./RequestPanel";
-import { processVariables } from "@/lib/variableProcessor";
+import { useCollection } from "@/hooks/useCollection";
+import RequestEditor from "./RequestEditor/RequestEditor";
+import ResponseViewer from "./ResponseViewer/ResponseViewer";
+import Sidebar from "./Sidebar/Sidebar";
 
 interface Header {
   key: string;
@@ -49,243 +22,157 @@ interface TestAssertion {
 }
 
 const RequestBuilder = () => {
-  const { toast } = useToast();
   const { currentWorkspace } = useWorkspace();
+  const { refetch: refetchCollection } = useCollection();
+  const [isBottomLayout, setIsBottomLayout] = useState(true);
+  const [resizePosition, setResizePosition] = useState(50); // Default 50%
+  const isDraggingRef = useRef(false);
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  const [method, setMethod] = useState("GET");
-  const [url, setUrl] = useState("");
-  const [headers, setHeaders] = useState<Header[]>([
-    { key: "Content-Type", value: "application/json", enabled: true },
-  ]);
-  const [body, setBody] = useState("");
-  const [tests, setTests] = useState<TestAssertion[]>([]);
-  const [response, setResponse] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [showImportModal, setShowImportModal] = useState(false);
-  const {
-    collectionList,
-    addCollectionMutation,
-    activeRequest,
-    setActiveRequest,
-  } = useRequestBuilder();
-
-  const handleCollectionCreate = (collection: any) => {
-    addCollectionMutation.mutate({
-      ...collection,
-      workspaceId: currentWorkspace?.id,
-    });
+  const handleResizeStart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    isDraggingRef.current = true;
+    document.addEventListener("mousemove", handleResize);
+    document.addEventListener("mouseup", handleResizeEnd);
+    document.body.style.cursor = isBottomLayout ? "row-resize" : "col-resize";
+    document.body.style.userSelect = "none";
   };
 
-  const executeMutation = useMutation({
-    mutationFn: async () => {
-      setIsLoading(true);
+  const handleResize = (e: MouseEvent) => {
+    if (!isDraggingRef.current || !containerRef.current) return;
 
-      // Simulate API request execution
-      const enabledHeaders = headers
-        .filter((h) => h.enabled && h.key && h.value)
-        .reduce((acc, h) => ({ ...acc, [h.key]: h.value }), {});
+    const container = containerRef.current;
+    const rect = container.getBoundingClientRect();
 
-      // Mock response based on URL
-      await new Promise((resolve) =>
-        setTimeout(resolve, 1000 + Math.random() * 2000)
-      );
-
-      const mockResponse = {
-        status: Math.random() > 0.2 ? 200 : 500,
-        statusText: Math.random() > 0.2 ? "OK" : "Internal Server Error",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Response-Time": `${Math.round(100 + Math.random() * 400)}ms`,
-        },
-        data:
-          method === "GET"
-            ? [
-                { id: 1, name: "John Doe", email: "john@example.com" },
-                { id: 2, name: "Jane Smith", email: "jane@example.com" },
-              ]
-            : { success: true, id: Date.now() },
-        time: Math.round(100 + Math.random() * 400),
-      };
-
-      return mockResponse;
-    },
-    onSuccess: (data) => {
-      setResponse(data);
-      setIsLoading(false);
-      toast({
-        title: "Request executed successfully",
-        description: `Response time: ${data.time}ms`,
-      });
-    },
-    onError: (error) => {
-      setIsLoading(false);
-      toast({
-        title: "Request failed",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  const saveEndpointMutation = useMutation({
-    mutationFn: async (endpointData: any) => {
-      const projectId = currentWorkspace?.id;
-
-      return await apiRequest("POST", "/api/endpoints", {
-        ...endpointData,
-        projectId,
-      });
-    },
-    onSuccess: () => {
-      toast({
-        title: "Endpoint saved",
-        description: "Your API endpoint has been saved successfully",
-      });
-    },
-  });
-
-  const handleCollectionUpdate = (collection: Collection) => {
-    // setCollections((prev) =>
-    //   prev.map((c) => (c.id === collection.id ? collection : c))
-    // );
-  };
-  const [loading, setLoading] = useState(false);
-  
-  const handleSend = async () => {
-    setLoading(true);
-    try {
-      const storedDataRepoVars = localStorage.getItem("dataRepoVariables");
-      const dataRepoVariables = storedDataRepoVars
-        ? JSON.parse(storedDataRepoVars)
-        : [];
-
-      const processedUrl = processVariables(
-        activeRequest.url,
-        {},
-        dataRepoVariables
-      );
-
-      const processedHeaders = Object.entries(activeRequest.headers).reduce(
-        (acc, [key, value]) => ({
-          ...acc,
-          [key]: processVariables(value, {}, dataRepoVariables),
-        }),
-        {}
-      );
-
-      const processedParams = Object.entries(activeRequest.params).reduce(
-        (acc, [key, value]) => ({
-          ...acc,
-          [key]: processVariables(value, {}, dataRepoVariables),
-        }),
-        {}
-      );
-
-      const body = prepareRequestBody({
-        method: activeRequest.method,
-        body: activeRequest.bodyFormData ? activeRequest.bodyFormData : "",
-        // isGraphQL: activeRequest.isGraphQL,
-        // graphQLQuery: processVariables(
-        //   activeRequest.graphQLQuery || "",
-        //   {},
-        //   dataRepoVariables
-        // ),
-        // graphQLVariables: processVariables(
-        //   activeRequest.graphQLVariables || "",
-        //   {},
-        //   dataRepoVariables
-        // ),
-      });
-
-      const url = createUrlWithParams(processedUrl, processedParams);
-
-      const options = prepareRequestOptions(
-        activeRequest.method,
-        processedHeaders,
-        body,
-        // activeRequest.isGraphQL
-      );
-
-      const startTime = performance.now();
-      const response = await fetchWithTimeout(url, options);
-      const endTime = performance.now();
-      const responseTime = (endTime - startTime) / 1000;
-
-      let data;
-      const contentType = response.headers.get("content-type");
-      if (contentType?.includes("application/json")) {
-        data = await response.json();
-      } else {
-        data = await response.text();
-      }
-
-      const responseObj: Response = {
-        status: response.status,
-        statusText: response.statusText,
-        headers: Object.fromEntries(response.headers),
-        data,
-        // responseTime,
-      };
-
-      // if (activeRequest.assertions) {
-      //   responseObj.assertions = validateResponse(
-      //     responseObj,
-      //     activeRequest.assertions
-      //   );
-      // }
-
-      setResponse(responseObj);
-    } catch (error: any) {
-      console.error("Request error:", error);
-
-      let errorResponse: Response;
-      if (error instanceof RequestError) {
-        errorResponse = {
-          status: error.status || 0,
-          statusText: error.statusText || "Error",
-          headers: error.response
-            ? Object.fromEntries(error.response.headers)
-            : {},
-          data: null,
-          error: error.message,
-          errorDetails: {
-            message: error.message,
-            code: error.status?.toString(),
-          },
-        };
-      } else {
-        errorResponse = {
-          status: 0,
-          statusText: "Error",
-          headers: {},
-          data: null,
-          error:
-            error instanceof Error
-              ? error.message
-              : "An unknown error occurred",
-        };
-      }
-
-      setResponse(errorResponse);
+    let newPosition;
+    if (isBottomLayout) {
+      newPosition = ((e.clientY - rect.top) / rect.height) * 100;
+    } else {
+      newPosition = ((e.clientX - rect.left) / rect.width) * 100;
     }
 
-
-    setLoading(false);
+    // Clamp the values to ensure panels don't get too small
+    newPosition = Math.max(20, Math.min(80, newPosition));
+    setResizePosition(newPosition);
   };
+
+  const handleResizeEnd = () => {
+    isDraggingRef.current = false;
+    document.removeEventListener("mousemove", handleResize);
+    document.removeEventListener("mouseup", handleResizeEnd);
+    document.body.style.cursor = "";
+    document.body.style.userSelect = "";
+  };
+
+  // Toggle layout orientation
+  const toggleLayout = () => {
+    setIsBottomLayout(!isBottomLayout);
+    // Reset resize position when switching layouts
+    setResizePosition(50);
+  };
+
+  useEffect(() => {
+    refetchCollection();
+  }, [currentWorkspace?.id]);
 
   return (
     <div className="flex h-full bg-background">
-      {/* Sidebar */}
-      <CollectionsSidebar currentRequest={activeRequest} />
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <RequestPanel
-          request={activeRequest}
-          setRequest={setActiveRequest}
-          onSend={handleSend}
-          loading={loading}
-          response={response}
-        />
+      <Sidebar />
+
+      <div
+        ref={containerRef}
+        className={`flex-1 flex overflow-hidden ${
+          isBottomLayout ? "flex-col" : "flex-col lg:flex-row"
+        }`}
+      >
+        {/* Request Editor */}
+        <div
+          className={`flex flex-col min-h-0 overflow-hidden ${
+            isBottomLayout
+              ? `h-[${resizePosition}%] min-h-[20%] max-h-[80%]`
+              : `lg:w-[${resizePosition}%] min-w-[20%] max-w-[80%] flex-1`
+          }`}
+          style={{
+            height: isBottomLayout ? `${resizePosition}%` : undefined,
+            width: !isBottomLayout ? `${resizePosition}%` : undefined,
+          }}
+        >
+          <RequestEditor />
+        </div>
+
+        {/* Resizer Handle */}
+        <div
+          className={`flex justify-center items-center cursor-${
+            isBottomLayout ? "row" : "col"
+          }-resize ${
+            isBottomLayout
+              ? "h-[6px] w-full bg-gray-200 dark:bg-gray-700 hover:bg-blue-300 dark:hover:bg-blue-800 transition-colors"
+              : "w-[6px] h-full bg-gray-200 dark:bg-gray-700 hover:bg-blue-300 dark:hover:bg-blue-800 transition-colors"
+          }`}
+          onMouseDown={handleResizeStart}
+        >
+          {isBottomLayout ? (
+            <GripHorizontal className="h-3 w-3 text-gray-500" />
+          ) : (
+            <GripVertical className="h-3 w-3 text-gray-500" />
+          )}
+        </div>
+
+        <div
+          className={`flex flex-col min-h-0 overflow-hidden ${
+            isBottomLayout
+              ? `h-[${100 - resizePosition}%] min-h-[20%] max-h-[80%]`
+              : `lg:w-[${100 - resizePosition}%] min-w-[20%] max-w-[80%] flex-1`
+          }`}
+          style={{
+            height: isBottomLayout ? `${100 - resizePosition}%` : undefined,
+            width: !isBottomLayout ? `${100 - resizePosition}%` : undefined,
+          }}
+        >
+          <ResponseViewer />
+        </div>
       </div>
+
+      {/* Layout toggle button */}
+      <button
+        onClick={toggleLayout}
+        className="fixed bottom-4 right-4 z-10 p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg"
+        title={`Switch to ${
+          isBottomLayout ? "side-by-side" : "top-bottom"
+        } layout`}
+      >
+        {isBottomLayout ? (
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+            <line x1="12" y1="3" x2="12" y2="21"></line>
+          </svg>
+        ) : (
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+          </svg>
+        )}
+      </button>
     </div>
   );
 };

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Calendar, Star, Trash2, Eye, Download } from 'lucide-react';
 import { SchemaType } from '@/shared/types/schema';
-import { useSchema } from '@/contexts/SchemaContext';
+import { useSchema } from '@/hooks/useSchema';
 
 interface SchemaListProps {
   compareMode: boolean;

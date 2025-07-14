@@ -2,7 +2,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle, Star, Crown, Zap, ArrowRight } from "lucide-react";
-import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { useWorkspace } from "@/hooks/useWorkspace";
 
 export default function UpgradePage() {
   const { currentWorkspace } = useWorkspace();

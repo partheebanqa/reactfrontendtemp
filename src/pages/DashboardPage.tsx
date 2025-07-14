@@ -1,13 +1,10 @@
-import Dashboard from "@/components/Dashboard/Dashboard";
-import DataManagement from "@/components/DataManement/DataManagement";
-
-
+import Dashboard from '@/components/Dashboard/Dashboard';
 
 const DashboardPage = () => {
-    return(
-        <>
-        <Dashboard />
-        </>
-    )
-}
+  return (
+    <>
+      <Dashboard />
+    </>
+  );
+};
 export default DashboardPage;

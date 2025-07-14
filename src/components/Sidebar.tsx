@@ -1,8 +1,8 @@
 import React from 'react';
 import { Link, useLocation } from 'wouter';
 import { useAuth } from '@/hooks/useAuth';
-import { useWorkspace } from '@/contexts/WorkspaceContext';
-import { useFeatureGate } from '@/contexts/FeatureGateContext';
+import { useWorkspace } from '@/hooks/useWorkspace';
+import { useFeatureGate } from '@/hooks/useFeatureGate';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -284,7 +284,7 @@ const Sidebar: React.FC = () => {
       <div className='p-4 border-t'>
         <div className='flex items-center space-x-3'>
           <Avatar className='w-10 h-10'>
-            <AvatarImage src={user?.profileImageUrl} alt={user?.firstName} />
+            {/* <AvatarImage src={user?.profileImageUrl} alt={user?.firstName} /> */}
             <AvatarFallback>
               {user?.firstName?.[0]}
               {user?.lastName?.[0]}

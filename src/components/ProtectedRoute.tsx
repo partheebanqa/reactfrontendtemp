@@ -1,5 +1,5 @@
 import React from "react";
-import { useFeatureGate } from "@/contexts/FeatureGateContext";
+import { useFeatureGate } from "@/hooks/useFeatureGate";
 import { useAuditLog } from "@/hooks/useAuditLog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";

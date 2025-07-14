@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useSchema } from '@/contexts/SchemaContext';
+import { useSchema } from '@/hooks/useSchema';
 import { generateJsonSchema } from '@/lib/schemaUtils';
 
 interface SchemaGeneratorPanelProps {
