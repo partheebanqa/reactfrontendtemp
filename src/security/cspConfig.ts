@@ -55,6 +55,7 @@ export const CSP_DIRECTIVES: CSPDirectives = {
     "https://api.github.com", // GitHub API
     "https://api.gitlab.com", // GitLab API
     "https://apibackenddev.onrender.com", // Backend API
+    "https://jsonplaceholder.typicode.com", // JSONPlaceholder API for testing
     "wss:", // WebSocket connections
     "ws:" // WebSocket connections (dev)
   ],
@@ -157,7 +158,12 @@ export function validateCSPCompliance(url: string): boolean {
         if (source === "'self'") {
           return urlObj.origin === window.location.origin;
         }
-        return url.startsWith(source);
+        if (source.startsWith('http')) {
+          // For explicit domains, match the origin
+          return urlObj.origin === source;
+        }
+        // Handle other directives like wss:, ws:, etc.
+        return source.startsWith(urlObj.protocol.slice(0, -1));
       });
     }
     

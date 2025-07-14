@@ -1,19 +1,23 @@
 // EditEnvironmentDialog.tsx
-import React, { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
-import { Environment } from "@/models/datamanagement";
-import { toast } from "@/hooks/use-toast";
-
+import React, { useState } from 'react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/components/ui/button';
+import { Environment } from '@/models/datamanagement';
+import { useToast } from '@/hooks/useToast';
 type Props = {
   open: boolean;
   onClose: () => void;
   onSave: (env: Environment) => void;
   environment: Environment;
 };
-
+const { toast } = useToast();
 const EditEnvironmentDialog: React.FC<Props> = ({
   open,
   onClose,
@@ -32,10 +36,10 @@ const EditEnvironmentDialog: React.FC<Props> = ({
       baseUrl,
     });
     toast({
-        title: "Environment Updated",
-        description: "Your environment has been updated successfully",
-        variant: 'success',
-      });
+      title: 'Environment Updated',
+      description: 'Your environment has been updated successfully',
+      variant: 'success',
+    });
   };
 
   return (
@@ -44,12 +48,26 @@ const EditEnvironmentDialog: React.FC<Props> = ({
         <DialogHeader>
           <DialogTitle>Edit Environment</DialogTitle>
         </DialogHeader>
-        <div className="space-y-4">
-          <Input placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} />
-          <Textarea placeholder="Description" value={description} onChange={(e) => setDescription(e.target.value)} />
-          <Input placeholder="Base URL" value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} />
-          <div className="flex justify-end space-x-2">
-            <Button variant="outline" onClick={onClose}>Cancel</Button>
+        <div className='space-y-4'>
+          <Input
+            placeholder='Name'
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+          <Textarea
+            placeholder='Description'
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+          />
+          <Input
+            placeholder='Base URL'
+            value={baseUrl}
+            onChange={(e) => setBaseUrl(e.target.value)}
+          />
+          <div className='flex justify-end space-x-2'>
+            <Button variant='outline' onClick={onClose}>
+              Cancel
+            </Button>
             <Button onClick={handleSave}> Update Environment</Button>
           </div>
         </div>

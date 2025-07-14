@@ -29,7 +29,7 @@ import {
   getTestCasesByRequestId,
   saveTestCasesForRequest,
 } from '@/services/testcase.service';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/useToast';
 import { ApiTestCase } from '@/models/testcase.model';
 
 type TestCase = {

@@ -6,9 +6,6 @@ import {
   User,
   LogOut,
   ChevronDown,
-  PlusCircle,
-  Edit,
-  Trash,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,37 +17,32 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
-import { useWorkspace } from "@/contexts/WorkspaceContext";
-import { apiRequest } from "@/lib/queryClient";
-import { API_WORKSPACES } from "@/config/apiRoutes";
+import { useWorkspace } from "@/hooks/useWorkspace";
 import { useLocation } from "wouter";
-import { Workspace } from "@/shared/types/workspace";
-import { create } from "domain";
-import { createWorkspace, updateWorkspace } from "@/service/workspace.service";
 import WorkspaceModal from "../WorkspaceModal";
 import WorkspaceDropdown from "./WorkspaceDropdown";
+import { useToast } from "@/hooks/useToast";
 
 export default function Header() {
-  const { user, isLoading, logoutMutation } = useAuth();
+  const { user, logoutMutation } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const {
     currentWorkspace,
     workspaces,
     setCurrentWorkspace,
     refreshWorkspaces,
+    createWorkspaceMutation,
+    updateWorkspaceMutation,
+    deleteWorkspaceMutation,
   } = useWorkspace();
   const [workspaceModalState, setWorkspaceModalState] = useState({
     isOpen: false,
     mode: "add" as "add" | "edit",
     workspace: null as any,
   });
-  const [location, setLocation] = useLocation();
-
-  if (isLoading || !user) {
-    return null;
-  }
+  const [_, setLocation] = useLocation();
+  const { success} = useToast();
 
   const handleLogout = async () => {
     logoutMutation.mutate();
@@ -65,27 +57,30 @@ export default function Header() {
   const handleSaveWorkspace = async (workspaceData: any) => {
     try {
       if (workspaceModalState.mode === "add") {
-        const response = await createWorkspace(workspaceData);
-        const currWorkspace = workspaces.find(
-          (ws) => ws.id === response?.workspaceId
-        );
-        setCurrentWorkspace(currWorkspace as Workspace); // Set the newly created workspace as current
-        console.log("Workspace created successfully:", response);
+        createWorkspaceMutation.mutate(workspaceData, {
+          onSuccess: (response) => {
+            const currWorkspace = workspaces.find(
+              (ws) => ws.id === response?.workspaceId
+            );
+            if (currWorkspace) {
+              setCurrentWorkspace(currWorkspace);
+            }
+            success("Workspace created successfully.");
+          },
+        });
       } else {
-        // Update existing workspace
-        const response = await updateWorkspace(workspaceData);
-
-        const data = await response.json();
-        const currWorkspace = workspaces.find(
-          (ws) => ws.id === workspaceData.id
-        );
-        setCurrentWorkspace(currWorkspace as Workspace); // Set the newly created workspace as current
-        console.log("Workspace updated successfully:", data);
+        updateWorkspaceMutation.mutate(workspaceData, {
+          onSuccess: (data) => {
+            const currWorkspace = workspaces.find(
+              (ws) => ws.id === workspaceData.id
+            );
+            setCurrentWorkspace(currWorkspace || null);
+            success("Workspace updated successfully.");
+          },
+        });
       }
-
-      // Refresh the workspaces list
+      setWorkspaceModalState({ ...workspaceModalState, isOpen: false });
       refreshWorkspaces();
-
       return true;
     } catch (error) {
       console.error(
@@ -101,9 +96,15 @@ export default function Header() {
   const handleDeleteWorkspace = async () => {
     if (!currentWorkspace) return;
     try {
-      await apiRequest("DELETE", `${API_WORKSPACES}/${currentWorkspace.id}`);
-      setCurrentWorkspace(workspaces[0] || null); // Set to first workspace or null if none exist
-      refreshWorkspaces();
+      deleteWorkspaceMutation.mutate(currentWorkspace.id, {
+        onSuccess: () => {
+          if (workspaces.length > 0) {
+            setCurrentWorkspace(workspaces[0]);
+          } else {
+            setCurrentWorkspace(null);
+          }
+        },
+      });
     } catch (error) {
       console.error("Error deleting workspace:", error);
     }
@@ -112,9 +113,11 @@ export default function Header() {
   return (
     <header className="border-b bg-white dark:bg-gray-900 px-6 py-4">
       <div className="flex items-center justify-between">
-        {/* Left side - Search */}
         <div className="flex items-center space-x-4 flex-1 max-w-md">
-            <WorkspaceDropdown setWorkspaceModalState={setWorkspaceModalState} handleDeleteWorkspace={handleDeleteWorkspace} />
+          <WorkspaceDropdown
+            setWorkspaceModalState={setWorkspaceModalState}
+            handleDeleteWorkspace={handleDeleteWorkspace}
+          />
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
             <Input
@@ -125,18 +128,13 @@ export default function Header() {
             />
           </div>
         </div>
-
-        {/* Right side - Workspace info & user menu */}
         <div className="flex items-center space-x-4">
-          {/* Notifications */}
           <Button variant="ghost" size="sm" className="relative">
             <Bell className="h-5 w-5" />
             <span className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
               3
             </span>
           </Button>
-
-          {/* User Menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button

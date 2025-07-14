@@ -12,7 +12,6 @@ export const fetchCollectionList = async (workspaceId: string) => {
       "GET",
       `${API_COLLECTIONS}?ws=${workspaceId}`
     );
-    console.log("🚀 ~ fetchCollectionList ~ response:", response);
     if (!response.ok) {
       throw new Error("Failed to fetch collection data");
     }
@@ -81,17 +80,38 @@ export const renameRequest = async (name: string, requestId: string) => {
   }
 };
 
-export const renameCollection = async (id: string, name: string) => {
+export const deleteRequest = async (requestId: string) => {
   try {
     const response = await apiRequest(
-      "PUT",
-      `${API_COLLECTIONS}/${id}/rename`,
+      "DELETE",
+      `${API_COLLECTION_REQUESTS}/${requestId}`
+    );
+    if (!response.ok) {
+      throw new Error("Failed to delete request");
+    }
+    return { success: true, requestId };
+  } catch (error: any) {
+    console.error("Error deleting request:", error);
+    throw error;
+  }
+};
+
+export const duplicateRequest = async (requestId: string, newName?: string) => {
+  try {
+    const response = await apiRequest(
+      "POST",
+      `${API_COLLECTION_REQUESTS}/${requestId}/duplicate`,
       {
-        body: JSON.stringify({ name: name }),
+        body: newName ? JSON.stringify({ name: newName }) : undefined,
       }
     );
-    return response;
+    if (!response.ok) {
+      throw new Error("Failed to duplicate request");
+    }
+    const data = await response.json();
+    return formatRequest(data);
   } catch (error: any) {
+    console.error("Error duplicating request:", error);
     throw error;
   }
 };

@@ -1,18 +1,7 @@
-import { FeatureGateProvider } from "./FeatureGateContext";
-import { RequestProvider } from "./RequestContext";
-import { SchemaProvider } from "./SchemaContext";
-import { WorkspaceProvider } from "./WorkspaceContext";
+import React from "react";
 
 export const ContextWrapper: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  return (
-    <WorkspaceProvider>
-    <SchemaProvider>
-      <FeatureGateProvider>
-        <RequestProvider>{children}</RequestProvider>
-      </FeatureGateProvider>
-    </SchemaProvider>
-    </WorkspaceProvider>
-  );
+  return children;
 };

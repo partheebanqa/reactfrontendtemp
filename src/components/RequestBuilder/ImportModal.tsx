@@ -1,12 +1,11 @@
 import React, { useState, useRef } from 'react';
 import { X, Upload, AlertCircle, Link as LinkIcon, FileText } from 'lucide-react';
-import { Collection, ImportCollection, ImportResult } from '@/shared/types/collection';
+import {ImportCollection } from '@/shared/types/collection';
 import { importPostmanCollection } from '@/lib/importers/postmanImporter';
-import { importCollectionFile } from '@/service/request-builder.service';
-import { toast } from '@/hooks/use-toast';
 import { importSwaggerCollection } from '@/lib/importers/swaggerImporter';
 import { importCurlCommand } from '@/lib/importers/curlImporter';
-import { useWorkspace } from '@/contexts/WorkspaceContext';
+import { useWorkspace } from '@/hooks/useWorkspace';
+import { useCollection } from '@/hooks/useCollection';
 
 
 interface ImportModalProps {
@@ -23,6 +22,7 @@ const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose,}) => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { currentWorkspace } = useWorkspace();
+  const { importCollectionMutation } = useCollection();
 
   if (!isOpen) return null;
 
@@ -37,11 +37,9 @@ const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose,}) => {
   const handleImport = async () => {
     setImporting(true);
     setError(null);
-
+    let textToImport = importText;
+    
     try {
-      let textToImport = importText;
-
-      // Handle different import sources
       if (importType === 'url') {
         const response = await fetch(swaggerUrl);
         if (!response.ok) {
@@ -50,34 +48,19 @@ const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose,}) => {
         textToImport = await response.text();
       } else if (importType === 'file' && selectedFile) {
         textToImport = await selectedFile.text();
-        const json = JSON.parse(textToImport);
-        if (json.info?.schema?.includes('schema.getpostman.com')) {
-          const importedCollection : ImportCollection = {
-            name: json.info?.name,
-            workspaceId: currentWorkspace?.id || '',
-            inputMethod: 'file',
-            specificationType: 'postman',
-            file: selectedFile,
-            raw: '',
-            url: ''
-          }
-          try{
-            const response = await importCollectionFile(importedCollection); 
-              // if (response) {
-              //   toast(response.data.message, 'success');
-              // }
-          }catch (err){
-            setError(err instanceof Error ? err.message : 'Failed to import collection');
-          }
-          
-        }
-      }
-
-      // Try to parse as JSON first (Postman collection)
+      }      
       try {
         const json = JSON.parse(textToImport);
         if (json.info?.schema?.includes('schema.getpostman.com')) {
-          const result = await importPostmanCollection(json);
+            const response = await importCollectionMutation.mutateAsync({
+              name: json.info.name,
+              workspaceId: currentWorkspace?.id || '',
+              inputMethod: "raw",
+              specificationType: 'postman',
+              raw: JSON.stringify(json),
+            }); 
+            console.log("🚀 ~ handleImport ~ response:", response)
+
           onClose();
           return;
         }
@@ -88,6 +71,7 @@ const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose,}) => {
       // Try to parse as Swagger/OpenAPI
       if (textToImport.includes('swagger') || textToImport.includes('openapi')) {
         const result = await importSwaggerCollection(textToImport);
+        console.log("🚀 ~ handleImport ~ swagger:", result)
       
         onClose();
         return;
@@ -96,6 +80,7 @@ const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose,}) => {
       // Try to parse as cURL
       if (textToImport.trim().toLowerCase().startsWith('curl')) {
         const result = importCurlCommand(textToImport);
+        console.log("🚀 ~ handleImport ~ curl:", result)
         // onImport(result.collections);
         onClose();
         return;

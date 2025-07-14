@@ -17,11 +17,12 @@ export const fetchWorkspaces = async () => {
 
 export const createWorkspace = async (workspaceData: Partial<Workspace>) => {
   try {
+    const bodyData = {
+      name: workspaceData.name,
+      description: workspaceData.description || "testing ws",
+    };
     const response = await apiRequest("POST", API_WORKSPACES, {
-      body: {
-        name: workspaceData.name,
-        description: workspaceData.description || "testing ws",
-      },
+      body: JSON.stringify(bodyData),
     });
 
     if (!response.ok) {
@@ -36,12 +37,17 @@ export const createWorkspace = async (workspaceData: Partial<Workspace>) => {
 
 export const updateWorkspace = async (workspaceData: Partial<Workspace>) => {
   try {
-    const response = await apiRequest("PUT", `${API_WORKSPACES}/${workspaceData.id}`, {
-      body: {
-        name: workspaceData.name,
-        description: workspaceData.description || "testing ws",
-      },
-    });
+    const bodyData = {
+      name: workspaceData.name,
+      description: workspaceData.description || "testing ws",
+    };
+    const response = await apiRequest(
+      "PUT",
+      `${API_WORKSPACES}/${workspaceData.id}`,
+      {
+        body: JSON.stringify(bodyData),
+      }
+    );
 
     if (!response.ok) {
       throw new Error("Failed to update workspace");

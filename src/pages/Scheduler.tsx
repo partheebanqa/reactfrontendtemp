@@ -8,7 +8,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/useToast';
 import SearchAndFilters from '@/components/Scheduler/SearchAndFilters';
 import SchedulesTable from '@/components/Scheduler/SchedulesTable';
 import CreateScheduleForm from '@/components/Scheduler/CreateScheduleForm';

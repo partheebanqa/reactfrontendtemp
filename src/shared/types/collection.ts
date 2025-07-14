@@ -1,36 +1,5 @@
 import { DocumentNode } from 'graphql';
-
-export interface Request {
-  method: string;
-  url: string;
-  headers: Record<string, string>;
-  params: Record<string, string>;
-  body: string;
-  isGraphQL?: boolean;
-  graphQLQuery?: string;
-  graphQLVariables?: string;
-  auth?: {
-    type: 'none' | 'basic' | 'bearer' | 'apiKey';
-    username?: string;
-    password?: string;
-    token?: string;
-    key?: string;
-    value?: string;
-    addTo?: 'header' | 'query';
-  };
-  assertions?: ResponseAssertions;
-}
-  
-export interface ChainRequest extends Request {
-  id: string;
-  name: string;
-  variables?: Record<string, string>;
-  dependsOn?: string[];
-  extractAuth?: {
-    tokenPath?: string;
-    headerName?: string;
-  };
-}
+import { Header, Param } from './request';
 
 export interface Response {
   status: number;
@@ -183,17 +152,17 @@ export interface CollectionFolder {
 }
 
 export interface CollectionRequest {
-    id: string,
-    collectionId: string,
-    description: string,
-    name: string,
-    order: number,
-    method: string,
-    url: string,
-    bodyType: string,
-    bodyFormData: string | null,
-    bodyRawContent?: string,
-    authorizationType: string,
+    id?: string;
+    collectionId?: string;
+    description?: string;
+    name?: string;
+    order: number;
+    method: string;
+    url: string;
+    bodyType: string;
+    bodyFormData: string | null;
+    bodyRawContent?: string | null;
+    authorizationType: string;
     authorization: {
         token?: string; // bearer
         username?: string; // basic
@@ -201,14 +170,13 @@ export interface CollectionRequest {
         key?: string;      // apiKey
         value?: string;    // apiKey
         addTo?: 'header' | 'query'; // apiKey
-    },
-    headers?: KeyValuePair[];
-    params?: KeyValuePair[];
-    variables: { },
-    createdBy: string,
-    createdAt: string,
-    updatedAt: string
-
+    };
+    headers?: Header[];
+    params?: Param[];
+    variables: Record<string, any>;
+    createdBy?: string;
+    createdAt?: string;
+    updatedAt?: string;
 }
 
 export interface ChangelogEntry {
@@ -233,8 +201,8 @@ export interface ImportCollection {
   inputMethod:string;
   specificationType:string;
   raw:string;
-  url:string;
-  file:File;
+  url?:string;
+  file?:File;
 }
 export interface CreateCollection{
     name:string,

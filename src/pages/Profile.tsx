@@ -7,9 +7,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/useToast";
 import { useAuth } from "@/hooks/useAuth";
-import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { useWorkspace } from "@/hooks/useWorkspace";
 import { apiRequest } from "@/lib/queryClient";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { 

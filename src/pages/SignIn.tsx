@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { useMutation } from "@tanstack/react-query";
 import {
   Card,
   CardContent,
@@ -14,22 +13,14 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { Eye, EyeOff, Lock, Mail } from "lucide-react";
-import { apiRequest } from "@/lib/queryClient";
-import { setEncryptedCookie } from "@/lib/cookieUtils";
-import { USER_COOKIE_NAME } from "@/lib/constants";
-import { API_LOGIN } from "@/config/apiRoutes";
 import { useAuth } from "@/hooks/useAuth";
-import { updateAuthState } from "@/service/auth.service";
-
-interface ILoginResponse{
-  token: string;
-  message?: string;
-}
+import { useToast } from "@/hooks/useToast";
 
 export default function SignIn() {
   const [, setLocation] = useLocation();
   const [showPassword, setShowPassword] = useState(false);
-  const { isAuthenticated, isLoading } = useAuth();
+  const { loginMutation, isAuthenticated, user, isLoading } = useAuth();
+  const { error: errorToast } = useToast();
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -49,32 +40,24 @@ export default function SignIn() {
     );
   }
 
-  const signInMutation = useMutation({
-    mutationFn: async (credentials: { email: string; password: string }) => {
-      const response = await apiRequest("POST", API_LOGIN, {
-        body: credentials,
-      });
-      const data = await response.json();
-      return data;
-    },    
-    onSuccess: async (data: ILoginResponse) => {
-      // Update auth state and wait for it to complete
-      if (data.token) {
-        await updateAuthState(data.token);
-        // Then redirect
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    try {
+      const loginMutationResult = await loginMutation.mutateAsync(formData);
+      console.log("🚀 ~ handleSubmit ~ loginMutationResult:", loginMutationResult)
+      if (loginMutationResult && loginMutationResult.token) {
         setLocation("/dashboard");
       } else {
-        console.error("No token received from login");
+        errorToast("Login failed: No authentication token received");
       }
-    },
-    onError: (error: any) => {
-      console.error("Sign in error:", error);
-    },
-  });
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    signInMutation.mutate(formData);
+    } catch (error) {
+      if (error instanceof Error) {
+        errorToast(error.message);
+      } else {
+        errorToast("An unexpected error occurred during login");
+      }
+    }
   };
 
   const handleDemoLogin = (
@@ -89,37 +72,37 @@ export default function SignIn() {
     };
 
     const credentials = demoCredentials[userType];
-    
+
     // In case the API isn't available, simulate a successful login for demo accounts
     try {
       setFormData(credentials);
-      
+
       // First try normal login
-      signInMutation.mutate(credentials);
-      
-      // If using demo accounts and API is not available, simulate login
-      setTimeout(() => {
-        if (signInMutation.isError) {
-          console.log("Using demo login fallback");
-          // Mock token for demo purposes
-          const mockToken = "demo_token_" + Math.random().toString(36).substring(2);
-          const mockData = { token: mockToken };
-          
-          // Manually set the cookie and update auth state
-          setEncryptedCookie(USER_COOKIE_NAME, {
-            user: {
-              firstName: userType,
-              lastName: "User",
-              email: credentials.email,
-              role: userType === "admin" ? "admin" : userType === "enterprise" ? "enterprise" : "user"
-            },
-            token: mockToken
-          });
-          
-          // Force a page reload to apply the cookie changes
-          window.location.href = "/dashboard";
-        }
-      }, 1000); // Give the regular login 1 second to complete or fail
+      // signInMutation.mutate(credentials);
+
+      // // If using demo accounts and API is not available, simulate login
+      // setTimeout(() => {
+      //   if (signInMutation.isError) {
+      //     console.log("Using demo login fallback");
+      //     // Mock token for demo purposes
+      //     const mockToken = "demo_token_" + Math.random().toString(36).substring(2);
+      //     const mockData = { token: mockToken };
+
+      //     // Manually set the cookie and update auth state
+      //     setEncryptedCookie(USER_COOKIE_NAME, {
+      //       user: {
+      //         firstName: userType,
+      //         lastName: "User",
+      //         email: credentials.email,
+      //         role: userType === "admin" ? "admin" : userType === "enterprise" ? "enterprise" : "user"
+      //       },
+      //       token: mockToken
+      //     });
+
+      //     // Force a page reload to apply the cookie changes
+      //     window.location.href = "/dashboard";
+      //   }
+      // }, 1000); // Give the regular login 1 second to complete or fail
     } catch (error) {
       console.error("Demo login error:", error);
     }
@@ -145,10 +128,12 @@ export default function SignIn() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            {signInMutation.isError && (
+            {loginMutation.isError && (
               <Alert variant="destructive">
                 <AlertDescription>
-                  Invalid email or password. Please try again.
+                  {loginMutation.error instanceof Error
+                    ? loginMutation.error.message
+                    : "Invalid email or password. Please try again."}
                 </AlertDescription>
               </Alert>
             )}
@@ -214,9 +199,9 @@ export default function SignIn() {
               <Button
                 type="submit"
                 className="w-full"
-                disabled={signInMutation.isPending}
+                disabled={loginMutation.isPending}
               >
-                {signInMutation.isPending ? "Signing in..." : "Sign in"}
+                {loginMutation.isPending ? "Signing in..." : "Sign in"}
               </Button>
             </form>
 

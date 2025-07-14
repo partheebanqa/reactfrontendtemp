@@ -7,7 +7,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "../ui/button";
-import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { useWorkspace } from "@/hooks/useWorkspace";
 import { ChevronDown, Edit, PlusCircle, Trash } from "lucide-react";
 
 interface WorkspaceDropdownProps {
@@ -24,7 +24,6 @@ export default function WorkspaceDropdown({ setWorkspaceModalState, handleDelete
         currentWorkspace,
         workspaces,
         setCurrentWorkspace,
-        refreshWorkspaces,
       } = useWorkspace();
   return (
     <>
@@ -37,7 +36,6 @@ export default function WorkspaceDropdown({ setWorkspaceModalState, handleDelete
         </DropdownMenuTrigger>
         <DropdownMenuContent className="w-56">
           {workspaces.map((workspace) => {
-            console.log("🚀 ~ {workspaces.map ~ workspace:", workspace);
             return (
               <DropdownMenuItem
                 key={workspace.id}
@@ -47,7 +45,6 @@ export default function WorkspaceDropdown({ setWorkspaceModalState, handleDelete
                 } justify-between`}
               >
                 <span className="font-medium">{workspace.name}</span>
-                {/* Edit button, only clickable if the workspace is already selected */}
                 {currentWorkspace?.id === workspace.id && (
                   <div>
                     <Button

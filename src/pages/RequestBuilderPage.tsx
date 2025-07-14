@@ -7,8 +7,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/hooks/use-toast";
-import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { useToast } from "@/hooks/useToast";
+import { useWorkspace } from "@/hooks/useWorkspace";
 import { apiRequest } from "@/lib/queryClient";
 import { API_METHODS } from "@/lib/constants";
 import { 
