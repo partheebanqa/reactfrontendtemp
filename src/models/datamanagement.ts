@@ -13,7 +13,7 @@ export interface Environment {
     id: string;
     key: string;
     value: string;
-    type: "string" | "number" | "boolean" | "secret" | "environment" | "dynamic";
+    type: "string" | "number" | "boolean" | "secret" | "environment" | "dynamic" | "static";
     description?: string;
     environmentId?: string;
     isGlobal: boolean;
