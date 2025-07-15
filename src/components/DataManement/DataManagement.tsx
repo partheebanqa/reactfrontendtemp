@@ -28,39 +28,60 @@ const DataManagement: React.FC = () => {
 
   const [variables, setVariables] = useState<Variable[]>([
     {
-      id: '1',
-      key: 'API_TOKEN',
-      value: '••••••••••••••••',
-      type: 'secret',
-      description: 'Authentication token for API access',
-      isGlobal: true,
+      id: "1",
+      key: "USER_ID",
+      value: "{{random_uuid}}",
+      type: "dynamic",
+      scope: "global",
+      isSecret: false,
+      description: "Generates a random UUID for each API request",
+      environmentId: '',
+      isGlobal: true
     },
     {
-      id: '2',
-      key: 'USER_EMAIL',
-      value: 'test@example.com',
-      type: 'string',
-      description: 'Test user email for authentication flows',
-      environmentId: '1',
-      isGlobal: false,
+      id: "2", 
+      key: "API_TOKEN",
+      value: "bearer_abc123xyz789",
+      type: "static",
+      scope: "global",
+      isSecret: true,
+      description: "Fixed authentication token for API requests",
+      environmentId: null,
+      isGlobal: true
     },
     {
-      id: '3',
-      key: 'MAX_RETRIES',
-      value: '3',
-      type: 'number',
-      description: 'Maximum number of retry attempts',
-      isGlobal: true,
+      id: "3",
+      key: "TIMESTAMP", 
+      value: "{{timestamp}}",
+      type: "dynamic",
+      scope: "global",
+      isSecret: false,
+      description: "Current Unix timestamp for each request",
+      environmentId: '',
+      isGlobal: true
     },
     {
-      id: '4',
-      key: 'DEBUG_MODE',
-      value: 'true',
-      type: 'boolean',
-      description: 'Enable debug logging',
-      environmentId: '1',
-      isGlobal: false,
+      id: "4",
+      key: "BASE_URL",
+      value: "https://api.staging.com",
+      type: "static", 
+      scope: "environment",
+      isSecret: false,
+      description: "Base URL for staging environment",
+      environmentId: "staging",
+      isGlobal: false
     },
+    {
+      id: "5",
+      key: "EMAIL_TEST",
+      value: "{{random_email}}",
+      type: "dynamic",
+      scope: "project",
+      isSecret: false,
+      description: "Random email for testing",
+      environmentId: "development",
+      isGlobal: false
+    }
   ]);
 
   return (
@@ -73,27 +94,7 @@ const DataManagement: React.FC = () => {
           </p>
         </div>
 
-        {/* <div className="flex items-center space-x-2">
-          <Button variant="outline" size="sm">
-            <Upload className="w-4 h-4 mr-2" />
-            Import
-          </Button>
-          <Button variant="outline" size="sm">
-            <Download className="w-4 h-4 mr-2" />
-            Export
-          </Button>
-        </div> */}
       </div>
-
-      {/* <div className="relative max-w-md">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-        <Input
-          placeholder="Search data..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-10"
-        />
-      </div> */}
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className='grid w-full grid-cols-2'>

@@ -385,7 +385,7 @@ const EditVariableDialog: React.FC<Props> = ({
               >
                 Cancel
               </Button>
-              <Button onClick={onSave}>Save</Button>
+              <Button onClick={onSave}>Update</Button>
             </div>
           </div>
         )}
