@@ -11,6 +11,8 @@ import Dashboard from '@/pages/Dashboard';
 import RequestChains from '@/pages/RequestChains';
 import TestSuites from '@/pages/TestSuites';
 import EditTestSuite from '@/pages/EditTestSuite';
+import Plan from '@/pages/Plan';
+import TestSuiteOverView from '@/pages/TestSuiteOverView';
 import Scheduler from '@/pages/Scheduler';
 import CiCdIntegration from '@/pages/CiCdIntegration';
 import Executions from '@/pages/Executions';
@@ -29,6 +31,8 @@ import ForgotPassword from '@/pages/ForgotPassword';
 import NotFound from '@/pages/not-found';
 import RequestBuilderPage from './pages/RequestBuilderPage';
 import { ContextWrapper } from './contexts/ContextWrapper';
+import DataManagementPage from '@/pages/DataManaementPage';
+import DashboardPage from '@/pages/DashboardPage';
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -59,28 +63,36 @@ function Router() {
 
   return (
     <ContextWrapper>
-        <AppLayout>
-          <Switch>
-            <Route path='/' component={Dashboard} />
-            <Route path='/dashboard' component={Dashboard} />
-            <Route path='/request-builder' component={RequestBuilderPage} />
-            <Route path='/request-chains' component={RequestChains} />
-            <Route path='/test-suites' component={TestSuites} />
-            <Route path='/test-suites/:id/edit' component={EditTestSuite} />
-            <Route path='/scheduler' component={Scheduler} />
-            <Route path='/cicd' component={CiCdIntegration} />
-            <Route path='/executions' component={Executions} />
-            <Route path='/data-management' component={DataManagement} />
-            <Route path='/reports' component={Reports} />
-            <Route path='/settings' component={Settings} />
-            <Route path='/profile' component={Profile} />
-            <Route path='/notifications' component={Notifications} />
-            <Route path='/pricing' component={Pricing} />
-            <Route path='/terms' component={Terms} />
-            <Route path='/privacy' component={Privacy} />
-            <Route component={NotFound} />
-          </Switch>
-        </AppLayout>
+      <AppLayout>
+        <Switch>
+          <Route path='/' component={Dashboard} />
+          <Route path='/dashboard' component={DashboardPage} />
+          <Route path='/request-builder' component={RequestBuilderPage} />
+          <Route path='/request-chains' component={RequestChains} />
+          <Route path='/reports' component={Reports} />
+          <Route path='/test-suites' component={TestSuites} />
+          <Route path='/plan-billing' component={Plan} />
+          <Route path='/test-suites/create' component={EditTestSuite} />
+          <Route path='/test-suites/:id/edit' component={EditTestSuite} />
+          <Route
+            path='/test-suites/:id/overview'
+            component={TestSuiteOverView}
+          />
+          <Route path='/scheduler' component={Scheduler} />
+          <Route path='/cicd' component={CiCdIntegration} />
+          <Route path='/executions' component={Executions} />
+          <Route path='/data-management' component={DataManagementPage} />
+          {/* <Route path='/data-management-page' component={DataManagementPage} /> */}
+          <Route path='/reports' component={Reports} />
+          <Route path='/settings' component={Settings} />
+          <Route path='/profile' component={Profile} />
+          <Route path='/notifications' component={Notifications} />
+          <Route path='/pricing' component={Pricing} />
+          <Route path='/terms' component={Terms} />
+          <Route path='/privacy' component={Privacy} />
+          <Route component={NotFound} />
+        </Switch>
+      </AppLayout>
     </ContextWrapper>
   );
 }

@@ -1,4 +1,4 @@
-import { Store, useStore } from "@tanstack/react-store";
+import { Store, useStore } from '@tanstack/react-store';
 
 // Define toast types
 export type ToastType = 'default' | 'success' | 'error' | 'info' | 'warning';
@@ -39,22 +39,22 @@ export const toastActions = {
   // Add a new toast
   addToast: (toast: Omit<Toast, 'id'>) => {
     const id = generateId();
-    
+
     toastStore.setState((state) => ({
       ...state,
       toasts: [...state.toasts, { ...toast, id }],
     }));
-    
+
     // Auto-remove toast after duration
     if (toast.duration !== Infinity) {
       setTimeout(() => {
         toastActions.removeToast(id);
       }, toast.duration || 5000); // Default duration: 5 seconds
     }
-    
+
     return id;
   },
-  
+
   // Remove a toast by ID
   removeToast: (id: string) => {
     toastStore.setState((state) => ({
@@ -62,7 +62,7 @@ export const toastActions = {
       toasts: state.toasts.filter((toast) => toast.id !== id),
     }));
   },
-  
+
   // Clear all toasts
   clearToasts: () => {
     toastStore.setState((state) => ({
@@ -70,7 +70,7 @@ export const toastActions = {
       toasts: [],
     }));
   },
-  
+
   // Helper methods for common toast types
   success: (title: string, description?: string, duration?: number) => {
     return toastActions.addToast({
@@ -80,7 +80,7 @@ export const toastActions = {
       duration,
     });
   },
-  
+
   error: (title: string, description?: string, duration?: number) => {
     return toastActions.addToast({
       title,
@@ -89,7 +89,7 @@ export const toastActions = {
       duration,
     });
   },
-  
+
   info: (title: string, description?: string, duration?: number) => {
     return toastActions.addToast({
       title,
@@ -98,7 +98,7 @@ export const toastActions = {
       duration,
     });
   },
-  
+
   warning: (title: string, description?: string, duration?: number) => {
     return toastActions.addToast({
       title,
