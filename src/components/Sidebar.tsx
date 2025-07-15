@@ -58,6 +58,12 @@ const menuItems = [
     feature: 'scheduler',
   },
   {
+    label: 'Executions',
+    path: '/executions',
+    icon: Play,
+    feature: 'executions',
+  },
+  {
     label: 'Data Management',
     path: '/data-management',
     icon: Database,
@@ -287,6 +293,7 @@ const Sidebar: React.FC = () => {
             {/* <AvatarImage src={user?.profileImageUrl} alt={user?.firstName} /> */}
             <AvatarFallback>
               {user?.firstName?.[0]}
+
               {user?.lastName?.[0]}
             </AvatarFallback>
           </Avatar>
