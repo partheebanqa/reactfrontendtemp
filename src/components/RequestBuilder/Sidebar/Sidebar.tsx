@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import ReactDOM from "react-dom";
 import {
   ChevronDown,
   ChevronRight,
@@ -14,13 +15,14 @@ import {
   X,
   Save,
   Copy,
+  FileJson2,
 } from "lucide-react";
 import { useCollection } from "@/hooks/useCollection";
 import { useWorkspace } from "@/hooks/useWorkspace";
-import { useRequestBuilder } from "@/hooks/useRequestBuilder";
 import { Collection, CollectionRequest } from "@/shared/types/collection";
 import { useToast } from "@/hooks/useToast";
 import ImportModal from "../ImportModal";
+import { useRequest } from "@/hooks/useRequest";
 
 const Sidebar: React.FC = () => {
   const { currentWorkspace } = useWorkspace();
@@ -38,14 +40,17 @@ const Sidebar: React.FC = () => {
     deleteRequest,
     duplicateRequestMutation,
     setFavouriteCollectionMutation,
-    renameRequestMutation
+    renameRequestMutation,
   } = useCollection();
-  const { toast,error:showError } = useToast();
+  const { setResponseData } = useRequest();
+  const { toast, error: showError } = useToast();
   const [showCollectionModal, setShowCollectionModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [showMenu, setShowMenu] = useState<string | null>(null);
+  const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
   const [selectedCollection, setSelectedCollection] =
     useState<Collection | null>(null);
+  const [selectedRequest, setSelectedRequest] = useState<CollectionRequest | null>(null);
   const [showRequestRenameModal, setShowRequestRenameModal] = useState(false);
   const [renameValue, setRenameValue] = useState("");
   const [requestId, setRequestId] = useState("");
@@ -55,6 +60,7 @@ const Sidebar: React.FC = () => {
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         setShowMenu(null);
+        setMenuPosition(null);
       }
     };
     if (showMenu) {
@@ -76,10 +82,9 @@ const Sidebar: React.FC = () => {
     setShowMenu(null);
   };
 
-  const handleCreateRequest = (collectionId?: string) => {
+  const handleCreateRequest = async (collection?: Collection) => {
     const newRequest: CollectionRequest = {
       name: "New Request",
-      order: 0,
       method: "GET",
       url: "",
       bodyType: "none",
@@ -89,24 +94,32 @@ const Sidebar: React.FC = () => {
       variables: {},
       headers: [],
       params: [],
+      order: 0 // This will be updated when adding to collection
     };
-    setActiveRequest(newRequest);
-    if (collectionId) {
+    setResponseData(null);
+    if (collection) {
+      // Ensure collection is expanded when adding a new request
+      if (!expandedCollections.has(collection.id)) {
+        toggleExpandedCollection(collection.id);
+      }
+      newRequest.collectionId = collection.id;
+      newRequest.order = (collection.requests?.length || 0) + 1;
       setCollection(
-        collections.map((collection) =>
-          collection.id === collectionId
+        collections.map((col) =>
+          col.id === collection.id
             ? {
-                ...collection,
-                requests: [...(collection.requests || []), newRequest],
+                ...col,
+                requests: [...(col.requests || []), newRequest],
               }
-            : collection
+            : col
         )
       );
       setActiveCollection(
-        collections.find((col) => col.id === collectionId) || null
+        collections.find((col) => col.id === collection.id) || null
       );
-      toggleExpandedCollection(collectionId);
     }
+    setActiveRequest(newRequest);
+    setShowMenu(null);
   };
 
   const handleSaveCollection = async (collectionName: string) => {
@@ -150,9 +163,9 @@ const Sidebar: React.FC = () => {
       });
     } catch (error) {
       console.error("Error favoriting collection:", error);
-      showError('failed to favorite collection');
+      showError("failed to favorite collection");
     }
-  }
+  };
 
   const handleDeleteRequest = async (requestId: string) => {
     try {
@@ -226,6 +239,241 @@ const Sidebar: React.FC = () => {
     }
   };
 
+  const handleDeleteCollection = async () => {};
+
+  const handleExportCollection = async (collection: Collection) => {
+    try {
+      // Ensure we have the latest data for this collection
+      await fetchCollectionRequests.mutateAsync(collection.id);
+
+      // Find the collection with updated requests
+      const collectionWithRequests = collections.find(
+        (c) => c.id === collection.id
+      );
+
+      if (!collectionWithRequests) {
+        showError("Collection not found");
+        return;
+      }
+
+      // Format the collection in Postman-like structure
+      const exportData = {
+        info: {
+          _postman_id: collection.id || `uuid-${Date.now()}`,
+          name: collection.name,
+          schema:
+            "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+          description: "", // Postman requires this field
+        },
+        item: collectionWithRequests.requests.map((request) => ({
+          name: request.name,
+          request: {
+            method: request.method,
+            header:
+              request.headers?.map((h) => ({
+                key: h.key,
+                value: h.value,
+                type: "text",
+                disabled: !h.enabled,
+              })) || [],
+            url: {
+              raw: request.url,
+              protocol: getProtocol(request.url),
+              host: getHost(request.url),
+              path: getPath(request.url),
+              query:
+                request.params?.map((p) => ({
+                  key: p.key,
+                  value: p.value,
+                  disabled: !p.enabled,
+                })) || [],
+            },
+            body:
+              request.bodyType !== "none"
+                ? {
+                    mode: getPostmanBodyMode(request.bodyType),
+                    ...(request.bodyType === "json"
+                      ? {
+                          raw: request.bodyRawContent || "{}",
+                          options: {
+                            raw: {
+                              language: "json",
+                            },
+                          },
+                        }
+                      : {}),
+                    ...(request.bodyType === "form-data"
+                      ? {
+                          formdata: Array.isArray(request.bodyFormData)
+                            ? request.bodyFormData.map((item: any) => ({
+                                key: item.key,
+                                value: item.type === "file" ? "" : item.value,
+                                type: item.type || "text",
+                                disabled: !item.enabled,
+                              }))
+                            : [],
+                        }
+                      : {}),
+                    ...(request.bodyType === "x-www-form-urlencoded"
+                      ? {
+                          urlencoded: Array.isArray(
+                            (request as any).urlEncodedData
+                          )
+                            ? (request as any).urlEncodedData.map(
+                                (item: any) => ({
+                                  key: item.key,
+                                  value: item.value,
+                                  disabled: !item.enabled,
+                                })
+                              )
+                            : [],
+                        }
+                      : {}),
+                    ...(request.bodyType === "raw"
+                      ? {
+                          raw: request.bodyRawContent || "",
+                        }
+                      : {}),
+                  }
+                : undefined,
+            auth:
+              request.authorizationType !== "none"
+                ? {
+                    type: request.authorizationType,
+                    [request.authorizationType]: getAuthDetails(request),
+                  }
+                : undefined,
+          },
+          response: [],
+        })),
+      };
+
+      // Convert to JSON string with indentation for readability
+      const jsonString = JSON.stringify(exportData, null, 2);
+
+      // Create a blob and download link
+      const blob = new Blob([jsonString], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${collection.name.replace(
+        /\s+/g,
+        "_"
+      )}.postman_collection.json`;
+
+      // Trigger download
+      document.body.appendChild(link);
+      link.click();
+
+      // Clean up
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: "Collection exported",
+        description: `${collection.name} has been exported successfully`,
+        variant: "success",
+      });
+
+      setShowMenu(null);
+    } catch (error) {
+      console.error("Error exporting collection:", error);
+      showError("Failed to export collection");
+    }
+  };
+
+  // Helper functions for export format conversion
+  const getPostmanBodyMode = (bodyType: string): string => {
+    switch (bodyType) {
+      case "json":
+        return "raw";
+      case "form-data":
+        return "formdata";
+      case "x-www-form-urlencoded":
+        return "urlencoded";
+      case "raw":
+        return "raw";
+      case "binary":
+        return "file";
+      default:
+        return "raw";
+    }
+  };
+
+  // URL parsing helper functions
+  const getProtocol = (url: string): string[] => {
+    try {
+      const match = url.match(/^(https?):\/\//);
+      return match ? [match[1]] : [];
+    } catch (e) {
+      return [];
+    }
+  };
+
+  const getHost = (url: string): string[] => {
+    try {
+      const match = url.match(/^(?:https?:\/\/)?([^\/]+)/i);
+      return match ? match[1].split(".") : [];
+    } catch (e) {
+      return [];
+    }
+  };
+
+  const getPath = (url: string): string[] => {
+    try {
+      const match = url.match(/^(?:https?:\/\/)?[^\/]+(\/[^?#]*)/i);
+      return match && match[1] ? match[1].split("/").filter(Boolean) : [];
+    } catch (e) {
+      return [];
+    }
+  };
+
+  const getAuthDetails = (request: CollectionRequest) => {
+    switch (request.authorizationType) {
+      case "basic":
+        return [
+          {
+            key: "username",
+            value: request.authorization?.username || "",
+            type: "string",
+          },
+          {
+            key: "password",
+            value: request.authorization?.password || "",
+            type: "string",
+          },
+        ];
+      case "bearer":
+        return [
+          {
+            key: "token",
+            value: request.authorization?.token || "",
+            type: "string",
+          },
+        ];
+      case "apiKey":
+        return [
+          {
+            key: "key",
+            value: request.authorization?.key || "",
+            type: "string",
+          },
+          {
+            key: "value",
+            value: request.authorization?.value || "",
+            type: "string",
+          },
+          {
+            key: "in",
+            value: request.authorization?.addTo || "header",
+            type: "string",
+          },
+        ];
+      default:
+        return [];
+    }
+  };
+
   const getMethodColor = (method: string) => {
     const colors = {
       GET: "text-green-600",
@@ -238,7 +486,6 @@ const Sidebar: React.FC = () => {
     };
     return colors[method as keyof typeof colors] || "text-gray-600";
   };
-  
 
   return (
     <div
@@ -299,8 +546,8 @@ const Sidebar: React.FC = () => {
                     </span>
                   </div>
 
-                  <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button
+                  <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity relative">
+                    {/* <button
                       onClick={(e) => {
                         e.stopPropagation();
                         handleCreateRequest(collection.id);
@@ -309,10 +556,19 @@ const Sidebar: React.FC = () => {
                       aria-label="Add request"
                     >
                       <Plus className="h-3 w-3" />
+                    </button> */}
+                    <button
+                      className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
+                      onClick={() => handleFavoriteCollection(collection)}
+                    >
+                      <Star className="h-4 w-4 mr-2" />
                     </button>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        setMenuPosition({ top: rect.bottom, left: rect.left });
+                        setSelectedCollection(collection);
                         setShowMenu(collection.id);
                       }}
                       className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
@@ -321,28 +577,7 @@ const Sidebar: React.FC = () => {
                       <MoreVertical className="h-3 w-3" />
                     </button>
 
-                    {showMenu === collection.id && (
-                      <div
-                        ref={menuRef}
-                        className="absolute right-12 mt-8 z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg py-1 min-w-[150px]"
-                      >
-                        <button
-                          onClick={() => handleRenameCollection(collection)}
-                          className="flex items-center w-full px-4 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700"
-                        >
-                          <Edit className="h-4 w-4 mr-2" />
-                          Rename
-                        </button>
-                        <button className="flex items-center w-full px-4 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700" onClick={() => handleFavoriteCollection(collection)}>
-                          <Star className="h-4 w-4 mr-2" />
-                          Favorite
-                        </button>
-                        <button className="flex items-center w-full px-4 py-2 text-sm text-left text-red-500 hover:bg-gray-100 dark:hover:bg-gray-700">
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Delete
-                        </button>
-                      </div>
-                    )}
+                    {/* Menu will be rendered outside the sidebar using React Portal */}
                   </div>
                 </div>
 
@@ -350,7 +585,7 @@ const Sidebar: React.FC = () => {
                   <div className="ml-4 sm:ml-6 space-y-1">
                     {collection.requests.map((request) => (
                       <div
-                        key={request.id}
+                        key={request.order}
                         className={`
                           flex items-center justify-between p-2 rounded-md cursor-pointer
                           hover:bg-gray-50 dark:hover:bg-gray-800
@@ -365,7 +600,6 @@ const Sidebar: React.FC = () => {
                           className="flex items-center space-x-2 flex-1 min-w-0"
                           onClick={() => setActiveRequest(request)}
                         >
-                          <FileText className="h-4 w-4 text-gray-500 flex-shrink-0" />
                           <span
                             className={`text-xs font-medium ${getMethodColor(
                               request.method
@@ -378,10 +612,13 @@ const Sidebar: React.FC = () => {
                           </span>
                         </div>
 
-                        <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity relative">
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
+                              const rect = e.currentTarget.getBoundingClientRect();
+                              setMenuPosition({ top: rect.bottom, left: rect.left });
+                              setSelectedRequest(request);
                               setShowMenu(`request-${request.id}`);
                             }}
                             className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
@@ -389,38 +626,7 @@ const Sidebar: React.FC = () => {
                             <MoreVertical className="h-3 w-3" />
                           </button>
 
-                          {showMenu === `request-${request.id}` && (
-                            <div
-                              ref={menuRef}
-                              className="absolute right-12 z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg py-1 min-w-[150px]"
-                            >
-                              <button
-                                onClick={() => handleRenameRequest(request)}
-                                className="flex items-center w-full px-4 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700"
-                              >
-                                <Edit className="h-4 w-4 mr-2" />
-                                Rename
-                              </button>
-                              <button
-                                onClick={() => handleDuplicateRequest(request)}
-                                className="flex items-center w-full px-4 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700"
-                              >
-                                <Copy className="h-4 w-4 mr-2" />
-                                Duplicate
-                              </button>
-                              <button
-                                className="flex items-center w-full px-4 py-2 text-sm text-left text-red-500 hover:bg-gray-100 dark:hover:bg-gray-700"
-                                onClick={() => {
-                                  if (request.id) {
-                                    handleDeleteRequest(request.id);
-                                  }
-                                }}
-                              >
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                Delete
-                              </button>
-                            </div>
-                          )}
+                          {/* Request menu will be rendered outside the sidebar using React Portal */}
                         </div>
                       </div>
                     ))}
@@ -548,6 +754,119 @@ const Sidebar: React.FC = () => {
         isOpen={showImportModal}
         onClose={() => setShowImportModal(false)}
       />
+      
+      {/* Portal Menus */}
+      {showMenu && menuPosition && typeof document !== 'undefined' && ReactDOM.createPortal(
+        <>
+          {/* Collection Menu */}
+          {showMenu === selectedCollection?.id && (
+            <div
+              ref={menuRef}
+              className="fixed z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg py-1 min-w-[180px]"
+              style={{
+                top: `${menuPosition.top}px`,
+                left: `${menuPosition.left}px`,
+              }}
+            >
+              <button
+                onClick={() => {
+                  if (selectedCollection) handleCreateRequest(selectedCollection);
+                  setShowMenu(null);
+                  setMenuPosition(null);
+                }}
+                className="flex items-center w-full px-4 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Request
+              </button>
+              <button
+                onClick={() => {
+                  if (selectedCollection) handleRenameCollection(selectedCollection);
+                  setShowMenu(null);
+                  setMenuPosition(null);
+                }}
+                className="flex items-center w-full px-4 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700"
+              >
+                <Edit className="h-4 w-4 mr-2" />
+                Rename
+              </button>
+              <button
+                className="flex items-center w-full px-4 py-2 text-sm text-left text-red-500 hover:bg-gray-100 dark:hover:bg-gray-700"
+                onClick={() => {
+                  handleDeleteCollection();
+                  setShowMenu(null);
+                  setMenuPosition(null);
+                }}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete
+              </button>
+              <div className="border-t border-gray-200 dark:border-gray-700 my-1"></div>
+              <button
+                className="flex items-center w-full px-4 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (selectedCollection) handleExportCollection(selectedCollection);
+                  setShowMenu(null);
+                  setMenuPosition(null);
+                }}
+              >
+                <FileJson2 className="h-4 w-4 mr-2" />
+                Export
+              </button>
+            </div>
+          )}
+
+          {/* Request Menu */}
+          {showMenu.startsWith('request-') && selectedRequest && (
+            <div
+              ref={menuRef}
+              className="fixed z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg py-1 min-w-[180px]"
+              style={{
+                top: `${menuPosition.top}px`,
+                left: `${menuPosition.left}px`,
+              }}
+            >
+              <button
+                onClick={() => {
+                  handleRenameRequest(selectedRequest);
+                  setShowMenu(null);
+                  setMenuPosition(null);
+                }}
+                className="flex items-center w-full px-4 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700"
+              >
+                <Edit className="h-4 w-4 mr-2" />
+                Rename
+              </button>
+              <button
+                onClick={() => {
+                  handleDuplicateRequest(selectedRequest);
+                  setShowMenu(null);
+                  setMenuPosition(null);
+                }}
+                className="flex items-center w-full px-4 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700"
+              >
+                <Copy className="h-4 w-4 mr-2" />
+                Duplicate
+              </button>
+              <button
+                className="flex items-center w-full px-4 py-2 text-sm text-left text-red-500 hover:bg-gray-100 dark:hover:bg-gray-700"
+                onClick={() => {
+                  if (selectedRequest.id) {
+                    handleDeleteRequest(selectedRequest.id);
+                  }
+                  setShowMenu(null);
+                  setMenuPosition(null);
+                }}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete
+              </button>
+            </div>
+          )}
+        </>,
+        document.body
+      )}
     </div>
   );
 };

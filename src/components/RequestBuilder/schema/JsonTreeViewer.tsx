@@ -29,7 +29,7 @@ const JsonTreeViewer: React.FC<JsonTreeViewerProps> = ({
     
     // Null and primitive values
     if (value === null) {
-      return <span className="text-gray-500">null</span>;
+      return <span className="text-gray-500 italic">null</span>;
     }
     
     if (type !== 'object' || value === null) {
@@ -40,7 +40,7 @@ const JsonTreeViewer: React.FC<JsonTreeViewerProps> = ({
         return <span className="text-blue-600">{value}</span>;
       }
       if (type === 'boolean') {
-        return <span className="text-purple-600">{value.toString()}</span>;
+        return <span className="text-purple-600 font-semibold">{value.toString()}</span>;
       }
       return <span>{String(value)}</span>;
     }
@@ -50,29 +50,31 @@ const JsonTreeViewer: React.FC<JsonTreeViewerProps> = ({
     const isEmpty = Object.keys(value).length === 0;
     
     if (isEmpty) {
-      return isArray ? <span className="text-gray-500">[]</span> : <span className="text-gray-500">{'{}'}</span>;
+      return isArray ? <span className="text-gray-500 italic">[]</span> : <span className="text-gray-500 italic">{'{}'}</span>;
     }
     
     return (
       <div>
         <div 
-          className="flex items-center cursor-pointer hover:bg-gray-50 py-0.5"
+          className="flex items-center cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 py-1 px-1 rounded transition-colors"
           onClick={() => toggleExpand(valueKey)}
         >
-          {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-          <span className="text-gray-700">
+          <span className="text-gray-400 mr-1">
+            {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+          </span>
+          <span className={`${isArray ? 'text-blue-500' : 'text-purple-500'} font-medium`}>
             {isArray ? `Array[${Object.keys(value).length}]` : `Object`}
           </span>
         </div>
         
         {isExpanded && (
-          <div className="ml-4 border-l border-gray-200 pl-2">
+          <div className="ml-4 border-l border-gray-200 dark:border-gray-700 pl-2 mt-1">
             {Object.keys(value).map((objKey) => {
               const newPath = currentPath ? `${currentPath}.${objKey}` : objKey;
               return (
-                <div key={objKey} className="py-0.5">
-                  <div className="flex">
-                    <span className="text-gray-800 font-medium mr-1">{objKey}:</span>
+                <div key={objKey} className="py-1">
+                  <div className="flex items-start">
+                    <span className="text-gray-800 dark:text-gray-300 font-medium mr-1">{objKey}:</span>
                     {renderValue(objKey, value[objKey], newPath)}
                   </div>
                 </div>
@@ -87,14 +89,14 @@ const JsonTreeViewer: React.FC<JsonTreeViewerProps> = ({
   // For the root level
   if (level === 0) {
     return (
-      <div className="font-mono text-sm bg-gray-50 p-2 rounded-md">
+      <div className="font-mono text-sm bg-white dark:bg-gray-900 p-3 rounded-md border border-gray-200 dark:border-gray-700 custom-scrollbar">
         {typeof json === 'object' && json !== null ? (
           Object.keys(json).map((key) => {
             const currentPath = path ? `${path}.${key}` : key;
             return (
-              <div key={key} className="py-0.5">
-                <div className="flex">
-                  <span className="text-gray-800 font-medium mr-1">{key}:</span>
+              <div key={key} className="py-1">
+                <div className="flex items-start">
+                  <span className="text-gray-800 dark:text-gray-300 font-medium mr-1">{key}:</span>
                   {renderValue(key, json[key], currentPath)}
                 </div>
               </div>

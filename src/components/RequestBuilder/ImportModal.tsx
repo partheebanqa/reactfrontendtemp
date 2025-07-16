@@ -59,7 +59,6 @@ const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose,}) => {
               specificationType: 'postman',
               raw: JSON.stringify(json),
             }); 
-            console.log("🚀 ~ handleImport ~ response:", response)
 
           onClose();
           return;
@@ -71,7 +70,6 @@ const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose,}) => {
       // Try to parse as Swagger/OpenAPI
       if (textToImport.includes('swagger') || textToImport.includes('openapi')) {
         const result = await importSwaggerCollection(textToImport);
-        console.log("🚀 ~ handleImport ~ swagger:", result)
       
         onClose();
         return;
@@ -80,7 +78,6 @@ const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose,}) => {
       // Try to parse as cURL
       if (textToImport.trim().toLowerCase().startsWith('curl')) {
         const result = importCurlCommand(textToImport);
-        console.log("🚀 ~ handleImport ~ curl:", result)
         // onImport(result.collections);
         onClose();
         return;

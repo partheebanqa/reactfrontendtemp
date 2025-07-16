@@ -1,4 +1,4 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, Redirect } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 
 // Pages
@@ -6,23 +6,34 @@ import Landing from "@/pages/Landing";
 import SignIn from "@/pages/SignIn";
 import SignUp from "@/pages/SignUp";
 import ForgotPassword from "@/pages/ForgotPassword";
-import Dashboard from "@/modules/dashboard/DashboardPage";
-import RequestBuilder from "@/modules/requestbuilder/RequestbuilderPage";
-import TestSuites from "@/modules/testsuites/TestsuitesPage";
-import RequestChains from "@/modules/requestchains/RequestchainsPage";
-import Scheduler from "@/modules/scheduler/SchedulerPage";
-import Executions from "@/modules/executions/ExecutionsPage";
-import CicdIntegration from "@/modules/cicd/CicdIntegrationPage";
-import Profile from "@/modules/profile/ProfilePage";
-import Settings from "@/modules/settings/SettingsPage";
-import DataManagement from "@/modules/datamanagement/DataManagementPage";
-import Utilities from "@/modules/utilities/UtilitiesPage";
-import Reports from "@/modules/reports/ReportsPage";
-import Notifications from "@/modules/notifications/NotificationsPage";
 import NotFound from "@/pages/not-found";
 
 // Layout
 import AppLayout from "@/components/AppLayout";
+import Dashboard from "@/pages/Dashboard";
+import RequestBuilderPage from "@/pages/RequestBuilderPage";
+import TestSuites from "@/pages/TestSuites";
+import RequestChains from "@/pages/RequestChains";
+import Scheduler from "@/pages/Scheduler";
+import Executions from "@/pages/Executions";
+import CiCdIntegration from "@/pages/CiCdIntegration";
+import Profile from "@/pages/Profile";
+import Settings from "@/pages/Settings";
+import DataManagement from "@/pages/DataManagement";
+import Reports from "@/pages/Reports";
+import Notifications from "@/pages/Notifications";
+import SwaggerParser from "@/pages/SwaggerParser";
+import JsonParser from "@/pages/JsonParser";
+import EditTestSuite from "@/pages/EditTestSuite";
+import Pricing from "@/pages/Pricing";
+import Terms from "@/pages/Terms";
+import Privacy from "@/pages/Privacy";
+import AccountSettingsPage from "@/pages/profile/AccountSettings";
+import AccountProfile from "@/pages/profile/AccountProfile";
+import AccountSecurity from "@/pages/profile/AccountSecurity";
+import AccountPreferences from "@/pages/profile/AccountPreferences";
+import AccountBilling from "@/pages/profile/AccountBilling";
+import Plan from "@/components/Plan/Plan";
 
 export default function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -46,22 +57,35 @@ export default function Router() {
         </>
       ) : (
         <AppLayout>
-          <Route path="/" component={Dashboard} />
-          <Route path="/request-builder" component={RequestBuilder} />
-          <Route path="/test-suites" component={TestSuites} />
-          <Route path="/request-chains" component={RequestChains} />
-          <Route path="/scheduler" component={Scheduler} />
-          <Route path="/executions" component={Executions} />
-          <Route path="/cicd" component={CicdIntegration} />
-          <Route path="/profile" component={Profile} />
-          <Route path="/settings" component={Settings} />
-          <Route path="/data-management" component={DataManagement} />
-          <Route path="/utilities" component={Utilities} />
-          <Route path="/reports" component={Reports} />
-          <Route path="/notifications" component={Notifications} />
+          <Route path='/' component={Dashboard} />
+            <Route path='/dashboard' component={Dashboard} />
+            <Route path='/json-parser' component={JsonParser} />
+            <Route path='/swagger-parser' component={SwaggerParser} />
+            <Route path='/request-builder' component={RequestBuilderPage} />
+            <Route path='/request-chains' component={RequestChains} />
+            <Route path='/test-suites' component={TestSuites} />
+            <Route path='/test-suites/:id/edit' component={EditTestSuite} />
+            <Route path='/scheduler' component={Scheduler} />
+            <Route path='/cicd' component={CiCdIntegration} />
+            <Route path='/executions' component={Executions} />
+            <Route path='/data-management' component={DataManagement} />
+            <Route path='/reports' component={Reports} />
+            <Route path='/settings' component={Settings} />
+            <Route path='/profile' component={Profile} />
+            <Route path='/notifications' component={Notifications} />
+            <Route path='/pricing' component={Pricing} />
+            <Route path='/plan-billing' component={Plan} />
+            <Route path='/terms' component={Terms} />
+            <Route path='/privacy' component={Privacy} />
+            <Route path="/settings/account" component={AccountSettingsPage} />
+            <Route path="/settings/profile" component={AccountProfile} />
+            <Route path="/settings/security" component={AccountSecurity} />
+            <Route path="/settings/preferences" component={AccountPreferences} />
+            <Route path="/settings/billing" component={AccountBilling} /> 
+            
         </AppLayout>
       )}
-      <Route component={NotFound} />
+      <Route path='*' component={NotFound} />
     </Switch>
   );
 }

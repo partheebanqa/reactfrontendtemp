@@ -12,11 +12,12 @@ import {
 } from "lucide-react";
 import { useRequest } from "@/hooks/useRequest";
 import JsonViewer from "../RequestEditor/JsonViewer";
+import PrimarySchemaPanel from "../schema/PrimarySchemaPanel";
 
 const ResponseViewer: React.FC = () => {
   const { responseData } = useRequest();
   const [activeTab, setActiveTab] = useState<
-    "body" | "headers" | "cookies" | "test-results"
+    "body" | "headers" | "cookies" | "test-results" | "schema"
   >("body");
   const [bodyView, setBodyView] = useState<"pretty" | "raw" | "preview">(
     "pretty"
@@ -117,6 +118,7 @@ const ResponseViewer: React.FC = () => {
               },
               { id: "cookies", label: "Cookies" },
               { id: "test-results", label: "Test Results" },
+              { id: "schema", label: "Schema" },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -258,7 +260,9 @@ const ResponseViewer: React.FC = () => {
 
                   <button
                     onClick={() =>
-                      copyToClipboard(JSON.stringify(responseData.data, null, 2))
+                      copyToClipboard(
+                        JSON.stringify(responseData.data, null, 2)
+                      )
                     }
                     className="p-1.5 sm:p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400"
                     title="Copy response"
@@ -325,6 +329,8 @@ const ResponseViewer: React.FC = () => {
             </div>
           </div>
         )}
+
+        {activeTab === "schema" && <PrimarySchemaPanel />}
       </div>
     </div>
   );

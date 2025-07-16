@@ -4,8 +4,11 @@ import {
   API_COLLECTIONS,
 } from "@/config/apiRoutes";
 import { apiRequest } from "@/lib/queryClient";
-import { Collection, CreateCollection, ImportCollection } from "@/shared/types/collection";
-import { formatRequest } from "./request-builder.service";
+import {
+  Collection,
+  CreateCollection,
+  ImportCollection,
+} from "@/shared/types/collection";
 
 export const fetchCollectionList = async (workspaceId: string) => {
   try {
@@ -43,11 +46,21 @@ export const addCollection = async (collection: CreateCollection) => {
   }
 };
 
-export const setFavouriteCollection = async ({collectionId, IsImportant}: {collectionId: string, IsImportant: boolean}) => {
+export const setFavouriteCollection = async ({
+  collectionId,
+  IsImportant,
+}: {
+  collectionId: string;
+  IsImportant: boolean;
+}) => {
   try {
-    const response = await apiRequest("PUT", `${API_COLLECTIONS}/${collectionId}/favourite`, {
-      body: JSON.stringify({ IsImportant }),
-    });
+    const response = await apiRequest(
+      "PUT",
+      `${API_COLLECTIONS}/${collectionId}/favourite`,
+      {
+        body: JSON.stringify({ IsImportant }),
+      }
+    );
     if (!response.ok) {
       throw new Error("Failed to update collection");
     }
@@ -57,7 +70,6 @@ export const setFavouriteCollection = async ({collectionId, IsImportant}: {colle
     throw error;
   }
 };
-
 
 export const deleteCollection = async (collectionId: string) => {
   try {
@@ -236,4 +248,28 @@ export const renameRequest = async ({
     console.error("Error duplicating request:", error);
     throw error;
   }
+};
+
+export const formatRequest = (request: any) => {
+  return {
+    id: request.Id || request.id,
+    collectionId: request.CollectionId || request.collectionId,
+    name: request.Name || request.name,
+    description: request.Description || request.description || "",
+    method: request.Method || request.method,
+    url: request.Url || request.url,
+    order: request.Order || request.order || 0,
+    bodyType: request.BodyType || request.bodyType || "none",
+    bodyFormData: request.BodyFormData || request.bodyFormData,
+    bodyRawContent: request.BodyRawContent || request.bodyRawContent,
+    authorizationType:
+      request.AuthorizationType || request.authorizationType || "none",
+    authorization: request.Authorization || request.authorization || {},
+    headers: request.Headers || request.headers || [],
+    params: request.Params || request.params || [],
+    variables: request.Variables || request.variables || {},
+    createdBy: request.CreatedBy || request.createdBy,
+    createdAt: request.CreatedAt || request.createdAt,
+    updatedAt: request.UpdatedAt || request.updatedAt,
+  };
 };

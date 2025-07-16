@@ -62,7 +62,6 @@ export const collectionActions = {
   },
 
   setCollections: (collections: Collection[]) => {
-    console.log("🚀 ~ collections:", collections);
     collectionStore.setState((state) => ({
       ...state,
       collections,

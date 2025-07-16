@@ -55,7 +55,27 @@ export function useCollection() {
     if (targetCollection?.hasFetchedRequests) {
       return;
     }
-    fetchCollectionRequests.mutateAsync(collectionId);
+
+    // Store any local requests that haven't been saved to the server yet
+    const unsavedRequests =
+      targetCollection?.requests.filter((req) => !req.id) || [];
+
+    // Fetch requests from server, then merge with unsaved local requests
+    fetchCollectionRequests.mutateAsync(collectionId).then(() => {
+      if (unsavedRequests.length > 0) {
+        // After fetching, add back any unsaved requests
+        const updatedCollections = collections.map((col) => {
+          if (col.id === collectionId) {
+            return {
+              ...col,
+              requests: [...col.requests, ...unsavedRequests],
+            };
+          }
+          return col;
+        });
+        setCollection(updatedCollections);
+      }
+    });
   };
 
   useEffect(() => {

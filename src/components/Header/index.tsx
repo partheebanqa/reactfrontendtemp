@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Bell,
   Search,
@@ -6,6 +6,11 @@ import {
   User,
   LogOut,
   ChevronDown,
+  Sun,
+  Moon,
+  Ghost,
+  Palette,
+  HelpCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,6 +32,7 @@ import { useToast } from "@/hooks/useToast";
 export default function Header() {
   const { user, logoutMutation } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
+  const [theme, setTheme] = useState("light");
   const {
     currentWorkspace,
     workspaces,
@@ -42,7 +48,7 @@ export default function Header() {
     workspace: null as any,
   });
   const [_, setLocation] = useLocation();
-  const { success} = useToast();
+  const { success } = useToast();
 
   const handleLogout = async () => {
     logoutMutation.mutate();
@@ -110,6 +116,17 @@ export default function Header() {
     }
   };
 
+  const themes = [
+    { id: "light", icon: Sun, tooltip: "Light Theme" },
+    { id: "dark", icon: Moon, tooltip: "Dark Theme" },
+    { id: "neutral", icon: Ghost, tooltip: "Neutral Blue Theme" },
+    { id: "custom", icon: Palette, tooltip: "Purple Theme" },
+  ];
+
+  const handleRedirect = (path: string) => {
+    setLocation(path);
+  };
+
   return (
     <header className="border-b bg-white dark:bg-gray-900 px-6 py-4">
       <div className="flex items-center justify-between">
@@ -145,14 +162,15 @@ export default function Header() {
                   <AvatarImage src={(user as any)?.profileImageUrl} />
                   <AvatarFallback>
                     {getInitials(
-                      (user as any)?.firstName,
+                      (user as any)?.firstName || "Test",
                       (user as any)?.lastName
                     )}
                   </AvatarFallback>
                 </Avatar>
                 <div className="text-left hidden md:block">
                   <div className="text-sm font-medium">
-                    {(user as any)?.firstName} {(user as any)?.lastName}
+                    {(user as any)?.firstName || "Test"}{" "}
+                    {(user as any)?.lastName}
                   </div>
                   <div className="text-xs text-gray-500">
                     {(user as any)?.role}
@@ -162,11 +180,70 @@ export default function Header() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuItem>
-                <User className="mr-2 h-4 w-4" />
-                Profile Settings
-              </DropdownMenuItem>
+              <div className="p-4">
+                <div className="flex items-center">
+                  <div className="w-10 h-10 bg-blue-200 rounded-full flex items-center justify-center">
+                    <span className="text-blue-800 font-medium">U</span>
+                  </div>
+                  <div className="ml-3">
+                    <p className="text-sm font-medium text-gray-900">
+                      John Doe
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      john.doe@example.com
+                    </p>
+                  </div>
+                </div>
+              </div>
               <DropdownMenuSeparator />
+              <div className="px-3 py-2">
+                <p className="text-xs font-medium text-gray-500 mb-2 pl-2">
+                  Theme
+                </p>
+                <div className="flex items-center justify-between gap-1 bg-gray-50 dark:bg-gray-800 p-2 rounded-lg">
+                  {themes.map((themeOption) => (
+                    <div
+                      key={themeOption.id}
+                      className="relative group"
+                      data-tooltip-id={`theme-tooltip-${themeOption.id}`}
+                    >
+                      <button
+                        onClick={() => setTheme(themeOption.id as any)}
+                        className={`p-2 rounded-md transition-all duration-200 ${
+                          theme === themeOption.id
+                            ? "bg-white dark:bg-gray-700 text-blue-600 shadow-sm"
+                            : "text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700"
+                        }`}
+                        aria-label={themeOption.tooltip}
+                      >
+                        <themeOption.icon size={18} />
+                      </button>
+                      <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1 px-2 py-1 bg-gray-800 text-white text-xs rounded pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
+                        {themeOption.tooltip}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => handleRedirect("/settings/profile")}
+              >
+                <User className="mr-2 h-4 w-4" />
+                Your Profile
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => handleRedirect("/settings/account")}
+              >
+                <Settings className="mr-2 h-4 w-4" />
+                Account Settings
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => handleRedirect("/settings/help")}
+              >
+                <HelpCircle className="mr-2 h-4 w-4" />
+                Help & Support
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={handleLogout} className="text-red-600">
                 <LogOut className="mr-2 h-4 w-4" />
                 Sign Out

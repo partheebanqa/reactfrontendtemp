@@ -1,26 +1,39 @@
 import { Store, useStore } from "@tanstack/react-store";
-import { RequestData, ResponseData, KeyValuePair, RequestState, ErrorState } from '@/shared/types/request';
+import {
+  RequestData,
+  ResponseData,
+  KeyValuePair,
+  RequestState,
+  ErrorState,
+} from "@/shared/types/request";
 import { CollectionRequest } from "@/shared/types/collection";
 
 // Define the shape of our request state
 
 // Initial state for request
 export const initialRequestState: RequestState = {
-
   requestData: {
-    method: 'GET',
-    url: '',
+    method: "GET",
+    url: "",
     params: [],
-    headers: [{ key: 'Content-Type', value: 'application/json' }],
-    body: ''
+    headers: [],
+    authorization: {},
+    authorizationType: "none",
+    bodyType: 'none',
+    bodyFormData: null,
+    bodyRawContent: null,
+    variables: {},
+    order: 0,
+    createdAt: new Date().toISOString(),
+
   },
   responseData: null,
   isLoading: false,
   error: {
-    title: '',
-    description: '',
-    suggestions: []
-  }
+    title: "",
+    description: "",
+    suggestions: [],
+  },
 };
 
 // Create the store
@@ -32,65 +45,62 @@ export const requestActions = {
   updateRequestData: (data: Partial<RequestData>) => {
     requestStore.setState((state) => ({
       ...state,
-      requestData : {
-        ...state.requestData,
-        ...data
-      }
+      data,
     }));
   },
-  
+
   // Set response data
   setResponseData: (responseData: ResponseData | null) => {
     requestStore.setState((state) => ({
       ...state,
       responseData,
-      isLoading: false
+      isLoading: false,
     }));
   },
-  
+
   // Set loading state
   setIsLoading: (isLoading: boolean) => {
     requestStore.setState((state) => ({
       ...state,
-      isLoading
+      isLoading,
     }));
   },
-  
+
   // Set error
   setError: (error: ErrorState) => {
     requestStore.setState((state) => ({
       ...state,
       error,
-      isLoading: false
+      isLoading: false,
     }));
   },
-  
+
   // Helper function to build URL with params
   buildUrl: (url: string, params: KeyValuePair[]): string => {
-    const validParams = params.filter(p => p.key && p.value);
+    const validParams = params.filter((p) => p.key && p.value);
     if (validParams.length === 0) return url;
-    
-    const urlObj = new URL(url.startsWith('http') ? url : `http://${url}`);
-    validParams.forEach(param => {
+
+    const urlObj = new URL(url.startsWith("http") ? url : `http://${url}`);
+    validParams.forEach((param) => {
       urlObj.searchParams.append(param.key, param.value);
     });
-    
+
     return urlObj.toString();
   },
-  
+
   // Reset request data to initial state
   resetRequestData: () => {
     requestStore.setState((state) => ({
       ...state,
-      requestData: initialRequestState.requestData
+      requestData: initialRequestState.requestData,
     }));
   },
-  
+
   // Reset response data
   resetResponseData: () => {
     requestStore.setState((state) => ({
       ...state,
-      responseData: null
+      responseData: null,
     }));
   },
 
@@ -98,13 +108,12 @@ export const requestActions = {
     requestStore.setState((state) => ({
       ...state,
       error: {
-        title: '',
-        description: '',
-        suggestions: []
-      }
+        title: "",
+        description: "",
+        suggestions: [],
+      },
     }));
-  }
- 
+  },
 };
 
 // Hook to use the request store
