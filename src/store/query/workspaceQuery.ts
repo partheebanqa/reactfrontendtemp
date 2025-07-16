@@ -32,8 +32,6 @@ export const useWorkspacesQuery = (enabled = true) => {
     refetchOnWindowFocus: false,
     queryFn: async () => {
       try {
-        console.log("Fetching workspaces...");
-
         workspaceActions.setIsLoading(true);
         const data = await fetchWorkspaces();
 

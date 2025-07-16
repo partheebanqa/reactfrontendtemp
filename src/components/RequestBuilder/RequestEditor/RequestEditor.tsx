@@ -23,6 +23,7 @@ const RequestEditor: React.FC = () => {
     addRequestMutation,
     toggleExpandedCollection,
     renameRequestMutation,
+    setCollection,
   } = useCollection();
   const { error: showError, success: showSuccess } = useToast();
   const { currentWorkspace } = useWorkspace();
@@ -207,8 +208,23 @@ const RequestEditor: React.FC = () => {
     }
     const active = { ...activeRequest, name: editedName.trim() };
     setActiveRequest(active);
-    if (activeRequest?.id) {
-    }
+    setCollection(
+      collections.map((collection) => {
+        if (collection.id === activeRequest.collectionId) {
+          return {
+            ...collection,
+            requests: collection.requests.map((request) =>{
+              return request.order === activeRequest.order ? active : request
+            }
+              
+            ),
+          };
+        } else {
+          return collection;
+        }
+      })
+    );
+
     setIsEditingName(false);
   };
 
@@ -295,7 +311,6 @@ const RequestEditor: React.FC = () => {
         variables: activeRequest.variables || {},
       };
       const request = await addRequestMutation.mutateAsync(requestData);
-      console.log("🚀 ~ handleConfirmSave ~ request:", request);
       setActiveRequest(requestData);
       setShowSaveModal(false);
       setNewCollectionName("");

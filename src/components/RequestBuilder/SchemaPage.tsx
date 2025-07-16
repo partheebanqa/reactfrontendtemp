@@ -1,16 +1,20 @@
-import React, { useState } from 'react';
-import { Download, Eye, Server } from 'lucide-react';
-import SchemaUploader from './schema/SchemaUploader';
-import SchemaList from './schema/SchemaList';
-import SchemaComparer from './schema/SchemaComparer';
-import JsonTreeViewer from './schema/JsonTreeViewer';
-import { useSchema } from '@/hooks/useSchema';
+import React, { useState } from "react";
+import { Download, Eye, Server } from "lucide-react";
+import SchemaUploader from "./schema/SchemaUploader";
+import SchemaList from "./schema/SchemaList";
+import SchemaComparer from "./schema/SchemaComparer";
+import JsonTreeViewer from "./schema/JsonTreeViewer";
+import { useSchema } from "@/hooks/useSchema";
 
 const SchemaPage: React.FC = () => {
   const { schemas } = useSchema();
   const [compareMode, setCompareMode] = useState(false);
   const [selectedSchemas, setSelectedSchemas] = useState<string[]>([]);
-  const [viewSchema, setViewSchema] = useState<{ id: string; name: string; content: any } | null>(null);
+  const [viewSchema, setViewSchema] = useState<{
+    id: string;
+    name: string;
+    content: any;
+  } | null>(null);
 
   const toggleCompareMode = () => {
     setCompareMode(!compareMode);
@@ -20,21 +24,27 @@ const SchemaPage: React.FC = () => {
   const handleSchemaSelect = (schemaId: string) => {
     if (compareMode) {
       if (selectedSchemas.includes(schemaId)) {
-        setSelectedSchemas(selectedSchemas.filter(id => id !== schemaId));
+        setSelectedSchemas(selectedSchemas.filter((id) => id !== schemaId));
       } else if (selectedSchemas.length < 2) {
         setSelectedSchemas([...selectedSchemas, schemaId]);
       }
     }
   };
 
-  const handleViewSchema = (schema: { id: string; name: string; content: any }) => {
+  const handleViewSchema = (schema: {
+    id: string;
+    name: string;
+    content: any;
+  }) => {
     setViewSchema(schema);
   };
 
   const handleDownloadSchema = (schema: { name: string; content: any }) => {
-    const blob = new Blob([JSON.stringify(schema.content, null, 2)], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify(schema.content, null, 2)], {
+      type: "application/json",
+    });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
     a.download = `${schema.name}.json`;
     document.body.appendChild(a);
@@ -53,20 +63,20 @@ const SchemaPage: React.FC = () => {
           <div className="flex space-x-3">
             <button
               className={`px-3 py-1 rounded-md transition-colors ${
-                compareMode 
-                  ? 'bg-gray-200 text-gray-800' 
-                  : 'bg-indigo-600 text-white hover:bg-indigo-700'
+                compareMode
+                  ? "bg-gray-200 text-gray-800"
+                  : "bg-indigo-600 text-white hover:bg-indigo-700"
               }`}
               onClick={toggleCompareMode}
             >
-              {compareMode ? 'Cancel Compare' : 'Compare Schemas'}
+              {compareMode ? "Cancel Compare" : "Compare Schemas"}
             </button>
             {compareMode && (
               <button
                 className={`px-3 py-1 rounded-md ${
                   canCompare
-                    ? 'bg-green-600 text-white hover:bg-green-700'
-                    : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                    ? "bg-green-600 text-white hover:bg-green-700"
+                    : "bg-gray-200 text-gray-400 cursor-not-allowed"
                 } transition-colors`}
                 disabled={!canCompare}
               >
@@ -75,12 +85,12 @@ const SchemaPage: React.FC = () => {
             )}
           </div>
         </div>
-        
+
         <SchemaUploader />
-        
+
         {schemas.length > 0 ? (
-          <SchemaList 
-            compareMode={compareMode} 
+          <SchemaList
+            compareMode={compareMode}
             selectedSchemas={selectedSchemas}
             onSchemaSelect={handleSchemaSelect}
             onViewSchema={handleViewSchema}
@@ -89,11 +99,13 @@ const SchemaPage: React.FC = () => {
         ) : (
           <div className="p-6 border border-dashed border-gray-300 rounded-md text-center text-gray-500">
             <p>No schemas available</p>
-            <p className="mt-2 text-sm">Upload a schema or generate one from an API response</p>
+            <p className="mt-2 text-sm">
+              Upload a schema or generate one from an API response
+            </p>
           </div>
         )}
       </div>
-      
+
       {canCompare && (
         <div className="bg-white rounded-lg shadow-md p-4">
           <h2 className="text-xl font-semibold mb-4">Schema Comparison</h2>
@@ -115,8 +127,18 @@ const SchemaPage: React.FC = () => {
                 className="text-gray-500 hover:text-gray-700"
               >
                 <span className="sr-only">Close</span>
-                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                <svg
+                  className="h-6 w-6"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
                 </svg>
               </button>
             </div>

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useLocation } from 'wouter';
 import { useAuth } from '@/hooks/useAuth';
 import { useWorkspace } from '@/hooks/useWorkspace';
@@ -23,8 +23,13 @@ import {
   Clock,
   Crown,
   Receipt,
-} from 'lucide-react';
-import FeatureGate from './FeatureGate';
+  Zap,
+  ChevronDown,
+  ChevronRight,
+  Wrench,
+  ChevronsLeft,
+  ChevronsRight,
+} from "lucide-react";
 
 const menuItems = [
   {
@@ -80,6 +85,21 @@ const menuItems = [
     path: '/plan-billing',
     icon: Receipt,
     feature: 'plan_billing',
+  },
+];
+
+const utilsItems = [
+  {
+    label: "Swagger Parser",
+    path: "/swagger-parser",
+    icon: Zap,
+    feature: "swagger_parser",
+  },
+  {
+    label: "JSON Parser",
+    path: "/json-parser",
+    icon: Code,
+    feature: "json_parser",
   },
 ];
 
@@ -140,6 +160,8 @@ const Sidebar: React.FC = () => {
   const { user, logoutMutation } = useAuth();
   const { currentWorkspace } = useWorkspace();
   const { hasFeatureAccess, subscriptionPlan } = useFeatureGate();
+  const [utilsExpanded, setUtilsExpanded] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
 
   const NavItem: React.FC<{
     item: (typeof menuItems)[0];
@@ -148,6 +170,43 @@ const Sidebar: React.FC = () => {
   }> = ({ item, isActive, featureType }) => {
     const hasAccess = hasFeatureAccess(item.feature);
     const Icon = item.icon;
+
+    if (collapsed) {
+      return (
+        <Link href={item.path}>
+          <div className="relative group">
+            <Button
+              variant={isActive ? "secondary" : "ghost"}
+              className={`w-full p-3 flex justify-center ${
+                !hasAccess ? "opacity-50 cursor-not-allowed" : ""
+              }`}
+              disabled={!hasAccess}
+            >
+              <Icon className="w-5 h-5" />
+            </Button>
+            <div className="absolute left-full ml-2 hidden  bg-white shadow-md rounded p-2 z-50 whitespace-nowrap">
+              {item.label}
+              {!hasAccess && featureType === "pro" && (
+                <Badge
+                  variant="outline"
+                  className="ml-2 text-xs bg-blue-50 text-blue-700 border-blue-200"
+                >
+                  PRO
+                </Badge>
+              )}
+              {!hasAccess && featureType === "enterprise" && (
+                <Badge
+                  variant="outline"
+                  className="ml-2 text-xs bg-purple-50 text-purple-700 border-purple-200"
+                >
+                  ENT
+                </Badge>
+              )}
+            </div>
+          </div>
+        </Link>
+      );
+    }
 
     return (
       <Link href={item.path}>
@@ -184,48 +243,65 @@ const Sidebar: React.FC = () => {
     );
   };
 
-  return (
-    <aside className='w-64 bg-white shadow-lg flex flex-col border-r'>
-      {/* Logo Section */}
-      <div className='p-6 border-b'>
-        <div className='flex items-center space-x-3'>
-          <div className='w-8 h-8 bg-primary rounded-lg flex items-center justify-center'>
-            <Code className='w-4 h-4 text-primary-foreground' />
-          </div>
-          <div>
-            <h1 className='text-xl font-bold'>Optraflow</h1>
-            <Badge variant='secondary' className='text-xs'>
-              {subscriptionPlan === 'free'
-                ? 'Free'
-                : subscriptionPlan === 'pro'
-                ? 'Pro'
-                : 'Enterprise'}
-            </Badge>
-          </div>
-        </div>
-      </div>
+  const CategoryHeader: React.FC<{ title: string }> = ({ title }) => {
+    if (collapsed) return null;
 
-      {/* Trial Banner */}
-      {/* {subscriptionPlan === "free" && trialDaysLeft > 0 && (
-        <div className="mx-4 mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-          <div className="flex items-center space-x-2">
-            <Clock className="w-4 h-4 text-yellow-600" />
+    return (
+      <p className="px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+        {title}
+      </p>
+    );
+  };
+
+  return (
+    <aside
+      className={`${
+        collapsed ? "w-16" : "w-64"
+      } bg-white shadow-lg flex flex-col border-r transition-all duration-300`}
+    >
+      {/* Logo Section */}
+      <div
+        className={`${
+          collapsed ? "p-3" : "p-6"
+        } border-b flex justify-between items-center relative`}
+      >
+        {collapsed ? (
+          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center mx-auto">
+            <Code className="w-4 h-4 text-primary-foreground" />
+          </div>
+        ) : (
+          <div className="flex items-center space-x-3">
+            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+              <Code className="w-4 h-4 text-primary-foreground" />
+            </div>
             <div>
-              <p className="text-sm font-medium text-gray-900">
-                Trial: {trialDaysLeft} days left
-              </p>
-              <Link href="/pricing">
-                <Button variant="link" className="text-xs p-0 h-auto text-primary">
-                  Upgrade Now
-                </Button>
-              </Link>
+              <h1 className="text-xl font-bold">Optraflow</h1>
+              <Badge variant="secondary" className="text-xs">
+                {subscriptionPlan === "free"
+                  ? "Free"
+                  : subscriptionPlan === "pro"
+                  ? "Pro"
+                  : "Enterprise"}
+              </Badge>
             </div>
           </div>
-        </div>
-      )} */}
+        )}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setCollapsed(!collapsed)}
+          className={`p-1 ${collapsed ? 'absolute left-[50px] top-1/2 transform -translate-y-1/2 bg-[#2094f3] rounded-full h-auto hover:bg-[#1e7bbf]' : ''}`}
+        >
+          {collapsed ? <ChevronsRight size={10} /> : <ChevronsLeft size={16} />}
+        </Button>
+      </div>
 
       {/* Navigation */}
-      <nav className='flex-1 px-4 py-6 space-y-2 overflow-y-auto'>
+      <nav
+        className={`flex-1 ${
+          collapsed ? "px-2" : "px-4"
+        } py-6 space-y-2 overflow-y-auto`}
+      >
         {/* Core Features */}
         <div className='space-y-1'>
           {menuItems.map((item) => (
@@ -236,14 +312,53 @@ const Sidebar: React.FC = () => {
               featureType='free'
             />
           ))}
+
+          {/* Utils Dropdown */}
+          {!collapsed ? (
+            <div className="w-full">
+              <Button
+                variant="ghost"
+                className="w-full justify-start relative group"
+                onClick={() => setUtilsExpanded(!utilsExpanded)}
+              >
+                <Wrench className="w-4 h-4 mr-3" />
+                <span className="flex-1 text-left">Utilities</span>
+                {utilsExpanded ? (
+                  <ChevronDown className="w-4 h-4" />
+                ) : (
+                  <ChevronRight className="w-4 h-4" />
+                )}
+              </Button>
+
+              {utilsExpanded && (
+                <div className="pl-3 space-y-1 mt-1">
+                  {utilsItems.map((item) => (
+                    <NavItem
+                      key={item.path}
+                      item={item}
+                      isActive={location === item.path}
+                      featureType="free"
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            utilsItems.map((item) => (
+              <NavItem
+                key={item.path}
+                item={item}
+                isActive={location === item.path}
+                featureType="free"
+              />
+            ))
+          )}
         </div>
 
         {/* Pro Features */}
-        <div className='pt-4 border-t'>
-          <p className='px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2'>
-            Pro Features
-          </p>
-          <div className='space-y-1'>
+        <div className="pt-4 border-t">
+          <CategoryHeader title="Pro Features" />
+          <div className="space-y-1">
             {proFeatures.map((item) => (
               <NavItem
                 key={item.path}
@@ -256,11 +371,9 @@ const Sidebar: React.FC = () => {
         </div>
 
         {/* Enterprise Features */}
-        <div className='pt-4 border-t'>
-          <p className='px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2'>
-            Enterprise
-          </p>
-          <div className='space-y-1'>
+        <div className="pt-4 border-t">
+          <CategoryHeader title="Enterprise" />
+          <div className="space-y-1">
             {enterpriseFeatures.map((item) => (
               <NavItem
                 key={item.path}
@@ -287,33 +400,50 @@ const Sidebar: React.FC = () => {
       </nav>
 
       {/* User Profile */}
-      <div className='p-4 border-t'>
-        <div className='flex items-center space-x-3'>
-          <Avatar className='w-10 h-10'>
-            {/* <AvatarImage src={user?.profileImageUrl} alt={user?.firstName} /> */}
-            <AvatarFallback>
-              {user?.firstName?.[0]}
-
-              {user?.lastName?.[0]}
-            </AvatarFallback>
-          </Avatar>
-          <div className='flex-1 min-w-0'>
-            <p className='text-sm font-medium truncate'>
-              {user?.firstName} {user?.lastName}
-            </p>
-            <p className='text-xs text-muted-foreground truncate'>
-              {currentWorkspace?.name}
-            </p>
+      <div className={`${collapsed ? "p-2" : "p-4"} border-t`}>
+        {collapsed ? (
+          <div className="flex justify-center">
+            <Avatar className="w-10 h-10">
+              <AvatarImage
+                src={user?.avatar || user?.imageUrl}
+                alt={user?.firstName}
+              />
+              <AvatarFallback>
+                {user?.firstName?.[0]}
+                {user?.lastName?.[0]}
+              </AvatarFallback>
+            </Avatar>
           </div>
-          <Button
-            variant='ghost'
-            size='sm'
-            onClick={() => logoutMutation.mutate()}
-            title='Logout'
-          >
-            <Settings className='w-4 h-4' />
-          </Button>
-        </div>
+        ) : (
+          <div className="flex items-center space-x-3">
+            <Avatar className="w-10 h-10">
+              <AvatarImage
+                src={user?.avatar || user?.imageUrl}
+                alt={user?.firstName}
+              />
+              <AvatarFallback>
+                {user?.firstName?.[0]}
+                {user?.lastName?.[0]}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium truncate">
+                {user?.firstName} {user?.lastName}
+              </p>
+              <p className="text-xs text-muted-foreground truncate">
+                {currentWorkspace?.name}
+              </p>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => logoutMutation.mutate()}
+              title="Logout"
+            >
+              <Settings className="w-4 h-4" />
+            </Button>
+          </div>
+        )}
       </div>
     </aside>
   );

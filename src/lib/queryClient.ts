@@ -7,7 +7,6 @@ import { i } from "node_modules/vite/dist/node/types.d-aGj9QkWt";
 import { authActions, authStore } from "@/store/authStore";
 
 async function throwIfResNotOk(res: Response) {
-  console.log("🚀 ~ throwIfResNotOk ~ res:", res);
   if (!res.ok) {
     const text = (await res.text()) || res.statusText;
     throw new Error(`${res.status}: ${text}`);
@@ -80,10 +79,8 @@ export async function apiRequest(
       fetchOptions.headers = { ...options?.headers };
     }
 
-    console.log("🚀 ~ fetchOptions:", fetchOptions);
 
     const res = await fetch(url, fetchOptions);
-    console.log("🚀 ~ res:", res);
 
     if(res.status === 401) {
       removeCookie(USER_COOKIE_NAME);
@@ -119,7 +116,6 @@ export const getQueryFn: <T>(options: {
     // }
 
     const res = await apiRequest("GET", url);
-    console.log("🚀 ~ getQueryFn:", res)
 
     if (res.status === 401) {
       removeCookie(USER_COOKIE_NAME);

@@ -11,7 +11,6 @@ import {
   renameCollection,
   renameRequest,
   setFavouriteCollection,
-  updateCollection,
 } from "@/service/collection.service";
 import { workspaceStore } from "../workspaceStore";
 import {
@@ -95,36 +94,39 @@ export const useSetFavouriteCollectionMutation = () => {
 };
 
 export const useCollectionRequestsQuery = () => {
-  const currentWorkspace = workspaceStore.state.currentWorkspace;
   return useMutation({
     mutationFn: getCollectionRequests,
     onSuccess: (requests, collectionId) => {
-      console.log("🚀 ~ useCollectionRequestsQuery ~ requests:", requests);
-      queryClient.setQueryData(
-        ["/collections", currentWorkspace?.id],
-        (oldData: Collection[]) => {
-          console.log("🚀 ~ useCollectionRequestsQuery ~ oldData:", oldData);
-          if (!oldData) return oldData;
-          const updatedCollection: Collection[] = oldData.map(
-            (collection: Collection) => {
-              console.log(
-                "🚀 ~ constoldDatas:Collection[]=oldData.map ~ collection:",
-                collection
-              );
-              if (collection?.id === collectionId) {
-                return {
-                  ...collection,
-                  requests: requests,
-                  hasFetchedRequests: true,
-                };
-              }
-              return collection;
+      const updatedCollection = collectionStore.state.collections.map(
+        (collection) => {
+          if (collection.id === collectionId) {
+            const unsavedRequests = collection.requests.filter(
+              (req) => !req.id
+            );
+            if (unsavedRequests.length > 0) {
+              const collectionRequest: CollectionRequest = collectionStore.state
+                .activeRequest as CollectionRequest;
+              collectionActions.setActiveRequest({
+                ...collectionRequest,
+                order: collection.requests.length,
+              });
             }
-          );
-          collectionActions.setCollections(updatedCollection);
-          return updatedCollection;
+            return {
+              ...collection,
+              requests: [
+                ...requests,
+                ...unsavedRequests.map((req) => ({
+                  ...req,
+                  order: requests.length + 1,
+                })),
+              ],
+              hasFetchedRequests: true,
+            };
+          }
+          return collection;
         }
       );
+      collectionActions.setCollections(updatedCollection);
     },
   });
 };
@@ -132,9 +134,7 @@ export const useCollectionRequestsQuery = () => {
 export const useImpotPostmanCollectionMutation = () => {
   return useMutation({
     mutationFn: importCollectionFile,
-    onSuccess: async (response) => {
-      
-    },
+    onSuccess: async (response) => {},
   });
 };
 
@@ -144,7 +144,6 @@ export const useAddRequestMutation = () => {
     mutationFn: addRequest,
     onSuccess: async (data, variables) => {
       fetchCollectionRequests.mutateAsync(variables.collectionId);
-     
     },
   });
 };
@@ -162,7 +161,6 @@ export const useDeleteRequestMutation = () => {
   return useMutation({
     mutationFn: deleteRequest,
     onSuccess: (data, variables) => {
-      console.log("🚀 ~ useDeleteRequestMutation ~ data:", data);
       collectionActions.deleteRequest(variables);
     },
     onError: (error) => {
