@@ -1,28 +1,39 @@
-import axios from 'axios';
 import { CreateTestSuitePayload, TestSuite } from '@/models/TestSuite.model';
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-
-const BEARER_TOKEN = `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJvcmdJZCI6IjFhZTZjMjY1LWU1MDItNGFlZC1hYWRjLTQ4MzM3ZTYyMDgwNyIsInRlbmFudElkIjoiYzE1ZDQ4OWItOGMxZS00NmZiLWFlYzgtMDlmMDBmZjUyMTNjIiwicm9sZXMiOlsiT3JnIEFkbWluIl0sInN1YiI6IjM1YmI2NzBkLTcyNTYtNDg0MC1iOTI1LTJkYjk1M2ZmYmVlNCIsImV4cCI6MTc1MjgwNDE5MywibmJmIjoxNzUyNzE3NzkzLCJpYXQiOjE3NTI3MTc3OTN9.ubV5gQYgFNzyBl7poOa2bmoxBnfbGKScejm4QrrfLGw`;
+import { apiRequest } from '@/lib/queryClient';
+import { API_TEST_SUITES } from '@/config/apiRoutes';
 
 const workspaceId = '8d9ea72f-7f74-4821-8909-e953066d9a8b';
 
-const axiosInstance = axios.create({
-  baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-    Authorization: `Bearer ${BEARER_TOKEN}`,
-  },
-});
-
 export const getAllTestSuites = async (): Promise<TestSuite[]> => {
   try {
-    const response = await axiosInstance.get(`/test-suites?ws=${workspaceId}`);
-    return response.data.testSuites;
-  } catch (error: any) {
-    throw new Error(
-      error.response?.data?.message || 'Failed to fetch test suites'
+    const response = await apiRequest(
+      'GET',
+      `${API_TEST_SUITES}?ws=${workspaceId}`
     );
+    const data = await response.json();
+    return data.testSuites;
+  } catch (error: any) {
+    throw new Error(error.message || 'Failed to fetch test suites');
+  }
+};
+
+export const getTestSuites = async (id: string): Promise<TestSuite> => {
+  try {
+    const response = await apiRequest('GET', `${API_TEST_SUITES}/${id}`);
+    return await response.json();
+  } catch (error: any) {
+    throw new Error(error.message || 'Failed to fetch test suite');
+  }
+};
+
+export const deleteTestSuite = async (id: string): Promise<void> => {
+  try {
+    const response = await apiRequest('DELETE', `${API_TEST_SUITES}/${id}`);
+    if (!response.ok) {
+      throw new Error(`Failed to delete test suite: ${response.statusText}`);
+    }
+  } catch (error: any) {
+    throw new Error(error.message || 'Failed to delete test suite');
   }
 };
 
@@ -30,36 +41,23 @@ export const createTestSuite = async (
   payload: CreateTestSuitePayload
 ): Promise<any> => {
   try {
-    const response = await axiosInstance.post('/test-suites', {
-      ...payload,
-      workspaceId,
+    const response = await apiRequest('POST', API_TEST_SUITES, {
+      body: JSON.stringify({
+        ...payload,
+        workspaceId,
+      }),
+      headers: {
+        'Content-Type': 'application/json',
+      },
     });
-    return response.data;
-  } catch (error: any) {
-    throw new Error(
-      error.response?.data?.message || 'Failed to create test suite'
-    );
-  }
-};
 
-export const deleteTestSuite = async (id: string): Promise<void> => {
-  try {
-    await axiosInstance.delete(`/test-suites/${id}`);
-  } catch (error: any) {
-    throw new Error(
-      error.response?.data?.message || 'Failed to delete test suite'
-    );
-  }
-};
+    if (!response.ok) {
+      throw new Error('Failed to create test suite');
+    }
 
-export const getTestSuites = async (id: string): Promise<TestSuite> => {
-  try {
-    const response = await axiosInstance.get(`/test-suites/${id}`);
-    return response.data;
-  } catch (error: any) {
-    throw new Error(
-      error.response?.data?.message || 'Failed to fetch test suite'
-    );
+    return await response.json();
+  } catch (error) {
+    throw new Error((error as Error).message || 'Failed to create test suite');
   }
 };
 
@@ -73,12 +71,20 @@ export const updateTestSuite = async (
   }
 ) => {
   try {
-    const response = await axiosInstance.put(`/test-suites/${id}`, data);
-    return response.data;
-  } catch (error: any) {
-    throw new Error(
-      error.response?.data?.message || 'Failed to update test suite'
-    );
+    const response = await apiRequest('PUT', `${API_TEST_SUITES}/${id}`, {
+      body: JSON.stringify(data),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to update test suite');
+    }
+
+    return await response.json();
+  } catch (error) {
+    throw new Error((error as Error).message || 'Failed to update test suite');
   }
 };
 
@@ -87,8 +93,20 @@ export const executeTestSuite = async ({
 }: {
   testSuiteId: string;
 }): Promise<void> => {
-  const response = await axiosInstance.post('/executor/test-suite', {
-    testSuiteId,
-  });
-  return response.data;
+  try {
+    const response = await apiRequest('POST', '/executor/test-suite', {
+      body: JSON.stringify({ testSuiteId }),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to execute test suite');
+    }
+
+    return await response.json();
+  } catch (error) {
+    throw new Error((error as Error).message || 'Failed to execute test suite');
+  }
 };

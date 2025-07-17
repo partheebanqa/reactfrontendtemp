@@ -10,7 +10,7 @@ import NotFound from '@/pages/not-found';
 
 // Layout
 import AppLayout from '@/components/AppLayout';
-import Dashboard from '@/pages/DashboardPage';
+import Dashboard from '@/pages/Dashboard';
 import RequestBuilderPage from '@/pages/RequestBuilderPage';
 import TestSuites from '@/pages/TestSuites';
 import RequestChains from '@/pages/RequestChains';

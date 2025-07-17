@@ -38,7 +38,7 @@ export interface BodyAssertion {
   value: any;
 }
 
-export type AssertionOperator = 
+export type AssertionOperator =
   | 'equals'
   | 'notEquals'
   | 'contains'
@@ -81,11 +81,11 @@ export interface KeyValuePair {
   enabled?: boolean;
 }
 
-export type DataVariableType = 
-  | 'string' 
-  | 'number' 
+export type DataVariableType =
+  | 'string'
+  | 'number'
   | 'singleDigit'
-  | 'boolean' 
+  | 'boolean'
   | 'object'
   | 'firstName'
   | 'lastName'
@@ -131,15 +131,15 @@ export interface GraphQLValidationResult {
 
 export interface Collection {
   id: string;
-  workspaceId:string;
+  workspaceId: string;
   name: string;
   isImportant?: boolean;
-  variables?:string;
+  variables?: string;
   requests: CollectionRequest[];
-  hasFetchedRequests?:boolean;
+  hasFetchedRequests?: boolean;
   createdAt: string;
   deletedAt: string;
-  updatedAt:string;
+  updatedAt: string;
 }
 
 export interface CollectionFolder {
@@ -152,31 +152,31 @@ export interface CollectionFolder {
 }
 
 export interface CollectionRequest {
-    id?: string;
-    collectionId?: string;
-    description?: string;
-    name?: string;
-    order: number;
-    method: string;
-    url: string;
-    bodyType: string;
-    bodyFormData: string | null;
-    bodyRawContent?: string | null;
-    authorizationType: string;
-    authorization: {
-        token?: string; // bearer
-        username?: string; // basic
-        password?: string; // basic
-        key?: string;      // apiKey
-        value?: string;    // apiKey
-        addTo?: 'header' | 'query'; // apiKey
-    };
-    headers?: Header[];
-    params?: Param[];
-    variables: Record<string, any>;
-    createdBy?: string;
-    createdAt?: string;
-    updatedAt?: string;
+  id?: string;
+  collectionId?: string;
+  description?: string;
+  name?: string;
+  order: number;
+  method: string;
+  url: string;
+  bodyType: string;
+  bodyFormData: string | null;
+  bodyRawContent?: string | null;
+  authorizationType: string;
+  authorization: {
+    token?: string; // bearer
+    username?: string; // basic
+    password?: string; // basic
+    key?: string; // apiKey
+    value?: string; // apiKey
+    addTo?: 'header' | 'query'; // apiKey
+  };
+  headers?: Header[];
+  params?: Param[];
+  variables: Record<string, any>;
+  createdBy?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface ChangelogEntry {
@@ -196,16 +196,16 @@ export interface ImportResult {
 }
 
 export interface ImportCollection {
-  name:string;
-  workspaceId:string;
-  inputMethod:string;
-  specificationType:string;
-  raw:string;
-  url?:string;
-  file?:File;
+  name: string;
+  workspaceId: string;
+  inputMethod: string;
+  specificationType: string;
+  raw: string;
+  url?: string;
+  file?: File;
 }
-export interface CreateCollection{
-    name:string,
-    workspaceId:string,
-    isImportant:boolean
+export interface CreateCollection {
+  name: string;
+  workspaceId: string;
+  isImportant: boolean;
 }
