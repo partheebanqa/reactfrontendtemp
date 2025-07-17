@@ -19,7 +19,7 @@ import Executions from '@/pages/Executions';
 import CiCdIntegration from '@/pages/CiCdIntegration';
 import Profile from '@/pages/Profile';
 import Settings from '@/pages/Settings';
-import DataManagement from '@/pages/DataManagement';
+import DataManagement from '@/pages/DataManaementPage';
 import Reports from '@/pages/Reports';
 import Notifications from '@/pages/Notifications';
 import SwaggerParser from '@/pages/SwaggerParser';
