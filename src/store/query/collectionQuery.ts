@@ -1,5 +1,5 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { collectionActions, collectionStore } from "../collectionStore";
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { collectionActions, collectionStore } from '../collectionStore';
 import {
   addCollection,
   addRequest,
@@ -11,24 +11,24 @@ import {
   renameCollection,
   renameRequest,
   setFavouriteCollection,
-} from "@/service/collection.service";
-import { workspaceStore } from "../workspaceStore";
+} from '@/services/collection.service';
+import { workspaceStore } from '../workspaceStore';
 import {
   Collection,
   CollectionRequest,
   CreateCollection,
-} from "@/shared/types/collection";
-import { queryClient } from "@/lib/queryClient";
+} from '@/shared/types/collection';
+import { queryClient } from '@/lib/queryClient';
 
 // Query to fetch collection data with current workspace context
 export const useCollectionQuery = (enabled = true) => {
   const currentWorkspace = workspaceStore.state.currentWorkspace;
   return useQuery({
-    queryKey: ["/collections", currentWorkspace?.id],
+    queryKey: ['/collections', currentWorkspace?.id],
     enabled: enabled && !!currentWorkspace?.id, // Only enable if we have a workspace
     queryFn: async () => {
       if (!currentWorkspace?.id) {
-        throw new Error("No active workspace selected");
+        throw new Error('No active workspace selected');
       }
       try {
         collectionActions.setIsLoading(true);
@@ -42,10 +42,10 @@ export const useCollectionQuery = (enabled = true) => {
         collectionActions.setIsLoading(false);
         return data;
       } catch (error) {
-        console.error("Collection fetch error:", error);
+        console.error('Collection fetch error:', error);
         collectionActions.setIsLoading(false);
         collectionActions.setError(
-          error instanceof Error ? error.message : "Failed to fetch collections"
+          error instanceof Error ? error.message : 'Failed to fetch collections'
         );
         return null;
       }
@@ -65,7 +65,7 @@ export const useAddCollectionMutation = () => {
       return response;
     },
     onError: (error) => {
-      console.error("Error adding collection:", error);
+      console.error('Error adding collection:', error);
       throw error;
     },
   });
@@ -75,7 +75,7 @@ export const useRenameCollectionMutation = () => {
   return useMutation({
     mutationFn: renameCollection,
     onSuccess: (data, variables) => {
-      console.log("🚀 ~ useRenameCollectionMutation ~ data:", data);
+      console.log('🚀 ~ useRenameCollectionMutation ~ data:', data);
       collectionActions.renameCollection(variables.id, variables.name);
     },
   });
@@ -152,7 +152,10 @@ export const useRenameRequestMutation = () => {
   return useMutation({
     mutationFn: renameRequest,
     onSuccess: (data, variables) => {
-      collectionActions.renameRequest(variables?.newName, variables.requestId);
+      collectionActions.renameRequest(
+        variables?.newName || '',
+        variables.requestId
+      );
     },
   });
 };
@@ -164,7 +167,7 @@ export const useDeleteRequestMutation = () => {
       collectionActions.deleteRequest(variables);
     },
     onError: (error) => {
-      console.error("Error deleting request:", error);
+      console.error('Error deleting request:', error);
       throw error;
     },
   });
@@ -178,7 +181,7 @@ export const useDuplicateRequestMutation = () => {
       return data;
     },
     onError: (error) => {
-      console.error("Error duplicating request:", error);
+      console.error('Error duplicating request:', error);
       throw error;
     },
   });

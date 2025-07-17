@@ -28,60 +28,60 @@ const DataManagement: React.FC = () => {
 
   const [variables, setVariables] = useState<Variable[]>([
     {
-      id: "1",
-      key: "USER_ID",
-      value: "{{random_uuid}}",
-      type: "dynamic",
-      scope: "global",
+      id: '1',
+      key: 'USER_ID',
+      value: '{{random_uuid}}',
+      type: 'dynamic',
+      scope: 'global',
       isSecret: false,
-      description: "Generates a random UUID for each API request",
+      description: 'Generates a random UUID for each API request',
       environmentId: '',
-      isGlobal: true
+      isGlobal: true,
     },
     {
-      id: "2", 
-      key: "API_TOKEN",
-      value: "bearer_abc123xyz789",
-      type: "static",
-      scope: "global",
+      id: '2',
+      key: 'API_TOKEN',
+      value: 'bearer_abc123xyz789',
+      type: 'static',
+      scope: 'global',
       isSecret: true,
-      description: "Fixed authentication token for API requests",
-      environmentId: null,
-      isGlobal: true
-    },
-    {
-      id: "3",
-      key: "TIMESTAMP", 
-      value: "{{timestamp}}",
-      type: "dynamic",
-      scope: "global",
-      isSecret: false,
-      description: "Current Unix timestamp for each request",
+      description: 'Fixed authentication token for API requests',
       environmentId: '',
-      isGlobal: true
+      isGlobal: true,
     },
     {
-      id: "4",
-      key: "BASE_URL",
-      value: "https://api.staging.com",
-      type: "static", 
-      scope: "environment",
+      id: '3',
+      key: 'TIMESTAMP',
+      value: '{{timestamp}}',
+      type: 'dynamic',
+      scope: 'global',
       isSecret: false,
-      description: "Base URL for staging environment",
-      environmentId: "staging",
-      isGlobal: false
+      description: 'Current Unix timestamp for each request',
+      environmentId: '',
+      isGlobal: true,
     },
     {
-      id: "5",
-      key: "EMAIL_TEST",
-      value: "{{random_email}}",
-      type: "dynamic",
-      scope: "project",
+      id: '4',
+      key: 'BASE_URL',
+      value: 'https://api.staging.com',
+      type: 'static',
+      scope: 'environment',
       isSecret: false,
-      description: "Random email for testing",
-      environmentId: "development",
-      isGlobal: false
-    }
+      description: 'Base URL for staging environment',
+      environmentId: 'staging',
+      isGlobal: false,
+    },
+    {
+      id: '5',
+      key: 'EMAIL_TEST',
+      value: '{{random_email}}',
+      type: 'dynamic',
+      scope: 'project',
+      isSecret: false,
+      description: 'Random email for testing',
+      environmentId: 'development',
+      isGlobal: false,
+    },
   ]);
 
   return (
@@ -93,7 +93,6 @@ const DataManagement: React.FC = () => {
             Manage environments, variables, and test datasets
           </p>
         </div>
-
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>

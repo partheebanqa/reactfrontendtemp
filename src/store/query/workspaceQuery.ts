@@ -1,14 +1,14 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { workspaceActions, workspaceStore } from "../workspaceStore";
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { workspaceActions, workspaceStore } from '../workspaceStore';
 import {
   fetchWorkspaces,
   createWorkspace,
   updateWorkspace,
-} from "@/service/workspace.service";
-import { Workspace } from "@/shared/types/workspace";
-import { apiRequest } from "@/lib/queryClient";
-import { API_WORKSPACES } from "@/config/apiRoutes";
-import { queryClient } from "@/lib/queryClient";
+} from '@/services/workspace.service';
+import { Workspace } from '@/shared/types/workspace';
+import { apiRequest } from '@/lib/queryClient';
+import { API_WORKSPACES } from '@/config/apiRoutes';
+import { queryClient } from '@/lib/queryClient';
 
 // Remove console log
 // console.log('yeeeeee');
@@ -21,7 +21,7 @@ import { queryClient } from "@/lib/queryClient";
  */
 export const useWorkspacesQuery = (enabled = true) => {
   return useQuery({
-    queryKey: ["/api/workspaces"],
+    queryKey: ['/api/workspaces'],
     enabled,
     retry: false,
     // Set staleTime to prevent unnecessary refetches when navigating between pages
@@ -58,7 +58,7 @@ export const useWorkspacesQuery = (enabled = true) => {
         workspaceActions.setIsLoading(false);
         return data;
       } catch (error) {
-        console.error("Workspace fetch error:", error);
+        console.error('Workspace fetch error:', error);
         workspaceActions.setIsLoading(false);
         return null;
       }
@@ -98,7 +98,7 @@ export const useUpdateWorkspaceMutation = () => {
         }
 
         // Update the query cache directly
-        queryClient.setQueryData(["/api/workspaces"], (oldData: any) => {
+        queryClient.setQueryData(['/api/workspaces'], (oldData: any) => {
           if (!oldData) return { workspaces: [updatedWorkspace] };
           return {
             ...oldData,
@@ -117,11 +117,11 @@ export const useDeleteWorkspaceMutation = () => {
   return useMutation({
     mutationFn: async (workspaceId: string) => {
       const response = await apiRequest(
-        "DELETE",
+        'DELETE',
         `${API_WORKSPACES}/${workspaceId}`
       );
       if (!response.ok) {
-        throw new Error("Failed to delete workspace");
+        throw new Error('Failed to delete workspace');
       }
       return response.json();
     },
@@ -138,7 +138,7 @@ export const useDeleteWorkspaceMutation = () => {
       workspaceActions.removeWorkspace(variables);
 
       // Update the query cache directly
-      queryClient.setQueryData(["/api/workspaces"], (oldData: any) => {
+      queryClient.setQueryData(['/api/workspaces'], (oldData: any) => {
         if (!oldData) return { workspaces: [] };
         return {
           ...oldData,

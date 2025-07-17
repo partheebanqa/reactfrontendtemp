@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useToast } from '@/hooks/useToast';
+import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, Download } from 'lucide-react';
 import { ManageRequests } from '@/components/TestSuit/ManageRequests';
 import { ImportModal } from '@/components/TestSuit/ImportModal';
@@ -34,18 +34,18 @@ interface Request {
 
 const EditTestSuiteContent: React.FC = () => {
   const params = useParams();
-  const navigate = (path: string) => {
-    window.history.pushState({}, '', path);
-    window.dispatchEvent(new PopStateEvent('popstate'));
-  };
+  const [location, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const id = params.id;
+  // Fix the parameter access by properly handling the params object
+  const id = (params as any).id;
+  const isCreateMode = location.includes('/create');
 
-  const [location] = useLocation();
-  const isCreateMode = location === '/test-suites/create';
-  const actualId = isCreateMode ? undefined : id;
+  console.log('Current location:', location);
+  console.log('Is create mode:', isCreateMode);
+  console.log('Params:', params);
+  console.log('ID:', id);
 
   const [testSuiteName, setTestSuiteName] = useState('');
   const [description, setDescription] = useState('');
@@ -59,9 +59,9 @@ const EditTestSuiteContent: React.FC = () => {
     error,
     isError,
   } = useQuery({
-    queryKey: ['testSuite', actualId],
-    queryFn: () => getTestSuites(actualId!),
-    enabled: !!actualId && !isCreateMode,
+    queryKey: ['testSuite', id],
+    queryFn: () => getTestSuites(id!),
+    enabled: !!id && !isCreateMode,
   });
 
   const createMutation = useMutation({
@@ -72,7 +72,7 @@ const EditTestSuiteContent: React.FC = () => {
         description: 'Your test suite has been created successfully.',
       });
       queryClient.invalidateQueries({ queryKey: ['testSuites'] });
-      navigate('/test-suites');
+      setLocation('/test-suites');
     },
     onError: (error: any) => {
       toast({
@@ -103,7 +103,7 @@ const EditTestSuiteContent: React.FC = () => {
         description: 'Test suite has been updated successfully',
       });
       queryClient.invalidateQueries({ queryKey: ['testSuites'] });
-      queryClient.invalidateQueries({ queryKey: ['testSuite', actualId] });
+      queryClient.invalidateQueries({ queryKey: ['testSuite', id] });
     },
     onError: (error: any) => {
       toast({
@@ -231,7 +231,7 @@ const EditTestSuiteContent: React.FC = () => {
       const { addRequestIds, removeRequestIds } = calculateRequestChanges();
 
       updateMutation.mutate({
-        id: actualId!,
+        id: id!,
         name: testSuiteName,
         description: description,
         addRequestIds: addRequestIds.length > 0 ? addRequestIds : undefined,
@@ -242,7 +242,7 @@ const EditTestSuiteContent: React.FC = () => {
   };
 
   const handleBack = () => {
-    navigate('/test-suites');
+    setLocation('/test-suites');
   };
 
   const isLoading = isCreateMode ? false : isLoadingTestSuite;
@@ -359,7 +359,7 @@ const EditTestSuiteContent: React.FC = () => {
         ) : (
           <ManageRequests
             requests={requests}
-            testSuiteId={actualId || ''}
+            testSuiteId={id || ''}
             onImport={() => setIsImportModalOpen(true)}
             onDeleteRequest={handleDeleteRequest}
             onUpdateTestCases={handleUpdateTestCases}
