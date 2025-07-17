@@ -21,9 +21,11 @@ import {
   executeTestSuite,
 } from '@/services/testSuites.service';
 import { TestSuite } from '@/models/TestSuite.model';
+import { useWorkspace } from '@/hooks/useWorkspace';
 
 const TestSuites: React.FC = () => {
   const { toast } = useToast();
+  const { currentWorkspace } = useWorkspace();
   const queryClient = useQueryClient();
   const [location, setLocation] = useLocation();
   const [testSuitListData, setTestSuitListData] = useState<
@@ -37,10 +39,10 @@ const TestSuites: React.FC = () => {
     isLoading,
     error,
   } = useQuery({
-    queryKey: ['testSuites'],
-    queryFn: getAllTestSuites,
+    queryKey: ['/api/test-suites', currentWorkspace?.id],
+    enabled: !!currentWorkspace?.id,
+    queryFn: () => getAllTestSuites(currentWorkspace!.id),
   });
-
   useEffect(() => {
     if (error) {
       console.error('Error fetching test suites:', error);

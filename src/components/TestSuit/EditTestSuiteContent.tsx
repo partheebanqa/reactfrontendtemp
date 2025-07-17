@@ -17,7 +17,11 @@ import {
   createTestSuite,
   updateTestSuite,
 } from '@/services/testSuites.service';
-import { ExtendedRequest } from '@/models/collection.model';
+import {
+  CreateTestSuitePayload,
+  ExtendedRequest,
+} from '@/models/collection.model';
+import { useWorkspace } from '@/hooks/useWorkspace';
 
 interface Request {
   id: string;
@@ -36,6 +40,7 @@ const EditTestSuiteContent: React.FC = () => {
   const params = useParams();
   const [location, setLocation] = useLocation();
   const { toast } = useToast();
+  const { currentWorkspace } = useWorkspace();
   const queryClient = useQueryClient();
 
   // Fix the parameter access by properly handling the params object
@@ -65,15 +70,20 @@ const EditTestSuiteContent: React.FC = () => {
   });
 
   const createMutation = useMutation({
-    mutationFn: createTestSuite,
+    mutationFn: (data: CreateTestSuitePayload) =>
+      createTestSuite({ ...data, workspaceId: currentWorkspace!.id }),
+
     onSuccess: (data) => {
       toast({
         title: 'Test suite created',
         description: 'Your test suite has been created successfully.',
       });
-      queryClient.invalidateQueries({ queryKey: ['testSuites'] });
+      queryClient.invalidateQueries({
+        queryKey: ['/api/test-suites', currentWorkspace?.id],
+      });
       setLocation('/test-suites');
     },
+
     onError: (error: any) => {
       toast({
         title: 'Failed to create test suite',

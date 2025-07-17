@@ -2,9 +2,9 @@ import { CreateTestSuitePayload, TestSuite } from '@/models/TestSuite.model';
 import { apiRequest } from '@/lib/queryClient';
 import { API_TEST_SUITES } from '@/config/apiRoutes';
 
-const workspaceId = '8d9ea72f-7f74-4821-8909-e953066d9a8b';
-
-export const getAllTestSuites = async (): Promise<TestSuite[]> => {
+export const getAllTestSuites = async (
+  workspaceId: string
+): Promise<TestSuite[]> => {
   try {
     const response = await apiRequest(
       'GET',
@@ -38,14 +38,11 @@ export const deleteTestSuite = async (id: string): Promise<void> => {
 };
 
 export const createTestSuite = async (
-  payload: CreateTestSuitePayload
+  payload: CreateTestSuitePayload & { workspaceId: string }
 ): Promise<any> => {
   try {
     const response = await apiRequest('POST', API_TEST_SUITES, {
-      body: JSON.stringify({
-        ...payload,
-        workspaceId,
-      }),
+      body: JSON.stringify(payload),
       headers: {
         'Content-Type': 'application/json',
       },

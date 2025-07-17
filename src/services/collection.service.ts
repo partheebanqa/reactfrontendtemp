@@ -11,8 +11,6 @@ import {
 } from '@/shared/types/collection';
 import { CollectionsResponse } from '../models/collection.model';
 
-const workspaceId = '8d9ea72f-7f74-4821-8909-e953066d9a8b';
-
 export const fetchCollectionList = async (workspaceId: string) => {
   try {
     const response = await apiRequest(
@@ -277,22 +275,23 @@ export const formatRequest = (request: any) => {
   };
 };
 
-export const getCollectionsWithRequests =
-  async (): Promise<CollectionsResponse> => {
-    try {
-      const response = await apiRequest(
-        'GET',
-        `/collections/with-requests?ws=${workspaceId}`
-      );
+export const getCollectionsWithRequests = async (
+  workspaceId: string
+): Promise<CollectionsResponse> => {
+  try {
+    const response = await apiRequest(
+      'GET',
+      `${API_COLLECTIONS}/with-requests?ws=${workspaceId}`
+    );
 
-      if (!response.ok) {
-        throw new Error(`Failed to fetch collections: ${response.statusText}`);
-      }
-      const data: CollectionsResponse = await response.json();
-      console.log('Collections data:', data);
-      return data;
-    } catch (error) {
-      console.error('Error fetching collections with requests:', error);
-      throw error;
+    if (!response.ok) {
+      throw new Error(`Failed to fetch collections: ${response.statusText}`);
     }
-  };
+
+    const data: CollectionsResponse = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error fetching collections with requests:', error);
+    throw error;
+  }
+};
