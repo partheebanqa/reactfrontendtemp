@@ -1,4 +1,4 @@
-import { ApiTestCase } from '../models/testcase.model';
+import { ApiTestCase } from '../shared/types/testcase.model';
 import { apiRequest } from '@/lib/queryClient';
 
 export interface TestCasesResponse {
