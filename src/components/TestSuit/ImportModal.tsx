@@ -16,6 +16,7 @@ import {
   ExtendedRequest,
   TransformedCollection,
 } from '@/models/collection.model';
+import { useWorkspace } from '@/hooks/useWorkspace';
 
 interface ImportModalProps {
   isOpen: boolean;
@@ -30,21 +31,25 @@ export const ImportModal: React.FC<ImportModalProps> = ({
   onImport,
   importedRequestIds = [],
 }) => {
+  const { currentWorkspace } = useWorkspace();
+  const workspaceId = currentWorkspace?.id;
+
   const {
     data: apiData,
     isLoading,
     error,
   } = useQuery({
-    queryKey: ['collections'],
-    queryFn: getCollectionsWithRequests,
-    enabled: isOpen, // Only fetch when modal is open
+    queryKey: ['collections', workspaceId],
+    queryFn: () => {
+      if (!workspaceId) throw new Error('workspaceId is undefined');
+      return getCollectionsWithRequests(workspaceId);
+    },
+    enabled: isOpen && !!workspaceId,
   });
-
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedRequests, setSelectedRequests] = useState<string[]>([]);
   const [expandedCollections, setExpandedCollections] = useState<string[]>([]);
 
-  // Transform API data to match the component's expected structure
   const collections: TransformedCollection[] = React.useMemo(() => {
     if (!apiData?.collections) return [];
 
@@ -61,7 +66,6 @@ export const ImportModal: React.FC<ImportModalProps> = ({
     }));
   }, [apiData]);
 
-  // Initialize expanded collections when data is loaded
   React.useEffect(() => {
     if (collections.length > 0 && expandedCollections.length === 0) {
       setExpandedCollections(collections.map((c) => c.id));

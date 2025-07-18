@@ -29,7 +29,7 @@ import {
   Wrench,
   ChevronsLeft,
   ChevronsRight,
-} from "lucide-react";
+} from 'lucide-react';
 
 const menuItems = [
   {
@@ -90,16 +90,16 @@ const menuItems = [
 
 const utilsItems = [
   {
-    label: "Swagger Parser",
-    path: "/swagger-parser",
+    label: 'Swagger Parser',
+    path: '/swagger-parser',
     icon: Zap,
-    feature: "swagger_parser",
+    feature: 'swagger_parser',
   },
   {
-    label: "JSON Parser",
-    path: "/json-parser",
+    label: 'JSON Parser',
+    path: '/json-parser',
     icon: Code,
-    feature: "json_parser",
+    feature: 'json_parser',
   },
 ];
 
@@ -110,13 +110,6 @@ const proFeatures = [
     icon: Play,
     feature: 'executions',
   },
-
-  // {
-  //   label: "Reports",
-  //   path: "/reports",
-  //   icon: FileText,
-  //   feature: "reports",
-  // },
   // {
   //   label: "Data Management",
   //   path: "/data-management",
@@ -174,30 +167,30 @@ const Sidebar: React.FC = () => {
     if (collapsed) {
       return (
         <Link href={item.path}>
-          <div className="relative group">
+          <div className='relative group'>
             <Button
-              variant={isActive ? "secondary" : "ghost"}
+              variant={isActive ? 'secondary' : 'ghost'}
               className={`w-full p-3 flex justify-center ${
-                !hasAccess ? "opacity-50 cursor-not-allowed" : ""
+                !hasAccess ? 'opacity-50 cursor-not-allowed' : ''
               }`}
               disabled={!hasAccess}
             >
-              <Icon className="w-5 h-5" />
+              <Icon className='w-5 h-5' />
             </Button>
-            <div className="absolute left-full ml-2 hidden  bg-white shadow-md rounded p-2 z-50 whitespace-nowrap">
+            <div className='absolute left-full ml-2 hidden  bg-white shadow-md rounded p-2 z-50 whitespace-nowrap'>
               {item.label}
-              {!hasAccess && featureType === "pro" && (
+              {!hasAccess && featureType === 'pro' && (
                 <Badge
-                  variant="outline"
-                  className="ml-2 text-xs bg-blue-50 text-blue-700 border-blue-200"
+                  variant='outline'
+                  className='ml-2 text-xs bg-blue-50 text-blue-700 border-blue-200'
                 >
                   PRO
                 </Badge>
               )}
-              {!hasAccess && featureType === "enterprise" && (
+              {!hasAccess && featureType === 'enterprise' && (
                 <Badge
-                  variant="outline"
-                  className="ml-2 text-xs bg-purple-50 text-purple-700 border-purple-200"
+                  variant='outline'
+                  className='ml-2 text-xs bg-purple-50 text-purple-700 border-purple-200'
                 >
                   ENT
                 </Badge>
@@ -247,7 +240,7 @@ const Sidebar: React.FC = () => {
     if (collapsed) return null;
 
     return (
-      <p className="px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+      <p className='px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2'>
         {title}
       </p>
     );
@@ -256,41 +249,45 @@ const Sidebar: React.FC = () => {
   return (
     <aside
       className={`${
-        collapsed ? "w-16" : "w-64"
+        collapsed ? 'w-16' : 'w-64'
       } bg-white shadow-lg flex flex-col border-r transition-all duration-300`}
     >
       {/* Logo Section */}
       <div
         className={`${
-          collapsed ? "p-3" : "p-6"
+          collapsed ? 'p-3' : 'p-6'
         } border-b flex justify-between items-center relative`}
       >
         {collapsed ? (
-          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center mx-auto">
-            <Code className="w-4 h-4 text-primary-foreground" />
+          <div className='w-8 h-8 bg-primary rounded-lg flex items-center justify-center mx-auto'>
+            <Code className='w-4 h-4 text-primary-foreground' />
           </div>
         ) : (
-          <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-              <Code className="w-4 h-4 text-primary-foreground" />
+          <div className='flex items-center space-x-3'>
+            <div className='w-8 h-8 bg-primary rounded-lg flex items-center justify-center'>
+              <Code className='w-4 h-4 text-primary-foreground' />
             </div>
             <div>
-              <h1 className="text-xl font-bold">Optraflow</h1>
-              <Badge variant="secondary" className="text-xs">
-                {subscriptionPlan === "free"
-                  ? "Free"
-                  : subscriptionPlan === "pro"
-                  ? "Pro"
-                  : "Enterprise"}
+              <h1 className='text-xl font-bold'>Optraflow</h1>
+              <Badge variant='secondary' className='text-xs'>
+                {subscriptionPlan === 'free'
+                  ? 'Free'
+                  : subscriptionPlan === 'pro'
+                  ? 'Pro'
+                  : 'Enterprise'}
               </Badge>
             </div>
           </div>
         )}
         <Button
-          variant="ghost"
-          size="sm"
+          variant='ghost'
+          size='sm'
           onClick={() => setCollapsed(!collapsed)}
-          className={`p-1 ${collapsed ? 'absolute left-[50px] top-1/2 transform -translate-y-1/2 bg-[#2094f3] rounded-full h-auto hover:bg-[#1e7bbf]' : ''}`}
+          className={`p-1 ${
+            collapsed
+              ? 'absolute left-[50px] top-1/2 transform -translate-y-1/2 bg-[#2094f3] rounded-full h-auto hover:bg-[#1e7bbf]'
+              : ''
+          }`}
         >
           {collapsed ? <ChevronsRight size={10} /> : <ChevronsLeft size={16} />}
         </Button>
@@ -299,7 +296,7 @@ const Sidebar: React.FC = () => {
       {/* Navigation */}
       <nav
         className={`flex-1 ${
-          collapsed ? "px-2" : "px-4"
+          collapsed ? 'px-2' : 'px-4'
         } py-6 space-y-2 overflow-y-auto`}
       >
         {/* Core Features */}
@@ -315,29 +312,29 @@ const Sidebar: React.FC = () => {
 
           {/* Utils Dropdown */}
           {!collapsed ? (
-            <div className="w-full">
+            <div className='w-full'>
               <Button
-                variant="ghost"
-                className="w-full justify-start relative group"
+                variant='ghost'
+                className='w-full justify-start relative group'
                 onClick={() => setUtilsExpanded(!utilsExpanded)}
               >
-                <Wrench className="w-4 h-4 mr-3" />
-                <span className="flex-1 text-left">Utilities</span>
+                <Wrench className='w-4 h-4 mr-3' />
+                <span className='flex-1 text-left'>Utilities</span>
                 {utilsExpanded ? (
-                  <ChevronDown className="w-4 h-4" />
+                  <ChevronDown className='w-4 h-4' />
                 ) : (
-                  <ChevronRight className="w-4 h-4" />
+                  <ChevronRight className='w-4 h-4' />
                 )}
               </Button>
 
               {utilsExpanded && (
-                <div className="pl-3 space-y-1 mt-1">
+                <div className='pl-3 space-y-1 mt-1'>
                   {utilsItems.map((item) => (
                     <NavItem
                       key={item.path}
                       item={item}
                       isActive={location === item.path}
-                      featureType="free"
+                      featureType='free'
                     />
                   ))}
                 </div>
@@ -349,16 +346,16 @@ const Sidebar: React.FC = () => {
                 key={item.path}
                 item={item}
                 isActive={location === item.path}
-                featureType="free"
+                featureType='free'
               />
             ))
           )}
         </div>
 
         {/* Pro Features */}
-        <div className="pt-4 border-t">
-          <CategoryHeader title="Pro Features" />
-          <div className="space-y-1">
+        <div className='pt-4 border-t'>
+          <CategoryHeader title='Pro Features' />
+          <div className='space-y-1'>
             {proFeatures.map((item) => (
               <NavItem
                 key={item.path}
@@ -371,9 +368,9 @@ const Sidebar: React.FC = () => {
         </div>
 
         {/* Enterprise Features */}
-        <div className="pt-4 border-t">
-          <CategoryHeader title="Enterprise" />
-          <div className="space-y-1">
+        <div className='pt-4 border-t'>
+          <CategoryHeader title='Enterprise' />
+          <div className='space-y-1'>
             {enterpriseFeatures.map((item) => (
               <NavItem
                 key={item.path}
@@ -400,10 +397,10 @@ const Sidebar: React.FC = () => {
       </nav>
 
       {/* User Profile */}
-      <div className={`${collapsed ? "p-2" : "p-4"} border-t`}>
+      <div className={`${collapsed ? 'p-2' : 'p-4'} border-t`}>
         {collapsed ? (
-          <div className="flex justify-center">
-            <Avatar className="w-10 h-10">
+          <div className='flex justify-center'>
+            <Avatar className='w-10 h-10'>
               <AvatarImage
                 src={user?.avatar || user?.imageUrl}
                 alt={user?.firstName}
@@ -415,8 +412,8 @@ const Sidebar: React.FC = () => {
             </Avatar>
           </div>
         ) : (
-          <div className="flex items-center space-x-3">
-            <Avatar className="w-10 h-10">
+          <div className='flex items-center space-x-3'>
+            <Avatar className='w-10 h-10'>
               <AvatarImage
                 src={user?.avatar || user?.imageUrl}
                 alt={user?.firstName}
@@ -426,21 +423,21 @@ const Sidebar: React.FC = () => {
                 {user?.lastName?.[0]}
               </AvatarFallback>
             </Avatar>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">
+            <div className='flex-1 min-w-0'>
+              <p className='text-sm font-medium truncate'>
                 {user?.firstName} {user?.lastName}
               </p>
-              <p className="text-xs text-muted-foreground truncate">
+              <p className='text-xs text-muted-foreground truncate'>
                 {currentWorkspace?.name}
               </p>
             </div>
             <Button
-              variant="ghost"
-              size="sm"
+              variant='ghost'
+              size='sm'
               onClick={() => logoutMutation.mutate()}
-              title="Logout"
+              title='Logout'
             >
-              <Settings className="w-4 h-4" />
+              <Settings className='w-4 h-4' />
             </Button>
           </div>
         )}
