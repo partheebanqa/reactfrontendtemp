@@ -321,7 +321,7 @@ export function EnvironmentManagement() {
                   />
 
                   {/* Environment Variables */}
-                  <div className="space-y-3">
+                  {/* <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <h4 className="text-sm font-medium">Environment Variables</h4>
                       <Button type="button" variant="outline" size="sm" onClick={addVariable}>
@@ -373,7 +373,7 @@ export function EnvironmentManagement() {
                         </div>
                       </div>
                     ))}
-                  </div>
+                  </div> */}
 
                   <div className="flex justify-end gap-2 pt-4 border-t">
                     <Button 

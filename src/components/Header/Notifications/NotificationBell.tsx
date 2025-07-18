@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { Bell } from "lucide-react";
 import NotificationDropdown from "./NotificationDropdown";
 import * as TooltipPrimitive from "@radix-ui/react-tooltip";
@@ -12,6 +12,7 @@ const NotificationBell: React.FC = () => {
     toggleDropdown, 
     markAllAsRead 
   } = useNotification();
+    console.log("🚀 ~ isDropdownOpen:", isDropdownOpen)
 
   // Type the event parameter for the event handler
   const handleMarkAllAsRead = (
@@ -25,6 +26,15 @@ const NotificationBell: React.FC = () => {
     e.stopPropagation(); // Stop event from bubbling up
     toggleDropdown();
   };
+
+  const NotificationDropDown = useMemo(() => {
+    return isDropdownOpen ? (
+      <NotificationDropdown
+        onClose={toggleDropdown}
+        onMarkAllAsRead={handleMarkAllAsRead}
+      />
+    ) : null;
+  }, [isDropdownOpen, toggleDropdown, handleMarkAllAsRead]);
 
   return (
     <div
@@ -54,12 +64,7 @@ const NotificationBell: React.FC = () => {
         </div>
       )}
 
-      {isDropdownOpen && (
-        <NotificationDropdown
-          onClose={toggleDropdown}
-          onMarkAllAsRead={handleMarkAllAsRead}
-        />
-      )}
+      {NotificationDropDown}
     </div>
   );
 };

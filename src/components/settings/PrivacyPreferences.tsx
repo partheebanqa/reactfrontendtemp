@@ -177,7 +177,7 @@ export function PrivacyPreferences() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 border rounded-lg">
+          {/* <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 border rounded-lg">
             <div className="space-y-1">
               <Label className="text-base font-medium">Public Profile</Label>
               <p className="text-sm text-gray-600">
@@ -188,7 +188,7 @@ export function PrivacyPreferences() {
               defaultChecked={false}
               onCheckedChange={(checked) => handleToggle('Public Profile', checked)}
             />
-          </div>
+          </div> */}
 
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 border rounded-lg">
             <div className="space-y-1">

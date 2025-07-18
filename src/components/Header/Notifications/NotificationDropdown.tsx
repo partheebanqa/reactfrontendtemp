@@ -20,6 +20,7 @@ const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
     createTestNotification,
     addNotification,
   } = useNotification();
+    console.log("🚀 ~ notifications:", notifications)
   const [showPreferences, setShowPreferences] = useState(false);
 
   const handleTestNotification = useCallback(() => {
@@ -143,4 +144,4 @@ const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
 };
 
 // Use React.memo to prevent unnecessary re-renders
-export default React.memo(NotificationDropdown);
+export default NotificationDropdown

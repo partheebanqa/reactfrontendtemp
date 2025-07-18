@@ -196,8 +196,8 @@ export default function Header() {
                   </div>
                 </div>
               </div>
-              <DropdownMenuSeparator />
-              <div className="px-3 py-2">
+              {/* <DropdownMenuSeparator /> */}
+              {/* <div className="px-3 py-2">
                 <p className="text-xs font-medium text-gray-500 mb-2 pl-2">
                   Theme
                 </p>
@@ -224,18 +224,18 @@ export default function Header() {
                     </div>
                   ))}
                 </div>
-              </div>
+              </div> */}
               <DropdownMenuSeparator />
-              <DropdownMenuItem
+              {/* <DropdownMenuItem
                 onClick={() => handleRedirect("/settings/profile")}
               >
                 <User className="mr-2 h-4 w-4" />
                 Your Profile
-              </DropdownMenuItem>
+              </DropdownMenuItem> */}
               <DropdownMenuItem
                 onClick={() => handleRedirect("/settings/account")}
               >
-                <Settings className="mr-2 h-4 w-4" />
+              <Settings className="mr-2 h-4 w-4" />
                 Account Settings
               </DropdownMenuItem>
               <DropdownMenuItem
@@ -244,6 +244,8 @@ export default function Header() {
                 <HelpCircle className="mr-2 h-4 w-4" />
                 Help & Support
               </DropdownMenuItem>
+              <DropdownMenuSeparator />
+
               <DropdownMenuItem onClick={handleLogout} className="text-red-600">
                 <LogOut className="mr-2 h-4 w-4" />
                 Sign Out

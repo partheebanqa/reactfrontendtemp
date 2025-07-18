@@ -144,11 +144,6 @@ const fetchNotifications = async (): Promise<Notification[]> => {
   ];
 };
 
-const fetchPreferences = async (): Promise<NotificationPreference[]> => {
-  // Simulate API call delay
-  await new Promise(resolve => setTimeout(resolve, 500));
-  return defaultPreferences;
-};
 
 // Define actions to update the store
 export const notificationActions = {
@@ -356,12 +351,5 @@ export const notificationActions = {
 
 // Hook to use the notification store with derived values
 export const useNotificationStore = () => {
-  const state = useStore(notificationStore);
-  
-  // We use the unreadCount from the state directly, which is updated by actions
-  // This avoids recalculating it on every render
-  
-  return {
-    ...state
-  };
+  return useStore(notificationStore);
 };

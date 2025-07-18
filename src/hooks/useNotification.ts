@@ -1,5 +1,6 @@
 import { useEffect, useRef, useMemo } from "react";
 import { notificationActions, useNotificationStore } from "@/store/notificationStore";
+import { useNotificationQuery } from "@/store/query/notificationQuery";
 
 export function useNotification() {
     // Get state from notification store
@@ -12,20 +13,12 @@ export function useNotification() {
         unreadCount
     } = useNotificationStore();
     
-    // Use a ref to ensure we only load notifications once
-    const initialized = useRef(false);
-    
-    // Initialize notifications on first load
-    useEffect(() => {
-        if (!initialized.current) {
-            initialized.current = true;
-            notificationActions.loadNotifications();
-            notificationActions.loadPreferences();
-        }
-    }, []);
-    
-    // Use useMemo to maintain a consistent reference to the returned object
-    // This prevents unnecessary re-renders in components that use this hook
+    // Setup queries and mutations
+    //   const { refetch: refreshWorkspaces, isLoading: isRefetching } =
+    //     useNotificationQuery(isAuthenticated && shouldFetchWorkspaces);
+        
+
+
     return {
         // State
         notifications,
