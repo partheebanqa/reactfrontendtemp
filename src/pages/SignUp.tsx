@@ -32,9 +32,57 @@ export default function SignUp() {
   const { error: errorToast } = useToast();
   const { registerMutation } = useAuth();
 
+  const getOS = () => {
+    const userAgent = window.navigator.userAgent;
+    const platform = window.navigator.platform;
+    let os = "Unknown OS";
+
+    if (platform.includes("Win")) {
+      os = "Windows";
+    } else if (platform.includes("Mac")) {
+      os = "macOS";
+    } else if (platform.includes("Linux")) {
+      os = "Linux";
+    } else if (/iPhone|iPad|iPod/.test(userAgent)) {
+      os = "iOS";
+    } else if (/Android/.test(userAgent)) {
+      os = "Android";
+    }
+    return os;
+  }
+
+  const getBrowser = () => {
+    const userAgent = navigator.userAgent;
+    let browserName = "Unknown Browser";
+    let browserVersion = "Unknown Version";
+
+    if (userAgent.includes("Chrome") && !userAgent.includes("Edg") && !userAgent.includes("Brave")) {
+      browserName = "Google Chrome";
+      browserVersion = userAgent.match(/Chrome\/([0-9.]+)/)?.[1] || browserVersion;
+    } else if (userAgent.includes("Firefox")) {
+      browserName = "Firefox";
+      browserVersion = userAgent.match(/Firefox\/([0-9.]+)/)?.[1] || browserVersion;
+    } else if (userAgent.includes("Safari") && !userAgent.includes("Chrome")) {
+      browserName = "Safari";
+      browserVersion = userAgent.match(/Version\/([0-9.]+)/)?.[1] || browserVersion;
+    } else if (userAgent.includes("Edg")) {
+      browserName = "Microsoft Edge";
+      browserVersion = userAgent.match(/Edg\/([0-9.]+)/)?.[1] || browserVersion;
+    } else if (userAgent.includes("Brave")) {
+      browserName = "Brave";
+      browserVersion = userAgent.match(/BraveChrome\/([0-9.]+)/)?.[1] || browserVersion;
+    }
+    return { name: browserName, version: browserVersion };
+  }
+
+  const getTimezone = () => {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone;
+  }
+
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
+    
     try {
       if (formData.password !== formData.confirmPassword) {
         return;
@@ -43,8 +91,17 @@ export default function SignUp() {
       if (!formData.agreedToTerms) {
         return;
       }
-
-      const response = await registerMutation.mutateAsync(formData);
+      const os = getOS();
+      const browser = getBrowser();
+      const timezone = getTimezone();
+      const form = {
+        ...formData,
+        os,
+        browser: browser.name,
+        browserVersion: browser.version,
+        timezone,
+      };
+      const response = await registerMutation.mutateAsync(form);
       if (response.message) {
         setLocation("/signin");
       }

@@ -29,7 +29,9 @@ import {
   Wrench,
   ChevronsLeft,
   ChevronsRight,
-} from 'lucide-react';
+  Workflow,
+} from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 
 const menuItems = [
   {
@@ -120,6 +122,12 @@ const proFeatures = [
 
 const enterpriseFeatures = [
   {
+    label: 'CI/CD Configuration',
+    path: '/cicd-configuration',
+    icon: Workflow,
+    feature: 'cicd_configuration',
+  },
+  {
     label: 'CI/CD Integration',
     path: '/cicd',
     icon: Infinity,
@@ -167,17 +175,24 @@ const Sidebar: React.FC = () => {
     if (collapsed) {
       return (
         <Link href={item.path}>
-          <div className='relative group'>
-            <Button
-              variant={isActive ? 'secondary' : 'ghost'}
-              className={`w-full p-3 flex justify-center ${
-                !hasAccess ? 'opacity-50 cursor-not-allowed' : ''
-              }`}
-              disabled={!hasAccess}
-            >
-              <Icon className='w-5 h-5' />
-            </Button>
-            <div className='absolute left-full ml-2 hidden  bg-white shadow-md rounded p-2 z-50 whitespace-nowrap'>
+          <div className="relative group">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant={isActive ? "secondary" : "ghost"}
+                  className={`w-full p-3 flex justify-center ${
+                    !hasAccess ? "opacity-50 cursor-not-allowed" : ""
+                  }`}
+                  disabled={!hasAccess}
+                >
+                  <Icon className="w-5 h-5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="right">
+                {item.label}
+              </TooltipContent>
+            </Tooltip>
+            <div className="absolute left-full ml-2 hidden  bg-white shadow-md rounded p-2 z-50 whitespace-nowrap">
               {item.label}
               {!hasAccess && featureType === 'pro' && (
                 <Badge
@@ -203,35 +218,42 @@ const Sidebar: React.FC = () => {
 
     return (
       <Link href={item.path}>
-        <Button
-          variant={isActive ? 'secondary' : 'ghost'}
-          className={`w-full justify-start relative ${
-            !hasAccess ? 'opacity-50 cursor-not-allowed' : ''
-          }`}
-          disabled={!hasAccess}
-        >
-          <Icon className='w-4 h-4 mr-3' />
-          <span className='flex-1 text-left'>{item.label}</span>
-          {!hasAccess && featureType === 'pro' && (
-            <Badge
-              variant='outline'
-              className='ml-2 text-xs bg-blue-50 text-blue-700 border-blue-200'
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant={isActive ? 'secondary' : 'ghost'}
+              className={`w-full justify-start relative ${
+                !hasAccess ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
+              disabled={!hasAccess}
             >
-              PRO
-            </Badge>
-          )}
-          {!hasAccess && featureType === 'enterprise' && (
-            <Badge
-              variant='outline'
-              className='ml-2 text-xs bg-purple-50 text-purple-700 border-purple-200'
-            >
-              ENT
-            </Badge>
-          )}
-          {!hasAccess && !featureType && (
-            <Crown className='w-3 h-3 ml-auto text-yellow-500' />
-          )}
-        </Button>
+              <Icon className='w-4 h-4 mr-3' />
+              <span className='flex-1 text-left'>{item.label}</span>
+              {!hasAccess && featureType === 'pro' && (
+                <Badge
+                  variant='outline'
+                  className='ml-2 text-xs bg-blue-50 text-blue-700 border-blue-200'
+                >
+                  PRO
+                </Badge>
+              )}
+              {!hasAccess && featureType === 'enterprise' && (
+                <Badge
+                  variant='outline'
+                  className='ml-2 text-xs bg-purple-50 text-purple-700 border-purple-200'
+                >
+                  ENT
+                </Badge>
+              )}
+              {!hasAccess && !featureType && (
+                <Crown className='w-3 h-3 ml-auto text-yellow-500' />
+              )}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            {item.label}
+          </TooltipContent>
+        </Tooltip>
       </Link>
     );
   };
@@ -252,6 +274,7 @@ const Sidebar: React.FC = () => {
         collapsed ? 'w-16' : 'w-64'
       } bg-white shadow-lg flex flex-col border-r transition-all duration-300`}
     >
+      <TooltipProvider>
       {/* Logo Section */}
       <div
         className={`${
@@ -312,20 +335,27 @@ const Sidebar: React.FC = () => {
 
           {/* Utils Dropdown */}
           {!collapsed ? (
-            <div className='w-full'>
-              <Button
-                variant='ghost'
-                className='w-full justify-start relative group'
-                onClick={() => setUtilsExpanded(!utilsExpanded)}
-              >
-                <Wrench className='w-4 h-4 mr-3' />
-                <span className='flex-1 text-left'>Utilities</span>
-                {utilsExpanded ? (
-                  <ChevronDown className='w-4 h-4' />
-                ) : (
-                  <ChevronRight className='w-4 h-4' />
-                )}
-              </Button>
+            <div className="w-full">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className="w-full justify-start relative group"
+                    onClick={() => setUtilsExpanded(!utilsExpanded)}
+                  >
+                    <Wrench className="w-4 h-4 mr-3" />
+                    <span className="flex-1 text-left">Utilities</span>
+                    {utilsExpanded ? (
+                      <ChevronDown className="w-4 h-4" />
+                    ) : (
+                      <ChevronRight className="w-4 h-4" />
+                    )}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  Utilities
+                </TooltipContent>
+              </Tooltip>
 
               {utilsExpanded && (
                 <div className='pl-3 space-y-1 mt-1'>
@@ -442,6 +472,7 @@ const Sidebar: React.FC = () => {
           </div>
         )}
       </div>
+      </TooltipProvider>
     </aside>
   );
 };

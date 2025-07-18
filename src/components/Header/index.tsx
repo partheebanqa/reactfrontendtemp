@@ -28,6 +28,7 @@ import { useLocation } from "wouter";
 import WorkspaceModal from "../WorkspaceModal";
 import WorkspaceDropdown from "./WorkspaceDropdown";
 import { useToast } from "@/hooks/useToast";
+import NotificationBell from "./Notifications/NotificationBell";
 
 export default function Header() {
   const { user, logoutMutation } = useAuth();
@@ -90,8 +91,7 @@ export default function Header() {
       return true;
     } catch (error) {
       console.error(
-        `Error ${
-          workspaceModalState.mode === "add" ? "creating" : "updating"
+        `Error ${workspaceModalState.mode === "add" ? "creating" : "updating"
         } workspace:`,
         error
       );
@@ -146,12 +146,13 @@ export default function Header() {
           </div>
         </div>
         <div className="flex items-center space-x-4">
-          <Button variant="ghost" size="sm" className="relative">
+          <NotificationBell />
+          {/* <Button variant="ghost" size="sm" className="relative">
             <Bell className="h-5 w-5" />
             <span className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
               3
             </span>
-          </Button>
+          </Button> */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -195,8 +196,8 @@ export default function Header() {
                   </div>
                 </div>
               </div>
-              <DropdownMenuSeparator />
-              <div className="px-3 py-2">
+              {/* <DropdownMenuSeparator /> */}
+              {/* <div className="px-3 py-2">
                 <p className="text-xs font-medium text-gray-500 mb-2 pl-2">
                   Theme
                 </p>
@@ -209,11 +210,10 @@ export default function Header() {
                     >
                       <button
                         onClick={() => setTheme(themeOption.id as any)}
-                        className={`p-2 rounded-md transition-all duration-200 ${
-                          theme === themeOption.id
+                        className={`p-2 rounded-md transition-all duration-200 ${theme === themeOption.id
                             ? "bg-white dark:bg-gray-700 text-blue-600 shadow-sm"
                             : "text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700"
-                        }`}
+                          }`}
                         aria-label={themeOption.tooltip}
                       >
                         <themeOption.icon size={18} />
@@ -224,18 +224,18 @@ export default function Header() {
                     </div>
                   ))}
                 </div>
-              </div>
+              </div> */}
               <DropdownMenuSeparator />
-              <DropdownMenuItem
+              {/* <DropdownMenuItem
                 onClick={() => handleRedirect("/settings/profile")}
               >
                 <User className="mr-2 h-4 w-4" />
                 Your Profile
-              </DropdownMenuItem>
+              </DropdownMenuItem> */}
               <DropdownMenuItem
                 onClick={() => handleRedirect("/settings/account")}
               >
-                <Settings className="mr-2 h-4 w-4" />
+              <Settings className="mr-2 h-4 w-4" />
                 Account Settings
               </DropdownMenuItem>
               <DropdownMenuItem
@@ -244,6 +244,8 @@ export default function Header() {
                 <HelpCircle className="mr-2 h-4 w-4" />
                 Help & Support
               </DropdownMenuItem>
+              <DropdownMenuSeparator />
+
               <DropdownMenuItem onClick={handleLogout} className="text-red-600">
                 <LogOut className="mr-2 h-4 w-4" />
                 Sign Out
