@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { 
+import {
   ArrowLeft,
   Plus,
   GripVertical,
@@ -20,14 +20,29 @@ import {
   ChevronUp,
   Copy,
   MoreVertical,
-  Database
+  Database,
 } from 'lucide-react';
-import { useApp } from '../../contexts/AppContext';
-import { RequestChain, APIRequest, Variable } from '../../types';
-import { CollectionImportModal } from '../Collections/CollectionImportModal';
-import { RequestExecutor } from './RequestExecutor';
-import { VariableExtractor } from './VariableExtractor';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  RequestChain,
+  APIRequest,
+  Variable,
+} from '@/models/requestChain.model';
 import { RequestEditor } from './RequestEditor';
+import { RequestExecutor } from './RequestExecutor';
 import { VariablesTable } from './VariablesTable';
 
 interface RequestChainEditorProps {
@@ -36,8 +51,11 @@ interface RequestChainEditorProps {
   onSave: (chain: RequestChain) => void;
 }
 
-export function RequestChainEditor({ chain, onBack, onSave }: RequestChainEditorProps) {
-  const { state } = useApp();
+export function RequestChainEditor({
+  chain,
+  onBack,
+  onSave,
+}: RequestChainEditorProps) {
   const dragItem = useRef<number | null>(null);
   const dragOverItem = useRef<number | null>(null);
 
@@ -51,23 +69,29 @@ export function RequestChainEditor({ chain, onBack, onSave }: RequestChainEditor
       enabled: false,
       type: 'once',
       startDate: new Date().toISOString().split('T')[0],
-      timezone: 'UTC'
-    }
+      timezone: 'UTC',
+    },
   });
 
-  const [expandedRequests, setExpandedRequests] = useState<Set<string>>(new Set());
-  const [activeTab, setActiveTab] = useState<'requests' | 'variables' | 'extracted-variables' | 'schedule' | 'execute'>('requests');
-  const [showImportModal, setShowImportModal] = useState(false);
+  const [expandedRequests, setExpandedRequests] = useState<Set<string>>(
+    new Set()
+  );
   const [editingRequestId, setEditingRequestId] = useState<string | null>(null);
   const [globalVariables, setGlobalVariables] = useState<Variable[]>([
-    { id: '1', name: 'baseUrl', value: 'https://api.example.com', type: 'string' },
+    {
+      id: '1',
+      name: 'baseUrl',
+      value: 'https://api.example.com',
+      type: 'string',
+    },
     { id: '2', name: 'apiKey', value: 'your-api-key', type: 'string' },
-    { id: '3', name: 'timeout', value: '5000', type: 'number' }
+    { id: '3', name: 'timeout', value: '5000', type: 'number' },
   ]);
 
-  // Execution state for Variables Table
   const [executionLogs, setExecutionLogs] = useState<any[]>([]);
-  const [extractedVariables, setExtractedVariables] = useState<Record<string, any>>({});
+  const [extractedVariables, setExtractedVariables] = useState<
+    Record<string, any>
+  >({});
   const [isExecuting, setIsExecuting] = useState(false);
   const [currentRequestIndex, setCurrentRequestIndex] = useState(-1);
 
@@ -85,7 +109,7 @@ export function RequestChainEditor({ chain, onBack, onSave }: RequestChainEditor
       const draggedItem = requests[dragItem.current];
       requests.splice(dragItem.current, 1);
       requests.splice(dragOverItem.current, 0, draggedItem);
-      
+
       setFormData({ ...formData, requests });
     }
     dragItem.current = null;
@@ -117,12 +141,12 @@ export function RequestChainEditor({ chain, onBack, onSave }: RequestChainEditor
       dataExtractions: [],
       testScripts: [],
       enabled: true,
-      authType: 'none'
+      authType: 'none',
     };
-    
+
     setFormData({
       ...formData,
-      requests: [...(formData.requests || []), newRequest]
+      requests: [...(formData.requests || []), newRequest],
     });
     setExpandedRequests(new Set([...expandedRequests, newRequest.id]));
   };
@@ -130,7 +154,7 @@ export function RequestChainEditor({ chain, onBack, onSave }: RequestChainEditor
   const removeRequest = (requestId: string) => {
     setFormData({
       ...formData,
-      requests: formData.requests?.filter(req => req.id !== requestId) || []
+      requests: formData.requests?.filter((req) => req.id !== requestId) || [],
     });
     const newExpanded = new Set(expandedRequests);
     newExpanded.delete(requestId);
@@ -140,45 +164,41 @@ export function RequestChainEditor({ chain, onBack, onSave }: RequestChainEditor
   const updateRequest = (requestId: string, updates: Partial<APIRequest>) => {
     setFormData({
       ...formData,
-      requests: formData.requests?.map(req => 
-        req.id === requestId ? { ...req, ...updates } : req
-      ) || []
+      requests:
+        formData.requests?.map((req) =>
+          req.id === requestId ? { ...req, ...updates } : req
+        ) || [],
     });
   };
 
   const duplicateRequest = (requestId: string) => {
-    const request = formData.requests?.find(r => r.id === requestId);
+    const request = formData.requests?.find((r) => r.id === requestId);
     if (request) {
       const duplicated = {
         ...request,
         id: Date.now().toString(),
-        name: `${request.name} (Copy)`
+        name: `${request.name} (Copy)`,
       };
       setFormData({
         ...formData,
-        requests: [...(formData.requests || []), duplicated]
+        requests: [...(formData.requests || []), duplicated],
       });
     }
   };
 
   const moveRequest = (requestId: string, direction: 'up' | 'down') => {
     const requests = [...(formData.requests || [])];
-    const index = requests.findIndex(r => r.id === requestId);
+    const index = requests.findIndex((r) => r.id === requestId);
     if (index === -1) return;
 
     const newIndex = direction === 'up' ? index - 1 : index + 1;
     if (newIndex < 0 || newIndex >= requests.length) return;
 
-    [requests[index], requests[newIndex]] = [requests[newIndex], requests[index]];
+    [requests[index], requests[newIndex]] = [
+      requests[newIndex],
+      requests[index],
+    ];
     setFormData({ ...formData, requests });
-  };
-
-  const handleImportRequests = (importedRequests: APIRequest[]) => {
-    setFormData({
-      ...formData,
-      requests: [...(formData.requests || []), ...importedRequests]
-    });
-    setShowImportModal(false);
   };
 
   const handleSave = () => {
@@ -189,7 +209,7 @@ export function RequestChainEditor({ chain, onBack, onSave }: RequestChainEditor
 
     const chainData: RequestChain = {
       id: chain?.id || Date.now().toString(),
-      workspaceId: state.currentWorkspace?.id || '1',
+      workspaceId: '1',
       name: formData.name,
       description: formData.description,
       requests: formData.requests || [],
@@ -200,7 +220,7 @@ export function RequestChainEditor({ chain, onBack, onSave }: RequestChainEditor
       updatedAt: new Date().toISOString(),
       lastExecuted: chain?.lastExecuted,
       executionCount: chain?.executionCount || 0,
-      successRate: chain?.successRate || 0
+      successRate: chain?.successRate || 0,
     };
 
     onSave(chainData);
@@ -208,15 +228,15 @@ export function RequestChainEditor({ chain, onBack, onSave }: RequestChainEditor
 
   const getMethodColor = (method: string) => {
     const colors = {
-      GET: 'text-green-600 bg-green-50 border-green-200',
-      POST: 'text-blue-600 bg-blue-50 border-blue-200',
-      PUT: 'text-orange-600 bg-orange-50 border-orange-200',
-      DELETE: 'text-red-600 bg-red-50 border-red-200',
-      PATCH: 'text-purple-600 bg-purple-50 border-purple-200',
-      HEAD: 'text-gray-600 bg-gray-50 border-gray-200',
-      OPTIONS: 'text-yellow-600 bg-yellow-50 border-yellow-200'
+      GET: 'bg-green-100 text-green-800',
+      POST: 'bg-blue-100 text-blue-800',
+      PUT: 'bg-orange-100 text-orange-800',
+      DELETE: 'bg-red-100 text-red-800',
+      PATCH: 'bg-purple-100 text-purple-800',
+      HEAD: 'bg-gray-100 text-gray-800',
+      OPTIONS: 'bg-yellow-100 text-yellow-800',
     };
-    return colors[method as keyof typeof colors] || 'text-gray-600 bg-gray-50 border-gray-200';
+    return colors[method as keyof typeof colors] || 'bg-gray-100 text-gray-800';
   };
 
   const addGlobalVariable = () => {
@@ -224,44 +244,47 @@ export function RequestChainEditor({ chain, onBack, onSave }: RequestChainEditor
       id: Date.now().toString(),
       name: '',
       value: '',
-      type: 'string'
+      type: 'string',
     };
     setGlobalVariables([...globalVariables, newVar]);
   };
 
   const updateGlobalVariable = (id: string, updates: Partial<Variable>) => {
-    setGlobalVariables(globalVariables.map(v => 
-      v.id === id ? { ...v, ...updates } : v
-    ));
+    setGlobalVariables(
+      globalVariables.map((v) => (v.id === id ? { ...v, ...updates } : v))
+    );
   };
 
   const removeGlobalVariable = (id: string) => {
-    setGlobalVariables(globalVariables.filter(v => v.id !== id));
+    setGlobalVariables(globalVariables.filter((v) => v.id !== id));
   };
 
   // If editing a specific request, show the request editor
   if (editingRequestId) {
-    const request = formData.requests?.find(r => r.id === editingRequestId);
+    const request = formData.requests?.find((r) => r.id === editingRequestId);
     if (request) {
       return (
-        <div className="h-full flex flex-col">
-          <div className="flex-shrink-0 border-b border-gray-200 bg-white px-6 py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <button
+        <div className='h-full flex flex-col'>
+          <div className='flex-shrink-0 border-b bg-background px-6 py-4'>
+            <div className='flex items-center justify-between'>
+              <div className='flex items-center space-x-4'>
+                <Button
+                  variant='ghost'
+                  size='sm'
                   onClick={() => setEditingRequestId(null)}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
                 >
-                  <ArrowLeft className="w-5 h-5 text-gray-600" />
-                </button>
+                  <ArrowLeft className='w-4 h-4' />
+                </Button>
                 <div>
-                  <h1 className="text-xl font-semibold text-gray-900">Edit Request</h1>
-                  <p className="text-sm text-gray-500">Configure your API request</p>
+                  <h1 className='text-xl font-semibold'>Edit Request</h1>
+                  <p className='text-sm text-muted-foreground'>
+                    Configure your API request
+                  </p>
                 </div>
               </div>
             </div>
           </div>
-          <div className="flex-1 overflow-auto p-6">
+          <div className='flex-1 overflow-auto p-6'>
             <RequestEditor
               request={request}
               globalVariables={globalVariables}
@@ -275,410 +298,348 @@ export function RequestChainEditor({ chain, onBack, onSave }: RequestChainEditor
   }
 
   return (
-    <div className="h-full flex flex-col">
+    <div className='h-full flex flex-col'>
       {/* Header */}
-      <div className="flex-shrink-0 border-b border-gray-200 bg-white px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <button
-              onClick={onBack}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              <ArrowLeft className="w-5 h-5 text-gray-600" />
-            </button>
+      <div className='flex-shrink-0 border-b bg-background px-6 py-4'>
+        <div className='flex items-center justify-between'>
+          <div className='flex items-center space-x-4'>
+            <Button variant='ghost' size='sm' onClick={onBack}>
+              <ArrowLeft className='w-4 h-4' />
+            </Button>
             <div>
-              <h1 className="text-xl font-semibold text-gray-900">
+              <h1 className='text-xl font-semibold'>
                 {chain ? 'Edit Request Chain' : 'Create Request Chain'}
               </h1>
-              <p className="text-sm text-gray-500">
+              <p className='text-sm text-muted-foreground'>
                 Configure your API automation workflow
               </p>
             </div>
           </div>
-          <div className="flex items-center space-x-3">
-            <button
-              onClick={handleSave}
-              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              <Save className="w-4 h-4" />
-              <span>Save Chain</span>
-            </button>
+          <div className='flex items-center space-x-3'>
+            <Button onClick={handleSave} className='gap-2'>
+              <Save className='w-4 h-4' />
+              Save Chain
+            </Button>
           </div>
         </div>
       </div>
 
-      <div className="flex-1 flex overflow-hidden">
-        {/* Main Content */}
-        <div className="flex-1 overflow-auto">
-          <div className="p-6 space-y-6">
-            {/* Basic Information */}
-            <div className="bg-white rounded-xl border border-gray-200 p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Basic Information</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Chain Name *
-                  </label>
-                  <input
-                    type="text"
+      <div className='flex-1 overflow-auto'>
+        <div className='p-6 space-y-6'>
+          {/* Basic Information */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Basic Information</CardTitle>
+            </CardHeader>
+            <CardContent className='space-y-4'>
+              <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                <div className='space-y-2'>
+                  <Label htmlFor='chainName'>Chain Name *</Label>
+                  <Input
+                    id='chainName'
                     value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Enter chain name"
+                    onChange={(e) =>
+                      setFormData({ ...formData, name: e.target.value })
+                    }
+                    placeholder='Enter chain name'
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Status
-                  </label>
-                  <select
+                <div className='space-y-2'>
+                  <Label htmlFor='status'>Status</Label>
+                  <Select
                     value={formData.enabled ? 'enabled' : 'disabled'}
-                    onChange={(e) => setFormData({ ...formData, enabled: e.target.value === 'enabled' })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, enabled: value === 'enabled' })
+                    }
                   >
-                    <option value="enabled">Enabled</option>
-                    <option value="disabled">Disabled</option>
-                  </select>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value='enabled'>Enabled</SelectItem>
+                      <SelectItem value='disabled'>Disabled</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
-              <div className="mt-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Description
-                </label>
-                <textarea
+              <div className='space-y-2'>
+                <Label htmlFor='description'>Description</Label>
+                <Textarea
+                  id='description'
                   value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, description: e.target.value })
+                  }
+                  placeholder='Describe what this chain does'
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Describe what this chain does"
                 />
               </div>
-            </div>
+            </CardContent>
+          </Card>
 
-            {/* Tabs */}
-            <div className="bg-white rounded-xl border border-gray-200">
-              <div className="border-b border-gray-200">
-                <nav className="flex space-x-8 px-6">
-                  {[
-                    { id: 'requests', label: 'Requests', count: formData.requests?.length || 0 },
-                    { id: 'variables', label: 'Global Variables', count: globalVariables.length },
-                    { id: 'extracted-variables', label: 'Variables Table', icon: Database },
-                    { id: 'schedule', label: 'Schedule' },
-                    { id: 'execute', label: 'Execute & Test' }
-                  ].map((tab) => {
-                    const Icon = tab.icon;
-                    return (
-                      <button
-                        key={tab.id}
-                        onClick={() => setActiveTab(tab.id as typeof activeTab)}
-                        className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors flex items-center space-x-2 ${
-                          activeTab === tab.id
-                            ? 'border-blue-500 text-blue-600'
-                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                        }`}
-                      >
-                        {Icon && <Icon className="w-4 h-4" />}
-                        <span>{tab.label}</span>
-                        {tab.count !== undefined && (
-                          <span className="ml-2 px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded-full">
-                            {tab.count}
-                          </span>
-                        )}
-                      </button>
-                    );
-                  })}
-                </nav>
+          {/* Tabs */}
+          <Tabs defaultValue='requests' className='w-full'>
+            <TabsList className='grid w-full grid-cols-4'>
+              <TabsTrigger value='requests' className='gap-2'>
+                <Code className='w-4 h-4' />
+                Requests ({formData.requests?.length || 0})
+              </TabsTrigger>
+              <TabsTrigger value='variables' className='gap-2'>
+                <Globe className='w-4 h-4' />
+                Variables ({globalVariables.length})
+              </TabsTrigger>
+              <TabsTrigger value='variables-table' className='gap-2'>
+                <Database className='w-4 h-4' />
+                Variables Table
+              </TabsTrigger>
+              <TabsTrigger value='execute' className='gap-2'>
+                <Play className='w-4 h-4' />
+                Execute & Test
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value='requests' className='space-y-4'>
+              <div className='flex items-center justify-between'>
+                <h3 className='text-lg font-medium'>Request Chain</h3>
+                <Button onClick={addNewRequest} className='gap-2'>
+                  <Plus className='w-4 h-4' />
+                  Add Request
+                </Button>
               </div>
 
-              <div className="p-6">
-                {activeTab === 'requests' && (
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-lg font-medium text-gray-900">Request Chain</h3>
-                      <div className="flex space-x-2">
-                        <button
-                          onClick={() => setShowImportModal(true)}
-                          className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                        >
-                          <Upload className="w-4 h-4" />
-                          <span>Import</span>
-                        </button>
-                        <button
-                          onClick={addNewRequest}
-                          className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                        >
-                          <Plus className="w-4 h-4" />
-                          <span>Add Request</span>
-                        </button>
-                      </div>
-                    </div>
+              {formData.requests && formData.requests.length > 0 ? (
+                <div className='space-y-3'>
+                  {formData.requests.map((request, index) => (
+                    <Card
+                      key={request.id}
+                      className='hover:shadow-sm transition-shadow'
+                    >
+                      <CardContent className='p-4'>
+                        <div className='flex items-center'>
+                          <div className='flex items-center space-x-3'>
+                            <GripVertical
+                              className='w-5 h-5 text-muted-foreground cursor-move'
+                              draggable
+                              onDragStart={() => handleDragStart(index)}
+                              onDragEnter={() => handleDragEnter(index)}
+                              onDragEnd={handleDragEnd}
+                            />
 
-                    {formData.requests && formData.requests.length > 0 ? (
-                      <div className="space-y-3">
-                        {formData.requests.map((request, index) => (
-                          <div
-                            key={request.id}
-                            className="border border-gray-200 rounded-lg hover:shadow-sm transition-shadow"
-                          >
-                            <div className="flex items-center p-4">
-                              <div className="flex items-center space-x-3">
-                                <GripVertical 
-                                  className="w-5 h-5 text-gray-400 cursor-move" 
-                                  draggable
-                                  onDragStart={() => handleDragStart(index)}
-                                  onDragEnter={() => handleDragEnter(index)}
-                                  onDragEnd={handleDragEnd}
-                                />
-                                
-                                {/* Request Number */}
-                                <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-medium">
-                                  {index + 1}
-                                </div>
-                              </div>
-                              
-                              <div className="flex-1 flex items-center space-x-4 ml-3">
-                                <span className={`px-2 py-1 text-xs font-medium rounded border ${getMethodColor(request.method)}`}>
-                                  {request.method}
-                                </span>
-                                <div className="flex-1">
-                                  <p className="font-medium text-gray-900">{request.name}</p>
-                                  <p className="text-sm text-gray-500">{request.url || 'No URL specified'}</p>
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                  {request.enabled ? (
-                                    <Eye className="w-4 h-4 text-green-500" />
-                                  ) : (
-                                    <EyeOff className="w-4 h-4 text-gray-400" />
-                                  )}
-                                </div>
-                              </div>
-
-                              <div className="flex items-center space-x-2 ml-4">
-                                <button
-                                  onClick={() => toggleRequestExpanded(request.id)}
-                                  className="p-2 hover:bg-gray-50 rounded-lg transition-colors"
-                                >
-                                  {expandedRequests.has(request.id) ? (
-                                    <ChevronUp className="w-4 h-4 text-gray-500" />
-                                  ) : (
-                                    <ChevronDown className="w-4 h-4 text-gray-500" />
-                                  )}
-                                </button>
-                                
-                                <div className="relative group">
-                                  <button className="p-2 hover:bg-gray-50 rounded-lg transition-colors">
-                                    <MoreVertical className="w-4 h-4 text-gray-500" />
-                                  </button>
-                                  <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
-                                    <button
-                                      onClick={() => setEditingRequestId(request.id)}
-                                      className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center space-x-2"
-                                    >
-                                      <Edit className="w-4 h-4" />
-                                      <span>Edit Request</span>
-                                    </button>
-                                    <button
-                                      onClick={() => duplicateRequest(request.id)}
-                                      className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center space-x-2"
-                                    >
-                                      <Copy className="w-4 h-4" />
-                                      <span>Duplicate</span>
-                                    </button>
-                                    <button
-                                      onClick={() => moveRequest(request.id, 'up')}
-                                      disabled={index === 0}
-                                      className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 disabled:opacity-50 flex items-center space-x-2"
-                                    >
-                                      <ChevronUp className="w-4 h-4" />
-                                      <span>Move Up</span>
-                                    </button>
-                                    <button
-                                      onClick={() => moveRequest(request.id, 'down')}
-                                      disabled={index === formData.requests!.length - 1}
-                                      className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 disabled:opacity-50 flex items-center space-x-2"
-                                    >
-                                      <ChevronDown className="w-4 h-4" />
-                                      <span>Move Down</span>
-                                    </button>
-                                    <div className="border-t border-gray-200">
-                                      <button
-                                        onClick={() => removeRequest(request.id)}
-                                        className="w-full px-4 py-2 text-left text-sm hover:bg-red-50 text-red-600 flex items-center space-x-2"
-                                      >
-                                        <Trash2 className="w-4 h-4" />
-                                        <span>Delete</span>
-                                      </button>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
+                            <div className='w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-medium'>
+                              {index + 1}
                             </div>
-
-                            {/* Expanded Request Details */}
-                            {expandedRequests.has(request.id) && (
-                              <div className="border-t border-gray-200 p-4 bg-gray-50">
-                                <RequestEditor
-                                  request={request}
-                                  globalVariables={globalVariables}
-                                  onUpdate={(updates) => updateRequest(request.id, updates)}
-                                  compact={true}
-                                />
-                              </div>
-                            )}
                           </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-center py-8">
-                        <Code className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                        <p className="text-gray-500 mb-4">No requests in this chain</p>
-                        <div className="flex justify-center space-x-3">
-                          <button
-                            onClick={() => setShowImportModal(true)}
-                            className="inline-flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                          >
-                            <Upload className="w-4 h-4" />
-                            <span>Import from Collection</span>
-                          </button>
-                          <button
-                            onClick={addNewRequest}
-                            className="inline-flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                          >
-                            <Plus className="w-4 h-4" />
-                            <span>Add First Request</span>
-                          </button>
+
+                          <div className='flex-1 flex items-center space-x-4 ml-3'>
+                            <Badge className={getMethodColor(request.method)}>
+                              {request.method}
+                            </Badge>
+                            <div className='flex-1'>
+                              <p className='font-medium'>{request.name}</p>
+                              <p className='text-sm text-muted-foreground'>
+                                {request.url || 'No URL specified'}
+                              </p>
+                            </div>
+                            <div className='flex items-center space-x-2'>
+                              {request.enabled ? (
+                                <Eye className='w-4 h-4 text-green-500' />
+                              ) : (
+                                <EyeOff className='w-4 h-4 text-muted-foreground' />
+                              )}
+                            </div>
+                          </div>
+
+                          <div className='flex items-center space-x-2 ml-4'>
+                            <Button
+                              variant='ghost'
+                              size='sm'
+                              onClick={() => toggleRequestExpanded(request.id)}
+                            >
+                              {expandedRequests.has(request.id) ? (
+                                <ChevronUp className='w-4 h-4' />
+                              ) : (
+                                <ChevronDown className='w-4 h-4' />
+                              )}
+                            </Button>
+
+                            <Button
+                              variant='ghost'
+                              size='sm'
+                              onClick={() => setEditingRequestId(request.id)}
+                            >
+                              <Edit className='w-4 h-4' />
+                            </Button>
+
+                            <Button
+                              variant='ghost'
+                              size='sm'
+                              onClick={() => duplicateRequest(request.id)}
+                            >
+                              <Copy className='w-4 h-4' />
+                            </Button>
+
+                            <Button
+                              variant='ghost'
+                              size='sm'
+                              onClick={() => removeRequest(request.id)}
+                              className='text-red-600 hover:text-red-700'
+                            >
+                              <Trash2 className='w-4 h-4' />
+                            </Button>
+                          </div>
                         </div>
-                      </div>
-                    )}
-                  </div>
-                )}
 
-                {activeTab === 'variables' && (
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="text-lg font-medium text-gray-900">Global Variables</h3>
-                        <p className="text-sm text-gray-500">Variables shared across all requests in this chain</p>
-                      </div>
-                      <button
-                        onClick={addGlobalVariable}
-                        className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                      >
-                        <Plus className="w-4 h-4" />
-                        <span>Add Variable</span>
-                      </button>
-                    </div>
-
-                    {globalVariables.length > 0 ? (
-                      <div className="space-y-3">
-                        {globalVariables.map((variable) => (
-                          <div key={variable.id} className="flex items-center space-x-3 p-4 border border-gray-200 rounded-lg">
-                            <input
-                              type="text"
-                              value={variable.name}
-                              onChange={(e) => updateGlobalVariable(variable.id, { name: e.target.value })}
-                              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                              placeholder="Variable name"
+                        {expandedRequests.has(request.id) && (
+                          <div className='mt-4 pt-4 border-t'>
+                            <RequestEditor
+                              request={request}
+                              globalVariables={globalVariables}
+                              onUpdate={(updates) =>
+                                updateRequest(request.id, updates)
+                              }
+                              compact={true}
                             />
-                            <input
-                              type="text"
-                              value={variable.value}
-                              onChange={(e) => updateGlobalVariable(variable.id, { value: e.target.value })}
-                              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                              placeholder="Variable value"
-                            />
-                            <select
-                              value={variable.type}
-                              onChange={(e) => updateGlobalVariable(variable.id, { type: e.target.value as Variable['type'] })}
-                              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                            >
-                              <option value="string">String</option>
-                              <option value="number">Number</option>
-                              <option value="boolean">Boolean</option>
-                              <option value="json">JSON</option>
-                            </select>
-                            <button
-                              onClick={() => removeGlobalVariable(variable.id)}
-                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
                           </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-center py-8">
-                        <Globe className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                        <p className="text-gray-500 mb-4">No global variables defined</p>
-                        <button
-                          onClick={addGlobalVariable}
-                          className="inline-flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                        >
-                          <Plus className="w-4 h-4" />
-                          <span>Add First Variable</span>
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                )}
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <div className='text-center py-8'>
+                  <Code className='w-12 h-12 text-muted-foreground mx-auto mb-3' />
+                  <p className='text-muted-foreground mb-4'>
+                    No requests in this chain
+                  </p>
+                  <Button onClick={addNewRequest} className='gap-2'>
+                    <Plus className='w-4 h-4' />
+                    Add First Request
+                  </Button>
+                </div>
+              )}
+            </TabsContent>
 
-                {activeTab === 'extracted-variables' && (
-                  <VariablesTable
-                    requests={formData.requests || []}
-                    executionLogs={executionLogs}
-                    extractedVariables={extractedVariables}
-                    isExecuting={isExecuting}
-                    currentRequestIndex={currentRequestIndex}
-                  />
-                )}
-
-                {activeTab === 'schedule' && (
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-medium text-gray-900">Schedule Configuration</h3>
-                    <div className="text-center py-8">
-                      <Settings className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                      <p className="text-gray-500">Scheduling configuration coming soon</p>
-                    </div>
-                  </div>
-                )}
-
-                {activeTab === 'execute' && (
-                  <RequestExecutor
-                    requests={formData.requests || []}
-                    variables={[...globalVariables, ...(formData.variables || [])]}
-                    onExecutionComplete={(logs, extractedVars) => {
-                      console.log('Execution completed:', logs, extractedVars);
-                      setExecutionLogs(logs);
-                      // Update extracted variables for Variables Table
-                      const newExtractedVars: Record<string, any> = {};
-                      logs.forEach(log => {
-                        if (log.extractedVariables) {
-                          Object.assign(newExtractedVars, log.extractedVariables);
-                        }
-                      });
-                      setExtractedVariables(newExtractedVars);
-                    }}
-                    onVariableUpdate={(variables) => {
-                      setFormData({ ...formData, variables });
-                    }}
-                    onExecutionStateChange={(executing, requestIndex) => {
-                      setIsExecuting(executing);
-                      setCurrentRequestIndex(requestIndex);
-                    }}
-                  />
-                )}
+            <TabsContent value='variables' className='space-y-4'>
+              <div className='flex items-center justify-between'>
+                <div>
+                  <h3 className='text-lg font-medium'>Global Variables</h3>
+                  <p className='text-sm text-muted-foreground'>
+                    Variables shared across all requests in this chain
+                  </p>
+                </div>
+                <Button onClick={addGlobalVariable} className='gap-2'>
+                  <Plus className='w-4 h-4' />
+                  Add Variable
+                </Button>
               </div>
-            </div>
-          </div>
+
+              {globalVariables.length > 0 ? (
+                <div className='space-y-3'>
+                  {globalVariables.map((variable) => (
+                    <Card key={variable.id}>
+                      <CardContent className='p-4'>
+                        <div className='flex items-center space-x-3'>
+                          <div className='flex-1'>
+                            <Input
+                              value={variable.name}
+                              onChange={(e) =>
+                                updateGlobalVariable(variable.id, {
+                                  name: e.target.value,
+                                })
+                              }
+                              placeholder='Variable name'
+                            />
+                          </div>
+                          <div className='flex-1'>
+                            <Input
+                              value={variable.value}
+                              onChange={(e) =>
+                                updateGlobalVariable(variable.id, {
+                                  value: e.target.value,
+                                })
+                              }
+                              placeholder='Variable value'
+                            />
+                          </div>
+                          <Select
+                            value={variable.type}
+                            onValueChange={(value: Variable['type']) =>
+                              updateGlobalVariable(variable.id, { type: value })
+                            }
+                          >
+                            <SelectTrigger className='w-32'>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value='string'>String</SelectItem>
+                              <SelectItem value='number'>Number</SelectItem>
+                              <SelectItem value='boolean'>Boolean</SelectItem>
+                              <SelectItem value='json'>JSON</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <Button
+                            variant='ghost'
+                            size='sm'
+                            onClick={() => removeGlobalVariable(variable.id)}
+                            className='text-red-600'
+                          >
+                            <Trash2 className='w-4 h-4' />
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <div className='text-center py-8'>
+                  <Globe className='w-12 h-12 text-muted-foreground mx-auto mb-3' />
+                  <p className='text-muted-foreground mb-4'>
+                    No global variables defined
+                  </p>
+                  <Button onClick={addGlobalVariable} className='gap-2'>
+                    <Plus className='w-4 h-4' />
+                    Add First Variable
+                  </Button>
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value='variables-table'>
+              <VariablesTable
+                requests={formData.requests || []}
+                executionLogs={executionLogs}
+                extractedVariables={extractedVariables}
+                isExecuting={isExecuting}
+                currentRequestIndex={currentRequestIndex}
+              />
+            </TabsContent>
+
+            <TabsContent value='execute'>
+              <RequestExecutor
+                requests={formData.requests || []}
+                variables={[...globalVariables, ...(formData.variables || [])]}
+                onExecutionComplete={(logs, extractedVars) => {
+                  setExecutionLogs(logs);
+                  const newExtractedVars: Record<string, any> = {};
+                  logs.forEach((log) => {
+                    if (log.extractedVariables) {
+                      Object.assign(newExtractedVars, log.extractedVariables);
+                    }
+                  });
+                  setExtractedVariables(newExtractedVars);
+                }}
+                onVariableUpdate={(variables) => {
+                  setFormData({ ...formData, variables });
+                }}
+                onExecutionStateChange={(executing, requestIndex) => {
+                  setIsExecuting(executing);
+                  setCurrentRequestIndex(requestIndex);
+                }}
+              />
+            </TabsContent>
+          </Tabs>
         </div>
       </div>
-
-      {/* Collection Import Modal */}
-      <CollectionImportModal
-        isOpen={showImportModal}
-        onClose={() => setShowImportModal(false)}
-        onImport={handleImportRequests}
-      />
     </div>
   );
 }
