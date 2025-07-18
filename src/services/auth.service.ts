@@ -1,6 +1,6 @@
 import { API_GET_USER, API_LOGIN, API_LOGOUT, API_REGISTER } from "@/config/apiRoutes";
 import { apiRequest } from "@/lib/queryClient";
-import { ILoginResponse, User } from "@/shared/types/auth";
+import { ILoginResponse, SingUpForm, User } from "@/shared/types/auth";
 
 export const refreshUserData = async () => {
   try {
@@ -74,7 +74,7 @@ export const logoutApi = async () => {
   }
 };
 
-export const registerApi = async (userData: User) => {
+export const registerApi = async (userData: SingUpForm) => {
   try {
   const response = await apiRequest("POST", API_REGISTER, {
     body: JSON.stringify(userData),

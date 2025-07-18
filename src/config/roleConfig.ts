@@ -15,6 +15,7 @@ export const ROLE_PERMISSIONS = {
     "integrations", 
     "settings",
     "cicd_integrations",
+    "cicd_configuration",
     "notification_settings",
     "billing"
   ],
@@ -26,7 +27,7 @@ export const ROLE_PERMISSIONS = {
     "executions",
     "reports",
     "dashboard",
-    "cicd_connect"
+    "cicd_configuration"
   ],
   qa: [
     "request_builder",

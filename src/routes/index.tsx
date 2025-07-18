@@ -28,12 +28,9 @@ import EditTestSuite from '@/pages/EditTestSuite';
 import Pricing from '@/pages/Pricing';
 import Terms from '@/pages/Terms';
 import Privacy from '@/pages/Privacy';
-import AccountSettingsPage from '@/pages/profile/AccountSettings';
-import AccountProfile from '@/pages/profile/AccountProfile';
-import AccountSecurity from '@/pages/profile/AccountSecurity';
-import AccountPreferences from '@/pages/profile/AccountPreferences';
-import AccountBilling from '@/pages/profile/AccountBilling';
 import Plan from '@/components/Plan/Plan';
+import CICDConfiguration from '@/pages/CICDConfiguration';
+import AccountSettingsPage from "@/pages/AccountSettingsPage";
 
 export default function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -83,6 +80,9 @@ export default function Router() {
           <Route path='/settings/security' component={AccountSecurity} />
           <Route path='/settings/preferences' component={AccountPreferences} />
           <Route path='/settings/billing' component={AccountBilling} />
+          <Route path='/cicd-configuration' component={CICDConfiguration} />
+          <Route path="/settings/profile" component={AccountSettingsPage} />
+          <Route path="/settings/account" component={AccountSettingsPage} />
         </AppLayout>
       )}
       <Route path='*' component={NotFound} />
