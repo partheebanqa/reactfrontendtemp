@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
-import { Variable } from '@/models/datamanagement';
+import { Variable } from '@/shared/types/datamanagement';
 import { allGenerators, getGenerator } from '@/lib/dynamicVariables';
 import {
   FileText,

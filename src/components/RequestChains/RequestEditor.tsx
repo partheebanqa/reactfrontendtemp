@@ -42,7 +42,7 @@ import {
   Variable,
   DataExtraction,
   TestScript,
-} from '@/models/requestChain.model';
+} from '@/shared/types/requestChain.model';
 
 interface RequestEditorProps {
   request: APIRequest;

@@ -26,7 +26,7 @@ import {
 } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { RequestChain } from '@/models/requestChain.model';
+import { RequestChain } from '@/shared/types/requestChain.model';
 
 interface RequestChainsListProps {
   chains: RequestChain[];

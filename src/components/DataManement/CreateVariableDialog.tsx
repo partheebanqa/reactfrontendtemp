@@ -28,7 +28,7 @@ import {
   Wifi,
 } from 'lucide-react';
 import { allGenerators, getGenerator } from '@/lib/dynamicVariables';
-import { Variable, Environment } from '@/models/datamanagement';
+import { Variable, Environment } from '@/shared/types/datamanagement';
 
 interface VariableCreateDialogProps {
   open: boolean;

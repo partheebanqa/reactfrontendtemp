@@ -40,7 +40,7 @@ import {
   RequestChain,
   APIRequest,
   Variable,
-} from '@/models/requestChain.model';
+} from '@/shared/types/requestChain.model';
 import { RequestEditor } from './RequestEditor';
 import { RequestExecutor } from './RequestExecutor';
 import { VariablesTable } from './VariablesTable';

@@ -19,7 +19,7 @@ import Executions from '@/pages/Executions';
 import CiCdIntegration from '@/pages/CiCdIntegration';
 import Profile from '@/pages/Profile';
 import Settings from '@/pages/Settings';
-import DataManagement from '@/pages/DataManaementPage';
+import DataManagement from '@/pages/DataManaement';
 import Reports from '@/pages/Reports';
 import Notifications from '@/pages/Notifications';
 import SwaggerParser from '@/pages/SwaggerParser';
@@ -30,7 +30,7 @@ import Terms from '@/pages/Terms';
 import Privacy from '@/pages/Privacy';
 import Plan from '@/components/Plan/Plan';
 import CICDConfiguration from '@/pages/CICDConfiguration';
-import AccountSettingsPage from "@/pages/AccountSettingsPage";
+import AccountSettingsPage from '@/pages/AccountSettingsPage';
 
 export default function Router() {
   const { isAuthenticated, isLoading } = useAuth();

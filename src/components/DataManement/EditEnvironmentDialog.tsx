@@ -9,7 +9,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Environment } from '@/models/datamanagement';
+import { Environment } from '@/shared/types/datamanagement';
 import { useToast } from '@/hooks/useToast';
 type Props = {
   open: boolean;

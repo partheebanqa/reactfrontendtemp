@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import EnvironmentsSection from './EnvironmentsSection';
 import VariablesSection from './VariablesSection';
-import { Environment, Variable } from '@/models/datamanagement';
+import { Environment, Variable } from '@/shared/types/datamanagement';
 import { useToast } from '@/hooks/useToast';
 
 const DataManagement: React.FC = () => {

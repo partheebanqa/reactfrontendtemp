@@ -6,7 +6,7 @@ import {
   APIRequest,
   Variable,
   ExecutionLog,
-} from '@/models/requestChain.model';
+} from '@/shared/types/requestChain.model';
 
 interface RequestExecutorProps {
   requests: APIRequest[];
