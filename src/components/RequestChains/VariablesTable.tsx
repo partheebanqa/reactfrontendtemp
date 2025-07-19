@@ -1,7 +1,7 @@
 import React from 'react';
 import { Database } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { APIRequest, ExecutionLog } from '@/models/requestChain.model';
+import { APIRequest, ExecutionLog } from '@/shared/types/requestChain.model';
 
 interface VariablesTableProps {
   requests: APIRequest[];

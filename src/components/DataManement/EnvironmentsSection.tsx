@@ -1,6 +1,6 @@
 // EnvironmentsSection.tsx
 import React, { useState } from 'react';
-import { Environment } from '@/models/datamanagement';
+import { Environment } from '@/shared/types/datamanagement';
 import { Button } from '@/components/ui/button';
 import EnvironmentCard from './EnvironmentCard';
 import CreateEnvironmentDialog from './CreateEnvironmentDialog';

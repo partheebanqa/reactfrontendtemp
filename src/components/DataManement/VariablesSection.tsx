@@ -6,7 +6,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Variable, Environment } from '@/models/datamanagement';
+import { Variable, Environment } from '@/shared/types/datamanagement';
 import VariableCreateDialog from './CreateVariableDialog';
 import VariableCard from './VariableCard';
 import VariableEditDialog from './EditVariableDialog'; // ✅ CORRECTED

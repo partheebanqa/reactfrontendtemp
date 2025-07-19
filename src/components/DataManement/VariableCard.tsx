@@ -12,7 +12,7 @@ import {
   Zap,
   Globe,
 } from 'lucide-react';
-import { Variable, Environment } from '@/models/datamanagement';
+import { Variable, Environment } from '@/shared/types/datamanagement';
 
 interface VariableListProps {
   variables: Variable[];

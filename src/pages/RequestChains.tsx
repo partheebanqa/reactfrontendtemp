@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { RequestChainsList } from '@/components/RequestChains/RequestChainsList';
 import { RequestChainEditor } from '@/components/RequestChains/RequestChainEditor';
-import { RequestChain } from '@/models/requestChain.model';
+import { RequestChain } from '@/shared/types/requestChain.model';
 
 export default function RequestChains() {
   const [currentView, setCurrentView] = useState<'list' | 'editor'>('list');

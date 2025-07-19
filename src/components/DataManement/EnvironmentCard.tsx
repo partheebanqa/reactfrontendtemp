@@ -1,6 +1,6 @@
 // EnvironmentCard.tsx
 import React from 'react';
-import { Environment } from '@/models/datamanagement';
+import { Environment } from '@/shared/types/datamanagement';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';

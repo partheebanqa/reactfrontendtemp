@@ -281,7 +281,7 @@ export const getCollectionsWithRequests = async (
   try {
     const response = await apiRequest(
       'GET',
-      `${API_COLLECTIONS}/with-requests?ws=${workspaceId}`
+      `${API_COLLECTIONS}/with-requests?ws=8d9ea72f-7f74-4821-8909-e953066d9a8b`
     );
 
     if (!response.ok) {
