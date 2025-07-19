@@ -100,7 +100,7 @@ export const getCollectionRequests = async (collectionId: string) => {
     const data = await response.json();
     return data?.map((request: any) => formatRequest(request)) || [];
   } catch (error) {
-    return []; // Return empty array on error
+    return [];
   }
 };
 
