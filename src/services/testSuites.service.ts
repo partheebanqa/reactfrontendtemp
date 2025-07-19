@@ -1,4 +1,7 @@
-import { CreateTestSuitePayload, TestSuite } from '@/models/TestSuite.model';
+import {
+  CreateTestSuitePayload,
+  TestSuite,
+} from '@/shared/types/TestSuite.model';
 import { apiRequest } from '@/lib/queryClient';
 import { API_TEST_SUITES } from '@/config/apiRoutes';
 
