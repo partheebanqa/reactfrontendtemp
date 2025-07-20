@@ -38,7 +38,7 @@ export const ExecutionsTable = ({
         </TableRow>
       </TableHeader>
       <TableBody>
-        {executions.map((execution: any) => {
+        {executions?.map((execution: any) => {
           const schedule = schedules?.find(
             (s: any) => s.id === execution.scheduleId
           );
@@ -81,13 +81,13 @@ export const ExecutionsTable = ({
               </TableCell>
               <TableCell>
                 <div className='flex items-center gap-2'>
-                  {execution.testSuite ? (
+                  {execution?.testSuite ? (
                     <Calendar className='text-blue-600' size={16} />
                   ) : (
                     <GitBranch className='text-purple-600' size={16} />
                   )}
                   <span className='text-sm text-slate-700'>
-                    {execution.testSuite ? 'Test Suite' : 'Request Chain'}
+                    {execution?.testSuite ? 'Test Suite' : 'Request Chain'}
                   </span>
                 </div>
               </TableCell>
@@ -97,7 +97,7 @@ export const ExecutionsTable = ({
                 </span>
               </TableCell>
               <TableCell>
-                <Badge className={`${getStatusColor(execution.status)}`}>
+              <Badge >
                   <span className='mr-1'>
                     {getStatusIcon(execution.status)}
                   </span>
@@ -107,10 +107,10 @@ export const ExecutionsTable = ({
               <TableCell>
                 <div>
                   <p className='text-sm text-slate-900'>
-                    {format(new Date(execution.startTime), 'MMM d, yyyy')}
+                    {/* {format(new Date(execution.startTime), 'MMM d, yyyy')} */}
                   </p>
                   <p className='text-xs text-slate-500'>
-                    {format(new Date(execution.startTime), 'h:mm a')} •{' '}
+                    {/* {format(new Date(execution.startTime), 'h:mm a')} •{' '} */}
                     {formatDistanceToNow(new Date(execution.startTime), {
                       addSuffix: true,
                     })}
