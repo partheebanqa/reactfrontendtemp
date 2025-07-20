@@ -69,12 +69,12 @@ const menuItems = [
     icon: Calendar,
     feature: 'scheduler',
   },
-  // {
-  //   label: 'Executions',
-  //   path: '/executions',
-  //   icon: Play,
-  //   feature: 'executions',
-  // },
+  {
+    label: 'Executions',
+    path: '/executions',
+    icon: Play,
+    feature: 'executions',
+  },
   {
     label: 'Data Management',
     path: '/data-management',
