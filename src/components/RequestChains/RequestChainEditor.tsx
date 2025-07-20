@@ -21,6 +21,7 @@ import {
   Copy,
   MoreVertical,
   Database,
+  Loader2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -36,6 +37,8 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useToast } from '@/hooks/use-toast';
+import { useQuery } from '@tanstack/react-query';
 import {
   RequestChain,
   APIRequest,
@@ -44,6 +47,10 @@ import {
 import { ImportModal } from '@/components/TestSuit/ImportModal';
 import { ExtendedRequest } from '@/models/collection.model';
 import { RequestEditor } from '@/components/RequestChains/RequestEditor';
+import {
+  requestService,
+  RequestDetailResponse,
+} from '@/services/requestChain.service';
 
 interface RequestChainEditorProps {
   chain?: RequestChain;
@@ -51,11 +58,112 @@ interface RequestChainEditorProps {
   onSave: (chain: RequestChain) => void;
 }
 
+interface KeyValuePair {
+  id: string;
+  key: string;
+  value: string;
+  enabled: boolean;
+  description?: string;
+}
+
+// Transform function to convert API response to APIRequest format
+const transformRequestDetails = (
+  requestData: RequestDetailResponse
+): Partial<APIRequest> => {
+  // Transform headers from API format to KeyValuePair format
+  const transformHeaders = (headers: any): KeyValuePair[] => {
+    if (!headers) return [];
+    if (Array.isArray(headers)) {
+      return headers.map((header, index) => ({
+        id: `header_${index}_${Date.now()}`,
+        key: header.key || header.name || '',
+        value: header.value || '',
+        enabled: header.enabled !== false,
+        description: header.description || '',
+      }));
+    }
+    // If headers is an object
+    return Object.entries(headers).map(([key, value], index) => ({
+      id: `header_${index}_${Date.now()}`,
+      key,
+      value: String(value),
+      enabled: true,
+      description: '',
+    }));
+  };
+
+  // Transform params from API format to KeyValuePair format
+  const transformParams = (params: any): KeyValuePair[] => {
+    if (!params) return [];
+    if (Array.isArray(params)) {
+      return params.map((param, index) => ({
+        id: `param_${index}_${Date.now()}`,
+        key: param.key || param.name || '',
+        value: param.value || '',
+        enabled: param.enabled !== false,
+        description: param.description || '',
+      }));
+    }
+    // If params is an object
+    return Object.entries(params).map(([key, value], index) => ({
+      id: `param_${index}_${Date.now()}`,
+      key,
+      value: String(value),
+      enabled: true,
+      description: '',
+    }));
+  };
+
+  // Determine body type from the request data
+  const getBodyType = (data: any): APIRequest['bodyType'] => {
+    if (!data.body && !data.bodyFormData) return 'none';
+    if (data.bodyType) return data.bodyType;
+    if (data.bodyFormData) return 'form';
+    try {
+      JSON.parse(data.body);
+      return 'json';
+    } catch {
+      return 'raw';
+    }
+  };
+
+  // Transform auth configuration
+  const transformAuthConfig = (authData: any) => {
+    if (!authData) return undefined;
+
+    return {
+      token: authData.token || authData.bearerToken || '',
+      username: authData.username || '',
+      password: authData.password || '',
+      key: authData.key || authData.apiKey || '',
+      value: authData.value || authData.apiValue || '',
+      addTo: authData.addTo || (authData.in === 'query' ? 'query' : 'header'),
+    };
+  };
+
+  return {
+    name: requestData.name || 'Imported Request',
+    method: (requestData.method || 'GET').toUpperCase() as APIRequest['method'],
+    url: requestData.url || requestData.endpoint || '',
+    headers: transformHeaders(requestData.headers),
+    params: transformParams(requestData.params || requestData.queryParams),
+    bodyType: getBodyType(requestData),
+    body: requestData.body || requestData.rawBody || '',
+    authType: requestData.authType || requestData.auth?.type || 'none',
+    authConfig: transformAuthConfig(requestData.auth || requestData.authConfig),
+    timeout: requestData.timeout || 5000,
+    retries: requestData.retries || 0,
+    errorHandling: requestData.errorHandling || 'stop',
+    enabled: requestData.enabled !== false,
+  };
+};
+
 export function RequestChainEditor({
   chain,
   onBack,
   onSave,
 }: RequestChainEditorProps) {
+  const { toast } = useToast();
   const dragItem = useRef<number | null>(null);
   const dragOverItem = useRef<number | null>(null);
 
@@ -95,6 +203,21 @@ export function RequestChainEditor({
   const [isExecuting, setIsExecuting] = useState(false);
   const [currentRequestIndex, setCurrentRequestIndex] = useState(-1);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [pendingImportIds, setPendingImportIds] = useState<string[]>([]);
+
+  // Use React Query to fetch request details
+  const {
+    data: requestDetails,
+    isLoading: isLoadingDetails,
+    error: detailsError,
+    refetch: refetchDetails,
+  } = useQuery({
+    queryKey: ['requestDetails', pendingImportIds],
+    queryFn: () => requestService.getMultipleRequestDetails(pendingImportIds),
+    enabled: pendingImportIds.length > 0,
+    retry: 2,
+    retryDelay: 1000,
+  });
 
   const handleDragStart = (index: number) => {
     dragItem.current = index;
@@ -125,31 +248,6 @@ export function RequestChainEditor({
       newExpanded.add(requestId);
     }
     setExpandedRequests(newExpanded);
-  };
-
-  const addNewRequest = () => {
-    const newRequest: APIRequest = {
-      id: Date.now().toString(),
-      name: 'New Request',
-      method: 'GET',
-      url: '',
-      headers: [],
-      params: [],
-      bodyType: 'none',
-      timeout: 5000,
-      retries: 0,
-      errorHandling: 'stop',
-      dataExtractions: [],
-      testScripts: [],
-      enabled: true,
-      authType: 'none',
-    };
-
-    setFormData({
-      ...formData,
-      requests: [...(formData.requests || []), newRequest],
-    });
-    setExpandedRequests(new Set([...expandedRequests, newRequest.id]));
   };
 
   const removeRequest = (requestId: string) => {
@@ -204,7 +302,11 @@ export function RequestChainEditor({
 
   const handleSave = () => {
     if (!formData.name) {
-      alert('Please enter a chain name');
+      toast({
+        title: 'Validation Error',
+        description: 'Please enter a chain name',
+        variant: 'destructive',
+      });
       return;
     }
 
@@ -260,47 +362,143 @@ export function RequestChainEditor({
     setGlobalVariables(globalVariables.filter((v) => v.id !== id));
   };
 
-  const handleImportRequests = (importedRequests: ExtendedRequest[]) => {
-    const transformedRequests: APIRequest[] = importedRequests.map((req) => ({
-      id: req.id,
-      name: req.name,
-      method: req.method as
-        | 'GET'
-        | 'POST'
-        | 'PUT'
-        | 'DELETE'
-        | 'PATCH'
-        | 'HEAD'
-        | 'OPTIONS',
-      url: req.endpoint || req.url || '',
-      headers: [],
-      params: [],
-      bodyType: 'none' as const,
-      timeout: 5000,
-      retries: 0,
-      errorHandling: 'stop' as const,
-      dataExtractions: [],
-      testScripts: [],
-      enabled: true,
-      authType: 'none' as const,
-    }));
+  const handleImportRequests = async (importedRequests: ExtendedRequest[]) => {
+    try {
+      toast({
+        title: 'Importing Requests',
+        description: `Fetching details for ${importedRequests.length} requests...`,
+      });
 
-    setFormData({
-      ...formData,
-      requests: [...(formData.requests || []), ...transformedRequests],
-    });
+      // Set the pending import IDs to trigger the useQuery
+      const requestIds = importedRequests.map((req) => req.id);
+      setPendingImportIds(requestIds);
 
-    // Expand newly imported requests
-    const newExpanded = new Set([
-      ...expandedRequests,
-      ...transformedRequests.map((r) => r.id),
-    ]);
-    setExpandedRequests(newExpanded);
-
-    setIsImportModalOpen(false);
+      // The useQuery will automatically fetch the details
+      await refetchDetails();
+    } catch (error) {
+      console.error('Import failed:', error);
+      toast({
+        title: 'Import Failed',
+        description: 'Failed to import requests. Please try again.',
+        variant: 'destructive',
+      });
+    }
   };
 
-  // Mock RequestExecutor component since it doesn't exist
+  // Effect to handle the completion of request details fetching
+  React.useEffect(() => {
+    if (requestDetails && pendingImportIds.length > 0) {
+      try {
+        const detailedRequests: APIRequest[] = [];
+
+        // Process each fetched request detail
+        requestDetails.forEach((detail) => {
+          const transformedDetails = transformRequestDetails(detail);
+
+          const completeRequest: APIRequest = {
+            id: detail.id,
+            name: transformedDetails.name || detail.name || 'Imported Request',
+            method: transformedDetails.method || 'GET',
+            url: transformedDetails.url || detail.endpoint || detail.url || '',
+            headers: transformedDetails.headers || [],
+            params: transformedDetails.params || [],
+            bodyType: transformedDetails.bodyType || 'none',
+            body: transformedDetails.body || '',
+            authType: transformedDetails.authType || 'none',
+            authConfig: transformedDetails.authConfig,
+            timeout: transformedDetails.timeout || 5000,
+            retries: transformedDetails.retries || 0,
+            errorHandling: transformedDetails.errorHandling || 'stop',
+            dataExtractions: [],
+            testScripts: [],
+            enabled: transformedDetails.enabled !== false,
+          };
+
+          detailedRequests.push(completeRequest);
+          console.log(
+            `Imported request details for ${detail.name}:`,
+            completeRequest
+          );
+        });
+
+        // Handle any requests that failed to fetch (fallback to basic config)
+        const fetchedIds = requestDetails.map((d) => d.id);
+        const failedIds = pendingImportIds.filter(
+          (id) => !fetchedIds.includes(id)
+        );
+
+        failedIds.forEach((failedId) => {
+          const fallbackRequest: APIRequest = {
+            id: failedId,
+            name: 'Imported Request',
+            method: 'GET',
+            url: '',
+            headers: [],
+            params: [],
+            bodyType: 'none',
+            timeout: 5000,
+            retries: 0,
+            errorHandling: 'stop',
+            dataExtractions: [],
+            testScripts: [],
+            enabled: true,
+            authType: 'none',
+          };
+
+          detailedRequests.push(fallbackRequest);
+        });
+
+        if (failedIds.length > 0) {
+          toast({
+            title: 'Partial Import',
+            description: `Could not fetch details for ${failedIds.length} request(s). Using basic configuration.`,
+            variant: 'destructive',
+          });
+        }
+
+        // Update form data with the detailed requests
+        setFormData((prev) => ({
+          ...prev,
+          requests: [...(prev.requests || []), ...detailedRequests],
+        }));
+
+        // Expand newly imported requests
+        setExpandedRequests(
+          (prev) => new Set([...prev, ...detailedRequests.map((r) => r.id)])
+        );
+
+        toast({
+          title: 'Import Successful',
+          description: `Successfully imported ${detailedRequests.length} requests with complete details.`,
+        });
+
+        // Clean up
+        setPendingImportIds([]);
+        setIsImportModalOpen(false);
+      } catch (error) {
+        console.error('Error processing imported requests:', error);
+        toast({
+          title: 'Import Error',
+          description: 'Error processing imported requests. Please try again.',
+          variant: 'destructive',
+        });
+        setPendingImportIds([]);
+      }
+    }
+  }, [requestDetails, pendingImportIds, toast]);
+
+  // Handle query errors
+  React.useEffect(() => {
+    if (detailsError && pendingImportIds.length > 0) {
+      toast({
+        title: 'Import Failed',
+        description: 'Failed to fetch request details. Please try again.',
+        variant: 'destructive',
+      });
+      setPendingImportIds([]);
+    }
+  }, [detailsError, pendingImportIds, toast]);
+
   const RequestExecutor = ({
     requests,
     variables,
@@ -478,14 +676,15 @@ export function RequestChainEditor({
                   <Button
                     variant='outline'
                     onClick={() => setIsImportModalOpen(true)}
+                    disabled={isLoadingDetails}
                     className='gap-2'
                   >
-                    <Download className='w-4 h-4' />
-                    Import Request
-                  </Button>
-                  <Button onClick={addNewRequest} className='gap-2'>
-                    <Plus className='w-4 h-4' />
-                    Add Request
+                    {isLoadingDetails ? (
+                      <Loader2 className='w-4 h-4 animate-spin' />
+                    ) : (
+                      <Download className='w-4 h-4' />
+                    )}
+                    {isLoadingDetails ? 'Importing...' : 'Import Request'}
                   </Button>
                 </div>
               </div>
@@ -509,7 +708,6 @@ export function RequestChainEditor({
                             >
                               <GripVertical className='w-5 h-5 text-muted-foreground' />
                             </div>
-
                             <div className='w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-medium'>
                               {index + 1}
                             </div>
@@ -524,6 +722,17 @@ export function RequestChainEditor({
                               <p className='text-sm text-muted-foreground'>
                                 {request.url || 'No URL specified'}
                               </p>
+                              {request.headers &&
+                                request.headers.length > 0 && (
+                                  <p className='text-xs text-blue-600'>
+                                    {request.headers.length} headers
+                                  </p>
+                                )}
+                              {request.params && request.params.length > 0 && (
+                                <p className='text-xs text-green-600'>
+                                  {request.params.length} params
+                                </p>
+                              )}
                             </div>
                             <div className='flex items-center space-x-2'>
                               {request.enabled ? (
@@ -600,14 +809,17 @@ export function RequestChainEditor({
                     <Button
                       variant='outline'
                       onClick={() => setIsImportModalOpen(true)}
+                      disabled={isLoadingDetails}
                       className='gap-2'
                     >
-                      <Download className='w-4 h-4' />
-                      Import from Collection
-                    </Button>
-                    <Button onClick={addNewRequest} className='gap-2'>
-                      <Plus className='w-4 h-4' />
-                      Add Request
+                      {isLoadingDetails ? (
+                        <Loader2 className='w-4 h-4 animate-spin' />
+                      ) : (
+                        <Download className='w-4 h-4' />
+                      )}
+                      {isLoadingDetails
+                        ? 'Importing...'
+                        : 'Import from Collection'}
                     </Button>
                   </div>
                 </div>
