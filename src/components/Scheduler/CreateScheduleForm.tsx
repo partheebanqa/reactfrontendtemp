@@ -130,7 +130,7 @@ export default function CreateScheduleForm({
     scheduledTime: '08:00',
     recurrencePattern: 'weekly',
     selectedDays: ['fri'] as string[],
-    monthlyType: 'date', // 'date' or 'day'
+    monthlyType: 'date',
     monthlyDate: '1', // 1st, 2nd, etc.
     customRepeatEvery: 2,
     customFrequency: 'weeks',
