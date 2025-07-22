@@ -4,16 +4,13 @@ import {
   ChevronRight, 
   Copy, 
   Plus, 
-  Eye, 
   Code, 
   Hash, 
   Cookie,
-  Key,
   CheckCircle,
-  AlertCircle,
   Trash2
 } from 'lucide-react';
-import { DataExtraction, Variable } from '../../types';
+import { DataExtraction } from '../../shared/types/requestChain.model';
 
 interface ResponseExplorerProps {
   response: {
