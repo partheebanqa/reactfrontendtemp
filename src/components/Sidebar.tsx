@@ -73,12 +73,12 @@ const menuItems = [
     icon: Calendar,
     feature: 'scheduler',
   },
-  {
-    label: 'Executions',
-    path: '/executions',
-    icon: Play,
-    feature: 'executions',
-  },
+  // {
+  //   label: 'Executions',
+  //   path: '/executions',
+  //   icon: Play,
+  //   feature: 'executions',
+  // },
   {
     label: 'Data Management',
     path: '/data-management',
@@ -97,6 +97,12 @@ const menuItems = [
     icon: Receipt,
     feature: 'plan_billing',
   },
+  // {
+  //   label: 'CI/CD Configuration',
+  //   path: '/cicd-configuration',
+  //   icon: Workflow,
+  //   feature: 'cicd_configuration',
+  // },
 ];
 
 const utilsItems = [
@@ -120,6 +126,12 @@ const proFeatures = [
     path: '/executions',
     icon: Play,
     feature: 'executions',
+  },
+  {
+    label: 'CI/CD Configuration',
+    path: '/cicd-configuration',
+    icon: Workflow,
+    feature: 'cicd_configuration',
   },
   // {
   //   label: "Data Management",
@@ -264,145 +276,144 @@ const Sidebar: React.FC = () => {
     );
   };
 
-const CategoryHeader: React.FC<{ title: string }> = ({ title }) => {
-  if (collapsed) return null;
+  const CategoryHeader: React.FC<{ title: string }> = ({ title }) => {
+    if (collapsed) return null;
+
+    return (
+      <p className='px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2'>
+        {title}
+      </p>
+    );
+  };
 
   return (
-    <p className='px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2'>
-      {title}
-    </p>
-  );
-};
-
-return (
-  <aside
-    className={`${collapsed ? 'w-16' : 'w-64'
-      } bg-white shadow-lg flex flex-col border-r transition-all duration-300`}
-  >
-    <TooltipProvider>
-      {/* Logo Section */}
-      <div
-        className={`${collapsed ? 'p-3' : 'p-6'
-          } border-b flex justify-between items-center relative`}
-      >
-        {collapsed ? (
-          <div className='w-8 h-8 bg-primary rounded-lg flex items-center justify-center mx-auto'>
-            <Code className='w-4 h-4 text-primary-foreground' />
-          </div>
-        ) : (
-          <div className='flex items-center space-x-3'>
-            <div className='w-8 h-8 bg-primary rounded-lg flex items-center justify-center'>
-              <Code className='w-4 h-4 text-primary-foreground' />
-            </div>
-            <div>
-              <h1 className='text-xl font-bold'>Optraflow</h1>
-              <Badge variant='secondary' className='text-xs'>
-                {subscriptionPlan === 'free'
-                  ? 'Free'
-                  : subscriptionPlan === 'pro'
-                    ? 'Pro'
-                    : 'Enterprise'}
-              </Badge>
-            </div>
-          </div>
-        )}
-        <Button
-          variant='ghost'
-          size='sm'
-          onClick={() => setCollapsed(!collapsed)}
-          className={`p-1 ${collapsed
-            ? 'absolute left-[50px] top-1/2 transform -translate-y-1/2 bg-[#2094f3] rounded-full h-auto hover:bg-[#1e7bbf]'
-            : ''
-            }`}
+    <aside
+      className={`${collapsed ? 'w-16' : 'w-64'
+        } bg-white shadow-lg flex flex-col border-r transition-all duration-300`}
+    >
+        {/* Logo Section */}
+        <div
+          className={`${collapsed ? 'p-3' : 'p-6'
+            } border-b flex justify-between items-center relative`}
         >
           {collapsed ? (
-            <ChevronsRight size={10} />
-          ) : (
-            <ChevronsLeft size={16} />
-          )}
-        </Button>
-      </div>
-
-      {/* Navigation */}
-      <nav
-        className={`flex-1 ${collapsed ? 'px-2' : 'px-4'
-          } py-6 space-y-2 overflow-y-auto`}
-      >
-        {/* Core Features */}
-        <div className='space-y-1'>
-          {menuItems.map((item) => (
-            <NavItem
-              key={item.path}
-              item={item}
-              isActive={location === item.path}
-              featureType='free'
-            />
-          ))}
-
-          {/* Utils Dropdown */}
-          {!collapsed ? (
-            <div className='w-full'>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant='ghost'
-                    className='w-full justify-start relative group'
-                    onClick={() => setUtilsExpanded(!utilsExpanded)}
-                  >
-                    <Wrench className='w-4 h-4 mr-3' />
-                    <span className='flex-1 text-left'>Utilities</span>
-                    {utilsExpanded ? (
-                      <ChevronDown className='w-4 h-4' />
-                    ) : (
-                      <ChevronRight className='w-4 h-4' />
-                    )}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Utilities</TooltipContent>
-              </Tooltip>
-
-              {utilsExpanded && (
-                <div className='pl-3 space-y-1 mt-1'>
-                  {utilsItems.map((item) => (
-                    <NavItem
-                      key={item.path}
-                      item={item}
-                      isActive={location === item.path}
-                      featureType='free'
-                    />
-                  ))}
-                </div>
-              )}
+            <div className='w-8 h-8 bg-primary rounded-lg flex items-center justify-center mx-auto'>
+              <Code className='w-4 h-4 text-primary-foreground' />
             </div>
           ) : (
-            utilsItems.map((item) => (
+            <div className='flex items-center space-x-3'>
+              <div className='w-8 h-8 bg-primary rounded-lg flex items-center justify-center'>
+                <Code className='w-4 h-4 text-primary-foreground' />
+              </div>
+              <div>
+                <h1 className='text-xl font-bold'>Optraflow</h1>
+                <Badge variant='secondary' className='text-xs'>
+                  {subscriptionPlan === 'free'
+                    ? 'Free'
+                    : subscriptionPlan === 'pro'
+                      ? 'Pro'
+                      : 'Enterprise'}
+                </Badge>
+              </div>
+            </div>
+          )}
+          <Button
+            variant='ghost'
+            size='sm'
+            onClick={() => setCollapsed(!collapsed)}
+            className={`p-1 ${collapsed
+              ? 'absolute left-[50px] top-1/2 transform -translate-y-1/2 bg-[#2094f3] rounded-full h-auto hover:bg-[#1e7bbf]'
+              : ''
+              }`}
+          >
+            {collapsed ? (
+              <ChevronsRight size={10} />
+            ) : (
+              <ChevronsLeft size={16} />
+            )}
+          </Button>
+        </div>
+
+        {/* Navigation */}
+        <nav
+          className={`flex-1 ${collapsed ? 'px-2' : 'px-4'
+            } py-6 space-y-2 overflow-y-auto`}
+        >
+          {/* Core Features */}
+          <div className='space-y-1'>
+            {menuItems.map((item) => (
               <NavItem
                 key={item.path}
                 item={item}
                 isActive={location === item.path}
                 featureType='free'
               />
-            ))
-          )}
-        </div>
-
-        {/* Pro Features */}
-        <div className='pt-4 border-t'>
-          <CategoryHeader title='Pro Features' />
-          <div className='space-y-1'>
-            {proFeatures.map((item) => (
-              <NavItem
-                key={item.path}
-                item={item}
-                isActive={location === item.path}
-                featureType='pro'
-              />
             ))}
-          </div>
-        </div>
 
-        {/* Enterprise Features */}
-        <div className='pt-4 border-t'>
+            {/* Utils Dropdown */}
+            {!collapsed ? (
+              <div className='w-full'>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant='ghost'
+                      className='w-full justify-start relative group'
+                      onClick={() => setUtilsExpanded(!utilsExpanded)}
+                    >
+                      <Wrench className='w-4 h-4 mr-3' />
+                      <span className='flex-1 text-left'>Utilities</span>
+                      {utilsExpanded ? (
+                        <ChevronDown className='w-4 h-4' />
+                      ) : (
+                        <ChevronRight className='w-4 h-4' />
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Utilities</TooltipContent>
+                </Tooltip>
+
+                {utilsExpanded && (
+                  <div className='pl-3 space-y-1 mt-1'>
+                    {utilsItems.map((item) => (
+                      <NavItem
+                        key={item.path}
+                        item={item}
+                        isActive={location === item.path}
+                        featureType='free'
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              utilsItems.map((item) => (
+                <NavItem
+                  key={item.path}
+                  item={item}
+                  isActive={location === item.path}
+                  featureType='free'
+                />
+              ))
+            )}
+          </div>
+
+          {/* Pro Features */}
+          <div className='pt-4 border-t'>
+            <CategoryHeader title='Pro Features' />
+            <div className='space-y-1'>
+              {proFeatures.map((item) => (
+                <NavItem
+                  key={item.path}
+                  item={item}
+                  isActive={location === item.path}
+                  featureType='free'
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Enterprise Features */}
+          {/* <div className='pt-4 border-t'>
           <CategoryHeader title='Enterprise' />
           <div className='space-y-1'>
             {enterpriseFeatures.map((item) => (
@@ -414,10 +425,10 @@ return (
               />
             ))}
           </div>
-        </div>
+        </div> */}
 
-        {/* General Items */}
-        <div className='pt-4 border-t'>
+          {/* General Items */}
+          {/* <div className='pt-4 border-t'>
           <div className='space-y-1'>
             {generalItems.map((item) => (
               <NavItem
@@ -427,43 +438,42 @@ return (
               />
             ))}
           </div>
-        </div>
-      </nav>
+        </div> */}
+        </nav>
 
-      {/* Help & Support */}
-      <div className={`${collapsed ? 'p-2' : 'p-4'} border-t`}>
-        {collapsed ? (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="outline"
-                size="icon"
-                className="w-full h-10"
-                onClick={() => setShowHelpModal(true)}
-              >
-                <HelpCircle className="h-5 w-5" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="right">Help & Support</TooltipContent>
-          </Tooltip>
-        ) : (
-          <Button
-            variant="outline"
-            className="w-full justify-start"
-            onClick={() => setShowHelpModal(true)}
-          >
-            <HelpCircle className="mr-2 h-4 w-4" />
-            Help & Support
-          </Button>
-        )}
-      </div>
-    </TooltipProvider>
-    <HelpModal
-      isOpen={showHelpModal}
-      onClose={() => setShowHelpModal(false)}
-    />
-  </aside>
-);
+        {/* Help & Support */}
+        <div className={`${collapsed ? 'p-2' : 'p-4'} border-t`}>
+          {collapsed ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="w-full h-10"
+                  onClick={() => setShowHelpModal(true)}
+                >
+                  <HelpCircle className="h-5 w-5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="right">Help & Support</TooltipContent>
+            </Tooltip>
+          ) : (
+            <Button
+              variant="outline"
+              className="w-full justify-start"
+              onClick={() => setShowHelpModal(true)}
+            >
+              <HelpCircle className="mr-2 h-4 w-4" />
+              Help & Support
+            </Button>
+          )}
+        </div>
+      <HelpModal
+        isOpen={showHelpModal}
+        onClose={() => setShowHelpModal(false)}
+      />
+    </aside>
+  );
 };
 
 export default Sidebar;

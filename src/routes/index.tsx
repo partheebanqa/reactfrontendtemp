@@ -32,6 +32,9 @@ import Plan from '@/components/Plan/Plan';
 import CICDConfiguration from '@/pages/CICDConfiguration';
 import AccountSettingsPage from '@/pages/AccountSettingsPage';
 import ExecutionsNew from '@/pages/ExecutionsNew';
+import TermsPage from '@/pages/TermsPage';
+import PrivacyPage from '@/pages/PrivacyPolicy';
+import ContactPage from '@/pages/ContactPage';
 
 export default function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -85,6 +88,9 @@ export default function Router() {
         
         </AppLayout>
       )}
+      <Route path='/terms' component={TermsPage} />
+      <Route path='/privacy' component={PrivacyPage} />
+      <Route path='/contact' component={ContactPage} />
       <Route path='*' component={NotFound} />
     </Switch>
   );

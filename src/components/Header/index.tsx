@@ -131,29 +131,27 @@ export default function Header() {
 
   return (
     <header className="border-b bg-white dark:bg-gray-900 px-2 sm:px-6 py-2 sm:py-4">
-      <div className="flex items-center justify-end gap-4 sm:gap-6 max-w-screen-xl mx-auto">
+      <div className="flex items-center justify-end gap-4 sm:gap-6  mx-auto">
         <div className="flex items-center gap-1 sm:gap-4 min-w-0">
            <WorkspaceDropdown
+            setWorkspaceModalState={setWorkspaceModalState}
+            handleDeleteWorkspace={handleDeleteWorkspace}
+          />
+          <WorkspaceDropdown
             setWorkspaceModalState={setWorkspaceModalState}
             handleDeleteWorkspace={handleDeleteWorkspace}
           />
           <div className=" xs:block">
             <NotificationBell />
           </div>
-          {/* <Button variant="ghost" size="sm" className="relative">
-            <Bell className="h-5 w-5" />
-            <span className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
-              3
-            </span>
-          </Button> */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button
+              {/* <Button
                 variant="ghost"
                 className="flex items-center p-0 sm:px-2"
                 size="sm"
-              >
-                <Avatar className="h-7 w-7 sm:h-8 sm:w-8">
+              > */}
+                <Avatar className="h-7 w-7 sm:h-8 sm:w-8 cursor-pointer">
                   <AvatarImage src={(user as any)?.profileImageUrl} />
                   <AvatarFallback>
                     {getInitials(
@@ -162,17 +160,8 @@ export default function Header() {
                     )}
                   </AvatarFallback>
                 </Avatar>
-                <div className="text-left hidden md:block ml-2">
-                  <div className="text-sm font-medium">
-                    {(user as any)?.firstName || "Test"}{" "}
-                    {(user as any)?.lastName}
-                  </div>
-                  <div className="text-xs text-gray-500">
-                    {(user as any)?.role}
-                  </div>
-                </div>
-                <ChevronDown className="h-4 w-4 ml-1 sm:ml-2 hidden sm:block" />
-              </Button>
+                {/* <ChevronDown className="h-4 w-4 ml-1 sm:ml-2 hidden sm:block" /> */}
+              {/* </Button> */}
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
               <div className="p-4">
