@@ -11,3 +11,6 @@ export const API_COLLECTION_IMPORT = ENV.API_BASE_URL + '/collections/import';
 
 // TEST SUITES
 export const API_TEST_SUITES = ENV.API_BASE_URL + '/test-suites';
+
+// REQUEST
+export const API_REQUEST = ENV.API_BASE_URL + '/requests';
