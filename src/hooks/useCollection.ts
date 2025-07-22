@@ -48,6 +48,8 @@ export function useCollection() {
   const addRequestToCollection = collectionActions.addRequestToCollection;
 
   const toggleExpandedCollection = (collectionId: string) => {
+    console.log("🚀 ~ toggleExpandedCollection ~ collectionId:", collectionId)
+    if(!collectionId) return;
     collectionActions.toggleExpandedCollection(collectionId);
     const targetCollection = collections?.find(
       (col) => col.id === collectionId
@@ -84,7 +86,7 @@ export function useCollection() {
     } else {
       setShouldFetchCollections(false);
     }
-  }, [isAuthenticated, collections]);
+  }, [isAuthenticated,collections.length]);
 
   const addCollectionMutation = useAddCollectionMutation();
   const renameCollectionMutation = useRenameCollectionMutation();
@@ -126,5 +128,6 @@ export function useCollection() {
     duplicateRequestMutation,
     setFavouriteCollectionMutation,
     deleteCollectionMutation,
+    deleteRequestMutation
   };
 }

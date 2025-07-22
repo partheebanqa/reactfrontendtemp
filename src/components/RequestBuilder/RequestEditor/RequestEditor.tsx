@@ -7,6 +7,7 @@ import { Header, Param, RequestMethod } from '@/shared/types/request';
 import SchemaPage from '../SchemaPage';
 import { useToast } from '@/hooks/useToast';
 import { makeRequest } from '@/services/request.service';
+import { Collection, CollectionRequest } from '@/shared/types/collection';
 
 const RequestEditor: React.FC = () => {
   const { isLoading, clearError, setLoading, setError, setResponseData } =
@@ -24,6 +25,7 @@ const RequestEditor: React.FC = () => {
     toggleExpandedCollection,
     renameRequestMutation,
     setCollection,
+    expandedCollections,
   } = useCollection();
   const { error: showError, success: showSuccess } = useToast();
   const { currentWorkspace } = useWorkspace();
@@ -98,12 +100,12 @@ const RequestEditor: React.FC = () => {
       setBodyType(
         allowedBodyTypes.includes(bodyTypeValue)
           ? (bodyTypeValue as
-              | 'none'
-              | 'json'
-              | 'form-data'
-              | 'x-www-form-urlencoded'
-              | 'raw'
-              | 'binary')
+            | 'none'
+            | 'json'
+            | 'form-data'
+            | 'x-www-form-urlencoded'
+            | 'raw'
+            | 'binary')
           : 'none'
       );
       setBodyContent(activeRequest.bodyRawContent || '');
@@ -199,31 +201,36 @@ const RequestEditor: React.FC = () => {
   };
 
   const handleSaveName = async () => {
-    if (!activeRequest) return;
-    if (editedName.trim() && activeRequest?.id) {
-      await renameRequestMutation.mutateAsync({
-        requestId: activeRequest.id,
-        newName: editedName.trim(),
-      });
-    }
-    const active = { ...activeRequest, name: editedName.trim() };
-    setActiveRequest(active);
-    setCollection(
-      collections.map((collection) => {
-        if (collection.id === activeRequest.collectionId) {
-          return {
-            ...collection,
-            requests: collection.requests.map((request) => {
-              return request.order === activeRequest.order ? active : request;
-            }),
-          };
-        } else {
-          return collection;
-        }
-      })
-    );
+    try {
+      if (!activeRequest) return;
+      if (editedName.trim() && activeRequest?.id) {
+        await renameRequestMutation.mutateAsync({
+          requestId: activeRequest.id,
+          newName: editedName.trim(),
+        });
+      }
+      const active = { ...activeRequest, name: editedName.trim() };
+      setActiveRequest(active);
+      setCollection(
+        collections.map((collection) => {
+          if (collection.id === activeRequest.collectionId) {
+            return {
+              ...collection,
+              requests: collection.requests.map((request) => {
+                return request.order === activeRequest.order ? active : request;
+              }),
+            };
+          } else {
+            return collection;
+          }
+        })
+      );
 
-    setIsEditingName(false);
+      setIsEditingName(false);
+    } catch (error) {
+      console.error('Error saving request name:', error);
+      showError('Rename Failed', 'An error occurred while renaming the request name.');
+    }
   };
 
   const handleCancelEditName = () => {
@@ -254,6 +261,45 @@ const RequestEditor: React.FC = () => {
         setActiveCollection(workspaceCollections[0]);
       }
     }
+  };
+
+  const handleCreateRequest = async (collection?: Collection) => {
+    const newRequest: CollectionRequest = {
+      name: "New Request",
+      method: "GET",
+      url: "",
+      bodyType: "none",
+      bodyFormData: null,
+      authorizationType: "none",
+      authorization: {},
+      variables: {},
+      headers: [],
+      params: [],
+      order: 0 // This will be updated when adding to collection
+    };
+    setResponseData(null);
+    if (collection) {
+      // Ensure collection is expanded when adding a new request
+      if (!expandedCollections.has(collection.id)) {
+        toggleExpandedCollection(collection.id);
+      }
+      newRequest.collectionId = collection.id;
+      newRequest.order = (collection.requests?.length || 0) + 1;
+      setCollection(
+        collections.map((col) =>
+          col.id === collection.id
+            ? {
+              ...col,
+              requests: [...(col.requests || []), newRequest],
+            }
+            : col
+        )
+      );
+      setActiveCollection(
+        collections.find((col) => col.id === collection.id) || null
+      );
+    }
+    setActiveRequest(newRequest);
   };
 
   const handleConfirmSave = async () => {
@@ -294,7 +340,7 @@ const RequestEditor: React.FC = () => {
         collectionId: activeCollection?.id,
         description: '',
         name: activeRequest.name || 'New Request',
-        order: activeCollection?.requests.length || 0,
+        order: (activeCollection?.requests?.length || 0) + 1,
         method: method,
         url: url,
         bodyType: bodyType,
@@ -308,13 +354,12 @@ const RequestEditor: React.FC = () => {
         headers: headers,
         variables: activeRequest.variables || {},
       };
-      const request = await addRequestMutation.mutateAsync(requestData);
-      setActiveRequest(requestData);
+      await addRequestMutation.mutateAsync(requestData);
       setShowSaveModal(false);
       setNewCollectionName('');
       setIsCreatingCollection(false);
-      toggleExpandedCollection(request.id);
       showSuccess('Request saved successfully!');
+      handleCreateRequest();
     } catch (error) {
       console.error('Error saving request:', error);
       showError('Save Failed', 'An error occurred while saving the request.');
@@ -433,52 +478,22 @@ const RequestEditor: React.FC = () => {
               </div>
             )}
             <span
-              className={`px-2 py-1 rounded text-xs font-medium ${
-                method === 'GET'
-                  ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                  : method === 'POST'
+              className={`px-2 py-1 rounded text-xs font-medium ${method === 'GET'
+                ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                : method === 'POST'
                   ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200'
                   : method === 'PUT'
-                  ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
-                  : method === 'DELETE'
-                  ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                  : method === 'PATCH'
-                  ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
-                  : 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
-              }`}
+                    ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+                    : method === 'DELETE'
+                      ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                      : method === 'PATCH'
+                        ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
+                        : 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
+                }`}
             >
               {method}
             </span>
           </div>
-
-          {/* <div className="flex items-center space-x-2">
-            <button
-              onClick={() =>
-                setResponseLayout(
-                  responseLayout === "bottom" ? "right" : "bottom"
-                )
-              }
-              className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400"
-              title={`Switch to ${
-                responseLayout === "bottom" ? "right" : "bottom"
-              } layout`}
-            >
-              {responseLayout === "bottom" ? (
-                <Layout className="h-4 w-4" />
-              ) : (
-                <LayoutGrid className="h-4 w-4" />
-              )}
-            </button>
-
-            <button
-              onClick={handleCreateRequest}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-md text-sm flex items-center space-x-1"
-              title="Create new request"
-            >
-              <Plus className="h-4 w-4" />
-              <span className="hidden sm:inline">New</span>
-            </button>
-          </div> */}
         </div>
       </div>
 
@@ -516,7 +531,7 @@ const RequestEditor: React.FC = () => {
                 {isLoading ? 'Sending...' : 'Send'}
               </span>
             </button>
-
+            
             <button
               onClick={handleSaveRequest}
               className='border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 px-3 py-2 rounded-md'
@@ -560,10 +575,9 @@ const RequestEditor: React.FC = () => {
               onClick={() => setActiveTab(tab.id as any)}
               className={`
                 py-4 px-2 sm:px-4 border-b-2 font-medium text-sm transition-colors whitespace-nowrap
-                ${
-                  activeTab === tab.id
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                ${activeTab === tab.id
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }
               `}
             >
@@ -1045,18 +1059,16 @@ const RequestEditor: React.FC = () => {
                   />
                   <label
                     htmlFor='followRedirects'
-                    className={`block overflow-hidden h-6 rounded-full cursor-pointer ${
-                      settings.followRedirects
-                        ? 'bg-blue-500'
-                        : 'bg-gray-300 dark:bg-gray-700'
-                    }`}
+                    className={`block overflow-hidden h-6 rounded-full cursor-pointer ${settings.followRedirects
+                      ? 'bg-blue-500'
+                      : 'bg-gray-300 dark:bg-gray-700'
+                      }`}
                   >
                     <span
-                      className={`dot block h-6 w-6 rounded-full bg-white shadow transform transition-transform ${
-                        settings.followRedirects
-                          ? 'translate-x-4'
-                          : 'translate-x-0'
-                      }`}
+                      className={`dot block h-6 w-6 rounded-full bg-white shadow transform transition-transform ${settings.followRedirects
+                        ? 'translate-x-4'
+                        : 'translate-x-0'
+                        }`}
                     ></span>
                   </label>
                 </div>
@@ -1107,18 +1119,16 @@ const RequestEditor: React.FC = () => {
                   />
                   <label
                     htmlFor='sslVerification'
-                    className={`block overflow-hidden h-6 rounded-full cursor-pointer ${
-                      settings.sslVerification
-                        ? 'bg-blue-500'
-                        : 'bg-gray-300 dark:bg-gray-700'
-                    }`}
+                    className={`block overflow-hidden h-6 rounded-full cursor-pointer ${settings.sslVerification
+                      ? 'bg-blue-500'
+                      : 'bg-gray-300 dark:bg-gray-700'
+                      }`}
                   >
                     <span
-                      className={`dot block h-6 w-6 rounded-full bg-white shadow transform transition-transform ${
-                        settings.sslVerification
-                          ? 'translate-x-4'
-                          : 'translate-x-0'
-                      }`}
+                      className={`dot block h-6 w-6 rounded-full bg-white shadow transform transition-transform ${settings.sslVerification
+                        ? 'translate-x-4'
+                        : 'translate-x-0'
+                        }`}
                     ></span>
                   </label>
                 </div>
@@ -1165,7 +1175,7 @@ const RequestEditor: React.FC = () => {
                       onChange={(e) =>
                         setActiveCollection(
                           collections.find((c) => c.id === e.target.value) ||
-                            null
+                          null
                         )
                       }
                       className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white'

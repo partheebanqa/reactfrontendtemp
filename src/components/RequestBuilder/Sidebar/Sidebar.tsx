@@ -23,6 +23,7 @@ import { Collection, CollectionRequest } from "@/shared/types/collection";
 import { useToast } from "@/hooks/useToast";
 import ImportModal from "../ImportModal";
 import { useRequest } from "@/hooks/useRequest";
+import TooltipContainer from "@/components/ui/tooltip-container";
 
 const Sidebar: React.FC = () => {
   const { currentWorkspace } = useWorkspace();
@@ -37,7 +38,7 @@ const Sidebar: React.FC = () => {
     setCollection,
     toggleExpandedCollection,
     renameCollectionMutation,
-    deleteRequest,
+    deleteRequestMutation,
     duplicateRequestMutation,
     setFavouriteCollectionMutation,
     renameRequestMutation,
@@ -108,9 +109,9 @@ const Sidebar: React.FC = () => {
         collections.map((col) =>
           col.id === collection.id
             ? {
-                ...col,
-                requests: [...(col.requests || []), newRequest],
-              }
+              ...col,
+              requests: [...(col.requests || []), newRequest],
+            }
             : col
         )
       );
@@ -168,9 +169,9 @@ const Sidebar: React.FC = () => {
   };
 
   const handleDeleteRequest = async (requestId: string) => {
+    console.log("🚀 ~ handleDeleteRequest ~ requestId:", requestId)
     try {
-      await deleteRequest(requestId);
-      deleteRequest(requestId);
+      await deleteRequestMutation.mutateAsync(requestId);
       setShowMenu(null);
 
       toast({
@@ -236,10 +237,11 @@ const Sidebar: React.FC = () => {
       }
     } catch (error) {
       console.error("Failed to rename request:", error);
+      showError('Rename Failed', 'An error occurred while renaming the request name.');
     }
   };
 
-  const handleDeleteCollection = async () => {};
+  const handleDeleteCollection = async () => { };
 
   const handleExportCollection = async (collection: Collection) => {
     try {
@@ -291,57 +293,57 @@ const Sidebar: React.FC = () => {
             body:
               request.bodyType !== "none"
                 ? {
-                    mode: getPostmanBodyMode(request.bodyType),
-                    ...(request.bodyType === "json"
-                      ? {
-                          raw: request.bodyRawContent || "{}",
-                          options: {
-                            raw: {
-                              language: "json",
-                            },
-                          },
-                        }
-                      : {}),
-                    ...(request.bodyType === "form-data"
-                      ? {
-                          formdata: Array.isArray(request.bodyFormData)
-                            ? request.bodyFormData.map((item: any) => ({
-                                key: item.key,
-                                value: item.type === "file" ? "" : item.value,
-                                type: item.type || "text",
-                                disabled: !item.enabled,
-                              }))
-                            : [],
-                        }
-                      : {}),
-                    ...(request.bodyType === "x-www-form-urlencoded"
-                      ? {
-                          urlencoded: Array.isArray(
-                            (request as any).urlEncodedData
-                          )
-                            ? (request as any).urlEncodedData.map(
-                                (item: any) => ({
-                                  key: item.key,
-                                  value: item.value,
-                                  disabled: !item.enabled,
-                                })
-                              )
-                            : [],
-                        }
-                      : {}),
-                    ...(request.bodyType === "raw"
-                      ? {
-                          raw: request.bodyRawContent || "",
-                        }
-                      : {}),
-                  }
+                  mode: getPostmanBodyMode(request.bodyType),
+                  ...(request.bodyType === "json"
+                    ? {
+                      raw: request.bodyRawContent || "{}",
+                      options: {
+                        raw: {
+                          language: "json",
+                        },
+                      },
+                    }
+                    : {}),
+                  ...(request.bodyType === "form-data"
+                    ? {
+                      formdata: Array.isArray(request.bodyFormData)
+                        ? request.bodyFormData.map((item: any) => ({
+                          key: item.key,
+                          value: item.type === "file" ? "" : item.value,
+                          type: item.type || "text",
+                          disabled: !item.enabled,
+                        }))
+                        : [],
+                    }
+                    : {}),
+                  ...(request.bodyType === "x-www-form-urlencoded"
+                    ? {
+                      urlencoded: Array.isArray(
+                        (request as any).urlEncodedData
+                      )
+                        ? (request as any).urlEncodedData.map(
+                          (item: any) => ({
+                            key: item.key,
+                            value: item.value,
+                            disabled: !item.enabled,
+                          })
+                        )
+                        : [],
+                    }
+                    : {}),
+                  ...(request.bodyType === "raw"
+                    ? {
+                      raw: request.bodyRawContent || "",
+                    }
+                    : {}),
+                }
                 : undefined,
             auth:
               request.authorizationType !== "none"
                 ? {
-                    type: request.authorizationType,
-                    [request.authorizationType]: getAuthDetails(request),
-                  }
+                  type: request.authorizationType,
+                  [request.authorizationType]: getAuthDetails(request),
+                }
                 : undefined,
           },
           response: [],
@@ -492,8 +494,7 @@ const Sidebar: React.FC = () => {
       className={`
       bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700
       transition-all duration-300 ease-in-out
-       w-64
-      fixed lg:relative h-full z-40 overflow-hidden
+      w-full h-full md:w-64 overflow-auto
     `}
     >
       <div className="p-3 sm:p-4">
@@ -520,6 +521,7 @@ const Sidebar: React.FC = () => {
               onClick={() => setShowImportModal(true)}
               className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
               aria-label="Import collection"
+              title="Import collection"
             >
               <Upload className="h-4 w-4" />
             </button>
@@ -557,12 +559,15 @@ const Sidebar: React.FC = () => {
                     >
                       <Plus className="h-3 w-3" />
                     </button> */}
-                    <button
-                      className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
-                      onClick={() => handleFavoriteCollection(collection)}
-                    >
-                      <Star className="h-4 w-4 mr-2" />
-                    </button>
+                    <TooltipContainer text={collection.isImportant ? "Unfavorite" : "Favorite"} children={
+                      <button
+                        className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
+                        onClick={() => handleFavoriteCollection(collection)}
+                      >
+                        <Star className="h-4 w-4 mr-2" />
+                      </button>
+                    } />
+
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -589,10 +594,9 @@ const Sidebar: React.FC = () => {
                         className={`
                           flex items-center justify-between p-2 rounded-md cursor-pointer
                           hover:bg-gray-50 dark:hover:bg-gray-800
-                          ${
-                            activeRequest?.id === request.id
-                              ? "bg-blue-50 dark:bg-blue-900/20"
-                              : ""
+                          ${activeRequest?.id === request.id
+                            ? "bg-blue-50 dark:bg-blue-900/20"
+                            : ""
                           }
                         `}
                       >
@@ -754,7 +758,7 @@ const Sidebar: React.FC = () => {
         isOpen={showImportModal}
         onClose={() => setShowImportModal(false)}
       />
-      
+
       {/* Portal Menus */}
       {showMenu && menuPosition && typeof document !== 'undefined' && ReactDOM.createPortal(
         <>

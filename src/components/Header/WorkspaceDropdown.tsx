@@ -29,12 +29,16 @@ export default function WorkspaceDropdown({ setWorkspaceModalState, handleDelete
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline" className="flex items-center space-x-2">
-            {currentWorkspace?.name || "Select Workspace"}
-            <ChevronDown className="h-4 w-4 ml-2" />
+          <Button 
+            variant="outline" 
+            className="flex items-center space-x-1 sm:space-x-2 max-w-[120px] xs:max-w-[150px] sm:max-w-[200px] md:max-w-[250px] lg:max-w-[300px] h-9 px-2 py-1"
+            size="sm"
+          >
+            <span className="truncate text-xs sm:text-sm">{currentWorkspace?.name || "Select Workspace"}</span>
+            <ChevronDown className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent className="w-56">
+        <DropdownMenuContent className="w-48 sm:w-56 max-h-[60vh] overflow-y-auto custom-scrollbar">
           {workspaces.map((workspace) => {
             return (
               <DropdownMenuItem
@@ -42,15 +46,15 @@ export default function WorkspaceDropdown({ setWorkspaceModalState, handleDelete
                 onClick={() => setCurrentWorkspace(workspace)}
                 className={`${
                   currentWorkspace?.id === workspace.id ? "bg-gray-100" : ""
-                } justify-between`}
+                } justify-between text-xs sm:text-sm py-1`}
               >
-                <span className="font-medium">{workspace.name}</span>
+                <span className="font-medium truncate mr-2">{workspace.name}</span>
                 {currentWorkspace?.id === workspace.id && (
-                  <div>
+                  <div className="flex-shrink-0 flex items-center">
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-6 w-6 ml-2"
+                      className="h-5 w-5 sm:h-6 sm:w-6"
                       onClick={(e) => {
                         e.stopPropagation(); // Prevent triggering the parent dropdown item
                         setWorkspaceModalState({
@@ -60,16 +64,19 @@ export default function WorkspaceDropdown({ setWorkspaceModalState, handleDelete
                         });
                       }}
                     >
-                      <Edit className="h-3 w-3" />
+                      <Edit className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
                     </Button>
 
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-6 w-6 ml-2"
-                      onClick={(e) => handleDeleteWorkspace(workspace.id)}
+                      className="h-5 w-5 sm:h-6 sm:w-6"
+                      onClick={(e) => {
+                        e.stopPropagation(); // Prevent triggering the parent dropdown item
+                        handleDeleteWorkspace(workspace.id);
+                      }}
                     >
-                      <Trash className="h-3 w-3 " />
+                      <Trash className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
                     </Button>
                   </div>
                 )}
@@ -85,9 +92,9 @@ export default function WorkspaceDropdown({ setWorkspaceModalState, handleDelete
                 workspace: null,
               })
             }
-            className="text-blue-600 font-medium"
+            className="text-blue-600 font-medium text-xs sm:text-sm py-1"
           >
-            <PlusCircle className="mr-2 h-4 w-4" />
+            <PlusCircle className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
             Add New Workspace
           </DropdownMenuItem>
         </DropdownMenuContent>
