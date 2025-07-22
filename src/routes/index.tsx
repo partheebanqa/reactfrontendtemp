@@ -31,6 +31,7 @@ import Privacy from '@/pages/Privacy';
 import Plan from '@/components/Plan/Plan';
 import CICDConfiguration from '@/pages/CICDConfiguration';
 import AccountSettingsPage from '@/pages/AccountSettingsPage';
+import ExecutionsNew from '@/pages/ExecutionsNew';
 
 export default function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -65,7 +66,6 @@ export default function Router() {
           <Route path='/test-suites/create' component={EditTestSuite} />
           <Route path='/scheduler' component={Scheduler} />
           <Route path='/cicd' component={CiCdIntegration} />
-          <Route path='/executions' component={Executions} />
           <Route path='/data-management' component={DataManagement} />
           <Route path='/reports' component={Reports} />
           <Route path='/settings' component={Settings} />
@@ -81,6 +81,8 @@ export default function Router() {
           <Route path='/settings/preferences' component={AccountPreferences} />
           <Route path='/settings/billing' component={AccountBilling} /> */}
           <Route path='/cicd-configuration' component={CICDConfiguration} />
+          <Route path='/executions' component={ExecutionsNew} />
+        
         </AppLayout>
       )}
       <Route path='*' component={NotFound} />

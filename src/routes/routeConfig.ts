@@ -93,7 +93,7 @@ export const routeConfig: RouteConfig[] = [
   {
     path: '/executions',
     name: 'Executions',
-    component: 'ExecutionsPage',
+    component: 'ExecutionsNew',
     icon: 'Play',
     requiresAuth: true,
     meta: {

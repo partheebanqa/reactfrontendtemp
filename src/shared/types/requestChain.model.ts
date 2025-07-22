@@ -86,3 +86,26 @@ export interface Schedule {
   interval?: number;
   cron?: string;
 }
+
+export interface ExecutionLog {
+  id: string;
+  chainId: string;
+  requestId: string;
+  status: 'success' | 'error';
+  startTime: string;
+  endTime: string;
+  duration: number;
+  request: {
+    method: string;
+    url: string;
+    headers: Record<string, string>;
+    body?: string;
+  };
+  response: {
+    status: number;
+    headers: Record<string, string>;
+    body: string;
+    size: number;
+  };
+  errorMessage?: string; // Optional if status is 'error'
+}

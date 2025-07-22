@@ -318,11 +318,6 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                                 <p className='text-sm text-muted-foreground'>
                                   {request.endpoint || request.url}
                                 </p>
-                                {request.description && (
-                                  <p className='text-sm text-muted-foreground mt-1'>
-                                    {request.description}
-                                  </p>
-                                )}
                               </div>
                             </div>
                           );
