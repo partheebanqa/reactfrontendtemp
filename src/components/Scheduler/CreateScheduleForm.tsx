@@ -134,7 +134,7 @@ export default function CreateScheduleForm({
     monthlyDate: '1', // 1st, 2nd, etc.
     customRepeatEvery: 2,
     customFrequency: 'weeks',
-    customEndCondition: 'after', // 'never', 'after', 'on'
+    customEndCondition: 'after',
     customEndCount: 50,
     customEndDate: undefined as Date | undefined,
     isActive: true,
