@@ -56,6 +56,7 @@ export const CSP_DIRECTIVES: CSPDirectives = {
     "https://api.gitlab.com", // GitLab API
     "https://apibackenddev.onrender.com", // Backend API
     "https://jsonplaceholder.typicode.com", // JSONPlaceholder API for testing
+    "https://ipapi.co/json/", // IP geolocation API (note the trailing slash)
     "wss:", // WebSocket connections
     "ws:" // WebSocket connections (dev)
   ],

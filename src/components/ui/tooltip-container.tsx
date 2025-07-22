@@ -7,9 +7,10 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./tool
 interface TooltipContainerProps {
   children: React.ReactNode;
   text: string;
+  position?: "top" | "right" | "bottom" | "left";
 }
 
-const TooltipContainer = ({ children, text }: TooltipContainerProps) => {
+const TooltipContainer = ({ children, text, position = "top" }: TooltipContainerProps) => {
   return (
     <TooltipProvider>
       <Tooltip>
@@ -19,6 +20,7 @@ const TooltipContainer = ({ children, text }: TooltipContainerProps) => {
         <TooltipContent 
           className="bg-gray-800 text-white px-2 py-1 rounded text-xs"
           sideOffset={5}  // Adjust the offset as needed
+          side={position}
         >
           {text}
           <TooltipPrimitive.Arrow className="fill-gray-800" />

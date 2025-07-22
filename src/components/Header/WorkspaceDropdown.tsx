@@ -20,17 +20,17 @@ interface WorkspaceDropdownProps {
 }
 
 export default function WorkspaceDropdown({ setWorkspaceModalState, handleDeleteWorkspace }: WorkspaceDropdownProps): ReactElement {
-    const {
-        currentWorkspace,
-        workspaces,
-        setCurrentWorkspace,
-      } = useWorkspace();
+  const {
+    currentWorkspace,
+    workspaces,
+    setCurrentWorkspace,
+  } = useWorkspace();
   return (
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             className="flex items-center space-x-1 sm:space-x-2 max-w-[120px] xs:max-w-[150px] sm:max-w-[200px] md:max-w-[250px] lg:max-w-[300px] h-9 px-2 py-1"
             size="sm"
           >
@@ -44,9 +44,8 @@ export default function WorkspaceDropdown({ setWorkspaceModalState, handleDelete
               <DropdownMenuItem
                 key={workspace.id}
                 onClick={() => setCurrentWorkspace(workspace)}
-                className={`${
-                  currentWorkspace?.id === workspace.id ? "bg-gray-100" : ""
-                } justify-between text-xs sm:text-sm py-1`}
+                className={`${currentWorkspace?.id === workspace.id ? "bg-gray-100" : ""
+                  } justify-between text-xs sm:text-sm py-1`}
               >
                 <span className="font-medium truncate mr-2">{workspace.name}</span>
                 {currentWorkspace?.id === workspace.id && (
