@@ -1,15 +1,16 @@
 export interface ExtendedRequest {
   id: string;
-  method: string;
   name: string;
+  method: string;
   url: string;
-  endpoint?: string;
-  description?: string;
-  testCases: {
-    functional: number;
-    total: number;
-  };
+  endpoint: string;
+  queryParams?: { key: string; value: string }[];
+  headers?: any[];
+  body?: any;
+  testCases: { functional: number; total: number };
+  folderName?: string;
 }
+
 
 export interface TransformedCollection {
   id: string;
