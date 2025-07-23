@@ -137,20 +137,15 @@ export default function Header() {
             setWorkspaceModalState={setWorkspaceModalState}
             handleDeleteWorkspace={handleDeleteWorkspace}
           />
-          <WorkspaceDropdown
+          {/* <WorkspaceDropdown
             setWorkspaceModalState={setWorkspaceModalState}
             handleDeleteWorkspace={handleDeleteWorkspace}
-          />
+          /> */}
           <div className=" xs:block">
             <NotificationBell />
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              {/* <Button
-                variant="ghost"
-                className="flex items-center p-0 sm:px-2"
-                size="sm"
-              > */}
                 <Avatar className="h-7 w-7 sm:h-8 sm:w-8 cursor-pointer">
                   <AvatarImage src={(user as any)?.profileImageUrl} />
                   <AvatarFallback>
@@ -160,8 +155,6 @@ export default function Header() {
                     )}
                   </AvatarFallback>
                 </Avatar>
-                {/* <ChevronDown className="h-4 w-4 ml-1 sm:ml-2 hidden sm:block" /> */}
-              {/* </Button> */}
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
               <div className="p-4">
@@ -185,54 +178,13 @@ export default function Header() {
                   </div>
                 </div>
               </div>
-              {/* <DropdownMenuSeparator /> */}
-              {/* <div className="px-3 py-2">
-                <p className="text-xs font-medium text-gray-500 mb-2 pl-2">
-                  Theme
-                </p>
-                <div className="flex items-center justify-between gap-1 bg-gray-50 dark:bg-gray-800 p-2 rounded-lg">
-                  {themes.map((themeOption) => (
-                    <div
-                      key={themeOption.id}
-                      className="relative group"
-                      data-tooltip-id={`theme-tooltip-${themeOption.id}`}
-                    >
-                      <button
-                        onClick={() => setTheme(themeOption.id as any)}
-                        className={`p-2 rounded-md transition-all duration-200 ${theme === themeOption.id
-                            ? "bg-white dark:bg-gray-700 text-blue-600 shadow-sm"
-                            : "text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700"
-                          }`}
-                        aria-label={themeOption.tooltip}
-                      >
-                        <themeOption.icon size={18} />
-                      </button>
-                      <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1 px-2 py-1 bg-gray-800 text-white text-xs rounded pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
-                        {themeOption.tooltip}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div> */}
               <DropdownMenuSeparator />
-              {/* <DropdownMenuItem
-                onClick={() => handleRedirect("/settings/profile")}
-              >
-                <User className="mr-2 h-4 w-4" />
-                Your Profile
-              </DropdownMenuItem> */}
               <DropdownMenuItem
                 onClick={() => handleRedirect("/settings/account")}
               >
                 <Settings className="mr-2 h-4 w-4" />
                 Account Settings
               </DropdownMenuItem>
-              {/* <DropdownMenuItem
-                onClick={() => setShowHelpModal(true)}
-              >
-                <HelpCircle className="mr-2 h-4 w-4" />
-                Help & Support
-              </DropdownMenuItem> */}
               <DropdownMenuSeparator />
 
               <DropdownMenuItem onClick={handleLogout} className="text-red-600">

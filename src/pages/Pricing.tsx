@@ -25,6 +25,7 @@ import {
   Settings,
   HeadphonesIcon
 } from "lucide-react";
+import LandingLayout from "@/components/LandingLayout/LandingLayout";
 
 interface PricingPlan {
   name: string;
@@ -188,6 +189,7 @@ const Pricing: React.FC = () => {
   };
 
   return (
+    <LandingLayout>
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
       {/* Header */}
       <div className="container mx-auto px-4 pt-16 pb-8">
@@ -445,8 +447,7 @@ const Pricing: React.FC = () => {
             </Button>
             <Button 
               size="lg" 
-              variant="outline"
-              className="border-primary-foreground text-primary-foreground hover:bg-primary-foreground hover:text-primary"
+              variant="secondary"
               onClick={() => window.location.href = "mailto:sales@apiflow.com"}
             >
               <HeadphonesIcon className="w-5 h-5 mr-2" />
@@ -456,6 +457,7 @@ const Pricing: React.FC = () => {
         </div>
       </div>
     </div>
+    </LandingLayout>
   );
 };
 

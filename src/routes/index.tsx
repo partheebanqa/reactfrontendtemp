@@ -26,8 +26,6 @@ import SwaggerParser from '@/pages/SwaggerParser';
 import JsonParser from '@/pages/JsonParser';
 import EditTestSuite from '@/pages/EditTestSuite';
 import Pricing from '@/pages/Pricing';
-import Terms from '@/pages/Terms';
-import Privacy from '@/pages/Privacy';
 import Plan from '@/components/Plan/Plan';
 import CICDConfiguration from '@/pages/CICDConfiguration';
 import AccountSettingsPage from '@/pages/AccountSettingsPage';
@@ -74,10 +72,7 @@ export default function Router() {
           <Route path='/settings' component={Settings} />
           <Route path='/profile' component={Profile} />
           <Route path='/notifications' component={Notifications} />
-          <Route path='/pricing' component={Pricing} />
           <Route path='/plan-billing' component={Plan} />
-          <Route path='/terms' component={Terms} />
-          <Route path='/privacy' component={Privacy} />
           <Route path='/settings/account' component={AccountSettingsPage} />
           {/* <Route path='/settings/profile' component={AccountProfile} />
           <Route path='/settings/security' component={AccountSecurity} />
@@ -88,9 +83,10 @@ export default function Router() {
         
         </AppLayout>
       )}
+      <Route path='/pricing' component={Pricing} />
       <Route path='/terms' component={TermsPage} />
       <Route path='/privacy' component={PrivacyPage} />
-      <Route path='/contact' component={ContactPage} />
+      <Route path='/contact-us' component={ContactPage} />
       <Route path='*' component={NotFound} />
     </Switch>
   );
