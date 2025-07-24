@@ -51,6 +51,20 @@ import {
 } from '@/shared/types/requestChain.model';
 import { ResponseExplorer } from './ResponseExplorer';
 
+type ExtractionLog = {
+  url: string;
+  method: string;
+  bodyType: string;
+  bodyFormData?: any;
+  bodyRawContent?: any;
+  authorizationType?: string;
+  authorization?: object;
+  headers?: any[];
+  params?: any[];
+  variables?: Record<string, any>;
+  extractVariables?: any[];
+};
+
 interface RequestEditorProps {
   request: APIRequest;
   globalVariables: Variable[];
@@ -90,6 +104,14 @@ export function RequestEditor({
   >({});
 
   console.log('extractedVariables:', extractedVariables);
+  const [previousExtractions, setPreviousExtractions] = useState<
+    DataExtraction[]
+  >([]);
+  const [extractionLogs, setExtractionLogs] = useState<any[]>([]);
+
+  console.log('extractionLogs:', extractionLogs);
+
+  console.log('previousExtractions:', previousExtractions);
 
   const [responseTab, setResponseTab] = useState<
     'body' | 'cookies' | 'headers' | 'test-results'
@@ -427,7 +449,38 @@ export function RequestEditor({
   const handleExtractVariable = (extraction: DataExtraction) => {
     console.log('extractionInHandleExtractVariable:', extraction);
 
-    const updatedExtractions = [...request.dataExtractions, extraction];
+    const updatedExtractions = [...(request.dataExtractions || []), extraction];
+
+    const extractingLog = {
+      url: request.url,
+      method: request.method,
+      bodyType: request.bodyType,
+      bodyFormData: request.bodyFormData,
+      bodyRawContent: request.body,
+      authorizationType: request.authType,
+      authorization: {
+        token: request.authToken,
+        username: request.authUsername,
+        password: request.authPassword,
+        apiKey: request.authApiKey,
+        apiValue: request.authApiValue,
+        apiLocation: request.authApiLocation,
+      },
+      headers: request.headers,
+      params: request.params,
+      variables: request.variables || {},
+      extractVariables: updatedExtractions,
+    };
+
+    // Append new log to the log array state
+    setExtractionLogs((prevLogs) => [...prevLogs, extractingLog]);
+
+    // Optional: Also log to console
+    console.log('extractingFromRequest:', extractingLog);
+
+    // Update the previous extractions state
+    setPreviousExtractions(updatedExtractions);
+
     onUpdate({ dataExtractions: updatedExtractions });
 
     // Re-extract variables with new configuration

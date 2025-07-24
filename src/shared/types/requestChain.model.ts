@@ -37,6 +37,9 @@ export interface APIRequest {
     value?: string;
     addTo?: 'header' | 'query';
   };
+  bodyFormData?: Record<string, string | File>;
+  queryParams?: Record<string, string>;
+  variables?: Variable[];
   rawBodyType?: 'text' | 'json' | 'xml' | 'html';
   authType?: 'none' | 'bearer' | 'basic' | 'apikey' | 'oauth2';
   authToken?: string; // Bearer token or reference to AuthToken ID
