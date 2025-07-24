@@ -356,12 +356,17 @@ export function RequestChainEditor({
     setGlobalVariables(globalVariables.filter((v) => v.id !== id));
   };
 
+  const [requestChain, setRequestChain] = useState<ExtendedRequest[]>([]);
+
+
   const handleImportRequests = async (importedRequests: ExtendedRequest[]) => {
     try {
       toast({
         title: 'Importing Requests',
         description: `Fetching details for ${importedRequests.length} requests...`,
       });
+
+      setRequestChain((prev) => [...prev, ...importedRequests]);
 
       // Set the pending import IDs to trigger the useQuery
       const requestIds = importedRequests.map((req) => req.id);
