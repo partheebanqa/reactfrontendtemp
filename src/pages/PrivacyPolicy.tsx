@@ -1,58 +1,87 @@
-import { Link } from "wouter";
+import React from "react";
+import LandingLayout from "@/components/LandingLayout/LandingLayout";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 
-const PrivacyPage = () => {
+
+const PrivacyPage: React.FC = () => {
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-3xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-8">
-          <Link to="/">
-            <img src="/optraflow-logo.png" alt="Optraflow" className="mx-auto h-12 w-auto" />
-          </Link>
-          <h1 className="mt-6 text-3xl font-bold text-gray-900">Privacy Policy</h1>
+    <LandingLayout>
+      {/* Hero Section */}
+      <section className="container mx-auto px-4 py-20 text-center">
+        <Badge variant="secondary" className="mb-4">
+          Legal & Compliance
+        </Badge>
+        <h1 className="text-5xl font-bold mb-6 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+          Privacy Policy
+        </h1>
+        <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
+          Your privacy is important to us. Learn how we collect, use, and protect your information.
+        </p>
+      </section>
+
+      {/* Policy Sections */}
+      <section className="container mx-auto px-4 py-10">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <Card>
+            <CardHeader>
+              <CardTitle>Information We Collect</CardTitle>
+              <CardDescription>
+                We collect information you provide directly to us, including personal details when you register for an account.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>How We Use Your Information</CardTitle>
+              <CardDescription>
+                We use your information to provide, maintain, and improve our services, communicate with you, and protect our users.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Information Sharing</CardTitle>
+              <CardDescription>
+                We do not sell or rent your personal information. We may share it only as described in this policy.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Data Security</CardTitle>
+              <CardDescription>
+                We implement technical and organizational measures to protect your personal information against unauthorized access or disclosure.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Your Rights</CardTitle>
+              <CardDescription>
+                You have the right to access, correct, or delete your personal information, and to restrict certain processing.
+              </CardDescription>
+            </CardHeader>
+          </Card>
         </div>
-        
-        <div className="bg-white shadow rounded-lg p-6 space-y-6">
-          <section>
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">1. Information We Collect</h2>
-            <p className="text-gray-600">
-              We collect information that you provide directly to us, including personal information such as your name, email address, and organization details when you register for an account.
-            </p>
-          </section>
+      </section>
 
-          <section>
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">2. How We Use Your Information</h2>
-            <p className="text-gray-600">
-              We use the information we collect to provide, maintain, and improve our services, communicate with you, and protect our users and services.
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">3. Information Sharing</h2>
-            <p className="text-gray-600">
-              We do not sell or rent your personal information to third parties. We may share your information only in the circumstances described in this policy.
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">4. Data Security</h2>
-            <p className="text-gray-600">
-              We implement appropriate technical and organizational measures to protect your personal information against unauthorized access, alteration, disclosure, or destruction.
-            </p>
-          </section>
-
-          <section>
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">5. Your Rights</h2>
-            <p className="text-gray-600">
-              You have the right to access, correct, or delete your personal information. You can also object to or restrict certain processing of your information.
-            </p>
-          </section>
-        </div>
-
-        <div className="mt-8 text-center text-sm text-gray-600">
-          © 2025, Optraflow technologies Pvt. Ltd. All Rights Reserved.
-        </div>
-      </div>
-    </div>
+      {/* CTA Section */}
+      <section className="container mx-auto px-4 py-20 text-center">
+        <h2 className="text-3xl font-bold mb-4">Questions or Concerns?</h2>
+        <p className="text-muted-foreground text-lg mb-8">
+          Contact our support team for more information about our privacy practices.
+        </p>
+        <Button
+          size="lg"
+          onClick={() => window.location.href = "/contact-us"}
+          className="text-lg px-8"
+        >
+          Contact Us
+        </Button>
+      </section>
+    </LandingLayout>
   );
 };
 

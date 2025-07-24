@@ -17,9 +17,9 @@ const TooltipContainer = ({ children, text, position = "top" }: TooltipContainer
         <TooltipTrigger asChild>
           {children}
         </TooltipTrigger>
-        <TooltipContent 
-          className="bg-gray-800 text-white px-2 py-1 rounded text-xs"
-          sideOffset={5}  // Adjust the offset as needed
+        <TooltipContent
+          className="bg-white dark:bg-gray-900 text-gray-900 dark:text-white px-4 py-2 rounded-lg text-sm shadow-lg animate-fade-in border border-gray-200 dark:border-gray-700 backdrop-blur-md transition-all duration-200"
+          sideOffset={5}
           side={position}
         >
           {text}

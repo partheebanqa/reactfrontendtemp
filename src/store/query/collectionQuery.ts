@@ -147,8 +147,7 @@ export const useAddRequestMutation = () => {
   return useMutation({
     mutationFn: addRequest,
     onSuccess: async (data, variables) => {
-      console.log("🚀 ~ onSuccess: ~ variables:", variables)
-      // fetchCollectionRequests.mutateAsync(variables.collectionId);
+      fetchCollectionRequests.mutateAsync(variables.collectionId);
       return data
     },
     onError: (error) => {
