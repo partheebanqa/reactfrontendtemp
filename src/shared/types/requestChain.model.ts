@@ -22,7 +22,21 @@ export interface APIRequest {
   headers: Header[];
   params: Parameter[];
   body?: string;
-  bodyType: 'none' | 'json' | 'form-data' | 'x-www-form-urlencoded' | 'raw' | 'binary';
+  bodyType:
+    | 'none'
+    | 'json'
+    | 'form-data'
+    | 'x-www-form-urlencoded'
+    | 'raw'
+    | 'binary';
+  authConfig?: {
+    token?: string;
+    username?: string;
+    password?: string;
+    key?: string;
+    value?: string;
+    addTo?: 'header' | 'query';
+  };
   rawBodyType?: 'text' | 'json' | 'xml' | 'html';
   authType?: 'none' | 'bearer' | 'basic' | 'apikey' | 'oauth2';
   authToken?: string; // Bearer token or reference to AuthToken ID
@@ -33,7 +47,7 @@ export interface APIRequest {
   authApiLocation?: 'header' | 'query'; // Where to add API key
   timeout: number;
   retries: number;
-  errorHandling?: 'stop' | 'continue' | 'retry';
+  errorHandling?: string;
   dataExtractions: DataExtraction[];
   testScripts?: TestScript[];
   enabled: boolean;

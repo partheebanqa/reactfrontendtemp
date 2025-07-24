@@ -7,19 +7,14 @@ import {
   Edit,
   Play,
   Save,
-  Settings,
   Eye,
   EyeOff,
   ChevronDown,
-  ChevronRight,
   Code,
   Globe,
-  Key,
-  Upload,
   Download,
   ChevronUp,
   Copy,
-  MoreVertical,
   Database,
   Loader2,
 } from 'lucide-react';
@@ -66,7 +61,6 @@ interface KeyValuePair {
   description?: string;
 }
 
-// Transform function to convert API response to APIRequest format
 const transformRequestDetails = (
   requestData: RequestDetailResponse
 ): Partial<APIRequest> => {
@@ -118,7 +112,7 @@ const transformRequestDetails = (
   const getBodyType = (data: any): APIRequest['bodyType'] => {
     if (!data.body && !data.bodyFormData) return 'none';
     if (data.bodyType) return data.bodyType;
-    if (data.bodyFormData) return 'form';
+    if (data.bodyFormData) return 'form-data';
     try {
       JSON.parse(data.body);
       return 'json';
@@ -655,10 +649,10 @@ export function RequestChainEditor({
                 <Code className='w-4 h-4' />
                 Requests ({formData.requests?.length || 0})
               </TabsTrigger>
-              <TabsTrigger value='variables' className='gap-2'>
+              {/* <TabsTrigger value='variables' className='gap-2'>
                 <Globe className='w-4 h-4' />
                 Variables ({globalVariables.length})
-              </TabsTrigger>
+              </TabsTrigger> */}
               <TabsTrigger value='variables-table' className='gap-2'>
                 <Database className='w-4 h-4' />
                 Variables Table
@@ -850,7 +844,7 @@ export function RequestChainEditor({
                             <Input
                               value={variable.name}
                               onChange={(e) =>
-                                updateGlobalVariable(variable.id, {
+                                updateGlobalVariable(variable.id ?? '', {
                                   name: e.target.value,
                                 })
                               }
@@ -861,7 +855,7 @@ export function RequestChainEditor({
                             <Input
                               value={variable.value}
                               onChange={(e) =>
-                                updateGlobalVariable(variable.id, {
+                                updateGlobalVariable(variable.id ?? '', {
                                   value: e.target.value,
                                 })
                               }
@@ -871,7 +865,9 @@ export function RequestChainEditor({
                           <Select
                             value={variable.type}
                             onValueChange={(value: Variable['type']) =>
-                              updateGlobalVariable(variable.id, { type: value })
+                              updateGlobalVariable(variable.id ?? '', {
+                                type: value,
+                              })
                             }
                           >
                             <SelectTrigger className='w-32'>
@@ -887,7 +883,9 @@ export function RequestChainEditor({
                           <Button
                             variant='ghost'
                             size='sm'
-                            onClick={() => removeGlobalVariable(variable.id)}
+                            onClick={() =>
+                              removeGlobalVariable(variable.id || '')
+                            }
                             className='text-red-600'
                           >
                             <Trash2 className='w-4 h-4' />
@@ -925,20 +923,20 @@ export function RequestChainEditor({
               <RequestExecutor
                 requests={formData.requests || []}
                 variables={[...globalVariables, ...(formData.variables || [])]}
-                onExecutionComplete={(logs, extractedVars) => {
+                onExecutionComplete={(logs: any) => {
                   setExecutionLogs(logs);
                   const newExtractedVars: Record<string, any> = {};
-                  logs.forEach((log) => {
+                  logs.forEach((log: any) => {
                     if (log.extractedVariables) {
                       Object.assign(newExtractedVars, log.extractedVariables);
                     }
                   });
                   setExtractedVariables(newExtractedVars);
                 }}
-                onVariableUpdate={(variables) => {
+                onVariableUpdate={(variables: any) => {
                   setFormData({ ...formData, variables });
                 }}
-                onExecutionStateChange={(executing, requestIndex) => {
+                onExecutionStateChange={(executing: any, requestIndex: any) => {
                   setIsExecuting(executing);
                   setCurrentRequestIndex(requestIndex);
                 }}
