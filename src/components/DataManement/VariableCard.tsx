@@ -13,6 +13,12 @@ import {
   Globe,
 } from 'lucide-react';
 import { Variable, Environment } from '@/shared/types/datamanagement';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'; 
 
 interface VariableListProps {
   variables: Variable[];
@@ -148,21 +154,34 @@ const VariableCard: React.FC<VariableListProps> = ({
                 </div>
               </div>
               <div className='flex items-center space-x-2'>
-                <Button
-                  variant='outline'
-                  size='sm'
-                  onClick={() => onEdit(variable)}
-                >
-                  <Edit className='w-4 h-4' />
-                </Button>
-                <Button
-                  variant='ghost'
-                  size='sm'
-                  onClick={() => onDelete(variable.id, variable.key)}
-                >
-                  <Trash2 className='w-4 h-4' />
-                </Button>
-              </div>
+  <TooltipProvider>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          variant='outline'
+          size='sm'
+          onClick={() => onEdit(variable)}
+        >
+          <Edit className='w-4 h-4' />
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>Edit Variable</TooltipContent>
+    </Tooltip>
+
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          variant='ghost'
+          size='sm'
+          onClick={() => onDelete(variable.id, variable.key)}
+        >
+          <Trash2 className='w-4 h-4' />
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>Delete Variable</TooltipContent>
+    </Tooltip>
+  </TooltipProvider>
+</div>
             </div>
           </CardContent>
         </Card>
