@@ -137,3 +137,10 @@ export interface ExecutionLog {
   error?: string;
   extractedVariables?: Record<string, any>;
 }
+
+export interface DataExtraction {
+  variableName: string;
+  source: 'response_body' | 'response_header' | 'response_cookie';
+  path: string;
+  transform?: string;
+}

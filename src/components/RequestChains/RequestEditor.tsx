@@ -71,6 +71,9 @@ interface RequestEditorProps {
   onUpdate: (updates: Partial<APIRequest>) => void;
   onSave?: () => void;
   compact?: boolean;
+  chainName?: string;
+  chainDescription?: string;
+  chainEnabled?: boolean;
 }
 
 interface KeyValuePair {
@@ -87,6 +90,9 @@ export function RequestEditor({
   onUpdate,
   onSave,
   compact = false,
+  chainName,
+  chainDescription,
+  chainEnabled,
 }: RequestEditorProps) {
   const [showRequestUrl, setShowRequestUrl] = useState(true);
   const [isJsonOpen, setIsJsonOpen] = useState(false); // default closed
@@ -103,20 +109,17 @@ export function RequestEditor({
     Record<string, any>
   >({});
 
-  console.log('extractedVariables:', extractedVariables);
   const [previousExtractions, setPreviousExtractions] = useState<
     DataExtraction[]
   >([]);
   const [extractionLogs, setExtractionLogs] = useState<any[]>([]);
-
-  console.log('extractionLogs:', extractionLogs);
-
-  console.log('previousExtractions:', previousExtractions);
-
   const [responseTab, setResponseTab] = useState<
     'body' | 'cookies' | 'headers' | 'test-results'
   >('body');
 
+  console.log('chainName:', chainName);
+  console.log('chainDescription:', chainDescription);
+  console.log('chainEnabled:', chainEnabled);
   // Initialize params, headers if they don't exist
   const params = request.params || [];
   const headers = request.headers || [];
@@ -447,15 +450,35 @@ export function RequestEditor({
   };
 
   const handleExtractVariable = (extraction: DataExtraction) => {
-    console.log('extractionInHandleExtractVariable:', extraction);
+    const currentExtractions = request.dataExtractions || [];
 
-    const updatedExtractions = [...(request.dataExtractions || []), extraction];
+    const existingChains = JSON.parse(
+      localStorage.getItem('extractionLogs') || '[]'
+    );
 
-    const extractingLog = {
+    let maxOrder = 0;
+    for (const chain of existingChains) {
+      for (const req of chain.chainRequests || []) {
+        if (typeof req.order === 'number' && req.order > maxOrder) {
+          maxOrder = req.order;
+        }
+      }
+    }
+
+    const nextOrder = maxOrder + 1;
+
+    const extractionWithOrder = {
+      ...extraction,
+      order: nextOrder,
+    };
+
+    const updatedExtractions = [...currentExtractions, extractionWithOrder];
+
+    const newRequest = {
       url: request.url,
       method: request.method,
+      requestName: request.name,
       bodyType: request.bodyType,
-      bodyFormData: request.bodyFormData,
       bodyRawContent: request.body,
       authorizationType: request.authType,
       authorization: {
@@ -470,20 +493,38 @@ export function RequestEditor({
       params: request.params,
       variables: request.variables || {},
       extractVariables: updatedExtractions,
+      name: request.name,
+      description: request.description,
+      order: nextOrder,
     };
 
-    // Append new log to the log array state
-    setExtractionLogs((prevLogs) => [...prevLogs, extractingLog]);
+    // ✅ Try to find existing chain by identity
+    const chainIndex = existingChains.findIndex(
+      (chain: any) =>
+        chain.name === chainName &&
+        chain.description === chainDescription &&
+        chain.isImportant === !!chainEnabled
+    );
 
-    // Optional: Also log to console
-    console.log('extractingFromRequest:', extractingLog);
+    if (chainIndex !== -1) {
+      existingChains[chainIndex].chainRequests.push(newRequest);
+    } else {
+      // 🆕 New chain
+      const newChain = {
+        name: chainName || '',
+        description: chainDescription || '',
+        isImportant: !!chainEnabled,
+        chainRequests: [newRequest],
+      };
+      existingChains.push(newChain);
+    }
 
-    // Update the previous extractions state
+    localStorage.setItem('extractionLogs', JSON.stringify(existingChains));
+
+    // 🧠 Update state
     setPreviousExtractions(updatedExtractions);
-
     onUpdate({ dataExtractions: updatedExtractions });
 
-    // Re-extract variables with new configuration
     if (executionResult?.response) {
       const extracted = extractDataFromResponse(
         executionResult.response,
@@ -582,108 +623,108 @@ export function RequestEditor({
     });
   };
 
-  const KeyValueTable = ({
-    type,
-    items,
-    addButtonText,
-    emptyStateText,
-  }: {
-    type: 'params' | 'headers';
-    items: KeyValuePair[];
-    addButtonText: string;
-    emptyStateText: string;
-  }) => (
-    <div className='space-y-4'>
-      <div className='flex items-center justify-between'>
-        <h3 className='text-lg font-semibold'>
-          {type === 'params' ? 'Params' : 'Headers'}
-        </h3>
-        <Button
-          variant='link'
-          size='sm'
-          onClick={() => addKeyValuePair(type)}
-          className='gap-2 text-primary'
-        >
-          <Plus className='w-4 h-4' />
-          {addButtonText}
-        </Button>
-      </div>
+  // const KeyValueTable = ({
+  //   type,
+  //   items,
+  //   addButtonText,
+  //   emptyStateText,
+  // }: {
+  //   type: 'params' | 'headers';
+  //   items: KeyValuePair[];
+  //   addButtonText: string;
+  //   emptyStateText: string;
+  // }) => (
+  //   <div className='space-y-4'>
+  //     <div className='flex items-center justify-between'>
+  //       <h3 className='text-lg font-semibold'>
+  //         {type === 'params' ? 'Params' : 'Headers'}
+  //       </h3>
+  //       <Button
+  //         variant='link'
+  //         size='sm'
+  //         onClick={() => addKeyValuePair(type)}
+  //         className='gap-2 text-primary'
+  //       >
+  //         <Plus className='w-4 h-4' />
+  //         {addButtonText}
+  //       </Button>
+  //     </div>
 
-      {items.length > 0 ? (
-        <div className='space-y-2'>
-          <div className='grid grid-cols-12 gap-2 text-xs font-medium text-muted-foreground border-b pb-2'>
-            <div className='col-span-1'></div>
-            <div className='col-span-4'>Key</div>
-            <div className='col-span-4'>Value</div>
-            <div className='col-span-2'>Description</div>
-            <div className='col-span-1'></div>
-          </div>
+  //     {items.length > 0 ? (
+  //       <div className='space-y-2'>
+  //         <div className='grid grid-cols-12 gap-2 text-xs font-medium text-muted-foreground border-b pb-2'>
+  //           <div className='col-span-1'></div>
+  //           <div className='col-span-4'>Key</div>
+  //           <div className='col-span-4'>Value</div>
+  //           <div className='col-span-2'>Description</div>
+  //           <div className='col-span-1'></div>
+  //         </div>
 
-          {items.map((item) => (
-            <div key={item.id} className='grid grid-cols-12 gap-2 items-center'>
-              <div className='col-span-1 flex justify-center'>
-                <Checkbox
-                  checked={item.enabled}
-                  onCheckedChange={(checked) =>
-                    updateKeyValuePair(type, item.id, { enabled: !!checked })
-                  }
-                />
-              </div>
-              <div className='col-span-4'>
-                <Input
-                  value={item.key}
-                  onChange={(e) =>
-                    updateKeyValuePair(type, item.id, { key: e.target.value })
-                  }
-                  placeholder='Key'
-                  className='h-8'
-                />
-              </div>
-              <div className='col-span-4'>
-                <Input
-                  value={item.value}
-                  onChange={(e) =>
-                    updateKeyValuePair(type, item.id, { value: e.target.value })
-                  }
-                  placeholder='Value'
-                  className='h-8'
-                />
-              </div>
-              <div className='col-span-2'>
-                <Input
-                  value={item.description || ''}
-                  onChange={(e) =>
-                    updateKeyValuePair(type, item.id, {
-                      description: e.target.value,
-                    })
-                  }
-                  placeholder='Description'
-                  className='h-8'
-                />
-              </div>
-              <div className='col-span-1 flex justify-center'>
-                <Button
-                  variant='ghost'
-                  size='sm'
-                  onClick={() => removeKeyValuePair(type, item.id)}
-                  className='h-8 w-8 p-0 text-red-600 hover:text-red-700'
-                >
-                  <Trash2 className='w-3 h-3' />
-                </Button>
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className='flex flex-col items-center justify-center py-12'>
-          <div className='w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4'>
-            <Code className='w-8 h-8 text-muted-foreground' />
-          </div>
-          <p className='text-muted-foreground'>{emptyStateText}</p>
-        </div>
-      )}
-    </div>
-  );
+  //         {items.map((item) => (
+  //           <div key={item.id} className='grid grid-cols-12 gap-2 items-center'>
+  //             <div className='col-span-1 flex justify-center'>
+  //               <Checkbox
+  //                 checked={item.enabled}
+  //                 onCheckedChange={(checked) =>
+  //                   updateKeyValuePair(type, item.id, { enabled: !!checked })
+  //                 }
+  //               />
+  //             </div>
+  //             <div className='col-span-4'>
+  //               <Input
+  //                 value={item.key}
+  //                 onChange={(e) =>
+  //                   updateKeyValuePair(type, item.id, { key: e.target.value })
+  //                 }
+  //                 placeholder='Key'
+  //                 className='h-8'
+  //               />
+  //             </div>
+  //             <div className='col-span-4'>
+  //               <Input
+  //                 value={item.value}
+  //                 onChange={(e) =>
+  //                   updateKeyValuePair(type, item.id, { value: e.target.value })
+  //                 }
+  //                 placeholder='Value'
+  //                 className='h-8'
+  //               />
+  //             </div>
+  //             <div className='col-span-2'>
+  //               <Input
+  //                 value={item.description || ''}
+  //                 onChange={(e) =>
+  //                   updateKeyValuePair(type, item.id, {
+  //                     description: e.target.value,
+  //                   })
+  //                 }
+  //                 placeholder='Description'
+  //                 className='h-8'
+  //               />
+  //             </div>
+  //             <div className='col-span-1 flex justify-center'>
+  //               <Button
+  //                 variant='ghost'
+  //                 size='sm'
+  //                 onClick={() => removeKeyValuePair(type, item.id)}
+  //                 className='h-8 w-8 p-0 text-red-600 hover:text-red-700'
+  //               >
+  //                 <Trash2 className='w-3 h-3' />
+  //               </Button>
+  //             </div>
+  //           </div>
+  //         ))}
+  //       </div>
+  //     ) : (
+  //       <div className='flex flex-col items-center justify-center py-12'>
+  //         <div className='w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4'>
+  //           <Code className='w-8 h-8 text-muted-foreground' />
+  //         </div>
+  //         <p className='text-muted-foreground'>{emptyStateText}</p>
+  //       </div>
+  //     )}
+  //   </div>
+  // );
 
   if (compact) {
     return (
@@ -1937,118 +1978,6 @@ export function RequestEditor({
                   </SelectContent>
                 </Select>
               </div>
-
-              {/* {request.authType === 'bearer' && (
-                <div className='space-y-2'>
-                  <Label>Token</Label>
-                  <Input
-                    value={request.authConfig?.token || ''}
-                    onChange={(e) =>
-                      onUpdate({
-                        authConfig: {
-                          ...request.authConfig,
-                          token: e.target.value,
-                        },
-                      })
-                    }
-                    placeholder='Enter bearer token'
-                    type='password'
-                  />
-                </div>
-              )}
-
-              {request.authType === 'basic' && (
-                <div className='grid grid-cols-2 gap-4'>
-                  <div className='space-y-2'>
-                    <Label>Username</Label>
-                    <Input
-                      value={request.authConfig?.username || ''}
-                      onChange={(e) =>
-                        onUpdate({
-                          authConfig: {
-                            ...request.authConfig,
-                            username: e.target.value,
-                          },
-                        })
-                      }
-                      placeholder='Username'
-                    />
-                  </div>
-                  <div className='space-y-2'>
-                    <Label>Password</Label>
-                    <Input
-                      value={request.authConfig?.password || ''}
-                      onChange={(e) =>
-                        onUpdate({
-                          authConfig: {
-                            ...request.authConfig,
-                            password: e.target.value,
-                          },
-                        })
-                      }
-                      placeholder='Password'
-                      type='password'
-                    />
-                  </div>
-                </div>
-              )}
-
-              {request.authType === 'apikey' && (
-                <div className='space-y-4'>
-                  <div className='grid grid-cols-3 gap-4'>
-                    <div className='space-y-2'>
-                      <Label>Key</Label>
-                      <Input
-                        value={request.authConfig?.key || ''}
-                        onChange={(e) =>
-                          onUpdate({
-                            authConfig: {
-                              ...request.authConfig,
-                              key: e.target.value,
-                            },
-                          })
-                        }
-                        placeholder='API key name'
-                      />
-                    </div>
-                    <div className='space-y-2'>
-                      <Label>Value</Label>
-                      <Input
-                        value={request.authConfig?.value || ''}
-                        onChange={(e) =>
-                          onUpdate({
-                            authConfig: {
-                              ...request.authConfig,
-                              value: e.target.value,
-                            },
-                          })
-                        }
-                        placeholder='API key value'
-                        type='password'
-                      />
-                    </div>
-                    <div className='space-y-2'>
-                      <Label>Add to</Label>
-                      <Select
-                        value={request.authConfig?.addTo || 'header'}
-                        onValueChange={(value: 'header' | 'query') =>
-                          onUpdate({
-                            authConfig: { ...request.authConfig, addTo: value },
-                          })
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value='header'>Header</SelectItem>
-                          <SelectItem value='query'>Query Params</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                </div>
-              )} */}
             </CardContent>
           </Card>
         </TabsContent>

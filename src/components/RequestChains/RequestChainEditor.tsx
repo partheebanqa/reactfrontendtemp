@@ -358,7 +358,6 @@ export function RequestChainEditor({
 
   const [requestChain, setRequestChain] = useState<ExtendedRequest[]>([]);
 
-
   const handleImportRequests = async (importedRequests: ExtendedRequest[]) => {
     try {
       toast({
@@ -560,6 +559,9 @@ export function RequestChainEditor({
               globalVariables={globalVariables}
               onUpdate={(updates) => updateRequest(editingRequestId, updates)}
               onSave={() => setEditingRequestId(null)}
+              chainName={formData.name}
+              chainDescription={formData.description}
+              chainEnabled={formData.enabled}
             />
           </div>
         </div>
@@ -791,6 +793,9 @@ export function RequestChainEditor({
                                 updateRequest(request.id, updates)
                               }
                               compact={true}
+                              chainName={formData.name}
+                              chainDescription={formData.description}
+                              chainEnabled={formData.enabled}
                             />
                           </div>
                         )}

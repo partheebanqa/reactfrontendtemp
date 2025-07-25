@@ -10,7 +10,7 @@ import {
   CheckCircle,
   Trash2,
 } from 'lucide-react';
-import { DataExtraction } from '../../shared/types/requestChain.model';
+import { DataExtraction } from '@/shared/types/requestChain.model';
 
 interface ResponseExplorerProps {
   response: {
@@ -56,6 +56,16 @@ export function ResponseExplorer({
     value: any;
     suggestedName: string;
   } | null>(null);
+  const [variableName, setVariableName] = useState<string>('');
+
+  // Sanitize variable name: remove special characters, convert spaces to underscores
+  const sanitizeVariableName = (name: string): string => {
+    return name
+      .replace(/\s+/g, '_') // Convert spaces to underscores
+      .replace(/[^a-zA-Z0-9_]/g, '') // Remove special characters, keep only alphanumeric and underscores
+      .replace(/^_+|_+$/g, '') // Remove leading/trailing underscores
+      .replace(/_+/g, '_'); // Replace multiple underscores with single underscore
+  };
 
   // Parse JSON response into explorable nodes
   const parseJsonToNodes = (
@@ -150,25 +160,39 @@ export function ResponseExplorer({
         .split('.')
         .pop()
         ?.replace(/[\[\]]/g, '') || 'extractedValue';
+
+    const sanitizedName = sanitizeVariableName(suggestedName);
+    setVariableName(sanitizedName);
     setExtractionModal({
       isOpen: true,
       source,
       path,
       value,
-      suggestedName,
+      suggestedName: sanitizedName,
     });
   };
 
-  const confirmExtraction = (variableName: string, transform?: string) => {
-    if (extractionModal) {
+  // Allow spaces in input, do not sanitize while typing
+  const handleVariableNameChange = (value: string) => {
+    setVariableName(value);
+  };
+
+  // On save: sanitize + add E_ prefix
+  const confirmExtraction = (inputVariableName: string, transform?: string) => {
+    if (extractionModal && inputVariableName) {
+      const sanitized = sanitizeVariableName(inputVariableName); // clean + convert spaces
+      const finalVariableName = `E_${sanitized}`;
+
       const extraction: DataExtraction = {
-        variableName,
+        variableName: finalVariableName,
         source: extractionModal.source,
         path: extractionModal.path,
         transform,
       };
+
       onExtractVariable(extraction);
       setExtractionModal(null);
+      setVariableName('');
     }
   };
 
@@ -527,13 +551,22 @@ export function ResponseExplorer({
                 <label className='block text-sm font-medium text-gray-700 mb-2'>
                   Variable Name
                 </label>
-                <input
-                  type='text'
-                  defaultValue={extractionModal.suggestedName}
-                  id='variableName'
-                  className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-                  placeholder='Enter variable name'
-                />
+                <div>
+                  {/* <div className='absolute left-3 top-1/2 transform -translate-y-1/2 text-sm text-gray-500 font-mono'>
+                    E_
+                  </div> */}
+                  <input
+                    type='text'
+                    value={variableName}
+                    onChange={(e) => handleVariableNameChange(e.target.value)}
+                    className='w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 font-mono text-sm'
+                    placeholder='variable_name'
+                  />
+                </div>
+                <p className='text-xs text-gray-500 mt-1'>
+                  Only letters, numbers, and underscores allowed. Spaces will be
+                  converted to underscores.
+                </p>
               </div>
 
               <div>
@@ -602,16 +635,16 @@ export function ResponseExplorer({
 
             <div className='flex items-center justify-end space-x-3 p-6 border-t border-gray-200'>
               <button
-                onClick={() => setExtractionModal(null)}
+                onClick={() => {
+                  setExtractionModal(null);
+                  setVariableName('');
+                }}
                 className='px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors'
               >
                 Cancel
               </button>
               <button
                 onClick={() => {
-                  const variableName = (
-                    document.getElementById('variableName') as HTMLInputElement
-                  ).value;
                   const transform = (
                     document.getElementById('transform') as HTMLInputElement
                   ).value;
@@ -619,7 +652,8 @@ export function ResponseExplorer({
                     confirmExtraction(variableName, transform || undefined);
                   }
                 }}
-                className='px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors'
+                disabled={!variableName}
+                className='px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
               >
                 Extract Variable
               </button>
