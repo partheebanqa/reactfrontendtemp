@@ -1,4 +1,5 @@
 export interface ExtendedRequest {
+  description: string;
   id: string;
   name: string;
   method: string;
@@ -11,12 +12,12 @@ export interface ExtendedRequest {
   folderName?: string;
 }
 
-
 export interface TransformedCollection {
   id: string;
   name: string;
   requestCount: number;
   requests: ExtendedRequest[];
+  description?: string;
 }
 
 export interface Collection {

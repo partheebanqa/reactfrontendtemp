@@ -109,7 +109,7 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
                     onClick={() => handleConfigureTestCases(request)}
                     className='text-muted-foreground hover:text-primary hover:bg-primary/10'
                   >
-                    <Settings className='w-4 h-4' />
+                    {testSuiteId && <Settings className='w-4 h-4' />}
                   </Button>
                   <Button
                     variant='ghost'

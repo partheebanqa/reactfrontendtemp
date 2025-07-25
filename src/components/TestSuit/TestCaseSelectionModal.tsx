@@ -30,7 +30,7 @@ import {
   saveTestCasesForRequest,
 } from '@/services/testcase.service';
 import { useToast } from '@/hooks/useToast';
-import { ApiTestCase } from '@/models/testcase.model';
+import { ApiTestCase } from '@/shared/types/testcase.model';
 
 type TestCase = {
   id: string;

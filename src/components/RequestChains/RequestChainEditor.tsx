@@ -38,20 +38,20 @@ import {
   RequestChain,
   APIRequest,
   Variable,
+  RequestDetailResponse,
 } from '@/shared/types/requestChain.model';
+import { RequestExecutor } from './RequestExecutor';
 import { ImportModal } from '@/components/TestSuit/ImportModal';
 import { ExtendedRequest } from '@/models/collection.model';
 import { RequestEditor } from '@/components/RequestChains/RequestEditor';
-import {
-  requestService,
-  RequestDetailResponse,
-} from '@/services/requestChain.service';
+import { requestService } from '@/services/requestChain.service';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { VariablesTable } from './VariablesTable';
 
 interface RequestChainEditorProps {
   chain?: RequestChain;
@@ -506,37 +506,6 @@ export function RequestChainEditor({
     }
   }, [detailsError, pendingImportIds, toast]);
 
-  const RequestExecutor = ({
-    requests,
-    variables,
-    onExecutionComplete,
-    onVariableUpdate,
-    onExecutionStateChange,
-  }: any) => (
-    <div className='p-4 border rounded'>
-      <p>Request Executor</p>
-      <p className='text-sm text-muted-foreground'>
-        Mock component - implement as needed
-      </p>
-    </div>
-  );
-
-  // Mock VariablesTable component since it doesn't exist
-  const VariablesTable = ({
-    requests,
-    executionLogs,
-    extractedVariables,
-    isExecuting,
-    currentRequestIndex,
-  }: any) => (
-    <div className='p-4 border rounded'>
-      <p>Variables Table</p>
-      <p className='text-sm text-muted-foreground'>
-        Mock component - implement as needed
-      </p>
-    </div>
-  );
-
   // If editing a specific request, show the request editor
   if (editingRequestId) {
     const request = formData.requests?.find((r) => r.id === editingRequestId);
@@ -979,20 +948,22 @@ export function RequestChainEditor({
               <RequestExecutor
                 requests={formData.requests || []}
                 variables={[...globalVariables, ...(formData.variables || [])]}
-                onExecutionComplete={(logs: any) => {
+                onExecutionComplete={(logs, extractedVars) => {
+                  console.log('Execution completed:', logs, extractedVars);
                   setExecutionLogs(logs);
+                  // Update extracted variables for Variables Table
                   const newExtractedVars: Record<string, any> = {};
-                  logs.forEach((log: any) => {
+                  logs.forEach((log) => {
                     if (log.extractedVariables) {
                       Object.assign(newExtractedVars, log.extractedVariables);
                     }
                   });
                   setExtractedVariables(newExtractedVars);
                 }}
-                onVariableUpdate={(variables: any) => {
+                onVariableUpdate={(variables) => {
                   setFormData({ ...formData, variables });
                 }}
-                onExecutionStateChange={(executing: any, requestIndex: any) => {
+                onExecutionStateChange={(executing, requestIndex) => {
                   setIsExecuting(executing);
                   setCurrentRequestIndex(requestIndex);
                 }}

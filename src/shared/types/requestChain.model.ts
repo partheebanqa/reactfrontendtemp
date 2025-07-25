@@ -62,6 +62,8 @@ export interface Variable {
   name: string;
   value: string;
   type: 'string' | 'number' | 'boolean' | 'json';
+  source?: 'extracted' | string;
+  extractionPath?: string;
 }
 
 export interface Header {
@@ -80,9 +82,13 @@ export interface Parameter {
 
 export interface DataExtraction {
   variableName: string;
-  source: 'response_body' | 'response_header' | 'response_cookie';
-  path: string; // JSON path or header name
-  transform?: string; // Optional transformation function
+  source:
+    | 'response_body'
+    | 'response_header'
+    | 'response_cookie'
+    | 'request_header';
+  path: string;
+  transform?: string;
 }
 
 export interface TestScript {
@@ -138,9 +144,31 @@ export interface ExecutionLog {
   extractedVariables?: Record<string, any>;
 }
 
-export interface DataExtraction {
-  variableName: string;
-  source: 'response_body' | 'response_header' | 'response_cookie';
-  path: string;
-  transform?: string;
+// export interface DataExtraction {
+//   variableName: string;
+//   source: 'response_body' | 'response_header' | 'response_cookie';
+//   path: string;
+//   transform?: string;
+// }
+
+export interface RequestDetailResponse {
+  id: string;
+  name: string;
+  method: string;
+  url?: string;
+  endpoint?: string;
+  headers?: any;
+  params?: any;
+  queryParams?: any;
+  body?: string;
+  rawBody?: string;
+  bodyType?: string;
+  bodyFormData?: any;
+  auth?: any;
+  authConfig?: any;
+  authType?: string;
+  timeout?: number;
+  retries?: number;
+  errorHandling?: string;
+  enabled?: boolean;
 }

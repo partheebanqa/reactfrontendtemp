@@ -1,28 +1,7 @@
 import { ExtendedRequest } from '@/models/collection.model';
 import { API_REQUEST } from '@/config/apiRoutes';
 import { apiRequest } from '@/lib/queryClient';
-
-export interface RequestDetailResponse {
-  id: string;
-  name: string;
-  method: string;
-  url?: string;
-  endpoint?: string;
-  headers?: any;
-  params?: any;
-  queryParams?: any;
-  body?: string;
-  rawBody?: string;
-  bodyType?: string;
-  bodyFormData?: any;
-  auth?: any;
-  authConfig?: any;
-  authType?: string;
-  timeout?: number;
-  retries?: number;
-  errorHandling?: string;
-  enabled?: boolean;
-}
+import { RequestDetailResponse } from '@/shared/types/requestChain.model';
 
 class RequestService {
   async getRequestDetails(requestId: string): Promise<RequestDetailResponse> {
