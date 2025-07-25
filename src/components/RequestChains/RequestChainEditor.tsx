@@ -46,6 +46,12 @@ import {
   requestService,
   RequestDetailResponse,
 } from '@/services/requestChain.service';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'; 
 
 interface RequestChainEditorProps {
   chain?: RequestChain;
@@ -744,44 +750,68 @@ export function RequestChainEditor({
                             </div>
                           </div>
 
-                          <div className='flex items-center space-x-2 ml-4'>
-                            <Button
-                              variant='ghost'
-                              size='sm'
-                              onClick={() => toggleRequestExpanded(request.id)}
-                            >
-                              {expandedRequests.has(request.id) ? (
-                                <ChevronUp className='w-4 h-4' />
-                              ) : (
-                                <ChevronDown className='w-4 h-4' />
-                              )}
-                            </Button>
+                          <TooltipProvider>
+  <div className='flex items-center space-x-2 ml-4'>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          variant='ghost'
+          size='sm'
+          onClick={() => toggleRequestExpanded(request.id)}
+        >
+          {expandedRequests.has(request.id) ? (
+            <ChevronUp className='w-4 h-4' />
+          ) : (
+            <ChevronDown className='w-4 h-4' />
+          )}
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>
+        {expandedRequests.has(request.id) ? 'Collapse' : 'Expand'} Request
+      </TooltipContent>
+    </Tooltip>
 
-                            <Button
-                              variant='ghost'
-                              size='sm'
-                              onClick={() => setEditingRequestId(request.id)}
-                            >
-                              <Edit className='w-4 h-4' />
-                            </Button>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          variant='ghost'
+          size='sm'
+          onClick={() => setEditingRequestId(request.id)}
+        >
+          <Edit className='w-4 h-4' />
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>Edit Request</TooltipContent>
+    </Tooltip>
 
-                            <Button
-                              variant='ghost'
-                              size='sm'
-                              onClick={() => duplicateRequest(request.id)}
-                            >
-                              <Copy className='w-4 h-4' />
-                            </Button>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          variant='ghost'
+          size='sm'
+          onClick={() => duplicateRequest(request.id)}
+        >
+          <Copy className='w-4 h-4' />
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>Duplicate Request</TooltipContent>
+    </Tooltip>
 
-                            <Button
-                              variant='ghost'
-                              size='sm'
-                              onClick={() => removeRequest(request.id)}
-                              className='text-red-600 hover:text-red-700'
-                            >
-                              <Trash2 className='w-4 h-4' />
-                            </Button>
-                          </div>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          variant='ghost'
+          size='sm'
+          onClick={() => removeRequest(request.id)}
+          className='text-red-600 hover:text-red-700'
+        >
+          <Trash2 className='w-4 h-4' />
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>Delete Request</TooltipContent>
+    </Tooltip>
+  </div>
+</TooltipProvider>
                         </div>
 
                         {expandedRequests.has(request.id) && (

@@ -6,6 +6,12 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Globe, Edit, Trash2, Copy } from 'lucide-react';
 import { useToast } from '@/hooks/useToast';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 type Props = {
   environment: Environment;
@@ -69,22 +75,37 @@ const EnvironmentCard: React.FC<Props> = ({
             </div>
           </div>
 
-          <div className='flex items-center space-x-2'>
-            <Button
-              size='sm'
-              variant='outline'
-              onClick={() => onEdit(environment)}
-            >
-              <Edit className='w-4 h-4' />
-            </Button>
-            <Button
-              size='sm'
-              variant='ghost'
-              onClick={() => onDelete(environment.id)}
-            >
-              <Trash2 className='w-4 h-4' />
-            </Button>
-          </div>
+
+<div className='flex items-center space-x-2'>
+  <TooltipProvider>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          size='sm'
+          variant='outline'
+          onClick={() => onEdit(environment)}
+        >
+          <Edit className='w-4 h-4' />
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>Edit Environment</TooltipContent>
+    </Tooltip>
+
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          size='sm'
+          variant='ghost'
+          onClick={() => onDelete(environment.id)}
+        >
+          <Trash2 className='w-4 h-4' />
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>Delete Environment</TooltipContent>
+    </Tooltip>
+  </TooltipProvider>
+</div>
+
         </div>
       </CardContent>
     </Card>
