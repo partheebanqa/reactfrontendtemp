@@ -1,5 +1,6 @@
 import { ApiTestCase } from '../shared/types/testcase.model';
 import { apiRequest } from '@/lib/queryClient';
+import { API_TEST_CASES, API_TEST_SUITES } from '@/config/apiRoutes';
 
 export interface TestCasesResponse {
   testCases: ApiTestCase[];
@@ -9,7 +10,10 @@ export const getTestCasesByRequestId = async (
   requestId: string
 ): Promise<TestCasesResponse> => {
   try {
-    const response = await apiRequest('GET', `/test-cases?r=${requestId}`);
+    const response = await apiRequest(
+      'GET',
+      `${API_TEST_CASES}?r=${requestId}`
+    );
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
@@ -32,10 +36,12 @@ export const saveTestCasesForRequest = async (
       testCaseId,
       isSelected: selectedTestCaseIds.includes(testCaseId),
     }));
+    console.log('testSuiteId123:', testSuiteId);
+    console.log('requestId123:', requestId);
 
     const response = await apiRequest(
       'PUT',
-      `/test-suites/${testSuiteId}/request/${requestId}`,
+      `${API_TEST_SUITES}/${testSuiteId}/request/${requestId}`,
       {
         body: JSON.stringify({ testCases }),
         headers: {

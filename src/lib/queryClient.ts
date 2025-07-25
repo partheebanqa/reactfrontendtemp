@@ -1,10 +1,10 @@
-import { validateCSPCompliance } from "@/security/cspConfig";
-import { QueryClient, QueryFunction } from "@tanstack/react-query";
-import { getEncryptedCookie, removeCookie } from "./cookieUtils";
-import { USER_COOKIE_NAME } from "./constants";
-import { API_LOGIN } from "@/config/apiRoutes";
-import { i } from "node_modules/vite/dist/node/types.d-aGj9QkWt";
-import { authActions, authStore } from "@/store/authStore";
+import { validateCSPCompliance } from '@/security/cspConfig';
+import { QueryClient, QueryFunction } from '@tanstack/react-query';
+import { getEncryptedCookie, removeCookie } from './cookieUtils';
+import { USER_COOKIE_NAME } from './constants';
+import { API_LOGIN } from '@/config/apiRoutes';
+import { i } from 'node_modules/vite/dist/node/types.d-aGj9QkWt';
+import { authActions, authStore } from '@/store/authStore';
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
@@ -32,6 +32,7 @@ export async function apiRequest(
     // }
 
     const cachedUserData = getEncryptedCookie(USER_COOKIE_NAME);
+    console.log('cachedUserData:', cachedUserData);
 
     if (cachedUserData && cachedUserData.token) {
       options = {
@@ -46,8 +47,8 @@ export async function apiRequest(
     // Create fetch options - don't modify the Content-Type header if it's multipart/form-data
     // The browser will automatically set the correct boundary
     const isMultipartFormData =
-      options?.headers?.["content-type"]?.includes("multipart/form-data") ||
-      options?.headers?.["Content-Type"]?.includes("multipart/form-data");
+      options?.headers?.['content-type']?.includes('multipart/form-data') ||
+      options?.headers?.['Content-Type']?.includes('multipart/form-data');
 
     let fetchOptions: RequestInit = {
       method,
@@ -63,11 +64,11 @@ export async function apiRequest(
         // For multipart/form-data, don't set the Content-Type header manually
         // The browser will set it with the correct boundary
         const headers = { ...options?.headers };
-        if (headers["content-type"]?.includes("multipart/form-data")) {
-          delete headers["content-type"];
+        if (headers['content-type']?.includes('multipart/form-data')) {
+          delete headers['content-type'];
         }
-        if (headers["Content-Type"]?.includes("multipart/form-data")) {
-          delete headers["Content-Type"];
+        if (headers['Content-Type']?.includes('multipart/form-data')) {
+          delete headers['Content-Type'];
         }
         fetchOptions.headers = headers;
       } else {
@@ -78,10 +79,9 @@ export async function apiRequest(
       fetchOptions.headers = { ...options?.headers };
     }
 
-
     const res = await fetch(url, fetchOptions);
 
-    if(res.status === 401) {
+    if (res.status === 401) {
       removeCookie(USER_COOKIE_NAME);
     }
 
@@ -91,40 +91,39 @@ export async function apiRequest(
     }
     return res;
   } catch (error) {
-    console.error("API Request Error:", error);
+    console.error('API Request Error:', error);
     if (error instanceof Error) {
-      
     }
     throw error;
   }
 }
 
-type UnauthorizedBehavior = "returnNull" | "throw";
+type UnauthorizedBehavior = 'returnNull' | 'throw';
 export const getQueryFn: <T>(options: {
   on401: UnauthorizedBehavior;
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    try{
-    const url = queryKey[0] as string;
+    try {
+      const url = queryKey[0] as string;
 
-    // if (!validateCSPCompliance(url)) {
-    //   throw new Error(
-    //     `URL ${url} does not comply with Content Security Policy directives`
-    //   );
-    // }
+      // if (!validateCSPCompliance(url)) {
+      //   throw new Error(
+      //     `URL ${url} does not comply with Content Security Policy directives`
+      //   );
+      // }
 
-    const res = await apiRequest("GET", url);
+      const res = await apiRequest('GET', url);
 
-    if (res.status === 401) {
-      removeCookie(USER_COOKIE_NAME);
-    }
+      if (res.status === 401) {
+        removeCookie(USER_COOKIE_NAME);
+      }
 
-    await throwIfResNotOk(res);
-    return await res.json();
+      await throwIfResNotOk(res);
+      return await res.json();
     } catch (error) {
-      console.error("Query Function Error:", error);
-      if (unauthorizedBehavior === "throw") {
+      console.error('Query Function Error:', error);
+      if (unauthorizedBehavior === 'throw') {
         throw error;
       }
       return null; // Return null for 401 errors if configured to do so
@@ -134,7 +133,7 @@ export const getQueryFn: <T>(options: {
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      queryFn: getQueryFn({ on401: "throw" }),
+      queryFn: getQueryFn({ on401: 'throw' }),
       refetchInterval: false,
       refetchOnWindowFocus: false,
       retry: false,

@@ -17,56 +17,88 @@ export interface RequestChain {
 export interface APIRequest {
   id: string;
   name: string;
-  method: string;
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'HEAD' | 'OPTIONS';
   url: string;
   headers: Header[];
   params: Parameter[];
-  bodyType: 'none' | 'json' | 'form' | 'raw';
   body?: string;
+  bodyType:
+    | 'none'
+    | 'json'
+    | 'form-data'
+    | 'x-www-form-urlencoded'
+    | 'raw'
+    | 'binary';
+  authConfig?: {
+    token?: string;
+    username?: string;
+    password?: string;
+    key?: string;
+    value?: string;
+    addTo?: 'header' | 'query';
+  };
+  bodyFormData?: Record<string, string | File>;
+  queryParams?: Record<string, string>;
+  variables?: Variable[];
+  rawBodyType?: 'text' | 'json' | 'xml' | 'html';
+  authType?: 'none' | 'bearer' | 'basic' | 'apikey' | 'oauth2';
+  authToken?: string; // Bearer token or reference to AuthToken ID
+  authUsername?: string; // Basic auth username
+  authPassword?: string; // Basic auth password
+  authApiKey?: string; // API key name
+  authApiValue?: string; // API key value
+  authApiLocation?: 'header' | 'query'; // Where to add API key
   timeout: number;
   retries: number;
-  errorHandling: 'stop' | 'continue';
+  errorHandling?: string;
   dataExtractions: DataExtraction[];
-  testScripts: TestScript[];
+  testScripts?: TestScript[];
   enabled: boolean;
-  authType: 'none' | 'bearer' | 'basic' | 'apikey';
-  authConfig?: AuthConfig;
+  description?: string;
 }
 
 export interface Variable {
-  id: string;
+  id?: string;
   name: string;
   value: string;
   type: 'string' | 'number' | 'boolean' | 'json';
+  source?: 'extracted' | string;
+  extractionPath?: string;
 }
 
 export interface Header {
-  id: string;
+  id?: string;
   key: string;
   value: string;
   enabled: boolean;
 }
 
 export interface Parameter {
-  id: string;
+  id?: string;
   key: string;
   value: string;
   enabled: boolean;
 }
 
 export interface DataExtraction {
-  id: string;
-  name: string;
-  type: 'jsonPath' | 'regex' | 'header';
-  expression: string;
-  variable: string;
+  variableName: string;
+  source:
+    | 'response_body'
+    | 'response_header'
+    | 'response_cookie'
+    | 'request_header';
+  path: string;
+  transform?: string;
 }
 
 export interface TestScript {
   id: string;
-  name: string;
-  script: string;
+  type: 'status' | 'responseTime' | 'jsonContent';
   enabled: boolean;
+  operator: string; // 'equal', 'notEqual', 'greaterThan', 'lessThan', 'contain', 'exist', etc.
+  expectedValue: string;
+  jsonPath?: string; // For JSON content tests
+  description?: string;
 }
 
 export interface AuthConfig {
@@ -91,21 +123,52 @@ export interface ExecutionLog {
   id: string;
   chainId: string;
   requestId: string;
-  status: 'success' | 'error';
+  status: 'pending' | 'success' | 'error' | 'timeout';
   startTime: string;
-  endTime: string;
-  duration: number;
+  endTime?: string;
+  duration?: number;
   request: {
     method: string;
     url: string;
     headers: Record<string, string>;
     body?: string;
   };
-  response: {
+  response?: {
     status: number;
     headers: Record<string, string>;
     body: string;
     size: number;
+    cookies?: Record<string, string>;
   };
-  errorMessage?: string; // Optional if status is 'error'
+  error?: string;
+  extractedVariables?: Record<string, any>;
+}
+
+// export interface DataExtraction {
+//   variableName: string;
+//   source: 'response_body' | 'response_header' | 'response_cookie';
+//   path: string;
+//   transform?: string;
+// }
+
+export interface RequestDetailResponse {
+  id: string;
+  name: string;
+  method: string;
+  url?: string;
+  endpoint?: string;
+  headers?: any;
+  params?: any;
+  queryParams?: any;
+  body?: string;
+  rawBody?: string;
+  bodyType?: string;
+  bodyFormData?: any;
+  auth?: any;
+  authConfig?: any;
+  authType?: string;
+  timeout?: number;
+  retries?: number;
+  errorHandling?: string;
+  enabled?: boolean;
 }

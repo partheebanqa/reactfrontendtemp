@@ -7,19 +7,14 @@ import {
   Edit,
   Play,
   Save,
-  Settings,
   Eye,
   EyeOff,
   ChevronDown,
-  ChevronRight,
   Code,
   Globe,
-  Key,
-  Upload,
   Download,
   ChevronUp,
   Copy,
-  MoreVertical,
   Database,
   Loader2,
 } from 'lucide-react';
@@ -43,14 +38,20 @@ import {
   RequestChain,
   APIRequest,
   Variable,
+  RequestDetailResponse,
 } from '@/shared/types/requestChain.model';
+import { RequestExecutor } from './RequestExecutor';
 import { ImportModal } from '@/components/TestSuit/ImportModal';
 import { ExtendedRequest } from '@/models/collection.model';
 import { RequestEditor } from '@/components/RequestChains/RequestEditor';
+import { requestService } from '@/services/requestChain.service';
 import {
-  requestService,
-  RequestDetailResponse,
-} from '@/services/requestChain.service';
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import { VariablesTable } from './VariablesTable';
 
 interface RequestChainEditorProps {
   chain?: RequestChain;
@@ -66,7 +67,6 @@ interface KeyValuePair {
   description?: string;
 }
 
-// Transform function to convert API response to APIRequest format
 const transformRequestDetails = (
   requestData: RequestDetailResponse
 ): Partial<APIRequest> => {
@@ -118,7 +118,7 @@ const transformRequestDetails = (
   const getBodyType = (data: any): APIRequest['bodyType'] => {
     if (!data.body && !data.bodyFormData) return 'none';
     if (data.bodyType) return data.bodyType;
-    if (data.bodyFormData) return 'form';
+    if (data.bodyFormData) return 'form-data';
     try {
       JSON.parse(data.body);
       return 'json';
@@ -180,6 +180,9 @@ export function RequestChainEditor({
       timezone: 'UTC',
     },
   });
+
+  const isSaveDisabled =
+    !formData.name?.trim() || (formData.requests?.length ?? 0) === 0;
 
   const [expandedRequests, setExpandedRequests] = useState<Set<string>>(
     new Set()
@@ -362,12 +365,16 @@ export function RequestChainEditor({
     setGlobalVariables(globalVariables.filter((v) => v.id !== id));
   };
 
+  const [requestChain, setRequestChain] = useState<ExtendedRequest[]>([]);
+
   const handleImportRequests = async (importedRequests: ExtendedRequest[]) => {
     try {
       toast({
         title: 'Importing Requests',
         description: `Fetching details for ${importedRequests.length} requests...`,
       });
+
+      setRequestChain((prev) => [...prev, ...importedRequests]);
 
       // Set the pending import IDs to trigger the useQuery
       const requestIds = importedRequests.map((req) => req.id);
@@ -499,37 +506,6 @@ export function RequestChainEditor({
     }
   }, [detailsError, pendingImportIds, toast]);
 
-  const RequestExecutor = ({
-    requests,
-    variables,
-    onExecutionComplete,
-    onVariableUpdate,
-    onExecutionStateChange,
-  }: any) => (
-    <div className='p-4 border rounded'>
-      <p>Request Executor</p>
-      <p className='text-sm text-muted-foreground'>
-        Mock component - implement as needed
-      </p>
-    </div>
-  );
-
-  // Mock VariablesTable component since it doesn't exist
-  const VariablesTable = ({
-    requests,
-    executionLogs,
-    extractedVariables,
-    isExecuting,
-    currentRequestIndex,
-  }: any) => (
-    <div className='p-4 border rounded'>
-      <p>Variables Table</p>
-      <p className='text-sm text-muted-foreground'>
-        Mock component - implement as needed
-      </p>
-    </div>
-  );
-
   // If editing a specific request, show the request editor
   if (editingRequestId) {
     const request = formData.requests?.find((r) => r.id === editingRequestId);
@@ -561,6 +537,9 @@ export function RequestChainEditor({
               globalVariables={globalVariables}
               onUpdate={(updates) => updateRequest(editingRequestId, updates)}
               onSave={() => setEditingRequestId(null)}
+              chainName={formData.name}
+              chainDescription={formData.description}
+              chainEnabled={formData.enabled}
             />
           </div>
         </div>
@@ -587,7 +566,11 @@ export function RequestChainEditor({
             </div>
           </div>
           <div className='flex items-center space-x-3'>
-            <Button onClick={handleSave} className='gap-2'>
+            <Button
+              onClick={handleSave}
+              disabled={isSaveDisabled}
+              className='gap-2'
+            >
               <Save className='w-4 h-4' />
               Save Chain
             </Button>
@@ -655,10 +638,10 @@ export function RequestChainEditor({
                 <Code className='w-4 h-4' />
                 Requests ({formData.requests?.length || 0})
               </TabsTrigger>
-              <TabsTrigger value='variables' className='gap-2'>
+              {/* <TabsTrigger value='variables' className='gap-2'>
                 <Globe className='w-4 h-4' />
                 Variables ({globalVariables.length})
-              </TabsTrigger>
+              </TabsTrigger> */}
               <TabsTrigger value='variables-table' className='gap-2'>
                 <Database className='w-4 h-4' />
                 Variables Table
@@ -743,44 +726,77 @@ export function RequestChainEditor({
                             </div>
                           </div>
 
-                          <div className='flex items-center space-x-2 ml-4'>
-                            <Button
-                              variant='ghost'
-                              size='sm'
-                              onClick={() => toggleRequestExpanded(request.id)}
-                            >
-                              {expandedRequests.has(request.id) ? (
-                                <ChevronUp className='w-4 h-4' />
-                              ) : (
-                                <ChevronDown className='w-4 h-4' />
-                              )}
-                            </Button>
+                          <TooltipProvider>
+                            <div className='flex items-center space-x-2 ml-4'>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant='ghost'
+                                    size='sm'
+                                    onClick={() =>
+                                      toggleRequestExpanded(request.id)
+                                    }
+                                  >
+                                    {expandedRequests.has(request.id) ? (
+                                      <ChevronUp className='w-4 h-4' />
+                                    ) : (
+                                      <ChevronDown className='w-4 h-4' />
+                                    )}
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  {expandedRequests.has(request.id)
+                                    ? 'Collapse'
+                                    : 'Expand'}{' '}
+                                  Request
+                                </TooltipContent>
+                              </Tooltip>
 
-                            <Button
-                              variant='ghost'
-                              size='sm'
-                              onClick={() => setEditingRequestId(request.id)}
-                            >
-                              <Edit className='w-4 h-4' />
-                            </Button>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant='ghost'
+                                    size='sm'
+                                    onClick={() =>
+                                      setEditingRequestId(request.id)
+                                    }
+                                  >
+                                    <Edit className='w-4 h-4' />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Edit Request</TooltipContent>
+                              </Tooltip>
 
-                            <Button
-                              variant='ghost'
-                              size='sm'
-                              onClick={() => duplicateRequest(request.id)}
-                            >
-                              <Copy className='w-4 h-4' />
-                            </Button>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant='ghost'
+                                    size='sm'
+                                    onClick={() => duplicateRequest(request.id)}
+                                  >
+                                    <Copy className='w-4 h-4' />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  Duplicate Request
+                                </TooltipContent>
+                              </Tooltip>
 
-                            <Button
-                              variant='ghost'
-                              size='sm'
-                              onClick={() => removeRequest(request.id)}
-                              className='text-red-600 hover:text-red-700'
-                            >
-                              <Trash2 className='w-4 h-4' />
-                            </Button>
-                          </div>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant='ghost'
+                                    size='sm'
+                                    onClick={() => removeRequest(request.id)}
+                                    className='text-red-600 hover:text-red-700'
+                                  >
+                                    <Trash2 className='w-4 h-4' />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Delete Request</TooltipContent>
+                              </Tooltip>
+                            </div>
+                          </TooltipProvider>
                         </div>
 
                         {expandedRequests.has(request.id) && (
@@ -792,6 +808,9 @@ export function RequestChainEditor({
                                 updateRequest(request.id, updates)
                               }
                               compact={true}
+                              chainName={formData.name}
+                              chainDescription={formData.description}
+                              chainEnabled={formData.enabled}
                             />
                           </div>
                         )}
@@ -850,7 +869,7 @@ export function RequestChainEditor({
                             <Input
                               value={variable.name}
                               onChange={(e) =>
-                                updateGlobalVariable(variable.id, {
+                                updateGlobalVariable(variable.id ?? '', {
                                   name: e.target.value,
                                 })
                               }
@@ -861,7 +880,7 @@ export function RequestChainEditor({
                             <Input
                               value={variable.value}
                               onChange={(e) =>
-                                updateGlobalVariable(variable.id, {
+                                updateGlobalVariable(variable.id ?? '', {
                                   value: e.target.value,
                                 })
                               }
@@ -871,7 +890,9 @@ export function RequestChainEditor({
                           <Select
                             value={variable.type}
                             onValueChange={(value: Variable['type']) =>
-                              updateGlobalVariable(variable.id, { type: value })
+                              updateGlobalVariable(variable.id ?? '', {
+                                type: value,
+                              })
                             }
                           >
                             <SelectTrigger className='w-32'>
@@ -887,7 +908,9 @@ export function RequestChainEditor({
                           <Button
                             variant='ghost'
                             size='sm'
-                            onClick={() => removeGlobalVariable(variable.id)}
+                            onClick={() =>
+                              removeGlobalVariable(variable.id || '')
+                            }
                             className='text-red-600'
                           >
                             <Trash2 className='w-4 h-4' />
@@ -926,7 +949,9 @@ export function RequestChainEditor({
                 requests={formData.requests || []}
                 variables={[...globalVariables, ...(formData.variables || [])]}
                 onExecutionComplete={(logs, extractedVars) => {
+                  console.log('Execution completed:', logs, extractedVars);
                   setExecutionLogs(logs);
+                  // Update extracted variables for Variables Table
                   const newExtractedVars: Record<string, any> = {};
                   logs.forEach((log) => {
                     if (log.extractedVariables) {

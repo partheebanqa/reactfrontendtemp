@@ -20,7 +20,7 @@ import {
   deleteTestSuite,
   executeTestSuite,
 } from '@/services/testSuites.service';
-import { TestSuite } from '@/models/TestSuite.model';
+import { TestSuite } from '@/shared/types/TestSuite.model';
 import { useWorkspace } from '@/hooks/useWorkspace';
 
 const TestSuites: React.FC = () => {
@@ -75,8 +75,8 @@ const TestSuites: React.FC = () => {
     mutationFn: executeTestSuite,
     onSuccess: () => {
       toast({
-        title: 'Deleted',
-        description: 'Test suite deleted successfully.',
+        title: 'Executed',
+        description: 'Test suite executed successfully.',
       });
       queryClient.invalidateQueries({ queryKey: ['testSuites'] });
     },

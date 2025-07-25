@@ -3,7 +3,7 @@ import {
   TestSuite,
 } from '@/shared/types/TestSuite.model';
 import { apiRequest } from '@/lib/queryClient';
-import { API_TEST_SUITES } from '@/config/apiRoutes';
+import { API_EXECUTOR, API_TEST_SUITES } from '@/config/apiRoutes';
 
 export const getAllTestSuites = async (
   workspaceId: string
@@ -94,7 +94,7 @@ export const executeTestSuite = async ({
   testSuiteId: string;
 }): Promise<void> => {
   try {
-    const response = await apiRequest('POST', '/executor/test-suite', {
+    const response = await apiRequest('POST', `${API_EXECUTOR}/test-suite`, {
       body: JSON.stringify({ testSuiteId }),
       headers: {
         'Content-Type': 'application/json',
