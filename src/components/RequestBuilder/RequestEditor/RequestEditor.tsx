@@ -44,8 +44,9 @@ const RequestEditor: React.FC = () => {
   const [params, setParams] = useState<Param[]>([]);
   const [headers, setHeaders] = useState<Header[]>([]);
   const [bodyType, setBodyType] = useState<
-    'none' | 'json' | 'form-data' | 'x-www-form-urlencoded' | 'raw' | 'binary'
-  >('none');
+  'none' | 'json' | 'form-data' | 'x-www-form-urlencoded' | 'raw' | 'binary'
+  >('json');
+  console.log("🚀 ~ bodyType:", bodyType)
   const [bodyContent, setBodyContent] = useState('');
   const [formFields, setFormFields] = useState<Param[]>([]);
   const [urlEncodedFields, setUrlEncodedFields] = useState<Param[]>([]);
@@ -71,6 +72,8 @@ const RequestEditor: React.FC = () => {
 
   useEffect(() => {
     if (activeRequest) {
+      console.log('activeRequest',activeRequest);
+      
       setUrl(activeRequest.url || '');
       setMethod((activeRequest.method as RequestMethod) || 'GET');
       setParams(activeRequest.params || []);
@@ -109,7 +112,7 @@ const RequestEditor: React.FC = () => {
             | 'x-www-form-urlencoded'
             | 'raw'
             | 'binary')
-          : 'none'
+          : 'json'
       );
       setBodyContent(activeRequest.bodyRawContent || '');
 
@@ -174,7 +177,7 @@ const RequestEditor: React.FC = () => {
       setMethod('GET');
       setParams([]);
       setHeaders([]);
-      setBodyType('none');
+      setBodyType('json');
       setBodyContent('');
       setAuthType('none');
       setAuthData({
@@ -221,6 +224,7 @@ const RequestEditor: React.FC = () => {
         },
       };
       const response = await makeRequest(requestData);
+      console.log("🚀 ~ handleSendRequest ~ response:", response)
       setResponseData(response);
       if (response.data?.error) {
         setError({
@@ -305,7 +309,7 @@ const RequestEditor: React.FC = () => {
       name: "New Request",
       method: "GET",
       url: "",
-      bodyType: "none",
+      bodyType: "json",
       bodyFormData: null,
       authorizationType: "none",
       authorization: {},

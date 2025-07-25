@@ -31,6 +31,7 @@ export const makeRequest = async (
   request: RequestInput
 ): Promise<ResponseData> => {
   const startTime = Date.now();
+  console.log("🚀 ~ startTime:", startTime);
 
   try {
     // Build URL with params
@@ -186,18 +187,28 @@ export const makeRequest = async (
     const response = await axios(config);
     const endTime = Date.now();
 
+    console.log("🚀 ~ endTime:", endTime);
+    const diff = endTime - startTime;
+    const formattedTime =
+      diff < 1000 ? `${diff} ms` : `${(diff / 1000).toFixed(2)} s`;
+    console.log("🚀 ~ formattedTime:", formattedTime);
+
     return {
       status: response.status,
       statusText: response.statusText,
       headers: response.headers,
       data: response.data,
-      responseTime: endTime - startTime,
+      responseTime: formattedTime,
       size: calculateResponseSize(response.data),
     };
   } catch (error: any) {
     console.error("Request error:", error);
     const endTime = Date.now();
     const apiError = parseError(error);
+    const diff = endTime - startTime;
+    const formattedTime =
+      diff < 1000 ? `${diff} ms` : `${(diff / 1000).toFixed(2)} s`;
+    console.log("🚀 ~ formattedTime:", formattedTime);
 
     // Format the error response
     return {
@@ -213,7 +224,7 @@ export const makeRequest = async (
           originalError: error.message,
         },
       },
-      responseTime: endTime - startTime,
+      responseTime: formattedTime,
       size: calculateResponseSize(error.response?.data || apiError),
     };
   }

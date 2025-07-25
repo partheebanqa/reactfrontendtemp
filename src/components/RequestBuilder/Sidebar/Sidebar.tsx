@@ -88,7 +88,7 @@ const Sidebar: React.FC = () => {
       name: "New Request",
       method: "GET",
       url: "",
-      bodyType: "none",
+      bodyType: "json",
       bodyFormData: null,
       authorizationType: "none",
       authorization: {},
