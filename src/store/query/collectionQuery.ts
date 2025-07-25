@@ -135,6 +135,10 @@ export const useImpotPostmanCollectionMutation = () => {
   return useMutation({
     mutationFn: importCollectionFile,
     onSuccess: async (response) => {},
+    onError: (error) => {
+      console.error('Error importing collection:', error);
+      throw error;
+    }
   });
 };
 
@@ -144,7 +148,12 @@ export const useAddRequestMutation = () => {
     mutationFn: addRequest,
     onSuccess: async (data, variables) => {
       fetchCollectionRequests.mutateAsync(variables.collectionId);
+      return data
     },
+    onError: (error) => {
+      console.error('Error adding request:', error);
+      throw error;
+    }
   });
 };
 
@@ -157,6 +166,9 @@ export const useRenameRequestMutation = () => {
         variables.requestId
       );
     },
+    onError: (error) => {
+      throw error;
+    }
   });
 };
 

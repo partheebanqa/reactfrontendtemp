@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Play, Save, Edit2, Check, X, FolderPlus } from 'lucide-react';
+import { Play, Save, Edit2, Check, X, FolderPlus, Trash, Trash2 } from 'lucide-react';
 import { useRequest } from '@/hooks/useRequest';
 import { useCollection } from '@/hooks/useCollection';
 import { useWorkspace } from '@/hooks/useWorkspace';
@@ -7,6 +7,12 @@ import { Header, Param, RequestMethod } from '@/shared/types/request';
 import SchemaPage from '../SchemaPage';
 import { useToast } from '@/hooks/useToast';
 import { makeRequest } from '@/services/request.service';
+import { Collection, CollectionRequest } from '@/shared/types/collection';
+import TooltipContainer from '@/components/ui/tooltip-container';
+import KeyValueEditor from '@/components/ui/KeyValueEditor';
+import ToggleSwitch from '@/components/ui/ToggleSwitch';
+import EditableText from '@/components/ui/EditableText';
+import Modal from '@/components/ui/Modal';
 
 const RequestEditor: React.FC = () => {
   const { isLoading, clearError, setLoading, setError, setResponseData } =
@@ -24,25 +30,26 @@ const RequestEditor: React.FC = () => {
     toggleExpandedCollection,
     renameRequestMutation,
     setCollection,
+    expandedCollections,
   } = useCollection();
   const { error: showError, success: showSuccess } = useToast();
   const { currentWorkspace } = useWorkspace();
   const [activeTab, setActiveTab] = useState<
     'params' | 'headers' | 'body' | 'auth' | 'scripts' | 'settings' | 'schemas'
   >('params');
-  const [isEditingName, setIsEditingName] = useState(false);
-  const [editedName, setEditedName] = useState('');
   const [showSaveModal, setShowSaveModal] = useState(false);
-  // const [selectedCollectionId, setActiveCollection] = useState<string>("");
   const [newCollectionName, setNewCollectionName] = useState('');
   const [url, setUrl] = useState('');
   const [method, setMethod] = useState<RequestMethod>('GET');
   const [params, setParams] = useState<Param[]>([]);
   const [headers, setHeaders] = useState<Header[]>([]);
   const [bodyType, setBodyType] = useState<
-    'none' | 'json' | 'form-data' | 'x-www-form-urlencoded' | 'raw' | 'binary'
-  >('none');
+  'none' | 'json' | 'form-data' | 'x-www-form-urlencoded' | 'raw' | 'binary'
+  >('json');
+  console.log("🚀 ~ bodyType:", bodyType)
   const [bodyContent, setBodyContent] = useState('');
+  const [formFields, setFormFields] = useState<Param[]>([]);
+  const [urlEncodedFields, setUrlEncodedFields] = useState<Param[]>([]);
   const [authType, setAuthType] = useState<
     'none' | 'basic' | 'bearer' | 'apiKey'
   >('none');
@@ -65,8 +72,9 @@ const RequestEditor: React.FC = () => {
 
   useEffect(() => {
     if (activeRequest) {
+      console.log('activeRequest',activeRequest);
+      
       setUrl(activeRequest.url || '');
-      setEditedName(activeRequest.name || '');
       setMethod((activeRequest.method as RequestMethod) || 'GET');
       setParams(activeRequest.params || []);
       if (activeRequest.headers && Array.isArray(activeRequest.headers)) {
@@ -98,15 +106,54 @@ const RequestEditor: React.FC = () => {
       setBodyType(
         allowedBodyTypes.includes(bodyTypeValue)
           ? (bodyTypeValue as
-              | 'none'
-              | 'json'
-              | 'form-data'
-              | 'x-www-form-urlencoded'
-              | 'raw'
-              | 'binary')
-          : 'none'
+            | 'none'
+            | 'json'
+            | 'form-data'
+            | 'x-www-form-urlencoded'
+            | 'raw'
+            | 'binary')
+          : 'json'
       );
       setBodyContent(activeRequest.bodyRawContent || '');
+
+      // Initialize form fields from the request
+      try {
+        if (activeRequest.bodyFormData && typeof activeRequest.bodyFormData === 'object') {
+          const formDataFields = Object.entries(activeRequest.bodyFormData).map(([key, value]) => ({
+            key,
+            value: value?.toString() || '',
+            enabled: true
+          }));
+          setFormFields(formDataFields);
+        } else {
+          setFormFields([]);
+        }
+      } catch (error) {
+        console.error('Error initializing form fields:', error);
+        setFormFields([]);
+      }
+
+      // Initialize URL encoded fields from the request
+      try {
+        if (bodyTypeValue === 'x-www-form-urlencoded' && activeRequest.bodyRawContent) {
+          try {
+            const urlParams = new URLSearchParams(activeRequest.bodyRawContent);
+            const encodedFields: Param[] = [];
+            urlParams.forEach((value, key) => {
+              encodedFields.push({ key, value, enabled: true });
+            });
+            setUrlEncodedFields(encodedFields);
+          } catch (e) {
+            setUrlEncodedFields([]);
+          }
+        } else {
+          setUrlEncodedFields([]);
+        }
+      } catch (error) {
+        console.error('Error initializing URL encoded fields:', error);
+        setUrlEncodedFields([]);
+      }
+
       setToken(activeRequest.authorization?.token || '');
       setAuthType(
         (activeRequest.authorizationType as
@@ -127,11 +174,10 @@ const RequestEditor: React.FC = () => {
       setTestScript('');
     } else {
       setUrl('');
-      setEditedName('');
       setMethod('GET');
       setParams([]);
       setHeaders([]);
-      setBodyType('none');
+      setBodyType('json');
       setBodyContent('');
       setAuthType('none');
       setAuthData({
@@ -159,6 +205,14 @@ const RequestEditor: React.FC = () => {
         headers: headers,
         body: bodyContent,
         bodyType: bodyType,
+        formData: bodyType === 'form-data' ? formFields.filter(f => f.enabled).reduce((acc, field) => {
+          acc[field.key] = field.value;
+          return acc;
+        }, {} as Record<string, string>) : undefined,
+        urlEncodedData: bodyType === 'x-www-form-urlencoded' ? urlEncodedFields.filter(f => f.enabled).reduce((acc, field) => {
+          acc[field.key] = field.value;
+          return acc;
+        }, {} as Record<string, string>) : undefined,
         authorizationType: authType,
         authorization: {
           token: authType === 'bearer' ? authData.token : '',
@@ -170,6 +224,7 @@ const RequestEditor: React.FC = () => {
         },
       };
       const response = await makeRequest(requestData);
+      console.log("🚀 ~ handleSendRequest ~ response:", response)
       setResponseData(response);
       if (response.data?.error) {
         setError({
@@ -193,42 +248,35 @@ const RequestEditor: React.FC = () => {
     }
   };
 
-  const handleStartEditName = () => {
-    setIsEditingName(true);
-    setEditedName(activeRequest?.name || '');
-  };
-
-  const handleSaveName = async () => {
-    if (!activeRequest) return;
-    if (editedName.trim() && activeRequest?.id) {
-      await renameRequestMutation.mutateAsync({
-        requestId: activeRequest.id,
-        newName: editedName.trim(),
-      });
+  const handleSaveName = async (newName: string) => {
+    try {
+      if (!activeRequest) return;
+      if (newName.trim() && activeRequest?.id) {
+        await renameRequestMutation.mutateAsync({
+          requestId: activeRequest.id,
+          newName: newName.trim(),
+        });
+      }
+      const active = { ...activeRequest, name: newName.trim() };
+      setActiveRequest(active);
+      setCollection(
+        collections.map((collection) => {
+          if (collection.id === activeRequest.collectionId) {
+            return {
+              ...collection,
+              requests: collection.requests.map((request) => {
+                return request.order === activeRequest.order ? active : request;
+              }),
+            };
+          } else {
+            return collection;
+          }
+        })
+      );
+    } catch (error) {
+      console.error('Error saving request name:', error);
+      showError('Rename Failed', 'An error occurred while renaming the request name.');
     }
-    const active = { ...activeRequest, name: editedName.trim() };
-    setActiveRequest(active);
-    setCollection(
-      collections.map((collection) => {
-        if (collection.id === activeRequest.collectionId) {
-          return {
-            ...collection,
-            requests: collection.requests.map((request) => {
-              return request.order === activeRequest.order ? active : request;
-            }),
-          };
-        } else {
-          return collection;
-        }
-      })
-    );
-
-    setIsEditingName(false);
-  };
-
-  const handleCancelEditName = () => {
-    setIsEditingName(false);
-    setEditedName(activeRequest?.name || '');
   };
 
   const handleSaveRequest = () => {
@@ -254,6 +302,45 @@ const RequestEditor: React.FC = () => {
         setActiveCollection(workspaceCollections[0]);
       }
     }
+  };
+
+  const handleCreateRequest = async (collection?: Collection) => {
+    const newRequest: CollectionRequest = {
+      name: "New Request",
+      method: "GET",
+      url: "",
+      bodyType: "json",
+      bodyFormData: null,
+      authorizationType: "none",
+      authorization: {},
+      variables: {},
+      headers: [],
+      params: [],
+      order: 0 // This will be updated when adding to collection
+    };
+    setResponseData(null);
+    if (collection) {
+      // Ensure collection is expanded when adding a new request
+      if (!expandedCollections.has(collection.id)) {
+        toggleExpandedCollection(collection.id);
+      }
+      newRequest.collectionId = collection.id;
+      newRequest.order = (collection.requests?.length || 0) + 1;
+      setCollection(
+        collections.map((col) =>
+          col.id === collection.id
+            ? {
+              ...col,
+              requests: [...(col.requests || []), newRequest],
+            }
+            : col
+        )
+      );
+      setActiveCollection(
+        collections.find((col) => col.id === collection.id) || null
+      );
+    }
+    setActiveRequest(newRequest);
   };
 
   const handleConfirmSave = async () => {
@@ -294,12 +381,26 @@ const RequestEditor: React.FC = () => {
         collectionId: activeCollection?.id,
         description: '',
         name: activeRequest.name || 'New Request',
-        order: activeCollection?.requests.length || 0,
+        order: (activeCollection?.requests?.length || 0) + 1,
         method: method,
         url: url,
         bodyType: bodyType,
-        bodyFormData: bodyType === 'form-data' ? bodyContent : null,
-        bodyRawContent: bodyType === 'raw' ? bodyContent : null,
+        bodyFormData: bodyType === 'form-data' ? formFields.filter(f => f.enabled).reduce((acc, field) => {
+          if (field.key) {
+            acc[field.key] = field.value;
+          }
+          return acc;
+        }, {} as Record<string, string>) : null,
+        bodyRawContent: bodyType === 'raw' || bodyType === 'json' ? bodyContent :
+          bodyType === 'x-www-form-urlencoded' ?
+            new URLSearchParams(
+              urlEncodedFields.filter(f => f.enabled).reduce((acc, field) => {
+                if (field.key) {
+                  acc[field.key] = field.value;
+                }
+                return acc;
+              }, {} as Record<string, string>)
+            ).toString() : null,
         authorizationType: authType,
         authorization: {
           token: authType === 'bearer' ? authData.token : '',
@@ -308,13 +409,12 @@ const RequestEditor: React.FC = () => {
         headers: headers,
         variables: activeRequest.variables || {},
       };
-      const request = await addRequestMutation.mutateAsync(requestData);
-      setActiveRequest(requestData);
+      await addRequestMutation.mutateAsync(requestData);
       setShowSaveModal(false);
       setNewCollectionName('');
       setIsCreatingCollection(false);
-      toggleExpandedCollection(request.id);
       showSuccess('Request saved successfully!');
+      handleCreateRequest();
     } catch (error) {
       console.error('Error saving request:', error);
       showError('Save Failed', 'An error occurred while saving the request.');
@@ -367,6 +467,44 @@ const RequestEditor: React.FC = () => {
     setHeaders(headers.filter((_, i) => i !== index));
   };
 
+  // Form data field handlers
+  const addFormField = () => {
+    setFormFields([...formFields, { key: '', value: '', enabled: true }]);
+  };
+
+  const updateFormField = (
+    index: number,
+    field: keyof Param,
+    value: string | boolean
+  ) => {
+    const newFormFields = [...formFields];
+    newFormFields[index] = { ...newFormFields[index], [field]: value };
+    setFormFields(newFormFields);
+  };
+
+  const removeFormField = (index: number) => {
+    setFormFields(formFields.filter((_, i) => i !== index));
+  };
+
+  // URL encoded field handlers
+  const addUrlEncodedField = () => {
+    setUrlEncodedFields([...urlEncodedFields, { key: '', value: '', enabled: true }]);
+  };
+
+  const updateUrlEncodedField = (
+    index: number,
+    field: keyof Param,
+    value: string | boolean
+  ) => {
+    const newUrlEncodedFields = [...urlEncodedFields];
+    newUrlEncodedFields[index] = { ...newUrlEncodedFields[index], [field]: value };
+    setUrlEncodedFields(newUrlEncodedFields);
+  };
+
+  const removeUrlEncodedField = (index: number) => {
+    setUrlEncodedFields(urlEncodedFields.filter((_, i) => i !== index));
+  };
+
   const methods: RequestMethod[] = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'];
 
   if (!activeRequest) {
@@ -390,95 +528,30 @@ const RequestEditor: React.FC = () => {
       <div className='border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex-shrink-0'>
         <div className='flex items-center justify-between'>
           <div className='flex items-center space-x-3'>
-            {isEditingName ? (
-              <div className='flex items-center space-x-2'>
-                <input
-                  type='text'
-                  value={editedName}
-                  onChange={(e) => setEditedName(e.target.value)}
-                  className='text-lg font-semibold bg-transparent border-b-2 border-blue-500 focus:outline-none text-gray-900 dark:text-white min-w-0'
-                  autoFocus
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') handleSaveName();
-                    if (e.key === 'Escape') handleCancelEditName();
-                  }}
-                />
-                <button
-                  onClick={handleSaveName}
-                  className='p-1 text-green-600 hover:text-green-700'
-                  title='Save name'
-                >
-                  <Check className='h-4 w-4' />
-                </button>
-                <button
-                  onClick={handleCancelEditName}
-                  className='p-1 text-red-600 hover:text-red-700'
-                  title='Cancel'
-                >
-                  <X className='h-4 w-4' />
-                </button>
-              </div>
-            ) : (
-              <div className='flex items-center space-x-2'>
-                <h2 className='text-lg font-semibold text-gray-900 dark:text-white'>
-                  {activeRequest.name}
-                </h2>
-                <button
-                  onClick={handleStartEditName}
-                  className='p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
-                  title='Edit name'
-                >
-                  <Edit2 className='h-4 w-4' />
-                </button>
-              </div>
-            )}
+            <EditableText
+              value={activeRequest.name || ''}
+              onSave={handleSaveName}
+              placeholder="Request Name"
+              fontSize="lg"
+              fontWeight="semibold"
+            />
             <span
-              className={`px-2 py-1 rounded text-xs font-medium ${
-                method === 'GET'
-                  ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                  : method === 'POST'
+              className={`px-2 py-1 rounded text-xs font-medium ${method === 'GET'
+                ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                : method === 'POST'
                   ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200'
                   : method === 'PUT'
-                  ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
-                  : method === 'DELETE'
-                  ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                  : method === 'PATCH'
-                  ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
-                  : 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
-              }`}
+                    ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+                    : method === 'DELETE'
+                      ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                      : method === 'PATCH'
+                        ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
+                        : 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
+                }`}
             >
               {method}
             </span>
           </div>
-
-          {/* <div className="flex items-center space-x-2">
-            <button
-              onClick={() =>
-                setResponseLayout(
-                  responseLayout === "bottom" ? "right" : "bottom"
-                )
-              }
-              className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400"
-              title={`Switch to ${
-                responseLayout === "bottom" ? "right" : "bottom"
-              } layout`}
-            >
-              {responseLayout === "bottom" ? (
-                <Layout className="h-4 w-4" />
-              ) : (
-                <LayoutGrid className="h-4 w-4" />
-              )}
-            </button>
-
-            <button
-              onClick={handleCreateRequest}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-md text-sm flex items-center space-x-1"
-              title="Create new request"
-            >
-              <Plus className="h-4 w-4" />
-              <span className="hidden sm:inline">New</span>
-            </button>
-          </div> */}
         </div>
       </div>
 
@@ -488,7 +561,7 @@ const RequestEditor: React.FC = () => {
           <select
             value={method}
             onChange={(e) => setMethod(e.target.value as RequestMethod)}
-            className='w-full sm:w-auto border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-800 text-sm font-medium'
+            className='w-full sm:w-auto border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-800 text-sm font-medium hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all duration-150'
           >
             {methods.map((m) => (
               <option key={m} value={m}>
@@ -502,7 +575,7 @@ const RequestEditor: React.FC = () => {
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             placeholder='Enter request URL'
-            className='flex-1 min-w-0 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:text-white'
+            className='flex-1 min-w-0 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 dark:bg-gray-800 dark:text-white'
           />
 
           <div className='flex space-x-2'>
@@ -510,6 +583,8 @@ const RequestEditor: React.FC = () => {
               onClick={handleSendRequest}
               disabled={isLoading}
               className='bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-4 sm:px-6 py-2 rounded-md flex items-center space-x-2 transition-colors whitespace-nowrap'
+              aria-label='Send request'
+              title='Send request'
             >
               <Play className='h-4 w-4' />
               <span className='hidden sm:inline'>
@@ -517,13 +592,16 @@ const RequestEditor: React.FC = () => {
               </span>
             </button>
 
-            <button
-              onClick={handleSaveRequest}
-              className='border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 px-3 py-2 rounded-md'
-              aria-label='Save request'
-            >
-              <Save className='h-4 w-4' />
-            </button>
+            <TooltipContainer text='Save request' children={
+              <button
+                onClick={handleSaveRequest}
+                className='border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 px-3 py-2 rounded-md'
+                aria-label='Save request'
+              >
+                <Save className='h-4 w-4' />
+              </button>
+            } />
+
 
             {/* <button
               className="border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 px-3 py-2 rounded-md"
@@ -560,10 +638,9 @@ const RequestEditor: React.FC = () => {
               onClick={() => setActiveTab(tab.id as any)}
               className={`
                 py-4 px-2 sm:px-4 border-b-2 font-medium text-sm transition-colors whitespace-nowrap
-                ${
-                  activeTab === tab.id
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                ${activeTab === tab.id
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }
               `}
             >
@@ -581,127 +658,27 @@ const RequestEditor: React.FC = () => {
       {/* Tab Content - This div now has overflow-auto to enable scrolling */}
       <div className='flex-1 overflow-auto p-4'>
         {activeTab === 'params' && (
-          <div className='space-y-4'>
-            <div className='flex items-center justify-between'>
-              <h3 className='text-base sm:text-lg font-medium text-gray-900 dark:text-white'>
-                Query Parameters
-              </h3>
-              <button
-                onClick={addParam}
-                className='bg-blue-600 hover:bg-blue-700 text-white px-3 sm:px-4 py-2 rounded-md text-sm'
-              >
-                <span className='hidden sm:inline'>Add Parameter</span>
-                <span className='sm:hidden'>Add</span>
-              </button>
-            </div>
-
-            <div className='space-y-2'>
-              {params.map((param, index) => (
-                <div
-                  key={index}
-                  className='flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-2'
-                >
-                  <input
-                    type='checkbox'
-                    checked={param.enabled}
-                    onChange={(e) =>
-                      updateParam(index, 'enabled', e.target.checked)
-                    }
-                    className='h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded sm:flex-shrink-0'
-                  />
-                  <div className='flex flex-1 space-x-2'>
-                    <input
-                      type='text'
-                      value={param.key}
-                      onChange={(e) =>
-                        updateParam(index, 'key', e.target.value)
-                      }
-                      placeholder='Key'
-                      className='flex-1 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 dark:bg-gray-800 dark:text-white'
-                    />
-                    <input
-                      type='text'
-                      value={param.value}
-                      onChange={(e) =>
-                        updateParam(index, 'value', e.target.value)
-                      }
-                      placeholder='Value'
-                      className='flex-1 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 dark:bg-gray-800 dark:text-white'
-                    />
-                    <button
-                      onClick={() => removeParam(index)}
-                      className='text-red-600 hover:text-red-700 px-2 py-1 whitespace-nowrap'
-                    >
-                      <span className='hidden sm:inline'>Remove</span>
-                      <span className='sm:hidden'>×</span>
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+          <KeyValueEditor
+            items={params}
+            onAdd={addParam}
+            onUpdate={updateParam}
+            onRemove={removeParam}
+            title="Query Parameters"
+            addButtonLabel="Add Parameter"
+            emptyMessage="No query parameters added yet."
+          />
         )}
 
         {activeTab === 'headers' && (
-          <div className='space-y-4'>
-            <div className='flex items-center justify-between'>
-              <h3 className='text-base sm:text-lg font-medium text-gray-900 dark:text-white'>
-                Headers
-              </h3>
-              <button
-                onClick={addHeader}
-                className='bg-blue-600 hover:bg-blue-700 text-white px-3 sm:px-4 py-2 rounded-md text-sm'
-              >
-                <span className='hidden sm:inline'>Add Header</span>
-                <span className='sm:hidden'>Add</span>
-              </button>
-            </div>
-
-            <div className='space-y-2'>
-              {headers.map((header, index) => (
-                <div
-                  key={index}
-                  className='flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-2'
-                >
-                  <input
-                    type='checkbox'
-                    checked={header.enabled}
-                    onChange={(e) =>
-                      updateHeader(index, 'enabled', e.target.checked)
-                    }
-                    className='h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded sm:flex-shrink-0'
-                  />
-                  <div className='flex flex-1 space-x-2'>
-                    <input
-                      type='text'
-                      value={header.key}
-                      onChange={(e) =>
-                        updateHeader(index, 'key', e.target.value)
-                      }
-                      placeholder='Key'
-                      className='flex-1 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 dark:bg-gray-800 dark:text-white'
-                    />
-                    <input
-                      type='text'
-                      value={header.value}
-                      onChange={(e) =>
-                        updateHeader(index, 'value', e.target.value)
-                      }
-                      placeholder='Value'
-                      className='flex-1 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 dark:bg-gray-800 dark:text-white'
-                    />
-                    <button
-                      onClick={() => removeHeader(index)}
-                      className='text-red-600 hover:text-red-700 px-2 py-1 whitespace-nowrap'
-                    >
-                      <span className='hidden sm:inline'>Remove</span>
-                      <span className='sm:hidden'>×</span>
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+          <KeyValueEditor
+            items={headers}
+            onAdd={addHeader}
+            onUpdate={updateHeader}
+            onRemove={removeHeader}
+            title="Headers"
+            addButtonLabel="Add Header"
+            emptyMessage="No headers added yet."
+          />
         )}
 
         {activeTab === 'body' && (
@@ -713,7 +690,7 @@ const RequestEditor: React.FC = () => {
               <select
                 value={bodyType}
                 onChange={(e) => setBodyType(e.target.value as any)}
-                className='border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-800 text-sm font-medium'
+                className='border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-800 text-sm font-medium hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all duration-150'
               >
                 <option value='none'>None</option>
                 <option value='json'>JSON</option>
@@ -743,46 +720,13 @@ const RequestEditor: React.FC = () => {
             )}
 
             {bodyType === 'form-data' && (
-              <div className='space-y-2'>
-                <div className='flex items-center justify-between mb-2'>
-                  <div className='text-sm text-gray-600 dark:text-gray-400'>
-                    Form fields
-                  </div>
-                  <button
-                    className='bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-md text-sm'
-                    onClick={() => {
-                      // Implement form field addition
-                    }}
-                  >
-                    Add Field
-                  </button>
-                </div>
-                <div className='text-gray-500 dark:text-gray-400 text-center p-4 border border-dashed border-gray-300 dark:border-gray-700 rounded-md'>
-                  Form data fields will be displayed here
-                </div>
-              </div>
+              <KeyValueEditor items={formFields} onAdd={addFormField} onUpdate={updateFormField} onRemove={removeFormField} title='Form fields' addButtonLabel='Add Field' emptyMessage='No form fields added yet.' />
             )}
 
             {bodyType === 'x-www-form-urlencoded' && (
-              <div className='space-y-2'>
-                <div className='flex items-center justify-between mb-2'>
-                  <div className='text-sm text-gray-600 dark:text-gray-400'>
-                    URL encoded fields
-                  </div>
-                  <button
-                    className='bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-md text-sm'
-                    onClick={() => {
-                      // Implement url encoded field addition
-                    }}
-                  >
-                    Add Field
-                  </button>
-                </div>
-                <div className='text-gray-500 dark:text-gray-400 text-center p-4 border border-dashed border-gray-300 dark:border-gray-700 rounded-md'>
-                  URL encoded fields will be displayed here
-                </div>
-              </div>
+              <KeyValueEditor items={urlEncodedFields} onAdd={addUrlEncodedField} onUpdate={updateUrlEncodedField} onRemove={removeUrlEncodedField} title='URL encoded fields' addButtonLabel='Add Field' emptyMessage='No URL encoded fields added yet.' />
             )}
+
 
             {bodyType === 'raw' && (
               <textarea
@@ -816,7 +760,7 @@ const RequestEditor: React.FC = () => {
               <select
                 value={authType}
                 onChange={(e) => setAuthType(e.target.value as any)}
-                className='border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-800 text-sm font-medium'
+                className='border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-800 text-sm font-medium hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all duration-150'
               >
                 <option value='none'>No Auth</option>
                 <option value='basic'>Basic Auth</option>
@@ -844,7 +788,7 @@ const RequestEditor: React.FC = () => {
                       setAuthData({ ...authData, username: e.target.value })
                     }
                     placeholder='Enter username'
-                    className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-800 text-sm'
+                    className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 bg-white dark:bg-gray-800 text-sm'
                   />
                 </div>
                 <div>
@@ -858,7 +802,7 @@ const RequestEditor: React.FC = () => {
                       setAuthData({ ...authData, password: e.target.value })
                     }
                     placeholder='Enter password'
-                    className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-800 text-sm'
+                    className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 bg-white dark:bg-gray-800 text-sm'
                   />
                 </div>
               </div>
@@ -876,7 +820,7 @@ const RequestEditor: React.FC = () => {
                     setAuthData({ ...authData, token: e.target.value })
                   }
                   placeholder='Enter token'
-                  className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-800 text-sm'
+                  className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 bg-white dark:bg-gray-800 text-sm'
                 />
                 <p className='mt-1 text-xs text-gray-500 dark:text-gray-400'>
                   The token will be sent as "Bearer {token}" in the
@@ -898,7 +842,7 @@ const RequestEditor: React.FC = () => {
                       setAuthData({ ...authData, key: e.target.value })
                     }
                     placeholder='Enter API key name'
-                    className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-800 text-sm'
+                    className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 bg-white dark:bg-gray-800 text-sm'
                   />
                 </div>
                 <div>
@@ -912,7 +856,7 @@ const RequestEditor: React.FC = () => {
                       setAuthData({ ...authData, value: e.target.value })
                     }
                     placeholder='Enter API key value'
-                    className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-800 text-sm'
+                    className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 bg-white dark:bg-gray-800 text-sm'
                   />
                 </div>
                 <div>
@@ -967,7 +911,7 @@ const RequestEditor: React.FC = () => {
                 onChange={(e) => setPreRequestScript(e.target.value)}
                 placeholder='// Write pre-request JavaScript code here'
                 rows={6}
-                className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 font-mono text-sm dark:bg-gray-800 dark:text-white'
+                className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 font-mono text-sm dark:bg-gray-800 dark:text-white'
               />
             </div>
 
@@ -987,7 +931,7 @@ const RequestEditor: React.FC = () => {
 //   pm.response.to.have.status(200);
 // });"
                 rows={8}
-                className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 font-mono text-sm dark:bg-gray-800 dark:text-white'
+                className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 font-mono text-sm dark:bg-gray-800 dark:text-white'
               />
             </div>
 
@@ -1021,46 +965,13 @@ const RequestEditor: React.FC = () => {
             </h3>
 
             <div className='space-y-4'>
-              <div className='flex items-center justify-between'>
-                <div>
-                  <h4 className='text-sm font-medium text-gray-700 dark:text-gray-300'>
-                    Follow Redirects
-                  </h4>
-                  <p className='text-xs text-gray-500 dark:text-gray-400 mt-1'>
-                    Automatically follow HTTP redirects
-                  </p>
-                </div>
-                <div className='relative inline-block w-10 mr-2 align-middle select-none'>
-                  <input
-                    type='checkbox'
-                    id='followRedirects'
-                    checked={settings.followRedirects}
-                    onChange={(e) =>
-                      setSettings({
-                        ...settings,
-                        followRedirects: e.target.checked,
-                      })
-                    }
-                    className='sr-only'
-                  />
-                  <label
-                    htmlFor='followRedirects'
-                    className={`block overflow-hidden h-6 rounded-full cursor-pointer ${
-                      settings.followRedirects
-                        ? 'bg-blue-500'
-                        : 'bg-gray-300 dark:bg-gray-700'
-                    }`}
-                  >
-                    <span
-                      className={`dot block h-6 w-6 rounded-full bg-white shadow transform transition-transform ${
-                        settings.followRedirects
-                          ? 'translate-x-4'
-                          : 'translate-x-0'
-                      }`}
-                    ></span>
-                  </label>
-                </div>
-              </div>
+              <ToggleSwitch
+                id='followRedirects'
+                checked={settings.followRedirects}
+                onChange={(checked) => setSettings({ ...settings, followRedirects: checked })}
+                label='Follow Redirects'
+                description='Automatically follow HTTP redirects'
+              />
 
               <div>
                 <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
@@ -1076,53 +987,20 @@ const RequestEditor: React.FC = () => {
                       timeout: parseInt(e.target.value),
                     })
                   }
-                  className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-800 text-sm'
+                  className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 bg-white dark:bg-gray-800 text-sm'
                 />
                 <p className='text-xs text-gray-500 dark:text-gray-400 mt-1'>
                   Time in milliseconds to wait for a response before timing out
                 </p>
               </div>
 
-              <div className='flex items-center justify-between'>
-                <div>
-                  <h4 className='text-sm font-medium text-gray-700 dark:text-gray-300'>
-                    SSL Certificate Verification
-                  </h4>
-                  <p className='text-xs text-gray-500 dark:text-gray-400 mt-1'>
-                    Verify SSL certificates when making HTTPS requests
-                  </p>
-                </div>
-                <div className='relative inline-block w-10 mr-2 align-middle select-none'>
-                  <input
-                    type='checkbox'
-                    id='sslVerification'
-                    checked={settings.sslVerification}
-                    onChange={(e) =>
-                      setSettings({
-                        ...settings,
-                        sslVerification: e.target.checked,
-                      })
-                    }
-                    className='sr-only'
-                  />
-                  <label
-                    htmlFor='sslVerification'
-                    className={`block overflow-hidden h-6 rounded-full cursor-pointer ${
-                      settings.sslVerification
-                        ? 'bg-blue-500'
-                        : 'bg-gray-300 dark:bg-gray-700'
-                    }`}
-                  >
-                    <span
-                      className={`dot block h-6 w-6 rounded-full bg-white shadow transform transition-transform ${
-                        settings.sslVerification
-                          ? 'translate-x-4'
-                          : 'translate-x-0'
-                      }`}
-                    ></span>
-                  </label>
-                </div>
-              </div>
+              <ToggleSwitch
+                id='sslVerification'
+                checked={settings.sslVerification}
+                onChange={(checked) => setSettings({ ...settings, sslVerification: checked })}
+                label='SSL Certificate Verification'
+                description='Verify SSL certificates when making HTTPS requests'
+              />
             </div>
 
             <div className='mt-6 p-4 bg-yellow-50 dark:bg-yellow-900 rounded-md'>
@@ -1145,111 +1023,106 @@ const RequestEditor: React.FC = () => {
       </div>
 
       {/* Save Modal */}
-      {showSaveModal && (
-        <div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50'>
-          <div className='bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-md mx-4'>
-            <h3 className='text-lg font-semibold text-gray-900 dark:text-white mb-4'>
-              Save Request
-            </h3>
-
-            <div className='space-y-4'>
-              <div>
-                <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
-                  Save to Collection
-                </label>
-
-                {!isCreatingCollection ? (
-                  <div className='space-y-2'>
-                    <select
-                      value={activeCollection?.id}
-                      onChange={(e) =>
-                        setActiveCollection(
-                          collections.find((c) => c.id === e.target.value) ||
-                            null
-                        )
-                      }
-                      className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white'
-                    >
-                      <option value=''>Select a collection</option>
-                      {collections
-                        .filter(
-                          (collection) =>
-                            collection.workspaceId === currentWorkspace?.id
-                        )
-                        .map((collection) => (
-                          <option key={collection.id} value={collection.id}>
-                            {collection.name}
-                          </option>
-                        ))}
-                    </select>
-
-                    <button
-                      onClick={() => setIsCreatingCollection(true)}
-                      className='w-full flex items-center justify-center space-x-2 text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 py-2 border border-dashed border-gray-300 dark:border-gray-600 rounded-md'
-                    >
-                      <FolderPlus className='h-4 w-4' />
-                      <span>Create New Collection</span>
-                    </button>
-                  </div>
-                ) : (
-                  <div className='space-y-2'>
-                    <input
-                      type='text'
-                      value={newCollectionName}
-                      onChange={(e) => setNewCollectionName(e.target.value)}
-                      placeholder='Enter collection name'
-                      className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white'
-                      autoFocus
-                    />
-
-                    <button
-                      onClick={() => {
-                        setIsCreatingCollection(false);
-                        setNewCollectionName('');
-                      }}
-                      className='text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
-                    >
-                      ← Back to existing collections
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className='flex justify-end space-x-3 mt-6'>
-              <button
-                onClick={handleCancelSave}
-                className='px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md'
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleConfirmSave}
-                disabled={
-                  !activeCollection &&
-                  (!isCreatingCollection || !newCollectionName.trim())
-                }
-                className='px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-md'
-              >
-                Save
-              </button>
-            </div>
-
-            {!url.trim() && (
-              <div className='mt-2 text-red-600 text-sm'>
-                URL is required to save a request.
-              </div>
-            )}
-
-            {!activeCollection &&
-              (!isCreatingCollection || !newCollectionName.trim()) && (
-                <div className='mt-2 text-red-600 text-sm'>
-                  Please select or create a collection.
-                </div>
-              )}
+      <Modal
+        isOpen={showSaveModal}
+        onClose={handleCancelSave}
+        title="Save Request"
+        footer={
+          <div className='flex justify-end space-x-3'>
+            <button
+              onClick={handleCancelSave}
+              className='px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md'
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleConfirmSave}
+              disabled={
+                !activeCollection &&
+                (!isCreatingCollection || !newCollectionName.trim())
+              }
+              className='px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-md'
+            >
+              Save
+            </button>
           </div>
+        }
+      >
+        <div>
+          <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
+            Save to Collection
+          </label>
+
+          {!isCreatingCollection ? (
+            <div className='space-y-2'>
+              <select
+                value={activeCollection?.id}
+                onChange={(e) =>
+                  setActiveCollection(
+                    collections.find((c) => c.id === e.target.value) ||
+                    null
+                  )
+                }
+                className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150'
+              >
+                <option value=''>Select a collection</option>
+                {collections
+                  .filter(
+                    (collection) =>
+                      collection.workspaceId === currentWorkspace?.id
+                  )
+                  .map((collection) => (
+                    <option key={collection.id} value={collection.id}>
+                      {collection.name}
+                    </option>
+                  ))}
+              </select>
+
+              <button
+                onClick={() => setIsCreatingCollection(true)}
+                className='w-full flex items-center justify-center space-x-2 text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 py-2 border border-dashed border-gray-300 dark:border-gray-600 rounded-md'
+              >
+                <FolderPlus className='h-4 w-4' />
+                <span>Create New Collection</span>
+              </button>
+            </div>
+          ) : (
+            <div className='space-y-2'>
+              <input
+                type='text'
+                value={newCollectionName}
+                onChange={(e) => setNewCollectionName(e.target.value)}
+                placeholder='Enter collection name'
+                className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150'
+                autoFocus
+              />
+
+              <button
+                onClick={() => {
+                  setIsCreatingCollection(false);
+                  setNewCollectionName('');
+                }}
+                className='text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+              >
+                ← Back to existing collections
+              </button>
+            </div>
+          )}
         </div>
-      )}
+
+        {!url.trim() && (
+          <div className='mt-2 text-red-600 text-sm'>
+            URL is required to save a request.
+          </div>
+        )}
+
+        {!activeCollection &&
+          (!isCreatingCollection || !newCollectionName.trim()) && (
+            <div className='mt-2 text-red-600 text-sm'>
+              Please select or create a collection.
+            </div>
+          )}
+      </Modal>
     </div>
   );
 };

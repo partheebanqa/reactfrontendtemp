@@ -7,9 +7,9 @@ export function cspPlugin(): Plugin {
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
         // Add security headers to all responses
-        Object.entries(SECURITY_HEADERS).forEach(([key, value]) => {
-          res.setHeader(key, value);
-        });
+        // Object.entries(SECURITY_HEADERS).forEach(([key, value]) => {
+        //   res.setHeader(key, value);
+        // });
         next();
       });
     }

@@ -29,6 +29,9 @@ import WorkspaceModal from "../WorkspaceModal";
 import WorkspaceDropdown from "./WorkspaceDropdown";
 import { useToast } from "@/hooks/useToast";
 import NotificationBell from "./Notifications/NotificationBell";
+import { HelpModal } from "../HelpModal/HelpModal";
+import EnvironmentDropdown from "./EnvirementDropdown";
+import { Environment } from "@/shared/types/datamanagement";
 
 export default function Header() {
   const { user, logoutMutation } = useAuth();
@@ -48,6 +51,16 @@ export default function Header() {
     mode: "add" as "add" | "edit",
     workspace: null as any,
   });
+  const [environmentModalState, setEnvironmentModalState] = useState<{
+    isOpen: boolean;
+    mode: "add" | "edit" | "duplicate" | "manage";
+    environment: Environment | null;
+  }>({
+    isOpen: false,
+    mode: "add" ,
+    environment: null ,
+  });
+  const [showHelpModal, setShowHelpModal] = useState(false);
   const [_, setLocation] = useLocation();
   const { success } = useToast();
 
@@ -127,39 +140,38 @@ export default function Header() {
     setLocation(path);
   };
 
+  const handleDeleteEnvironment = async () => {
+    if (!currentWorkspace) return;
+    try {
+    } catch (error) {
+      console.error("Error deleting environment:", error);
+    }
+  };
+
   return (
-    <header className="border-b bg-white dark:bg-gray-900 px-6 py-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4 flex-1 max-w-md">
+    <header className="border-b bg-white dark:bg-gray-900 px-2 sm:px-6 py-2 sm:py-4">
+      <div className="flex items-center justify-between gap-4 sm:gap-6  mx-auto">
+        <div>
           <WorkspaceDropdown
             setWorkspaceModalState={setWorkspaceModalState}
             handleDeleteWorkspace={handleDeleteWorkspace}
           />
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <Input
-              placeholder="Search tests, endpoints, projects..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
-          </div>
         </div>
-        <div className="flex items-center space-x-4">
-          <NotificationBell />
-          {/* <Button variant="ghost" size="sm" className="relative">
-            <Bell className="h-5 w-5" />
-            <span className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
-              3
-            </span>
-          </Button> */}
+        <div className="flex items-center gap-1 sm:gap-4 min-w-0">
+           {/* <WorkspaceDropdown
+            setWorkspaceModalState={setWorkspaceModalState}
+            handleDeleteWorkspace={handleDeleteWorkspace}
+          /> */}
+           <EnvironmentDropdown
+             setEnvironmentModalState={setEnvironmentModalState}
+             handleDeleteEnvironment={handleDeleteEnvironment}
+           />
+          <div className=" xs:block">
+            <NotificationBell />
+          </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                className="flex items-center space-x-2 px-2"
-              >
-                <Avatar className="h-8 w-8">
+                <Avatar className="h-7 w-7 sm:h-8 sm:w-8 cursor-pointer">
                   <AvatarImage src={(user as any)?.profileImageUrl} />
                   <AvatarFallback>
                     {getInitials(
@@ -168,81 +180,35 @@ export default function Header() {
                     )}
                   </AvatarFallback>
                 </Avatar>
-                <div className="text-left hidden md:block">
-                  <div className="text-sm font-medium">
-                    {(user as any)?.firstName || "Test"}{" "}
-                    {(user as any)?.lastName}
-                  </div>
-                  <div className="text-xs text-gray-500">
-                    {(user as any)?.role}
-                  </div>
-                </div>
-                <ChevronDown className="h-4 w-4" />
-              </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
               <div className="p-4">
                 <div className="flex items-center">
                   <div className="w-10 h-10 bg-blue-200 rounded-full flex items-center justify-center">
-                    <span className="text-blue-800 font-medium">U</span>
+                    <span className="text-blue-800 font-medium">
+                      {getInitials(
+                        (user as any)?.firstName || "Test",
+                        (user as any)?.lastName
+                      )}
+                    </span>
                   </div>
                   <div className="ml-3">
                     <p className="text-sm font-medium text-gray-900">
-                      John Doe
+                      {(user as any)?.firstName || "Test"}{" "}
+                      {(user as any)?.lastName || "User"}
                     </p>
                     <p className="text-xs text-gray-500">
-                      john.doe@example.com
+                      {(user as any)?.email || "user@example.com"}
                     </p>
                   </div>
                 </div>
               </div>
-              {/* <DropdownMenuSeparator /> */}
-              {/* <div className="px-3 py-2">
-                <p className="text-xs font-medium text-gray-500 mb-2 pl-2">
-                  Theme
-                </p>
-                <div className="flex items-center justify-between gap-1 bg-gray-50 dark:bg-gray-800 p-2 rounded-lg">
-                  {themes.map((themeOption) => (
-                    <div
-                      key={themeOption.id}
-                      className="relative group"
-                      data-tooltip-id={`theme-tooltip-${themeOption.id}`}
-                    >
-                      <button
-                        onClick={() => setTheme(themeOption.id as any)}
-                        className={`p-2 rounded-md transition-all duration-200 ${theme === themeOption.id
-                            ? "bg-white dark:bg-gray-700 text-blue-600 shadow-sm"
-                            : "text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700"
-                          }`}
-                        aria-label={themeOption.tooltip}
-                      >
-                        <themeOption.icon size={18} />
-                      </button>
-                      <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1 px-2 py-1 bg-gray-800 text-white text-xs rounded pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
-                        {themeOption.tooltip}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div> */}
               <DropdownMenuSeparator />
-              {/* <DropdownMenuItem
-                onClick={() => handleRedirect("/settings/profile")}
-              >
-                <User className="mr-2 h-4 w-4" />
-                Your Profile
-              </DropdownMenuItem> */}
               <DropdownMenuItem
                 onClick={() => handleRedirect("/settings/account")}
               >
-              <Settings className="mr-2 h-4 w-4" />
+                <Settings className="mr-2 h-4 w-4" />
                 Account Settings
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => handleRedirect("/settings/help")}
-              >
-                <HelpCircle className="mr-2 h-4 w-4" />
-                Help & Support
               </DropdownMenuItem>
               <DropdownMenuSeparator />
 
@@ -262,6 +228,10 @@ export default function Header() {
         onSaveWorkspace={handleSaveWorkspace}
         workspace={workspaceModalState.workspace}
         mode={workspaceModalState.mode}
+      />
+      <HelpModal
+        isOpen={showHelpModal}
+        onClose={() => setShowHelpModal(false)}
       />
     </header>
   );

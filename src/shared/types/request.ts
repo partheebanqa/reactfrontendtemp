@@ -53,7 +53,7 @@ export interface ResponseData {
   statusText: string;
   headers: any;
   data: any;
-  responseTime?: number;
+  responseTime?: number | string; // Can be a number (in ms) or a formatted string (e.g., "1.23 s")
   size?: number;
   time?: number;
 }

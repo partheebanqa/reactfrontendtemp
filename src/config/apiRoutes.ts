@@ -8,6 +8,8 @@ export const API_WORKSPACES = ENV.API_BASE_URL + '/workspaces';
 export const API_COLLECTIONS = ENV.API_BASE_URL + '/collections';
 export const API_COLLECTION_REQUESTS = ENV.API_BASE_URL + '/requests';
 export const API_COLLECTION_IMPORT = ENV.API_BASE_URL + '/collections/import';
+export const API_ENVIRONMENT = ENV.API_BASE_URL + '/environments';
+export const API_VARIABLES = ENV.API_BASE_URL + '/environment-variables';
 
 // TEST SUITES
 export const API_TEST_SUITES = ENV.API_BASE_URL + '/test-suites';

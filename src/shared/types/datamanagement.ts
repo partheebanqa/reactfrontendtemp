@@ -1,14 +1,15 @@
 // types.ts
 export interface Environment {
     id: string;
+    workspaceId: string;
     name: string;
     description: string;
     baseUrl: string;
     variables: Record<string, string>;
     isDefault: boolean;
     createdAt: string;
-  }
-  
+    deletedAt?: string | null;
+  }  
   export interface Variable {
     id: string;
     key: string;
@@ -33,6 +34,18 @@ export interface Environment {
     size: number;
     createdAt: string;
   }
+
+  export interface DataManagementState {
+    environments: Environment[];
+    activeEnvironment: Environment | null;
+    isLoading: boolean;
+  }
+
+  
+export interface fetchEnvironmentsResponse {
+  environments: Environment[];
+}
+
   
   export type VariableType = "static" | "dynamic" | "environment";
   

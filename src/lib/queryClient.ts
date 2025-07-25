@@ -72,7 +72,6 @@ export async function apiRequest(
         }
         fetchOptions.headers = headers;
       } else {
-        // For other content types (like JSON), process normally
         fetchOptions.body = options.body;
         fetchOptions.headers = { ...options?.headers };
       }
