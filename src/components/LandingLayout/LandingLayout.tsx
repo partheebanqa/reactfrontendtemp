@@ -1,7 +1,7 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import {
-  Code 
+  Code
 } from "lucide-react";
 import { Link } from "wouter";
 
@@ -16,12 +16,12 @@ const LandingLayout: React.FC<LandingLayoutProps> = ({ children }) => {
         {/* Header */}
         <header className="container mx-auto px-4 py-6">
           <nav className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
+            <Link to="/" className="flex items-center space-x-3">
               <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
                 <Code className="w-4 h-4 text-primary-foreground" />
               </div>
               <span className="text-xl font-bold">Optraflow</span>
-            </div>
+            </Link>
 
             <div className="flex items-center space-x-4">
               <Button variant="ghost" asChild>

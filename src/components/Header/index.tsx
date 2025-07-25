@@ -30,6 +30,8 @@ import WorkspaceDropdown from "./WorkspaceDropdown";
 import { useToast } from "@/hooks/useToast";
 import NotificationBell from "./Notifications/NotificationBell";
 import { HelpModal } from "../HelpModal/HelpModal";
+import EnvironmentDropdown from "./EnvirementDropdown";
+import { Environment } from "@/shared/types/datamanagement";
 
 export default function Header() {
   const { user, logoutMutation } = useAuth();
@@ -48,6 +50,15 @@ export default function Header() {
     isOpen: false,
     mode: "add" as "add" | "edit",
     workspace: null as any,
+  });
+  const [environmentModalState, setEnvironmentModalState] = useState<{
+    isOpen: boolean;
+    mode: "add" | "edit" | "duplicate" | "manage";
+    environment: Environment | null;
+  }>({
+    isOpen: false,
+    mode: "add" ,
+    environment: null ,
   });
   const [showHelpModal, setShowHelpModal] = useState(false);
   const [_, setLocation] = useLocation();
@@ -129,18 +140,32 @@ export default function Header() {
     setLocation(path);
   };
 
+  const handleDeleteEnvironment = async () => {
+    if (!currentWorkspace) return;
+    try {
+    } catch (error) {
+      console.error("Error deleting environment:", error);
+    }
+  };
+
   return (
     <header className="border-b bg-white dark:bg-gray-900 px-2 sm:px-6 py-2 sm:py-4">
-      <div className="flex items-center justify-end gap-4 sm:gap-6  mx-auto">
-        <div className="flex items-center gap-1 sm:gap-4 min-w-0">
-           <WorkspaceDropdown
+      <div className="flex items-center justify-between gap-4 sm:gap-6  mx-auto">
+        <div>
+          <WorkspaceDropdown
             setWorkspaceModalState={setWorkspaceModalState}
             handleDeleteWorkspace={handleDeleteWorkspace}
           />
-          {/* <WorkspaceDropdown
+        </div>
+        <div className="flex items-center gap-1 sm:gap-4 min-w-0">
+           {/* <WorkspaceDropdown
             setWorkspaceModalState={setWorkspaceModalState}
             handleDeleteWorkspace={handleDeleteWorkspace}
           /> */}
+           <EnvironmentDropdown
+             setEnvironmentModalState={setEnvironmentModalState}
+             handleDeleteEnvironment={handleDeleteEnvironment}
+           />
           <div className=" xs:block">
             <NotificationBell />
           </div>

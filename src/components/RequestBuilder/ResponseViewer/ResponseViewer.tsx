@@ -162,7 +162,7 @@ const ResponseViewer: React.FC = () => {
               <div className="flex items-center space-x-1">
                 <Clock className="h-4 w-4 text-gray-500" />
                 <span className="font-medium text-gray-900 dark:text-white">
-                  {responseData.time || 0}ms
+                  {`${responseData.responseTime}`}
                 </span>
               </div>
 
