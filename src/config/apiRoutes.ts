@@ -22,3 +22,6 @@ export const API_REQUEST = ENV.API_BASE_URL + '/requests';
 
 // EXECUTOR
 export const API_EXECUTOR = ENV.API_BASE_URL + '/executor';
+
+// REQUEST CHAIN
+export const API_REQUEST_CHAIN = ENV.API_BASE_URL + '/request-chains';

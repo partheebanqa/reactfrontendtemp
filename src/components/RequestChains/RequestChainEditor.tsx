@@ -313,6 +313,11 @@ export function RequestChainEditor({
       return;
     }
 
+    const existingChains: RequestChain[] = JSON.parse(
+      localStorage.getItem('extractionLogs') || '[]'
+    );
+
+    // Step 2: Create updated/merged chain object
     const chainData: RequestChain = {
       id: chain?.id || Date.now().toString(),
       workspaceId: '1',
@@ -329,7 +334,24 @@ export function RequestChainEditor({
       successRate: chain?.successRate || 0,
     };
 
-    onSave(chainData);
+    // Step 3: Check if chain already exists and update or insert
+    const updatedChains = [...existingChains];
+    const existingIndex = updatedChains.findIndex((c) => c.id === chainData.id);
+
+    if (existingIndex !== -1) {
+      updatedChains[existingIndex] = chainData; // update
+    } else {
+      updatedChains.push(chainData); // add new
+    }
+
+    // Step 4: Save back to localStorage
+    localStorage.setItem('extractionLogs', JSON.stringify(updatedChains));
+
+    // Step 5: Trigger parent save
+
+    console.log('chainData:', chainData);
+
+    // onSave(chainData);
   };
 
   const getMethodColor = (method: string) => {

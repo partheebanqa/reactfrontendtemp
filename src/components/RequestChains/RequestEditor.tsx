@@ -51,20 +51,6 @@ import {
 } from '@/shared/types/requestChain.model';
 import { ResponseExplorer } from './ResponseExplorer';
 
-type ExtractionLog = {
-  url: string;
-  method: string;
-  bodyType: string;
-  bodyFormData?: any;
-  bodyRawContent?: any;
-  authorizationType?: string;
-  authorization?: object;
-  headers?: any[];
-  params?: any[];
-  variables?: Record<string, any>;
-  extractVariables?: any[];
-};
-
 interface RequestEditorProps {
   request: APIRequest;
   globalVariables: Variable[];

@@ -19,6 +19,8 @@ export default function RequestChains() {
   };
 
   const handleSaveChain = (chain: RequestChain) => {
+    console.log('chainIn page:', chain);
+
     if (editingChain) {
       // Update existing chain
       setChains(chains.map((c) => (c.id === chain.id ? chain : c)));

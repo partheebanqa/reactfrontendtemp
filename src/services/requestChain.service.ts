@@ -1,67 +1,83 @@
-import { ExtendedRequest } from '@/models/collection.model';
-import { API_REQUEST } from '@/config/apiRoutes';
+import { API_REQUEST_CHAIN } from '@/config/apiRoutes';
 import { apiRequest } from '@/lib/queryClient';
-import { RequestDetailResponse } from '@/shared/types/requestChain.model';
+import { RequestChain } from '@/shared/types/requestChain.model';
 
-class RequestService {
-  async getRequestDetails(requestId: string): Promise<RequestDetailResponse> {
-    try {
-      const response = await apiRequest('GET', `${API_REQUEST}/${requestId}`);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+export const saveRequestChain = async (
+  chain: RequestChain
+): Promise<RequestChain> => {
+  try {
+    const response = await apiRequest('POST', API_REQUEST_CHAIN, {
+      body: JSON.stringify(chain),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
 
-      const data = await response.json();
-      return data;
-    } catch (error) {
-      console.error(`Failed to fetch request details for ${requestId}:`, error);
-      throw new Error(
-        `Failed to fetch request details: ${
-          error instanceof Error ? error.message : 'Unknown error'
-        }`
-      );
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Failed to save request chain:', error);
+    throw new Error(
+      error instanceof Error
+        ? error.message
+        : 'Unknown error while saving chain'
+    );
   }
+};
 
-  async getMultipleRequestDetails(
-    requestIds: string[]
-  ): Promise<RequestDetailResponse[]> {
-    try {
-      const requests = requestIds.map((id) => this.getRequestDetails(id));
-      const results = await Promise.allSettled(requests);
+export const getRequestChainById = async (
+  id: string
+): Promise<RequestChain> => {
+  try {
+    const response = await apiRequest('GET', `${API_REQUEST_CHAIN}/${id}`);
 
-      return results
-        .filter(
-          (result): result is PromiseFulfilledResult<RequestDetailResponse> =>
-            result.status === 'fulfilled'
-        )
-        .map((result) => result.value);
-    } catch (error) {
-      console.error('Failed to fetch multiple request details:', error);
-      throw error;
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
+
+    return await response.json();
+  } catch (error) {
+    console.error(`Failed to fetch chain ${id}:`, error);
+    throw error;
   }
+};
 
-  async getCollectionRequests(
-    collectionId?: string
-  ): Promise<ExtendedRequest[]> {
-    try {
-      const url = collectionId
-        ? `${API_REQUEST}/collections/${collectionId}/requests`
-        : `${API_REQUEST}/requests`;
+export const getAllChains = async (): Promise<RequestChain[]> => {
+  try {
+    const response = await apiRequest('GET', API_REQUEST_CHAIN);
 
-      const response = await apiRequest('GET', url);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      return data;
-    } catch (error) {
-      console.error('Failed to fetch collection requests:', error);
-      throw error;
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
-  }
-}
 
-export const requestService = new RequestService();
+    return await response.json();
+  } catch (error) {
+    console.error('Failed to fetch all chains:', error);
+    throw error;
+  }
+};
+
+export const getMultipleRequestDetails = async (
+  ids: string[]
+): Promise<RequestChain[]> => {
+  try {
+    const response = await apiRequest('POST', `${API_REQUEST_CHAIN}/batch`, {
+      body: JSON.stringify({ ids }),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Failed to fetch multiple request details:', error);
+    throw error;
+  }
+};
