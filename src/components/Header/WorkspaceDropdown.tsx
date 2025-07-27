@@ -8,8 +8,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "../ui/button";
 import { useWorkspace } from "@/hooks/useWorkspace";
-import { ChevronDown, Edit, PlusCircle, Trash, Building, CheckCircle } from "lucide-react";
+import { ChevronDown, Edit, PlusCircle, Trash, Building, CheckCircle, Settings } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useLocation } from "wouter";
 
 interface WorkspaceDropdownProps {
   setWorkspaceModalState: (state: {
@@ -26,7 +27,8 @@ export default function WorkspaceDropdown({ setWorkspaceModalState, handleDelete
     workspaces,
     setCurrentWorkspace,
   } = useWorkspace();
-  
+  const [_, setLocation] = useLocation();
+
   return (
     <TooltipProvider>
       <Tooltip>
@@ -48,29 +50,24 @@ export default function WorkspaceDropdown({ setWorkspaceModalState, handleDelete
           <TooltipContent side="bottom">
             <p className="text-xs">Switch between workspaces</p>
           </TooltipContent>
-          
-          <DropdownMenuContent className="w-56 sm:w-64 max-h-[60vh] overflow-y-auto custom-scrollbar p-1">
-            <div className="mb-2 p-2 bg-blue-50 rounded-md">
-              <p className="text-xs text-blue-700 font-medium">Workspaces</p>
+
+          <DropdownMenuContent className="w-64 sm:w-72 max-h-[60vh] overflow-y-auto custom-scrollbar p-2 shadow-md rounded-md border border-gray-200">
+            <div className="mb-3 pb-2 border-b border-gray-100">
+              <h3 className="text-sm text-gray-800 font-semibold mb-1">Workspaces</h3>
               <p className="text-xs text-gray-500">Manage your project workspaces</p>
             </div>
-            
-            <DropdownMenuItem
-              onClick={() =>
-                setWorkspaceModalState({
-                  isOpen: true,
-                  mode: "add",
-                  workspace: null,
-                })
-              }
-              className="text-blue-600 font-medium text-xs sm:text-sm py-2 hover:bg-blue-50 rounded-md"
-            >
-              <PlusCircle className="mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              Add New Workspace
-            </DropdownMenuItem>
-            
+
             <DropdownMenuSeparator className="my-2" />
-            
+
+            <DropdownMenuItem
+              className="text-gray-600 font-medium text-xs sm:text-sm py-2 hover:bg-gray-50 rounded-md border border-gray-100 shadow-sm"
+              onClick={() => setLocation('/settings/account?tab=workspaces', { replace: true })}
+            >
+              <Settings className="mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              Manage Workspaces
+            </DropdownMenuItem>
+            <DropdownMenuSeparator className="my-2" />
+
             {workspaces.length === 0 ? (
               <p className="text-xs text-gray-500 p-2">No workspaces available</p>
             ) : (
@@ -81,55 +78,17 @@ export default function WorkspaceDropdown({ setWorkspaceModalState, handleDelete
                     <DropdownMenuItem
                       key={workspace.id}
                       onClick={() => setCurrentWorkspace(workspace)}
-                      className={`justify-between text-xs sm:text-sm py-2 rounded-md ${
-                        isSelected 
-                          ? "bg-blue-50 text-blue-700" 
-                          : "hover:bg-gray-50"
-                      }`}
+                      className={`justify-between text-xs sm:text-sm py-2 rounded-md ${isSelected
+                        ? "bg-blue-50 text-blue-700"
+                        : "hover:bg-gray-50"
+                        }`}
                     >
                       <div className="flex items-center">
                         <Building className="h-3.5 w-3.5 mr-2 text-gray-500" />
                         <span className="font-medium truncate mr-2">
                           {workspace.name}
                         </span>
-                        {isSelected && (
-                          <CheckCircle className="h-3 w-3 text-green-500 ml-1" />
-                        )}
                       </div>
-                      
-                      {isSelected && (
-                        <div className="flex-shrink-0 flex items-center gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6 hover:bg-blue-100"
-                            title="Edit workspace"
-                            onClick={(e) => {
-                              e.stopPropagation(); // Prevent triggering the parent dropdown item
-                              setWorkspaceModalState({
-                                isOpen: true,
-                                mode: "edit",
-                                workspace,
-                              });
-                            }}
-                          >
-                            <Edit className="h-3 w-3 text-blue-600" />
-                          </Button>
-
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6 hover:bg-red-100"
-                            title="Delete workspace"
-                            onClick={(e) => {
-                              e.stopPropagation(); // Prevent triggering the parent dropdown item
-                              handleDeleteWorkspace(workspace.id);
-                            }}
-                          >
-                            <Trash className="h-3 w-3 text-red-600" />
-                          </Button>
-                        </div>
-                      )}
                     </DropdownMenuItem>
                   );
                 })}

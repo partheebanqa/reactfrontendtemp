@@ -3,8 +3,12 @@ import {
   useDataManagementStore,
 } from "@/store/dataManagementStore";
 import {
+  useCreateEnvironmentMutation,
+  useCreateVariableMutation,
+  useDeleteEnvironmentMutation,
   usefetchVariablesQuery,
   usegetEnvironmentQuery,
+  useUpdateEnvironmentMutation,
 } from "@/store/query/dataManagementQuery";
 import { useWorkspace } from "./useWorkspace";
 
@@ -28,6 +32,12 @@ export function useDataManagement() {
   const setEnvironments = dataManagementActions.setEnvironments;
   const setActiveEnvironment = dataManagementActions.setActiveEnvironment;
 
+  const createEnvironmentMutation = useCreateEnvironmentMutation();
+  const createVariableMutation = useCreateVariableMutation();
+  const updateEnvironmentMutation = useUpdateEnvironmentMutation();
+
+  const deleteEnvironmentMutation = useDeleteEnvironmentMutation();
+
   return {
     environments,
     activeEnvironment,
@@ -36,5 +46,11 @@ export function useDataManagement() {
     // Actions
     setEnvironments,
     setActiveEnvironment,
+
+    createEnvironmentMutation,
+    createVariableMutation,
+    updateEnvironmentMutation,
+    deleteEnvironmentMutation,
+    
   };
 }

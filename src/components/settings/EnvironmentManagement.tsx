@@ -13,6 +13,9 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Settings, Plus, Globe, Lock, Edit, Trash2, Copy } from 'lucide-react';
 import { useToast } from '@/hooks/useToast';
+import { useDataManagement } from '@/hooks/useDataManagement';
+import { Environment } from '@/shared/types/datamanagement';
+import { useWorkspace } from '@/hooks/useWorkspace';
 
 const environmentSchema = z.object({
   name: z.string().min(1, 'Environment name is required'),
@@ -28,20 +31,6 @@ const environmentSchema = z.object({
 
 type EnvironmentFormData = z.infer<typeof environmentSchema>;
 
-interface Environment {
-  id: string;
-  name: string;
-  description?: string;
-  baseUrl: string;
-  workspaceId: string;
-  workspaceName: string;
-  variableCount: number;
-  secretCount: number;
-  createdAt: string;
-  isDefault?: boolean;
-  isActive: boolean;
-}
-
 interface Variable {
   key: string;
   value: string;
@@ -53,6 +42,8 @@ export function EnvironmentManagement() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingEnvironment, setEditingEnvironment] = useState<Environment | null>(null);
   const [variables, setVariables] = useState<Variable[]>([{ key: '', value: '', isSecret: false }]);
+  const { environments, activeEnvironment, setActiveEnvironment, setEnvironments, createEnvironmentMutation, createVariableMutation, updateEnvironmentMutation, deleteEnvironmentMutation } = useDataManagement();
+  const { workspaces } = useWorkspace();
 
   const form = useForm<EnvironmentFormData>({
     resolver: zodResolver(environmentSchema),
@@ -60,57 +51,41 @@ export function EnvironmentManagement() {
       name: '',
       description: '',
       baseUrl: '',
-      workspaceId: '',
       variables: [],
+      workspaceId: '',
     },
   });
 
-  // Mock data
-  const workspaces = [
-    { id: 'workspace-1', name: 'Default Workspace' },
-    { id: 'workspace-2', name: 'Development Team' },
-    { id: 'workspace-3', name: 'QA Testing' },
-  ];
+  // Effect to populate form when editing an environment
+  React.useEffect(() => {
+    if (editingEnvironment) {
+      // Reset form with the editing environment data
+      form.reset({
+        name: editingEnvironment.name,
+        description: editingEnvironment.description || '',
+        workspaceId: editingEnvironment.workspaceId,
+        // variables: editingEnvironment.variables?.items?.map(v => ({
+        //   key: v.key,
+        //   value: v.value,
+        //   isSecret: v.isSecret || false
+        // })) || [],
+      });
+      
+      // Update variables state if environment has variables
+      if (editingEnvironment.variables?.items && editingEnvironment.variables.items.length > 0) {
+        setVariables(
+          editingEnvironment.variables.items.map(v => ({
+            key: v.key,
+            value: v.value,
+            isSecret: v.isSecret || false
+          }))
+        );
+      } else {
+        setVariables([{ key: '', value: '', isSecret: false }]);
+      }
+    }
+  }, [editingEnvironment, form]);
 
-  const [environments, setEnvironments] = useState<Environment[]>([
-    {
-      id: '1',
-      name: 'Development',
-      description: 'Development environment for testing',
-      baseUrl: 'https://dev-api.example.com',
-      workspaceId: 'workspace-1',
-      workspaceName: 'Default Workspace',
-      variableCount: 5,
-      secretCount: 2,
-      createdAt: '2024-01-15',
-      isDefault: true,
-      isActive: true,
-    },
-    {
-      id: '2',
-      name: 'Staging',
-      description: 'Staging environment for pre-production testing',
-      baseUrl: 'https://staging-api.example.com',
-      workspaceId: 'workspace-1',
-      workspaceName: 'Default Workspace',
-      variableCount: 8,
-      secretCount: 3,
-      createdAt: '2024-01-18',
-      isActive: false,
-    },
-    {
-      id: '3',
-      name: 'Production',
-      description: 'Production environment',
-      baseUrl: 'https://api.example.com',
-      workspaceId: 'workspace-2',
-      workspaceName: 'Development Team',
-      variableCount: 12,
-      secretCount: 6,
-      createdAt: '2024-01-20',
-      isActive: true,
-    },
-  ]);
 
   const addVariable = () => {
     setVariables([...variables, { key: '', value: '', isSecret: false }]);
@@ -126,39 +101,36 @@ export function EnvironmentManagement() {
     setVariables(updated);
   };
 
-  const onSubmit = (data: EnvironmentFormData) => {
+  const onSubmit = async (data: EnvironmentFormData) => {
     const environmentData = {
-      ...data,
-      variables: variables.filter(v => v.key.trim() !== ''),
+      workspaceId: data.workspaceId,
+      name: data.name,
+      description: data.description,
+      defaultVariables: {
+        baseUrl: data.baseUrl,
+      },
     };
-    
-    console.log('Environment saved:', environmentData);
+
+    if (editingEnvironment) {
+      // Update existing environment
+      await updateEnvironmentMutation.mutateAsync({ ...environmentData, id: editingEnvironment.id });
+    } else {
+      await createEnvironmentMutation.mutateAsync(environmentData);
+    }
+
     toast({
       title: editingEnvironment ? 'Environment updated' : 'Environment created',
       description: `Environment "${data.name}" has been ${editingEnvironment ? 'updated' : 'created'} successfully.`,
     });
-    
+
     setIsCreateDialogOpen(false);
     setEditingEnvironment(null);
     form.reset();
     setVariables([{ key: '', value: '', isSecret: false }]);
   };
 
-  const handleEdit = (environment: Environment) => {
-    setEditingEnvironment(environment);
-    form.setValue('name', environment.name);
-    form.setValue('description', environment.description || '');
-    form.setValue('baseUrl', environment.baseUrl);
-    form.setValue('workspaceId', environment.workspaceId);
-    // Mock variables for editing
-    setVariables([
-      { key: 'API_KEY', value: 'sk-1234...', isSecret: true },
-      { key: 'BASE_PATH', value: '/api/v1', isSecret: false },
-      { key: 'TIMEOUT', value: '30000', isSecret: false },
-    ]);
-  };
 
-  const handleDelete = (environment: Environment) => {
+  const handleDelete = async (environment: Environment) => {
     if (environment.isDefault) {
       toast({
         title: 'Cannot delete default environment',
@@ -167,44 +139,69 @@ export function EnvironmentManagement() {
       });
       return;
     }
-    
+
     if (confirm(`Are you sure you want to delete "${environment.name}"? This action cannot be undone.`)) {
-      toast({
-        title: 'Environment deleted',
-        description: `Environment "${environment.name}" has been deleted.`,
-      });
+      try {
+        await deleteEnvironmentMutation.mutateAsync(environment.id);
+        
+        toast({
+          title: 'Environment deleted',
+          description: `Environment "${environment.name}" has been deleted.`,
+        });
+      } catch (error) {
+        toast({
+          title: 'Error deleting environment',
+          description: 'There was a problem deleting the environment.',
+          variant: 'destructive',
+        });
+      }
     }
   };
 
   const handleToggleActive = (environment: Environment) => {
-    const newStatus = !environment.isActive;
-    setEnvironments(envs => 
-      envs.map(env => 
-        env.id === environment.id 
-          ? { ...env, isActive: newStatus }
-          : env
-      )
-    );
+    setActiveEnvironment(environment);
     toast({
-      title: `Environment ${newStatus ? 'activated' : 'deactivated'}`,
-      description: `${environment.name} is now ${newStatus ? 'active' : 'inactive'}.`,
+      title: `Environment ${environment.id === activeEnvironment?.id ? 'activated' : 'deactivated'}`,
+      description: `${environment.name} is now ${environment.id === activeEnvironment?.id ? 'active' : 'inactive'}.`,
     });
   };
 
-  const handleDuplicate = (environment: Environment) => {
-    const duplicatedEnv: Environment = {
-      ...environment,
-      id: `${environment.id}-copy-${Date.now()}`,
+  const handleDuplicate = async (environment: Environment) => {
+    const duplicateData = {
+      workspaceId: environment.workspaceId,
       name: `${environment.name} (Copy)`,
-      isDefault: false,
-      createdAt: new Date().toISOString().split('T')[0],
+      description: environment.description,
+      defaultVariables: {
+        baseUrl: environment.baseUrl,
+      },
     };
-    
-    setEnvironments(envs => [...envs, duplicatedEnv]);
-    toast({
-      title: 'Environment duplicated',
-      description: `A copy of "${environment.name}" has been created.`,
-    });
+
+    try {
+      const duplicatedEnv = await createEnvironmentMutation.mutateAsync(duplicateData);
+      
+      // If there are variables, duplicate them too
+      if (environment.variables?.items && environment.variables.items.length > 0) {
+        for (const variable of environment.variables.items) {
+          await createVariableMutation.mutateAsync({
+            environmentId: duplicatedEnv.id,
+            key: variable.key,
+            value: variable.value,
+            isSecret: variable.isSecret || false,
+          });
+        }
+      }
+
+      toast({
+        title: 'Environment duplicated',
+        description: `A copy of "${environment.name}" has been created.`,
+      });
+    } catch (error) {
+      toast({
+        title: 'Error duplicating environment',
+        description: 'There was a problem creating a duplicate environment.',
+        variant: 'destructive',
+      });
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -309,10 +306,10 @@ export function EnvironmentManagement() {
                       <FormItem>
                         <FormLabel>Description (Optional)</FormLabel>
                         <FormControl>
-                          <Textarea 
-                            placeholder="Environment description" 
+                          <Textarea
+                            placeholder="Environment description"
                             rows={2}
-                            {...field} 
+                            {...field}
                           />
                         </FormControl>
                         <FormMessage />
@@ -376,9 +373,9 @@ export function EnvironmentManagement() {
                   </div> */}
 
                   <div className="flex justify-end gap-2 pt-4 border-t">
-                    <Button 
-                      type="button" 
-                      variant="outline" 
+                    <Button
+                      type="button"
+                      variant="outline"
                       onClick={() => {
                         setIsCreateDialogOpen(false);
                         setEditingEnvironment(null);
@@ -426,11 +423,11 @@ export function EnvironmentManagement() {
                             Default
                           </Badge>
                         )}
-                        <Badge 
-                          variant={environment.isActive ? "default" : "secondary"} 
-                          className={`text-xs ${environment.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}
+                        <Badge
+                          variant={environment.id === activeEnvironment?.id ? "default" : "secondary"}
+                          className={`text-xs ${environment.id === activeEnvironment?.id ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}
                         >
-                          {environment.isActive ? 'Active' : 'Inactive'}
+                          {environment.id === activeEnvironment?.id ? 'Active' : 'Inactive'}
                         </Badge>
                       </div>
                       {environment.description && (
@@ -441,12 +438,12 @@ export function EnvironmentManagement() {
                         <span className="text-xs sm:text-sm text-gray-600 truncate">{environment.baseUrl}</span>
                       </div>
                     </div>
-                    
+
                     {/* Mobile: Action buttons */}
                     <div className="flex items-center gap-2 sm:hidden">
                       <div className="flex items-center gap-1">
                         <Switch
-                          checked={environment.isActive}
+                          checked={environment.id === activeEnvironment?.id}
                           onCheckedChange={() => handleToggleActive(environment)}
                           className="data-[state=checked]:bg-green-600"
                         />
@@ -483,12 +480,12 @@ export function EnvironmentManagement() {
                     <div className="hidden sm:flex items-center gap-3">
                       <div className="flex items-center gap-2">
                         <Switch
-                          checked={environment.isActive}
+                          checked={environment.id === activeEnvironment?.id}
                           onCheckedChange={() => handleToggleActive(environment)}
                           className="data-[state=checked]:bg-green-600"
                         />
                         <span className="text-sm text-gray-600">
-                          {environment.isActive ? 'Active' : 'Inactive'}
+                          {environment.id === activeEnvironment?.id ? 'Active' : 'Inactive'}
                         </span>
                       </div>
                       <Button
@@ -520,21 +517,17 @@ export function EnvironmentManagement() {
                       )}
                     </div>
                   </div>
-                  
+
                   {/* Mobile: Environment details */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs text-gray-500 pt-2 border-t sm:hidden">
                     <div>
-                      <span className="font-medium block">Workspace:</span>
-                      <span className="truncate">{environment.workspaceName}</span>
-                    </div>
-                    <div>
-                      <span className="font-medium block">{environment.variableCount}</span>
+                      <span className="font-medium block">{environment.variables.count}</span>
                       <span>variables</span>
                     </div>
-                    <div>
+                    {/* <div>
                       <span className="font-medium block">{environment.secretCount}</span>
                       <span>secrets</span>
-                    </div>
+                    </div> */}
                     <div>
                       <span className="font-medium block">Created:</span>
                       <span>{formatDate(environment.createdAt)}</span>
@@ -543,12 +536,11 @@ export function EnvironmentManagement() {
 
                   {/* Desktop: Environment details */}
                   <div className="hidden sm:flex items-center gap-4 text-xs text-gray-500 pt-2 border-t">
-                    <span>Workspace: {environment.workspaceName}</span>
-                    <span>{environment.variableCount} variables</span>
-                    <span className="flex items-center gap-1">
+                    <span>{environment.variables.count} variables</span>
+                    {/* <span className="flex items-center gap-1">
                       <Lock className="h-3 w-3" />
                       {environment.secretCount} secrets
-                    </span>
+                    </span> */}
                     <span>Created {formatDate(environment.createdAt)}</span>
                   </div>
                 </div>
@@ -561,7 +553,7 @@ export function EnvironmentManagement() {
         <div className="mt-8 p-4 bg-blue-50 rounded-lg">
           <h4 className="font-medium text-blue-900 mb-2">Environment Usage</h4>
           <p className="text-sm text-blue-800">
-            Environments allow you to manage different API endpoints and configurations for development, 
+            Environments allow you to manage different API endpoints and configurations for development,
             staging, and production. Variables can be used in your requests using variable_name syntax.
           </p>
         </div>
