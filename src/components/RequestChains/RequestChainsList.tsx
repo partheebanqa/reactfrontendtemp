@@ -27,6 +27,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { RequestChain } from '@/shared/types/requestChain.model';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 
 interface RequestChainsListProps {
   chains: RequestChain[];
@@ -330,56 +331,91 @@ export function RequestChainsList({
                     >
                       <CheckCircle className='w-4 h-4' />
                     </Button> */}
-                    <Button
-                      variant='ghost'
-                      size='sm'
-                      onClick={() => onToggleChain(chain?.id)}
-                      className={
-                        chain.enabled
-                          ? 'text-green-600 hover:text-green-700'
-                          : 'text-muted-foreground hover:text-foreground'
-                      }
-                    >
-                      {chain.enabled ? (
-                        <Play className='w-4 h-4' />
-                      ) : (
-                        <Pause className='w-4 h-4' />
-                      )}
-                    </Button>
+                  <TooltipProvider>
+  {/* Enable/Disable Chain */}
+  <Tooltip>
+    <TooltipTrigger asChild>
+      <Button
+        variant='ghost'
+        size='sm'
+        onClick={() => onToggleChain(chain?.id)}
+        className={
+          chain.enabled
+            ? 'text-green-600 hover:text-green-700'
+            : 'text-muted-foreground hover:text-foreground'
+        }
+      >
+        {chain.enabled ? (
+          <Play className='w-4 h-4' />
+        ) : (
+          <Pause className='w-4 h-4' />
+        )}
+      </Button>
+    </TooltipTrigger>
+    <TooltipContent>
+      {chain.enabled ? 'Disable Chain' : 'Enable Chain'}
+    </TooltipContent>
+  </Tooltip>
 
-                    <Button
-                      variant='ghost'
-                      size='sm'
-                      onClick={() => onEditChain(chain)}
-                      className='text-muted-foreground hover:text-foreground'
-                    >
-                      <Edit className='w-4 h-4' />
-                    </Button>
+  {/* Edit Chain */}
+  <Tooltip>
+    <TooltipTrigger asChild>
+      <Button
+        variant='ghost'
+        size='sm'
+        onClick={() => onEditChain(chain)}
+        className='text-muted-foreground hover:text-foreground'
+      >
+        <Edit className='w-4 h-4' />
+      </Button>
+    </TooltipTrigger>
+    <TooltipContent>Edit Chain</TooltipContent>
+  </Tooltip>
 
-                    <Button
-                      variant='ghost'
-                      size='sm'
-                      className='text-muted-foreground hover:text-foreground'
-                    >
-                      <Copy className='w-4 h-4' />
-                    </Button>
+  {/* Copy Chain */}
+  <Tooltip>
+    <TooltipTrigger asChild>
+      <Button
+        variant='ghost'
+        size='sm'
+        className='text-muted-foreground hover:text-foreground'
+      >
+        <Copy className='w-4 h-4' />
+      </Button>
+    </TooltipTrigger>
+    <TooltipContent>Copy Chain</TooltipContent>
+  </Tooltip>
 
-                    <Button
-                      variant='ghost'
-                      size='sm'
-                      className='text-muted-foreground hover:text-foreground'
-                    >
-                      <Download className='w-4 h-4' />
-                    </Button>
+  {/* Download Chain */}
+  <Tooltip>
+    <TooltipTrigger asChild>
+      <Button
+        variant='ghost'
+        size='sm'
+        className='text-muted-foreground hover:text-foreground'
+      >
+        <Download className='w-4 h-4' />
+      </Button>
+    </TooltipTrigger>
+    <TooltipContent>Download Chain</TooltipContent>
+  </Tooltip>
 
-                    <Button
-                      variant='ghost'
-                      size='sm'
-                      onClick={() => onDeleteChain(chain.id)}
-                      className='text-red-600 hover:text-red-700'
-                    >
-                      <Trash2 className='w-4 h-4' />
-                    </Button>
+  {/* Delete Chain */}
+  <Tooltip>
+    <TooltipTrigger asChild>
+      <Button
+        variant='ghost'
+        size='sm'
+        onClick={() => onDeleteChain(chain.id)}
+        className='text-red-600 hover:text-red-700'
+      >
+        <Trash2 className='w-4 h-4' />
+      </Button>
+    </TooltipTrigger>
+    <TooltipContent>Delete Chain</TooltipContent>
+  </Tooltip>
+</TooltipProvider>
+
                   </div>
                 </div>
               </CardContent>
