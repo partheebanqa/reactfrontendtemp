@@ -1,30 +1,43 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { RequestChainsList } from '@/components/RequestChains/RequestChainsList';
 import { RequestChainEditor } from '@/components/RequestChains/RequestChainEditor';
 import { RequestChain } from '@/shared/types/requestChain.model';
-import { requestService } from '@/services/requestChain.service';
+import {
+  getRequestChains,
+  saveRequestChain,
+} from '@/services/requestChain.service';
 
 const Index = () => {
   const [currentView, setCurrentView] = useState<'list' | 'editor'>('list');
   const [editingChain, setEditingChain] = useState<RequestChain | undefined>();
-  const [chains, setChains] = useState<RequestChain[]>([]);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadChains();
-  }, []);
+  const queryClient = useQueryClient();
 
-  const loadChains = async () => {
-    try {
-      setLoading(true);
-      const data = await requestService.getRequestChains('workspace-1');
-      setChains(data);
-    } catch (error) {
-      console.error('Failed to load chains:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const {
+    data: chains = [],
+    isLoading: loading,
+    refetch,
+  } = useQuery({
+    queryKey: ['requestChains', 'workspace-1'],
+    queryFn: () => getRequestChains('workspace-1'),
+  });
+
+  const {
+    mutate: saveChain,
+    isPending: isSavingChain,
+    error: saveError,
+  } = useMutation({
+    mutationFn: (chain: RequestChain) => saveRequestChain(chain),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ['requestChains', 'workspace-1'],
+      });
+    },
+    onError: (error) => {
+      console.error('Failed to save chain:', error);
+    },
+  });
 
   const handleCreateChain = () => {
     setEditingChain(undefined);
@@ -36,20 +49,19 @@ const Index = () => {
     setCurrentView('editor');
   };
 
-  const handleSaveChain = async (chain: RequestChain) => {
-    try {
-      await requestService.saveRequestChain(chain);
-      await loadChains(); // Reload the list
-      setCurrentView('list');
-    } catch (error) {
-      console.error('Failed to save chain:', error);
-    }
+  const handleSaveChain = (chain: RequestChain) => {
+    saveChain(chain);
+    // await loadChains(); // Reload the list
+    // setCurrentView('list');
   };
 
   const handleDeleteChain = async (chainId: string) => {
     try {
       // await requestService.deleteRequestChain(chainId);
-      setChains(chains.filter((c) => c.id !== chainId));
+      queryClient.setQueryData(
+        ['requestChains', 'workspace-1'],
+        (old: RequestChain[] = []) => old.filter((c) => c.id !== chainId)
+      );
     } catch (error) {
       console.error('Failed to delete chain:', error);
     }
@@ -57,11 +69,10 @@ const Index = () => {
 
   const handleToggleChain = async (chainId: string) => {
     try {
-      // await requestService.toggleRequestChain(chainId);
-      setChains(
-        chains.map((c) =>
-          c.id === chainId ? { ...c, enabled: !c.enabled } : c
-        )
+      queryClient.setQueryData(
+        ['requestChains', 'workspace-1'],
+        (old: RequestChain[] = []) =>
+          old.map((c) => (c.id === chainId ? { ...c, enabled: !c.enabled } : c))
       );
     } catch (error) {
       console.error('Failed to toggle chain:', error);

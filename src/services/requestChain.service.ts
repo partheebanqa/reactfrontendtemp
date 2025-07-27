@@ -192,90 +192,137 @@ const mockChains: RequestChain[] = [
   },
 ];
 
-class RequestService {
-  async getRequestDetails(requestId: string): Promise<RequestDetailResponse> {
-    try {
-      const response = await apiRequest('GET', `${API_REQUEST}/${requestId}`);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      return data;
-    } catch (error) {
-      console.error(`Failed to fetch request details for ${requestId}:`, error);
-      throw new Error(
-        `Failed to fetch request details: ${
-          error instanceof Error ? error.message : 'Unknown error'
-        }`
-      );
-    }
-  }
-
-  async getMultipleRequestDetails(
-    requestIds: string[]
-  ): Promise<RequestDetailResponse[]> {
-    try {
-      const requests = requestIds.map((id) => this.getRequestDetails(id));
-      const results = await Promise.allSettled(requests);
-
-      return results
-        .filter(
-          (result): result is PromiseFulfilledResult<RequestDetailResponse> =>
-            result.status === 'fulfilled'
-        )
-        .map((result) => result.value);
-    } catch (error) {
-      console.error('Failed to fetch multiple request details:', error);
-      throw error;
-    }
-  }
-
-  async getCollectionRequests(
-    collectionId?: string
-  ): Promise<ExtendedRequest[]> {
-    try {
-      const url = collectionId
-        ? `${API_REQUEST}/collections/${collectionId}/requests`
-        : `${API_REQUEST}/requests`;
-
-      const response = await apiRequest('GET', url);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      return data;
-    } catch (error) {
-      console.error('Failed to fetch collection requests:', error);
-      throw error;
-    }
-  }
-
-  async saveRequestChain(chain: RequestChain): Promise<RequestChain> {
-    console.log('saving chain', chain);
-
-    const response = await apiRequest('POST', API_REQUEST_CHAIN, {
-      body: JSON.stringify(chain),
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-
+export async function getRequestDetails(
+  requestId: string
+): Promise<RequestDetailResponse> {
+  try {
+    const response = await apiRequest('GET', `${API_REQUEST}/${requestId}`);
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    return await response.json(); // This ensures a value is returned!
-  }
-
-  async getRequestChains(workspaceId: string): Promise<RequestChain[]> {
-    // Simulate API call delay
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    // Return mock data - replace with actual API call later
-    return mockChains.filter((chain) => chain.workspaceId === workspaceId);
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error(`Failed to fetch request details for ${requestId}:`, error);
+    throw new Error(
+      `Failed to fetch request details: ${
+        error instanceof Error ? error.message : 'Unknown error'
+      }`
+    );
   }
 }
 
-export const requestService = new RequestService();
+export async function getMultipleRequestDetails(
+  requestIds: string[]
+): Promise<RequestDetailResponse[]> {
+  try {
+    const requests = requestIds.map((id) => getRequestDetails(id));
+    const results = await Promise.allSettled(requests);
+
+    return results
+      .filter(
+        (result): result is PromiseFulfilledResult<RequestDetailResponse> =>
+          result.status === 'fulfilled'
+      )
+      .map((result) => result.value);
+  } catch (error) {
+    console.error('Failed to fetch multiple request details:', error);
+    throw error;
+  }
+}
+
+export async function getCollectionRequests(
+  collectionId?: string
+): Promise<ExtendedRequest[]> {
+  try {
+    const url = collectionId
+      ? `${API_REQUEST}/collections/${collectionId}/requests`
+      : `${API_REQUEST}/requests`;
+
+    const response = await apiRequest('GET', url);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Failed to fetch collection requests:', error);
+    throw error;
+  }
+}
+
+export async function saveRequestChain(
+  chain: RequestChain
+): Promise<RequestChain> {
+  console.log('saving chain', chain);
+
+  const response = await apiRequest('POST', API_REQUEST_CHAIN, {
+    body: JSON.stringify(chain),
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`);
+  }
+
+  return await response.json();
+}
+
+// export async function getRequestChains(
+//   workspaceId: string
+// ): Promise<RequestChain[]> {
+//   await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulate network delay
+
+//   // Return mock data for now
+//   return mockChains.filter((chain) => chain.workspaceId === workspaceId);
+// }
+
+export const getRequestChains = async (
+  workspaceId: string
+): Promise<RequestChain[]> => {
+  try {
+    const response = await apiRequest(
+      'GET',
+      `${API_REQUEST_CHAIN}?ws=8d9ea72f-7f74-4821-8909-e953066d9a8b`
+    );
+
+    const data = await response.json();
+
+    // Map the API response to the RequestChain interface
+    const mappedChains: RequestChain[] = data.requestChains.map(
+      (chain: any) => ({
+        id: chain.id,
+        workspaceId: chain.workspaceId,
+        name: chain.name,
+        // Provide default or null values for properties not present in the API response
+        requests: [], // Assuming empty if not provided
+        description: '', // Assuming empty if not provided
+        variables: [], // Assuming empty if not provided
+        schedule: {
+          enabled: false,
+          type: 'once',
+          startDate: '',
+          timezone: '',
+        }, // Default schedule
+        enabled: true, // Default to enabled, or infer from another field if available
+        createdAt: chain.createdAt,
+        updatedAt: chain.updatedAt,
+        lastExecuted: null, // Assuming null if not provided
+        executionCount: 0, // Assuming 0 if not provided
+        successRate: 0, // Assuming 0 if not provided
+        // Add other properties as needed, providing defaults if they are missing
+        isImportant: chain.isImportant || false, // Map isImportant if needed
+      })
+    );
+
+    return mappedChains;
+  } catch (error: any) {
+    throw new Error(error.message || 'Failed to fetch request chains');
+  }
+};
+
+// 8d9ea72f-7f74-4821-8909-e953066d9a8b

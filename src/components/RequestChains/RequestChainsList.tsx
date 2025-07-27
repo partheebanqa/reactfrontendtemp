@@ -249,7 +249,7 @@ export function RequestChainsList({
                       </p>
 
                       <div className='flex items-center space-x-4 mt-2 text-sm text-muted-foreground'>
-                        <span>{chain.requests.length} steps</span>
+                        <span>{chain?.requests?.length} steps</span>
                         <span>•</span>
                         <span>
                           {chain.requests.map((r) => r.name).join(', ')}

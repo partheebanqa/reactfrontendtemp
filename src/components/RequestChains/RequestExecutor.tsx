@@ -15,12 +15,14 @@ import {
 import {
   APIRequest,
   ExecutionLog,
+  RequestChain,
   Variable,
 } from '@/shared/types/requestChain.model';
 
 interface RequestExecutorProps {
   requests: APIRequest[];
   variables: Variable[];
+  chainName?: string;
   onExecutionComplete: (
     logs: ExecutionLog[],
     extractedVariables: Variable[]
@@ -46,7 +48,11 @@ export function RequestExecutor({
   onExecutionComplete,
   onVariableUpdate,
   onExecutionStateChange,
-}: RequestExecutorProps) {
+  onPreExecute,
+  chainName,
+}: RequestExecutorProps & {
+  onPreExecute?: () => Promise<RequestChain | null>;
+}) {
   const [isExecuting, setIsExecuting] = useState(false);
   const [currentRequestIndex, setCurrentRequestIndex] = useState(-1);
   const [executionLogs, setExecutionLogs] = useState<ExecutionLog[]>([]);
@@ -306,13 +312,25 @@ export function RequestExecutor({
   };
 
   const handleExecuteChain = async () => {
+    // ✅ Step 1: Save the chain and wait for its ID
+    const savedChain = await onPreExecute?.();
+
+    console.log('savedChain', savedChain);
+
+    if (!savedChain?.id) {
+      console.warn('Execution aborted: Chain not saved properly.');
+      return;
+    }
+
+    console.log('Executing chain with ID:', savedChain.id);
+
     if (requests.length === 0) return;
 
     setIsExecuting(true);
     setCurrentRequestIndex(0);
     setExecutionLogs([]);
 
-    // Notify parent component about execution state
+    // Notify parent about execution start
     onExecutionStateChange?.(true, 0);
 
     let currentVars = [...allVariables];
@@ -329,9 +347,9 @@ export function RequestExecutor({
       const log = await executeRequest(request, currentVars);
 
       logs.push(log);
-      setExecutionLogs([...logs]);
+      setExecutionLogs([...logs]); // Update UI after each request
 
-      // Update variables with extracted data
+      // Extract variables from response
       if (log.extractedVariables) {
         Object.entries(log.extractedVariables).forEach(([name, value]) => {
           const existingVarIndex = currentVars.findIndex(
@@ -364,16 +382,16 @@ export function RequestExecutor({
           }
         });
 
-        // Update local state with new variables for next iteration
-        setAllVariables([...currentVars]);
+        setAllVariables([...currentVars]); // For next iterations
       }
 
-      // Stop execution if request failed and error handling is set to stop
+      // Stop execution if error and errorHandling is set to 'stop'
       if (log.status === 'error' && request.errorHandling === 'stop') {
         break;
       }
     }
 
+    // ✅ Final cleanup
     setIsExecuting(false);
     setCurrentRequestIndex(-1);
     setExtractedVariables(newExtractedVars);
@@ -452,11 +470,14 @@ export function RequestExecutor({
           ) : (
             <button
               onClick={handleExecuteChain}
-              disabled={requests.filter((r) => r.enabled).length === 0}
+              disabled={
+                !chainName?.trim() ||
+                requests.filter((r) => r.enabled).length === 0
+              }
               className='flex items-center justify-center space-x-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors w-full sm:w-auto'
             >
               <Play className='w-4 h-4' />
-              <span className='hidden sm:inline'>Save & Execute</span>
+              <span className='hidden sm:inline'>Save chain & Execute</span>
               <span className='sm:hidden'>Execute</span>
             </button>
           )}

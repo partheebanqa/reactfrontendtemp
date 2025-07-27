@@ -95,6 +95,8 @@ export function RequestEditor({
     Record<string, any>
   >({});
 
+  console.log('extractedVariables:', extractedVariables);
+
   const [previousExtractions, setPreviousExtractions] = useState<
     DataExtraction[]
   >([]);
@@ -609,108 +611,108 @@ export function RequestEditor({
     });
   };
 
-  // const KeyValueTable = ({
-  //   type,
-  //   items,
-  //   addButtonText,
-  //   emptyStateText,
-  // }: {
-  //   type: 'params' | 'headers';
-  //   items: KeyValuePair[];
-  //   addButtonText: string;
-  //   emptyStateText: string;
-  // }) => (
-  //   <div className='space-y-4'>
-  //     <div className='flex items-center justify-between'>
-  //       <h3 className='text-lg font-semibold'>
-  //         {type === 'params' ? 'Params' : 'Headers'}
-  //       </h3>
-  //       <Button
-  //         variant='link'
-  //         size='sm'
-  //         onClick={() => addKeyValuePair(type)}
-  //         className='gap-2 text-primary'
-  //       >
-  //         <Plus className='w-4 h-4' />
-  //         {addButtonText}
-  //       </Button>
-  //     </div>
+  const KeyValueTable = ({
+    type,
+    items,
+    addButtonText,
+    emptyStateText,
+  }: {
+    type: 'params' | 'headers';
+    items: KeyValuePair[];
+    addButtonText: string;
+    emptyStateText: string;
+  }) => (
+    <div className='space-y-4'>
+      <div className='flex items-center justify-between'>
+        <h3 className='text-lg font-semibold'>
+          {type === 'params' ? 'Params' : 'Headers'}
+        </h3>
+        <Button
+          variant='link'
+          size='sm'
+          onClick={() => addKeyValuePair(type)}
+          className='gap-2 text-primary'
+        >
+          <Plus className='w-4 h-4' />
+          {addButtonText}
+        </Button>
+      </div>
 
-  //     {items.length > 0 ? (
-  //       <div className='space-y-2'>
-  //         <div className='grid grid-cols-12 gap-2 text-xs font-medium text-muted-foreground border-b pb-2'>
-  //           <div className='col-span-1'></div>
-  //           <div className='col-span-4'>Key</div>
-  //           <div className='col-span-4'>Value</div>
-  //           <div className='col-span-2'>Description</div>
-  //           <div className='col-span-1'></div>
-  //         </div>
+      {items.length > 0 ? (
+        <div className='space-y-2'>
+          <div className='grid grid-cols-12 gap-2 text-xs font-medium text-muted-foreground border-b pb-2'>
+            <div className='col-span-1'></div>
+            <div className='col-span-4'>Key</div>
+            <div className='col-span-4'>Value</div>
+            <div className='col-span-2'>Description</div>
+            <div className='col-span-1'></div>
+          </div>
 
-  //         {items.map((item) => (
-  //           <div key={item.id} className='grid grid-cols-12 gap-2 items-center'>
-  //             <div className='col-span-1 flex justify-center'>
-  //               <Checkbox
-  //                 checked={item.enabled}
-  //                 onCheckedChange={(checked) =>
-  //                   updateKeyValuePair(type, item.id, { enabled: !!checked })
-  //                 }
-  //               />
-  //             </div>
-  //             <div className='col-span-4'>
-  //               <Input
-  //                 value={item.key}
-  //                 onChange={(e) =>
-  //                   updateKeyValuePair(type, item.id, { key: e.target.value })
-  //                 }
-  //                 placeholder='Key'
-  //                 className='h-8'
-  //               />
-  //             </div>
-  //             <div className='col-span-4'>
-  //               <Input
-  //                 value={item.value}
-  //                 onChange={(e) =>
-  //                   updateKeyValuePair(type, item.id, { value: e.target.value })
-  //                 }
-  //                 placeholder='Value'
-  //                 className='h-8'
-  //               />
-  //             </div>
-  //             <div className='col-span-2'>
-  //               <Input
-  //                 value={item.description || ''}
-  //                 onChange={(e) =>
-  //                   updateKeyValuePair(type, item.id, {
-  //                     description: e.target.value,
-  //                   })
-  //                 }
-  //                 placeholder='Description'
-  //                 className='h-8'
-  //               />
-  //             </div>
-  //             <div className='col-span-1 flex justify-center'>
-  //               <Button
-  //                 variant='ghost'
-  //                 size='sm'
-  //                 onClick={() => removeKeyValuePair(type, item.id)}
-  //                 className='h-8 w-8 p-0 text-red-600 hover:text-red-700'
-  //               >
-  //                 <Trash2 className='w-3 h-3' />
-  //               </Button>
-  //             </div>
-  //           </div>
-  //         ))}
-  //       </div>
-  //     ) : (
-  //       <div className='flex flex-col items-center justify-center py-12'>
-  //         <div className='w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4'>
-  //           <Code className='w-8 h-8 text-muted-foreground' />
-  //         </div>
-  //         <p className='text-muted-foreground'>{emptyStateText}</p>
-  //       </div>
-  //     )}
-  //   </div>
-  // );
+          {items.map((item) => (
+            <div key={item.id} className='grid grid-cols-12 gap-2 items-center'>
+              <div className='col-span-1 flex justify-center'>
+                <Checkbox
+                  checked={item.enabled}
+                  onCheckedChange={(checked) =>
+                    updateKeyValuePair(type, item.id, { enabled: !!checked })
+                  }
+                />
+              </div>
+              <div className='col-span-4'>
+                <Input
+                  value={item.key}
+                  onChange={(e) =>
+                    updateKeyValuePair(type, item.id, { key: e.target.value })
+                  }
+                  placeholder='Key'
+                  className='h-8'
+                />
+              </div>
+              <div className='col-span-4'>
+                <Input
+                  value={item.value}
+                  onChange={(e) =>
+                    updateKeyValuePair(type, item.id, { value: e.target.value })
+                  }
+                  placeholder='Value'
+                  className='h-8'
+                />
+              </div>
+              <div className='col-span-2'>
+                <Input
+                  value={item.description || ''}
+                  onChange={(e) =>
+                    updateKeyValuePair(type, item.id, {
+                      description: e.target.value,
+                    })
+                  }
+                  placeholder='Description'
+                  className='h-8'
+                />
+              </div>
+              <div className='col-span-1 flex justify-center'>
+                <Button
+                  variant='ghost'
+                  size='sm'
+                  onClick={() => removeKeyValuePair(type, item.id)}
+                  className='h-8 w-8 p-0 text-red-600 hover:text-red-700'
+                >
+                  <Trash2 className='w-3 h-3' />
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className='flex flex-col items-center justify-center py-12'>
+          <div className='w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4'>
+            <Code className='w-8 h-8 text-muted-foreground' />
+          </div>
+          <p className='text-muted-foreground'>{emptyStateText}</p>
+        </div>
+      )}
+    </div>
+  );
 
   if (compact) {
     return (
@@ -1864,12 +1866,12 @@ export function RequestEditor({
               <CardTitle>Query Parameters</CardTitle>
             </CardHeader>
             <CardContent>
-              {/* <KeyValueTable
+              <KeyValueTable
                 type='params'
                 items={params}
                 addButtonText='Add Param'
                 emptyStateText="No params added. Click 'Add Param' to get started."
-              /> */}
+              />
             </CardContent>
           </Card>
         </TabsContent>
@@ -1880,12 +1882,12 @@ export function RequestEditor({
               <CardTitle>Headers</CardTitle>
             </CardHeader>
             <CardContent>
-              {/* <KeyValueTable
+              <KeyValueTable
                 type='headers'
                 items={headers}
                 addButtonText='Add Header'
                 emptyStateText="No headers added. Click 'Add Header' to get started."
-              /> */}
+              />
             </CardContent>
           </Card>
         </TabsContent>

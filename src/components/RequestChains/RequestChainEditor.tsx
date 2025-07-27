@@ -44,7 +44,7 @@ import { RequestExecutor } from './RequestExecutor';
 import { ImportModal } from '@/components/TestSuit/ImportModal';
 import { ExtendedRequest } from '@/models/collection.model';
 import { RequestEditor } from '@/components/RequestChains/RequestEditor';
-import { requestService } from '@/services/requestChain.service';
+import { getMultipleRequestDetails } from '@/services/requestChain.service';
 import {
   Tooltip,
   TooltipContent,
@@ -218,7 +218,7 @@ export function RequestChainEditor({
     refetch: refetchDetails,
   } = useQuery({
     queryKey: ['requestDetails', pendingImportIds],
-    queryFn: () => requestService.getMultipleRequestDetails(pendingImportIds),
+    queryFn: () => getMultipleRequestDetails(pendingImportIds),
     enabled: pendingImportIds.length > 0,
     retry: 2,
     retryDelay: 1000,
@@ -304,22 +304,20 @@ export function RequestChainEditor({
     ];
     setFormData({ ...formData, requests });
   };
-
-  const handleSave = () => {
+  const saveChain = async (): Promise<RequestChain | null> => {
     if (!formData.name) {
       toast({
         title: 'Validation Error',
         description: 'Please enter a chain name',
         variant: 'destructive',
       });
-      return;
+      return null;
     }
 
     const existingChains: RequestChain[] = JSON.parse(
       localStorage.getItem('extractionLogs') || '[]'
     );
 
-    // Step 2: Create updated/merged chain object
     const chainData: RequestChain = {
       id: chain?.id || Date.now().toString(),
       workspaceId: formData.workspaceId || '',
@@ -327,7 +325,6 @@ export function RequestChainEditor({
       description: formData.description,
       requests: formData.requests || [],
       variables: formData.variables || [],
-      // schedule: formData.schedule!,
       enabled: formData.enabled || false,
       createdAt: chain?.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -336,24 +333,30 @@ export function RequestChainEditor({
       successRate: chain?.successRate || 0,
     };
 
-    // Step 3: Check if chain already exists and update or insert
     const updatedChains = [...existingChains];
     const existingIndex = updatedChains.findIndex((c) => c.id === chainData.id);
 
     if (existingIndex !== -1) {
-      updatedChains[existingIndex] = chainData; // update
+      updatedChains[existingIndex] = chainData;
     } else {
-      updatedChains.push(chainData); // add new
+      updatedChains.push(chainData);
     }
 
-    // Step 4: Save back to localStorage
     localStorage.setItem('extractionLogs', JSON.stringify(updatedChains));
 
-    // Step 5: Trigger parent save
-
     onSave(chainData);
+    return chainData;
   };
 
+  const handleSave = async () => {
+    const saved = await saveChain();
+    if (saved) {
+      toast({
+        title: 'Chain Saved',
+        description: 'Your request chain has been saved successfully.',
+      });
+    }
+  };
   const getMethodColor = (method: string) => {
     const colors = {
       GET: 'bg-green-100 text-green-800',
@@ -656,10 +659,10 @@ export function RequestChainEditor({
                 <Code className='w-4 h-4' />
                 Requests ({formData.requests?.length || 0})
               </TabsTrigger>
-              {/* <TabsTrigger value='variables' className='gap-2'>
+              <TabsTrigger value='variables' className='gap-2'>
                 <Globe className='w-4 h-4' />
-                Variables ({globalVariables.length})
-              </TabsTrigger> */}
+                Global Variables ({globalVariables.length})
+              </TabsTrigger>
               <TabsTrigger value='variables-table' className='gap-2'>
                 <Database className='w-4 h-4' />
                 Variables Table
@@ -984,6 +987,8 @@ export function RequestChainEditor({
                   setIsExecuting(executing);
                   setCurrentRequestIndex(requestIndex);
                 }}
+                onPreExecute={saveChain}
+                chainName={formData?.name}
               />
             </TabsContent>
           </Tabs>
