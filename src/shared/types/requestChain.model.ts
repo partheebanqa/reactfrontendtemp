@@ -144,12 +144,13 @@ export interface ExecutionLog {
   extractedVariables?: Record<string, any>;
 }
 
-// export interface DataExtraction {
-//   variableName: string;
-//   source: 'response_body' | 'response_header' | 'response_cookie';
-//   path: string;
-//   transform?: string;
-// }
+export interface KeyValuePair {
+  id?: string;
+  key: string;
+  value: string;
+  enabled: boolean;
+  description?: string;
+}
 
 export interface RequestDetailResponse {
   id: string;

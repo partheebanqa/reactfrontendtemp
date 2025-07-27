@@ -182,8 +182,6 @@ export function RequestChainEditor({
     // },
   });
 
-  console.log('INsideFormData:', formData);
-
   const isSaveDisabled =
     !formData.name?.trim() || (formData.requests?.length ?? 0) === 0;
 
@@ -206,7 +204,6 @@ export function RequestChainEditor({
   const [extractedVariables, setExtractedVariables] = useState<
     Record<string, any>
   >({});
-  console.log('extractedVaribales:', extractedVariables.E_userId);
 
   const [isExecuting, setIsExecuting] = useState(false);
   const [currentRequestIndex, setCurrentRequestIndex] = useState(-1);
@@ -354,8 +351,6 @@ export function RequestChainEditor({
 
     // Step 5: Trigger parent save
 
-    console.log('chainData:', chainData);
-
     onSave(chainData);
   };
 
@@ -449,10 +444,6 @@ export function RequestChainEditor({
           };
 
           detailedRequests.push(completeRequest);
-          console.log(
-            `Imported request details for ${detail.name}:`,
-            completeRequest
-          );
         });
 
         // Handle any requests that failed to fetch (fallback to basic config)
@@ -976,7 +967,6 @@ export function RequestChainEditor({
                 requests={formData.requests || []}
                 variables={[...globalVariables, ...(formData.variables || [])]}
                 onExecutionComplete={(logs, extractedVars) => {
-                  console.log('Execution completed:', logs, extractedVars);
                   setExecutionLogs(logs);
                   // Update extracted variables for Variables Table
                   const newExtractedVars: Record<string, any> = {};

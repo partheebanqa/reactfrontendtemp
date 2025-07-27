@@ -103,9 +103,9 @@ export function RequestEditor({
     'body' | 'cookies' | 'headers' | 'test-results'
   >('body');
 
-  console.log('chainName:', chainName);
-  console.log('chainDescription:', chainDescription);
-  console.log('chainEnabled:', chainEnabled);
+  // console.log('chainName:', chainName);
+  // console.log('chainDescription:', chainDescription);
+  // console.log('chainEnabled:', chainEnabled);
   // Initialize params, headers if they don't exist
   const params = request.params || [];
   const headers = request.headers || [];

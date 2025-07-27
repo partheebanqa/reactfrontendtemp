@@ -32,7 +32,7 @@ export async function apiRequest(
     // }
 
     const cachedUserData = getEncryptedCookie(USER_COOKIE_NAME);
-    console.log('cachedUserData:', cachedUserData);
+    // console.log('cachedUserData:', cachedUserData);
 
     if (cachedUserData && cachedUserData.token) {
       options = {
