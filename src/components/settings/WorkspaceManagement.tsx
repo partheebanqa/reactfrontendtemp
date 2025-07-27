@@ -7,11 +7,12 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Building2, Users, Plus, Settings, Trash2, Crown } from 'lucide-react';
+import { Building2, Users, Plus, Settings, Trash2, Crown, Edit, ExternalLink, LogOut } from 'lucide-react';
 import { useToast } from '@/hooks/useToast';
 import { useWorkspace } from '@/hooks/useWorkspace';
 import { useAuth } from '@/hooks/useAuth';
 import { Workspace as BaseWorkspace } from '@/shared/types/workspace';
+import WorkspaceModal from '../WorkspaceModal';
 
 interface Workspace extends BaseWorkspace {
   role: 'owner' | 'admin' | 'member';
@@ -24,13 +25,17 @@ export function WorkspaceManagement() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newWorkspaceName, setNewWorkspaceName] = useState('');
   const [newWorkspaceDescription, setNewWorkspaceDescription] = useState('');
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState<'add' | 'edit'>('add');
+  const [selectedWorkspace, setSelectedWorkspace] = useState<Workspace | null>(null);
 
   // Get workspaces and mutations from the custom hook
-  const { 
-    workspaces, 
-    refreshWorkspaces, 
-    createWorkspaceMutation, 
-    deleteWorkspaceMutation 
+  const {
+    workspaces,
+    refreshWorkspaces,
+    createWorkspaceMutation,
+    updateWorkspaceMutation,
+    deleteWorkspaceMutation
   } = useWorkspace();
 
   const handleCreateWorkspace = () => {
@@ -67,6 +72,69 @@ export function WorkspaceManagement() {
     });
   };
 
+  // Function to handle saving workspace (create or update)
+  const handleSaveWorkspace = async (workspace: Partial<BaseWorkspace>) => {
+    if (modalMode === 'add') {
+      return new Promise((resolve, reject) => {
+        createWorkspaceMutation.mutate(workspace, {
+          onSuccess: (data) => {
+            toast({
+              title: 'Workspace created',
+              description: `Workspace "${workspace.name}" has been created successfully.`,
+            });
+            refreshWorkspaces();
+            resolve(data);
+          },
+          onError: (error: any) => {
+            toast({
+              title: 'Failed to create workspace',
+              description: error.message || 'An error occurred while creating the workspace.',
+              variant: 'destructive',
+            });
+            reject(error);
+          }
+        });
+      });
+    } else {
+      // Edit mode
+      return new Promise((resolve, reject) => {
+        updateWorkspaceMutation.mutate(workspace, {
+          onSuccess: (data) => {
+            toast({
+              title: 'Workspace updated',
+              description: `Workspace "${workspace.name}" has been updated successfully.`,
+            });
+            refreshWorkspaces();
+            resolve(data);
+          },
+          onError: (error: any) => {
+            toast({
+              title: 'Failed to update workspace',
+              description: error.message || 'An error occurred while updating the workspace.',
+              variant: 'destructive',
+            });
+            reject(error);
+          }
+        });
+      });
+    }
+  };
+
+  // Function to add a new workspace
+  const handleAddWorkspace = () => {
+    setSelectedWorkspace(null);
+    setModalMode('add');
+    setIsModalOpen(true);
+  };
+  
+  // Function to edit a workspace
+  const handleEditWorkspace = (workspace: Workspace) => {
+    setSelectedWorkspace(workspace);
+    setModalMode('edit');
+    setIsModalOpen(true);
+  };
+
+
   const handleDeleteWorkspace = (workspaceId: string, workspaceName: string) => {
     if (confirm(`Are you sure you want to delete "${workspaceName}"? This action cannot be undone.`)) {
       deleteWorkspaceMutation.mutate(workspaceId, {
@@ -88,11 +156,11 @@ export function WorkspaceManagement() {
     }
   };
 
+  // Function to open the workspace settings modal
   const handleWorkspaceSettings = (workspace: Workspace) => {
-    toast({
-      title: 'Workspace settings',
-      description: `Settings for ${workspace.name} would open here.`,
-    });
+    setSelectedWorkspace(workspace);
+    setModalMode('edit');
+    setIsModalOpen(true);
   };
 
   const handleLeaveWorkspace = (workspace: Workspace) => {
@@ -176,7 +244,7 @@ export function WorkspaceManagement() {
                     <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
                       Cancel
                     </Button>
-                    <Button 
+                    <Button
                       onClick={handleCreateWorkspace}
                       disabled={createWorkspaceMutation.isPending}
                     >
@@ -204,92 +272,113 @@ export function WorkspaceManagement() {
             role: (workspace as any).role || 'member',
             memberCount: (workspace as any).memberCount || 0
           };
-          
+
           return (
-          <Card key={enrichedWorkspace.id}>
-            <CardContent className="p-4 sm:p-6">
-              <div className="flex flex-col gap-4">
-                {/* Header Row */}
-                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-                  <div className="flex items-start gap-3 flex-1 min-w-0">
-                    <Avatar className="h-10 w-10 flex-shrink-0">
-                      <AvatarImage src="/api/placeholder/40/40" alt={enrichedWorkspace.name} />
-                      <AvatarFallback className="text-sm">
-                        {enrichedWorkspace.name?.split(' ').map((n: string) => n?.[0] || '').join('') || 'W'}
-                      </AvatarFallback>
-                    </Avatar>
-                    
-                    <div className="flex-1 min-w-0">
-                      <div className="flex flex-wrap items-center gap-2 mb-1">
-                        <h3 className="font-semibold text-gray-900 truncate">
-                          {enrichedWorkspace.name}
-                        </h3>
-                        {getRoleIcon(enrichedWorkspace.role)}
-                        {getRoleBadge(enrichedWorkspace.role)}
+            <Card key={enrichedWorkspace.id}>
+              <CardContent className="p-4 sm:p-6">
+                <div className="flex flex-col gap-4">
+                  {/* Header Row */}
+                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                    <div className="flex items-start gap-3 flex-1 min-w-0">
+                      <Avatar className="h-10 w-10 flex-shrink-0">
+                        <AvatarImage src="/api/placeholder/40/40" alt={enrichedWorkspace.name} />
+                        <AvatarFallback className="text-sm">
+                          {enrichedWorkspace.name?.split(' ').map((n: string) => n?.[0] || '').join('') || 'W'}
+                        </AvatarFallback>
+                      </Avatar>
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2 mb-1">
+                          <h3 className="font-semibold text-gray-900 truncate">
+                            {enrichedWorkspace.name}
+                          </h3>
+                          {getRoleIcon(enrichedWorkspace.role)}
+                          {getRoleBadge(enrichedWorkspace.role)}
+                        </div>
+
+                        {enrichedWorkspace.description && (
+                          <p className="text-sm text-gray-600 mb-2 line-clamp-2">
+                            {enrichedWorkspace.description}
+                          </p>
+                        )}
+
+                        <div className="flex flex-wrap items-center gap-4 text-xs text-gray-500">
+                          <div className="flex items-center gap-1">
+                            <Users className="h-3 w-3" />
+                            <span>{enrichedWorkspace.memberCount} members</span>
+                          </div>
+                          <div>
+                            Created {enrichedWorkspace.createdAt ? new Date(enrichedWorkspace.createdAt).toLocaleDateString() : 'N/A'}
+                          </div>
+                        </div>
                       </div>
-                      
-                      {enrichedWorkspace.description && (
-                        <p className="text-sm text-gray-600 mb-2 line-clamp-2">
-                          {enrichedWorkspace.description}
-                        </p>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex items-center gap-2">
+                      {/* {enrichedWorkspace.role === 'owner' || enrichedWorkspace.role === 'admin' ? ( */}
+                        <>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleWorkspaceSettings(enrichedWorkspace)}
+                          >
+                            <Settings className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
+                            <span className="hidden sm:inline">Settings</span>
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEditWorkspace(enrichedWorkspace)}
+                          >
+                            <Edit className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
+                            <span className="hidden sm:inline">Edit</span>
+                          </Button>
+                          {/* {enrichedWorkspace.role === 'owner' && ( */}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleDeleteWorkspace(enrichedWorkspace.id, enrichedWorkspace.name)}
+                              className="text-red-600 hover:text-red-700"
+                            >
+                              <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
+                              <span className="hidden sm:inline">Delete</span>
+                            </Button>
+                          {/* ) : null} */}
+                        </>
+                      {/* ) : null} */}
+
+                      {enrichedWorkspace.role !== 'owner' && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleLeaveWorkspace(enrichedWorkspace)}
+                          className="text-red-600 hover:text-red-700"
+                        >
+                          <LogOut className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
+                          <span className="hidden sm:inline">Leave</span>
+                        </Button>
                       )}
-                      
-                      <div className="flex flex-wrap items-center gap-4 text-xs text-gray-500">
-                        <div className="flex items-center gap-1">
-                          <Users className="h-3 w-3" />
-                          <span>{enrichedWorkspace.memberCount} members</span>
-                        </div>
-                        <div>
-                          Created {enrichedWorkspace.createdAt ? new Date(enrichedWorkspace.createdAt).toLocaleDateString() : 'N/A'}
-                        </div>
+                    </div>
+                  </div>
+
+                  {/* Mobile: Additional Info */}
+                  <div className="sm:hidden grid grid-cols-2 gap-4 pt-3 border-t text-xs">
+                    <div>
+                      <span className="font-medium text-gray-900">Role:</span>
+                      <div className="flex items-center gap-1 mt-1">
+                        {getRoleIcon(enrichedWorkspace.role)}
+                        <span className="capitalize">{enrichedWorkspace.role}</span>
                       </div>
                     </div>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex items-center gap-2">
-                    {enrichedWorkspace.role === 'owner' || enrichedWorkspace.role === 'admin' ? (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleWorkspaceSettings(enrichedWorkspace)}
-                      >
-                        <Settings className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
-                        <span className="hidden sm:inline">Settings</span>
-                      </Button>
-                    ) : null}
-                    
-                    {enrichedWorkspace.role !== 'owner' && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleLeaveWorkspace(enrichedWorkspace)}
-                        className="text-red-600 hover:text-red-700"
-                      >
-                        <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
-                        <span className="hidden sm:inline">Leave</span>
-                      </Button>
-                    )}
-                  </div>
-                </div>
-
-                {/* Mobile: Additional Info */}
-                <div className="sm:hidden grid grid-cols-2 gap-4 pt-3 border-t text-xs">
-                  <div>
-                    <span className="font-medium text-gray-900">Role:</span>
-                    <div className="flex items-center gap-1 mt-1">
-                      {getRoleIcon(enrichedWorkspace.role)}
-                      <span className="capitalize">{enrichedWorkspace.role}</span>
+                    <div>
+                      <span className="font-medium text-gray-900">Members:</span>
+                      <div className="mt-1">{enrichedWorkspace.memberCount} people</div>
                     </div>
                   </div>
-                  <div>
-                    <span className="font-medium text-gray-900">Members:</span>
-                    <div className="mt-1">{enrichedWorkspace.memberCount} people</div>
-                  </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
           );
         })}
       </div>
@@ -362,6 +451,16 @@ export function WorkspaceManagement() {
           </div>
         </CardContent>
       </Card>
+      
+      {/* Create/Edit workspace modal */}
+      <Button className="hidden" onClick={handleAddWorkspace}>Add Workspace</Button>
+      <WorkspaceModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSaveWorkspace={handleSaveWorkspace}
+        workspace={selectedWorkspace}
+        mode={modalMode}
+      />
     </div>
   );
 }

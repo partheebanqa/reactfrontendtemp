@@ -353,6 +353,7 @@ const RequestEditor: React.FC = () => {
         );
         return;
       }
+      let createdCollectionId: string | null = null;
       if (isCreatingCollection && newCollectionName.trim()) {
         const res = await addCollectionMutation.mutateAsync({
           name: newCollectionName.trim(),
@@ -360,6 +361,7 @@ const RequestEditor: React.FC = () => {
           isImportant: false,
         });
         if (res?.collectionId) {
+          createdCollectionId = res.collectionId;
           const createdCollection = collections.find(
             (collection) => collection.id === res.collectionId
           );
@@ -378,7 +380,7 @@ const RequestEditor: React.FC = () => {
       }
 
       const requestData = {
-        collectionId: activeCollection?.id,
+        collectionId: createdCollectionId ? createdCollectionId : activeCollection?.id,
         description: '',
         name: activeRequest.name || 'New Request',
         order: (activeCollection?.requests?.length || 0) + 1,
@@ -1067,10 +1069,6 @@ const RequestEditor: React.FC = () => {
               >
                 <option value=''>Select a collection</option>
                 {collections
-                  .filter(
-                    (collection) =>
-                      collection.workspaceId === currentWorkspace?.id
-                  )
                   .map((collection) => (
                     <option key={collection.id} value={collection.id}>
                       {collection.name}

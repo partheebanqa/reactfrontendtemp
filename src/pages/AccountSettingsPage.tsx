@@ -17,41 +17,33 @@ import { PlanManagement } from '@/components/settings/PlanManagement';
 import { ExternalTools } from '@/components/settings/ExternalTools';
 import { DataPurgeConfig } from '@/components/settings/DataPurgeConfig';
 import { AccountDeactivation } from '@/components/settings/AccountDeactivation';
+import { useLocation } from 'wouter';
 
 export default function AccountSettings() {
-  const [activeTab, setActiveTab] = useState('account-info');
-  
-  // Get user data from the auth hook
-  const { user, refreshUser } = useAuth();
-  
-  // Get workspace data if needed for settings
-  const { currentWorkspace } = useWorkspace();
-  
-  // Access toast for notifications
+  // Get the search params from the window location
+  const searchParams = new URLSearchParams(window.location.search);
+  const tabParam = searchParams.get('tab');
+  const [activeTab, setActiveTab] = useState(tabParam || 'account-info');
   const { toast } = useToast();
+  const [location, setLocation] = useLocation();
   
-  // Performance and accessibility optimizations
+  // Function to update both the active tab and URL
+  const handleTabChange = (tabId) => {
+    setActiveTab(tabId);
+    
+    // Update the URL without causing a full page reload
+    const newParams = new URLSearchParams(window.location.search);
+    newParams.set('tab', tabId);
+    setLocation(`/settings/account?${newParams.toString()}`, { replace: true });
+  };
+  
   useEffect(() => {
-    // Add scroll behavior for keyboard navigation
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Tab') {
-        // Ensure focus is visible
-        document.body.classList.add('keyboard-nav');
-      }
-    };
-    
-    const handleMouseDown = () => {
-      document.body.classList.remove('keyboard-nav');
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-    document.addEventListener('mousedown', handleMouseDown);
-    
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-      document.removeEventListener('mousedown', handleMouseDown);
-    };
-  }, []);
+    // Update active tab when URL query parameter changes
+    const tabFromURL = searchParams.get('tab');
+    if (tabFromURL && settingsSections.some(section => section.id === tabFromURL)) {
+      setActiveTab(tabFromURL);
+    }
+  }, [location]);
 
   const settingsSections = [
     { id: 'account-info', label: 'Account Info', icon: User, component: AccountInfo },
@@ -90,7 +82,7 @@ export default function AccountSettings() {
                       return (
                         <button
                           key={section.id}
-                          onClick={() => setActiveTab(section.id)}
+                          onClick={() => handleTabChange(section.id)}
                           className={`flex-shrink-0 flex flex-col items-center gap-1 p-3 rounded-lg text-xs font-medium transition-colors ${
                             activeTab === section.id
                               ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400'
@@ -121,7 +113,7 @@ export default function AccountSettings() {
                     return (
                       <button
                         key={section.id}
-                        onClick={() => setActiveTab(section.id)}
+                        onClick={() => handleTabChange(section.id)}
                         className={`w-full flex items-center gap-3 px-4 py-3 text-left text-sm font-medium transition-colors ${
                           activeTab === section.id
                             ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600 dark:bg-blue-900/20 dark:text-blue-400'

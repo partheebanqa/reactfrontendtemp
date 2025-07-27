@@ -150,18 +150,18 @@ export default function Header() {
 
   return (
     <header className="border-b bg-white dark:bg-gray-900 px-2 sm:px-6 py-2 sm:py-4">
-      <div className="flex items-center justify-between gap-4 sm:gap-6  mx-auto">
-        <div>
+      <div className="flex items-center justify-end gap-4 sm:gap-6  mx-auto">
+        {/* <div>
           <WorkspaceDropdown
             setWorkspaceModalState={setWorkspaceModalState}
             handleDeleteWorkspace={handleDeleteWorkspace}
           />
-        </div>
+        </div> */}
         <div className="flex items-center gap-1 sm:gap-4 min-w-0">
-           {/* <WorkspaceDropdown
+           <WorkspaceDropdown
             setWorkspaceModalState={setWorkspaceModalState}
             handleDeleteWorkspace={handleDeleteWorkspace}
-          /> */}
+          />
            <EnvironmentDropdown
              setEnvironmentModalState={setEnvironmentModalState}
              handleDeleteEnvironment={handleDeleteEnvironment}
@@ -171,7 +171,8 @@ export default function Header() {
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-                <Avatar className="h-7 w-7 sm:h-8 sm:w-8 cursor-pointer">
+              <div className="flex items-center cursor-pointer">
+                  <Avatar className="h-7 w-7 sm:h-8 sm:w-8 cursor-pointer">
                   <AvatarImage src={(user as any)?.profileImageUrl} />
                   <AvatarFallback>
                     {getInitials(
@@ -180,6 +181,8 @@ export default function Header() {
                     )}
                   </AvatarFallback>
                 </Avatar>
+                <ChevronDown className="h-4 w-4 ml-1 text-gray-500" />
+              </div>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
               <div className="p-4">
