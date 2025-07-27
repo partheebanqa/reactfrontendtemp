@@ -289,6 +289,7 @@ export const getCollectionsWithRequests = async (
     }
 
     const data: CollectionsResponse = await response.json();
+
     return data;
   } catch (error) {
     console.error('Error fetching collections with requests:', error);

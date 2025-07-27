@@ -233,7 +233,7 @@ export default function CreateScheduleForm({
 
   return (
     <div className='max-w-2xl max-h-[90vh] overflow-y-auto'>
-      <div className='flex items-center justify-between mb-6'>
+      {/* <div className='flex items-center justify-between mb-6'>
         <h2 className='text-xl font-semibold'>Create New Schedule</h2>
         <Button
           variant='ghost'
@@ -243,7 +243,7 @@ export default function CreateScheduleForm({
           <Info size={16} className='mr-2' />
           Quick Guide
         </Button>
-      </div>
+      </div> */}
 
       <TooltipProvider>
         <form onSubmit={handleSubmit} className='space-y-6'>

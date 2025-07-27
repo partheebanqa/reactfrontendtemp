@@ -170,16 +170,19 @@ export function RequestChainEditor({
   const [formData, setFormData] = useState<Partial<RequestChain>>({
     name: chain?.name || '',
     description: chain?.description || '',
+    workspaceId: '8d9ea72f-7f74-4821-8909-e953066d9a8b',
     enabled: chain?.enabled ?? true,
     requests: chain?.requests || [],
     variables: chain?.variables || [],
-    schedule: chain?.schedule || {
-      enabled: false,
-      type: 'once',
-      startDate: new Date().toISOString().split('T')[0],
-      timezone: 'UTC',
-    },
+    // schedule: chain?.schedule || {
+    //   enabled: false,
+    //   type: 'once',
+    //   startDate: new Date().toISOString().split('T')[0],
+    //   timezone: 'UTC',
+    // },
   });
+
+  console.log('INsideFormData:', formData);
 
   const isSaveDisabled =
     !formData.name?.trim() || (formData.requests?.length ?? 0) === 0;
@@ -203,6 +206,8 @@ export function RequestChainEditor({
   const [extractedVariables, setExtractedVariables] = useState<
     Record<string, any>
   >({});
+  console.log('extractedVaribales:', extractedVariables.E_userId);
+
   const [isExecuting, setIsExecuting] = useState(false);
   const [currentRequestIndex, setCurrentRequestIndex] = useState(-1);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
@@ -320,12 +325,12 @@ export function RequestChainEditor({
     // Step 2: Create updated/merged chain object
     const chainData: RequestChain = {
       id: chain?.id || Date.now().toString(),
-      workspaceId: '1',
+      workspaceId: formData.workspaceId || '',
       name: formData.name,
       description: formData.description,
       requests: formData.requests || [],
       variables: formData.variables || [],
-      schedule: formData.schedule!,
+      // schedule: formData.schedule!,
       enabled: formData.enabled || false,
       createdAt: chain?.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -351,7 +356,7 @@ export function RequestChainEditor({
 
     console.log('chainData:', chainData);
 
-    // onSave(chainData);
+    onSave(chainData);
   };
 
   const getMethodColor = (method: string) => {

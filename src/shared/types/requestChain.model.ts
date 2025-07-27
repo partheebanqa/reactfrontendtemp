@@ -5,7 +5,7 @@ export interface RequestChain {
   description?: string;
   requests: APIRequest[];
   variables: Variable[];
-  schedule: Schedule;
+  schedule?: Schedule;
   enabled: boolean;
   createdAt: string;
   updatedAt: string;

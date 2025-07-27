@@ -54,6 +54,10 @@ export function RequestExecutor({
     return result;
   };
 
+  console.log('extractedVariables123:', extractedVariables);
+
+  console.log('variables123:', variables);
+
   const extractDataFromResponse = (
     response: any,
     extractions: APIRequest['dataExtractions']
@@ -280,7 +284,9 @@ export function RequestExecutor({
     }
   };
 
-  const executeChain = async () => {
+  const handleExecuteChain = async () => {
+    console.log('handleExecuteChain:', requests);
+
     if (requests.length === 0) return;
 
     setIsExecuting(true);
@@ -302,6 +308,8 @@ export function RequestExecutor({
       onExecutionStateChange?.(true, i);
 
       const log = await executeRequest(request, currentVars);
+      console.log('ExecutionLogs:', log);
+
       logs.push(log);
       setExecutionLogs([...logs]);
 
@@ -422,12 +430,12 @@ export function RequestExecutor({
             </button>
           ) : (
             <button
-              onClick={executeChain}
+              onClick={handleExecuteChain}
               disabled={requests.filter((r) => r.enabled).length === 0}
               className='flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
             >
               <Play className='w-4 h-4' />
-              <span>Execute Chain</span>
+              <span>Save & Execute</span>
             </button>
           )}
         </div>
