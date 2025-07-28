@@ -114,6 +114,9 @@ const EditTestSuiteContent: React.FC = () => {
       });
       queryClient.invalidateQueries({ queryKey: ['testSuites'] });
       queryClient.invalidateQueries({ queryKey: ['testSuite', id] });
+
+      // ✅ Redirect after successful update
+      setLocation('/test-suites');
     },
     onError: (error: any) => {
       toast({
@@ -300,7 +303,12 @@ const EditTestSuiteContent: React.FC = () => {
             <Button variant='outline' onClick={handleBack}>
               Cancel
             </Button>
-            <Button onClick={handleSaveChanges} disabled={isSaving}>
+            <Button
+              onClick={handleSaveChanges}
+              disabled={
+                isSaving || !testSuiteName.trim() || requests.length === 0
+              }
+            >
               {isSaving
                 ? isCreateMode
                   ? 'Creating...'

@@ -43,6 +43,7 @@ const TestSuites: React.FC = () => {
     enabled: !!currentWorkspace?.id,
     queryFn: () => getAllTestSuites(currentWorkspace!.id),
   });
+
   useEffect(() => {
     if (error) {
       console.error('Error fetching test suites:', error);
@@ -60,7 +61,10 @@ const TestSuites: React.FC = () => {
         title: 'Deleted',
         description: 'Test suite deleted successfully.',
       });
-      queryClient.invalidateQueries({ queryKey: ['testSuites'] });
+
+      queryClient.invalidateQueries({
+        queryKey: ['/api/test-suites', currentWorkspace?.id],
+      });
     },
     onError: (error: any) => {
       toast({
@@ -119,12 +123,17 @@ const TestSuites: React.FC = () => {
     <div className='p-6 space-y-6'>
       <div className='flex items-center justify-between'>
         <h1 className='text-2xl font-bold'>Test Suites</h1>
-        <Button
+        {/* <Button
           className='bg-blue-600 hover:bg-blue-700'
           onClick={handleCreateSuite}
         >
           <Plus className='w-4 h-4 mr-2' />
           Create Test Suite
+        </Button> */}
+
+        <Button onClick={handleCreateSuite} className='gap-2'>
+          <Plus className='w-4 h-4' />
+          Create Suite
         </Button>
       </div>
 

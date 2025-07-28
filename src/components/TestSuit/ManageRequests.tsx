@@ -50,6 +50,8 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
   onDeleteRequest,
   onUpdateTestCases,
 }) => {
+  console.log('requests123:', requests);
+
   const [selectedRequest, setSelectedRequest] = useState<Request | null>(null);
 
   const [isTestCaseModalOpen, setIsTestCaseModalOpen] = useState(false);
@@ -95,11 +97,11 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
                     <p className='text-sm text-muted-foreground mt-1'>
                       {request.endpoint}
                     </p>
-                    {request.description && (
+                    {/* {request.description && (
                       <p className='text-sm text-muted-foreground mt-1'>
                         {request.description}
                       </p>
-                    )}
+                    )} */}
                   </div>
                 </div>
                 <div className='flex items-center space-x-2'>
@@ -121,28 +123,29 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
                   </Button>
                 </div>
               </div>
-
-              <div className='mt-4'>
-                <h5 className='text-sm font-medium mb-2'>Test Cases:</h5>
-                <div className='flex items-center space-x-4'>
-                  {(request.selectedTestCases?.length || 0) > 0 && (
-                    <div className='flex items-center space-x-1'>
-                      <span className='text-sm text-muted-foreground'>
-                        🧪 Functional
-                      </span>
-                      <span className='text-sm font-medium'>
-                        {request.selectedTestCases?.length || 0}
-                      </span>
-                    </div>
-                  )}
+              {testSuiteId && (
+                <div className='mt-4'>
+                  <h5 className='text-sm font-medium mb-2'>Test Cases:</h5>
+                  <div className='flex items-center space-x-4'>
+                    {(request.selectedTestCases?.length || 0) > 0 && (
+                      <div className='flex items-center space-x-1'>
+                        <span className='text-sm text-muted-foreground'>
+                          🧪 Functional
+                        </span>
+                        <span className='text-sm font-medium'>
+                          {request.selectedTestCases?.length || 0}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  <p className='text-sm text-muted-foreground mt-1'>
+                    Total:{' '}
+                    <span className='font-medium'>
+                      {request.selectedTestCases?.length || 0} test cases
+                    </span>
+                  </p>
                 </div>
-                <p className='text-sm text-muted-foreground mt-1'>
-                  Total:{' '}
-                  <span className='font-medium'>
-                    {request.selectedTestCases?.length || 0} test cases
-                  </span>
-                </p>
-              </div>
+              )}
             </div>
           ))}
         </div>
