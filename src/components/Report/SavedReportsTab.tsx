@@ -3,6 +3,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Download, FileText } from 'lucide-react';
 import { format } from 'date-fns';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 
 const savedReports = [
   {
@@ -83,9 +84,18 @@ export default function SavedReportsTab() {
                 <Button size='sm' variant='outline'>
                   View
                 </Button>
-                <Button size='sm' variant='outline'>
-                  <Download size={14} />
-                </Button>
+
+               <TooltipProvider>
+  <Tooltip>
+    <TooltipTrigger asChild>
+      <Button size='sm' variant='outline'>
+        <Download size={14} />
+      </Button>
+    </TooltipTrigger>
+    <TooltipContent>Download</TooltipContent>
+  </Tooltip>
+</TooltipProvider>
+
               </div>
             </div>
           </div>

@@ -18,6 +18,9 @@ import {
 } from '@/models/collection.model';
 import { useWorkspace } from '@/hooks/useWorkspace';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
+import { useLocation } from 'wouter';
+
+
 
 interface ImportModalProps {
   isOpen: boolean;
@@ -191,7 +194,12 @@ const [externalFileError, setExternalFileError] = useState<string | null>(null);
       setExternalRequests([]);
     }
   };
+
   
+  const [location] = useLocation();
+  const isRequestChainsRoute = location === '/request-chains';
+  
+
 
   if (isLoading) {
     return (
@@ -242,9 +250,14 @@ const [externalFileError, setExternalFileError] = useState<string | null>(null);
       
           <DialogTitle>Collections</DialogTitle>
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className='grid w-full grid-cols-2'>
+        <TabsList className={`grid w-full ${
+          isRequestChainsRoute ? 'grid-cols-2' : 'grid-cols-1'
+        }`}
+        >
           <TabsTrigger value='Internal'>Import from Collection</TabsTrigger>
-          <TabsTrigger value='extranal'>Import from Extranal</TabsTrigger>
+            {isRequestChainsRoute && (
+              <TabsTrigger value='extranal'>Import from External</TabsTrigger>
+            )}
         </TabsList>
     
        
