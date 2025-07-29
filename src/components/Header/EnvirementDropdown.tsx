@@ -27,7 +27,7 @@ export default function EnvironmentDropdown({
   setEnvironmentModalState,
   handleDeleteEnvironment
 }: EnvironmentDropdownProps): ReactElement {
-  const { environments, activeEnvironment, setActiveEnvironment } = useDataManagement();
+  const { environments, activeEnvironment, setActiveEnvironment ,variables} = useDataManagement();
   const [_, setLocation] = useLocation()
 
   const getEnvironmentColor = (environment: Environment) => {
@@ -78,7 +78,7 @@ export default function EnvironmentDropdown({
             <p className="text-xs">Switch between environments</p>
           </TooltipContent>
 
-          <DropdownMenuContent className="w-64 sm:w-72 max-h-[60vh] overflow-y-auto custom-scrollbar p-2 shadow-md rounded-md border border-gray-200">
+          <DropdownMenuContent className="w-72 sm:w-80 max-h-[60vh] overflow-y-auto custom-scrollbar p-2 shadow-md rounded-md border border-gray-200">
             <div className="mb-3 pb-2 border-b border-gray-100">
               <h3 className="text-sm text-gray-800 font-semibold mb-1">Environments</h3>
               <p className="text-xs text-gray-500">Select environment to use variables</p>
@@ -139,7 +139,7 @@ export default function EnvironmentDropdown({
               </div>
             )}
 
-            <DropdownMenuSeparator className="my-3" />
+            {/* <DropdownMenuSeparator className="my-3" />
 
             <div className="p-3 bg-gray-50 rounded-md border border-gray-100">
               <h3 className="text-xs font-semibold text-gray-700 mb-2 flex items-center">
@@ -148,11 +148,11 @@ export default function EnvironmentDropdown({
               </h3>
               {activeEnvironment ? (
                 <div className="max-h-48 overflow-y-auto custom-scrollbar pr-1">
-                  {Object.entries(activeEnvironment.variables).map(([key, value]) => (
+                  {variables.map((value,key) => (
                     <div key={key} className="flex justify-between items-center text-xs py-1.5 border-b border-gray-100 last:border-0">
-                      <span className="font-mono text-gray-700 font-medium">{key}</span>
+                      <span className="font-mono text-gray-700 font-medium">{value.name}</span>
                       <span className="font-mono text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">
-                        {key.includes("KEY") || key.includes("SECRET") || key.includes("PASSWORD") ? "••••••••" : value}
+                        {value.initialValue}
                       </span>
                     </div>
                   ))}
@@ -160,7 +160,7 @@ export default function EnvironmentDropdown({
               ) : (
                 <p className="text-xs text-gray-500 italic">Select an environment to see variables</p>
               )}
-            </div>
+            </div> */}
           </DropdownMenuContent>
         </DropdownMenu>
       </Tooltip>

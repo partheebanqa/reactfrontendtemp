@@ -19,6 +19,9 @@ import {
 import {
   Environment,
   fetchEnvironmentsResponse,
+  ResponseEnvironment,
+  ResponseVariable,
+  Variable,
 } from "@/shared/types/datamanagement";
 
 export const usegetEnvironmentQuery = (enabled = true) => {
@@ -47,18 +50,17 @@ export const usegetEnvironmentQuery = (enabled = true) => {
 };
 
 export const usefetchVariablesQuery = (enabled = true) => {
-  console.log("🚀 ~ usefetchVariablesQuery ~ enabled:", enabled);
   const environmentId = dataManagementStore.state.activeEnvironment?.id!;
-  console.log("🚀 ~ usefetchVariablesQuery ~ environmentId:", environmentId);
   return useQuery({
     queryKey: ["variables", environmentId],
     enabled: !!environmentId && enabled,
     queryFn: async () => {
       try {
         const response = await fetchVariables(environmentId);
-        console.log("🚀 ~ queryFn: ~ response:", response);
-        if (response?.variables) {
-          return response.variables;
+        if (response.items.length > 0) {
+          const filteredVariables = response.items.map(filterVariable);
+          console.log("filteredVariables", filteredVariables);
+          dataManagementActions.setVariables(filteredVariables);
         }
         return [];
       } catch (error) {
@@ -72,12 +74,11 @@ export const usefetchVariablesQuery = (enabled = true) => {
 export const useCreateEnvironmentMutation = () => {
   return useMutation({
     mutationFn: createEnvironment,
-    onSuccess: (newEnvironment: Environment) => {
-      console.log("New environment created:", newEnvironment);
-      const data : Environment = filterEnvironment(newEnvironment);
-      console.log(data);
-      const environments = dataManagementStore.state.environments;
-      dataManagementActions.setEnvironments([...environments, data]);
+    onSuccess: (newEnvironment: ResponseEnvironment) => {
+      dataManagementActions.setEnvironments([
+        ...dataManagementStore.state.environments,
+        filterEnvironment(newEnvironment),
+      ]);
     },
     onError: (error) => {
       console.error("Error creating environment:", error);
@@ -110,22 +111,23 @@ export const useDeleteEnvironmentMutation = () => {
 };
 
 export const useCreateVariableMutation = () => {
+  const fetchVariablesQuery = usefetchVariablesQuery();
   return useMutation({
     mutationFn: createVariable,
     onSuccess: (newVariable: any) => {
       console.log("New variable created:", newVariable);
-    },
-    onError: (error) => {
-      console.error("Error creating variable:", error);
+      fetchVariablesQuery.refetch();
     },
   });
 };
 
 export const useUpdateVariableMutation = () => {
+  const fetchVariablesQuery = usefetchVariablesQuery();
   return useMutation({
     mutationFn: updateVariable,
     onSuccess: (updatedVariable: any) => {
       console.log("Variable updated:", updatedVariable);
+      fetchVariablesQuery.refetch();
     },
     onError: (error) => {
       console.error("Error updating variable:", error);
@@ -134,28 +136,43 @@ export const useUpdateVariableMutation = () => {
 };
 
 export const useDeleteVariableMutation = () => {
+  const fetchVariablesQuery = usefetchVariablesQuery();
   return useMutation({
     mutationFn: deleteVariable,
     onSuccess: (variableId: string) => {
       console.log("Variable deleted:", variableId);
+      fetchVariablesQuery.refetch();
     },
     onError: (error) => {
       console.error("Error deleting variable:", error);
+      fetchVariablesQuery.refetch();
     },
   });
 };
 
-const filterEnvironment = (environment) => {
+const filterEnvironment = (environment: ResponseEnvironment) => {
   return {
     id: environment.Id,
     name: environment.Name,
+    workspaceId: environment.WorkspaceId,
     description: environment.Description,
     createdAt: environment.CreatedAt,
-    updatedAt: environment.UpdatedAt,
-    workspaceId: environment.WorkspaceId,
-    baseUrl: environment.BaseUrl,
-    isDefault: environment.IsDefault,
-    variables: environment.Variables || {}, // Ensure variables is an object
-    deletedAt: environment.DeletedAt || null,
+    baseUrl: "",
+    isDefault: false,
   } as Environment;
+};
+
+const filterVariable = (variable: ResponseVariable) => {
+  return {
+    createdAt: variable.CreatedAt,
+    currentValue: variable.CurrentValue,
+    deletedAt: variable.DeletedAt,
+    description: variable.Description,
+    environmentId: variable.EnvironmentId,
+    id: variable.Id,
+    initialValue: variable.InitialValue,
+    name: variable.Name,
+    type: variable.Type,
+    updatedAt: variable.UpdatedAt,
+  } as Variable;
 };

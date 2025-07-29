@@ -72,15 +72,9 @@ export default function Router() {
           <Route path='/settings' component={Settings} />
           <Route path='/profile' component={Profile} />
           <Route path='/notifications' component={Notifications} />
-          <Route path='/plan-billing' component={Plan} />
           <Route path='/settings/account' component={AccountSettingsPage} />
-          {/* <Route path='/settings/profile' component={AccountProfile} />
-          <Route path='/settings/security' component={AccountSecurity} />
-          <Route path='/settings/preferences' component={AccountPreferences} />
-          <Route path='/settings/billing' component={AccountBilling} /> */}
           <Route path='/cicd-configuration' component={CICDConfiguration} />
           <Route path='/executions' component={ExecutionsNew} />
-        
         </AppLayout>
       )}
       <Route path='/pricing' component={Pricing} />
