@@ -3,11 +3,9 @@ import { apiRequest } from "@/lib/queryClient";
 import {
   Environment,
   fetchEnvironmentsResponse,
+  FetchVariablesResponse,
+  ResponseEnvironment,
 } from "@/shared/types/datamanagement";
-
-export interface FetchVariablesResponse {
-  variables: any[]; // Replace with your actual variable type
-}
 
 export const fetchEnvironments = async (
   workspaceId: string
@@ -25,7 +23,7 @@ export const fetchEnvironments = async (
 export const fetchVariables = async (
   environmentId: string
 ): Promise<FetchVariablesResponse> => {
-  const response = await apiRequest("GET", `${API_VARIABLES}/${environmentId}`);
+  const response = await apiRequest("GET", `${API_VARIABLES}?e=${environmentId}&page=1&pageSize=10`);
   if (!response.ok) {
     throw new Error("Failed to fetch variables");
   }
@@ -39,7 +37,7 @@ export const createEnvironment = async (
     defaultVariables?: any[];
     workspaceId: string;
   }
-): Promise<Environment> => {
+): Promise<ResponseEnvironment> => {
   const response = await apiRequest("POST", API_ENVIRONMENT, {
     body: JSON.stringify(environment),
   });
@@ -50,7 +48,7 @@ export const createEnvironment = async (
 };
 
 export const updateEnvironment = async (
-  environment: Environment
+  environment: UpdateEnvironmentPayload
 ): Promise<Environment> => {
   const response = await apiRequest(
     "PUT",

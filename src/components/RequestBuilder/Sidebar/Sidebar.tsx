@@ -24,6 +24,7 @@ import { useToast } from "@/hooks/useToast";
 import ImportModal from "../ImportModal";
 import { useRequest } from "@/hooks/useRequest";
 import TooltipContainer from "@/components/ui/tooltip-container";
+import CreateCollectionModel from "../CreateCollectionModel/CreateCollectionModel";
 
 const Sidebar: React.FC = () => {
   const { currentWorkspace } = useWorkspace();
@@ -124,6 +125,7 @@ const Sidebar: React.FC = () => {
   };
 
   const handleSaveCollection = async (collectionName: string) => {
+  
     if (currentWorkspace && collectionName.trim()) {
       try {
         if (selectedCollection) {
@@ -489,6 +491,11 @@ const Sidebar: React.FC = () => {
     return colors[method as keyof typeof colors] || "text-gray-600";
   };
 
+  const handleClose = () => {
+     setShowCollectionModal(false);
+      setSelectedCollection(null);
+  }
+
   return (
     <div
       className={`
@@ -543,9 +550,16 @@ const Sidebar: React.FC = () => {
                       <ChevronRight className="h-4 w-4 text-gray-500" />
                     )}
                     <Folder className="h-4 w-4 text-orange-500" />
-                    <span className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                      {collection.name}
-                    </span>
+                    <TooltipContainer children={
+                      <span
+                        className="text-sm font-medium text-gray-900 dark:text-white truncate max-w-[120px] inline-block align-bottom"
+                        style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', verticalAlign: 'bottom' }}
+                      >
+                        {collection.name}
+                        {collection.name.length > 18 && <span>&nbsp;…</span>}
+                      </span>
+                    } text={collection.name} />
+
                   </div>
 
                   <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity relative">
@@ -642,65 +656,8 @@ const Sidebar: React.FC = () => {
         </div>
       </div>
 
-      {/* Collection Modal */}
       {showCollectionModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg w-full max-w-md border border-gray-200 dark:border-gray-700">
-            <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-              <h2 className="text-xl font-semibold">
-                {selectedCollection ? "Edit Collection" : "New Collection"}
-              </h2>
-              <button
-                onClick={() => {
-                  setShowCollectionModal(false);
-                  setSelectedCollection(null);
-                }}
-                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            <div className="p-4 space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">Name</label>
-                <input
-                  type="text"
-                  defaultValue={selectedCollection?.name || ""}
-                  id="collectionName"
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800"
-                  placeholder="Collection name"
-                />
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-2 p-4 border-t border-gray-200 dark:border-gray-700">
-              <button
-                onClick={() => {
-                  setShowCollectionModal(false);
-                  setSelectedCollection(null);
-                }}
-                className="px-4 py-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => {
-                  const nameInput = document.getElementById(
-                    "collectionName"
-                  ) as HTMLInputElement;
-                  if (nameInput && nameInput.value.trim()) {
-                    handleSaveCollection(nameInput.value);
-                  }
-                }}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center gap-2"
-              >
-                <Save size={16} />
-                Save
-              </button>
-            </div>
-          </div>
-        </div>
+          <CreateCollectionModel handleClose={handleClose} handleSaveCollection={handleSaveCollection} selectedCollection={selectedCollection} />
       )}
 
       {/* Request Rename Modal */}

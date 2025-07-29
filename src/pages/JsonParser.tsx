@@ -588,10 +588,6 @@ const JsonParser: FC = () => {
             <h1 className="text-2xl font-bold">
               Professional JSON Parser & Formatter
             </h1>
-            <p className="text-blue-100 mt-1">
-              Free online JSON validator, formatter, viewer, and comparison tool
-              with advanced features
-            </p>
           </div>
         </div>
 

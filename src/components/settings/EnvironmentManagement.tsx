@@ -30,6 +30,9 @@ const environmentSchema = z.object({
 });
 
 type EnvironmentFormData = z.infer<typeof environmentSchema>;
+interface EditEnvironmentFormData extends EnvironmentFormData {
+  id: string;
+}
 
 interface Variable {
   key: string;
@@ -40,9 +43,9 @@ interface Variable {
 export function EnvironmentManagement() {
   const { toast } = useToast();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [editingEnvironment, setEditingEnvironment] = useState<Environment | null>(null);
-  const [variables, setVariables] = useState<Variable[]>([{ key: '', value: '', isSecret: false }]);
-  const { environments, activeEnvironment, setActiveEnvironment, setEnvironments, createEnvironmentMutation, createVariableMutation, updateEnvironmentMutation, deleteEnvironmentMutation } = useDataManagement();
+  const [editingEnvironment, setEditingEnvironment] = useState<EditEnvironmentFormData>();
+  // const [ formVariables, setVariables] = useState<Variable[]>([{ key: '', value: '', isSecret: false }]);
+  const { variables, setVariables, environments, activeEnvironment, setActiveEnvironment, setEnvironments, createEnvironmentMutation, createVariableMutation, updateEnvironmentMutation, deleteEnvironmentMutation } = useDataManagement();
   const { workspaces } = useWorkspace();
 
   const form = useForm<EnvironmentFormData>({
@@ -64,25 +67,21 @@ export function EnvironmentManagement() {
         name: editingEnvironment.name,
         description: editingEnvironment.description || '',
         workspaceId: editingEnvironment.workspaceId,
-        // variables: editingEnvironment.variables?.items?.map(v => ({
-        //   key: v.key,
-        //   value: v.value,
-        //   isSecret: v.isSecret || false
-        // })) || [],
+        variables: editingEnvironment.variables?.map(v => ({
+          key: v.key,
+          value: v.value,
+          isSecret: v.isSecret || false
+        })) || [],
       });
-      
+
       // Update variables state if environment has variables
-      if (editingEnvironment.variables?.items && editingEnvironment.variables.items.length > 0) {
-        setVariables(
-          editingEnvironment.variables.items.map(v => ({
-            key: v.key,
-            value: v.value,
-            isSecret: v.isSecret || false
-          }))
-        );
-      } else {
-        setVariables([{ key: '', value: '', isSecret: false }]);
-      }
+      // if (editingEnvironment.variables && editingEnvironment.variables.length > 0) {
+      //   setVariables(
+      //     editingEnvironment.variables.map())
+      //   );
+      // } else {
+      //   setVariables([{ key: '', value: '', isSecret: false }]);
+      // }
     }
   }, [editingEnvironment, form]);
 
@@ -126,7 +125,6 @@ export function EnvironmentManagement() {
     setIsCreateDialogOpen(false);
     setEditingEnvironment(null);
     form.reset();
-    setVariables([{ key: '', value: '', isSecret: false }]);
   };
 
 
@@ -143,7 +141,7 @@ export function EnvironmentManagement() {
     if (confirm(`Are you sure you want to delete "${environment.name}"? This action cannot be undone.`)) {
       try {
         await deleteEnvironmentMutation.mutateAsync(environment.id);
-        
+
         toast({
           title: 'Environment deleted',
           description: `Environment "${environment.name}" has been deleted.`,
@@ -167,29 +165,29 @@ export function EnvironmentManagement() {
   };
 
   const handleDuplicate = async (environment: Environment) => {
-    const duplicateData = {
-      workspaceId: environment.workspaceId,
-      name: `${environment.name} (Copy)`,
-      description: environment.description,
-      defaultVariables: {
-        baseUrl: environment.baseUrl,
-      },
-    };
+    // const duplicateData = {
+    //   workspaceId: environment.workspaceId,
+    //   name: `${environment.name} (Copy)`,
+    //   description: environment.description,
+    //   defaultVariables: {
+    //     baseUrl: environment.baseUrl,
+    //   },
+    // };
 
     try {
-      const duplicatedEnv = await createEnvironmentMutation.mutateAsync(duplicateData);
-      
+      // const duplicatedEnv = await createEnvironmentMutation.mutateAsync(duplicateData);
+
       // If there are variables, duplicate them too
-      if (environment.variables?.items && environment.variables.items.length > 0) {
-        for (const variable of environment.variables.items) {
-          await createVariableMutation.mutateAsync({
-            environmentId: duplicatedEnv.id,
-            key: variable.key,
-            value: variable.value,
-            isSecret: variable.isSecret || false,
-          });
-        }
-      }
+      // if (environment.variables&& environment.variables.length > 0) {
+      //   for (const variable of environment.variables) {
+      //     await createVariableMutation.mutateAsync({
+      //       environmentId: duplicatedEnv.id,
+      //       key: variable.key,
+      //       value: variable.value,
+      //       isSecret: variable.isSecret || false,
+      //     });
+      //   }
+      // }
 
       toast({
         title: 'Environment duplicated',
@@ -225,7 +223,7 @@ export function EnvironmentManagement() {
               setIsCreateDialogOpen(false);
               setEditingEnvironment(null);
               form.reset();
-              setVariables([{ key: '', value: '', isSecret: false }]);
+              // setVariables([{ key: '', value: '', isSecret: false }]);
             }
           }}>
             <DialogTrigger asChild>
@@ -380,7 +378,6 @@ export function EnvironmentManagement() {
                         setIsCreateDialogOpen(false);
                         setEditingEnvironment(null);
                         form.reset();
-                        setVariables([{ key: '', value: '', isSecret: false }]);
                       }}
                     >
                       Cancel
@@ -521,7 +518,7 @@ export function EnvironmentManagement() {
                   {/* Mobile: Environment details */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs text-gray-500 pt-2 border-t sm:hidden">
                     <div>
-                      <span className="font-medium block">{environment.variables.count}</span>
+                      <span className="font-medium block">{variables.length}</span>
                       <span>variables</span>
                     </div>
                     {/* <div>
@@ -536,7 +533,7 @@ export function EnvironmentManagement() {
 
                   {/* Desktop: Environment details */}
                   <div className="hidden sm:flex items-center gap-4 text-xs text-gray-500 pt-2 border-t">
-                    <span>{environment.variables.count} variables</span>
+                    <span>{variables.length} variables</span>
                     {/* <span className="flex items-center gap-1">
                       <Lock className="h-3 w-3" />
                       {environment.secretCount} secrets

@@ -13,9 +13,15 @@ import {
 import { useRequest } from "@/hooks/useRequest";
 import JsonViewer from "../RequestEditor/JsonViewer";
 import PrimarySchemaPanel from "../schema/PrimarySchemaPanel";
+import { useIsMobile } from '@/hooks/use-mobile';
 
-const ResponseViewer: React.FC = () => {
+interface ResponseViewerProps {
+  isBottomLayout: boolean
+}
+
+const ResponseViewer = ({isBottomLayout} : ResponseViewerProps) => {
   const { responseData } = useRequest();
+  const isMobile = useIsMobile();
   const [activeTab, setActiveTab] = useState<
     "body" | "headers" | "cookies" | "test-results" | "schema"
   >("body");
@@ -103,34 +109,64 @@ const ResponseViewer: React.FC = () => {
     );
   }
 
+  // --- Status summary component for reuse ---
+  const StatusSummary = () => (
+    <div className="flex items-center space-x-4 text-sm">
+      <div className="flex items-center space-x-1">
+        <CheckCircle className={`h-4 w-4 ${getStatusColor(responseData.status)}`} />
+        <span className={`font-medium ${getStatusColor(responseData.status)}`}>
+          {responseData.status} {responseData.statusText}
+        </span>
+      </div>
+      <div className="flex items-center space-x-1">
+        <Clock className="h-4 w-4 text-gray-500" />
+        <span className="font-medium text-gray-900 dark:text-white">
+          {`${responseData.responseTime}`}
+        </span>
+      </div>
+      <div className="flex items-center space-x-1">
+        <HardDrive className="h-4 w-4 text-gray-500" />
+        <span className="font-medium text-gray-900 dark:text-white">
+          {calculateResponseSize(responseData.data)}
+        </span>
+      </div>
+    </div>
+  );
+
+  // --- Tab definitions ---
+  const tabs = [
+    { id: "body", label: "Body" },
+    { id: "headers", label: "Headers", count: Object.keys(responseData.headers).length },
+    { id: "cookies", label: "Cookies" },
+    { id: "test-results", label: "Test Results" },
+    { id: "schema", label: "Schema" },
+  ];
+
   return (
     <div className="flex-1 flex flex-col bg-white dark:bg-gray-900 border-t lg:border-t-0 lg:border-l border-gray-200 dark:border-gray-700 min-h-0 overflow-hidden">
-      {/* Response Tabs */}
+      {/* Response Tabs & Status */}
       <div className="border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
-        <div className="flex items-center justify-between px-4">
-          <nav className="flex overflow-x-auto">
-            {[
-              { id: "body", label: "Body" },
-              {
-                id: "headers",
-                label: "Headers",
-                count: Object.keys(responseData.headers).length,
-              },
-              { id: "cookies", label: "Cookies" },
-              { id: "test-results", label: "Test Results" },
-              { id: "schema", label: "Schema" },
-            ].map((tab) => (
+        <div className={`items-center justify-between px-4 ${!isBottomLayout ? "mt-5" : "flex"}`}>
+          {/* Top status summary (desktop) */}
+          {!isBottomLayout && (
+            <div className="flex items-center space-x-4">
+              <StatusSummary />
+            </div>
+          )}
+          {/* Tab navigation */}
+          <nav className="flex overflow-x-auto" aria-label="Response tabs">
+            {tabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
-                className={`
-                  py-4 px-2 sm:px-4 border-b-2 font-medium text-sm transition-colors whitespace-nowrap
-                  ${
-                    activeTab === tab.id
-                      ? "border-blue-500 text-blue-600"
-                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                  }
-                `}
+                className={`py-4 px-2 sm:px-4 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
+                  activeTab === tab.id
+                    ? "border-blue-500 text-blue-600"
+                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                }`}
+                aria-current={activeTab === tab.id ? "page" : undefined}
+                tabIndex={0}
+                type="button"
               >
                 {tab.label}
                 {tab.count !== undefined && tab.count > 0 && (
@@ -141,41 +177,13 @@ const ResponseViewer: React.FC = () => {
               </button>
             ))}
           </nav>
-
-          {/* Status and Actions */}
-          <div className="flex items-center space-x-4">
-            {/* Status Info */}
-            <div className="flex items-center space-x-4 text-sm">
-              <div className="flex items-center space-x-1">
-                <CheckCircle
-                  className={`h-4 w-4 ${getStatusColor(responseData.status)}`}
-                />
-                <span
-                  className={`font-medium ${getStatusColor(
-                    responseData.status
-                  )}`}
-                >
-                  {responseData.status} {responseData.statusText}
-                </span>
-              </div>
-
-              <div className="flex items-center space-x-1">
-                <Clock className="h-4 w-4 text-gray-500" />
-                <span className="font-medium text-gray-900 dark:text-white">
-                  {`${responseData.responseTime}`}
-                </span>
-              </div>
-
-              <div className="flex items-center space-x-1">
-                <HardDrive className="h-4 w-4 text-gray-500" />
-                <span className="font-medium text-gray-900 dark:text-white">
-                  {calculateResponseSize(responseData.data)}
-                </span>
-              </div>
+          {/* Bottom status summary (mobile/bottom layout) */}
+          {isBottomLayout && (
+            <div className="flex items-center space-x-4">
+              <StatusSummary />
             </div>
-          </div>
+          )}
         </div>
-
         {/* Search Bar */}
         {showSearch && (
           <div className="px-4 pb-3 flex items-center space-x-2">
@@ -197,6 +205,7 @@ const ResponseViewer: React.FC = () => {
               }}
               className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500"
               aria-label="Close search"
+              type="button"
             >
               <X className="h-4 w-4" />
             </button>

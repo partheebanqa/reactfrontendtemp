@@ -6,9 +6,11 @@ import {
   useCreateEnvironmentMutation,
   useCreateVariableMutation,
   useDeleteEnvironmentMutation,
+  useDeleteVariableMutation,
   usefetchVariablesQuery,
   usegetEnvironmentQuery,
   useUpdateEnvironmentMutation,
+  useUpdateVariableMutation,
 } from "@/store/query/dataManagementQuery";
 import { useWorkspace } from "./useWorkspace";
 
@@ -17,7 +19,7 @@ import { useWorkspace } from "./useWorkspace";
  * This replaces the RequestContext with a store-based approach
  */
 export function useDataManagement() {
-  const { environments, activeEnvironment, isLoading } =
+  const { environments, activeEnvironment, isLoading ,variables} =
     useDataManagementStore();
 
   const { currentWorkspace } = useWorkspace();
@@ -35,22 +37,27 @@ export function useDataManagement() {
   const createEnvironmentMutation = useCreateEnvironmentMutation();
   const createVariableMutation = useCreateVariableMutation();
   const updateEnvironmentMutation = useUpdateEnvironmentMutation();
+  const updateVariableMutation = useUpdateVariableMutation();
 
   const deleteEnvironmentMutation = useDeleteEnvironmentMutation();
+  const deletedVariableMutation = useDeleteVariableMutation();
 
   return {
     environments,
     activeEnvironment,
     isLoading,
+    variables,
 
     // Actions
     setEnvironments,
     setActiveEnvironment,
+    setVariables: dataManagementActions.setVariables,
 
     createEnvironmentMutation,
     createVariableMutation,
     updateEnvironmentMutation,
+    updateVariableMutation,
     deleteEnvironmentMutation,
-    
+    deletedVariableMutation
   };
 }

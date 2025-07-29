@@ -12,103 +12,102 @@ import VariableCard from './VariableCard';
 import VariableEditDialog from './EditVariableDialog'; // ✅ CORRECTED
 import { Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { useDataManagement } from '@/hooks/useDataManagement';
+import { useToast } from '@/hooks/useToast';
 
-interface VariablesSectionProps {
-  variables: Variable[];
-  setVariables: React.Dispatch<React.SetStateAction<Variable[]>>;
-  environments: Environment[];
-  toast: any;
-}
 
-const VariablesSection: React.FC<VariablesSectionProps> = ({
-  variables,
-  setVariables,
-  environments,
-  toast,
-}) => {
+
+const VariablesSection: React.FC = () => {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
-
+  const { environments, variables, setVariables, createVariableMutation, deletedVariableMutation, updateVariableMutation } = useDataManagement();
   const [editingVariable, setEditingVariable] = useState<Variable | null>(null);
   const [newVariable, setNewVariable] = useState<Variable>({
     id: '',
-    key: '',
-    value: '',
-    type: 'string',
-    description: '',
     environmentId: '',
-    isGlobal: true,
-    generatorFunction: '',
-    scope: 'global',
-    isSecret: false,
+    name: '',
+    description: '',
+    type: 'string',
+    initialValue: '',
+    currentValue: '',
+    createdAt: '',
+    updatedAt: '',
+    deletedAt: null,
   });
   const [search, setSearch] = useState('');
   const [environmentFilter, setEnvironmentFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
+  const { error: errorToast, success: successToast } = useToast();
 
-  const handleCreate = () => {
-    setVariables((prev) => [
-      ...prev,
-      { ...newVariable, id: Date.now().toString() },
-    ]);
-    toast({
-      title: 'Variable created',
-      description: `${newVariable.key} created successfully.`,
-      variant: 'success',
-    });
-    setIsCreateOpen(false);
+  const handleCreate = async () => {
+    try {
+      await createVariableMutation.mutateAsync({
+        environmentId: newVariable.environmentId,
+        name: newVariable.name,
+        description: newVariable.description,
+        type: newVariable.type,
+        initialValue: newVariable.initialValue,
+        currentValue: newVariable.currentValue,
+      });
+
+    } catch (error: any) {
+      errorToast(error instanceof Error ? error.message : 'Failed to create variable');
+      return;
+    }
     setNewVariable({
       id: '',
-      key: '',
-      value: '',
-      type: 'string',
-      description: '',
       environmentId: '',
-      isGlobal: true,
-      generatorFunction: '',
-      scope: 'global',
-      isSecret: false,
+      name: '',
+      description: '',
+      type: 'string',
+      initialValue: '',
+      currentValue: '',
+      createdAt: '',
+      updatedAt: '',
+      deletedAt: null,
     });
+    setIsCreateOpen(false);
   };
 
   const handleUpdate = () => {
-    setVariables((prev) =>
-      prev.map((v) => (v.id === editingVariable?.id ? editingVariable! : v))
-    );
-    toast({
-      title: 'Variable updated',
-      description: `${editingVariable?.key} updated successfully.`,
-      variant: 'success',
-    });
-    setIsEditOpen(false);
-    setEditingVariable(null);
+    try {
+      if (editingVariable) {
+        updateVariableMutation.mutate({
+          ...editingVariable,
+          updatedAt: new Date().toISOString()
+        });
+      }
+      setEditingVariable(null);
+      setIsEditOpen(false);
+      
+    } catch (error: any) {
+      errorToast(error instanceof Error ? error.message : 'Failed to update variable');
+      return;
+    }
+
   };
 
-  const handleDelete = (id: string, label: string) => {
-    setVariables((prev) => prev.filter((v) => v.id !== id));
-    toast({
-      title: 'Variable deleted',
-      description: `${label} has been deleted.`,
-      variant: 'destructive',
-    });
+
+  const handleDelete = async (id: string, label: string) => {
+    try {
+      await deletedVariableMutation.mutateAsync(id);
+    } catch (error) {
+      errorToast(error instanceof Error ? error.message : 'Failed to delete variable');
+      return;
+    }
   };
 
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);
-    toast({
-      title: 'Copied to clipboard',
-      description: `Variable value copied.`,
-      variant: 'success',
-    });
+    successToast('Variable copied to clipboard');
   };
 
   const filteredVariables = variables.filter((v) => {
     const matchesSearch =
-      v.key.toLowerCase().includes(search.toLowerCase()) ||
+      v.name.toLowerCase().includes(search.toLowerCase()) ||
       v.description?.toLowerCase().includes(search.toLowerCase());
     const matchesEnv =
       environmentFilter === 'all' ||
-      (environmentFilter === 'global' && v.isGlobal) ||
       v.environmentId === environmentFilter;
     const matchesType = typeFilter === 'all' || v.type === typeFilter;
     return matchesSearch && matchesEnv && matchesType;
