@@ -162,10 +162,10 @@ const TestSuites: React.FC = () => {
           </SelectContent>
         </Select>
 
-        <Button className='bg-green-600 hover:bg-green-700'>
+        {/* <Button className='bg-green-600 hover:bg-green-700'>
           <Play className='w-4 h-4 mr-2' />
           Run All Suites
-        </Button>
+        </Button> */}
       </div>
 
       <div className='bg-white rounded-lg border'>
