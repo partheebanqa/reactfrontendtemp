@@ -50,6 +50,7 @@ import {
   Variable,
 } from '@/shared/types/requestChain.model';
 import { ResponseExplorer } from './ResponseExplorer';
+import { useToast } from '@/hooks/useToast';
 
 interface RequestEditorProps {
   request: APIRequest;
@@ -533,6 +534,28 @@ export function RequestEditor({
     delete newExtracted[variableName];
     setExtractedVariables(newExtracted);
   };
+
+  const [copied, setCopied] = useState(false);
+
+  // console.log('copied:', copied);
+ const { toast } = useToast();
+ 
+const handleCopy = async (value: string) => {
+  try {
+    await navigator.clipboard.writeText(value);
+    setCopied(true);
+    toast({
+      title: 'Copied to Clipboard',
+      description: 'The value has been copied successfully.',
+      variant: 'success',
+    });
+    setTimeout(() => setCopied(false), 2000); 
+  } catch (err) {
+    console.error('Failed to copy:', err);
+  }
+};
+
+
 
   const addHeader = () => {
     onUpdate({
@@ -1767,6 +1790,8 @@ export function RequestEditor({
               extractedVariables={extractedVariables}
               existingExtractions={request.dataExtractions}
               onRemoveExtraction={handleRemoveExtraction}
+              handleCopy={handleCopy}
+              copied={copied}
             />
           </div>
         )}
