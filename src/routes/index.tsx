@@ -36,6 +36,7 @@ import ContactPage from '@/pages/ContactPage';
 
 export default function Router() {
   const { isAuthenticated, isLoading } = useAuth();
+  console.log("🚀 ~ Router ~ isAuthenticated:", isAuthenticated)
 
   if (isLoading) {
     return (
@@ -56,7 +57,9 @@ export default function Router() {
         </>
       ) : (
         <AppLayout>
-          <Route path='/' component={Dashboard} />
+          <Route path='/' children={
+            <Redirect to='/dashboard' />
+          }/>
           <Route path='/dashboard' component={Dashboard} />
           <Route path='/json-parser' component={JsonParser} />
           <Route path='/swagger-parser' component={SwaggerParser} />
