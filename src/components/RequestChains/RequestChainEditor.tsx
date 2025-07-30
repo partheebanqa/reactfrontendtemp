@@ -183,12 +183,48 @@ export function RequestChainEditor({
     // },
   });
 
+  interface Environment {
+    id: string;
+    name: string;
+    baseUrl: string;
+  }
+  
+  // Mock environment data
+  const mockEnvironments: Environment[] = [
+    {
+      id: 'development',
+      name: 'Development',
+      baseUrl: 'https://api-dev.example.com',
+    },
+    {
+      id: 'staging',
+      name: 'Staging',
+      baseUrl: 'https://api-staging.example.com',
+    },
+    {
+      id: 'production',
+      name: 'Production',
+      baseUrl: 'https://api.example.com',
+    },
+    {
+      id: 'local',
+      name: 'Local',
+      baseUrl: 'http://localhost:3000',
+    },
+    {
+      id: 'qa',
+      name: 'QA',
+      baseUrl: 'https://api-qa.example.com',
+    },
+  ];
+
   const isSaveDisabled =
     !formData.name?.trim() || (formData.requests?.length ?? 0) === 0;
 
   const [expandedRequests, setExpandedRequests] = useState<Set<string>>(
     new Set()
   );
+    const [selectedEnvironment, setSelectedEnvironment] = useState<string>('');
   const [editingRequestId, setEditingRequestId] = useState<string | null>(null);
   const [globalVariables, setGlobalVariables] = useState<Variable[]>([
     {
@@ -200,6 +236,9 @@ export function RequestChainEditor({
     { id: "2", name: "apiKey", value: "your-api-key", type: "string" },
     { id: "3", name: "timeout", value: "5000", type: "number" },
   ]);
+
+
+
 
   const [executionLogs, setExecutionLogs] = useState<any[]>([]);
   const [extractedVariables, setExtractedVariables] = useState<
@@ -651,22 +690,36 @@ export function RequestChainEditor({
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="environment">Select ENV</Label>
-                <Select
-                  value={formData.environment || ""}
-                  onValueChange={(value) =>
-                    setFormData({ ...formData, environment: value })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Choose an environment" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="dev">DEV</SelectItem>
-                    <SelectItem value="prod">PROD</SelectItem>
-                    <SelectItem value="uat">UAT</SelectItem>
-                  </SelectContent>
-                </Select>
+               
+                              <label className='block text-sm font-medium mb-2'>
+                                Environment <span className='text-destructive'>*</span>
+                              </label>
+                              <Select
+                                value={selectedEnvironment}
+                                onValueChange={setSelectedEnvironment}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder='Select environment' />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {mockEnvironments.map((env) => (
+                                    <SelectItem key={env.id} value={env.id}>
+                                      <div className='flex flex-col'>
+                                        <span className='font-medium'>{env.name}</span>
+                                        <span className='text-sm text-muted-foreground'>
+                                          {env.baseUrl}
+                                        </span>
+                                      </div>
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              {/* {selectedEnvData && (
+                                <p className='text-sm text-muted-foreground mt-1'>
+                                  Base URL: {selectedEnvData.baseUrl}
+                                </p>
+                              )} */}
+                          
               </div>
             </CardContent>
           </Card>

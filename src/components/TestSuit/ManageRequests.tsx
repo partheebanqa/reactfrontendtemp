@@ -4,6 +4,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Download, Trash2, Settings } from 'lucide-react';
 import { TestCaseSelectionModal } from './TestCaseSelectionModal';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 interface Request {
   id: string;
@@ -105,6 +111,9 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
                   </div>
                 </div>
                 <div className='flex items-center space-x-2'>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
                   <Button
                     variant='ghost'
                     size='sm'
@@ -113,6 +122,12 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
                   >
                     {testSuiteId && <Settings className='w-4 h-4' />}
                   </Button>
+                  </TooltipTrigger>
+                        <TooltipContent>Configuration</TooltipContent>
+                      </Tooltip>
+                   
+                      <Tooltip>
+                        <TooltipTrigger asChild>
                   <Button
                     variant='ghost'
                     size='sm'
@@ -121,6 +136,10 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
                   >
                     <Trash2 className='w-4 h-4' />
                   </Button>
+                  </TooltipTrigger>
+                        <TooltipContent>Delete</TooltipContent>
+                      </Tooltip>
+                  </TooltipProvider>
                 </div>
               </div>
               {testSuiteId && (

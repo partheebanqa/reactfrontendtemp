@@ -119,7 +119,7 @@ const EditTestSuiteContent: React.FC = () => {
     onSuccess: (data) => {
       toast({
         title: 'Test suite created',
-        description: 'Your test suite has been created successfully.',
+        description: 'Test suite created. Test cases are in progress—please wait a few minutes',
       });
       queryClient.invalidateQueries({
         queryKey: ['/api/test-suites', currentWorkspace?.id],
