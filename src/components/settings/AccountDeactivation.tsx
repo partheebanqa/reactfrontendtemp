@@ -39,7 +39,7 @@ const deactivationSchema = z.object({
   }),
 });
 
-type DeactivationFormData = z.infer<typeof deactivationSchema>;
+export type DeactivationFormData = z.infer<typeof deactivationSchema>;
 
 export function AccountDeactivation() {
   const { toast } = useToast();
@@ -61,32 +61,6 @@ export function AccountDeactivation() {
     },
   });
 
-  const deactivationMutation = useMutation({
-    mutationFn: async (data: DeactivationFormData) => {
-      const response = await apiRequest('POST', '/api/auth/deactivate', data);
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to deactivate account');
-      }
-      return response.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: 'Account deactivated',
-        description: 'Your account has been successfully deactivated.',
-      });
-      setIsDeactivationDialogOpen(false);
-      // Redirect to login or home page
-      window.location.href = '/';
-    },
-    onError: (error: Error) => {
-      toast({
-        title: 'Deactivation failed',
-        description: error.message,
-        variant: 'destructive',
-      });
-    },
-  });
 
   const handleDataExport = () => {
     toast({
@@ -143,20 +117,20 @@ export function AccountDeactivation() {
         </div>
 
         {/* Data Export Option */}
-        <div className="border rounded-lg p-4">
+        {/* <div className="border rounded-lg p-4">
           <h3 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
             <Download className="h-5 w-5" />
             Export Your Data
           </h3>
           <p className="text-sm text-gray-600 mb-4">
-            Before deactivating, you can export all your data including test suites, 
+            Before deactivating, you can export all your data including test suites,
             execution results, and settings for your records.
           </p>
           <Button variant="outline" onClick={handleDataExport}>
             <Download className="h-4 w-4 mr-2" />
             Export All Data
           </Button>
-        </div>
+        </div> */}
 
         {/* Alternative Actions */}
         <div className="border rounded-lg p-4">
@@ -202,7 +176,7 @@ export function AccountDeactivation() {
                 {step === 1 && (
                   <div className="space-y-4">
                     <h4 className="font-medium">Step 1: Reason & Feedback</h4>
-                    
+
                     <FormField
                       control={form.control}
                       name="reason"
@@ -235,10 +209,10 @@ export function AccountDeactivation() {
                         <FormItem>
                           <FormLabel>Additional feedback (Optional)</FormLabel>
                           <FormControl>
-                            <Textarea 
-                              placeholder="Help us improve by sharing your experience..." 
+                            <Textarea
+                              placeholder="Help us improve by sharing your experience..."
                               rows={3}
-                              {...field} 
+                              {...field}
                             />
                           </FormControl>
                           <FormMessage />
@@ -255,7 +229,7 @@ export function AccountDeactivation() {
                 {step === 2 && (
                   <div className="space-y-4">
                     <h4 className="font-medium">Step 2: Data Handling</h4>
-                    
+
                     <FormField
                       control={form.control}
                       name="dataHandling"
@@ -298,7 +272,7 @@ export function AccountDeactivation() {
                 {step === 3 && (
                   <div className="space-y-4">
                     <h4 className="font-medium">Step 3: Final Confirmation</h4>
-                    
+
                     <FormField
                       control={form.control}
                       name="password"
@@ -306,10 +280,10 @@ export function AccountDeactivation() {
                         <FormItem>
                           <FormLabel>Confirm your password</FormLabel>
                           <FormControl>
-                            <Input 
-                              type="password" 
-                              placeholder="Enter your password" 
-                              {...field} 
+                            <Input
+                              type="password"
+                              placeholder="Enter your password"
+                              {...field}
                             />
                           </FormControl>
                           <FormMessage />
@@ -383,9 +357,9 @@ export function AccountDeactivation() {
                       <Button type="button" variant="outline" onClick={() => setStep(2)}>
                         Back
                       </Button>
-                      <Button 
-                        type="submit" 
-                        variant="destructive" 
+                      <Button
+                        type="submit"
+                        variant="destructive"
                         className="flex-1"
                         disabled={deactivationMutation.isPending}
                       >

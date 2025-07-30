@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Select,
   SelectContent,
@@ -14,6 +14,7 @@ import { Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useDataManagement } from '@/hooks/useDataManagement';
 import { useToast } from '@/hooks/useToast';
+import PaginationControls from '@/admin/PaginationControls';
 
 
 
@@ -37,6 +38,8 @@ const VariablesSection: React.FC = () => {
   const [search, setSearch] = useState('');
   const [environmentFilter, setEnvironmentFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   const { error: errorToast, success: successToast } = useToast();
 
   const handleCreate = async () => {
@@ -102,16 +105,33 @@ const VariablesSection: React.FC = () => {
     successToast('Variable copied to clipboard');
   };
 
-  const filteredVariables = variables.filter((v) => {
-    const matchesSearch =
-      v.name.toLowerCase().includes(search.toLowerCase()) ||
-      v.description?.toLowerCase().includes(search.toLowerCase());
-    const matchesEnv =
-      environmentFilter === 'all' ||
-      v.environmentId === environmentFilter;
-    const matchesType = typeFilter === 'all' || v.type === typeFilter;
-    return matchesSearch && matchesEnv && matchesType;
-  });
+  const filteredVariables = useMemo(() => {
+    return variables.filter((v) => {
+      const matchesSearch =
+        v.name.toLowerCase().includes(search.toLowerCase()) ||
+        v.description?.toLowerCase().includes(search.toLowerCase());
+      const matchesEnv =
+        environmentFilter === 'all' ||
+        v.environmentId === environmentFilter;
+      const matchesType = typeFilter === 'all' || v.type === typeFilter;
+      return matchesSearch && matchesEnv && matchesType;
+    });
+  }, [variables, search, environmentFilter, typeFilter]);
+
+  // Calculate pagination
+  const totalPages = Math.ceil(filteredVariables.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedVariables = useMemo(() => {
+    return filteredVariables.slice(startIndex, endIndex);
+  }, [filteredVariables, startIndex, endIndex]);
+
+  // Handle page change
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    // Scroll to top of variables section
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   return (
     <>
@@ -176,7 +196,7 @@ const VariablesSection: React.FC = () => {
 
       <div className='grid gap-4'>
         <VariableCard
-          variables={filteredVariables}
+          variables={paginatedVariables}
           environments={environments}
           handleCopy={handleCopy}
           onEdit={(v) => {
@@ -186,6 +206,45 @@ const VariablesSection: React.FC = () => {
           onDelete={handleDelete}
         />
       </div>
+
+      {filteredVariables.length > 0 && (
+        <div className="mt-6">
+          <div className="flex justify-between items-center mb-2">
+            <div className="text-sm text-muted-foreground">
+              Showing {startIndex + 1} to {Math.min(endIndex, filteredVariables.length)} of {filteredVariables.length} variables
+            </div>
+            <Select
+              value={itemsPerPage.toString()}
+              onValueChange={(value) => {
+                setItemsPerPage(Number(value));
+                setCurrentPage(1);
+              }}
+            >
+              <SelectTrigger className="w-[140px]">
+                <SelectValue placeholder="Items per page" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="5">5 per page</SelectItem>
+                <SelectItem value="10">10 per page</SelectItem>
+                <SelectItem value="20">20 per page</SelectItem>
+                <SelectItem value="50">50 per page</SelectItem>
+                <SelectItem value="100">100 per page</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <PaginationControls
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={handlePageChange}
+          />
+        </div>
+      )}
+
+      {filteredVariables.length === 0 && (
+        <div className="text-center p-8">
+          <p className="text-muted-foreground">No variables found with the current filters.</p>
+        </div>
+      )}
 
       <VariableEditDialog
         open={isEditOpen}

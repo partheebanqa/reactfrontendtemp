@@ -35,6 +35,7 @@ import { Environment } from "@/shared/types/datamanagement";
 
 export default function Header() {
   const { user, logoutMutation } = useAuth();
+  console.log("🚀 ~ Header ~ user:", user)
   const [searchQuery, setSearchQuery] = useState("");
   const [theme, setTheme] = useState("light");
   const {
@@ -57,21 +58,21 @@ export default function Header() {
     environment: Environment | null;
   }>({
     isOpen: false,
-    mode: "add" ,
-    environment: null ,
+    mode: "add",
+    environment: null,
   });
   const [showHelpModal, setShowHelpModal] = useState(false);
   const [_, setLocation] = useLocation();
   const { success } = useToast();
 
   const handleLogout = async () => {
-    logoutMutation.mutate();
+   await logoutMutation.mutateAsync();
     setLocation("/");
   };
 
-  const getInitials = (firstName?: string, lastName?: string) => {
-    if (!firstName && !lastName) return "U";
-    return `${firstName?.[0] || ""}${lastName?.[0] || ""}`.toUpperCase();
+  const getInitials = (firstName?: string) => {
+    if (!firstName) return "U";
+    return `${firstName?.[0] || ""}`.toUpperCase();
   };
 
   const handleSaveWorkspace = async (workspaceData: any) => {
@@ -150,58 +151,55 @@ export default function Header() {
 
   return (
     <header className="border-b bg-white dark:bg-gray-900 px-2 sm:px-6 py-2 sm:py-4">
-      <div className="flex items-center justify-end gap-4 sm:gap-6  mx-auto">
-        {/* <div>
+      <div className="flex items-center justify-between gap-4 sm:gap-6  mx-auto">
+        <div className="flex items-center gap-2 sm:gap-4">
+          <h5 className="text-md font-semibold text-gray-800 dark:text-gray-200">
+            Workspace :
+          </h5>
           <WorkspaceDropdown
             setWorkspaceModalState={setWorkspaceModalState}
             handleDeleteWorkspace={handleDeleteWorkspace}
           />
-        </div> */}
+        </div>
         <div className="flex items-center gap-1 sm:gap-4 min-w-0">
-           <WorkspaceDropdown
-            setWorkspaceModalState={setWorkspaceModalState}
-            handleDeleteWorkspace={handleDeleteWorkspace}
-          />
-           <EnvironmentDropdown
-             setEnvironmentModalState={setEnvironmentModalState}
-             handleDeleteEnvironment={handleDeleteEnvironment}
-           />
+          <div className="flex items-center gap-2 sm:gap-4">
+            <h5 className="text-md font-semibold text-gray-800 dark:text-gray-200">
+              Environment :
+            </h5>
+            <EnvironmentDropdown
+              setEnvironmentModalState={setEnvironmentModalState}
+              handleDeleteEnvironment={handleDeleteEnvironment}
+            />
+          </div>
           <div className=" xs:block">
             <NotificationBell />
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <div className="flex items-center cursor-pointer">
-                  <Avatar className="h-7 w-7 sm:h-8 sm:w-8 cursor-pointer">
+                <Avatar className="h-7 w-7 sm:h-8 sm:w-9 cursor-pointer">
                   <AvatarImage src={(user as any)?.profileImageUrl} />
                   <AvatarFallback>
-                    {getInitials(
-                      (user as any)?.firstName || "Test",
-                      (user as any)?.lastName
-                    )}
+                    {getInitials(user?.firstName)}
                   </AvatarFallback>
                 </Avatar>
                 <ChevronDown className="h-4 w-4 ml-1 text-gray-500" />
               </div>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuContent align="end" className="w-auto">
               <div className="p-4">
                 <div className="flex items-center">
                   <div className="w-10 h-10 bg-blue-200 rounded-full flex items-center justify-center">
                     <span className="text-blue-800 font-medium">
-                      {getInitials(
-                        (user as any)?.firstName || "Test",
-                        (user as any)?.lastName
-                      )}
+                      {getInitials(user?.firstName)}
                     </span>
                   </div>
                   <div className="ml-3">
                     <p className="text-sm font-medium text-gray-900">
-                      {(user as any)?.firstName || "Test"}{" "}
-                      {(user as any)?.lastName || "User"}
+                      {user?.firstName}{" "}{user?.lastName}
                     </p>
                     <p className="text-xs text-gray-500">
-                      {(user as any)?.email || "user@example.com"}
+                      {user?.email}
                     </p>
                   </div>
                 </div>

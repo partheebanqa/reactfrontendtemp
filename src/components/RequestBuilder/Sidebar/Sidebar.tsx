@@ -125,7 +125,7 @@ const Sidebar: React.FC = () => {
   };
 
   const handleSaveCollection = async (collectionName: string) => {
-  
+
     if (currentWorkspace && collectionName.trim()) {
       try {
         if (selectedCollection) {
@@ -492,8 +492,8 @@ const Sidebar: React.FC = () => {
   };
 
   const handleClose = () => {
-     setShowCollectionModal(false);
-      setSelectedCollection(null);
+    setShowCollectionModal(false);
+    setSelectedCollection(null);
   }
 
   return (
@@ -536,7 +536,7 @@ const Sidebar: React.FC = () => {
         </div>
 
         <div className="space-y-1">
-          {collections.map((collection) => {
+          {collections.length > 0 ? collections.map((collection) => {
             return (
               <div key={collection.id} className="group">
                 <div
@@ -652,12 +652,34 @@ const Sidebar: React.FC = () => {
                 )}
               </div>
             );
-          })}
+          }) :
+            (
+              <>
+                <div className="text-center py-2 px-2">
+                  <p className="text-gray-500 mb-3 text-sm">No collections yet</p>
+                  <div className="space-y-2">
+                    <button
+                      onClick={handleCreateCollection}
+                      className="flex items-center justify-center w-full px-2 py-1.5 text-sm text-blue-600 border border-blue-600 rounded-md hover:bg-blue-50"
+                    >
+                      <Plus className="h-3 w-3 mr-1.5" /> Create Collection
+                    </button>
+                    <button
+                      onClick={() => setShowImportModal(true)}
+                      className="flex items-center justify-center w-full px-2 py-1.5 text-sm text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50"
+                    >
+                      <Upload className="h-3 w-3 mr-1.5" /> Import Collection
+                    </button>
+                  </div>
+                </div>
+              </>
+            )
+          }
         </div>
       </div>
 
       {showCollectionModal && (
-          <CreateCollectionModel handleClose={handleClose} handleSaveCollection={handleSaveCollection} selectedCollection={selectedCollection} />
+        <CreateCollectionModel handleClose={handleClose} handleSaveCollection={handleSaveCollection} selectedCollection={selectedCollection} />
       )}
 
       {/* Request Rename Modal */}

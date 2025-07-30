@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { X, Upload, AlertCircle, Link as LinkIcon, FileText } from 'lucide-react';
+import { X, Upload, AlertCircle, Link as LinkIcon, FileText, Terminal } from 'lucide-react';
 import { ImportCollection } from '@/shared/types/collection';
 import { importPostmanCollection } from '@/lib/importers/postmanImporter';
 import { importSwaggerCollection } from '@/lib/importers/swaggerImporter';
@@ -8,6 +8,25 @@ import { useWorkspace } from '@/hooks/useWorkspace';
 import { useCollection } from '@/hooks/useCollection';
 import { useToast } from '@/hooks/useToast';
 
+// Helper function to validate JSON
+const isValidJson = (text: string): boolean => {
+  try {
+    JSON.parse(text);
+    return true;
+  } catch (e) {
+    return false;
+  }
+};
+
+// Helper function to check if it's a Postman collection
+const isPostmanCollection = (json: any): boolean => {
+  return json?.info?.schema?.includes('schema.getpostman.com');
+};
+
+// Helper function to check if it's a Swagger/OpenAPI specification
+const isSwaggerSpec = (json: any): boolean => {
+  return Boolean(json?.swagger || json?.openapi);
+};
 
 interface ImportModalProps {
   isOpen: boolean;
@@ -19,7 +38,7 @@ const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, }) => {
   const [postmanUrl, setPostmanUrl] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
-  const [importType, setImportType] = useState<'file' | 'url' | 'text'>('file');
+  const [importType, setImportType] = useState<'file' | 'swagger' | 'curl'>('file');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { currentWorkspace } = useWorkspace();
@@ -31,10 +50,17 @@ const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, }) => {
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      // Check file type
-      if (!file.type.includes('json') && !file.name.endsWith('.json')) {
-        setError('Only JSON files are accepted');
-        showError('Invalid File Type', 'Please select a JSON file');
+      // Check file type - allow JSON and other formats that might be valid for import
+      const isAcceptedType = file.type.includes('json') ||
+        file.type.includes('application/x-yaml') ||
+        file.type.includes('text/') ||
+        file.name.endsWith('.json') ||
+        file.name.endsWith('.yaml') ||
+        file.name.endsWith('.yml');
+
+      if (!isAcceptedType) {
+        setError('Invalid file type. Please select a JSON, YAML, or text file');
+        showError('Invalid File Type', 'Please select a supported file format');
         setSelectedFile(null);
         // Reset the file input
         if (fileInputRef.current) {
@@ -42,6 +68,7 @@ const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, }) => {
         }
         return;
       }
+
       // Check file size (5MB = 5 * 1024 * 1024 bytes)
       if (file.size > 5 * 1024 * 1024) {
         setError('File size exceeds 5MB limit');
@@ -53,6 +80,7 @@ const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, }) => {
         }
         return;
       }
+
       setSelectedFile(file);
       setError(null);
     }
@@ -73,17 +101,48 @@ const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, }) => {
     let textToImport = importText;
 
     try {
-      if (importType === 'url') {
-        const response = await fetch(postmanUrl);
-        if (!response.ok) {
-          throw new Error('Failed to fetch collection from URL');
+      if (importType === 'swagger') {
+        // If text is already provided in the JSON paste area, use that instead of fetching
+        if (importText.trim()) {
+          textToImport = importText;
+        } else if (postmanUrl.trim()) {
+          try {
+            const response = await fetch(postmanUrl);
+            if (!response.ok) {
+              throw new Error(`Failed to fetch from URL: ${response.status} ${response.statusText}`);
+            }
+            textToImport = await response.text();
+          } catch (err) {
+            const errorMessage = err instanceof Error ? err.message : 'Failed to fetch from URL';
+            setError(errorMessage);
+            showError('URL Fetch Error', errorMessage);
+            setImporting(false);
+            return;
+          }
+        } else {
+          setError('Please provide either a URL or paste JSON content');
+          showError('Import Failed', 'Please provide either a URL or paste JSON content');
+          setImporting(false);
+          return;
         }
-        textToImport = await response.text();
       } else if (importType === 'file' && selectedFile) {
         textToImport = await selectedFile.text();
+      } else if (importType === 'file' && importText.trim()) {
+
+        textToImport = importText;
+      } else if (importType === 'curl') {
+        if (!importText.trim()) {
+          setError('Please enter a cURL command');
+          showError('Import Failed', 'Please enter a cURL command');
+          setImporting(false);
+          return;
+        }
+        textToImport = importText;
       }
       try {
         const json = JSON.parse(textToImport);
+
+        // Check if it's a Postman collection
         if (json.info?.schema?.includes('schema.getpostman.com')) {
           const response = await importCollectionMutation.mutateAsync({
             name: json.info.name,
@@ -96,26 +155,81 @@ const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, }) => {
           success('Import Successful', `Imported Postman collection: ${json.info.name}`);
           handleOnClose();
           return;
-        } else {
-          throw new Error('Not a valid Postman collection');
+        }
+        // Check if it's a Swagger/OpenAPI specification
+        else if (json.swagger || json.openapi) {
+          try {
+            // Import swagger
+            const swaggerCollection = await importSwaggerCollection(textToImport);
+            const collectionName = json.info?.title || 'Imported API';
+
+            const response = await importCollectionMutation.mutateAsync({
+              name: collectionName,
+              workspaceId: currentWorkspace?.id || '',
+              inputMethod: "raw",
+              specificationType: 'swagger',
+              raw: JSON.stringify(json),
+            });
+
+            success('Import Successful', `Imported Swagger/OpenAPI collection: ${collectionName}`);
+            handleOnClose();
+            return;
+          } catch (swaggerError) {
+            throw new Error(`Failed to import Swagger: ${swaggerError instanceof Error ? swaggerError.message : 'Unknown error'}`);
+          }
+        }
+        else {
+          throw new Error('Not a valid Postman collection or Swagger/OpenAPI specification');
         }
       } catch (e) {
-        // Not JSON or not a valid Postman collection
+        // Continue to try cURL if JSON parsing fails
+        if (importType !== 'curl') {
+          const errorMessage = e instanceof Error ? e.message : 'Failed to parse JSON';
+          setError(errorMessage);
+          showError('JSON Parse Error', errorMessage);
+
+          // Only return if not trying as curl (for backward compatibility)
+          if (!textToImport.trim().toLowerCase().startsWith('curl')) {
+            setImporting(false);
+            return;
+          }
+        }
       }
 
       // Try to parse as cURL
       if (textToImport.trim().toLowerCase().startsWith('curl')) {
-        const result = importCurlCommand(textToImport);
-        success('Import Successful', 'Imported cURL command');
-        handleOnClose();
-        return;
+        try {
+          const result = importCurlCommand(textToImport);
+
+          // Create a collection from the cURL command result
+          const curlCollection = result.collections[0];
+
+          const response = await importCollectionMutation.mutateAsync({
+            name: curlCollection.name || 'Imported cURL Collection',
+            workspaceId: currentWorkspace?.id || '',
+            inputMethod: "raw",
+            specificationType: 'curl',
+            raw: JSON.stringify(curlCollection),
+          });
+
+          success('Import Successful', 'Imported cURL command');
+          handleOnClose();
+          return;
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Failed to import cURL command';
+          setError(errorMessage);
+          showError('Import Error', errorMessage);
+          return;
+        }
       }
 
-      const errorMsg = 'Unsupported format. Please provide a valid Postman collection or cURL command.';
+      const errorMsg = 'Unsupported format. Please provide a valid Postman collection, OpenAPI/Swagger specification, or cURL command.';
       setError(errorMsg);
       showError('Import Failed', errorMsg);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to import collection';
+      const errorMessage = err instanceof Error
+        ? err.message
+        : 'Failed to import collection';
       setError(errorMessage);
       showError('Import Error', errorMessage);
     } finally {
@@ -124,13 +238,17 @@ const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, }) => {
   };
 
   const isImportDisabled = () => {
+    if (importing) return true;
+
     switch (importType) {
-      case 'text':
+      case 'curl':
         return !importText.trim();
-      case 'url':
-        return !postmanUrl.trim();
+      case 'swagger':
+        // Allow either URL or direct JSON input
+        return !postmanUrl.trim() && !importText.trim();
       case 'file':
-        return !selectedFile;
+        // Allow either file upload or direct JSON input
+        return !selectedFile && !importText.trim();
       default:
         return true;
     }
@@ -153,77 +271,93 @@ const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, }) => {
           <div className="space-y-4">
             <div className="flex rounded-lg bg-gray-100 p-1">
               <button
-                className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-colors ${importType === 'file'
-                    ? 'bg-white text-gray-800 shadow'
-                    : 'text-gray-600 hover:text-gray-800'
+                className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center justify-center gap-2 ${importType === 'file'
+                  ? 'bg-white text-gray-800 shadow'
+                  : 'text-gray-600 hover:text-gray-800'
                   }`}
                 onClick={() => setImportType('file')}
               >
-                Upload File
+                <FileText size={16} />
+                File Upload
               </button>
               <button
-                className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-colors ${importType === 'url'
-                    ? 'bg-white text-gray-800 shadow'
-                    : 'text-gray-600 hover:text-gray-800'
+                className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center justify-center gap-2 ${importType === 'swagger'
+                  ? 'bg-white text-gray-800 shadow'
+                  : 'text-gray-600 hover:text-gray-800'
                   }`}
-                onClick={() => setImportType('url')}
+                onClick={() => setImportType('swagger')}
               >
-                Import from URL
+                <LinkIcon size={16} />
+                Swagger URL
               </button>
               <button
-                className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-colors ${importType === 'text'
-                    ? 'bg-white text-gray-800 shadow'
-                    : 'text-gray-600 hover:text-gray-800'
+                className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center justify-center gap-2 ${importType === 'curl'
+                  ? 'bg-white text-gray-800 shadow'
+                  : 'text-gray-600 hover:text-gray-800'
                   }`}
-                onClick={() => setImportType('text')}
+                onClick={() => setImportType('curl')}
               >
-                Import from Text
+                <Terminal size={16} />
+                cURL Command
               </button>
             </div>
 
-            {importType === 'text' && (
+
+
+            {importType === 'swagger' && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Paste Collection
-                </label>
-                <textarea
-                  value={importText}
-                  onChange={(e) => setImportText(e.target.value)}
-                  className="w-full h-64 px-3 py-2 text-sm font-mono border border-gray-300 rounded-md"
-                  placeholder="Paste your Postman collection or cURL command here..."
+                <input
+                  type="url"
+                  value={postmanUrl}
+                  onChange={(e) => setPostmanUrl(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md"
+                  placeholder="https://api.example.com/swagger.json"
                 />
+                <p className="mt-1 text-xs text-gray-500">
+                  Enter a URL to a Swagger/OpenAPI specification or paste JSON in the box below
+                </p>
               </div>
             )}
 
-            {importType === 'url' && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Postman Collection URL
-                </label>
-                <div className="flex gap-2">
-                  <div className="relative flex-1">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <LinkIcon size={16} className="text-gray-400" />
+            {importType === 'curl' && (
+              <>
+                <div>
+                  <textarea
+                    value={importText}
+                    onChange={(e) => {
+                      setImportText(e.target.value);
+                      // Clear error if there was one when user starts typing
+                      if (error && e.target.value) {
+                        setError(null);
+                      }
+
+                      // Basic validation for cURL format
+                      if (!e.target.value.trim().toLowerCase().startsWith('curl')) {
+                        setError('Input should start with "curl"');
+                      } else {
+                        setError(null);
+                      }
+                    }}
+                    className={`w-full h-64 px-3 py-2 text-sm font-mono border rounded-md ${error && importText.trim() ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
+                      }`}
+                    placeholder="Paste your cURL command here..."
+                  />
+
+                  {importText.trim().toLowerCase().startsWith('curl') && (
+                    <div className="mt-1">
+                      <p className="text-xs text-green-600">
+                        ✓ Valid cURL format detected
+                      </p>
                     </div>
-                    <input
-                      type="url"
-                      value={postmanUrl}
-                      onChange={(e) => setPostmanUrl(e.target.value)}
-                      className="w-full pl-10 pr-3 py-2 text-sm border border-gray-300 rounded-md"
-                      placeholder="https://api.example.com/postman-collection.json"
-                    />
-                  </div>
+                  )}
                 </div>
-              </div>
+              </>
             )}
 
             {importType === 'file' && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Upload File
-                </label>
                 <div
-                  className="mt-1 flex flex-col items-center justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md hover:border-blue-400 transition-colors"
+                  className="flex flex-col items-center justify-center px-6 py-10 border border-gray-300 border-dashed rounded-lg"
                   onDragOver={(e) => e.preventDefault()}
                   onDrop={(e) => {
                     e.preventDefault();
@@ -246,39 +380,90 @@ const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, }) => {
                     }
                   }}
                 >
-                  <div className="space-y-3 text-center">
-                    <div className="flex flex-col items-center">
-                      <Upload size={42} className="mx-auto text-gray-400" />
-                      <h3 className="mt-2 text-sm font-medium text-gray-900">Choose a file</h3>
-                    </div>
-                    <div className="flex justify-center text-sm text-gray-600">
+                  <div className="text-center">
+                    <Upload size={36} className="mx-auto text-gray-400 mb-4" />
+
+                    <p className="text-sm mb-2">
                       <label
                         htmlFor="file-upload"
-                        className="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none"
+                        className="cursor-pointer text-blue-600 font-medium hover:text-blue-700"
                       >
-                        <span>Choose a file</span>
+                        Upload a file
                         <input
                           id="file-upload"
                           ref={fileInputRef}
                           type="file"
                           className="sr-only"
-                          accept="application/json,.json"
+                          accept="application/json,.json,application/x-yaml,.yaml,.yml,text/plain"
                           onChange={handleFileSelect}
                         />
                       </label>
-                      <p className="pl-1">or drag and drop</p>
-                    </div>
-                    <p className="text-xs text-gray-500">
-                      Postman collection JSON files up to 5MB
+                      <span className="text-gray-600"> or drag and drop</span>
                     </p>
+
+                    <p className="text-xs text-gray-500">
+                      Postman Collection, OpenAPI/Swagger, cURL or JSON
+                    </p>
+
                     {selectedFile && (
-                      <div className="mt-2 text-sm bg-gray-50 px-3 py-2 rounded-md text-green-600">
-                        <span className="font-medium text-[#47515f]">Selected:</span> {selectedFile.name} ({(selectedFile.size / (1024 * 1024)).toFixed(2)} MB)
+                      <div className="mt-4 text-sm bg-gray-50 px-3 py-2 rounded-md text-gray-600">
+                        <span className="font-medium">Selected:</span> {selectedFile.name} ({(selectedFile.size / (1024 * 1024)).toFixed(2)} MB)
                       </div>
                     )}
                   </div>
                 </div>
               </div>
+            )}
+            {importType === 'file' && (
+              <>
+                <div className="flex items-center justify-center my-2">
+                  <span className="text-sm text-gray-500 px-4 relative before:content-[''] before:absolute before:left-[-40px] before:top-[50%] before:h-[1px] before:w-[30px] before:bg-gray-300 after:content-[''] after:absolute after:right-[-40px] after:top-[50%] after:h-[1px] after:w-[30px] after:bg-gray-300">Or paste JSON</span>
+                </div>
+
+                <div>
+                  <textarea
+                    value={importText}
+                    onChange={(e) => {
+                      setImportText(e.target.value);
+                      // Clear error if there was one when user starts typing
+                      if (error && e.target.value) {
+                        setError(null);
+                      }
+
+                      // For JSON-based imports, do basic validation
+                      if (e.target.value.trim()) {
+                        if (!isValidJson(e.target.value)) {
+                          setError('Invalid JSON format');
+                        } else {
+                          try {
+                            const json = JSON.parse(e.target.value);
+                            if (isPostmanCollection(json)) {
+                              setError(null);
+                            } else if (isSwaggerSpec(json)) {
+                              setError(null);
+                            } else {
+                              setError('JSON does not appear to be a valid Postman collection or Swagger/OpenAPI specification');
+                            }
+                          } catch (e) {
+                            // This shouldn't happen since we already checked isValidJson
+                          }
+                        }
+                      }
+                    }}
+                    className={`w-full h-64 px-3 py-2 text-sm font-mono border rounded-md ${error && importText.trim() ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
+                      }`}
+                    placeholder="Paste your Postman collection or OpenAPI/Swagger JSON here..."
+                  />
+
+                  {importText.trim() && isValidJson(importText) && (
+                    <div className="mt-1">
+                      <p className="text-xs text-green-600">
+                        ✓ Valid JSON format detected
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </>
             )}
 
             {error && (
@@ -290,21 +475,30 @@ const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, }) => {
           </div>
         </div>
 
-        <div className="flex justify-end gap-2 p-4 border-t border-gray-200">
-          <button
-            onClick={handleOnClose}
-            className="px-4 py-2 text-gray-700 hover:text-gray-900"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleImport}
-            disabled={isImportDisabled() || importing}
-            className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:opacity-50 flex items-center gap-2"
-          >
-            <Upload size={16} />
-            {importing ? 'Importing...' : 'Import'}
-          </button>
+        <div className="flex justify-between items-center p-4 border-t border-gray-200">
+          <div>
+            {importing && (
+              <p className="text-sm text-blue-600">
+                Importing... please wait
+              </p>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={handleOnClose}
+              className="px-4 py-2 text-gray-700 hover:text-gray-900"
+              disabled={importing}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleImport}
+              disabled={isImportDisabled() || importing}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+            >
+              {importing ? 'Importing...' : 'Import'}
+            </button>
+          </div>
         </div>
       </div>
     </div>
