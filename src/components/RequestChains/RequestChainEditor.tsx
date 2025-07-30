@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef } from "react";
 import {
   ArrowLeft,
   Plus,
@@ -17,41 +17,41 @@ import {
   Copy,
   Database,
   Loader2,
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useToast } from '@/hooks/use-toast';
-import { useQuery } from '@tanstack/react-query';
+} from "@/components/ui/select";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useToast } from "@/hooks/use-toast";
+import { useQuery } from "@tanstack/react-query";
 import {
   RequestChain,
   APIRequest,
   Variable,
   RequestDetailResponse,
-} from '@/shared/types/requestChain.model';
-import { RequestExecutor } from './RequestExecutor';
-import { ImportModal } from '@/components/TestSuit/ImportModal';
-import { ExtendedRequest } from '@/models/collection.model';
-import { RequestEditor } from '@/components/RequestChains/RequestEditor';
-import { getMultipleRequestDetails } from '@/services/requestChain.service';
+} from "@/shared/types/requestChain.model";
+import { RequestExecutor } from "./RequestExecutor";
+import { ImportModal } from "@/components/TestSuit/ImportModal";
+import { ExtendedRequest } from "@/models/collection.model";
+import { RequestEditor } from "@/components/RequestChains/RequestEditor";
+import { getMultipleRequestDetails } from "@/services/requestChain.service";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from '@/components/ui/tooltip';
-import { VariablesTable } from './VariablesTable';
+} from "@/components/ui/tooltip";
+import { VariablesTable } from "./VariablesTable";
 
 interface RequestChainEditorProps {
   chain?: RequestChain;
@@ -76,10 +76,10 @@ const transformRequestDetails = (
     if (Array.isArray(headers)) {
       return headers.map((header, index) => ({
         id: `header_${index}_${Date.now()}`,
-        key: header.key || header.name || '',
-        value: header.value || '',
+        key: header.key || header.name || "",
+        value: header.value || "",
         enabled: header.enabled !== false,
-        description: header.description || '',
+        description: header.description || "",
       }));
     }
     // If headers is an object
@@ -88,7 +88,7 @@ const transformRequestDetails = (
       key,
       value: String(value),
       enabled: true,
-      description: '',
+      description: "",
     }));
   };
 
@@ -98,10 +98,10 @@ const transformRequestDetails = (
     if (Array.isArray(params)) {
       return params.map((param, index) => ({
         id: `param_${index}_${Date.now()}`,
-        key: param.key || param.name || '',
-        value: param.value || '',
+        key: param.key || param.name || "",
+        value: param.value || "",
         enabled: param.enabled !== false,
-        description: param.description || '',
+        description: param.description || "",
       }));
     }
     // If params is an object
@@ -110,20 +110,20 @@ const transformRequestDetails = (
       key,
       value: String(value),
       enabled: true,
-      description: '',
+      description: "",
     }));
   };
 
   // Determine body type from the request data
-  const getBodyType = (data: any): APIRequest['bodyType'] => {
-    if (!data.body && !data.bodyFormData) return 'none';
+  const getBodyType = (data: any): APIRequest["bodyType"] => {
+    if (!data.body && !data.bodyFormData) return "none";
     if (data.bodyType) return data.bodyType;
-    if (data.bodyFormData) return 'form-data';
+    if (data.bodyFormData) return "form-data";
     try {
       JSON.parse(data.body);
-      return 'json';
+      return "json";
     } catch {
-      return 'raw';
+      return "raw";
     }
   };
 
@@ -132,28 +132,28 @@ const transformRequestDetails = (
     if (!authData) return undefined;
 
     return {
-      token: authData.token || authData.bearerToken || '',
-      username: authData.username || '',
-      password: authData.password || '',
-      key: authData.key || authData.apiKey || '',
-      value: authData.value || authData.apiValue || '',
-      addTo: authData.addTo || (authData.in === 'query' ? 'query' : 'header'),
+      token: authData.token || authData.bearerToken || "",
+      username: authData.username || "",
+      password: authData.password || "",
+      key: authData.key || authData.apiKey || "",
+      value: authData.value || authData.apiValue || "",
+      addTo: authData.addTo || (authData.in === "query" ? "query" : "header"),
     };
   };
 
   return {
-    name: requestData.name || 'Imported Request',
-    method: (requestData.method || 'GET').toUpperCase() as APIRequest['method'],
-    url: requestData.url || requestData.endpoint || '',
+    name: requestData.name || "Imported Request",
+    method: (requestData.method || "GET").toUpperCase() as APIRequest["method"],
+    url: requestData.url || requestData.endpoint || "",
     headers: transformHeaders(requestData.headers),
     params: transformParams(requestData.params || requestData.queryParams),
     bodyType: getBodyType(requestData),
-    body: requestData.body || requestData.rawBody || '',
-    authType: requestData.authType || requestData.auth?.type || 'none',
+    body: requestData.body || requestData.rawBody || "",
+    authType: requestData.authType || requestData.auth?.type || "none",
     authConfig: transformAuthConfig(requestData.auth || requestData.authConfig),
     timeout: requestData.timeout || 5000,
     retries: requestData.retries || 0,
-    errorHandling: requestData.errorHandling || 'stop',
+    errorHandling: requestData.errorHandling || "stop",
     enabled: requestData.enabled !== false,
   };
 };
@@ -168,12 +168,13 @@ export function RequestChainEditor({
   const dragOverItem = useRef<number | null>(null);
 
   const [formData, setFormData] = useState<Partial<RequestChain>>({
-    name: chain?.name || '',
-    description: chain?.description || '',
-    workspaceId: '8d9ea72f-7f74-4821-8909-e953066d9a8b',
+    name: chain?.name || "",
+    description: chain?.description || "",
+    workspaceId: "8d9ea72f-7f74-4821-8909-e953066d9a8b",
     enabled: chain?.enabled ?? true,
     requests: chain?.requests || [],
     variables: chain?.variables || [],
+    environment: chain?.environment || "dev",
     // schedule: chain?.schedule || {
     //   enabled: false,
     //   type: 'once',
@@ -191,13 +192,13 @@ export function RequestChainEditor({
   const [editingRequestId, setEditingRequestId] = useState<string | null>(null);
   const [globalVariables, setGlobalVariables] = useState<Variable[]>([
     {
-      id: '1',
-      name: 'baseUrl',
-      value: 'https://api.example.com',
-      type: 'string',
+      id: "1",
+      name: "baseUrl",
+      value: "https://api.example.com",
+      type: "string",
     },
-    { id: '2', name: 'apiKey', value: 'your-api-key', type: 'string' },
-    { id: '3', name: 'timeout', value: '5000', type: 'number' },
+    { id: "2", name: "apiKey", value: "your-api-key", type: "string" },
+    { id: "3", name: "timeout", value: "5000", type: "number" },
   ]);
 
   const [executionLogs, setExecutionLogs] = useState<any[]>([]);
@@ -217,7 +218,7 @@ export function RequestChainEditor({
     error: detailsError,
     refetch: refetchDetails,
   } = useQuery({
-    queryKey: ['requestDetails', pendingImportIds],
+    queryKey: ["requestDetails", pendingImportIds],
     queryFn: () => getMultipleRequestDetails(pendingImportIds),
     enabled: pendingImportIds.length > 0,
     retry: 2,
@@ -290,12 +291,12 @@ export function RequestChainEditor({
     }
   };
 
-  const moveRequest = (requestId: string, direction: 'up' | 'down') => {
+  const moveRequest = (requestId: string, direction: "up" | "down") => {
     const requests = [...(formData.requests || [])];
     const index = requests.findIndex((r) => r.id === requestId);
     if (index === -1) return;
 
-    const newIndex = direction === 'up' ? index - 1 : index + 1;
+    const newIndex = direction === "up" ? index - 1 : index + 1;
     if (newIndex < 0 || newIndex >= requests.length) return;
 
     [requests[index], requests[newIndex]] = [
@@ -307,20 +308,20 @@ export function RequestChainEditor({
   const saveChain = async (): Promise<RequestChain | null> => {
     if (!formData.name) {
       toast({
-        title: 'Validation Error',
-        description: 'Please enter a chain name',
-        variant: 'destructive',
+        title: "Validation Error",
+        description: "Please enter a chain name",
+        variant: "destructive",
       });
       return null;
     }
 
     const existingChains: RequestChain[] = JSON.parse(
-      localStorage.getItem('extractionLogs') || '[]'
+      localStorage.getItem("extractionLogs") || "[]"
     );
 
     const chainData: RequestChain = {
       id: chain?.id || Date.now().toString(),
-      workspaceId: formData.workspaceId || '',
+      workspaceId: formData.workspaceId || "",
       name: formData.name,
       description: formData.description,
       requests: formData.requests || [],
@@ -342,7 +343,7 @@ export function RequestChainEditor({
       updatedChains.push(chainData);
     }
 
-    localStorage.setItem('extractionLogs', JSON.stringify(updatedChains));
+    localStorage.setItem("extractionLogs", JSON.stringify(updatedChains));
 
     onSave(chainData);
     return chainData;
@@ -352,30 +353,30 @@ export function RequestChainEditor({
     const saved = await saveChain();
     if (saved) {
       toast({
-        title: 'Chain Saved',
-        description: 'Your request chain has been saved successfully.',
+        title: "Chain Saved",
+        description: "Your request chain has been saved successfully.",
       });
     }
   };
   const getMethodColor = (method: string) => {
     const colors = {
-      GET: 'bg-green-100 text-green-800',
-      POST: 'bg-blue-100 text-blue-800',
-      PUT: 'bg-orange-100 text-orange-800',
-      DELETE: 'bg-red-100 text-red-800',
-      PATCH: 'bg-purple-100 text-purple-800',
-      HEAD: 'bg-gray-100 text-gray-800',
-      OPTIONS: 'bg-yellow-100 text-yellow-800',
+      GET: "bg-green-100 text-green-800",
+      POST: "bg-blue-100 text-blue-800",
+      PUT: "bg-orange-100 text-orange-800",
+      DELETE: "bg-red-100 text-red-800",
+      PATCH: "bg-purple-100 text-purple-800",
+      HEAD: "bg-gray-100 text-gray-800",
+      OPTIONS: "bg-yellow-100 text-yellow-800",
     };
-    return colors[method as keyof typeof colors] || 'bg-gray-100 text-gray-800';
+    return colors[method as keyof typeof colors] || "bg-gray-100 text-gray-800";
   };
 
   const addGlobalVariable = () => {
     const newVar: Variable = {
       id: Date.now().toString(),
-      name: '',
-      value: '',
-      type: 'string',
+      name: "",
+      value: "",
+      type: "string",
     };
     setGlobalVariables([...globalVariables, newVar]);
   };
@@ -395,7 +396,7 @@ export function RequestChainEditor({
   const handleImportRequests = async (importedRequests: ExtendedRequest[]) => {
     try {
       toast({
-        title: 'Importing Requests',
+        title: "Importing Requests",
         description: `Fetching details for ${importedRequests.length} requests...`,
       });
 
@@ -408,11 +409,11 @@ export function RequestChainEditor({
       // The useQuery will automatically fetch the details
       await refetchDetails();
     } catch (error) {
-      console.error('Import failed:', error);
+      console.error("Import failed:", error);
       toast({
-        title: 'Import Failed',
-        description: 'Failed to import requests. Please try again.',
-        variant: 'destructive',
+        title: "Import Failed",
+        description: "Failed to import requests. Please try again.",
+        variant: "destructive",
       });
     }
   };
@@ -429,18 +430,18 @@ export function RequestChainEditor({
 
           const completeRequest: APIRequest = {
             id: detail.id,
-            name: transformedDetails.name || detail.name || 'Imported Request',
-            method: transformedDetails.method || 'GET',
-            url: transformedDetails.url || detail.endpoint || detail.url || '',
+            name: transformedDetails.name || detail.name || "Imported Request",
+            method: transformedDetails.method || "GET",
+            url: transformedDetails.url || detail.endpoint || detail.url || "",
             headers: transformedDetails.headers || [],
             params: transformedDetails.params || [],
-            bodyType: transformedDetails.bodyType || 'none',
-            body: transformedDetails.body || '',
-            authType: transformedDetails.authType || 'none',
+            bodyType: transformedDetails.bodyType || "none",
+            body: transformedDetails.body || "",
+            authType: transformedDetails.authType || "none",
             authConfig: transformedDetails.authConfig,
             timeout: transformedDetails.timeout || 5000,
             retries: transformedDetails.retries || 0,
-            errorHandling: transformedDetails.errorHandling || 'stop',
+            errorHandling: transformedDetails.errorHandling || "stop",
             dataExtractions: [],
             testScripts: [],
             enabled: transformedDetails.enabled !== false,
@@ -458,19 +459,19 @@ export function RequestChainEditor({
         failedIds.forEach((failedId) => {
           const fallbackRequest: APIRequest = {
             id: failedId,
-            name: 'Imported Request',
-            method: 'GET',
-            url: '',
+            name: "Imported Request",
+            method: "GET",
+            url: "",
             headers: [],
             params: [],
-            bodyType: 'none',
+            bodyType: "none",
             timeout: 5000,
             retries: 0,
-            errorHandling: 'stop',
+            errorHandling: "stop",
             dataExtractions: [],
             testScripts: [],
             enabled: true,
-            authType: 'none',
+            authType: "none",
           };
 
           detailedRequests.push(fallbackRequest);
@@ -478,9 +479,9 @@ export function RequestChainEditor({
 
         if (failedIds.length > 0) {
           toast({
-            title: 'Partial Import',
+            title: "Partial Import",
             description: `Could not fetch details for ${failedIds.length} request(s). Using basic configuration.`,
-            variant: 'destructive',
+            variant: "destructive",
           });
         }
 
@@ -496,7 +497,7 @@ export function RequestChainEditor({
         );
 
         toast({
-          title: 'Import Successful',
+          title: "Import Successful",
           description: `Successfully imported ${detailedRequests.length} requests with complete details.`,
         });
 
@@ -504,11 +505,11 @@ export function RequestChainEditor({
         setPendingImportIds([]);
         setIsImportModalOpen(false);
       } catch (error) {
-        console.error('Error processing imported requests:', error);
+        console.error("Error processing imported requests:", error);
         toast({
-          title: 'Import Error',
-          description: 'Error processing imported requests. Please try again.',
-          variant: 'destructive',
+          title: "Import Error",
+          description: "Error processing imported requests. Please try again.",
+          variant: "destructive",
         });
         setPendingImportIds([]);
       }
@@ -519,9 +520,9 @@ export function RequestChainEditor({
   React.useEffect(() => {
     if (detailsError && pendingImportIds.length > 0) {
       toast({
-        title: 'Import Failed',
-        description: 'Failed to fetch request details. Please try again.',
-        variant: 'destructive',
+        title: "Import Failed",
+        description: "Failed to fetch request details. Please try again.",
+        variant: "destructive",
       });
       setPendingImportIds([]);
     }
@@ -532,27 +533,27 @@ export function RequestChainEditor({
     const request = formData.requests?.find((r) => r.id === editingRequestId);
     if (request) {
       return (
-        <div className='h-full flex flex-col'>
-          <div className='flex-shrink-0 border-b bg-background px-6 py-4'>
-            <div className='flex items-center justify-between'>
-              <div className='flex items-center space-x-4'>
+        <div className="h-full flex flex-col">
+          <div className="flex-shrink-0 border-b bg-background px-6 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
                 <Button
-                  variant='ghost'
-                  size='sm'
+                  variant="ghost"
+                  size="sm"
                   onClick={() => setEditingRequestId(null)}
                 >
-                  <ArrowLeft className='w-4 h-4' />
+                  <ArrowLeft className="w-4 h-4" />
                 </Button>
                 <div>
-                  <h1 className='text-xl font-semibold'>Edit Request</h1>
-                  <p className='text-sm text-muted-foreground'>
+                  <h1 className="text-xl font-semibold">Edit Request</h1>
+                  <p className="text-sm text-muted-foreground">
                     Configure your API request
                   </p>
                 </div>
               </div>
             </div>
           </div>
-          <div className='flex-1 overflow-auto p-6'>
+          <div className="flex-1 overflow-auto p-6">
             <RequestEditor
               request={request}
               globalVariables={globalVariables}
@@ -569,206 +570,224 @@ export function RequestChainEditor({
   }
 
   return (
-    <div className='h-full flex flex-col'>
+    <div className="h-full flex flex-col">
       {/* Header */}
-      <div className='flex-shrink-0 border-b bg-background px-6 py-4'>
-        <div className='flex items-center justify-between'>
-          <div className='flex items-center space-x-4'>
-            <Button variant='ghost' size='sm' onClick={onBack}>
-              <ArrowLeft className='w-4 h-4' />
+      <div className="flex-shrink-0 border-b bg-background px-6 py-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <Button variant="ghost" size="sm" onClick={onBack}>
+              <ArrowLeft className="w-4 h-4" />
             </Button>
             <div>
-              <h1 className='text-xl font-semibold'>
-                {chain ? 'Edit Request Chain' : 'Create Request Chain'}
+              <h1 className="text-xl font-semibold">
+                {chain ? "Edit Request Chain" : "Create Request Chain"}
               </h1>
-              <p className='text-sm text-muted-foreground'>
+              <p className="text-sm text-muted-foreground">
                 Configure your API automation workflow
               </p>
             </div>
           </div>
-          <div className='flex items-center space-x-3'>
+          <div className="flex items-center space-x-3">
             <Button
               onClick={handleSave}
               disabled={isSaveDisabled}
-              className='gap-2'
+              className="gap-2"
             >
-              <Save className='w-4 h-4' />
+              <Save className="w-4 h-4" />
               Save Chain
             </Button>
           </div>
         </div>
       </div>
 
-      <div className='flex-1 overflow-auto'>
-        <div className='p-6 space-y-6'>
+      <div className="flex-1 overflow-auto">
+        <div className="p-6 space-y-6">
           {/* Basic Information */}
           <Card>
             <CardHeader>
               <CardTitle>Basic Information</CardTitle>
             </CardHeader>
-            <CardContent className='space-y-4'>
-              <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                <div className='space-y-2'>
-                  <Label htmlFor='chainName'>Chain Name *</Label>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="chainName">Chain Name *</Label>
                   <Input
-                    id='chainName'
+                    id="chainName"
                     value={formData.name}
                     onChange={(e) =>
                       setFormData({ ...formData, name: e.target.value })
                     }
-                    placeholder='Enter chain name'
+                    placeholder="Enter chain name"
                   />
                 </div>
-                <div className='space-y-2'>
-                  <Label htmlFor='status'>Status</Label>
+                <div className="space-y-2">
+                  <Label htmlFor="status">Status</Label>
                   <Select
-                    value={formData.enabled ? 'enabled' : 'disabled'}
+                    value={formData.enabled ? "enabled" : "disabled"}
                     onValueChange={(value) =>
-                      setFormData({ ...formData, enabled: value === 'enabled' })
+                      setFormData({ ...formData, enabled: value === "enabled" })
                     }
                   >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value='enabled'>Enabled</SelectItem>
-                      <SelectItem value='disabled'>Disabled</SelectItem>
+                      <SelectItem value="enabled">Enabled</SelectItem>
+                      <SelectItem value="disabled">Disabled</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
               </div>
-              <div className='space-y-2'>
-                <Label htmlFor='description'>Description</Label>
+              <div className="space-y-2">
+                <Label htmlFor="description">Description</Label>
                 <Textarea
-                  id='description'
+                  id="description"
                   value={formData.description}
                   onChange={(e) =>
                     setFormData({ ...formData, description: e.target.value })
                   }
-                  placeholder='Describe what this chain does'
+                  placeholder="Describe what this chain does"
                   rows={3}
                 />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="environment">Select ENV</Label>
+                <Select
+                  value={formData.environment || ""}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, environment: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choose an environment" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="dev">DEV</SelectItem>
+                    <SelectItem value="prod">PROD</SelectItem>
+                    <SelectItem value="uat">UAT</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </CardContent>
           </Card>
 
           {/* Tabs */}
-          <Tabs defaultValue='requests' className='w-full'>
-            <TabsList className='grid w-full grid-cols-4'>
-              <TabsTrigger value='requests' className='gap-2'>
-                <Code className='w-4 h-4' />
+          <Tabs defaultValue="requests" className="w-full">
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="requests" className="gap-2">
+                <Code className="w-4 h-4" />
                 Requests ({formData.requests?.length || 0})
               </TabsTrigger>
-              <TabsTrigger value='variables' className='gap-2'>
-                <Globe className='w-4 h-4' />
+              <TabsTrigger value="variables" className="gap-2">
+                <Globe className="w-4 h-4" />
                 Global Variables ({globalVariables.length})
               </TabsTrigger>
-              <TabsTrigger value='variables-table' className='gap-2'>
-                <Database className='w-4 h-4' />
+              <TabsTrigger value="variables-table" className="gap-2">
+                <Database className="w-4 h-4" />
                 Variables Table
               </TabsTrigger>
-              <TabsTrigger value='execute' className='gap-2'>
-                <Play className='w-4 h-4' />
+              <TabsTrigger value="execute" className="gap-2">
+                <Play className="w-4 h-4" />
                 Execute & Test
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value='requests' className='space-y-4'>
-              <div className='flex items-center justify-between'>
-                <h3 className='text-lg font-medium'>Request Chain</h3>
-                <div className='flex items-center space-x-2'>
+            <TabsContent value="requests" className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-medium">Request Chain</h3>
+                <div className="flex items-center space-x-2">
                   <Button
-                    variant='outline'
+                    variant="outline"
                     onClick={() => setIsImportModalOpen(true)}
                     disabled={isLoadingDetails}
-                    className='gap-2'
+                    className="gap-2"
                   >
                     {isLoadingDetails ? (
-                      <Loader2 className='w-4 h-4 animate-spin' />
+                      <Loader2 className="w-4 h-4 animate-spin" />
                     ) : (
-                      <Download className='w-4 h-4' />
+                      <Download className="w-4 h-4" />
                     )}
-                    {isLoadingDetails ? 'Importing...' : 'Import Request'}
+                    {isLoadingDetails ? "Importing..." : "Import Request"}
                   </Button>
                 </div>
               </div>
 
               {formData.requests && formData.requests.length > 0 ? (
-                <div className='space-y-3'>
+                <div className="space-y-3">
                   {formData.requests.map((request, index) => (
                     <Card
                       key={request.id}
-                      className='hover:shadow-sm transition-shadow'
+                      className="hover:shadow-sm transition-shadow"
                     >
-                      <CardContent className='p-4'>
-                        <div className='flex items-center'>
-                          <div className='flex items-center space-x-3'>
+                      <CardContent className="p-4">
+                        <div className="flex items-center">
+                          <div className="flex items-center space-x-3">
                             <div
-                              className='cursor-move'
+                              className="cursor-move"
                               draggable
                               onDragStart={() => handleDragStart(index)}
                               onDragEnter={() => handleDragEnter(index)}
                               onDragEnd={handleDragEnd}
                             >
-                              <GripVertical className='w-5 h-5 text-muted-foreground' />
+                              <GripVertical className="w-5 h-5 text-muted-foreground" />
                             </div>
-                            <div className='w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-medium'>
+                            <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-medium">
                               {index + 1}
                             </div>
                           </div>
 
-                          <div className='flex-1 flex items-center space-x-4 ml-3'>
+                          <div className="flex-1 flex items-center space-x-4 ml-3">
                             <Badge className={getMethodColor(request.method)}>
                               {request.method}
                             </Badge>
-                            <div className='flex-1'>
-                              <p className='font-medium'>{request.name}</p>
-                              <p className='text-sm text-muted-foreground'>
-                                {request.url || 'No URL specified'}
+                            <div className="flex-1">
+                              <p className="font-medium">{request.name}</p>
+                              <p className="text-sm text-muted-foreground">
+                                {request.url || "No URL specified"}
                               </p>
                               {request.headers &&
                                 request.headers.length > 0 && (
-                                  <p className='text-xs text-blue-600'>
+                                  <p className="text-xs text-blue-600">
                                     {request.headers.length} headers
                                   </p>
                                 )}
                               {request.params && request.params.length > 0 && (
-                                <p className='text-xs text-green-600'>
+                                <p className="text-xs text-green-600">
                                   {request.params.length} params
                                 </p>
                               )}
                             </div>
-                            <div className='flex items-center space-x-2'>
+                            <div className="flex items-center space-x-2">
                               {request.enabled ? (
-                                <Eye className='w-4 h-4 text-green-500' />
+                                <Eye className="w-4 h-4 text-green-500" />
                               ) : (
-                                <EyeOff className='w-4 h-4 text-muted-foreground' />
+                                <EyeOff className="w-4 h-4 text-muted-foreground" />
                               )}
                             </div>
                           </div>
 
                           <TooltipProvider>
-                            <div className='flex items-center space-x-2 ml-4'>
+                            <div className="flex items-center space-x-2 ml-4">
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <Button
-                                    variant='ghost'
-                                    size='sm'
+                                    variant="ghost"
+                                    size="sm"
                                     onClick={() =>
                                       toggleRequestExpanded(request.id)
                                     }
                                   >
                                     {expandedRequests.has(request.id) ? (
-                                      <ChevronUp className='w-4 h-4' />
+                                      <ChevronUp className="w-4 h-4" />
                                     ) : (
-                                      <ChevronDown className='w-4 h-4' />
+                                      <ChevronDown className="w-4 h-4" />
                                     )}
                                   </Button>
                                 </TooltipTrigger>
                                 <TooltipContent>
                                   {expandedRequests.has(request.id)
-                                    ? 'Collapse'
-                                    : 'Expand'}{' '}
+                                    ? "Collapse"
+                                    : "Expand"}{" "}
                                   Request
                                 </TooltipContent>
                               </Tooltip>
@@ -776,13 +795,13 @@ export function RequestChainEditor({
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <Button
-                                    variant='ghost'
-                                    size='sm'
+                                    variant="ghost"
+                                    size="sm"
                                     onClick={() =>
                                       setEditingRequestId(request.id)
                                     }
                                   >
-                                    <Edit className='w-4 h-4' />
+                                    <Edit className="w-4 h-4" />
                                   </Button>
                                 </TooltipTrigger>
                                 <TooltipContent>Edit Request</TooltipContent>
@@ -791,11 +810,11 @@ export function RequestChainEditor({
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <Button
-                                    variant='ghost'
-                                    size='sm'
+                                    variant="ghost"
+                                    size="sm"
                                     onClick={() => duplicateRequest(request.id)}
                                   >
-                                    <Copy className='w-4 h-4' />
+                                    <Copy className="w-4 h-4" />
                                   </Button>
                                 </TooltipTrigger>
                                 <TooltipContent>
@@ -806,12 +825,12 @@ export function RequestChainEditor({
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <Button
-                                    variant='ghost'
-                                    size='sm'
+                                    variant="ghost"
+                                    size="sm"
                                     onClick={() => removeRequest(request.id)}
-                                    className='text-red-600 hover:text-red-700'
+                                    className="text-red-600 hover:text-red-700"
                                   >
-                                    <Trash2 className='w-4 h-4' />
+                                    <Trash2 className="w-4 h-4" />
                                   </Button>
                                 </TooltipTrigger>
                                 <TooltipContent>Delete Request</TooltipContent>
@@ -821,7 +840,7 @@ export function RequestChainEditor({
                         </div>
 
                         {expandedRequests.has(request.id) && (
-                          <div className='mt-4 pt-4 border-t'>
+                          <div className="mt-4 pt-4 border-t">
                             <RequestEditor
                               request={request}
                               globalVariables={globalVariables}
@@ -840,101 +859,101 @@ export function RequestChainEditor({
                   ))}
                 </div>
               ) : (
-                <div className='text-center py-8'>
-                  <Code className='w-12 h-12 text-muted-foreground mx-auto mb-3' />
-                  <p className='text-muted-foreground mb-4'>
+                <div className="text-center py-8">
+                  <Code className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+                  <p className="text-muted-foreground mb-4">
                     No requests in this chain
                   </p>
-                  <div className='flex items-center justify-center space-x-3'>
+                  <div className="flex items-center justify-center space-x-3">
                     <Button
-                      variant='outline'
+                      variant="outline"
                       onClick={() => setIsImportModalOpen(true)}
                       disabled={isLoadingDetails}
-                      className='gap-2'
+                      className="gap-2"
                     >
                       {isLoadingDetails ? (
-                        <Loader2 className='w-4 h-4 animate-spin' />
+                        <Loader2 className="w-4 h-4 animate-spin" />
                       ) : (
-                        <Download className='w-4 h-4' />
+                        <Download className="w-4 h-4" />
                       )}
                       {isLoadingDetails
-                        ? 'Importing...'
-                        : 'Import from Collection'}
+                        ? "Importing..."
+                        : "Import from Collection"}
                     </Button>
                   </div>
                 </div>
               )}
             </TabsContent>
 
-            <TabsContent value='variables' className='space-y-4'>
-              <div className='flex items-center justify-between'>
+            <TabsContent value="variables" className="space-y-4">
+              <div className="flex items-center justify-between">
                 <div>
-                  <h3 className='text-lg font-medium'>Global Variables</h3>
-                  <p className='text-sm text-muted-foreground'>
+                  <h3 className="text-lg font-medium">Global Variables</h3>
+                  <p className="text-sm text-muted-foreground">
                     Variables shared across all requests in this chain
                   </p>
                 </div>
-                <Button onClick={addGlobalVariable} className='gap-2'>
-                  <Plus className='w-4 h-4' />
+                <Button onClick={addGlobalVariable} className="gap-2">
+                  <Plus className="w-4 h-4" />
                   Add Variable
                 </Button>
               </div>
 
               {globalVariables.length > 0 ? (
-                <div className='space-y-3'>
+                <div className="space-y-3">
                   {globalVariables.map((variable) => (
                     <Card key={variable.id}>
-                      <CardContent className='p-4'>
-                        <div className='flex items-center space-x-3'>
-                          <div className='flex-1'>
+                      <CardContent className="p-4">
+                        <div className="flex items-center space-x-3">
+                          <div className="flex-1">
                             <Input
                               value={variable.name}
                               onChange={(e) =>
-                                updateGlobalVariable(variable.id ?? '', {
+                                updateGlobalVariable(variable.id ?? "", {
                                   name: e.target.value,
                                 })
                               }
-                              placeholder='Variable name'
+                              placeholder="Variable name"
                             />
                           </div>
-                          <div className='flex-1'>
+                          <div className="flex-1">
                             <Input
                               value={variable.value}
                               onChange={(e) =>
-                                updateGlobalVariable(variable.id ?? '', {
+                                updateGlobalVariable(variable.id ?? "", {
                                   value: e.target.value,
                                 })
                               }
-                              placeholder='Variable value'
+                              placeholder="Variable value"
                             />
                           </div>
                           <Select
                             value={variable.type}
-                            onValueChange={(value: Variable['type']) =>
-                              updateGlobalVariable(variable.id ?? '', {
+                            onValueChange={(value: Variable["type"]) =>
+                              updateGlobalVariable(variable.id ?? "", {
                                 type: value,
                               })
                             }
                           >
-                            <SelectTrigger className='w-32'>
+                            <SelectTrigger className="w-32">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value='string'>String</SelectItem>
-                              <SelectItem value='number'>Number</SelectItem>
-                              <SelectItem value='boolean'>Boolean</SelectItem>
-                              <SelectItem value='json'>JSON</SelectItem>
+                              <SelectItem value="string">String</SelectItem>
+                              <SelectItem value="number">Number</SelectItem>
+                              <SelectItem value="boolean">Boolean</SelectItem>
+                              <SelectItem value="json">JSON</SelectItem>
                             </SelectContent>
                           </Select>
                           <Button
-                            variant='ghost'
-                            size='sm'
+                            variant="ghost"
+                            size="sm"
                             onClick={() =>
-                              removeGlobalVariable(variable.id || '')
+                              removeGlobalVariable(variable.id || "")
                             }
-                            className='text-red-600'
+                            className="text-red-600"
                           >
-                            <Trash2 className='w-4 h-4' />
+                            <Trash2 className="w-4 h-4" />
                           </Button>
                         </div>
                       </CardContent>
@@ -942,20 +961,20 @@ export function RequestChainEditor({
                   ))}
                 </div>
               ) : (
-                <div className='text-center py-8'>
-                  <Globe className='w-12 h-12 text-muted-foreground mx-auto mb-3' />
-                  <p className='text-muted-foreground mb-4'>
+                <div className="text-center py-8">
+                  <Globe className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+                  <p className="text-muted-foreground mb-4">
                     No global variables defined
                   </p>
-                  <Button onClick={addGlobalVariable} className='gap-2'>
-                    <Plus className='w-4 h-4' />
+                  <Button onClick={addGlobalVariable} className="gap-2">
+                    <Plus className="w-4 h-4" />
                     Add First Variable
                   </Button>
                 </div>
               )}
             </TabsContent>
 
-            <TabsContent value='variables-table'>
+            <TabsContent value="variables-table">
               <VariablesTable
                 requests={formData.requests || []}
                 executionLogs={executionLogs}
@@ -965,7 +984,7 @@ export function RequestChainEditor({
               />
             </TabsContent>
 
-            <TabsContent value='execute'>
+            <TabsContent value="execute">
               <RequestExecutor
                 requests={formData.requests || []}
                 variables={[...globalVariables, ...(formData.variables || [])]}

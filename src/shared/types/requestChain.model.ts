@@ -12,6 +12,7 @@ export interface RequestChain {
   lastExecuted?: string;
   executionCount: number;
   successRate: number;
+  environment?: 'dev' | 'prod' | 'uat';
 }
 
 export interface APIRequest {
