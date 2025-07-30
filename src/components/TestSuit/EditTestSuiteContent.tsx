@@ -7,6 +7,13 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, Download } from 'lucide-react';
 import { ManageRequests } from '@/components/TestSuit/ManageRequests';
@@ -36,6 +43,41 @@ interface Request {
   selectedTestCases?: string[];
 }
 
+interface Environment {
+  id: string;
+  name: string;
+  baseUrl: string;
+}
+
+// Mock environment data
+const mockEnvironments: Environment[] = [
+  {
+    id: 'development',
+    name: 'Development',
+    baseUrl: 'https://api-dev.example.com',
+  },
+  {
+    id: 'staging',
+    name: 'Staging',
+    baseUrl: 'https://api-staging.example.com',
+  },
+  {
+    id: 'production',
+    name: 'Production',
+    baseUrl: 'https://api.example.com',
+  },
+  {
+    id: 'local',
+    name: 'Local',
+    baseUrl: 'http://localhost:3000',
+  },
+  {
+    id: 'qa',
+    name: 'QA',
+    baseUrl: 'https://api-qa.example.com',
+  },
+];
+
 const EditTestSuiteContent: React.FC = () => {
   const params = useParams();
   const [location, setLocation] = useLocation();
@@ -54,6 +96,7 @@ const EditTestSuiteContent: React.FC = () => {
 
   const [testSuiteName, setTestSuiteName] = useState('');
   const [description, setDescription] = useState('');
+  const [selectedEnvironment, setSelectedEnvironment] = useState<string>('');
   const [requests, setRequests] = useState<Request[]>([]);
   const [originalRequestIds, setOriginalRequestIds] = useState<string[]>([]);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
@@ -264,6 +307,10 @@ const EditTestSuiteContent: React.FC = () => {
   // Get imported request IDs to pass to ImportModal
   const importedRequestIds = requests.map((request) => request.id);
 
+  const selectedEnvData = mockEnvironments.find(
+    (env) => env.id === selectedEnvironment
+  );
+
   return (
     <div className='min-h-screen bg-background'>
       <div className='bg-card border-b px-6 py-4'>
@@ -347,6 +394,36 @@ const EditTestSuiteContent: React.FC = () => {
                 placeholder='Enter test suite description'
                 rows={3}
               />
+            </div>
+            <div>
+              <label className='block text-sm font-medium mb-2'>
+                Environment <span className='text-destructive'>*</span>
+              </label>
+              <Select
+                value={selectedEnvironment}
+                onValueChange={setSelectedEnvironment}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder='Select environment' />
+                </SelectTrigger>
+                <SelectContent>
+                  {mockEnvironments.map((env) => (
+                    <SelectItem key={env.id} value={env.id}>
+                      <div className='flex flex-col'>
+                        <span className='font-medium'>{env.name}</span>
+                        <span className='text-sm text-muted-foreground'>
+                          {env.baseUrl}
+                        </span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {selectedEnvData && (
+                <p className='text-sm text-muted-foreground mt-1'>
+                  Base URL: {selectedEnvData.baseUrl}
+                </p>
+              )}
             </div>
           </CardContent>
         </Card>
