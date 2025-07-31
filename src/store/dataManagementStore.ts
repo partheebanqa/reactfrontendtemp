@@ -7,6 +7,9 @@ export const initialDataManagementState: DataManagementState = {
   environments: [],
   activeEnvironment: null,
   isLoading: false,
+  variables: [],
+  variablePage:1,
+  variablePageSize:10,
 };
 
 
@@ -29,8 +32,14 @@ export const dataManagementActions = {
       ...state,
       activeEnvironment: environment,
     }));
+  },
+
+  setVariables: (variables: DataManagementState['variables']) => {
+    dataManagementStore.setState((state) => ({
+      ...state,
+      variables,
+    }));
   }
-  
 };
 
 // Hook to use the data management store

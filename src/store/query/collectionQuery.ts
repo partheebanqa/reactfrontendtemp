@@ -132,9 +132,13 @@ export const useCollectionRequestsQuery = () => {
 };
 
 export const useImpotPostmanCollectionMutation = () => {
+  const collectionQuery = useCollectionQuery();
   return useMutation({
     mutationFn: importCollectionFile,
-    onSuccess: async (response) => {},
+    onSuccess: async (response) => {
+      collectionQuery.refetch();
+      return response;
+    },
     onError: (error) => {
       console.error('Error importing collection:', error);
       throw error;

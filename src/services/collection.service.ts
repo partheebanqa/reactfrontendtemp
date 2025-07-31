@@ -147,13 +147,14 @@ export const importCollectionFile = async (
   importCollection: ImportCollection
 ) => {
   try {
-    // const formData = new FormData();
+    const formData = new FormData();
 
-    // // Add metadata fields
+    // Add metadata fields
     // formData.append("name", importCollection.name);
-    // formData.append("workspaceId", importCollection.workspaceId);
-    // formData.append("inputMethod", importCollection.inputMethod);
-    // formData.append("specificationType", importCollection.specificationType);
+    formData.append("workspaceId", importCollection.workspaceId);
+    formData.append("inputMethod", importCollection.inputMethod);
+    formData.append("specificationType", importCollection.specificationType);
+    formData.append('file', importCollection.file);
     // formData.append("url", importCollection.url);
     // formData.append("raw", importCollection.raw);
 

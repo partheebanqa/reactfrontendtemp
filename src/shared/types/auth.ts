@@ -8,7 +8,7 @@ export interface User {
   firstName: string;
   lastName: string;
   email: string;
-  organization: string;
+  organization: string | null;
 }
 
 export interface SingUpForm {

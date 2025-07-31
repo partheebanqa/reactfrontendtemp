@@ -36,6 +36,7 @@ import ContactPage from '@/pages/ContactPage';
 
 export default function Router() {
   const { isAuthenticated, isLoading } = useAuth();
+  console.log("🚀 ~ Router ~ isAuthenticated:", isAuthenticated)
 
   if (isLoading) {
     return (
@@ -56,7 +57,9 @@ export default function Router() {
         </>
       ) : (
         <AppLayout>
-          <Route path='/' component={Dashboard} />
+          <Route path='/' children={
+            <Redirect to='/dashboard' />
+          }/>
           <Route path='/dashboard' component={Dashboard} />
           <Route path='/json-parser' component={JsonParser} />
           <Route path='/swagger-parser' component={SwaggerParser} />
@@ -72,15 +75,9 @@ export default function Router() {
           <Route path='/settings' component={Settings} />
           <Route path='/profile' component={Profile} />
           <Route path='/notifications' component={Notifications} />
-          <Route path='/plan-billing' component={Plan} />
           <Route path='/settings/account' component={AccountSettingsPage} />
-          {/* <Route path='/settings/profile' component={AccountProfile} />
-          <Route path='/settings/security' component={AccountSecurity} />
-          <Route path='/settings/preferences' component={AccountPreferences} />
-          <Route path='/settings/billing' component={AccountBilling} /> */}
           <Route path='/cicd-configuration' component={CICDConfiguration} />
           <Route path='/executions' component={ExecutionsNew} />
-        
         </AppLayout>
       )}
       <Route path='/pricing' component={Pricing} />

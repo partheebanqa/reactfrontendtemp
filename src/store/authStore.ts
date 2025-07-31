@@ -30,7 +30,7 @@ export const authActions = {
     authStore.setState((state) => ({
       ...state,
       user,
-      isAuthenticated: !!user,
+      isAuthenticated: !!state.token,
     }));
   },
   

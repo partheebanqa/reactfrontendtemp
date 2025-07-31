@@ -9,6 +9,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Badge } from '@/components/ui/badge';
 import { Shield, Lock, Smartphone, Key, Mail, AlertTriangle, Eye, EyeOff } from 'lucide-react';
 import { useToast } from '@/hooks/useToast';
+import { useAuth } from '@/hooks/useAuth';
+import { useLocation } from 'wouter';
 
 const passwordSchema = z.object({
   currentPassword: z.string().min(1, 'Current password is required'),
@@ -17,12 +19,17 @@ const passwordSchema = z.object({
 }).refine((data) => data.newPassword === data.confirmPassword, {
   message: "Passwords don't match",
   path: ["confirmPassword"],
+}).refine((data) => data.currentPassword !== data.newPassword, {
+  message: "New password must be different from current password",
+  path: ["newPassword"],
 });
 
 const emailSchema = z.object({
   newEmail: z.string().email('Invalid email address'),
   password: z.string().min(1, 'Password is required to change email'),
 });
+
+
 
 type PasswordFormData = z.infer<typeof passwordSchema>;
 type EmailFormData = z.infer<typeof emailSchema>;
@@ -35,6 +42,22 @@ export function LoginInfo() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [showEmailPassword, setShowEmailPassword] = useState(false);
+  const { user, changePasswordMutation, updateProfileMutation } = useAuth();
+  const [_, setLocation] = useLocation();
+
+  // Calculate last password change date (for demo purposes using a random value between 1-60 days)
+  const [lastPasswordChange] = useState(() => {
+    return Math.floor(Math.random() * 60) + 1;
+  });
+
+  // Two-factor authentication state (demo)
+  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
+  const [showTwoFactorSetup, setShowTwoFactorSetup] = useState(false);
+  const [twoFactorCode, setTwoFactorCode] = useState(() => {
+    // Generate a random 6-digit code
+    return Math.floor(100000 + Math.random() * 900000).toString();
+  });
+  const [recoveryCodes, setRecoveryCodes] = useState<string[]>([]);
 
   const passwordForm = useForm<PasswordFormData>({
     resolver: zodResolver(passwordSchema),
@@ -53,39 +76,119 @@ export function LoginInfo() {
     },
   });
 
-  const onPasswordSubmit = (data: PasswordFormData) => {
-    console.log('Password change:', data);
-    toast({
-      title: 'Password updated',
-      description: 'Your password has been changed successfully.',
-    });
-    passwordForm.reset();
-    setIsPasswordSectionOpen(false);
+  const onPasswordSubmit = async (data: PasswordFormData) => {
+    try {
+      const passwordResponse = await changePasswordMutation.mutateAsync({
+        oldPassword: data.currentPassword,
+        newPassword: data.newPassword,
+      });
+      setLocation('/signin')
+      toast({
+        title: 'Password updated',
+        description: 'Your password has been changed successfully.',
+      });
+      passwordForm.reset();
+      setIsPasswordSectionOpen(false);
+    } catch (error) {
+      console.error("Error changing password:", error);
+      toast({
+        title: 'Error',
+        description: 'Failed to change password. Please try again.',
+        variant: 'destructive',
+      });
+    }
   };
 
-  const onEmailSubmit = (data: EmailFormData) => {
-    console.log('Email change:', data);
-    toast({
-      title: 'Email verification sent',
-      description: 'Please check your new email for verification instructions.',
-    });
-    emailForm.reset();
-    setIsEmailSectionOpen(false);
+  const onEmailSubmit = async (data: EmailFormData) => {
+    try {
+      // Attempt to update the user email
+      await updateProfileMutation.mutateAsync({
+        email: data.newEmail
+      });
+
+      toast({
+        title: 'Email verification sent',
+        description: 'Please check your new email for verification instructions.',
+      });
+      emailForm.reset();
+      setIsEmailSectionOpen(false);
+    } catch (error) {
+      console.error("Error changing email:", error);
+      toast({
+        title: 'Error',
+        description: 'Failed to change email. Please try again.',
+        variant: 'destructive',
+      });
+    }
   };
 
   const handleEnable2FA = () => {
+    setShowTwoFactorSetup(true);
+  };
+
+  const handleConfirm2FA = () => {
+    setTwoFactorEnabled(true);
+    setShowTwoFactorSetup(false);
+
+    // Generate recovery codes
+    const codes = Array.from({ length: 8 }, () =>
+      Math.random().toString(36).substring(2, 6) + '-' +
+      Math.random().toString(36).substring(2, 6)
+    );
+    setRecoveryCodes(codes);
+
     toast({
-      title: 'Two-factor authentication',
-      description: 'Setting up 2FA...',
+      title: 'Two-factor authentication enabled',
+      description: 'Your account is now more secure with 2FA.',
     });
   };
 
+  const handleDisable2FA = () => {
+    if (confirm("Are you sure you want to disable two-factor authentication? This will make your account less secure.")) {
+      setTwoFactorEnabled(false);
+      setRecoveryCodes([]);
+
+      toast({
+        title: 'Two-factor authentication disabled',
+        description: 'Two-factor authentication has been turned off.',
+      });
+    }
+  };
+
   const handleRecoveryCodes = () => {
+    if (!twoFactorEnabled) {
+      toast({
+        title: 'Two-factor authentication required',
+        description: 'You need to enable 2FA before generating recovery codes.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    // Regenerate recovery codes
+    const codes = Array.from({ length: 8 }, () =>
+      Math.random().toString(36).substring(2, 6) + '-' +
+      Math.random().toString(36).substring(2, 6)
+    );
+    setRecoveryCodes(codes);
+
     toast({
-      title: 'Recovery codes',
-      description: 'Generating new recovery codes...',
+      title: 'Recovery codes generated',
+      description: 'Keep these codes in a safe place. You can use them if you lose access to your authenticator app.',
     });
   };
+
+  // Show loading state if user data is not yet available
+  if (!user) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="flex flex-col items-center space-y-4">
+          <div className="w-10 h-10 border-4 border-t-blue-600 border-b-blue-600 border-r-transparent border-l-transparent rounded-full animate-spin"></div>
+          <p className="text-gray-500">Loading account information...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -98,12 +201,12 @@ export function LoginInfo() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4">
             <div className="flex items-center gap-3 p-4 border rounded-lg">
               <Mail className="h-5 w-5 text-blue-600" />
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-sm">Email</p>
-                <p className="text-sm text-gray-600 truncate">demo@example.com</p>
+                <p className="text-sm text-gray-600 truncate">{user?.email || 'Not available'}</p>
               </div>
               <Badge variant="secondary" className="text-xs">Verified</Badge>
             </div>
@@ -112,19 +215,29 @@ export function LoginInfo() {
               <Lock className="h-5 w-5 text-green-600" />
               <div className="flex-1">
                 <p className="font-medium text-sm">Password</p>
-                <p className="text-sm text-gray-600">Last changed 30 days ago</p>
+                <p className="text-sm text-gray-600">Last changed {lastPasswordChange} days ago</p>
               </div>
-              <Badge variant="secondary" className="text-xs">Strong</Badge>
+              <Badge
+                variant={lastPasswordChange > 45 ? "destructive" : lastPasswordChange > 30 ? "secondary" : "outline"}
+                className="text-xs"
+              >
+                {lastPasswordChange > 45 ? "Change Recommended" : "Strong"}
+              </Badge>
             </div>
 
-            <div className="flex items-center gap-3 p-4 border rounded-lg">
+            {/* <div className="flex items-center gap-3 p-4 border rounded-lg">
               <Smartphone className="h-5 w-5 text-orange-600" />
               <div className="flex-1">
                 <p className="font-medium text-sm">Two-Factor Auth</p>
-                <p className="text-sm text-gray-600">Not enabled</p>
+                <p className="text-sm text-gray-600">{twoFactorEnabled ? 'Enabled' : 'Not enabled'}</p>
               </div>
-              <Badge variant="destructive" className="text-xs">Disabled</Badge>
-            </div>
+              <Badge 
+                variant={twoFactorEnabled ? "outline" : "destructive"} 
+                className={`text-xs ${twoFactorEnabled ? 'bg-green-100 text-green-800' : ''}`}
+              >
+                {twoFactorEnabled ? 'Enabled' : 'Disabled'}
+              </Badge>
+            </div> */}
           </div>
         </CardContent>
       </Card>
@@ -137,7 +250,7 @@ export function LoginInfo() {
               <Lock className="h-5 w-5" />
               Change Password
             </CardTitle>
-            <Button 
+            <Button
               variant="outline"
               onClick={() => setIsPasswordSectionOpen(!isPasswordSectionOpen)}
             >
@@ -157,10 +270,10 @@ export function LoginInfo() {
                       <FormLabel>Current Password</FormLabel>
                       <FormControl>
                         <div className="relative">
-                          <Input 
-                            type={showCurrentPassword ? "text" : "password"} 
-                            placeholder="Enter current password" 
-                            {...field} 
+                          <Input
+                            type={showCurrentPassword ? "text" : "password"}
+                            placeholder="Enter current password"
+                            {...field}
                             className="pr-10"
                           />
                           <button
@@ -190,10 +303,10 @@ export function LoginInfo() {
                         <FormLabel>New Password</FormLabel>
                         <FormControl>
                           <div className="relative">
-                            <Input 
-                              type={showNewPassword ? "text" : "password"} 
-                              placeholder="Enter new password" 
-                              {...field} 
+                            <Input
+                              type={showNewPassword ? "text" : "password"}
+                              placeholder="Enter new password"
+                              {...field}
                               className="pr-10"
                             />
                             <button
@@ -222,10 +335,10 @@ export function LoginInfo() {
                         <FormLabel>Confirm Password</FormLabel>
                         <FormControl>
                           <div className="relative">
-                            <Input 
-                              type={showConfirmPassword ? "text" : "password"} 
-                              placeholder="Confirm new password" 
-                              {...field} 
+                            <Input
+                              type={showConfirmPassword ? "text" : "password"}
+                              placeholder="Confirm new password"
+                              {...field}
                               className="pr-10"
                             />
                             <button
@@ -254,13 +367,14 @@ export function LoginInfo() {
                     <li>• Include uppercase and lowercase letters</li>
                     <li>• Include at least one number</li>
                     <li>• Include at least one special character</li>
+                    <li><b>• Recommended to logoff and login again after changing password</b></li>
                   </ul>
                 </div>
 
                 <div className="flex justify-end gap-2 pt-4 border-t">
-                  <Button 
-                    type="button" 
-                    variant="outline" 
+                  <Button
+                    type="button"
+                    variant="outline"
                     onClick={() => setIsPasswordSectionOpen(false)}
                   >
                     Cancel
@@ -295,6 +409,11 @@ export function LoginInfo() {
           <CardContent>
             <Form {...emailForm}>
               <form onSubmit={emailForm.handleSubmit(onEmailSubmit)} className="space-y-4">
+                <div className="flex items-center gap-2 mb-4 p-3 bg-blue-50 rounded-md text-blue-700">
+                  <Mail className="h-4 w-4 flex-shrink-0" />
+                  <span className="text-sm">Current email: <strong>{user?.email || 'Not available'}</strong></span>
+                </div>
+                
                 <FormField
                   control={emailForm.control}
                   name="newEmail"
@@ -362,8 +481,11 @@ export function LoginInfo() {
                   >
                     Cancel
                   </Button>
-                  <Button type="submit">
-                    Send Verification Email
+                  <Button 
+                    type="submit" 
+                    disabled={updateProfileMutation.isPending}
+                  >
+                    {updateProfileMutation.isPending ? 'Sending...' : 'Send Verification Email'}
                   </Button>
                 </div>
               </form>
@@ -390,25 +512,101 @@ export function LoginInfo() {
                 </p>
               </div>
               <div className="flex items-center gap-2">
-                <Badge variant="destructive" className="text-xs">Not Setup</Badge>
-                <Button onClick={handleEnable2FA}>
-                  Enable
-                </Button>
+                <Badge 
+                  variant={twoFactorEnabled ? "outline" : "destructive"} 
+                  className={`text-xs ${twoFactorEnabled ? 'bg-green-100 text-green-800' : ''}`}
+                >
+                  {twoFactorEnabled ? 'Enabled' : 'Not Setup'}
+                </Badge>
+                {twoFactorEnabled ? (
+                  <Button variant="destructive" onClick={handleDisable2FA}>
+                    Disable
+                  </Button>
+                ) : (
+                  <Button onClick={handleEnable2FA}>
+                    Enable
+                  </Button>
+                )}
               </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 border rounded-lg opacity-50">
+            {showTwoFactorSetup && (
+              <div className="p-4 border rounded-lg bg-gray-50">
+                <h4 className="font-medium mb-3">Set up Two-Factor Authentication</h4>
+                <div className="space-y-4">
+                  <ol className="list-decimal pl-5 space-y-3 text-sm">
+                    <li>Download an authenticator app like Google Authenticator or Authy</li>
+                    <li>Scan the QR code or enter the setup key manually</li>
+                    <li>Enter the 6-digit code from your authenticator app below</li>
+                  </ol>
+                  
+                  <div className="flex flex-col items-center my-6">
+                    <div className="bg-white p-3 border mb-3" style={{width: '200px', height: '200px'}}>
+                      <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                        <span className="text-gray-500 text-xs">QR Code Placeholder</span>
+                      </div>
+                    </div>
+                    <p className="text-sm font-medium mb-1">Setup key:</p>
+                    <p className="font-mono bg-gray-100 px-3 py-1 rounded text-sm select-all">
+                      {twoFactorCode.split('').join(' ')}
+                    </p>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Verification code</label>
+                    <div className="flex gap-2">
+                      <Input 
+                        type="text"
+                        placeholder="Enter 6-digit code"
+                        className="max-w-[180px]"
+                      />
+                      <Button onClick={handleConfirm2FA}>
+                        Verify & Enable
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 border rounded-lg ${!twoFactorEnabled ? 'opacity-50' : ''}`}>
               <div className="space-y-1">
                 <h4 className="font-medium">Recovery Codes</h4>
                 <p className="text-sm text-gray-600">
                   Generate backup codes for account recovery
                 </p>
               </div>
-              <Button variant="outline" disabled>
+              <Button variant="outline" disabled={!twoFactorEnabled} onClick={handleRecoveryCodes}>
                 <Key className="h-4 w-4 mr-2" />
                 Generate Codes
               </Button>
             </div>
+            
+            {recoveryCodes.length > 0 && (
+              <div className="p-4 border border-yellow-200 rounded-lg bg-yellow-50">
+                <div className="flex items-start gap-2 mb-3">
+                  <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5" />
+                  <div>
+                    <h4 className="font-medium text-yellow-900">Recovery Codes</h4>
+                    <p className="text-sm text-yellow-800">
+                      Save these recovery codes in a secure place. Each code can only be used once.
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 my-3">
+                  {recoveryCodes.map((code, index) => (
+                    <div key={index} className="font-mono text-xs bg-white p-2 border rounded select-all">
+                      {code}
+                    </div>
+                  ))}
+                </div>
+                
+                <Button variant="outline" size="sm" className="mt-2" onClick={() => setRecoveryCodes([])}>
+                  I've saved these codes
+                </Button>
+              </div>
+            )}
 
             <div className="bg-blue-50 p-4 rounded-lg">
               <h4 className="font-medium text-blue-900 mb-2">Why enable 2FA?</h4>
