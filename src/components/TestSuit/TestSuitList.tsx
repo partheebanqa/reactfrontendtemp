@@ -19,6 +19,7 @@ import {
   getAllTestSuites,
   deleteTestSuite,
   executeTestSuite,
+  duplicateTestSuite,
 } from '@/services/testSuites.service';
 import { TestSuite } from '@/shared/types/TestSuite.model';
 import { useWorkspace } from '@/hooks/useWorkspace';
@@ -75,6 +76,27 @@ const TestSuites: React.FC = () => {
     },
   });
 
+  const cloneSuiteMutation = useMutation({
+    mutationFn: duplicateTestSuite,
+    onSuccess: () => {
+      toast({
+        title: 'Cloned',
+        description: 'Test suite Cloned successfully.',
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: ['/api/test-suites', currentWorkspace?.id],
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Delete failed',
+        description: error.message || 'Something went wrong.',
+        variant: 'destructive',
+      });
+    },
+  });
+
   const executeSuiteMutation = useMutation({
     mutationFn: executeTestSuite,
     onSuccess: () => {
@@ -95,6 +117,9 @@ const TestSuites: React.FC = () => {
 
   const handleDeleteSuite = (id: string) => {
     deleteSuiteMutation.mutate(id);
+  };
+  const handleClonseSuite = (id: string) => {
+    cloneSuiteMutation.mutate(id);
   };
 
   const handleExecuteSuite = (id: string) => {
@@ -182,6 +207,7 @@ const TestSuites: React.FC = () => {
                 onEdit={handleEditSuite}
                 onDelete={handleDeleteSuite}
                 onExecute={handleExecuteSuite}
+                onClone={handleClonseSuite}
               />
             ))}
           </div>

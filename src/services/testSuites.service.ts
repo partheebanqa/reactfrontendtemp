@@ -110,3 +110,18 @@ export const executeTestSuite = async ({
     throw new Error((error as Error).message || 'Failed to execute test suite');
   }
 };
+
+export const duplicateTestSuite = async (id: string): Promise<TestSuite> => {
+  try {
+    const response = await apiRequest(
+      'POST',
+      `${API_TEST_SUITES}/${id}/duplicate`
+    );
+    if (!response.ok) {
+      throw new Error('Failed to duplicate test suite');
+    }
+    return await response.json();
+  } catch (error: any) {
+    throw new Error(error.message || 'Failed to duplicate test suite');
+  }
+};

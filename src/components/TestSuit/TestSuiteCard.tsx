@@ -5,7 +5,12 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Play, Edit, Copy, Trash2, Info } from 'lucide-react';
 import { formatDate } from '@/utils/formatDate';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 interface TestSuite {
   requests: boolean;
@@ -24,6 +29,7 @@ interface TestSuiteCardProps {
   onEdit: (suite: TestSuite) => void;
   onDelete: (id: string) => void;
   onExecute: (id: string) => void;
+  onClone: (id: string) => void;
 }
 
 const TestSuiteCard: React.FC<TestSuiteCardProps> = ({
@@ -31,6 +37,7 @@ const TestSuiteCard: React.FC<TestSuiteCardProps> = ({
   onEdit,
   onDelete,
   onExecute,
+  onClone,
 }) => {
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -117,67 +124,67 @@ const TestSuiteCard: React.FC<TestSuiteCardProps> = ({
         </div>
 
         <div className='flex items-center space-x-2'>
-        <TooltipProvider>
-  {/* Play / Execute */}
-  <Tooltip>
-    <TooltipTrigger asChild>
-      <Button
-        variant='ghost'
-        size='icon'
-        className='text-gray-600 hover:text-blue-600'
-        onClick={() => onExecute(suite.id)}
-      >
-        <Play className='w-4 h-4' />
-      </Button>
-    </TooltipTrigger>
-    <TooltipContent>Run Suite</TooltipContent>
-  </Tooltip>
+          <TooltipProvider>
+            {/* Play / Execute */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant='ghost'
+                  size='icon'
+                  className='text-gray-600 hover:text-blue-600'
+                  onClick={() => onExecute(suite.id)}
+                >
+                  <Play className='w-4 h-4' />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Run Suite</TooltipContent>
+            </Tooltip>
 
-  {/* Edit */}
-  <Tooltip>
-    <TooltipTrigger asChild>
-      <Button
-        variant='ghost'
-        size='icon'
-        className='text-gray-600 hover:text-blue-600'
-        onClick={() => onEdit(suite)}
-      >
-        <Edit className='w-4 h-4' />
-      </Button>
-    </TooltipTrigger>
-    <TooltipContent>Edit Suite</TooltipContent>
-  </Tooltip>
+            {/* Edit */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant='ghost'
+                  size='icon'
+                  className='text-gray-600 hover:text-blue-600'
+                  onClick={() => onEdit(suite)}
+                >
+                  <Edit className='w-4 h-4' />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Edit Suite</TooltipContent>
+            </Tooltip>
 
-  {/* Copy */}
-  <Tooltip>
-    <TooltipTrigger asChild>
-      <Button
-        variant='ghost'
-        size='icon'
-        className='text-gray-600 hover:text-blue-600'
-      >
-        <Copy className='w-4 h-4' />
-      </Button>
-    </TooltipTrigger>
-    <TooltipContent>Duplicate Suite</TooltipContent>
-  </Tooltip>
+            {/* Copy */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant='ghost'
+                  size='icon'
+                  className='text-gray-600 hover:text-blue-600'
+                  onClick={() => onClone(suite.id)}
+                >
+                  <Copy className='w-4 h-4' />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Duplicate Suite</TooltipContent>
+            </Tooltip>
 
-  {/* Delete */}
-  <Tooltip>
-    <TooltipTrigger asChild>
-      <Button
-        variant='ghost'
-        size='icon'
-        className='text-gray-600 hover:text-red-600'
-        onClick={() => onDelete(suite.id)}
-      >
-        <Trash2 className='w-4 h-4' />
-      </Button>
-    </TooltipTrigger>
-    <TooltipContent>Delete Suite</TooltipContent>
-  </Tooltip>
-</TooltipProvider>
-
+            {/* Delete */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant='ghost'
+                  size='icon'
+                  className='text-gray-600 hover:text-red-600'
+                  onClick={() => onDelete(suite.id)}
+                >
+                  <Trash2 className='w-4 h-4' />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Delete Suite</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
       </div>
     </div>

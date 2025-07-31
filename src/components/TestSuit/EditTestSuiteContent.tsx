@@ -119,7 +119,8 @@ const EditTestSuiteContent: React.FC = () => {
     onSuccess: (data) => {
       toast({
         title: 'Test suite created',
-        description: 'Test suite created. Test cases are in progress—please wait a few minutes',
+        description:
+          'Test suite created. Test cases are in progress—please wait a few minutes',
       });
       queryClient.invalidateQueries({
         queryKey: ['/api/test-suites', currentWorkspace?.id],
@@ -316,15 +317,6 @@ const EditTestSuiteContent: React.FC = () => {
       <div className='bg-card border-b px-6 py-4'>
         <div className='flex items-center justify-between'>
           <div className='flex items-center space-x-4'>
-            <Button
-              variant='ghost'
-              size='sm'
-              onClick={handleBack}
-              className='text-muted-foreground hover:text-foreground'
-            >
-              <ArrowLeft className='w-4 h-4 mr-2' />
-              Back
-            </Button>
             <div>
               <h1 className='text-2xl font-semibold'>
                 {isCreateMode ? 'Create Test Suite' : 'Edit Test Suite'}
