@@ -2,11 +2,12 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { RequestChainsList } from '@/components/RequestChains/RequestChainsList';
 import { RequestChainEditor } from '@/components/RequestChains/RequestChainEditor';
-import { RequestChain } from '@/shared/types/requestChain.model';
+import { ExecutionLog, RequestChain, Variable } from '@/shared/types/requestChain.model';
 import {
   getRequestChains,
   saveRequestChain,
 } from '@/services/requestChain.service';
+import { RequestExecutor } from '@/components/RequestChains/RequestExecutor';
 
 const Index = () => {
   const [currentView, setCurrentView] = useState<'list' | 'editor'>('list');
@@ -49,12 +50,31 @@ const Index = () => {
     setCurrentView('editor');
   };
 
-  const handleSaveChain = (chain: RequestChain) => {
-    saveChain(chain);
-    // await loadChains(); // Reload the list
-    // setCurrentView('list');
-  };
+  interface RequestChainEditorProps {
+    id:string;
+    name: string;
+  }
 
+
+  const [data, setData] = useState<RequestChainEditorProps>({
+    id: '',
+    name: '', 
+  });
+
+  console.log('RequestChains data:', data);
+
+  const handleSaveChain = async (chain: RequestChain): Promise<RequestChain | null> => {
+    try {
+      const saved = await saveRequestChain(chain);
+      console.log('Chain saved:', saved);
+      setData(saved? { id: saved.id, name: saved.name } : { id: '', name: '' });  
+      return saved;
+    } catch (e) {
+      console.error(e);
+      return null;
+    }
+  };
+  
   const handleDeleteChain = async (chainId: string) => {
     try {
       // await requestService.deleteRequestChain(chainId);
@@ -86,11 +106,20 @@ const Index = () => {
 
   if (currentView === 'editor') {
     return (
+      <>
       <RequestChainEditor
         chain={editingChain}
         onBack={handleBackToList}
         onSave={handleSaveChain}
       />
+      {data.id && (
+        <RequestExecutor chainId={data.id} requests={[]} variables={[]} onExecutionComplete={function (logs: ExecutionLog[], extractedVariables: Variable[]): void {
+            throw new Error('Function not implemented.');
+          } } onVariableUpdate={function (variables: Variable[]): void {
+            throw new Error('Function not implemented.');
+          } }  />
+      )}
+      </>
     );
   }
 

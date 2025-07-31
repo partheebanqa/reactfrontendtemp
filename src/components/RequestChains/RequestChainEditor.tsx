@@ -52,6 +52,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { VariablesTable } from "./VariablesTable";
+import { useRequestChainData } from "@/hooks/useRequestChainData";
 
 interface RequestChainEditorProps {
   chain?: RequestChain;
@@ -245,6 +246,9 @@ export function RequestChainEditor({
     Record<string, any>
   >({});
 
+  
+
+
   const [isExecuting, setIsExecuting] = useState(false);
   const [currentRequestIndex, setCurrentRequestIndex] = useState(-1);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
@@ -263,6 +267,8 @@ export function RequestChainEditor({
     retry: 2,
     retryDelay: 1000,
   });
+
+  // console.log("Request Details:", requestDetails);
 
   const handleDragStart = (index: number) => {
     dragItem.current = index;
@@ -385,17 +391,21 @@ export function RequestChainEditor({
     localStorage.setItem("extractionLogs", JSON.stringify(updatedChains));
 
     onSave(chainData);
+    // console.log("Chain saved:", chainData);
     return chainData;
   };
 
   const handleSave = async () => {
     const saved = await saveChain();
+   console.log("Chain saved:", saved);
     if (saved) {
       toast({
         title: "Chain Saved",
         description: "Your request chain has been saved successfully.",
       });
     }
+    return saved;
+
   };
   const getMethodColor = (method: string) => {
     const colors = {

@@ -2,9 +2,12 @@ import { ExtendedRequest } from '@/models/collection.model';
 import { API_REQUEST, API_REQUEST_CHAIN } from '@/config/apiRoutes';
 import { apiRequest } from '@/lib/queryClient';
 import {
+  ExecutionItem,
+  ExecutionResponse,
   RequestChain,
   RequestDetailResponse,
 } from '@/shared/types/requestChain.model';
+import axios from 'axios';
 
 const mockChains: RequestChain[] = [
   {
@@ -256,7 +259,7 @@ export async function getCollectionRequests(
 export async function saveRequestChain(
   chain: RequestChain
 ): Promise<RequestChain> {
-  console.log('saving chain', chain);
+  // console.log('🟡 Saving chain (request payload):', chain);
 
   const response = await apiRequest('POST', API_REQUEST_CHAIN, {
     body: JSON.stringify(chain),
@@ -269,7 +272,10 @@ export async function saveRequestChain(
     throw new Error(`HTTP error! status: ${response.status}`);
   }
 
-  return await response.json();
+  const savedChain: RequestChain = await response.json();
+  console.log('✅ Response from backend:', savedChain);
+
+  return savedChain;
 }
 
 // export async function getRequestChains(
@@ -326,3 +332,61 @@ export const getRequestChains = async (
 };
 
 // 8d9ea72f-7f74-4821-8909-e953066d9a8b
+
+
+
+
+// export const getRequestChainData = async (
+//   chainId: string
+// ): Promise<ExecutionResponse> => {
+//   try {
+//     const response = await apiRequest(
+//       'GET',
+//       `/request-chains/${chainId}/data`
+//     );
+
+//     if (!response.ok) {
+//       throw new Error(`HTTP error! status: ${response.status}`);
+//     }
+
+//     const rawData: ExecutionResponse = await response.json();
+
+//     // Parse nested JSON fields
+//     const items: ExecutionItem[] = rawData.items.map((item) => ({
+//       ...item,
+//       data: safeJsonParse(item.data),
+//       extractedVariables: safeJsonParse(item.extractedVariables) || [],
+//     }));
+
+//     return {
+//       ...rawData,
+//       items,
+//     };
+//   } catch (error: any) {
+//     throw new Error(error.message || 'Failed to fetch execution data');
+//   }
+// };
+
+// const safeJsonParse = (input: any) => {
+//   try {
+//     return typeof input === 'string' ? JSON.parse(input) : input;
+//   } catch {
+//     return null;
+//   }
+// };
+
+
+export const getRequestChainData = async (chainId: string) => {
+  try {
+    const response = await apiRequest(
+      'GET',
+      `${API_REQUEST_CHAIN}/${chainId}/data`
+    );
+    const data = await response.json();
+  } catch (error: any) {
+    throw new Error(error.message || 'Failed to fetch test suite');
+  }
+};
+
+
+

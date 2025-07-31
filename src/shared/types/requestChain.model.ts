@@ -174,3 +174,28 @@ export interface RequestDetailResponse {
   errorHandling?: string;
   enabled?: boolean;
 }
+
+
+export interface ExtractedVariable {
+  name: string;
+  path: string;
+  value: string;
+  status: 'success' | 'failed' | string;
+}
+
+export interface ExecutionItem {
+  id: string;
+  executionId: string;
+  chainRequestId: string;
+  requestChainId: string;
+  status: number;
+  data: string | object; // will parse to JSON in hook
+  extractedVariables: ExtractedVariable[]; // parsed from string
+}
+
+export interface ExecutionResponse {
+  page: number;
+  pageSize: number;
+  count: number;
+  items: ExecutionItem[];
+}
