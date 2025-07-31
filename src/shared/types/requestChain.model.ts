@@ -5,13 +5,14 @@ export interface RequestChain {
   description?: string;
   requests: APIRequest[];
   variables: Variable[];
-  schedule: Schedule;
+  schedule?: Schedule;
   enabled: boolean;
   createdAt: string;
   updatedAt: string;
   lastExecuted?: string;
   executionCount: number;
   successRate: number;
+  environment?: 'dev' | 'prod' | 'uat';
 }
 
 export interface APIRequest {
@@ -144,12 +145,13 @@ export interface ExecutionLog {
   extractedVariables?: Record<string, any>;
 }
 
-// export interface DataExtraction {
-//   variableName: string;
-//   source: 'response_body' | 'response_header' | 'response_cookie';
-//   path: string;
-//   transform?: string;
-// }
+export interface KeyValuePair {
+  id?: string;
+  key: string;
+  value: string;
+  enabled: boolean;
+  description?: string;
+}
 
 export interface RequestDetailResponse {
   id: string;
@@ -171,4 +173,29 @@ export interface RequestDetailResponse {
   retries?: number;
   errorHandling?: string;
   enabled?: boolean;
+}
+
+
+export interface ExtractedVariable {
+  name: string;
+  path: string;
+  value: string;
+  status: 'success' | 'failed' | string;
+}
+
+export interface ExecutionItem {
+  id: string;
+  executionId: string;
+  chainRequestId: string;
+  requestChainId: string;
+  status: number;
+  data: string | object; // will parse to JSON in hook
+  extractedVariables: ExtractedVariable[]; // parsed from string
+}
+
+export interface ExecutionResponse {
+  page: number;
+  pageSize: number;
+  count: number;
+  items: ExecutionItem[];
 }

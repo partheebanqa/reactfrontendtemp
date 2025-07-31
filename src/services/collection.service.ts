@@ -151,9 +151,9 @@ export const importCollectionFile = async (
 
     // Add metadata fields
     // formData.append("name", importCollection.name);
-    formData.append("workspaceId", importCollection.workspaceId);
-    formData.append("inputMethod", importCollection.inputMethod);
-    formData.append("specificationType", importCollection.specificationType);
+    formData.append('workspaceId', importCollection.workspaceId);
+    formData.append('inputMethod', importCollection.inputMethod);
+    formData.append('specificationType', importCollection.specificationType);
     formData.append('file', importCollection.file);
     // formData.append("url", importCollection.url);
     // formData.append("raw", importCollection.raw);
@@ -290,6 +290,7 @@ export const getCollectionsWithRequests = async (
     }
 
     const data: CollectionsResponse = await response.json();
+
     return data;
   } catch (error) {
     console.error('Error fetching collections with requests:', error);

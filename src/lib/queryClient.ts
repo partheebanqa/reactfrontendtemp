@@ -1,15 +1,15 @@
-import { validateCSPCompliance } from "@/security/cspConfig";
-import { QueryClient, QueryFunction } from "@tanstack/react-query";
-import { getEncryptedCookie, removeCookie } from "./cookieUtils";
-import { USER_COOKIE_NAME } from "./constants";
-import { API_LOGIN } from "@/config/apiRoutes";
-import { i } from "node_modules/vite/dist/node/types.d-aGj9QkWt";
-import { authActions, authStore } from "@/store/authStore";
+import { validateCSPCompliance } from '@/security/cspConfig';
+import { QueryClient, QueryFunction } from '@tanstack/react-query';
+import { getEncryptedCookie, removeCookie } from './cookieUtils';
+import { USER_COOKIE_NAME } from './constants';
+import { API_LOGIN } from '@/config/apiRoutes';
+import { i } from 'node_modules/vite/dist/node/types.d-aGj9QkWt';
+import { authActions, authStore } from '@/store/authStore';
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
     const response = await res.json();
-    throw new Error(response.error || response.message || "Request failed");
+    throw new Error(response.error || response.message || 'Request failed');
   }
 }
 
@@ -46,8 +46,8 @@ export async function apiRequest(
     // Create fetch options - don't modify the Content-Type header if it's multipart/form-data
     // The browser will automatically set the correct boundary
     const isMultipartFormData =
-      options?.headers?.["content-type"]?.includes("multipart/form-data") ||
-      options?.headers?.["Content-Type"]?.includes("multipart/form-data");
+      options?.headers?.['content-type']?.includes('multipart/form-data') ||
+      options?.headers?.['Content-Type']?.includes('multipart/form-data');
 
     let fetchOptions: RequestInit = {
       method,
@@ -63,11 +63,11 @@ export async function apiRequest(
         // For multipart/form-data, don't set the Content-Type header manually
         // The browser will set it with the correct boundary
         const headers = { ...options?.headers };
-        if (headers["content-type"]?.includes("multipart/form-data")) {
-          delete headers["content-type"];
+        if (headers['content-type']?.includes('multipart/form-data')) {
+          delete headers['content-type'];
         }
-        if (headers["Content-Type"]?.includes("multipart/form-data")) {
-          delete headers["Content-Type"];
+        if (headers['Content-Type']?.includes('multipart/form-data')) {
+          delete headers['Content-Type'];
         }
         fetchOptions.headers = headers;
       } else {
@@ -94,7 +94,7 @@ export async function apiRequest(
   }
 }
 
-type UnauthorizedBehavior = "returnNull" | "throw";
+type UnauthorizedBehavior = 'returnNull' | 'throw';
 export const getQueryFn: <T>(options: {
   on401: UnauthorizedBehavior;
 }) => QueryFunction<T> =
@@ -109,7 +109,7 @@ export const getQueryFn: <T>(options: {
       //   );
       // }
 
-      const res = await apiRequest("GET", url);
+      const res = await apiRequest('GET', url);
 
       if (res.status === 401) {
         removeCookie(USER_COOKIE_NAME);
@@ -118,8 +118,8 @@ export const getQueryFn: <T>(options: {
       await throwIfResNotOk(res);
       return await res.json();
     } catch (error) {
-      console.error("Query Function Error:", error);
-      if (unauthorizedBehavior === "throw") {
+      console.error('Query Function Error:', error);
+      if (unauthorizedBehavior === 'throw') {
         throw error;
       }
       return null; // Return null for 401 errors if configured to do so
@@ -129,7 +129,7 @@ export const getQueryFn: <T>(options: {
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      queryFn: getQueryFn({ on401: "throw" }),
+      queryFn: getQueryFn({ on401: 'throw' }),
       refetchInterval: false,
       refetchOnWindowFocus: false,
       retry: false,

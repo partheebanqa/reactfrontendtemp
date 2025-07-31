@@ -19,6 +19,7 @@ import {
   getAllTestSuites,
   deleteTestSuite,
   executeTestSuite,
+  duplicateTestSuite,
 } from '@/services/testSuites.service';
 import { TestSuite } from '@/shared/types/TestSuite.model';
 import { useWorkspace } from '@/hooks/useWorkspace';
@@ -43,6 +44,7 @@ const TestSuites: React.FC = () => {
     enabled: !!currentWorkspace?.id,
     queryFn: () => getAllTestSuites(currentWorkspace!.id),
   });
+
   useEffect(() => {
     if (error) {
       console.error('Error fetching test suites:', error);
@@ -60,11 +62,35 @@ const TestSuites: React.FC = () => {
         title: 'Deleted',
         description: 'Test suite deleted successfully.',
       });
-      queryClient.invalidateQueries({ queryKey: ['testSuites'] });
+
+      queryClient.invalidateQueries({
+        queryKey: ['/api/test-suites', currentWorkspace?.id],
+      });
     },
     onError: (error: any) => {
       toast({
         title: 'Delete failed',
+        description: error.message || 'Something went wrong.',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const cloneSuiteMutation = useMutation({
+    mutationFn: duplicateTestSuite,
+    onSuccess: () => {
+      toast({
+        title: 'Cloned',
+        description: 'Test suite Cloned successfully.',
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: ['/api/test-suites', currentWorkspace?.id],
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Clone failed',
         description: error.message || 'Something went wrong.',
         variant: 'destructive',
       });
@@ -82,8 +108,8 @@ const TestSuites: React.FC = () => {
     },
     onError: (error: any) => {
       toast({
-        title: 'Delete failed',
-        description: error.message || 'Something went wrong.',
+        title: 'Execute failed',
+        description: 'Execution failed. Please try again later.',
         variant: 'destructive',
       });
     },
@@ -91,6 +117,9 @@ const TestSuites: React.FC = () => {
 
   const handleDeleteSuite = (id: string) => {
     deleteSuiteMutation.mutate(id);
+  };
+  const handleClonseSuite = (id: string) => {
+    cloneSuiteMutation.mutate(id);
   };
 
   const handleExecuteSuite = (id: string) => {
@@ -119,12 +148,17 @@ const TestSuites: React.FC = () => {
     <div className='p-6 space-y-6'>
       <div className='flex items-center justify-between'>
         <h1 className='text-2xl font-bold'>Test Suites</h1>
-        <Button
+        {/* <Button
           className='bg-blue-600 hover:bg-blue-700'
           onClick={handleCreateSuite}
         >
           <Plus className='w-4 h-4 mr-2' />
           Create Test Suite
+        </Button> */}
+
+        <Button onClick={handleCreateSuite} className='gap-2'>
+          <Plus className='w-4 h-4' />
+          Create Suite
         </Button>
       </div>
 
@@ -153,10 +187,10 @@ const TestSuites: React.FC = () => {
           </SelectContent>
         </Select>
 
-        <Button className='bg-green-600 hover:bg-green-700'>
+        {/* <Button className='bg-green-600 hover:bg-green-700'>
           <Play className='w-4 h-4 mr-2' />
           Run All Suites
-        </Button>
+        </Button> */}
       </div>
 
       <div className='bg-white rounded-lg border'>
@@ -173,6 +207,7 @@ const TestSuites: React.FC = () => {
                 onEdit={handleEditSuite}
                 onDelete={handleDeleteSuite}
                 onExecute={handleExecuteSuite}
+                onClone={handleClonseSuite}
               />
             ))}
           </div>

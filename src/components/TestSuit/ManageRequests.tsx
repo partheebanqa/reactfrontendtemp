@@ -4,6 +4,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Download, Trash2, Settings } from 'lucide-react';
 import { TestCaseSelectionModal } from './TestCaseSelectionModal';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import { RefreshCcw } from 'lucide-react';
 
 interface Request {
   id: string;
@@ -50,6 +57,8 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
   onDeleteRequest,
   onUpdateTestCases,
 }) => {
+  console.log('requests123:', requests);
+
   const [selectedRequest, setSelectedRequest] = useState<Request | null>(null);
 
   const [isTestCaseModalOpen, setIsTestCaseModalOpen] = useState(false);
@@ -72,12 +81,20 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
       <CardHeader>
         <div className='flex items-center justify-between'>
           <CardTitle>Requests ({requests.length})</CardTitle>
-          <Button variant='outline' onClick={onImport}>
-            <Download className='w-4 h-4 mr-2' />
-            Import More Requests
-          </Button>
+
+          <div className='flex items-center space-x-2'>
+            <Button variant='outline'>
+              <RefreshCcw className='w-4 h-4 mr-2' />
+              Refresh
+            </Button>
+            <Button variant='outline' onClick={onImport}>
+              <Download className='w-4 h-4 mr-2' />
+              Import More Requests
+            </Button>
+          </div>
         </div>
       </CardHeader>
+
       <CardContent>
         <div className='space-y-3'>
           {requests.map((request) => (
@@ -95,54 +112,68 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
                     <p className='text-sm text-muted-foreground mt-1'>
                       {request.endpoint}
                     </p>
-                    {request.description && (
+                    {/* {request.description && (
                       <p className='text-sm text-muted-foreground mt-1'>
                         {request.description}
                       </p>
-                    )}
+                    )} */}
                   </div>
                 </div>
                 <div className='flex items-center space-x-2'>
-                  <Button
-                    variant='ghost'
-                    size='sm'
-                    onClick={() => handleConfigureTestCases(request)}
-                    className='text-muted-foreground hover:text-primary hover:bg-primary/10'
-                  >
-                    {testSuiteId && <Settings className='w-4 h-4' />}
-                  </Button>
-                  <Button
-                    variant='ghost'
-                    size='sm'
-                    onClick={() => onDeleteRequest(request.id)}
-                    className='text-muted-foreground hover:text-destructive hover:bg-destructive/10'
-                  >
-                    <Trash2 className='w-4 h-4' />
-                  </Button>
-                </div>
-              </div>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant='ghost'
+                          size='sm'
+                          onClick={() => handleConfigureTestCases(request)}
+                          className='text-muted-foreground hover:text-primary hover:bg-primary/10'
+                        >
+                          {testSuiteId && <Settings className='w-4 h-4' />}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Configuration</TooltipContent>
+                    </Tooltip>
 
-              <div className='mt-4'>
-                <h5 className='text-sm font-medium mb-2'>Test Cases:</h5>
-                <div className='flex items-center space-x-4'>
-                  {(request.selectedTestCases?.length || 0) > 0 && (
-                    <div className='flex items-center space-x-1'>
-                      <span className='text-sm text-muted-foreground'>
-                        🧪 Functional
-                      </span>
-                      <span className='text-sm font-medium'>
-                        {request.selectedTestCases?.length || 0}
-                      </span>
-                    </div>
-                  )}
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant='ghost'
+                          size='sm'
+                          onClick={() => onDeleteRequest(request.id)}
+                          className='text-muted-foreground hover:text-destructive hover:bg-destructive/10'
+                        >
+                          <Trash2 className='w-4 h-4' />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Delete</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </div>
-                <p className='text-sm text-muted-foreground mt-1'>
-                  Total:{' '}
-                  <span className='font-medium'>
-                    {request.selectedTestCases?.length || 0} test cases
-                  </span>
-                </p>
               </div>
+              {testSuiteId && (
+                <div className='mt-4'>
+                  <h5 className='text-sm font-medium mb-2'>Test Cases:</h5>
+                  <div className='flex items-center space-x-4'>
+                    {(request.selectedTestCases?.length || 0) > 0 && (
+                      <div className='flex items-center space-x-1'>
+                        <span className='text-sm text-muted-foreground'>
+                          🧪 Functional
+                        </span>
+                        <span className='text-sm font-medium'>
+                          {request.selectedTestCases?.length || 0}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  <p className='text-sm text-muted-foreground mt-1'>
+                    Total:{' '}
+                    <span className='font-medium'>
+                      {request.selectedTestCases?.length || 0} test cases
+                    </span>
+                  </p>
+                </div>
+              )}
             </div>
           ))}
         </div>

@@ -14,4 +14,5 @@ export interface CreateTestSuitePayload {
   name: string;
   description?: string;
   requestIds: string[];
+  environmentId?: string;
 }

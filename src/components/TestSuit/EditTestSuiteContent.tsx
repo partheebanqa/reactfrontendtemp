@@ -7,6 +7,13 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, Download } from 'lucide-react';
 import { ManageRequests } from '@/components/TestSuit/ManageRequests';
@@ -36,6 +43,41 @@ interface Request {
   selectedTestCases?: string[];
 }
 
+interface Environment {
+  id: string;
+  name: string;
+  baseUrl: string;
+}
+
+// Mock environment data
+const mockEnvironments: Environment[] = [
+  {
+    id: 'development',
+    name: 'Development',
+    baseUrl: 'https://api-dev.example.com',
+  },
+  {
+    id: 'staging',
+    name: 'Staging',
+    baseUrl: 'https://api-staging.example.com',
+  },
+  {
+    id: 'production',
+    name: 'Production',
+    baseUrl: 'https://api.example.com',
+  },
+  {
+    id: 'local',
+    name: 'Local',
+    baseUrl: 'http://localhost:3000',
+  },
+  {
+    id: 'qa',
+    name: 'QA',
+    baseUrl: 'https://api-qa.example.com',
+  },
+];
+
 const EditTestSuiteContent: React.FC = () => {
   const params = useParams();
   const [location, setLocation] = useLocation();
@@ -54,6 +96,7 @@ const EditTestSuiteContent: React.FC = () => {
 
   const [testSuiteName, setTestSuiteName] = useState('');
   const [description, setDescription] = useState('');
+  const [selectedEnvironment, setSelectedEnvironment] = useState<string>('');
   const [requests, setRequests] = useState<Request[]>([]);
   const [originalRequestIds, setOriginalRequestIds] = useState<string[]>([]);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
@@ -76,7 +119,8 @@ const EditTestSuiteContent: React.FC = () => {
     onSuccess: (data) => {
       toast({
         title: 'Test suite created',
-        description: 'Your test suite has been created successfully.',
+        description:
+          'Test suite created. Test cases are in progress—please wait a few minutes',
       });
       queryClient.invalidateQueries({
         queryKey: ['/api/test-suites', currentWorkspace?.id],
@@ -114,6 +158,9 @@ const EditTestSuiteContent: React.FC = () => {
       });
       queryClient.invalidateQueries({ queryKey: ['testSuites'] });
       queryClient.invalidateQueries({ queryKey: ['testSuite', id] });
+
+      // ✅ Redirect after successful update
+      setLocation('/test-suites');
     },
     onError: (error: any) => {
       toast({
@@ -261,20 +308,15 @@ const EditTestSuiteContent: React.FC = () => {
   // Get imported request IDs to pass to ImportModal
   const importedRequestIds = requests.map((request) => request.id);
 
+  const selectedEnvData = mockEnvironments.find(
+    (env) => env.id === selectedEnvironment
+  );
+
   return (
     <div className='min-h-screen bg-background'>
       <div className='bg-card border-b px-6 py-4'>
         <div className='flex items-center justify-between'>
           <div className='flex items-center space-x-4'>
-            <Button
-              variant='ghost'
-              size='sm'
-              onClick={handleBack}
-              className='text-muted-foreground hover:text-foreground'
-            >
-              <ArrowLeft className='w-4 h-4 mr-2' />
-              Back
-            </Button>
             <div>
               <h1 className='text-2xl font-semibold'>
                 {isCreateMode ? 'Create Test Suite' : 'Edit Test Suite'}
@@ -300,7 +342,12 @@ const EditTestSuiteContent: React.FC = () => {
             <Button variant='outline' onClick={handleBack}>
               Cancel
             </Button>
-            <Button onClick={handleSaveChanges} disabled={isSaving}>
+            <Button
+              onClick={handleSaveChanges}
+              disabled={
+                isSaving || !testSuiteName.trim() || requests.length === 0
+              }
+            >
               {isSaving
                 ? isCreateMode
                   ? 'Creating...'
@@ -339,6 +386,36 @@ const EditTestSuiteContent: React.FC = () => {
                 placeholder='Enter test suite description'
                 rows={3}
               />
+            </div>
+            <div>
+              <label className='block text-sm font-medium mb-2'>
+                Environment <span className='text-destructive'>*</span>
+              </label>
+              <Select
+                value={selectedEnvironment}
+                onValueChange={setSelectedEnvironment}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder='Select environment' />
+                </SelectTrigger>
+                <SelectContent>
+                  {mockEnvironments.map((env) => (
+                    <SelectItem key={env.id} value={env.id}>
+                      <div className='flex flex-col'>
+                        <span className='font-medium'>{env.name}</span>
+                        <span className='text-sm text-muted-foreground'>
+                          {env.baseUrl}
+                        </span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {selectedEnvData && (
+                <p className='text-sm text-muted-foreground mt-1'>
+                  Base URL: {selectedEnvData.baseUrl}
+                </p>
+              )}
             </div>
           </CardContent>
         </Card>

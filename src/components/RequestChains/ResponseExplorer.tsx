@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   ChevronDown,
   ChevronRight,
@@ -9,8 +9,14 @@ import {
   Cookie,
   CheckCircle,
   Trash2,
-} from 'lucide-react';
-import { DataExtraction } from '@/shared/types/requestChain.model';
+} from "lucide-react";
+import { DataExtraction } from "@/shared/types/requestChain.model";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "../ui/tooltip";
 
 interface ResponseExplorerProps {
   response: {
@@ -23,13 +29,15 @@ interface ResponseExplorerProps {
   extractedVariables: Record<string, any>;
   existingExtractions: DataExtraction[];
   onRemoveExtraction: (variableName: string) => void;
+  handleCopy: (value: string) => void;
+  copied?: boolean;
 }
 
 interface JsonNode {
   key: string;
   value: any;
   path: string;
-  type: 'object' | 'array' | 'string' | 'number' | 'boolean' | 'null';
+  type: "object" | "array" | "string" | "number" | "boolean" | "null";
   level: number;
 }
 
@@ -39,38 +47,40 @@ export function ResponseExplorer({
   extractedVariables,
   existingExtractions,
   onRemoveExtraction,
+  handleCopy,
+  copied,
 }: ResponseExplorerProps) {
-  console.log('Extracted Variables:', extractedVariables);
+  // console.log('Extracted Variables:', extractedVariables);
 
-  const [activeTab, setActiveTab] = useState<'body' | 'headers' | 'cookies'>(
-    'body'
+  const [activeTab, setActiveTab] = useState<"body" | "headers" | "cookies">(
+    "body"
   );
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(
-    new Set(['root'])
+    new Set(["root"])
   );
-  const [selectedPath, setSelectedPath] = useState<string>('');
+  const [selectedPath, setSelectedPath] = useState<string>("");
   const [extractionModal, setExtractionModal] = useState<{
     isOpen: boolean;
-    source: 'response_body' | 'response_header' | 'response_cookie';
+    source: "response_body" | "response_header" | "response_cookie";
     path: string;
     value: any;
     suggestedName: string;
   } | null>(null);
-  const [variableName, setVariableName] = useState<string>('');
+  const [variableName, setVariableName] = useState<string>("");
 
   // Sanitize variable name: remove special characters, convert spaces to underscores
   const sanitizeVariableName = (name: string): string => {
     return name
-      .replace(/\s+/g, '_') // Convert spaces to underscores
-      .replace(/[^a-zA-Z0-9_]/g, '') // Remove special characters, keep only alphanumeric and underscores
-      .replace(/^_+|_+$/g, '') // Remove leading/trailing underscores
-      .replace(/_+/g, '_'); // Replace multiple underscores with single underscore
+      .replace(/\s+/g, "_") // Convert spaces to underscores
+      .replace(/[^a-zA-Z0-9_]/g, "") // Remove special characters, keep only alphanumeric and underscores
+      .replace(/^_+|_+$/g, "") // Remove leading/trailing underscores
+      .replace(/_+/g, "_"); // Replace multiple underscores with single underscore
   };
 
   // Parse JSON response into explorable nodes
   const parseJsonToNodes = (
     obj: any,
-    parentPath = '',
+    parentPath = "",
     level = 0
   ): JsonNode[] => {
     const nodes: JsonNode[] = [];
@@ -78,10 +88,10 @@ export function ResponseExplorer({
     if (obj === null) {
       return [
         {
-          key: 'null',
+          key: "null",
           value: null,
           path: parentPath,
-          type: 'null',
+          type: "null",
           level,
         },
       ];
@@ -93,45 +103,45 @@ export function ResponseExplorer({
           ? `${parentPath}[${index}]`
           : `[${index}]`;
         const itemType = Array.isArray(item)
-          ? 'array'
+          ? "array"
           : item === null
-          ? 'null'
-          : typeof item === 'object'
-          ? 'object'
+          ? "null"
+          : typeof item === "object"
+          ? "object"
           : typeof item;
 
         nodes.push({
           key: `[${index}]`,
           value: item,
           path: currentPath,
-          type: itemType as JsonNode['type'],
+          type: itemType as JsonNode["type"],
           level,
         });
 
-        if (typeof item === 'object' && item !== null) {
+        if (typeof item === "object" && item !== null) {
           nodes.push(...parseJsonToNodes(item, currentPath, level + 1));
         }
       });
-    } else if (typeof obj === 'object') {
+    } else if (typeof obj === "object") {
       Object.entries(obj).forEach(([key, value]) => {
         const currentPath = parentPath ? `${parentPath}.${key}` : key;
         const valueType = Array.isArray(value)
-          ? 'array'
+          ? "array"
           : value === null
-          ? 'null'
-          : typeof value === 'object'
-          ? 'object'
+          ? "null"
+          : typeof value === "object"
+          ? "object"
           : typeof value;
 
         nodes.push({
           key,
           value,
           path: currentPath,
-          type: valueType as JsonNode['type'],
+          type: valueType as JsonNode["type"],
           level,
         });
 
-        if (typeof value === 'object' && value !== null) {
+        if (typeof value === "object" && value !== null) {
           nodes.push(...parseJsonToNodes(value, currentPath, level + 1));
         }
       });
@@ -151,15 +161,15 @@ export function ResponseExplorer({
   };
 
   const handleExtractClick = (
-    source: DataExtraction['source'],
+    source: DataExtraction["source"],
     path: string,
     value: any
   ) => {
     const suggestedName =
       path
-        .split('.')
+        .split(".")
         .pop()
-        ?.replace(/[\[\]]/g, '') || 'extractedValue';
+        ?.replace(/[\[\]]/g, "") || "extractedValue";
 
     const sanitizedName = sanitizeVariableName(suggestedName);
     setVariableName(sanitizedName);
@@ -192,7 +202,7 @@ export function ResponseExplorer({
 
       onExtractVariable(extraction);
       setExtractionModal(null);
-      setVariableName('');
+      setVariableName("");
     }
   };
 
@@ -200,7 +210,7 @@ export function ResponseExplorer({
     if (!isVisible) return null;
 
     const isExpanded = expandedNodes.has(node.path);
-    const hasChildren = node.type === 'object' || node.type === 'array';
+    const hasChildren = node.type === "object" || node.type === "array";
     const isAlreadyExtracted = existingExtractions.some(
       (e) => e.path === node.path
     );
@@ -208,41 +218,41 @@ export function ResponseExplorer({
     return (
       <div
         key={node.path}
-        className='group hover:bg-blue-50 transition-colors'
+        className="group hover:bg-blue-50 transition-colors"
         style={{ marginLeft: `${node.level * 20}px` }}
       >
-        <div className='flex items-center py-1 px-2 rounded'>
-          <div className='flex items-center flex-1 min-w-0'>
+        <div className="flex items-center py-1 px-2 rounded">
+          <div className="flex items-center flex-1 min-w-0">
             {hasChildren && (
               <button
                 onClick={() => toggleNode(node.path)}
-                className='p-1 hover:bg-gray-200 rounded mr-1'
+                className="p-1 hover:bg-gray-200 rounded mr-1"
               >
                 {isExpanded ? (
-                  <ChevronDown className='w-3 h-3 text-gray-500' />
+                  <ChevronDown className="w-3 h-3 text-gray-500" />
                 ) : (
-                  <ChevronRight className='w-3 h-3 text-gray-500' />
+                  <ChevronRight className="w-3 h-3 text-gray-500" />
                 )}
               </button>
             )}
 
-            <span className='text-blue-600 font-medium mr-2 text-sm'>
+            <span className="text-blue-600 font-medium mr-2 text-sm">
               {node.key}
             </span>
 
             {!hasChildren && (
               <span
                 className={`text-sm font-mono ${
-                  node.type === 'string'
-                    ? 'text-green-600'
-                    : node.type === 'number'
-                    ? 'text-purple-600'
-                    : node.type === 'boolean'
-                    ? 'text-orange-600'
-                    : 'text-gray-600'
+                  node.type === "string"
+                    ? "text-green-600"
+                    : node.type === "number"
+                    ? "text-purple-600"
+                    : node.type === "boolean"
+                    ? "text-orange-600"
+                    : "text-gray-600"
                 }`}
               >
-                {node.type === 'string'
+                {node.type === "string"
                   ? `"${node.value}"`
                   : String(node.value)}
               </span>
@@ -250,31 +260,31 @@ export function ResponseExplorer({
           </div>
 
           {!hasChildren && (
-            <div className='flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity'>
+            <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
               <button
                 onClick={() =>
                   navigator.clipboard.writeText(String(node.value))
                 }
-                className='p-1 text-gray-400 hover:text-gray-600 rounded'
-                title='Copy value'
+                className="p-1 text-gray-400 hover:text-gray-600 rounded"
+                title="Copy value"
               >
-                <Copy className='w-3 h-3' />
+                <Copy className="w-3 h-3" />
               </button>
 
               {isAlreadyExtracted ? (
-                <div className='flex items-center space-x-1 px-2 py-1 bg-green-100 text-green-700 rounded text-xs'>
-                  <CheckCircle className='w-3 h-3' />
+                <div className="flex items-center space-x-1 px-2 py-1 bg-green-100 text-green-700 rounded text-xs">
+                  <CheckCircle className="w-3 h-3" />
                   <span>Extracted</span>
                 </div>
               ) : (
                 <button
                   onClick={() =>
-                    handleExtractClick('response_body', node.path, node.value)
+                    handleExtractClick("response_body", node.path, node.value)
                   }
-                  className='px-2 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 transition-colors'
-                  title='Extract as variable'
+                  className="px-2 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 transition-colors"
+                  title="Extract as variable"
                 >
-                  <Plus className='w-3 h-3 mr-1 inline' />
+                  <Plus className="w-3 h-3 mr-1 inline" />
                   Extract
                 </button>
               )}
@@ -291,12 +301,12 @@ export function ResponseExplorer({
       const nodes = parseJsonToNodes(jsonData);
 
       return (
-        <div className='space-y-1'>
+        <div className="space-y-1">
           {nodes.map((node) => {
             const parentPath =
-              node.path.substring(0, node.path.lastIndexOf('.')) ||
-              node.path.substring(0, node.path.lastIndexOf('[')) ||
-              'root';
+              node.path.substring(0, node.path.lastIndexOf(".")) ||
+              node.path.substring(0, node.path.lastIndexOf("[")) ||
+              "root";
             const isVisible = node.level === 0 || expandedNodes.has(parentPath);
             return renderJsonValue(node, isVisible);
           })}
@@ -304,9 +314,9 @@ export function ResponseExplorer({
       );
     } catch (error) {
       return (
-        <div className='p-4 bg-gray-50 rounded border'>
-          <p className='text-gray-600 text-sm'>Response is not valid JSON</p>
-          <pre className='mt-2 text-xs text-gray-700 whitespace-pre-wrap'>
+        <div className="p-4 bg-gray-50 rounded border">
+          <p className="text-gray-600 text-sm">Response is not valid JSON</p>
+          <pre className="mt-2 text-xs text-gray-700 whitespace-pre-wrap">
             {response.body}
           </pre>
         </div>
@@ -315,49 +325,49 @@ export function ResponseExplorer({
   };
 
   const renderHeadersTab = () => (
-    <div className='space-y-2'>
+    <div className="space-y-2">
       {Object.entries(response.headers).map(([key, value]) => {
         const isAlreadyExtracted = existingExtractions.some(
-          (e) => e.source === 'response_header' && e.path === key
+          (e) => e.source === "response_header" && e.path === key
         );
 
         return (
           <div
             key={key}
-            className='group flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50'
+            className="group flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50"
           >
-            <div className='flex-1 min-w-0'>
-              <div className='flex items-center space-x-2'>
-                <Hash className='w-4 h-4 text-gray-400' />
-                <span className='font-medium text-gray-900 text-sm'>{key}</span>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center space-x-2">
+                <Hash className="w-4 h-4 text-gray-400" />
+                <span className="font-medium text-gray-900 text-sm">{key}</span>
               </div>
-              <p className='text-sm text-gray-600 font-mono mt-1 break-all'>
+              <p className="text-sm text-gray-600 font-mono mt-1 break-all">
                 {value}
               </p>
             </div>
 
-            <div className='flex items-center space-x-2 ml-4'>
+            <div className="flex items-center space-x-2 ml-4">
               <button
                 onClick={() => navigator.clipboard.writeText(value)}
-                className='p-1 text-gray-400 hover:text-gray-600 rounded'
-                title='Copy value'
+                className="p-1 text-gray-400 hover:text-gray-600 rounded"
+                title="Copy value"
               >
-                <Copy className='w-4 h-4' />
+                <Copy className="w-4 h-4" />
               </button>
 
               {isAlreadyExtracted ? (
-                <div className='flex items-center space-x-1 px-2 py-1 bg-green-100 text-green-700 rounded text-xs'>
-                  <CheckCircle className='w-3 h-3' />
+                <div className="flex items-center space-x-1 px-2 py-1 bg-green-100 text-green-700 rounded text-xs">
+                  <CheckCircle className="w-3 h-3" />
                   <span>Extracted</span>
                 </div>
               ) : (
                 <button
                   onClick={() =>
-                    handleExtractClick('response_header', key, value)
+                    handleExtractClick("response_header", key, value)
                   }
-                  className='px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 transition-colors'
+                  className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 transition-colors"
                 >
-                  <Plus className='w-4 h-4 mr-1 inline' />
+                  <Plus className="w-4 h-4 mr-1 inline" />
                   Extract
                 </button>
               )}
@@ -369,52 +379,52 @@ export function ResponseExplorer({
   );
 
   const renderCookiesTab = () => (
-    <div className='space-y-2'>
+    <div className="space-y-2">
       {response.cookies && Object.keys(response.cookies).length > 0 ? (
         Object.entries(response.cookies).map(([key, value]) => {
           const isAlreadyExtracted = existingExtractions.some(
-            (e) => e.source === 'response_cookie' && e.path === key
+            (e) => e.source === "response_cookie" && e.path === key
           );
 
           return (
             <div
               key={key}
-              className='group flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50'
+              className="group flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50"
             >
-              <div className='flex-1 min-w-0'>
-                <div className='flex items-center space-x-2'>
-                  <Cookie className='w-4 h-4 text-gray-400' />
-                  <span className='font-medium text-gray-900 text-sm'>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center space-x-2">
+                  <Cookie className="w-4 h-4 text-gray-400" />
+                  <span className="font-medium text-gray-900 text-sm">
                     {key}
                   </span>
                 </div>
-                <p className='text-sm text-gray-600 font-mono mt-1 break-all'>
+                <p className="text-sm text-gray-600 font-mono mt-1 break-all">
                   {value}
                 </p>
               </div>
 
-              <div className='flex items-center space-x-2 ml-4'>
+              <div className="flex items-center space-x-2 ml-4">
                 <button
                   onClick={() => navigator.clipboard.writeText(value)}
-                  className='p-1 text-gray-400 hover:text-gray-600 rounded'
-                  title='Copy value'
+                  className="p-1 text-gray-400 hover:text-gray-600 rounded"
+                  title="Copy value"
                 >
-                  <Copy className='w-4 h-4' />
+                  <Copy className="w-4 h-4" />
                 </button>
 
                 {isAlreadyExtracted ? (
-                  <div className='flex items-center space-x-1 px-2 py-1 bg-green-100 text-green-700 rounded text-xs'>
-                    <CheckCircle className='w-3 h-3' />
+                  <div className="flex items-center space-x-1 px-2 py-1 bg-green-100 text-green-700 rounded text-xs">
+                    <CheckCircle className="w-3 h-3" />
                     <span>Extracted</span>
                   </div>
                 ) : (
                   <button
                     onClick={() =>
-                      handleExtractClick('response_cookie', key, value)
+                      handleExtractClick("response_cookie", key, value)
                     }
-                    className='px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 transition-colors'
+                    className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 transition-colors"
                   >
-                    <Plus className='w-4 h-4 mr-1 inline' />
+                    <Plus className="w-4 h-4 mr-1 inline" />
                     Extract
                   </button>
                 )}
@@ -423,8 +433,8 @@ export function ResponseExplorer({
           );
         })
       ) : (
-        <div className='text-center py-8 text-gray-500'>
-          <Cookie className='w-12 h-12 text-gray-300 mx-auto mb-3' />
+        <div className="text-center py-8 text-gray-500">
+          <Cookie className="w-12 h-12 text-gray-300 mx-auto mb-3" />
           <p>No cookies found in response</p>
         </div>
       )}
@@ -432,15 +442,15 @@ export function ResponseExplorer({
   );
 
   return (
-    <div className='space-y-6'>
+    <div className="space-y-6">
       {/* Response Explorer */}
-      <div className='bg-white border border-gray-200 rounded-lg'>
-        <div className='border-b border-gray-200'>
-          <nav className='flex space-x-8 px-6'>
+      <div className="bg-white border border-gray-200 rounded-lg">
+        <div className="border-b border-gray-200">
+          <nav className="flex space-x-8 px-6">
             {[
-              { id: 'body', label: 'Response Body', icon: Code },
-              { id: 'headers', label: 'Headers', icon: Hash },
-              { id: 'cookies', label: 'Cookies', icon: Cookie },
+              { id: "body", label: "Response Body", icon: Code },
+              { id: "headers", label: "Headers", icon: Hash },
+              { id: "cookies", label: "Cookies", icon: Cookie },
             ].map((tab) => {
               const Icon = tab.icon;
               return (
@@ -449,11 +459,11 @@ export function ResponseExplorer({
                   onClick={() => setActiveTab(tab.id as typeof activeTab)}
                   className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors flex items-center space-x-2 ${
                     activeTab === tab.id
-                      ? 'border-blue-500 text-blue-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      ? "border-blue-500 text-blue-600"
+                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                   }`}
                 >
-                  <Icon className='w-4 h-4' />
+                  <Icon className="w-4 h-4" />
                   <span>{tab.label}</span>
                 </button>
               );
@@ -461,26 +471,26 @@ export function ResponseExplorer({
           </nav>
         </div>
 
-        <div className='p-6 max-h-96 overflow-auto'>
-          {activeTab === 'body' && renderJsonTree()}
-          {activeTab === 'headers' && renderHeadersTab()}
-          {activeTab === 'cookies' && renderCookiesTab()}
+        <div className="p-6 max-h-96 overflow-auto">
+          {activeTab === "body" && renderJsonTree()}
+          {activeTab === "headers" && renderHeadersTab()}
+          {activeTab === "cookies" && renderCookiesTab()}
         </div>
       </div>
 
       {/* Extracted Variables Preview */}
       {Object.keys(extractedVariables).length > 0 && (
-        <div className='bg-green-50 border border-green-200 rounded-lg p-6'>
-          <div className='flex items-center justify-between mb-4'>
-            <h4 className='font-medium text-green-900 flex items-center space-x-2'>
-              <CheckCircle className='w-5 h-5' />
+        <div className="bg-green-50 border border-green-200 rounded-lg p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h4 className="font-medium text-green-900 flex items-center space-x-2">
+              <CheckCircle className="w-5 h-5" />
               <span>
                 Extracted Variables ({Object.keys(extractedVariables).length})
               </span>
             </h4>
           </div>
 
-          <div className='grid grid-cols-1 md:grid-cols-2 gap-3'>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {Object.entries(extractedVariables).map(([name, value]) => {
               const extraction = existingExtractions.find(
                 (e) => e.variableName === name
@@ -488,32 +498,51 @@ export function ResponseExplorer({
               return (
                 <div
                   key={name}
-                  className='bg-white border border-green-200 rounded-lg p-3'
+                  className="bg-white border border-green-200 rounded-lg p-3"
                 >
-                  <div className='flex items-center justify-between mb-2'>
-                    <span className='font-medium text-gray-900'>{name}</span>
-                    <div className='flex items-center space-x-2'>
-                      <span className='text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded'>
-                        {extraction?.source?.replace('_', ' ')}
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center space-x-2">
+                      <span className="font-medium text-gray-900">{name}</span>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            onClick={() => handleCopy(name)}
+                            className="p-1 text-blue-600 hover:bg-blue-50 rounded"
+                            
+                          >
+                            {copied ? (
+                              <Copy className="w-3 h-3 text-green-600" />
+                            ) : (
+                              <Copy className="w-3 h-3" />
+                            )}
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent>Copy variable name</TooltipContent>
+                      </Tooltip>
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                      <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                        {extraction?.source?.replace("_", " ")}
                       </span>
                       <button
                         onClick={() => onRemoveExtraction(name)}
-                        className='p-1 text-red-600 hover:bg-red-50 rounded'
-                        title='Remove extraction'
+                        className="p-1 text-red-600 hover:bg-red-50 rounded"
+                        title="Remove extraction"
                       >
-                        <Trash2 className='w-3 h-3' />
+                        <Trash2 className="w-3 h-3" />
                       </button>
                     </div>
                   </div>
-                  <div className='text-sm'>
-                    <p className='text-gray-600 mb-1'>
-                      Path:{' '}
-                      <code className='bg-gray-100 px-1 rounded'>
+                  <div className="text-sm">
+                    <p className="text-gray-600 mb-1">
+                      Path:{" "}
+                      <code className="bg-gray-100 px-1 rounded">
                         {extraction?.path}
                       </code>
                     </p>
-                    <p className='text-gray-900 font-mono bg-gray-50 p-2 rounded border text-xs break-all'>
-                      {typeof value === 'object'
+                    <p className="text-gray-900 font-mono bg-gray-50 p-2 rounded border text-xs break-all">
+                      {typeof value === "object"
                         ? JSON.stringify(value)
                         : String(value)}
                     </p>
@@ -523,11 +552,11 @@ export function ResponseExplorer({
             })}
           </div>
 
-          <div className='mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg'>
-            <p className='text-sm text-blue-800'>
+          <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-sm text-blue-800">
               <strong>💡 Usage:</strong> Use these variables in other requests
-              with the syntax:{' '}
-              <code className='bg-blue-100 px-1 rounded'>{`{{variableName}}`}</code>
+              with the syntax:{" "}
+              <code className="bg-blue-100 px-1 rounded">{`{{variableName}}`}</code>
             </p>
           </div>
         </div>
@@ -535,20 +564,20 @@ export function ResponseExplorer({
 
       {/* Extraction Modal */}
       {extractionModal && (
-        <div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50'>
-          <div className='bg-white rounded-xl shadow-2xl w-full max-w-md'>
-            <div className='p-6 border-b border-gray-200'>
-              <h3 className='text-lg font-semibold text-gray-900'>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
+            <div className="p-6 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">
                 Extract Variable
               </h3>
-              <p className='text-sm text-gray-500 mt-1'>
+              <p className="text-sm text-gray-500 mt-1">
                 Configure how to extract and store this value
               </p>
             </div>
 
-            <div className='p-6 space-y-4'>
+            <div className="p-6 space-y-4">
               <div>
-                <label className='block text-sm font-medium text-gray-700 mb-2'>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Variable Name
                 </label>
                 <div>
@@ -556,60 +585,60 @@ export function ResponseExplorer({
                     E_
                   </div> */}
                   <input
-                    type='text'
+                    type="text"
                     value={variableName}
                     onChange={(e) => handleVariableNameChange(e.target.value)}
-                    className='w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 font-mono text-sm'
-                    placeholder='variable_name'
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 font-mono text-sm"
+                    placeholder="variable_name"
                   />
                 </div>
-                <p className='text-xs text-gray-500 mt-1'>
+                <p className="text-xs text-gray-500 mt-1">
                   Only letters, numbers, and underscores allowed. Spaces will be
                   converted to underscores.
                 </p>
               </div>
 
               <div>
-                <label className='block text-sm font-medium text-gray-700 mb-2'>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Source
                 </label>
-                <div className='flex items-center space-x-2 p-3 bg-gray-50 rounded-lg'>
-                  {extractionModal.source === 'response_body' && (
-                    <Code className='w-4 h-4 text-blue-600' />
+                <div className="flex items-center space-x-2 p-3 bg-gray-50 rounded-lg">
+                  {extractionModal.source === "response_body" && (
+                    <Code className="w-4 h-4 text-blue-600" />
                   )}
-                  {extractionModal.source === 'response_header' && (
-                    <Hash className='w-4 h-4 text-blue-600' />
+                  {extractionModal.source === "response_header" && (
+                    <Hash className="w-4 h-4 text-blue-600" />
                   )}
-                  {extractionModal.source === 'response_cookie' && (
-                    <Cookie className='w-4 h-4 text-blue-600' />
+                  {extractionModal.source === "response_cookie" && (
+                    <Cookie className="w-4 h-4 text-blue-600" />
                   )}
-                  <span className='text-sm text-gray-700'>
+                  <span className="text-sm text-gray-700">
                     {extractionModal.source
-                      .replace('_', ' ')
+                      .replace("_", " ")
                       .replace(/\b\w/g, (l) => l.toUpperCase())}
                   </span>
                 </div>
               </div>
 
               <div>
-                <label className='block text-sm font-medium text-gray-700 mb-2'>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Path
                 </label>
                 <input
-                  type='text'
+                  type="text"
                   value={extractionModal.path}
                   readOnly
-                  className='w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 font-mono text-sm'
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 font-mono text-sm"
                 />
               </div>
 
               <div>
-                <label className='block text-sm font-medium text-gray-700 mb-2'>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Preview Value
                 </label>
-                <div className='p-3 bg-gray-50 rounded-lg border'>
-                  <code className='text-sm text-gray-900'>
-                    {typeof extractionModal.value === 'object'
+                <div className="p-3 bg-gray-50 rounded-lg border">
+                  <code className="text-sm text-gray-900">
+                    {typeof extractionModal.value === "object"
                       ? JSON.stringify(extractionModal.value, null, 2)
                       : String(extractionModal.value)}
                   </code>
@@ -617,43 +646,43 @@ export function ResponseExplorer({
               </div>
 
               <div>
-                <label className='block text-sm font-medium text-gray-700 mb-2'>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Transform (Optional)
                 </label>
                 <input
-                  type='text'
-                  id='transform'
-                  className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm'
-                  placeholder='e.g., value.toUpperCase(), parseInt(value)'
+                  type="text"
+                  id="transform"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
+                  placeholder="e.g., value.toUpperCase(), parseInt(value)"
                 />
-                <p className='text-xs text-gray-500 mt-1'>
+                <p className="text-xs text-gray-500 mt-1">
                   JavaScript expression to transform the value (use 'value' as
                   variable)
                 </p>
               </div>
             </div>
 
-            <div className='flex items-center justify-end space-x-3 p-6 border-t border-gray-200'>
+            <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200">
               <button
                 onClick={() => {
                   setExtractionModal(null);
-                  setVariableName('');
+                  setVariableName("");
                 }}
-                className='px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors'
+                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={() => {
                   const transform = (
-                    document.getElementById('transform') as HTMLInputElement
+                    document.getElementById("transform") as HTMLInputElement
                   ).value;
                   if (variableName) {
                     confirmExtraction(variableName, transform || undefined);
                   }
                 }}
                 disabled={!variableName}
-                className='px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Extract Variable
               </button>

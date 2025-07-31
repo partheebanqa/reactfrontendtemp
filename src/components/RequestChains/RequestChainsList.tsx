@@ -27,17 +27,51 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { RequestChain } from '@/shared/types/requestChain.model';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 
 interface RequestChainsListProps {
   chains: RequestChain[];
+  loading?: boolean;
   onCreateChain: () => void;
   onEditChain: (chain: RequestChain) => void;
   onDeleteChain: (chainId: string) => void;
   onToggleChain: (chainId: string) => void;
 }
 
+// Loading skeleton component
+const LoadingSkeleton = () => (
+  <div className='space-y-3'>
+    {[1, 2, 3].map((i) => (
+      <Card key={i} className='animate-pulse'>
+        <CardContent className='p-6'>
+          <div className='flex items-center justify-between'>
+            <div className='flex items-center space-x-4 flex-1'>
+              <div className='w-4 h-4 bg-muted rounded-full'></div>
+              <div className='flex-1'>
+                <div className='h-5 bg-muted rounded w-1/3 mb-2'></div>
+                <div className='h-4 bg-muted rounded w-2/3 mb-3'></div>
+                <div className='flex space-x-6'>
+                  <div className='h-4 bg-muted rounded w-16'></div>
+                  <div className='h-4 bg-muted rounded w-16'></div>
+                  <div className='h-4 bg-muted rounded w-16'></div>
+                </div>
+              </div>
+            </div>
+            <div className='flex space-x-2'>
+              {[1, 2, 3, 4, 5].map((j) => (
+                <div key={j} className='w-8 h-8 bg-muted rounded'></div>
+              ))}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    ))}
+  </div>
+);
+
 export function RequestChainsList({
   chains,
+  loading = false,
   onCreateChain,
   onEditChain,
   onDeleteChain,
@@ -183,119 +217,206 @@ export function RequestChainsList({
         Showing {filteredAndSortedChains.length} of {chains.length} chains
       </div>
 
-      {/* Chains Grid */}
-      {filteredAndSortedChains.length > 0 ? (
-        <div className='grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6'>
+      {/* Chains List */}
+      {loading ? (
+        <LoadingSkeleton />
+      ) : filteredAndSortedChains.length > 0 ? (
+        <div className='space-y-3'>
           {filteredAndSortedChains.map((chain) => (
-            <Card key={chain.id} className='hover:shadow-lg transition-shadow'>
-              <CardHeader className='pb-3'>
-                <div className='flex items-start justify-between'>
-                  <div className='flex items-center space-x-3 min-w-0 flex-1'>
-                    {getStatusIcon(chain)}
-                    <div className='min-w-0 flex-1'>
-                      <CardTitle className='text-lg truncate'>
-                        {chain.name}
-                      </CardTitle>
-                      <p className='text-sm text-muted-foreground line-clamp-2'>
+            <Card key={chain.id} className='hover:shadow-sm transition-shadow'>
+              <CardContent className='p-6'>
+                <div className='flex items-center justify-between'>
+                  {/* Left section - Icon, Name, and Details */}
+                  <div className='flex items-center space-x-4 flex-1 min-w-0'>
+                    <div className='flex-shrink-0'>{getStatusIcon(chain)}</div>
+
+                    <div className='flex-1 min-w-0'>
+                      <div className='flex items-center space-x-3'>
+                        <h3 className='text-lg font-semibold truncate'>
+                          {chain.name}
+                        </h3>
+                        <Badge
+                          variant={chain.enabled ? 'default' : 'secondary'}
+                          className={
+                            chain.enabled ? 'bg-green-100 text-green-800' : ''
+                          }
+                        >
+                          {chain.enabled ? 'Enabled' : 'Disabled'}
+                        </Badge>
+                      </div>
+
+                      <p className='text-sm text-muted-foreground mt-1 line-clamp-1'>
                         {chain.description}
                       </p>
-                    </div>
-                  </div>
-                  <div className='flex items-center space-x-1 ml-2'>
-                    <Button
-                      variant='ghost'
-                      size='sm'
-                      onClick={() => onToggleChain(chain.id)}
-                      className={
-                        chain.enabled
-                          ? 'text-green-600'
-                          : 'text-muted-foreground'
-                      }
-                    >
-                      {chain.enabled ? (
-                        <Play className='w-4 h-4' />
-                      ) : (
-                        <Pause className='w-4 h-4' />
+
+                      <div className='flex items-center space-x-4 mt-2 text-sm text-muted-foreground'>
+                        <span>{chain?.requests?.length} steps</span>
+                        <span>•</span>
+                        <span>
+                          {chain.requests.map((r) => r.name).join(', ')}
+                        </span>
+                      </div>
+
+                      <div className='flex items-center space-x-6 mt-3'>
+                        <div className='text-center'>
+                          <p className='text-sm font-medium'>
+                            {chain.requests.length}
+                          </p>
+                          <p className='text-xs text-muted-foreground'>
+                            Requests
+                          </p>
+                        </div>
+                        {/* <div className='text-center'>
+                          <p className='text-sm font-medium'>
+                            {chain.executionCount}
+                          </p>
+                          <p className='text-xs text-muted-foreground'>
+                            Executions
+                          </p>
+                        </div> */}
+                        <div className='text-center'>
+                          <p className='text-sm font-medium'>
+                            {chain.successRate}%
+                          </p>
+                          <p className='text-xs text-muted-foreground'>
+                            Success
+                          </p>
+                        </div>
+                        <div className='text-center'>
+                          <p className='text-sm font-medium'>
+                            {chain.lastExecuted
+                              ? new Date(
+                                  chain.lastExecuted
+                                ).toLocaleDateString()
+                              : 'Never'}
+                          </p>
+                          <p className='text-xs text-muted-foreground'>
+                            Last Execution
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Schedule info */}
+                      {chain?.schedule?.enabled && (
+                        <div className='flex items-center space-x-2 mt-2'>
+                          <Badge
+                            variant='outline'
+                            className='text-blue-600 border-blue-200'
+                          >
+                            <Settings className='w-3 h-3 mr-1' />
+                            Scheduled
+                          </Badge>
+                          <span className='text-xs text-blue-600'>
+                            {chain.schedule.type === 'once'
+                              ? 'One-time'
+                              : 'Recurring'}
+                          </span>
+                        </div>
                       )}
-                    </Button>
-                    <Button
-                      variant='ghost'
-                      size='sm'
-                      onClick={() => onEditChain(chain)}
-                    >
-                      <Edit className='w-4 h-4' />
-                    </Button>
-                    <Button
-                      variant='ghost'
-                      size='sm'
-                      onClick={() => onDeleteChain(chain.id)}
-                      className='text-red-600 hover:text-red-700'
-                    >
-                      <Trash2 className='w-4 h-4' />
-                    </Button>
-                  </div>
-                </div>
-              </CardHeader>
 
-              <CardContent className='space-y-4'>
-                {/* Stats */}
-                <div className='grid grid-cols-3 gap-4'>
-                  <div className='text-center'>
-                    <p className='text-2xl font-bold'>
-                      {chain.requests.length}
-                    </p>
-                    <p className='text-xs text-muted-foreground'>Requests</p>
-                  </div>
-                  <div className='text-center'>
-                    <p className='text-2xl font-bold'>{chain.executionCount}</p>
-                    <p className='text-xs text-muted-foreground'>Executions</p>
-                  </div>
-                  <div className='text-center'>
-                    <p className='text-2xl font-bold'>{chain.successRate}%</p>
-                    <p className='text-xs text-muted-foreground'>Success</p>
-                  </div>
-                </div>
-
-                {/* Last Execution */}
-                <div className='flex items-center justify-between p-3 bg-muted/50 rounded-lg'>
-                  <div className='min-w-0 flex-1'>
-                    <p className='text-sm font-medium'>Last Execution</p>
-                    <p className='text-xs text-muted-foreground truncate'>
-                      {chain.lastExecuted
-                        ? new Date(chain.lastExecuted).toLocaleString()
-                        : 'Never executed'}
-                    </p>
-                  </div>
-                  <Clock className='w-4 h-4 text-muted-foreground flex-shrink-0' />
-                </div>
-
-                {/* Schedule Status */}
-                {chain.schedule.enabled && (
-                  <div className='flex items-center justify-between p-3 bg-blue-50 rounded-lg'>
-                    <div className='min-w-0 flex-1'>
-                      <p className='text-sm font-medium text-blue-900'>
-                        Scheduled
-                      </p>
-                      <p className='text-xs text-blue-600'>
-                        {chain.schedule.type === 'once'
-                          ? 'One-time'
-                          : 'Recurring'}
-                      </p>
+                      <div className='text-xs text-muted-foreground mt-2'>
+                        Created:{' '}
+                        {new Date(chain.createdAt).toLocaleDateString()} • ID:{' '}
+                        {chain.id}
+                      </div>
                     </div>
-                    <Settings className='w-4 h-4 text-blue-500 flex-shrink-0' />
                   </div>
-                )}
 
-                {/* Actions */}
-                <div className='grid grid-cols-2 gap-2'>
-                  <Button variant='outline' size='sm' className='gap-2'>
-                    <Copy className='w-4 h-4' />
-                    Clone
-                  </Button>
-                  <Button variant='outline' size='sm' className='gap-2'>
-                    <Download className='w-4 h-4' />
-                    Export
-                  </Button>
+                  {/* Right section - Action buttons */}
+                  <div className='flex items-center space-x-2 flex-shrink-0 ml-4'>
+                    {/* <Button
+                      variant='ghost'
+                      size='sm'
+                      className='text-green-600 hover:text-green-700'
+                    >
+                      <CheckCircle className='w-4 h-4' />
+                    </Button> */}
+                  <TooltipProvider>
+  {/* Enable/Disable Chain */}
+  <Tooltip>
+    <TooltipTrigger asChild>
+      <Button
+        variant='ghost'
+        size='sm'
+        onClick={() => onToggleChain(chain?.id)}
+        className={
+          chain.enabled
+            ? 'text-green-600 hover:text-green-700'
+            : 'text-muted-foreground hover:text-foreground'
+        }
+      >
+        {chain.enabled ? (
+          <Play className='w-4 h-4' />
+        ) : (
+          <Pause className='w-4 h-4' />
+        )}
+      </Button>
+    </TooltipTrigger>
+    <TooltipContent>
+      {chain.enabled ? 'Disable Chain' : 'Enable Chain'}
+    </TooltipContent>
+  </Tooltip>
+
+  {/* Edit Chain */}
+  <Tooltip>
+    <TooltipTrigger asChild>
+      <Button
+        variant='ghost'
+        size='sm'
+        onClick={() => onEditChain(chain)}
+        className='text-muted-foreground hover:text-foreground'
+      >
+        <Edit className='w-4 h-4' />
+      </Button>
+    </TooltipTrigger>
+    <TooltipContent>Edit Chain</TooltipContent>
+  </Tooltip>
+
+  {/* Copy Chain */}
+  <Tooltip>
+    <TooltipTrigger asChild>
+      <Button
+        variant='ghost'
+        size='sm'
+        className='text-muted-foreground hover:text-foreground'
+      >
+        <Copy className='w-4 h-4' />
+      </Button>
+    </TooltipTrigger>
+    <TooltipContent>Copy Chain</TooltipContent>
+  </Tooltip>
+
+  {/* Download Chain */}
+  <Tooltip>
+    <TooltipTrigger asChild>
+      <Button
+        variant='ghost'
+        size='sm'
+        className='text-muted-foreground hover:text-foreground'
+      >
+        <Download className='w-4 h-4' />
+      </Button>
+    </TooltipTrigger>
+    <TooltipContent>Download Chain</TooltipContent>
+  </Tooltip>
+
+  {/* Delete Chain */}
+  <Tooltip>
+    <TooltipTrigger asChild>
+      <Button
+        variant='ghost'
+        size='sm'
+        onClick={() => onDeleteChain(chain.id)}
+        className='text-red-600 hover:text-red-700'
+      >
+        <Trash2 className='w-4 h-4' />
+      </Button>
+    </TooltipTrigger>
+    <TooltipContent>Delete Chain</TooltipContent>
+  </Tooltip>
+</TooltipProvider>
+
+                  </div>
                 </div>
               </CardContent>
             </Card>
