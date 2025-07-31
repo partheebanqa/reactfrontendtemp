@@ -293,7 +293,7 @@ export const getRequestChains = async (
   try {
     const response = await apiRequest(
       'GET',
-      `${API_REQUEST_CHAIN}?ws=8d9ea72f-7f74-4821-8909-e953066d9a8b`
+      `${API_REQUEST_CHAIN}?ws=${workspaceId}`
     );
 
     const data = await response.json();
@@ -332,9 +332,6 @@ export const getRequestChains = async (
 };
 
 // 8d9ea72f-7f74-4821-8909-e953066d9a8b
-
-
-
 
 // export const getRequestChainData = async (
 //   chainId: string
@@ -375,7 +372,6 @@ export const getRequestChains = async (
 //   }
 // };
 
-
 export const getRequestChainData = async (chainId: string) => {
   try {
     const response = await apiRequest(
@@ -387,6 +383,3 @@ export const getRequestChainData = async (chainId: string) => {
     throw new Error(error.message || 'Failed to fetch test suite');
   }
 };
-
-
-
