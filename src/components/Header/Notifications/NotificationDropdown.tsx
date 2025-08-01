@@ -20,7 +20,6 @@ const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
     createTestNotification,
     addNotification,
   } = useNotification();
-    console.log("🚀 ~ notifications:", notifications)
   const [showPreferences, setShowPreferences] = useState(false);
 
   const handleTestNotification = useCallback(() => {

@@ -2,23 +2,24 @@ import {
   API_COLLECTION_IMPORT,
   API_COLLECTION_REQUESTS,
   API_COLLECTIONS,
-} from '@/config/apiRoutes';
-import { apiRequest } from '@/lib/queryClient';
+  API_UPLOAD_REQUEST_SCHEMA,
+} from "@/config/apiRoutes";
+import { apiRequest } from "@/lib/queryClient";
 import {
   Collection,
   CreateCollection,
   ImportCollection,
-} from '@/shared/types/collection';
-import { CollectionsResponse } from '../models/collection.model';
+} from "@/shared/types/collection";
+import { CollectionsResponse } from "../models/collection.model";
 
 export const fetchCollectionList = async (workspaceId: string) => {
   try {
     const response = await apiRequest(
-      'GET',
+      "GET",
       `${API_COLLECTIONS}?ws=${workspaceId}`
     );
     if (!response.ok) {
-      throw new Error('Failed to fetch collection data');
+      throw new Error("Failed to fetch collection data");
     }
     const data = await response.json();
     const collections = data?.collections?.map((collection: any) =>
@@ -27,22 +28,22 @@ export const fetchCollectionList = async (workspaceId: string) => {
     // Return a consistent structure
     return collections;
   } catch (error) {
-    console.error('Error fetching collection list:', error);
+    console.error("Error fetching collection list:", error);
     return []; // Return empty collections array on error for consistency
   }
 };
 
 export const addCollection = async (collection: CreateCollection) => {
   try {
-    const response = await apiRequest('POST', API_COLLECTIONS, {
+    const response = await apiRequest("POST", API_COLLECTIONS, {
       body: JSON.stringify(collection),
     });
     if (!response.ok) {
-      throw new Error('Failed to add collection data');
+      throw new Error("Failed to add collection data");
     }
     return response.json();
   } catch (error) {
-    console.error('Error adding collection:', error);
+    console.error("Error adding collection:", error);
     throw error;
   }
 };
@@ -56,18 +57,18 @@ export const setFavouriteCollection = async ({
 }) => {
   try {
     const response = await apiRequest(
-      'PUT',
+      "PUT",
       `${API_COLLECTIONS}/${collectionId}/favourite`,
       {
         body: JSON.stringify({ IsImportant }),
       }
     );
     if (!response.ok) {
-      throw new Error('Failed to update collection');
+      throw new Error("Failed to update collection");
     }
     return response.json();
   } catch (error) {
-    console.error('Error updating collection:', error);
+    console.error("Error updating collection:", error);
     throw error;
   }
 };
@@ -75,15 +76,15 @@ export const setFavouriteCollection = async ({
 export const deleteCollection = async (collectionId: string) => {
   try {
     const response = await apiRequest(
-      'DELETE',
+      "DELETE",
       `${API_COLLECTIONS}/${collectionId}`
     );
     if (!response.ok) {
-      throw new Error('Failed to delete collection');
+      throw new Error("Failed to delete collection");
     }
     return { success: true, collectionId };
   } catch (error) {
-    console.error('Error deleting collection:', error);
+    console.error("Error deleting collection:", error);
     throw error;
   }
 };
@@ -91,11 +92,11 @@ export const deleteCollection = async (collectionId: string) => {
 export const getCollectionRequests = async (collectionId: string) => {
   try {
     const response = await apiRequest(
-      'GET',
+      "GET",
       `${API_COLLECTIONS}/${collectionId}/requests`
     );
     if (!response.ok) {
-      throw new Error('Failed to fetch collection requests');
+      throw new Error("Failed to fetch collection requests");
     }
     const data = await response.json();
     return data?.map((request: any) => formatRequest(request)) || [];
@@ -113,14 +114,14 @@ export const renameCollection = async ({
 }) => {
   try {
     const response = await apiRequest(
-      'PUT',
+      "PUT",
       `${API_COLLECTIONS}/${id}/rename`,
       {
         body: JSON.stringify({ name: name }),
       }
     );
     if (!response.ok) {
-      throw new Error('Failed to rename collection');
+      throw new Error("Failed to rename collection");
     }
     return response.json();
   } catch (error) {
@@ -147,21 +148,53 @@ export const importCollectionFile = async (
   importCollection: ImportCollection
 ) => {
   try {
-    const formData = new FormData();
+    // If input method is file, use FormData to properly handle file uploads
+    if (importCollection.inputMethod === "file" && importCollection.file) {
+      const formData = new FormData();
+      
+      // Add all fields to the form data
+      formData.append("name", importCollection.name || "");
+      formData.append("workspaceId", importCollection.workspaceId);
+      formData.append("inputMethod", importCollection.inputMethod);
+      formData.append("specificationType", importCollection.specificationType);
+      formData.append("file", importCollection.file);
+      
+      // For completeness, include these if provided
+      if (importCollection.url) formData.append("url", importCollection.url);
+      
+      const response = await apiRequest("POST", API_COLLECTION_IMPORT, {
+        body: formData,
+        headers: {
+          // Let the browser set the correct content-type with boundary
+          // "content-type": "multipart/form-data; boundary=X-INSOMNIA-BOUNDARY",
+        },
+      });
+      
+      return response;
+    } else {
+      // For raw or URL imports, use JSON payload
+      const response = await apiRequest("POST", API_COLLECTION_IMPORT, {
+        body: JSON.stringify(importCollection),
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+      
+      return response;
+    }
+  } catch (error: any) {
+    throw error;
+  }
+};
 
-    // Add metadata fields
-    // formData.append("name", importCollection.name);
-    formData.append('workspaceId', importCollection.workspaceId);
-    formData.append('inputMethod', importCollection.inputMethod);
-    formData.append('specificationType', importCollection.specificationType);
-    formData.append('file', importCollection.file);
-    // formData.append("url", importCollection.url);
-    // formData.append("raw", importCollection.raw);
-
-    const response = await apiRequest('POST', API_COLLECTION_IMPORT, {
+export const useImpotCollectionJsonMutation = async (
+  importCollection: ImportCollection
+) => {
+  try {
+    const response = await apiRequest("POST", API_COLLECTION_IMPORT, {
       body: JSON.stringify(importCollection),
       // headers: {
-      //   "content-type": "multipart/form-data; boundary=X-INSOMNIA-BOUNDARY",
+      //   "content-type": "application/json",
       // },
     });
 
@@ -173,18 +206,18 @@ export const importCollectionFile = async (
 
 export const addRequest = async (requestData: any) => {
   try {
-    const response = await apiRequest('POST', API_COLLECTION_REQUESTS, {
+    const response = await apiRequest("POST", API_COLLECTION_REQUESTS, {
       body: JSON.stringify(requestData),
     });
 
     if (!response.ok) {
-      throw new Error('Failed to add request');
+      throw new Error("Failed to add request");
     }
 
     const data = await response.json();
     return data;
   } catch (error) {
-    console.error('Error adding request:', error);
+    console.error("Error adding request:", error);
     throw error;
   }
 };
@@ -192,15 +225,15 @@ export const addRequest = async (requestData: any) => {
 export const deleteRequest = async (requestId: string) => {
   try {
     const response = await apiRequest(
-      'DELETE',
+      "DELETE",
       `${API_COLLECTION_REQUESTS}/${requestId}`
     );
     if (!response.ok) {
-      throw new Error('Failed to delete request');
+      throw new Error("Failed to delete request");
     }
     return { success: true, requestId };
   } catch (error: any) {
-    console.error('Error deleting request:', error);
+    console.error("Error deleting request:", error);
     throw error;
   }
 };
@@ -212,16 +245,16 @@ export const duplicateRequest = async ({
 }) => {
   try {
     const response = await apiRequest(
-      'POST',
+      "POST",
       `${API_COLLECTION_REQUESTS}/${requestId}/duplicate`
     );
     if (!response.ok) {
-      throw new Error('Failed to duplicate request');
+      throw new Error("Failed to duplicate request");
     }
     const data = await response.json();
     return formatRequest(data);
   } catch (error: any) {
-    console.error('Error duplicating request:', error);
+    console.error("Error duplicating request:", error);
     throw error;
   }
 };
@@ -235,19 +268,19 @@ export const renameRequest = async ({
 }) => {
   try {
     const response = await apiRequest(
-      'PUT',
+      "PUT",
       `${API_COLLECTION_REQUESTS}/${requestId}/rename`,
       {
         body: newName ? JSON.stringify({ name: newName }) : undefined,
       }
     );
     if (!response.ok) {
-      throw new Error('Failed to duplicate request');
+      throw new Error("Failed to duplicate request");
     }
     const data = await response.json();
     return formatRequest(data);
   } catch (error: any) {
-    console.error('Error duplicating request:', error);
+    console.error("Error duplicating request:", error);
     throw error;
   }
 };
@@ -257,15 +290,15 @@ export const formatRequest = (request: any) => {
     id: request.Id || request.id,
     collectionId: request.CollectionId || request.collectionId,
     name: request.Name || request.name,
-    description: request.Description || request.description || '',
+    description: request.Description || request.description || "",
     method: request.Method || request.method,
     url: request.Url || request.url,
     order: request.Order || request.order || 0,
-    bodyType: request.BodyType || request.bodyType || 'none',
+    bodyType: request.BodyType || request.bodyType || "none",
     bodyFormData: request.BodyFormData || request.bodyFormData,
     bodyRawContent: request.BodyRawContent || request.bodyRawContent,
     authorizationType:
-      request.AuthorizationType || request.authorizationType || 'none',
+      request.AuthorizationType || request.authorizationType || "none",
     authorization: request.Authorization || request.authorization || {},
     headers: request.Headers || request.headers || [],
     params: request.Params || request.params || [],
@@ -281,7 +314,7 @@ export const getCollectionsWithRequests = async (
 ): Promise<CollectionsResponse> => {
   try {
     const response = await apiRequest(
-      'GET',
+      "GET",
       `${API_COLLECTIONS}/with-requests?ws=${workspaceId}`
     );
 
@@ -293,7 +326,7 @@ export const getCollectionsWithRequests = async (
 
     return data;
   } catch (error) {
-    console.error('Error fetching collections with requests:', error);
+    console.error("Error fetching collections with requests:", error);
     throw error;
   }
 };

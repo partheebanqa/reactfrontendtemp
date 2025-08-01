@@ -1,7 +1,14 @@
 import { Card, CardContent } from "@/components/ui/card";
+import { useAuth } from "@/hooks/useAuth";
 import { AlertCircle } from "lucide-react";
+import { useLocation } from "wouter";
 
 export default function NotFound() {
+  const { isAuthenticated } = useAuth()
+  const [_, setLocation] = useLocation()
+  if (!isAuthenticated) {
+    setLocation("/signin")
+  }
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-gray-50">
       <Card className="w-full max-w-md mx-4">

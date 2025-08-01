@@ -43,6 +43,7 @@ const Sidebar: React.FC = () => {
     duplicateRequestMutation,
     setFavouriteCollectionMutation,
     renameRequestMutation,
+    deleteCollectionMutation
   } = useCollection();
   const { setResponseData } = useRequest();
   const { toast, error: showError } = useToast();
@@ -171,7 +172,6 @@ const Sidebar: React.FC = () => {
   };
 
   const handleDeleteRequest = async (requestId: string) => {
-    console.log("🚀 ~ handleDeleteRequest ~ requestId:", requestId)
     try {
       await deleteRequestMutation.mutateAsync(requestId);
       setShowMenu(null);
@@ -243,7 +243,26 @@ const Sidebar: React.FC = () => {
     }
   };
 
-  const handleDeleteCollection = async () => { };
+  const handleDeleteCollection = async () => {
+    if (!selectedCollection) return;
+    
+    try {
+      await deleteCollectionMutation.mutateAsync(selectedCollection.id);
+      
+      toast({
+        title: "Collection deleted",
+        description: "The collection has been successfully deleted",
+        variant: "success",
+      });
+    } catch (error) {
+      console.error("Error deleting collection:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete the collection. Please try again.",
+        variant: "destructive",
+      });
+    }
+   };
 
   const handleExportCollection = async (collection: Collection) => {
     try {

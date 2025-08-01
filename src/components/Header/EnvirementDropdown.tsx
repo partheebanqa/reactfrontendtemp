@@ -56,7 +56,7 @@ export default function EnvironmentDropdown({
                 size="sm"
                 aria-label="Select environment"
               >
-                {activeEnvironment ? (
+                {activeEnvironment && (
                   <>
                     <div
                       className="h-3.5 w-3.5 rounded-full flex-shrink-0 ring-1 ring-opacity-25 ring-gray-400"
@@ -64,12 +64,7 @@ export default function EnvironmentDropdown({
                     />
                     <span className="truncate text-xs sm:text-sm font-semibold">{activeEnvironment.name}</span>
                   </>
-                ) : (
-                  <>
-                    <Settings className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-gray-600 flex-shrink-0" />
-                    <span className="truncate text-xs sm:text-sm font-medium">No Environment</span>
-                  </>
-                )}
+                ) }
                 <ChevronDown className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0 text-gray-500" />
               </Button>
             </DropdownMenuTrigger>
@@ -97,19 +92,6 @@ export default function EnvironmentDropdown({
             </div>
 
             <DropdownMenuSeparator className="my-2" />
-
-            <DropdownMenuItem
-              onClick={() => setActiveEnvironment(null)}
-              className={`justify-between text-xs sm:text-sm py-2 rounded-md mb-1 ${!activeEnvironment
-                ? "bg-gray-50 text-gray-800 border border-gray-200"
-                : "hover:bg-gray-50 border border-transparent hover:border-gray-100"
-                }`}
-            >
-              <div className="flex items-center">
-                <Settings className="h-3.5 w-3.5 mr-2 text-gray-500" />
-                <span className="font-medium truncate mr-2">No Environment</span>
-              </div>
-            </DropdownMenuItem>
 
             {environments.length === 0 ? (
               <p className="text-xs text-gray-500 p-2 italic">No environments available</p>

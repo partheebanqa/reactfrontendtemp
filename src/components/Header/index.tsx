@@ -35,7 +35,6 @@ import { Environment } from "@/shared/types/datamanagement";
 
 export default function Header() {
   const { user, logoutMutation } = useAuth();
-  console.log("🚀 ~ Header ~ user:", user)
   const [searchQuery, setSearchQuery] = useState("");
   const [theme, setTheme] = useState("light");
   const {
@@ -67,7 +66,7 @@ export default function Header() {
 
   const handleLogout = async () => {
    await logoutMutation.mutateAsync();
-    setLocation("/");
+    setLocation("/signin");
   };
 
   const getInitials = (firstName?: string) => {
