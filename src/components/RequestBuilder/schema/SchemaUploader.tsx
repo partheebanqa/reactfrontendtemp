@@ -24,6 +24,11 @@ const SchemaUploader: React.FC = () => {
   };
 
   const processFile = async (file: File) => {
+    if(!activeRequest?.id){
+      setError('Please save the request before uploading a schema.');
+      setUploading(false);
+      return;
+    }
     setUploading(true);
     setError(null);
 

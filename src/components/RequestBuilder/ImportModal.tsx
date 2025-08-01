@@ -153,15 +153,15 @@ const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, }) => {
         });
       } if (importType === 'curl') {
         // const { collectionName, specificationType } = checkJson(importText)
-          const data = detectImportFormat(importText,importType)
-          console.log("🚀 ~ handleImport ~ data:", data)
-        await importCollectionMutation.mutateAsync({
-          name: collectionName,
-          workspaceId: currentWorkspace?.id || '',
-          inputMethod: "raw",
-          specificationType: specificationType,
-          raw: JSON.stringify(importCurlCommand(importText)),
-        });
+        // const data = detectImportFormat(importText, importType)
+        // console.log("🚀 ~ handleImport ~ data:", data)
+        // await importCollectionMutation.mutateAsync({
+        //   name: collectionName,
+        //   workspaceId: currentWorkspace?.id || '',
+        //   inputMethod: "raw",
+        //   specificationType: specificationType,
+        //   raw: JSON.stringify(importCurlCommand(importText)),
+        // });
       } else if (importType === 'file' && selectedFile) {
         const fileText = await selectedFile.text();
         const json = JSON.parse(fileText);
@@ -176,7 +176,10 @@ const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, }) => {
       }
     } catch (err) {
       showError('Import Error', err instanceof Error ? err.message : 'Failed to import collection');
+      setImporting(false);
+
     } finally {
+      handleOnClose();
       setImporting(false);
     }
   };

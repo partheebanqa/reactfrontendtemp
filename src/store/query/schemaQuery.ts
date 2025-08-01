@@ -7,6 +7,7 @@ export const useUploadRequestSchemaMutation = () => {
     mutationFn: uploadSchema,
     onSuccess: (newSchema: any) => {
       console.log("New schema uploaded:", newSchema);
+      schemaActions.addSchema(newSchema);
     },
     onError: (error) => {
       console.error("Error uploading schema:", error);
