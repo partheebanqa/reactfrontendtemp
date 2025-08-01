@@ -43,7 +43,8 @@ const Sidebar: React.FC = () => {
     duplicateRequestMutation,
     setFavouriteCollectionMutation,
     renameRequestMutation,
-    deleteCollectionMutation
+    deleteCollectionMutation,
+    handleCreateRequest
   } = useCollection();
   const { setResponseData } = useRequest();
   const { toast, error: showError } = useToast();
@@ -85,45 +86,7 @@ const Sidebar: React.FC = () => {
     setShowMenu(null);
   };
 
-  const handleCreateRequest = async (collection?: Collection) => {
-    const newRequest: CollectionRequest = {
-      name: "New Request",
-      method: "GET",
-      url: "",
-      bodyType: "json",
-      bodyFormData: null,
-      authorizationType: "none",
-      authorization: {},
-      variables: {},
-      headers: [],
-      params: [],
-      order: 0 // This will be updated when adding to collection
-    };
-    setResponseData(null);
-    if (collection) {
-      // Ensure collection is expanded when adding a new request
-      if (!expandedCollections.has(collection.id)) {
-        toggleExpandedCollection(collection.id);
-      }
-      newRequest.collectionId = collection.id;
-      newRequest.order = (collection.requests?.length || 0) + 1;
-      setCollection(
-        collections.map((col) =>
-          col.id === collection.id
-            ? {
-              ...col,
-              requests: [...(col.requests || []), newRequest],
-            }
-            : col
-        )
-      );
-      setActiveCollection(
-        collections.find((col) => col.id === collection.id) || null
-      );
-    }
-    setActiveRequest(newRequest);
-    setShowMenu(null);
-  };
+
 
   const handleSaveCollection = async (collectionName: string) => {
 
@@ -245,10 +208,10 @@ const Sidebar: React.FC = () => {
 
   const handleDeleteCollection = async () => {
     if (!selectedCollection) return;
-    
+
     try {
       await deleteCollectionMutation.mutateAsync(selectedCollection.id);
-      
+
       toast({
         title: "Collection deleted",
         description: "The collection has been successfully deleted",
@@ -262,7 +225,7 @@ const Sidebar: React.FC = () => {
         variant: "destructive",
       });
     }
-   };
+  };
 
   const handleExportCollection = async (collection: Collection) => {
     try {
@@ -530,7 +493,10 @@ const Sidebar: React.FC = () => {
           </h2>
           <div className="flex items-center space-x-1">
             <button
-              onClick={() => handleCreateRequest()}
+              onClick={() => {
+                handleCreateRequest();
+                setShowMenu(null);
+              }}
               className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
               title="Create new request"
             >
