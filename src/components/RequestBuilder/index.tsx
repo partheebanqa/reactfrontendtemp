@@ -12,6 +12,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import RequestEditor from "./RequestEditor/RequestEditor";
 import ResponseViewer from "./ResponseViewer/ResponseViewer";
 import Sidebar from "./Sidebar/Sidebar";
+import { useRequest } from "@/hooks/useRequest";
 
 interface Header {
   key: string;
@@ -27,7 +28,8 @@ interface TestAssertion {
 
 const RequestBuilder = () => {
   const { currentWorkspace } = useWorkspace();
-  const { refetch: refetchCollection } = useCollection();
+  const { refetch: refetchCollection, setActiveCollection, setActiveRequest ,handleCreateRequest} = useCollection();
+  const { setResponseData, setRequestData } = useRequest()
   const isMobile = useIsMobile();
   const [isBottomLayout, setIsBottomLayout] = useState(true);
   const [resizePosition, setResizePosition] = useState(isMobile ? 60 : 50); // Default 60% on mobile, 50% on desktop
@@ -64,7 +66,7 @@ const RequestBuilder = () => {
     const minSize = isMobile ? 30 : 20;
     const maxSize = isMobile ? 70 : 80;
     newPosition = Math.max(minSize, Math.min(maxSize, newPosition));
-    
+
     setResizePosition(newPosition);
   }, [isBottomLayout, isMobile]);
 
@@ -95,7 +97,10 @@ const RequestBuilder = () => {
 
   // Fetch collection data when workspace changes
   useEffect(() => {
-    refetchCollection();    
+    refetchCollection();
+    setActiveCollection(null);
+    handleCreateRequest();
+    
   }, [currentWorkspace?.id, refetchCollection]);
 
   // Adjust layout based on mobile/desktop
@@ -131,7 +136,7 @@ const RequestBuilder = () => {
             >
               {showSidebar ? <PanelRight size={18} /> : <PanelLeft size={18} />}
             </button>
-            
+
             {/* Mobile Panel Toggle */}
             <button
               onClick={toggleLayout}
@@ -148,9 +153,8 @@ const RequestBuilder = () => {
 
         <div
           ref={containerRef}
-          className={`flex-1 flex overflow-hidden ${
-            isBottomLayout ? "flex-col" : "flex-row"
-          }`}
+          className={`flex-1 flex overflow-hidden ${isBottomLayout ? "flex-col" : "flex-row"
+            }`}
         >
           {/* Request Editor */}
           <div
@@ -227,9 +231,8 @@ const RequestBuilder = () => {
         <button
           onClick={toggleLayout}
           className="fixed bottom-4 right-4 z-10 p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg"
-          title={`Switch to ${
-            isBottomLayout ? "side-by-side" : "top-bottom"
-          } layout`}
+          title={`Switch to ${isBottomLayout ? "side-by-side" : "top-bottom"
+            } layout`}
         >
           {isBottomLayout ? (
             <svg
@@ -273,26 +276,24 @@ const RequestBuilder = () => {
               setActivePanel('editor');
               toggleSidebar();
             }}
-            className={`mx-2 p-2 rounded-md flex flex-col items-center ${
-              activePanel === 'editor' && showSidebar
+            className={`mx-2 p-2 rounded-md flex flex-col items-center ${activePanel === 'editor' && showSidebar
                 ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
                 : 'text-gray-600 dark:text-gray-400'
-            }`}
+              }`}
           >
             <PanelLeft size={18} />
             <span className="text-xs mt-1">Collections</span>
           </button>
-          
+
           <button
             onClick={() => {
               setActivePanel('editor');
               setShowSidebar(false);
             }}
-            className={`mx-2 p-2 rounded-md flex flex-col items-center ${
-              activePanel === 'editor' && !showSidebar
+            className={`mx-2 p-2 rounded-md flex flex-col items-center ${activePanel === 'editor' && !showSidebar
                 ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
                 : 'text-gray-600 dark:text-gray-400'
-            }`}
+              }`}
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -310,17 +311,16 @@ const RequestBuilder = () => {
             </svg>
             <span className="text-xs mt-1">Request</span>
           </button>
-          
+
           <button
             onClick={() => {
               setActivePanel('response');
               setShowSidebar(false);
             }}
-            className={`mx-2 p-2 rounded-md flex flex-col items-center ${
-              activePanel === 'response'
+            className={`mx-2 p-2 rounded-md flex flex-col items-center ${activePanel === 'response'
                 ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
                 : 'text-gray-600 dark:text-gray-400'
-            }`}
+              }`}
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"

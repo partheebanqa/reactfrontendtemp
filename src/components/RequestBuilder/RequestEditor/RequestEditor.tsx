@@ -33,6 +33,7 @@ const RequestEditor: React.FC = () => {
     renameRequestMutation,
     setCollection,
     expandedCollections,
+    handleCreateRequest,
   } = useCollection();
   const { variables, environments, activeEnvironment } = useDataManagement()
   const { error: showError, success: showSuccess } = useToast();
@@ -357,44 +358,7 @@ const RequestEditor: React.FC = () => {
     }
   };
 
-  const handleCreateRequest = async (collection?: Collection) => {
-    const newRequest: CollectionRequest = {
-      name: "New Request",
-      method: "GET",
-      url: "",
-      bodyType: "json",
-      bodyFormData: null,
-      authorizationType: "none",
-      authorization: {},
-      variables: {},
-      headers: [],
-      params: [],
-      order: 0 // This will be updated when adding to collection
-    };
-    setResponseData(null);
-    if (collection) {
-      // Ensure collection is expanded when adding a new request
-      if (!expandedCollections.has(collection.id)) {
-        toggleExpandedCollection(collection.id);
-      }
-      newRequest.collectionId = collection.id;
-      newRequest.order = (collection.requests?.length || 0) + 1;
-      setCollection(
-        collections.map((col) =>
-          col.id === collection.id
-            ? {
-              ...col,
-              requests: [...(col.requests || []), newRequest],
-            }
-            : col
-        )
-      );
-      setActiveCollection(
-        collections.find((col) => col.id === collection.id) || null
-      );
-    }
-    setActiveRequest(newRequest);
-  };
+
 
   const handleConfirmSave = async () => {
     try {
