@@ -4,12 +4,14 @@ import {
   useAddRequestMutation,
   useCollectionQuery,
   useCollectionRequestsQuery,
+  useDeleteCollectionMutation,
   useDeleteRequestMutation,
   useDuplicateRequestMutation,
   useImpotPostmanCollectionMutation,
   useRenameCollectionMutation,
   useRenameRequestMutation,
   useSetFavouriteCollectionMutation,
+  useUploadRequestSchemaMutation,
 } from "@/store/query/collectionQuery";
 import { collectionActions, useCollectionStore } from "@/store/collectionStore";
 import { useAuth } from "./useAuth";
@@ -48,8 +50,7 @@ export function useCollection() {
   const addRequestToCollection = collectionActions.addRequestToCollection;
 
   const toggleExpandedCollection = (collectionId: string) => {
-    console.log("🚀 ~ toggleExpandedCollection ~ collectionId:", collectionId)
-    if(!collectionId) return;
+    if (!collectionId) return;
     collectionActions.toggleExpandedCollection(collectionId);
     const targetCollection = collections?.find(
       (col) => col.id === collectionId
@@ -86,13 +87,13 @@ export function useCollection() {
     } else {
       setShouldFetchCollections(false);
     }
-  }, [isAuthenticated,collections.length]);
+  }, [isAuthenticated, collections.length]);
 
   const addCollectionMutation = useAddCollectionMutation();
   const renameCollectionMutation = useRenameCollectionMutation();
   const setFavouriteCollectionMutation = useSetFavouriteCollectionMutation();
   const fetchCollectionRequests = useCollectionRequestsQuery();
-  const deleteCollectionMutation = useDeleteRequestMutation();
+  const deleteCollectionMutation = useDeleteCollectionMutation();
   const importCollectionMutation = useImpotPostmanCollectionMutation();
   const addRequestMutation = useAddRequestMutation();
   const renameRequestMutation = useRenameRequestMutation();
@@ -128,6 +129,6 @@ export function useCollection() {
     duplicateRequestMutation,
     setFavouriteCollectionMutation,
     deleteCollectionMutation,
-    deleteRequestMutation
+    deleteRequestMutation,
   };
 }

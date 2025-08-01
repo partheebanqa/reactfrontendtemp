@@ -20,7 +20,7 @@ const SchemaComparer: React.FC<SchemaComparerProps> = ({ schemaIds }) => {
       const schema2 = getSchemaById(schemaIds[1]);
       
       if (schema1 && schema2) {
-        const diffs = compareSchemas(schema1.content, schema2.content);
+        const diffs = compareSchemas(schema1.schema, schema2.schema);
         setDifferences(diffs);
       }
       

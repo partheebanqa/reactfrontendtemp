@@ -99,139 +99,50 @@ const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, }) => {
     setImporting(true);
     setError(null);
     let textToImport = importText;
-
     try {
+
       if (importType === 'swagger') {
-        // If text is already provided in the JSON paste area, use that instead of fetching
-        if (importText.trim()) {
-          textToImport = importText;
-        } else if (postmanUrl.trim()) {
-          try {
-            const response = await fetch(postmanUrl);
-            if (!response.ok) {
-              throw new Error(`Failed to fetch from URL: ${response.status} ${response.statusText}`);
-            }
-            textToImport = await response.text();
-          } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : 'Failed to fetch from URL';
-            setError(errorMessage);
-            showError('URL Fetch Error', errorMessage);
-            setImporting(false);
-            return;
-          }
-        } else {
-          setError('Please provide either a URL or paste JSON content');
-          showError('Import Failed', 'Please provide either a URL or paste JSON content');
-          setImporting(false);
-          return;
-        }
+        const response = await importCollectionMutation.mutateAsync({
+          workspaceId: currentWorkspace?.id || '',
+          inputMethod: "url",
+          specificationType: 'swagger',
+          url: postmanUrl.trim(),
+        });
+      } if (importType === 'curl') {
+        const response = await importCollectionMutation.mutateAsync({
+          workspaceId: currentWorkspace?.id || '',
+          inputMethod: "raw",
+          specificationType: 'curl',
+          url: importText.trim(),
+        });
       } else if (importType === 'file' && selectedFile) {
-        textToImport = await selectedFile.text();
-      } else if (importType === 'file' && importText.trim()) {
+        const fileText = await selectedFile.text();
+        const json = JSON.parse(fileText);
+        let specificationType: 'postman' | 'swagger' | 'openapi' | 'file' = 'file';
+        let collectionName = '';
 
-        textToImport = importText;
-      } else if (importType === 'curl') {
-        if (!importText.trim()) {
-          setError('Please enter a cURL command');
-          showError('Import Failed', 'Please enter a cURL command');
-          setImporting(false);
-          return;
-        }
-        textToImport = importText;
-      }
-      try {
-        const json = JSON.parse(textToImport);
-
-        // Check if it's a Postman collection
         if (json.info?.schema?.includes('schema.getpostman.com')) {
-          const response = await importCollectionMutation.mutateAsync({
-            name: json.info.name,
-            workspaceId: currentWorkspace?.id || '',
-            inputMethod: "raw",
-            specificationType: 'postman',
-            raw: JSON.stringify(json),
-          });
-
-          success('Import Successful', `Imported Postman collection: ${json.info.name}`);
-          handleOnClose();
-          return;
-        }
-        // Check if it's a Swagger/OpenAPI specification
-        else if (json.swagger || json.openapi) {
-          try {
-            // Import swagger
-            const swaggerCollection = await importSwaggerCollection(textToImport);
-            const collectionName = json.info?.title || 'Imported API';
-
-            const response = await importCollectionMutation.mutateAsync({
-              name: collectionName,
-              workspaceId: currentWorkspace?.id || '',
-              inputMethod: "raw",
-              specificationType: 'swagger',
-              raw: JSON.stringify(json),
-            });
-
-            success('Import Successful', `Imported Swagger/OpenAPI collection: ${collectionName}`);
-            handleOnClose();
-            return;
-          } catch (swaggerError) {
-            throw new Error(`Failed to import Swagger: ${swaggerError instanceof Error ? swaggerError.message : 'Unknown error'}`);
-          }
-        }
-        else {
+          specificationType = 'postman';
+          collectionName = json.info.name || 'Imported Postman Collection';
+        } else if (json.swagger) {
+          specificationType = 'swagger';
+          collectionName = json.info?.title || 'Imported API';
+        } else if (json.openapi) {
+          specificationType = 'openapi';
+          collectionName = json.info?.title || 'Imported API';
+        } else {
           throw new Error('Not a valid Postman collection or Swagger/OpenAPI specification');
         }
-      } catch (e) {
-        // Continue to try cURL if JSON parsing fails
-        if (importType !== 'curl') {
-          const errorMessage = e instanceof Error ? e.message : 'Failed to parse JSON';
-          setError(errorMessage);
-          showError('JSON Parse Error', errorMessage);
-
-          // Only return if not trying as curl (for backward compatibility)
-          if (!textToImport.trim().toLowerCase().startsWith('curl')) {
-            setImporting(false);
-            return;
-          }
-        }
+           await importCollectionMutation.mutateAsync({
+          name: collectionName,
+          workspaceId: currentWorkspace?.id || '',
+          inputMethod: "file",
+          specificationType: specificationType,
+          file: selectedFile,
+        });
       }
-
-      // Try to parse as cURL
-      if (textToImport.trim().toLowerCase().startsWith('curl')) {
-        try {
-          const result = importCurlCommand(textToImport);
-
-          // Create a collection from the cURL command result
-          const curlCollection = result.collections[0];
-
-          const response = await importCollectionMutation.mutateAsync({
-            name: curlCollection.name || 'Imported cURL Collection',
-            workspaceId: currentWorkspace?.id || '',
-            inputMethod: "raw",
-            specificationType: 'curl',
-            raw: JSON.stringify(curlCollection),
-          });
-
-          success('Import Successful', 'Imported cURL command');
-          handleOnClose();
-          return;
-        } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : 'Failed to import cURL command';
-          setError(errorMessage);
-          showError('Import Error', errorMessage);
-          return;
-        }
-      }
-
-      const errorMsg = 'Unsupported format. Please provide a valid Postman collection, OpenAPI/Swagger specification, or cURL command.';
-      setError(errorMsg);
-      showError('Import Failed', errorMsg);
     } catch (err) {
-      const errorMessage = err instanceof Error
-        ? err.message
-        : 'Failed to import collection';
-      setError(errorMessage);
-      showError('Import Error', errorMessage);
+      showError('Import Error', err instanceof Error ? err.message : 'Failed to import collection');
     } finally {
       setImporting(false);
     }
@@ -413,57 +324,6 @@ const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, }) => {
                   </div>
                 </div>
               </div>
-            )}
-            {importType === 'file' && (
-              <>
-                <div className="flex items-center justify-center my-2">
-                  <span className="text-sm text-gray-500 px-4 relative before:content-[''] before:absolute before:left-[-40px] before:top-[50%] before:h-[1px] before:w-[30px] before:bg-gray-300 after:content-[''] after:absolute after:right-[-40px] after:top-[50%] after:h-[1px] after:w-[30px] after:bg-gray-300">Or paste JSON</span>
-                </div>
-
-                <div>
-                  <textarea
-                    value={importText}
-                    onChange={(e) => {
-                      setImportText(e.target.value);
-                      // Clear error if there was one when user starts typing
-                      if (error && e.target.value) {
-                        setError(null);
-                      }
-
-                      // For JSON-based imports, do basic validation
-                      if (e.target.value.trim()) {
-                        if (!isValidJson(e.target.value)) {
-                          setError('Invalid JSON format');
-                        } else {
-                          try {
-                            const json = JSON.parse(e.target.value);
-                            if (isPostmanCollection(json)) {
-                              setError(null);
-                            } else if (isSwaggerSpec(json)) {
-                              setError(null);
-                            } else {
-                              setError('JSON does not appear to be a valid Postman collection or Swagger/OpenAPI specification');
-                            }
-                          } catch (e) {
-                            // This shouldn't happen since we already checked isValidJson
-                          }
-                        }
-                      }
-                    }}
-                    className={`w-full h-64 px-3 py-2 text-sm font-mono border rounded-md ${error && importText.trim() ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
-                      }`}
-                    placeholder="Paste your Postman collection or OpenAPI/Swagger JSON here..."
-                  />
-
-                  {importText.trim() && isValidJson(importText) && (
-                    <div className="mt-1">
-                      <p className="text-xs text-green-600">
-                        ✓ Valid JSON format detected
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </>
             )}
 
             {error && (

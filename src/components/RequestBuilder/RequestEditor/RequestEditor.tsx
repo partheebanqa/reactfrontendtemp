@@ -33,7 +33,6 @@ const RequestEditor: React.FC = () => {
     renameRequestMutation,
     setCollection,
     expandedCollections,
-
   } = useCollection();
   const { variables, environments, activeEnvironment } = useDataManagement()
   const { error: showError, success: showSuccess } = useToast();
@@ -95,7 +94,7 @@ const RequestEditor: React.FC = () => {
     timeout: 30000, // 30 seconds
     sslVerification: true,
   });
-  
+
   useEffect(() => {
     if (activeRequest) {
       setUrl(activeRequest.url || '');
@@ -223,6 +222,7 @@ const RequestEditor: React.FC = () => {
     } else {
       handleCreateRequest()
     }
+    setResponseData(null);
   }, [activeRequest]);
 
   const handleSendRequest = async () => {
@@ -278,7 +278,6 @@ const RequestEditor: React.FC = () => {
         },
       };
       const response = await makeRequest(requestData);
-      console.log("🚀 ~ handleSendRequest ~ response:", response)
       setResponseData(response);
       if (response.data?.error) {
         setError({
@@ -489,7 +488,7 @@ const RequestEditor: React.FC = () => {
         },
         params: params,
         headers: headers,
-        variables: activeRequest.variables || {},
+        // variables: activeRequest.variables || {},
       };
       await addRequestMutation.mutateAsync(requestData);
       setShowSaveModal(false);
@@ -518,35 +517,41 @@ const RequestEditor: React.FC = () => {
 
 
   const buildFinalUrl = (): string => {
+    if (!url) return '';
     let finalUrl = url
+    console.log("🚀 ~ buildFinalUrl ~ url:", url)
 
     // Apply variable substitution
     finalUrl = substituteVariables(finalUrl)
 
-    // Apply environment base URL if not "no-environment"
-    if (activeCollection?.name) {
-      if (activeEnvironment && activeEnvironment.baseUrl) {
-        try {
-          // Parse the original URL to extract the path and query parameters
-          const originalUrl = new URL(finalUrl)
-          const pathAndQuery = originalUrl.pathname + originalUrl.search + originalUrl.hash
+    const baseUrVar = variables.find(v => v.name === 'baseUrl')?.initialValue || ''
+    console.log("🚀 ~ buildFinalUrl ~ baseUrVar:", baseUrVar)
 
-          // Combine activeEnvironment base URL with the path from original URL
-          const baseUrl = activeEnvironment.baseUrl.replace(/\/$/, '')
-          finalUrl = `${baseUrl}${pathAndQuery}`
-        } catch (error) {
-          // If URL parsing fails, treat as relative path
-          if (!finalUrl.startsWith('http://') && !finalUrl.startsWith('https://')) {
-            finalUrl = finalUrl.startsWith('/') ? finalUrl : `/${finalUrl}`
-            finalUrl = `${activeEnvironment.baseUrl.replace(/\/$/, '')}${finalUrl}`
-          }
+    // Apply environment base URL if not "no-environment"
+    console.log("🚀 ~ buildFinalUrl ~ finalUrl:", finalUrl)
+    if (baseUrVar) {
+      try {
+        const originalUrl = new URL(finalUrl)
+        console.log("🚀 ~ buildFinalUrl ~ originalUrl:", originalUrl)
+        const pathAndQuery = originalUrl.pathname + originalUrl.search + originalUrl.hash
+        console.log("🚀 ~ buildFinalUrl ~ pathAndQuery:", pathAndQuery)
+
+        // Combine activeEnvironment base URL with the path from original URL
+        const baseUrl = baseUrVar.replace(/\/$/, '')
+        console.log("🚀 ~ buildFinalUrl ~ baseUrl:", baseUrl)
+        finalUrl = `${baseUrl}${pathAndQuery}`
+        console.log("🚀 ~ buildFinalUrl ~ finalUrl:", finalUrl)
+      } catch (error) {
+        if (!finalUrl.startsWith('http://') && !finalUrl.startsWith('https://')) {
+          finalUrl = finalUrl.startsWith('/') ? finalUrl : `/${finalUrl}`
+          finalUrl = `${baseUrVar.replace(/\/$/, '')}${finalUrl}`
         }
       }
     }
-
     return finalUrl
   }
   const previewUrl = buildFinalUrl()
+  console.log("🚀 ~ RequestEditor ~ previewUrl:", previewUrl)
 
   const handleCancelSave = () => {
     setShowSaveModal(false);

@@ -11,17 +11,11 @@ export const API_COLLECTION_REQUESTS = ENV.API_BASE_URL + '/requests';
 export const API_COLLECTION_IMPORT = ENV.API_BASE_URL + '/collections/import';
 export const API_ENVIRONMENT = ENV.API_BASE_URL + '/environments';
 export const API_VARIABLES = ENV.API_BASE_URL + '/environment-variables';
-
-// TEST SUITES
+export const API_UPLOAD_REQUEST_SCHEMA = ENV.API_BASE_URL + '/requests/{id}/upload-schema';
+export const API_GET_REQUEST_SCHEMA = ENV.API_BASE_URL + '/requests/{id}/schema';
 export const API_TEST_SUITES = ENV.API_BASE_URL + '/test-suites';
-
-// TEST CASES
 export const API_TEST_CASES = ENV.API_BASE_URL + '/test-cases';
-
-// REQUEST
 export const API_REQUEST = ENV.API_BASE_URL + '/requests';
-
-// EXECUTOR
 export const API_EXECUTOR = ENV.API_BASE_URL + '/executor';
 
 // REQUEST CHAIN

@@ -36,8 +36,6 @@ import ContactPage from '@/pages/ContactPage';
 
 export default function Router() {
   const { isAuthenticated, isLoading } = useAuth();
-  console.log("🚀 ~ Router ~ isAuthenticated:", isAuthenticated)
-
   if (isLoading) {
     return (
       <div className='min-h-screen flex items-center justify-center'>

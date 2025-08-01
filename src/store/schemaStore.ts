@@ -1,6 +1,6 @@
 import { Store, useStore } from "@tanstack/react-store";
 import {
-  Schema,
+  SchemaInfo as Schema,
   SchemaDifference,
   SchemaValidationResult,
 } from "@/shared/types/schema";
@@ -128,40 +128,6 @@ export const schemaActions = {
     }));
   },
 
-  // Initialize schemas from localStorage
-  initializeFromLocalStorage: () => {
-    try {
-      schemaActions.setIsLoading(true);
-
-      const savedSchemas = localStorage.getItem("api-schemas");
-      if (savedSchemas) {
-        const parsedSchemas = JSON.parse(savedSchemas);
-        schemaActions.setSchemas(parsedSchemas);
-
-        // Set primary schema if one exists
-        const primary = parsedSchemas.find(
-          (schema: Schema) => schema.isPrimary
-        );
-        if (primary) {
-          schemaStore.setState((state) => ({
-            ...state,
-            primarySchema: primary,
-          }));
-        }
-      }
-
-      schemaActions.setIsLoading(false);
-    } catch (error) {
-      console.error("Error loading schemas:", error);
-      schemaActions.setIsLoading(false);
-    }
-  },
-
-  // Save to localStorage
-  saveToLocalStorage: () => {
-    const state = schemaStore.state;
-    localStorage.setItem("api-schemas", JSON.stringify(state.schemas));
-  },
 };
 
 // Hook to use the schema store

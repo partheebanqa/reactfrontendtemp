@@ -59,7 +59,6 @@ export const usefetchVariablesQuery = (enabled = true) => {
         const response = await fetchVariables(environmentId);
         if (response.items.length > 0) {
           const filteredVariables = response.items.map(filterVariable);
-          console.log("filteredVariables", filteredVariables);
           dataManagementActions.setVariables(filteredVariables);
         }
         return [];
@@ -150,6 +149,7 @@ export const useDeleteVariableMutation = () => {
   });
 };
 
+
 const filterEnvironment = (environment: ResponseEnvironment) => {
   return {
     id: environment.Id,
@@ -164,15 +164,15 @@ const filterEnvironment = (environment: ResponseEnvironment) => {
 
 const filterVariable = (variable: ResponseVariable) => {
   return {
-    createdAt: variable.CreatedAt,
+    createdAt: variable.CreatedAt,//
     currentValue: variable.CurrentValue,
-    deletedAt: variable.DeletedAt,
+    deletedAt: variable.DeletedAt, //
     description: variable.Description,
     environmentId: variable.EnvironmentId,
     id: variable.Id,
     initialValue: variable.InitialValue,
     name: variable.Name,
     type: variable.Type,
-    updatedAt: variable.UpdatedAt,
+    updatedAt: variable.UpdatedAt,//
   } as Variable;
 };

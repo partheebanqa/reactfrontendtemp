@@ -82,6 +82,7 @@ export async function apiRequest(
 
     if (res.status === 401) {
       removeCookie(USER_COOKIE_NAME);
+      authActions.clearAuth();
     }
 
     // Only throw for non-auth related errors to prevent login issues
@@ -113,6 +114,7 @@ export const getQueryFn: <T>(options: {
 
       if (res.status === 401) {
         removeCookie(USER_COOKIE_NAME);
+        authActions.clearAuth();
       }
 
       await throwIfResNotOk(res);

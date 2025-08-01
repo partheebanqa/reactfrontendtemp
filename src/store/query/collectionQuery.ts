@@ -3,6 +3,7 @@ import { collectionActions, collectionStore } from '../collectionStore';
 import {
   addCollection,
   addRequest,
+  deleteCollection,
   deleteRequest,
   duplicateRequest,
   fetchCollectionList,
@@ -11,6 +12,7 @@ import {
   renameCollection,
   renameRequest,
   setFavouriteCollection,
+  uploadSchema,
 } from '@/services/collection.service';
 import { workspaceStore } from '../workspaceStore';
 import {
@@ -146,6 +148,21 @@ export const useImpotPostmanCollectionMutation = () => {
   });
 };
 
+export const useImpotCollectionJsonMutation = () => {
+  const collectionQuery = useCollectionQuery();
+  return useMutation({
+    mutationFn: importCollectionJson,
+    onSuccess: async (response) => {
+      collectionQuery.refetch();
+      return response;
+    },
+    onError: (error) => {
+      console.error('Error importing collection:', error);
+      throw error;
+    }
+  });
+};
+
 export const useAddRequestMutation = () => {
   const fetchCollectionRequests = useCollectionRequestsQuery();
   return useMutation({
@@ -173,6 +190,20 @@ export const useRenameRequestMutation = () => {
     onError: (error) => {
       throw error;
     }
+  });
+};
+
+export const useDeleteCollectionMutation = () => {
+  return useMutation({
+    mutationFn: deleteCollection,
+    onSuccess: (data, variables) => {
+      console.log("🚀 ~ useDeleteCollectionMutation ~ variables:", variables)
+      collectionActions.deleteCollection(variables);
+    },
+    onError: (error) => {
+      console.error('Error deleting collection:', error);
+      throw error;
+    },
   });
 };
 
