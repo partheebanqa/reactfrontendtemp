@@ -95,6 +95,43 @@ const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, }) => {
     onClose();
   };
 
+  const detectImportFormat = (content, url = null) => {
+    // If URL is provided, try to detect from URL pattern
+    if (url) {
+      if (url.includes('swagger') || url.includes('openapi')) {
+        return 'openapi';
+      }
+    }
+
+    // Try to parse as JSON first
+    try {
+      const parsed = typeof content === 'string' ? JSON.parse(content) : content;
+
+      // Check for Postman collection
+      if (parsed.info && (parsed.info.schema || parsed.item)) {
+        return 'postman';
+      }
+
+      // Check for OpenAPI/Swagger
+      if (parsed.openapi || parsed.swagger) {
+        return 'openapi';
+      }
+
+      // Default to postman for JSON objects
+      return 'postman';
+
+    } catch (parseError) {
+      // Not valid JSON, check for cURL
+      if (typeof content === 'string' && content.trim().startsWith('curl')) {
+        return 'curl';
+      }
+
+      // Default fallback
+      return 'raw';
+    }
+  }
+
+
   const handleImport = async () => {
     setImporting(true);
     setError(null);
@@ -102,38 +139,34 @@ const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, }) => {
     try {
 
       if (importType === 'swagger') {
-        const response = await importCollectionMutation.mutateAsync({
-          workspaceId: currentWorkspace?.id || '',
-          inputMethod: "url",
-          specificationType: 'swagger',
-          url: postmanUrl.trim(),
-        });
-      } if (importType === 'curl') {
-        const response = await importCollectionMutation.mutateAsync({
+        const fetchRes = await fetch(postmanUrl.trim());
+        console.log("🚀 ~ handleImport ~ fetchRes:", fetchRes)
+        const json = fetchRes.ok ? await fetchRes.json() : null;
+        const { collectionName, specificationType } = checkJson(json)
+
+        await importCollectionMutation.mutateAsync({
+          name: collectionName,
           workspaceId: currentWorkspace?.id || '',
           inputMethod: "raw",
-          specificationType: 'curl',
-          url: importText.trim(),
+          specificationType: specificationType,
+          raw: JSON.stringify(json)
+        });
+      } if (importType === 'curl') {
+        // const { collectionName, specificationType } = checkJson(importText)
+          const data = detectImportFormat(importText,importType)
+          console.log("🚀 ~ handleImport ~ data:", data)
+        await importCollectionMutation.mutateAsync({
+          name: collectionName,
+          workspaceId: currentWorkspace?.id || '',
+          inputMethod: "raw",
+          specificationType: specificationType,
+          raw: JSON.stringify(importCurlCommand(importText)),
         });
       } else if (importType === 'file' && selectedFile) {
         const fileText = await selectedFile.text();
         const json = JSON.parse(fileText);
-        let specificationType: 'postman' | 'swagger' | 'openapi' | 'file' = 'file';
-        let collectionName = '';
-
-        if (json.info?.schema?.includes('schema.getpostman.com')) {
-          specificationType = 'postman';
-          collectionName = json.info.name || 'Imported Postman Collection';
-        } else if (json.swagger) {
-          specificationType = 'swagger';
-          collectionName = json.info?.title || 'Imported API';
-        } else if (json.openapi) {
-          specificationType = 'openapi';
-          collectionName = json.info?.title || 'Imported API';
-        } else {
-          throw new Error('Not a valid Postman collection or Swagger/OpenAPI specification');
-        }
-           await importCollectionMutation.mutateAsync({
+        const { collectionName, specificationType } = checkJson(json)
+        await importCollectionMutation.mutateAsync({
           name: collectionName,
           workspaceId: currentWorkspace?.id || '',
           inputMethod: "file",
@@ -147,6 +180,28 @@ const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, }) => {
       setImporting(false);
     }
   };
+
+  const checkJson = (json) => {
+    let specificationType: 'postman' | 'swagger' | 'openapi' | 'file' = 'file';
+    let collectionName = '';
+
+    if (json.info?.schema?.includes('schema.getpostman.com')) {
+      specificationType = 'postman';
+      collectionName = json.info.name || 'Imported Postman Collection';
+    } else if (json.swagger) {
+      specificationType = 'swagger';
+      collectionName = json.info?.title || 'Imported API';
+    } else if (json.openapi) {
+      specificationType = 'openapi';
+      collectionName = json.info?.title || 'Imported API';
+    } else {
+      throw new Error('Not a valid Postman collection or Swagger/OpenAPI specification');
+    }
+    return {
+      specificationType,
+      collectionName
+    }
+  }
 
   const isImportDisabled = () => {
     if (importing) return true;
