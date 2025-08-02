@@ -86,10 +86,12 @@ export const useCreateEnvironmentMutation = () => {
 };
 
 export const useUpdateEnvironmentMutation = () => {
+  const fetchEnvironmentsQuery = usegetEnvironmentQuery();
   return useMutation({
     mutationFn: updateEnvironment,
     onSuccess: (updatedEnvironment: Environment) => {
       console.log("Environment updated:", updatedEnvironment);
+      fetchEnvironmentsQuery.refetch();
     },
     onError: (error) => {
       console.error("Error updating environment:", error);
@@ -98,10 +100,13 @@ export const useUpdateEnvironmentMutation = () => {
 };
 
 export const useDeleteEnvironmentMutation = () => {
+  const fetchEnvironmentsQuery = usegetEnvironmentQuery();
   return useMutation({
     mutationFn: deleteEnvironment,
-    onSuccess: (environmentId: string) => {
-      console.log("Environment deleted:", environmentId);
+    onSuccess: () => {
+      console.log("🚀 ~ useDeleteEnvironmentMutation ~ environmentId:");
+      console.log("Environment deleted:");
+      fetchEnvironmentsQuery.refetch();
     },
     onError: (error) => {
       console.error("Error deleting environment:", error);
@@ -149,7 +154,6 @@ export const useDeleteVariableMutation = () => {
   });
 };
 
-
 const filterEnvironment = (environment: ResponseEnvironment) => {
   return {
     id: environment.Id,
@@ -164,7 +168,7 @@ const filterEnvironment = (environment: ResponseEnvironment) => {
 
 const filterVariable = (variable: ResponseVariable) => {
   return {
-    createdAt: variable.CreatedAt,//
+    createdAt: variable.CreatedAt, //
     currentValue: variable.CurrentValue,
     deletedAt: variable.DeletedAt, //
     description: variable.Description,
@@ -173,6 +177,6 @@ const filterVariable = (variable: ResponseVariable) => {
     initialValue: variable.InitialValue,
     name: variable.Name,
     type: variable.Type,
-    updatedAt: variable.UpdatedAt,//
+    updatedAt: variable.UpdatedAt, //
   } as Variable;
 };

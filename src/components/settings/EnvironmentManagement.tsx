@@ -147,6 +147,7 @@ export function EnvironmentManagement() {
           description: `Environment "${environment.name}" has been deleted.`,
         });
       } catch (error) {
+        console.log("🚀 ~ handleDelete ~ error:", error)
         toast({
           title: 'Error deleting environment',
           description: 'There was a problem deleting the environment.',
