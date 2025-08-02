@@ -23,6 +23,7 @@ import {
 } from '@/services/testSuites.service';
 import { TestSuite } from '@/shared/types/TestSuite.model';
 import { useWorkspace } from '@/hooks/useWorkspace';
+import HelpLink from '../HelpModal/HelpLink';
 
 const TestSuites: React.FC = () => {
   const { toast } = useToast();
@@ -156,10 +157,13 @@ const TestSuites: React.FC = () => {
           Create Test Suite
         </Button> */}
 
-        <Button onClick={handleCreateSuite} className='gap-2'>
+       <div className='flex items-center gap-2'>
+         <Button onClick={handleCreateSuite} className='gap-2'>
           <Plus className='w-4 h-4' />
           Create Suite
         </Button>
+        <HelpLink />
+       </div>
       </div>
 
       <div className='flex items-center space-x-4'>
