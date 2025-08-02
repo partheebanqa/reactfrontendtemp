@@ -403,7 +403,7 @@ const RequestEditor: React.FC = () => {
         order: (activeCollection?.requests?.length || 0) + 1,
         method: method,
         url: url,
-        bodyType: bodyType,
+        bodyType: bodyType == 'json' ? 'raw' : bodyType,
         bodyFormData: bodyType === 'form-data' ? formFields.filter(f => f.enabled).reduce((acc, field) => {
           if (field.key) {
             acc[field.key] = field.value;
@@ -454,6 +454,7 @@ const RequestEditor: React.FC = () => {
         headers: headers,
         // variables: activeRequest.variables || {},
       };
+      console.log("🚀 ~ handleConfirmSave ~ requestData:", requestData)
       await addRequestMutation.mutateAsync(requestData);
       setShowSaveModal(false);
       setNewCollectionName('');
