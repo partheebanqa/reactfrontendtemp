@@ -80,7 +80,11 @@ export default function Router() {
           <Route path='/notifications' component={Notifications} />
           <Route path='/settings/account' component={AccountSettingsPage} />
           <Route path='/cicd-configuration' component={CICDConfiguration} />
-          <Route path='/executions' component={ExecutionsNew} />
+          <Route path='/executions' component={ExecutionsNew} /> 
+           <Route path='/executions-reports' component={ExecutionReportsPage} />
+          <Route path='/request-chain-reports' component={RequestChainReport} />
+          <Route path='/test-suite-reports' component={TestSuiteReport} />
+
         </AppLayout>
       )}
       <Route path='/pricing' component={Pricing} />
