@@ -9,6 +9,7 @@ import VariablesSection from './VariablesSection';
 import { Environment, Variable } from '@/shared/types/datamanagement';
 import { useToast } from '@/hooks/useToast';
 import { useDataManagement } from '@/hooks/useDataManagement';
+import HelpLink from '../HelpModal/HelpLink';
 
 const DataManagement: React.FC = () => {
   const { toast } = useToast();
@@ -25,6 +26,7 @@ const DataManagement: React.FC = () => {
             Manage environments, variables, and test datasets
           </p>
         </div>
+        <HelpLink />
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>

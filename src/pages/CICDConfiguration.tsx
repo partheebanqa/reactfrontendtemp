@@ -1,15 +1,16 @@
 import React, { useState } from 'react';
-import { 
-  Key, 
-  Copy, 
-  RefreshCw, 
-  Eye, 
-  EyeOff, 
-  Code, 
+import {
+  Key,
+  Copy,
+  RefreshCw,
+  Eye,
+  EyeOff,
+  Code,
   AlertCircle,
   CheckCircle,
   Calendar
 } from 'lucide-react';
+import HelpLink from '@/components/HelpModal/HelpLink';
 
 export default function CICDConfiguration() {
   const [apiKey, setApiKey] = useState('api_test_12345abcdef67890ghijklmn');
@@ -36,9 +37,12 @@ export default function CICDConfiguration() {
 
   return (
     <div className="flex-1 overflow-y-auto p-4 sm:p-6">
-      <div className="mb-8">
-        <h2 className="text-3xl font-bold text-gray-900">CI/CD Integration</h2>
-        <p className="text-gray-600 mt-2">Connect with your CI/CD pipeline for automated testing</p>
+      <div className='flex items-center justify-between mb-6'>
+        <div className="mb-8">
+          <h2 className="text-3xl font-bold text-gray-900">CI/CD Integration</h2>
+          <p className="text-gray-600 mt-2">Connect with your CI/CD pipeline for automated testing</p>
+        </div>
+        <HelpLink />
       </div>
 
       {/* API Key Required Notice */}
@@ -82,7 +86,7 @@ export default function CICDConfiguration() {
                 )}
               </div>
             </div>
-            
+
             <div className="flex items-center space-x-3">
               <div className="flex-1 relative">
                 <input

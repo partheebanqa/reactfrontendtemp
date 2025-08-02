@@ -1,5 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { Download, FileText } from 'lucide-react';
+import HelpLink from '../HelpModal/HelpLink';
 
 export default function ReportsHeader() {
   return (
@@ -20,6 +21,7 @@ export default function ReportsHeader() {
             <FileText className='mr-2' size={16} />
             Generate Report
           </Button>
+          <HelpLink />
         </div>
       </div>
     </header>

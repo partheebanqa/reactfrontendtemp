@@ -1,6 +1,7 @@
 // ExecutionsHeader.tsx
 import { Button } from "@/components/ui/button";
 import { Download, Play } from "lucide-react";
+import HelpLink from "../HelpModal/HelpLink";
 
 export const ExecutionsHeader = () => (
   <header className="bg-white border-b border-slate-200 px-6 py-4">
@@ -20,6 +21,7 @@ export const ExecutionsHeader = () => (
           <Play className="mr-2" size={16} />
           Run Test Suite
         </Button>
+        <HelpLink />
       </div>
     </div>
   </header>

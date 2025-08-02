@@ -6,6 +6,7 @@ import {
   PanelLeft,
   PanelRight,
   Layers,
+  HelpCircle,
 } from "lucide-react";
 import { useCollection } from "@/hooks/useCollection";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -13,6 +14,7 @@ import RequestEditor from "./RequestEditor/RequestEditor";
 import ResponseViewer from "./ResponseViewer/ResponseViewer";
 import Sidebar from "./Sidebar/Sidebar";
 import { useRequest } from "@/hooks/useRequest";
+import { HelpModal } from "@/components/HelpModal/HelpModal";
 
 interface Header {
   key: string;
