@@ -1,13 +1,24 @@
-import React from "react";
+import React, { useEffect } from "react";
 import Sidebar from "./Sidebar";
 import TrialBanner from "./TrialBanner";
 import Header from "./Header/index";
+import { useAuth } from "@/hooks/useAuth";
+import { useLocation } from "wouter";
 
 interface AppLayoutProps {
   children: React.ReactNode;
 }
 
 const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
+  const {token,isAuthenticated} = useAuth();
+  const [_,setLocation] = useLocation();
+  useEffect(() => {
+    console.log('isAuthenticated',isAuthenticated);
+    
+    if (!token) {
+      setLocation("/");
+    }
+  }, [token]);
   try {
     return (
       <div className="flex h-screen overflow-hidden bg-gray-50">

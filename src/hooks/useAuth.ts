@@ -6,6 +6,7 @@ import {
   useLogoutMutation,
   useRegisterMutation,
   useUpdateProfileMutation,
+  useChangePasswordMutation,
 } from "@/store/query/authQuery";
 
 export function useAuth() {
@@ -25,6 +26,7 @@ export function useAuth() {
   const logoutMutation = useLogoutMutation();
   const registerMutation = useRegisterMutation();
   const updateProfileMutation = useUpdateProfileMutation();
+  const changePasswordMutation = useChangePasswordMutation();
 
   return {
     // State
@@ -42,5 +44,6 @@ export function useAuth() {
     logoutMutation,
     registerMutation,
     updateProfileMutation,
+    changePasswordMutation,
   };
 }

@@ -112,11 +112,6 @@ temp/
 *.njsproj
 *.sln
 *.sw?
-
-# Replit specific
-.replit
-replit.nix
-
 # Local development
 .local/
 

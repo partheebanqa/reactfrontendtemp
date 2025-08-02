@@ -6,45 +6,20 @@ import EnvironmentCard from './EnvironmentCard';
 import CreateEnvironmentDialog from './CreateEnvironmentDialog';
 import EditEnvironmentDialog from './EditEnvironmentDialog';
 import { useToast } from '@/hooks/useToast';
+import { useDataManagement } from '@/hooks/useDataManagement';
+import { useLocation } from 'wouter';
 
-const initialEnvironments: Environment[] = [
-  {
-    id: '1',
-    name: 'Development',
-    description: 'Development environment for testing',
-    baseUrl: 'https://api-dev.company.com',
-    variables: {
-      api_version: 'v1',
-      timeout: '5000',
-      retry_count: '3',
-    },
-    isDefault: true,
-    createdAt: '2024-01-15T10:30:00Z',
-  },
-  {
-    id: '2',
-    name: 'Staging',
-    description: 'Staging environment for pre-production testing',
-    baseUrl: 'https://api-staging.company.com',
-    variables: {
-      api_version: 'v1',
-      timeout: '3000',
-      retry_count: '2',
-    },
-    isDefault: false,
-    createdAt: '2024-01-10T09:15:00Z',
-  },
-];
 
 const EnvironmentsSection: React.FC = () => {
   const { toast } = useToast();
-  const [environments, setEnvironments] = useState(initialEnvironments);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const { environments } = useDataManagement();
   const [editingEnvironment, setEditingEnvironment] =
     useState<Environment | null>(null);
+  const [_,setLocation] = useLocation()
 
   const handleDeleteEnv = (id: string, label: string) => {
-    setEnvironments((prev) => prev.filter((env) => env.id !== id));
+    // setEnvironments((prev) => prev.filter((env) => env.id !== id));
     toast({
       title: 'Environment Deleted',
       description: `${label} has been deleted`,
@@ -52,12 +27,10 @@ const EnvironmentsSection: React.FC = () => {
     });
   };
   const handleCreate = (env: Environment) => {
-    setEnvironments((prev) => [...prev, env]);
     setIsCreateOpen(false);
   };
 
   const handleUpdate = (env: Environment) => {
-    setEnvironments((prev) => prev.map((e) => (e.id === env.id ? env : e)));
     setEditingEnvironment(null);
   };
 
@@ -65,7 +38,7 @@ const EnvironmentsSection: React.FC = () => {
     <>
       <div className='flex justify-between items-center my-4'>
         <h2 className='text-xl font-semibold'>Environments</h2>
-        <Button onClick={() => setIsCreateOpen(true)}>Add Environment</Button>
+        <Button onClick={() =>setLocation('/settings/account?tab=environments') }>Manage Environment</Button>
       </div>
 
       <div className='grid gap-4'>

@@ -217,7 +217,7 @@ const RequestBuilder = () => {
               width: !isBottomLayout ? `${100 - resizePosition}%` : undefined,
             }}
           >
-            <ResponseViewer />
+            <ResponseViewer isBottomLayout={isBottomLayout} />
           </div>
         </div>
       </div>

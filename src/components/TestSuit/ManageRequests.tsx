@@ -10,6 +10,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { RefreshCcw } from 'lucide-react';
 
 interface Request {
   id: string;
@@ -80,12 +81,20 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
       <CardHeader>
         <div className='flex items-center justify-between'>
           <CardTitle>Requests ({requests.length})</CardTitle>
-          <Button variant='outline' onClick={onImport}>
-            <Download className='w-4 h-4 mr-2' />
-            Import More Requests
-          </Button>
+
+          <div className='flex items-center space-x-2'>
+            <Button variant='outline'>
+              <RefreshCcw className='w-4 h-4 mr-2' />
+              Refresh
+            </Button>
+            <Button variant='outline' onClick={onImport}>
+              <Download className='w-4 h-4 mr-2' />
+              Import More Requests
+            </Button>
+          </div>
         </div>
       </CardHeader>
+
       <CardContent>
         <div className='space-y-3'>
           {requests.map((request) => (
@@ -111,34 +120,34 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
                   </div>
                 </div>
                 <div className='flex items-center space-x-2'>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                  <Button
-                    variant='ghost'
-                    size='sm'
-                    onClick={() => handleConfigureTestCases(request)}
-                    className='text-muted-foreground hover:text-primary hover:bg-primary/10'
-                  >
-                    {testSuiteId && <Settings className='w-4 h-4' />}
-                  </Button>
-                  </TooltipTrigger>
-                        <TooltipContent>Configuration</TooltipContent>
-                      </Tooltip>
-                   
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                  <Button
-                    variant='ghost'
-                    size='sm'
-                    onClick={() => onDeleteRequest(request.id)}
-                    className='text-muted-foreground hover:text-destructive hover:bg-destructive/10'
-                  >
-                    <Trash2 className='w-4 h-4' />
-                  </Button>
-                  </TooltipTrigger>
-                        <TooltipContent>Delete</TooltipContent>
-                      </Tooltip>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant='ghost'
+                          size='sm'
+                          onClick={() => handleConfigureTestCases(request)}
+                          className='text-muted-foreground hover:text-primary hover:bg-primary/10'
+                        >
+                          {testSuiteId && <Settings className='w-4 h-4' />}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Configuration</TooltipContent>
+                    </Tooltip>
+
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant='ghost'
+                          size='sm'
+                          onClick={() => onDeleteRequest(request.id)}
+                          className='text-muted-foreground hover:text-destructive hover:bg-destructive/10'
+                        >
+                          <Trash2 className='w-4 h-4' />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Delete</TooltipContent>
+                    </Tooltip>
                   </TooltipProvider>
                 </div>
               </div>

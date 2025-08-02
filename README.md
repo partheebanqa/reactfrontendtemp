@@ -86,7 +86,6 @@ A comprehensive no-code/low-code SaaS API testing platform with enterprise-grade
 │   ├── routes.ts         # API routes
 │   ├── storage.ts        # Database operations
 │   ├── db.ts             # Database connection
-│   └── replitAuth.ts     # Authentication setup
 └── shared/
     └── schema.ts         # Database schema and types
 ```
@@ -114,12 +113,7 @@ A comprehensive no-code/low-code SaaS API testing platform with enterprise-grade
    ```bash
    # Database
    DATABASE_URL="your_postgresql_connection_string"
-   
-   # Authentication (provided by Replit)
-   REPL_ID="your_repl_id"
-   REPLIT_DOMAINS="your_domain"
-   SESSION_SECRET="your_session_secret"
-   ```
+  
 
 4. **Set up the database**
    ```bash

@@ -166,7 +166,7 @@ export default function SignUp() {
                       placeholder="John"
                       value={formData.firstName}
                       onChange={(e) =>
-                        setFormData({ ...formData, firstName: e.target.value })
+                        setFormData({ ...formData, firstName: e.target.value.trim() })
                       }
                     />
                   </div>
@@ -181,7 +181,7 @@ export default function SignUp() {
                     placeholder="Doe"
                     value={formData.lastName}
                     onChange={(e) =>
-                      setFormData({ ...formData, lastName: e.target.value })
+                      setFormData({ ...formData, lastName: e.target.value.trim() })
                     }
                   />
                 </div>
@@ -199,7 +199,7 @@ export default function SignUp() {
                     placeholder="john@company.com"
                     value={formData.email}
                     onChange={(e) =>
-                      setFormData({ ...formData, email: e.target.value })
+                      setFormData({ ...formData, email: e.target.value.trim() })
                     }
                   />
                 </div>
@@ -219,7 +219,7 @@ export default function SignUp() {
                     onChange={(e) =>
                       setFormData({
                         ...formData,
-                        workspaceName: e.target.value,
+                        workspaceName: e.target.value.trim(),
                       })
                     }
                   />
@@ -238,7 +238,7 @@ export default function SignUp() {
                     placeholder="Create a password"
                     value={formData.password}
                     onChange={(e) =>
-                      setFormData({ ...formData, password: e.target.value })
+                      setFormData({ ...formData, password: e.target.value.trim() })
                     }
                   />
                   <button
@@ -269,7 +269,7 @@ export default function SignUp() {
                     onChange={(e) =>
                       setFormData({
                         ...formData,
-                        confirmPassword: e.target.value,
+                        confirmPassword: e.target.value.trim(),
                       })
                     }
                   />

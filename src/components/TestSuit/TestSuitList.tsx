@@ -90,7 +90,7 @@ const TestSuites: React.FC = () => {
     },
     onError: (error: any) => {
       toast({
-        title: 'Delete failed',
+        title: 'Clone failed',
         description: error.message || 'Something went wrong.',
         variant: 'destructive',
       });
@@ -108,8 +108,8 @@ const TestSuites: React.FC = () => {
     },
     onError: (error: any) => {
       toast({
-        title: 'Delete failed',
-        description: error.message || 'Something went wrong.',
+        title: 'Execute failed',
+        description: 'Execution failed. Please try again later.',
         variant: 'destructive',
       });
     },

@@ -8,8 +8,8 @@ import { authActions, authStore } from '@/store/authStore';
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
-    const text = (await res.text()) || res.statusText;
-    throw new Error(`${res.status}: ${text}`);
+    const response = await res.json();
+    throw new Error(response.error || response.message || 'Request failed');
   }
 }
 
@@ -32,7 +32,6 @@ export async function apiRequest(
     // }
 
     const cachedUserData = getEncryptedCookie(USER_COOKIE_NAME);
-    // console.log('cachedUserData:', cachedUserData);
 
     if (cachedUserData && cachedUserData.token) {
       options = {
@@ -91,9 +90,6 @@ export async function apiRequest(
     }
     return res;
   } catch (error) {
-    console.error('API Request Error:', error);
-    if (error instanceof Error) {
-    }
     throw error;
   }
 }

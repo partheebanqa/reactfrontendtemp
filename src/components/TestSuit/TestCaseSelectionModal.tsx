@@ -97,8 +97,9 @@ const generateTags = (testCase: ApiTestCase): string[] => {
 // Transform API response to UI format
 const transformTestCases = (
   apiTestCases: ApiTestCase[]
-): TestCaseCategory[] => {
+): { categories: TestCaseCategory[]; selectedIds: string[] } => {
   const categoriesMap: { [key: string]: TestCase[] } = {};
+  const selectedIds: string[] = [];
 
   apiTestCases.forEach((apiTestCase) => {
     const categoryName = getCategoryName(apiTestCase.category);
@@ -114,13 +115,20 @@ const transformTestCases = (
       categoriesMap[categoryName] = [];
     }
     categoriesMap[categoryName].push(testCase);
+
+    // Track selected
+    if (apiTestCase.isSelected) {
+      selectedIds.push(apiTestCase.id);
+    }
   });
 
-  return Object.entries(categoriesMap).map(([category, tests]) => ({
+  const categories = Object.entries(categoriesMap).map(([category, tests]) => ({
     category,
     count: tests.length,
     tests,
   }));
+
+  return { categories, selectedIds };
 };
 
 export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
@@ -199,12 +207,14 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
   // Transform and set test cases when data changes
   useEffect(() => {
     if (testCasesData?.testCases) {
-      const transformedCategories = transformTestCases(testCasesData.testCases);
-      setTestCaseCategories(transformedCategories);
+      const { categories, selectedIds } = transformTestCases(
+        testCasesData.testCases
+      );
+      setTestCaseCategories(categories);
+      setSelectedTestCases(selectedIds);
 
-      // Expand the first category if it exists
-      if (transformedCategories.length > 0) {
-        setExpandedCategories([transformedCategories[0].category]);
+      if (categories.length > 0) {
+        setExpandedCategories([categories[0].category]);
       }
     }
   }, [testCasesData]);

@@ -91,18 +91,6 @@ const menuItems = [
     icon: FileText,
     feature: 'reports',
   },
-  {
-    label: 'Execution Reports',
-    path: '/executions-reports',
-    icon: FileText,
-    feature: 'reports',
-  },
-  {
-    label: 'Plan & Billing',
-    path: '/plan-billing',
-    icon: Receipt,
-    feature: 'plan_billing',
-  },
   // {
   //   label: 'CI/CD Configuration',
   //   path: '/cicd-configuration',
@@ -308,10 +296,10 @@ const Sidebar: React.FC = () => {
           </div>
         ) : (
           <div className='flex items-center space-x-3'>
-            <div className='w-8 h-8 bg-primary rounded-lg flex items-center justify-center'>
+            <Link to='/' className='w-8 h-8 bg-primary rounded-lg flex items-center justify-center'>
               <Code className='w-4 h-4 text-primary-foreground' />
-            </div>
-            <div>
+            </Link >
+            <Link to='/'>
               <h1 className='text-xl font-bold'>Optraflow</h1>
               <Badge variant='secondary' className='text-xs'>
                 {subscriptionPlan === 'free'
@@ -320,7 +308,7 @@ const Sidebar: React.FC = () => {
                     ? 'Pro'
                     : 'Enterprise'}
               </Badge>
-            </div>
+            </Link>
           </div>
         )}
         <Button

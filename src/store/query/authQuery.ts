@@ -1,43 +1,41 @@
-import { useMutation, useQuery } from '@tanstack/react-query';
-import { apiRequest } from '@/lib/queryClient';
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import {
   getEncryptedCookie,
   setEncryptedCookie,
   removeCookie,
-} from '@/lib/cookieUtils';
-import { USER_COOKIE_NAME } from '@/lib/constants';
-import { API_GET_USER, API_LOGIN } from '@/config/apiRoutes';
-import { authActions } from '../authStore';
-import { User, ILoginResponse } from '@/shared/types/auth';
-import { queryClient } from '@/lib/queryClient';
+} from "@/lib/cookieUtils";
+import { USER_COOKIE_NAME } from "@/lib/constants";
+import { authActions } from "../authStore";
+import { User, ILoginResponse } from "@/shared/types/auth";
+import { queryClient } from "@/lib/queryClient";
 import {
+  changePasswordApi,
   loginApi,
   logoutApi,
   refreshUserData,
   registerApi,
-} from '@/services/auth.service';
-import { da } from '@faker-js/faker';
+} from "@/services/auth.service";
+import { DeactivationFormData } from "@/components/settings/AccountDeactivation";
 
 // Query to fetch current user data
 export const useUserQuery = () => {
   return useQuery({
-    queryKey: ['/api/auth/user'],
+    queryKey: ["/api/auth/user"],
     retry: false,
     queryFn: async () => {
       try {
         authActions.setIsLoading(true);
         const data = await refreshUserData();
-        if (data?.user) {
-          authActions.setUser(data.user);
-        }
-
-        if (data?.token) {
-          authActions.setToken(data.token);
+        const filteredUser = filterUserData(data || {});
+        console.log("🚀 ~ useUserQuery ~ filteredUser:", filteredUser);
+        if (filteredUser) {
+          authActions.setUser(filteredUser);
         }
         authActions.setIsLoading(false);
         return data;
       } catch (error) {
-        console.error('Auth check error:', error);
+        console.error("Auth check error:", error);
         authActions.setIsLoading(false);
         return null;
       }
@@ -60,7 +58,7 @@ export const useLoginMutation = () => {
           token: data.token,
         };
         setEncryptedCookie(USER_COOKIE_NAME, newUserData);
-        await queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
+        await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
         return true;
       }
       return false;
@@ -69,9 +67,9 @@ export const useLoginMutation = () => {
       const errorMessage =
         error instanceof Error
           ? error.message
-          : 'An unexpected error occurred during login';
+          : "An unexpected error occurred during login";
 
-      console.error('Login error:', errorMessage);
+      console.error("Login error:", errorMessage);
       throw new Error(errorMessage);
     },
   });
@@ -89,16 +87,13 @@ export const useLogoutMutation = () => {
       authActions.clearAuth();
 
       // Clear queries
-      await queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       queryClient.clear();
     },
     onError: async (error: any) => {
-      console.error('Logout error:', error);
-
-      // Even on error, clean up local state
       removeCookie(USER_COOKIE_NAME);
       authActions.clearAuth();
-      await queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
     },
   });
 };
@@ -116,9 +111,9 @@ export const useRegisterMutation = () => {
       const errorMessage =
         error instanceof Error
           ? error.message
-          : 'An unexpected error occurred during registration';
+          : "An unexpected error occurred during registration";
 
-      console.error('Registration erroraa:', errorMessage);
+      console.error("Registration erroraa:", errorMessage);
       throw new Error(errorMessage);
     },
   });
@@ -128,12 +123,12 @@ export const useRegisterMutation = () => {
 export const useUpdateProfileMutation = () => {
   return useMutation({
     mutationFn: async (profileData: Partial<User>) => {
-      const response = await apiRequest('PUT', '/api/auth/profile', {
+      const response = await apiRequest("PUT", "/api/auth/profile", {
         body: profileData,
       });
 
       if (!response.ok) {
-        throw new Error('Failed to update profile');
+        throw new Error("Failed to update profile");
       }
 
       return response.json();
@@ -144,8 +139,55 @@ export const useUpdateProfileMutation = () => {
         authActions.setUser(data.user);
 
         // Update in queries
-        await queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
+        await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       }
     },
   });
+};
+
+export const useChangePasswordMutation = () => {
+  return useMutation({
+    mutationFn: changePasswordApi,
+    onSuccess: () => {
+      console.log("Password changed successfully");
+      authActions.clearAuth();
+      removeCookie(USER_COOKIE_NAME);
+    },
+  });
+};
+
+export const useDeactiveAccountMutation = () => {
+  return useMutation({
+    mutationFn: async (data: DeactivationFormData) => {
+      const response = await apiRequest('POST', '/api/auth/deactivate', data);
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to deactivate account');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Account deactivated',
+        description: 'Your account has been successfully deactivated.',
+      });
+      setIsDeactivationDialogOpen(false);
+      // Redirect to login or home page
+      window.location.href = '/';
+    },
+  });
+};
+
+const filterUserData = (user) => {
+  return {
+    id: user.Id,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    email: user.email,
+    role: user.role,
+    createdAt: user.createdAt,
+    updatedAt: user.updatedAt,
+    deletedAt: user.deletedAt,
+    organization: user.organization || null,
+  } as User;
 };

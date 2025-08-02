@@ -13,6 +13,8 @@ import KeyValueEditor from '@/components/ui/KeyValueEditor';
 import ToggleSwitch from '@/components/ui/ToggleSwitch';
 import EditableText from '@/components/ui/EditableText';
 import Modal from '@/components/ui/Modal';
+import HighlightedUrlInput from '../HighlightedUrlInput';
+import { useDataManagement } from '@/hooks/useDataManagement';
 
 const RequestEditor: React.FC = () => {
   const { isLoading, clearError, setLoading, setError, setResponseData } =
@@ -31,7 +33,9 @@ const RequestEditor: React.FC = () => {
     renameRequestMutation,
     setCollection,
     expandedCollections,
+
   } = useCollection();
+  const { variables, environments, activeEnvironment } = useDataManagement()
   const { error: showError, success: showSuccess } = useToast();
   const { currentWorkspace } = useWorkspace();
   const [activeTab, setActiveTab] = useState<
@@ -44,14 +48,13 @@ const RequestEditor: React.FC = () => {
   const [params, setParams] = useState<Param[]>([]);
   const [headers, setHeaders] = useState<Header[]>([]);
   const [bodyType, setBodyType] = useState<
-  'none' | 'json' | 'form-data' | 'x-www-form-urlencoded' | 'raw' | 'binary'
+    'none' | 'json' | 'form-data' | 'x-www-form-urlencoded' | 'raw' | 'binary'
   >('json');
-  console.log("🚀 ~ bodyType:", bodyType)
   const [bodyContent, setBodyContent] = useState('');
   const [formFields, setFormFields] = useState<Param[]>([]);
   const [urlEncodedFields, setUrlEncodedFields] = useState<Param[]>([]);
   const [authType, setAuthType] = useState<
-    'none' | 'basic' | 'bearer' | 'apiKey'
+    'none' | 'basic' | 'bearer' | 'apiKey' | 'oauth1' | 'oauth2'
   >('none');
   const [token, setToken] = useState('');
   const [authData, setAuthData] = useState({
@@ -61,6 +64,29 @@ const RequestEditor: React.FC = () => {
     key: '',
     value: '',
     addTo: 'header' as 'header' | 'query',
+    // OAuth 1.0 fields
+    oauth1: {
+      consumerKey: '',
+      consumerSecret: '',
+      token: '',
+      tokenSecret: '',
+      signatureMethod: 'HMAC-SHA1',
+      version: '1.0',
+      realm: '',
+      nonce: '',
+      timestamp: '',
+    },
+    // OAuth 2.0 fields
+    oauth2: {
+      clientId: '',
+      clientSecret: '',
+      accessToken: '',
+      tokenType: 'Bearer',
+      refreshToken: '',
+      scope: '',
+      grantType: 'authorization_code' as 'authorization_code' | 'client_credentials' | 'password' | 'refresh_token',
+      redirectUri: '',
+    }
   });
   const [preRequestScript, setPreRequestScript] = useState('');
   const [testScript, setTestScript] = useState('');
@@ -69,11 +95,9 @@ const RequestEditor: React.FC = () => {
     timeout: 30000, // 30 seconds
     sslVerification: true,
   });
-
+  
   useEffect(() => {
     if (activeRequest) {
-      console.log('activeRequest',activeRequest);
-      
       setUrl(activeRequest.url || '');
       setMethod((activeRequest.method as RequestMethod) || 'GET');
       setParams(activeRequest.params || []);
@@ -160,7 +184,9 @@ const RequestEditor: React.FC = () => {
           | 'none'
           | 'basic'
           | 'bearer'
-          | 'apiKey') || 'none'
+          | 'apiKey'
+          | 'oauth1'
+          | 'oauth2') || 'none'
       );
       setAuthData({
         username: activeRequest.authorization?.username || '',
@@ -169,27 +195,33 @@ const RequestEditor: React.FC = () => {
         key: activeRequest.authorization?.key || '',
         value: activeRequest.authorization?.value || '',
         addTo: activeRequest.authorization?.addTo || 'header',
+        // Set default values for OAuth fields
+        oauth1: {
+          consumerKey: '',
+          consumerSecret: '',
+          token: '',
+          tokenSecret: '',
+          signatureMethod: 'HMAC-SHA1',
+          version: '1.0',
+          realm: '',
+          nonce: '',
+          timestamp: '',
+        },
+        oauth2: {
+          clientId: '',
+          clientSecret: '',
+          accessToken: '',
+          tokenType: 'Bearer',
+          refreshToken: '',
+          scope: '',
+          grantType: 'authorization_code',
+          redirectUri: '',
+        }
       });
       setPreRequestScript('');
       setTestScript('');
     } else {
-      setUrl('');
-      setMethod('GET');
-      setParams([]);
-      setHeaders([]);
-      setBodyType('json');
-      setBodyContent('');
-      setAuthType('none');
-      setAuthData({
-        username: '',
-        password: '',
-        token: '',
-        key: '',
-        value: '',
-        addTo: 'header',
-      });
-      setPreRequestScript('');
-      setTestScript('');
+      handleCreateRequest()
     }
   }, [activeRequest]);
 
@@ -197,10 +229,11 @@ const RequestEditor: React.FC = () => {
     if (!activeRequest) return;
     clearError();
     setLoading(true);
+    const newUrl = buildFinalUrl();
     try {
       const requestData = {
         method: method,
-        url: url,
+        url: newUrl,
         params: params,
         headers: headers,
         body: bodyContent,
@@ -221,6 +254,27 @@ const RequestEditor: React.FC = () => {
           key: authType === 'apiKey' ? authData.key : '',
           value: authType === 'apiKey' ? authData.value : '',
           addTo: authType === 'apiKey' ? authData.addTo : 'header',
+          oauth1: authType === 'oauth1' ? {
+            consumerKey: authData.oauth1.consumerKey,
+            consumerSecret: authData.oauth1.consumerSecret,
+            token: authData.oauth1.token,
+            tokenSecret: authData.oauth1.tokenSecret,
+            signatureMethod: authData.oauth1.signatureMethod,
+            version: authData.oauth1.version,
+            realm: authData.oauth1.realm,
+            nonce: authData.oauth1.nonce,
+            timestamp: authData.oauth1.timestamp,
+          } : undefined,
+          oauth2: authType === 'oauth2' ? {
+            clientId: authData.oauth2.clientId,
+            clientSecret: authData.oauth2.clientSecret,
+            accessToken: authData.oauth2.accessToken,
+            tokenType: authData.oauth2.tokenType,
+            refreshToken: authData.oauth2.refreshToken,
+            scope: authData.oauth2.scope,
+            grantType: authData.oauth2.grantType,
+            redirectUri: authData.oauth2.redirectUri,
+          } : undefined,
         },
       };
       const response = await makeRequest(requestData);
@@ -353,6 +407,7 @@ const RequestEditor: React.FC = () => {
         );
         return;
       }
+      let createdCollectionId: string | null = null;
       if (isCreatingCollection && newCollectionName.trim()) {
         const res = await addCollectionMutation.mutateAsync({
           name: newCollectionName.trim(),
@@ -360,6 +415,7 @@ const RequestEditor: React.FC = () => {
           isImportant: false,
         });
         if (res?.collectionId) {
+          createdCollectionId = res.collectionId;
           const createdCollection = collections.find(
             (collection) => collection.id === res.collectionId
           );
@@ -378,7 +434,7 @@ const RequestEditor: React.FC = () => {
       }
 
       const requestData = {
-        collectionId: activeCollection?.id,
+        collectionId: createdCollectionId ? createdCollectionId : activeCollection?.id,
         description: '',
         name: activeRequest.name || 'New Request',
         order: (activeCollection?.requests?.length || 0) + 1,
@@ -404,6 +460,32 @@ const RequestEditor: React.FC = () => {
         authorizationType: authType,
         authorization: {
           token: authType === 'bearer' ? authData.token : '',
+          username: authType === 'basic' ? authData.username : '',
+          password: authType === 'basic' ? authData.password : '',
+          key: authType === 'apiKey' ? authData.key : '',
+          value: authType === 'apiKey' ? authData.value : '',
+          addTo: authType === 'apiKey' ? authData.addTo : 'header',
+          oauth1: authType === 'oauth1' ? {
+            consumerKey: authData.oauth1.consumerKey,
+            consumerSecret: authData.oauth1.consumerSecret,
+            token: authData.oauth1.token,
+            tokenSecret: authData.oauth1.tokenSecret,
+            signatureMethod: authData.oauth1.signatureMethod,
+            version: authData.oauth1.version,
+            realm: authData.oauth1.realm,
+            nonce: authData.oauth1.nonce,
+            timestamp: authData.oauth1.timestamp,
+          } : undefined,
+          oauth2: authType === 'oauth2' ? {
+            clientId: authData.oauth2.clientId,
+            clientSecret: authData.oauth2.clientSecret,
+            accessToken: authData.oauth2.accessToken,
+            tokenType: authData.oauth2.tokenType,
+            refreshToken: authData.oauth2.refreshToken,
+            scope: authData.oauth2.scope,
+            grantType: authData.oauth2.grantType,
+            redirectUri: authData.oauth2.redirectUri,
+          } : undefined,
         },
         params: params,
         headers: headers,
@@ -424,6 +506,47 @@ const RequestEditor: React.FC = () => {
       });
     }
   };
+
+  const substituteVariables = (text: string): string => {
+    let result = text
+    variables.forEach(variable => {
+      const regex = new RegExp(`{{${variable.name}}}`, 'g')
+      result = result.replace(regex, variable.initialValue)
+    })
+    return result
+  }
+
+
+  const buildFinalUrl = (): string => {
+    let finalUrl = url
+
+    // Apply variable substitution
+    finalUrl = substituteVariables(finalUrl)
+
+    // Apply environment base URL if not "no-environment"
+    if (activeCollection?.name) {
+      if (activeEnvironment && activeEnvironment.baseUrl) {
+        try {
+          // Parse the original URL to extract the path and query parameters
+          const originalUrl = new URL(finalUrl)
+          const pathAndQuery = originalUrl.pathname + originalUrl.search + originalUrl.hash
+
+          // Combine activeEnvironment base URL with the path from original URL
+          const baseUrl = activeEnvironment.baseUrl.replace(/\/$/, '')
+          finalUrl = `${baseUrl}${pathAndQuery}`
+        } catch (error) {
+          // If URL parsing fails, treat as relative path
+          if (!finalUrl.startsWith('http://') && !finalUrl.startsWith('https://')) {
+            finalUrl = finalUrl.startsWith('/') ? finalUrl : `/${finalUrl}`
+            finalUrl = `${activeEnvironment.baseUrl.replace(/\/$/, '')}${finalUrl}`
+          }
+        }
+      }
+    }
+
+    return finalUrl
+  }
+  const previewUrl = buildFinalUrl()
 
   const handleCancelSave = () => {
     setShowSaveModal(false);
@@ -507,6 +630,19 @@ const RequestEditor: React.FC = () => {
 
   const methods: RequestMethod[] = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'];
 
+  const getMethodColor = (method: string) => {
+    const colors = {
+      GET: 'text-green-600 bg-green-50 border-green-200',
+      POST: 'text-blue-600 bg-blue-50 border-blue-200',
+      PUT: 'text-orange-600 bg-orange-50 border-orange-200',
+      DELETE: 'text-red-600 bg-red-50 border-red-200',
+      PATCH: 'text-purple-600 bg-purple-50 border-purple-200',
+      HEAD: 'text-gray-600 bg-gray-50 border-gray-200',
+      OPTIONS: 'text-indigo-600 bg-indigo-50 border-indigo-200',
+    };
+    return colors[method as keyof typeof colors] || 'text-gray-600 bg-gray-50 border-gray-200';
+  };
+
   if (!activeRequest) {
     return (
       <div className='flex-1 flex items-center justify-center bg-gray-50 dark:bg-gray-900 p-4'>
@@ -535,22 +671,6 @@ const RequestEditor: React.FC = () => {
               fontSize="lg"
               fontWeight="semibold"
             />
-            <span
-              className={`px-2 py-1 rounded text-xs font-medium ${method === 'GET'
-                ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                : method === 'POST'
-                  ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200'
-                  : method === 'PUT'
-                    ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
-                    : method === 'DELETE'
-                      ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                      : method === 'PATCH'
-                        ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
-                        : 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
-                }`}
-            >
-              {method}
-            </span>
           </div>
         </div>
       </div>
@@ -558,13 +678,25 @@ const RequestEditor: React.FC = () => {
       {/* Request URL Bar */}
       <div className='border-b border-gray-200 dark:border-gray-700 p-4 flex-shrink-0'>
         <div className='flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-2'>
+          {/* Replace the old method selector with the one built into HighlightedUrlInput */}
+          {/* <HighlightedUrlInput 
+            url={url} 
+            setUrl={setUrl} 
+            method={method}
+            setMethod={(newMethod) => setMethod(newMethod as RequestMethod)}
+          /> */}
           <select
             value={method}
             onChange={(e) => setMethod(e.target.value as RequestMethod)}
-            className='w-full sm:w-auto border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-800 text-sm font-medium hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all duration-150'
+            className={`w-full sm:w-auto border rounded-md px-3 py-2 text-sm font-medium hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all duration-150 ${getMethodColor(method)}`}
+            style={{ appearance: 'auto' }} /* Ensures dropdown styling is maintained */
           >
             {methods.map((m) => (
-              <option key={m} value={m}>
+              <option
+                key={m}
+                value={m}
+                className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-200" /* Normal styling for options */
+              >
                 {m}
               </option>
             ))}
@@ -611,6 +743,17 @@ const RequestEditor: React.FC = () => {
             </button> */}
           </div>
         </div>
+
+        {previewUrl && <div className="mt-2 mb-1">
+          <div className="bg-gray-50 dark:bg-gray-800 rounded px-3 py-2 flex gap-2  items-center">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              <span className="font-medium">Final URL Preview:</span>
+            </p>
+            <p className="text-sm text-blue-600 dark:text-blue-400 font-mono break-all">
+              {previewUrl}
+            </p>
+          </div>
+        </div>}
       </div>
 
       {/* Request Tabs */}
@@ -766,6 +909,8 @@ const RequestEditor: React.FC = () => {
                 <option value='basic'>Basic Auth</option>
                 <option value='bearer'>Bearer Token</option>
                 <option value='apiKey'>API Key</option>
+                <option value='oauth1'>OAuth 1.0</option>
+                <option value='oauth2'>OAuth 2.0</option>
               </select>
             </div>
 
@@ -891,6 +1036,221 @@ const RequestEditor: React.FC = () => {
                       </span>
                     </label>
                   </div>
+                </div>
+              </div>
+            )}
+
+            {authType === 'oauth1' && (
+              <div className='space-y-4'>
+                <div>
+                  <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
+                    Consumer Key
+                  </label>
+                  <input
+                    type='text'
+                    value={authData.oauth1.consumerKey}
+                    onChange={(e) =>
+                      setAuthData({
+                        ...authData,
+                        oauth1: { ...authData.oauth1, consumerKey: e.target.value }
+                      })
+                    }
+                    placeholder='Enter consumer key'
+                    className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 bg-white dark:bg-gray-800 text-sm'
+                  />
+                </div>
+                <div>
+                  <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
+                    Consumer Secret
+                  </label>
+                  <input
+                    type='password'
+                    value={authData.oauth1.consumerSecret}
+                    onChange={(e) =>
+                      setAuthData({
+                        ...authData,
+                        oauth1: { ...authData.oauth1, consumerSecret: e.target.value }
+                      })
+                    }
+                    placeholder='Enter consumer secret'
+                    className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 bg-white dark:bg-gray-800 text-sm'
+                  />
+                </div>
+                <div>
+                  <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
+                    Access Token
+                  </label>
+                  <input
+                    type='text'
+                    value={authData.oauth1.token}
+                    onChange={(e) =>
+                      setAuthData({
+                        ...authData,
+                        oauth1: { ...authData.oauth1, token: e.target.value }
+                      })
+                    }
+                    placeholder='Enter access token'
+                    className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 bg-white dark:bg-gray-800 text-sm'
+                  />
+                </div>
+                <div>
+                  <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
+                    Token Secret
+                  </label>
+                  <input
+                    type='password'
+                    value={authData.oauth1.tokenSecret}
+                    onChange={(e) =>
+                      setAuthData({
+                        ...authData,
+                        oauth1: { ...authData.oauth1, tokenSecret: e.target.value }
+                      })
+                    }
+                    placeholder='Enter token secret'
+                    className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 bg-white dark:bg-gray-800 text-sm'
+                  />
+                </div>
+                <div>
+                  <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
+                    Signature Method
+                  </label>
+                  <select
+                    value={authData.oauth1.signatureMethod}
+                    onChange={(e) =>
+                      setAuthData({
+                        ...authData,
+                        oauth1: { ...authData.oauth1, signatureMethod: e.target.value }
+                      })
+                    }
+                    className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-800 text-sm font-medium hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all duration-150'
+                  >
+                    <option value='HMAC-SHA1'>HMAC-SHA1</option>
+                    <option value='HMAC-SHA256'>HMAC-SHA256</option>
+                    <option value='PLAINTEXT'>PLAINTEXT</option>
+                    <option value='RSA-SHA1'>RSA-SHA1</option>
+                  </select>
+                </div>
+                <div>
+                  <p className='mt-1 text-xs text-gray-500 dark:text-gray-400'>
+                    OAuth 1.0 parameters will be automatically generated and added to the Authorization header.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {authType === 'oauth2' && (
+              <div className='space-y-4'>
+                <div>
+                  <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
+                    Grant Type
+                  </label>
+                  <select
+                    value={authData.oauth2.grantType}
+                    onChange={(e) =>
+                      setAuthData({
+                        ...authData,
+                        oauth2: { ...authData.oauth2, grantType: e.target.value as any }
+                      })
+                    }
+                    className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-800 text-sm font-medium hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all duration-150'
+                  >
+                    <option value='authorization_code'>Authorization Code</option>
+                    <option value='client_credentials'>Client Credentials</option>
+                    <option value='password'>Password</option>
+                    <option value='refresh_token'>Refresh Token</option>
+                  </select>
+                </div>
+                <div>
+                  <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
+                    Access Token
+                  </label>
+                  <input
+                    type='text'
+                    value={authData.oauth2.accessToken}
+                    onChange={(e) =>
+                      setAuthData({
+                        ...authData,
+                        oauth2: { ...authData.oauth2, accessToken: e.target.value }
+                      })
+                    }
+                    placeholder='Enter access token'
+                    className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 bg-white dark:bg-gray-800 text-sm'
+                  />
+                </div>
+                <div>
+                  <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
+                    Client ID
+                  </label>
+                  <input
+                    type='text'
+                    value={authData.oauth2.clientId}
+                    onChange={(e) =>
+                      setAuthData({
+                        ...authData,
+                        oauth2: { ...authData.oauth2, clientId: e.target.value }
+                      })
+                    }
+                    placeholder='Enter client ID'
+                    className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 bg-white dark:bg-gray-800 text-sm'
+                  />
+                </div>
+                <div>
+                  <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
+                    Client Secret
+                  </label>
+                  <input
+                    type='password'
+                    value={authData.oauth2.clientSecret}
+                    onChange={(e) =>
+                      setAuthData({
+                        ...authData,
+                        oauth2: { ...authData.oauth2, clientSecret: e.target.value }
+                      })
+                    }
+                    placeholder='Enter client secret'
+                    className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 bg-white dark:bg-gray-800 text-sm'
+                  />
+                </div>
+                {authData.oauth2.grantType === 'authorization_code' && (
+                  <div>
+                    <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
+                      Redirect URI
+                    </label>
+                    <input
+                      type='text'
+                      value={authData.oauth2.redirectUri}
+                      onChange={(e) =>
+                        setAuthData({
+                          ...authData,
+                          oauth2: { ...authData.oauth2, redirectUri: e.target.value }
+                        })
+                      }
+                      placeholder='Enter redirect URI'
+                      className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 bg-white dark:bg-gray-800 text-sm'
+                    />
+                  </div>
+                )}
+                <div>
+                  <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
+                    Scope
+                  </label>
+                  <input
+                    type='text'
+                    value={authData.oauth2.scope}
+                    onChange={(e) =>
+                      setAuthData({
+                        ...authData,
+                        oauth2: { ...authData.oauth2, scope: e.target.value }
+                      })
+                    }
+                    placeholder='Enter scope (space-separated)'
+                    className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 bg-white dark:bg-gray-800 text-sm'
+                  />
+                </div>
+                <div>
+                  <p className='mt-1 text-xs text-gray-500 dark:text-gray-400'>
+                    OAuth 2.0 access token will be sent as a Bearer token in the Authorization header.
+                  </p>
                 </div>
               </div>
             )}
@@ -1067,10 +1427,6 @@ const RequestEditor: React.FC = () => {
               >
                 <option value=''>Select a collection</option>
                 {collections
-                  .filter(
-                    (collection) =>
-                      collection.workspaceId === currentWorkspace?.id
-                  )
                   .map((collection) => (
                     <option key={collection.id} value={collection.id}>
                       {collection.name}
