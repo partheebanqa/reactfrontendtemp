@@ -92,6 +92,12 @@ const menuItems = [
     feature: 'reports',
   },
   {
+    label: 'Execution Reports',
+    path: '/executions-reports',
+    icon: FileText,
+    feature: 'reports',
+  },
+  {
     label: 'Plan & Billing',
     path: '/plan-billing',
     icon: Receipt,

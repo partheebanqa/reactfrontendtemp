@@ -33,6 +33,9 @@ import ExecutionsNew from '@/pages/ExecutionsNew';
 import TermsPage from '@/pages/TermsPage';
 import PrivacyPage from '@/pages/PrivacyPolicy';
 import ContactPage from '@/pages/ContactPage';
+import ExecutionReportsPage from '@/pages/ExecutionReportsPage';
+import RequestChainReport from '@/pages/RequestChainReport';
+import TestSuiteReport from '@/pages/TestSuiteReport';
 
 export default function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -80,6 +83,9 @@ export default function Router() {
           <Route path='/settings/billing' component={AccountBilling} /> */}
           <Route path='/cicd-configuration' component={CICDConfiguration} />
           <Route path='/executions' component={ExecutionsNew} />
+          <Route path='/executions-reports' component={ExecutionReportsPage} />
+          <Route path='/request-chain-reports' component={RequestChainReport} />
+          <Route path='/test-suite-reports' component={TestSuiteReport} />
         
         </AppLayout>
       )}
