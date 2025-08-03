@@ -91,6 +91,12 @@ const menuItems = [
     icon: FileText,
     feature: 'reports',
   },
+  {
+    label: 'Execution Reports',
+    path: '/executions-reports',
+    icon: FileText,
+    feature: 'reports',
+  },
   // {
   //   label: 'CI/CD Configuration',
   //   path: '/cicd-configuration',
