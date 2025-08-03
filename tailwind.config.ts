@@ -49,6 +49,10 @@ export default {
           DEFAULT: "var(--destructive)",
           foreground: "var(--destructive-foreground)",
         },
+        success: {
+					DEFAULT: 'rgb(var(--success))',
+					foreground: 'rgb(var(--success-foreground))'
+				},
         border: "var(--border)",
         input: "var(--input)",
         ring: "var(--ring)",

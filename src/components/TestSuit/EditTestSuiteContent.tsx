@@ -29,6 +29,7 @@ import {
   ExtendedRequest,
 } from '@/models/collection.model';
 import { useWorkspace } from '@/hooks/useWorkspace';
+import { useDataManagement } from '@/hooks/useDataManagement';
 
 interface Request {
   id: string;
@@ -93,10 +94,13 @@ const EditTestSuiteContent: React.FC = () => {
   console.log('Is create mode:', isCreateMode);
   console.log('Params:', params);
   console.log('ID:', id);
+  const { environments, activeEnvironment, setActiveEnvironment } =
+    useDataManagement();
 
   const [testSuiteName, setTestSuiteName] = useState('');
   const [description, setDescription] = useState('');
   const [selectedEnvironment, setSelectedEnvironment] = useState<string>('');
+
   const [requests, setRequests] = useState<Request[]>([]);
   const [originalRequestIds, setOriginalRequestIds] = useState<string[]>([]);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
@@ -111,6 +115,21 @@ const EditTestSuiteContent: React.FC = () => {
     queryFn: () => getTestSuites(id!),
     enabled: !!id && !isCreateMode,
   });
+
+  useEffect(() => {
+    if (activeEnvironment) {
+      setSelectedEnvironment(activeEnvironment.id);
+    }
+  }, [activeEnvironment]);
+
+  // Handle environment change and update the global active environment
+  const handleEnvironmentChange = (environmentId: string) => {
+    setSelectedEnvironment(environmentId);
+    const selectedEnv = environments.find((env) => env.id === environmentId);
+    if (selectedEnv) {
+      setActiveEnvironment(selectedEnv);
+    }
+  };
 
   const createMutation = useMutation({
     mutationFn: (data: CreateTestSuitePayload) =>
@@ -308,10 +327,6 @@ const EditTestSuiteContent: React.FC = () => {
   // Get imported request IDs to pass to ImportModal
   const importedRequestIds = requests.map((request) => request.id);
 
-  const selectedEnvData = mockEnvironments.find(
-    (env) => env.id === selectedEnvironment
-  );
-
   return (
     <div className='min-h-screen bg-background'>
       <div className='bg-card border-b px-6 py-4'>
@@ -387,23 +402,27 @@ const EditTestSuiteContent: React.FC = () => {
                 rows={3}
               />
             </div>
-            <div>
-              <label className='block text-sm font-medium mb-2'>
+            <div className='space-y-2'>
+              <label
+                htmlFor='environment-select'
+                className='block text-sm font-medium'
+              >
                 Environment <span className='text-destructive'>*</span>
               </label>
+
               <Select
                 value={selectedEnvironment}
-                onValueChange={setSelectedEnvironment}
+                onValueChange={handleEnvironmentChange}
               >
-                <SelectTrigger>
+                <SelectTrigger id='environment-select'>
                   <SelectValue placeholder='Select environment' />
                 </SelectTrigger>
                 <SelectContent>
-                  {mockEnvironments.map((env) => (
+                  {environments.map((env) => (
                     <SelectItem key={env.id} value={env.id}>
-                      <div className='flex flex-col'>
-                        <span className='font-medium'>{env.name}</span>
-                        <span className='text-sm text-muted-foreground'>
+                      <div className='flex flex-col text-left'>
+                        <span className='font-medium text-sm'>{env.name}</span>
+                        <span className='text-xs text-muted-foreground break-all'>
                           {env.baseUrl}
                         </span>
                       </div>
@@ -411,11 +430,6 @@ const EditTestSuiteContent: React.FC = () => {
                   ))}
                 </SelectContent>
               </Select>
-              {selectedEnvData && (
-                <p className='text-sm text-muted-foreground mt-1'>
-                  Base URL: {selectedEnvData.baseUrl}
-                </p>
-              )}
             </div>
           </CardContent>
         </Card>

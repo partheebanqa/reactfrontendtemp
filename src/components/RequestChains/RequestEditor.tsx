@@ -51,6 +51,8 @@ import {
 } from '@/shared/types/requestChain.model';
 import { ResponseExplorer } from './ResponseExplorer';
 import { useToast } from '@/hooks/useToast';
+import { useDataManagementStore } from '@/store/dataManagementStore';
+import { useDataManagement } from '@/hooks/useDataManagement';
 
 interface RequestEditorProps {
   request: APIRequest;
@@ -83,6 +85,14 @@ export function RequestEditor({
 }: RequestEditorProps) {
   const [showRequestUrl, setShowRequestUrl] = useState(true);
   const [isJsonOpen, setIsJsonOpen] = useState(false); // default closed
+
+  const {
+    environments,
+    activeEnvironment,
+    variables: storeVariables,
+  } = useDataManagementStore();
+
+  console.log('storeVariables:', storeVariables);
 
   const [activeTab, setActiveTab] = useState<
     'params' | 'headers' | 'body' | 'auth' | 'tests' | 'settings'
@@ -204,12 +214,31 @@ export function RequestEditor({
     return extracted;
   };
 
+  const overrideBaseUrl = (originalUrl: string): string => {
+    try {
+      const baseUrl = storeVariables
+        .find((v) => v.name === 'baseUrl')
+        ?.initialValue?.trim();
+      if (!baseUrl) return originalUrl;
+
+      const parsedOriginal = new URL(originalUrl);
+      const baseParsed = new URL(baseUrl);
+
+      return `${baseParsed.origin}${parsedOriginal.pathname}${parsedOriginal.search}${parsedOriginal.hash}`;
+    } catch (error) {
+      console.warn('Invalid URL override attempt:', error);
+      return originalUrl;
+    }
+  };
+
   const handleExecute = async () => {
     if (!request.url) return;
 
     setIsExecuting(true);
     try {
-      const processedUrl = replaceVariables(request.url, globalVariables);
+      const replacedUrl = replaceVariables(request.url, globalVariables); // Keep your existing logic
+      const processedUrl = overrideBaseUrl(replacedUrl); // Apply only the base domain override
+
       const processedHeaders: Record<string, string> = {};
 
       request.headers.forEach((header) => {
@@ -348,6 +377,26 @@ export function RequestEditor({
       setIsExecuting(false);
     }
   };
+
+  const getPreviewUrl = () => {
+    const replacedUrl = replaceVariables(request.url, globalVariables);
+
+    const baseUrl = storeVariables
+      .find((v) => v.name === 'baseUrl')
+      ?.initialValue?.trim();
+    if (!baseUrl) return replacedUrl;
+
+    try {
+      const parsedOriginal = new URL(replacedUrl);
+      const parsedBase = new URL(baseUrl);
+      return `${parsedBase.origin}${parsedOriginal.pathname}${parsedOriginal.search}${parsedOriginal.hash}`;
+    } catch {
+      // If replacedUrl is relative
+      return `${baseUrl.replace(/\/$/, '')}/${replacedUrl.replace(/^\//, '')}`;
+    }
+  };
+
+  const previewUrl = getPreviewUrl();
 
   const addKeyValuePair = (type: 'params' | 'headers') => {
     const newPair: KeyValuePair = {
@@ -538,24 +587,22 @@ export function RequestEditor({
   const [copied, setCopied] = useState(false);
 
   // console.log('copied:', copied);
- const { toast } = useToast();
- 
-const handleCopy = async (value: string) => {
-  try {
-    await navigator.clipboard.writeText(value);
-    setCopied(true);
-    toast({
-      title: 'Copied to Clipboard',
-      description: 'The value has been copied successfully.',
-      variant: 'success',
-    });
-    setTimeout(() => setCopied(false), 2000); 
-  } catch (err) {
-    console.error('Failed to copy:', err);
-  }
-};
+  const { toast } = useToast();
 
-
+  const handleCopy = async (value: string) => {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(true);
+      toast({
+        title: 'Copied to Clipboard',
+        description: 'The value has been copied successfully.',
+        variant: 'success',
+      });
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
 
   const addHeader = () => {
     onUpdate({
@@ -772,6 +819,16 @@ const handleCopy = async (value: string) => {
             <Play className='w-4 h-4' />
             Run
           </Button>
+        </div>
+
+        {/* Final URL Preview BELOW the input */}
+        <div className='flex items-center space-x-2 mt-2 text-sm'>
+          <span className='text-gray-600 dark:text-gray-400 font-medium'>
+            Final URL Preview:
+          </span>
+          <span className='text-blue-600 dark:text-blue-400 font-mono break-all'>
+            {previewUrl}
+          </span>
         </div>
 
         {/* Tabs */}
