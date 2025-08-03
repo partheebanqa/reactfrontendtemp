@@ -94,10 +94,12 @@ export const useCreateEnvironmentMutation = () => {
 };
 
 export const useUpdateEnvironmentMutation = () => {
+  const fetchEnvironmentsQuery = usegetEnvironmentQuery();
   return useMutation({
     mutationFn: updateEnvironment,
     onSuccess: (updatedEnvironment: Environment) => {
       console.log('Environment updated:', updatedEnvironment);
+      fetchEnvironmentsQuery.refetch();
     },
     onError: (error) => {
       console.error('Error updating environment:', error);
@@ -106,10 +108,13 @@ export const useUpdateEnvironmentMutation = () => {
 };
 
 export const useDeleteEnvironmentMutation = () => {
+  const fetchEnvironmentsQuery = usegetEnvironmentQuery();
   return useMutation({
     mutationFn: deleteEnvironment,
-    onSuccess: (environmentId: string) => {
-      console.log('Environment deleted:', environmentId);
+    onSuccess: () => {
+      console.log('🚀 ~ useDeleteEnvironmentMutation ~ environmentId:');
+      console.log('Environment deleted:');
+      fetchEnvironmentsQuery.refetch();
     },
     onError: (error) => {
       console.error('Error deleting environment:', error);

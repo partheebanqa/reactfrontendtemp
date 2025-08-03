@@ -50,9 +50,7 @@ export const createEnvironment = async (environment: {
   return response.json();
 };
 
-export const updateEnvironment = async (
-  environment: any
-): Promise<Environment> => {
+export const updateEnvironment = async (environment): Promise<Environment> => {
   const response = await apiRequest(
     'PUT',
     `${API_ENVIRONMENT}/${environment.id}`,
@@ -66,17 +64,12 @@ export const updateEnvironment = async (
   return response.json();
 };
 
-export const deleteEnvironment = async (
-  environmentId: string
-): Promise<any> => {
+export const deleteEnvironment = async (environmentId: string) => {
   const response = await apiRequest(
     'DELETE',
     `${API_ENVIRONMENT}/${environmentId}`
   );
-  if (!response.ok) {
-    throw new Error('Failed to delete environment');
-  }
-  return response.json();
+  return environmentId;
 };
 
 export const createVariable = async (variable: any): Promise<any> => {

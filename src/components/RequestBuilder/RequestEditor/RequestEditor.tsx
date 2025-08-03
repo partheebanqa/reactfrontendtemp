@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Play, Save, Edit2, Check, X, FolderPlus, Trash, Trash2 } from 'lucide-react';
+import { Play, Save, Edit2, Check, X, FolderPlus, Trash, Trash2, Info } from 'lucide-react';
 import { useRequest } from '@/hooks/useRequest';
 import { useCollection } from '@/hooks/useCollection';
 import { useWorkspace } from '@/hooks/useWorkspace';
@@ -10,11 +10,13 @@ import { makeRequest } from '@/services/request.service';
 import { Collection, CollectionRequest } from '@/shared/types/collection';
 import TooltipContainer from '@/components/ui/tooltip-container';
 import KeyValueEditor from '@/components/ui/KeyValueEditor';
+import KeyValueEditorWithFileUpload, { KeyValuePairWithFile } from '@/components/ui/KeyValueEditorWithFileUpload';
 import ToggleSwitch from '@/components/ui/ToggleSwitch';
 import EditableText from '@/components/ui/EditableText';
 import Modal from '@/components/ui/Modal';
 import HighlightedUrlInput from '../HighlightedUrlInput';
 import { useDataManagement } from '@/hooks/useDataManagement';
+import HelpLink from '@/components/HelpModal/HelpLink';
 
 const RequestEditor: React.FC = () => {
   const { isLoading, clearError, setLoading, setError, setResponseData } =
@@ -51,7 +53,7 @@ const RequestEditor: React.FC = () => {
     'none' | 'json' | 'form-data' | 'x-www-form-urlencoded' | 'raw' | 'binary'
   >('json');
   const [bodyContent, setBodyContent] = useState('');
-  const [formFields, setFormFields] = useState<Param[]>([]);
+  const [formFields, setFormFields] = useState<KeyValuePairWithFile[]>([]);
   const [urlEncodedFields, setUrlEncodedFields] = useState<Param[]>([]);
   const [authType, setAuthType] = useState<
     'none' | 'basic' | 'bearer' | 'apiKey' | 'oauth1' | 'oauth2'
@@ -146,7 +148,8 @@ const RequestEditor: React.FC = () => {
           const formDataFields = Object.entries(activeRequest.bodyFormData).map(([key, value]) => ({
             key,
             value: value?.toString() || '',
-            enabled: true
+            enabled: true,
+            type: 'text' as const
           }));
           setFormFields(formDataFields);
         } else {
@@ -232,17 +235,39 @@ const RequestEditor: React.FC = () => {
     setLoading(true);
     const newUrl = buildFinalUrl();
     try {
+      // Create FormData object for file uploads if needed
+      let requestFormData: FormData | undefined;
+
+      if (bodyType === 'form-data') {
+        const fileFields = formFields.filter(f => f.enabled && f.type === 'file' && f.value instanceof File);
+        if (fileFields.length > 0) {
+          requestFormData = new FormData();
+          formFields.filter(f => f.enabled).forEach(field => {
+            if (field.type === 'file' && field.value instanceof File) {
+              requestFormData!.append(field.key, field.value, field.fileName);
+            } else {
+              requestFormData!.append(field.key, String(field.value));
+            }
+          });
+        }
+      }
+
       const requestData = {
         method: method,
         url: newUrl,
         params: params,
         headers: headers,
-        body: bodyContent,
+        body: requestFormData || bodyContent,
         bodyType: bodyType,
         formData: bodyType === 'form-data' ? formFields.filter(f => f.enabled).reduce((acc, field) => {
-          acc[field.key] = field.value;
+          // For file fields, store a reference to the file object
+          if (field.type === 'file' && field.value instanceof File) {
+            acc[field.key] = field.value;
+          } else {
+            acc[field.key] = String(field.value);
+          }
           return acc;
-        }, {} as Record<string, string>) : undefined,
+        }, {} as Record<string, string | File>) : undefined,
         urlEncodedData: bodyType === 'x-www-form-urlencoded' ? urlEncodedFields.filter(f => f.enabled).reduce((acc, field) => {
           acc[field.key] = field.value;
           return acc;
@@ -403,13 +428,17 @@ const RequestEditor: React.FC = () => {
         order: (activeCollection?.requests?.length || 0) + 1,
         method: method,
         url: url,
-        bodyType: bodyType,
-        bodyFormData: bodyType === 'form-data' ? formFields.filter(f => f.enabled).reduce((acc, field) => {
+        bodyType: bodyType == 'json' ? 'raw' : bodyType,
+        bodyFormData: bodyType === 'form-data' ? formFields.filter(f => f.enabled).reduce((acc: Record<string, any>, field) => {
           if (field.key) {
-            acc[field.key] = field.value;
+            if (field.type === 'file' && field.value instanceof File) {
+              acc[field.key] = field.value;
+            } else {
+              acc[field.key] = String(field.value);
+            }
           }
           return acc;
-        }, {} as Record<string, string>) : null,
+        }, {}) : null,
         bodyRawContent: bodyType === 'raw' || bodyType === 'json' ? bodyContent :
           bodyType === 'x-www-form-urlencoded' ?
             new URLSearchParams(
@@ -454,6 +483,7 @@ const RequestEditor: React.FC = () => {
         headers: headers,
         // variables: activeRequest.variables || {},
       };
+      console.log("🚀 ~ handleConfirmSave ~ requestData:", requestData)
       await addRequestMutation.mutateAsync(requestData);
       setShowSaveModal(false);
       setNewCollectionName('');
@@ -561,13 +591,13 @@ const RequestEditor: React.FC = () => {
 
   // Form data field handlers
   const addFormField = () => {
-    setFormFields([...formFields, { key: '', value: '', enabled: true }]);
+    setFormFields([...formFields, { key: '', value: '', enabled: true, type: 'text' }]);
   };
 
   const updateFormField = (
     index: number,
-    field: keyof Param,
-    value: string | boolean
+    field: keyof KeyValuePairWithFile,
+    value: string | boolean | File | undefined
   ) => {
     const newFormFields = [...formFields];
     newFormFields[index] = { ...newFormFields[index], [field]: value };
@@ -641,6 +671,7 @@ const RequestEditor: React.FC = () => {
               fontWeight="semibold"
             />
           </div>
+          <HelpLink />
         </div>
       </div>
 
@@ -832,7 +863,20 @@ const RequestEditor: React.FC = () => {
             )}
 
             {bodyType === 'form-data' && (
-              <KeyValueEditor items={formFields} onAdd={addFormField} onUpdate={updateFormField} onRemove={removeFormField} title='Form fields' addButtonLabel='Add Field' emptyMessage='No form fields added yet.' />
+              <>
+                <div className="mb-2 text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 p-3 rounded-md border border-gray-200 dark:border-gray-700">
+                  <p>Form fields support both text values and file uploads. Click the "File" button next to any field to upload a file.</p>
+                </div>
+                <KeyValueEditorWithFileUpload
+                  items={formFields}
+                  onAdd={addFormField}
+                  onUpdate={updateFormField}
+                  onRemove={removeFormField}
+                  title='Form fields'
+                  addButtonLabel='Add Field'
+                  emptyMessage='No form fields added yet.'
+                />
+              </>
             )}
 
             {bodyType === 'x-www-form-urlencoded' && (
