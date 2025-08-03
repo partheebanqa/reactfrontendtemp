@@ -337,10 +337,7 @@ export const getRequestChains = async (
 //   chainId: string
 // ): Promise<ExecutionResponse> => {
 //   try {
-//     const response = await apiRequest(
-//       'GET',
-//       `/request-chains/${chainId}/data`
-//     );
+//     const response = await apiRequest('GET', `/request-chains/${chainId}/data`);
 
 //     if (!response.ok) {
 //       throw new Error(`HTTP error! status: ${response.status}`);

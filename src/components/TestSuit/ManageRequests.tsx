@@ -11,6 +11,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { RefreshCcw } from 'lucide-react';
+import { useDataManagement } from '@/hooks/useDataManagement';
 
 interface Request {
   id: string;
@@ -57,11 +58,62 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
   onDeleteRequest,
   onUpdateTestCases,
 }) => {
+  const { variables, environments, activeEnvironment } = useDataManagement();
+
   console.log('requests123:', requests);
+  console.log('variables:', variables);
 
   const [selectedRequest, setSelectedRequest] = useState<Request | null>(null);
-
   const [isTestCaseModalOpen, setIsTestCaseModalOpen] = useState(false);
+
+  const substituteVariables = (text: string): string => {
+    let result = text;
+    variables.forEach((variable) => {
+      const regex = new RegExp(`{{${variable.name}}}`, 'g');
+      result = result.replace(regex, variable.initialValue);
+    });
+    return result;
+  };
+
+  const buildFinalUrl = (url: string): string => {
+    if (!url) return '';
+    let finalUrl = url;
+    console.log('buildFinalUrl:', url);
+
+    // Apply variable substitution
+    finalUrl = substituteVariables(finalUrl);
+
+    const baseUrVar =
+      variables.find((v) => v.name === 'baseUrl')?.initialValue || '';
+    console.log('🚀 ~ buildFinalUrl:', baseUrVar);
+
+    // Apply environment base URL if not "no-environment"
+    console.log('🚀 ~ buildFinalUrl ~ finalUrl:', finalUrl);
+    if (baseUrVar) {
+      try {
+        const originalUrl = new URL(finalUrl);
+        console.log('🚀 ~ buildFinalUrl ~ originalUrl:', originalUrl);
+        const pathAndQuery =
+          originalUrl.pathname + originalUrl.search + originalUrl.hash;
+        console.log('🚀 ~ buildFinalUrl ~ pathAndQuery:', pathAndQuery);
+
+        // Combine activeEnvironment base URL with the path from original URL
+        const baseUrl = baseUrVar.replace(/\/$/, '');
+        console.log('🚀 ~ buildFinalUrl ~ baseUrl:', baseUrl);
+        finalUrl = `${baseUrl}${pathAndQuery}`;
+        console.log('🚀 ~ buildFinalUrl ~ finalUrl:', finalUrl);
+      } catch (error) {
+        if (
+          !finalUrl.startsWith('http://') &&
+          !finalUrl.startsWith('https://')
+        ) {
+          finalUrl = finalUrl.startsWith('/') ? finalUrl : `/${finalUrl}`;
+          finalUrl = `${baseUrVar.replace(/\/$/, '')}${finalUrl}`;
+        }
+      }
+    }
+    return finalUrl;
+  };
 
   const handleConfigureTestCases = (request: Request) => {
     setSelectedRequest(request);
@@ -97,85 +149,90 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
 
       <CardContent>
         <div className='space-y-3'>
-          {requests.map((request) => (
-            <div
-              key={request.id}
-              className='p-4 border rounded-lg hover:bg-muted/50 transition-colors'
-            >
-              <div className='flex items-start justify-between'>
-                <div className='flex items-start space-x-3 flex-1'>
-                  <Badge className={getMethodBadgeColor(request.method)}>
-                    {request.method}
-                  </Badge>
-                  <div className='flex-1 min-w-0'>
-                    <h4 className='font-medium text-base'>{request.name}</h4>
-                    <p className='text-sm text-muted-foreground mt-1'>
-                      {request.endpoint}
-                    </p>
-                    {/* {request.description && (
-                      <p className='text-sm text-muted-foreground mt-1'>
-                        {request.description}
-                      </p>
-                    )} */}
-                  </div>
-                </div>
-                <div className='flex items-center space-x-2'>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant='ghost'
-                          size='sm'
-                          onClick={() => handleConfigureTestCases(request)}
-                          className='text-muted-foreground hover:text-primary hover:bg-primary/10'
-                        >
-                          {testSuiteId && <Settings className='w-4 h-4' />}
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>Configuration</TooltipContent>
-                    </Tooltip>
+          {requests.map((request) => {
+            const finalUrl = buildFinalUrl(request.endpoint);
+            console.log('ManageRequests-finalUrl:', finalUrl);
 
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant='ghost'
-                          size='sm'
-                          onClick={() => onDeleteRequest(request.id)}
-                          className='text-muted-foreground hover:text-destructive hover:bg-destructive/10'
-                        >
-                          <Trash2 className='w-4 h-4' />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>Delete</TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
-              </div>
-              {testSuiteId && (
-                <div className='mt-4'>
-                  <h5 className='text-sm font-medium mb-2'>Test Cases:</h5>
-                  <div className='flex items-center space-x-4'>
-                    {(request.selectedTestCases?.length || 0) > 0 && (
-                      <div className='flex items-center space-x-1'>
-                        <span className='text-sm text-muted-foreground'>
-                          🧪 Functional
-                        </span>
-                        <span className='text-sm font-medium'>
-                          {request.selectedTestCases?.length || 0}
-                        </span>
-                      </div>
-                    )}
+            return (
+              <div
+                key={request.id}
+                className='p-4 border rounded-lg hover:bg-muted/50 transition-colors'
+              >
+                <div className='flex items-start justify-between'>
+                  <div className='flex items-start space-x-3 flex-1'>
+                    <Badge className={getMethodBadgeColor(request.method)}>
+                      {request.method}
+                    </Badge>
+                    <div className='flex-1 min-w-0'>
+                      <h4 className='font-medium text-base'>{request.name}</h4>
+                      <p className='text-sm text-muted-foreground mt-1'>
+                        {finalUrl}
+                      </p>
+                      {/* {request.description && (
+                        <p className='text-sm text-muted-foreground mt-1'>
+                          {request.description}
+                        </p>
+                      )} */}
+                    </div>
                   </div>
-                  <p className='text-sm text-muted-foreground mt-1'>
-                    Total:{' '}
-                    <span className='font-medium'>
-                      {request.selectedTestCases?.length || 0} test cases
-                    </span>
-                  </p>
+                  <div className='flex items-center space-x-2'>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant='ghost'
+                            size='sm'
+                            onClick={() => handleConfigureTestCases(request)}
+                            className='text-muted-foreground hover:text-primary hover:bg-primary/10'
+                          >
+                            {testSuiteId && <Settings className='w-4 h-4' />}
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Configuration</TooltipContent>
+                      </Tooltip>
+
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant='ghost'
+                            size='sm'
+                            onClick={() => onDeleteRequest(request.id)}
+                            className='text-muted-foreground hover:text-destructive hover:bg-destructive/10'
+                          >
+                            <Trash2 className='w-4 h-4' />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Delete</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
                 </div>
-              )}
-            </div>
-          ))}
+                {testSuiteId && (
+                  <div className='mt-4'>
+                    <h5 className='text-sm font-medium mb-2'>Test Cases:</h5>
+                    <div className='flex items-center space-x-4'>
+                      {(request.selectedTestCases?.length || 0) > 0 && (
+                        <div className='flex items-center space-x-1'>
+                          <span className='text-sm text-muted-foreground'>
+                            🧪 Functional
+                          </span>
+                          <span className='text-sm font-medium'>
+                            {request.selectedTestCases?.length || 0}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    <p className='text-sm text-muted-foreground mt-1'>
+                      Total:{' '}
+                      <span className='font-medium'>
+                        {request.selectedTestCases?.length || 0} test cases
+                      </span>
+                    </p>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </CardContent>
 

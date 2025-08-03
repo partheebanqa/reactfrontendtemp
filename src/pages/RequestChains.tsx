@@ -2,26 +2,33 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { RequestChainsList } from '@/components/RequestChains/RequestChainsList';
 import { RequestChainEditor } from '@/components/RequestChains/RequestChainEditor';
-import { ExecutionLog, RequestChain, Variable } from '@/shared/types/requestChain.model';
+import {
+  ExecutionLog,
+  RequestChain,
+  Variable,
+} from '@/shared/types/requestChain.model';
 import {
   getRequestChains,
   saveRequestChain,
 } from '@/services/requestChain.service';
 import { RequestExecutor } from '@/components/RequestChains/RequestExecutor';
+import { useWorkspace } from '@/hooks/useWorkspace';
 
 const Index = () => {
   const [currentView, setCurrentView] = useState<'list' | 'editor'>('list');
   const [editingChain, setEditingChain] = useState<RequestChain | undefined>();
+  const [data, setData] = useState<{ id: string; name: string }>({
+    id: '',
+    name: '',
+  });
 
+  const { currentWorkspace } = useWorkspace();
   const queryClient = useQueryClient();
 
-  const {
-    data: chains = [],
-    isLoading: loading,
-    refetch,
-  } = useQuery({
-    queryKey: ['requestChains', 'workspace-1'],
-    queryFn: () => getRequestChains('workspace-1'),
+  const { data: chains = [], isLoading: loading } = useQuery({
+    queryKey: ['requestChains', currentWorkspace?.id || ''],
+    queryFn: () => getRequestChains(currentWorkspace?.id || ''),
+    enabled: !!currentWorkspace?.id,
   });
 
   const {
@@ -32,7 +39,7 @@ const Index = () => {
     mutationFn: (chain: RequestChain) => saveRequestChain(chain),
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ['requestChains', 'workspace-1'],
+        queryKey: ['requestChains', currentWorkspace?.id || ''],
       });
     },
     onError: (error) => {
@@ -50,36 +57,29 @@ const Index = () => {
     setCurrentView('editor');
   };
 
-  interface RequestChainEditorProps {
-    id:string;
-    name: string;
-  }
-
-
-  const [data, setData] = useState<RequestChainEditorProps>({
-    id: '',
-    name: '', 
-  });
-
-  console.log('RequestChains data:', data);
-
-  const handleSaveChain = async (chain: RequestChain): Promise<RequestChain | null> => {
-    try {
-      const saved = await saveRequestChain(chain);
-      console.log('Chain saved:', saved);
-      setData(saved? { id: saved.id, name: saved.name } : { id: '', name: '' });  
-      return saved;
-    } catch (e) {
-      console.error(e);
-      return null;
-    }
+  const handleSaveChain = async (
+    chain: RequestChain
+  ): Promise<RequestChain | null> => {
+    return new Promise((resolve) => {
+      saveChain(chain, {
+        onSuccess: (saved) => {
+          setData(
+            saved ? { id: saved.id, name: saved.name } : { id: '', name: '' }
+          );
+          resolve(saved);
+        },
+        onError: (err) => {
+          console.error(err);
+          resolve(null);
+        },
+      });
+    });
   };
-  
+
   const handleDeleteChain = async (chainId: string) => {
     try {
-      // await requestService.deleteRequestChain(chainId);
       queryClient.setQueryData(
-        ['requestChains', 'workspace-1'],
+        ['requestChains', currentWorkspace?.id || ''],
         (old: RequestChain[] = []) => old.filter((c) => c.id !== chainId)
       );
     } catch (error) {
@@ -90,7 +90,7 @@ const Index = () => {
   const handleToggleChain = async (chainId: string) => {
     try {
       queryClient.setQueryData(
-        ['requestChains', 'workspace-1'],
+        ['requestChains', currentWorkspace?.id || ''],
         (old: RequestChain[] = []) =>
           old.map((c) => (c.id === chainId ? { ...c, enabled: !c.enabled } : c))
       );
@@ -107,18 +107,27 @@ const Index = () => {
   if (currentView === 'editor') {
     return (
       <>
-      <RequestChainEditor
-        chain={editingChain}
-        onBack={handleBackToList}
-        onSave={handleSaveChain}
-      />
-      {data.id && (
-        <RequestExecutor chainId={data.id} requests={[]} variables={[]} onExecutionComplete={function (logs: ExecutionLog[], extractedVariables: Variable[]): void {
-            throw new Error('Function not implemented.');
-          } } onVariableUpdate={function (variables: Variable[]): void {
-            throw new Error('Function not implemented.');
-          } }  />
-      )}
+        <RequestChainEditor
+          chain={editingChain}
+          onBack={handleBackToList}
+          onSave={handleSaveChain}
+        />
+        {data.id && (
+          <RequestExecutor
+            chainId={data.id}
+            requests={[]}
+            variables={[]}
+            onExecutionComplete={function (
+              logs: ExecutionLog[],
+              extractedVariables: Variable[]
+            ): void {
+              throw new Error('Function not implemented.');
+            }}
+            onVariableUpdate={function (variables: Variable[]): void {
+              throw new Error('Function not implemented.');
+            }}
+          />
+        )}
       </>
     );
   }

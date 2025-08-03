@@ -19,6 +19,7 @@ import {
   Variable,
 } from '@/shared/types/requestChain.model';
 import { useRequestChainData } from '@/hooks/useRequestChainData';
+import { useDataManagementStore } from '@/store/dataManagementStore';
 
 interface RequestExecutorProps {
   chainId?: string;
@@ -36,10 +37,7 @@ interface RequestExecutorProps {
   ) => void;
 }
 
-interface RequestExecutorPropsNew {
- 
-}
-
+interface RequestExecutorPropsNew {}
 
 interface KeyValuePair {
   id: string;
@@ -61,6 +59,14 @@ export function RequestExecutor({
 }: RequestExecutorProps & {
   onPreExecute?: () => Promise<RequestChain | null>;
 }) {
+  const {
+    environments,
+    activeEnvironment,
+    variables: storeVariables,
+  } = useDataManagementStore();
+
+  console.log('storeVariables:', storeVariables);
+
   const [isExecuting, setIsExecuting] = useState(false);
   const [currentRequestIndex, setCurrentRequestIndex] = useState(-1);
   const [executionLogs, setExecutionLogs] = useState<ExecutionLog[]>([]);
@@ -317,81 +323,85 @@ export function RequestExecutor({
         error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
-
-
   };
 
+  const { data, isLoading, error } = useRequestChainData(chainId || '');
 
-
- 
-    const { data, isLoading, error } = useRequestChainData(chainId || '');
-  
-  console.log("Request Chain Data:", data);
+  console.log('Request Chain Data:', data);
 
   const handleExecuteChain = async () => {
     // ✅ Save the chain before execution
     const savedChain = await onPreExecute?.();
-  
+
     console.log('savedChain response from API:', savedChain);
-  
+
     if (!savedChain?.id) {
       console.warn('Execution aborted: Chain not saved properly.');
       return;
     }
 
-  
     if (requests.length === 0) return;
-  
+
     setIsExecuting(true);
     setCurrentRequestIndex(0);
     setExecutionLogs([]);
-  
+
     onExecutionStateChange?.(true, 0); // notify parent
-  
+
     let currentVars = [...allVariables];
     const logs: ExecutionLog[] = [];
     const newExtractedVars: Variable[] = [];
-  
+
     for (let i = 0; i < requests.length; i++) {
       const request = requests[i];
       if (!request.enabled) continue;
-  
+
       setCurrentRequestIndex(i);
       onExecutionStateChange?.(true, i);
-  
+
       const log = await executeRequest(request, currentVars);
       logs.push(log);
       setExecutionLogs([...logs]); // Update UI
-  
+
       if (log.extractedVariables) {
         Object.entries(log.extractedVariables).forEach(([name, value]) => {
           const existingIndex = currentVars.findIndex((v) => v.name === name);
-  
+
           const newVar: Variable = {
             id: `${Date.now()}-${Math.random()}`,
             name,
             value: String(value),
-            type: typeof value === 'number' ? 'number' : typeof value === 'boolean' ? 'boolean' : 'string',
+            type:
+              typeof value === 'number'
+                ? 'number'
+                : typeof value === 'boolean'
+                ? 'boolean'
+                : 'string',
             source: 'extracted',
-            extractionPath: request.dataExtractions.find((e) => e.variableName === name)?.path,
+            extractionPath: request.dataExtractions.find(
+              (e) => e.variableName === name
+            )?.path,
           };
-  
+
           if (existingIndex >= 0) {
-            currentVars[existingIndex] = { ...currentVars[existingIndex], ...newVar };
+            currentVars[existingIndex] = {
+              ...currentVars[existingIndex],
+              ...newVar,
+            };
           } else {
             currentVars.push(newVar);
             newExtractedVars.push(newVar);
           }
         });
-  
+
         setAllVariables([...currentVars]);
       }
-  
+
       if (log.status === 'error' && request.errorHandling === 'stop') {
         break;
       }
     }
-  
+
     setIsExecuting(false);
     setCurrentRequestIndex(-1);
     setExtractedVariables(newExtractedVars);
@@ -399,7 +409,6 @@ export function RequestExecutor({
     onVariableUpdate(currentVars);
     onExecutionStateChange?.(false, -1);
   };
-  
 
   const stopExecution = () => {
     setIsExecuting(false);
@@ -447,6 +456,8 @@ export function RequestExecutor({
     }
     return body;
   };
+
+  console.log('storeVariables:', storeVariables);
 
   return (
     <div className='bg-card rounded-xl border border-border p-4 sm:p-6'>

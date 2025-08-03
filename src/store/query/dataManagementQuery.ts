@@ -1,4 +1,4 @@
-import { queryClient } from "@/lib/queryClient";
+import { queryClient } from '@/lib/queryClient';
 import {
   FetchVariablesResponse,
   createEnvironment,
@@ -9,25 +9,25 @@ import {
   fetchVariables,
   updateEnvironment,
   updateVariable,
-} from "@/services/dataManagement.service";
-import { workspaceStore } from "../workspaceStore";
-import { useMutation, useQuery } from "@tanstack/react-query";
+} from '@/services/dataManagement.service';
+import { workspaceStore } from '../workspaceStore';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import {
   dataManagementActions,
   dataManagementStore,
-} from "../dataManagementStore";
+} from '../dataManagementStore';
 import {
   Environment,
   fetchEnvironmentsResponse,
   ResponseEnvironment,
   ResponseVariable,
   Variable,
-} from "@/shared/types/datamanagement";
+} from '@/shared/types/datamanagement';
 
 export const usegetEnvironmentQuery = (enabled = true) => {
   const workspaceId = workspaceStore.state.currentWorkspace?.id!;
   return useQuery({
-    queryKey: ["environments", workspaceId],
+    queryKey: ['environments', workspaceId],
     enabled,
     queryFn: async () => {
       const response: fetchEnvironmentsResponse = await fetchEnvironments(
@@ -50,12 +50,20 @@ export const usegetEnvironmentQuery = (enabled = true) => {
 };
 
 export const usefetchVariablesQuery = (enabled = true) => {
+  console.log('useFetch var is called');
+
   const environmentId = dataManagementStore.state.activeEnvironment?.id!;
+  console.log('usefetchVariablesQuery is called');
+  console.log('activeEnvironment ID from Zustand:', environmentId);
+  console.log('Query enabled status:', !!environmentId && enabled);
+
   return useQuery({
-    queryKey: ["variables", environmentId],
+    queryKey: ['variables', environmentId],
     enabled: !!environmentId && enabled,
     queryFn: async () => {
       try {
+        console.log('Running fetchVariables for environment:', environmentId);
+
         const response = await fetchVariables(environmentId);
         if (response.items.length > 0) {
           const filteredVariables = response.items.map(filterVariable);
@@ -63,7 +71,7 @@ export const usefetchVariablesQuery = (enabled = true) => {
         }
         return [];
       } catch (error) {
-        console.error("Error fetching variables:", error);
+        console.error('Error fetching variables:', error);
         throw error;
       }
     },
@@ -80,7 +88,7 @@ export const useCreateEnvironmentMutation = () => {
       ]);
     },
     onError: (error) => {
-      console.error("Error creating environment:", error);
+      console.error('Error creating environment:', error);
     },
   });
 };
@@ -89,10 +97,10 @@ export const useUpdateEnvironmentMutation = () => {
   return useMutation({
     mutationFn: updateEnvironment,
     onSuccess: (updatedEnvironment: Environment) => {
-      console.log("Environment updated:", updatedEnvironment);
+      console.log('Environment updated:', updatedEnvironment);
     },
     onError: (error) => {
-      console.error("Error updating environment:", error);
+      console.error('Error updating environment:', error);
     },
   });
 };
@@ -101,10 +109,10 @@ export const useDeleteEnvironmentMutation = () => {
   return useMutation({
     mutationFn: deleteEnvironment,
     onSuccess: (environmentId: string) => {
-      console.log("Environment deleted:", environmentId);
+      console.log('Environment deleted:', environmentId);
     },
     onError: (error) => {
-      console.error("Error deleting environment:", error);
+      console.error('Error deleting environment:', error);
     },
   });
 };
@@ -114,7 +122,7 @@ export const useCreateVariableMutation = () => {
   return useMutation({
     mutationFn: createVariable,
     onSuccess: (newVariable: any) => {
-      console.log("New variable created:", newVariable);
+      console.log('New variable created:', newVariable);
       fetchVariablesQuery.refetch();
     },
   });
@@ -125,11 +133,11 @@ export const useUpdateVariableMutation = () => {
   return useMutation({
     mutationFn: updateVariable,
     onSuccess: (updatedVariable: any) => {
-      console.log("Variable updated:", updatedVariable);
+      console.log('Variable updated:', updatedVariable);
       fetchVariablesQuery.refetch();
     },
     onError: (error) => {
-      console.error("Error updating variable:", error);
+      console.error('Error updating variable:', error);
     },
   });
 };
@@ -139,16 +147,15 @@ export const useDeleteVariableMutation = () => {
   return useMutation({
     mutationFn: deleteVariable,
     onSuccess: (variableId: string) => {
-      console.log("Variable deleted:", variableId);
+      console.log('Variable deleted:', variableId);
       fetchVariablesQuery.refetch();
     },
     onError: (error) => {
-      console.error("Error deleting variable:", error);
+      console.error('Error deleting variable:', error);
       fetchVariablesQuery.refetch();
     },
   });
 };
-
 
 const filterEnvironment = (environment: ResponseEnvironment) => {
   return {
@@ -157,14 +164,14 @@ const filterEnvironment = (environment: ResponseEnvironment) => {
     workspaceId: environment.WorkspaceId,
     description: environment.Description,
     createdAt: environment.CreatedAt,
-    baseUrl: "",
+    baseUrl: '',
     isDefault: false,
   } as Environment;
 };
 
 const filterVariable = (variable: ResponseVariable) => {
   return {
-    createdAt: variable.CreatedAt,//
+    createdAt: variable.CreatedAt, //
     currentValue: variable.CurrentValue,
     deletedAt: variable.DeletedAt, //
     description: variable.Description,
@@ -173,6 +180,6 @@ const filterVariable = (variable: ResponseVariable) => {
     initialValue: variable.InitialValue,
     name: variable.Name,
     type: variable.Type,
-    updatedAt: variable.UpdatedAt,//
+    updatedAt: variable.UpdatedAt, //
   } as Variable;
 };
