@@ -238,6 +238,7 @@ export async function getMultipleRequestDetails(
 export async function getCollectionRequests(
   collectionId?: string
 ): Promise<ExtendedRequest[]> {
+  console.log('getCollectionRequests is called');
   try {
     const url = collectionId
       ? `${API_REQUEST}/collections/${collectionId}/requests`

@@ -50,12 +50,12 @@ export const usegetEnvironmentQuery = (enabled = true) => {
 };
 
 export const usefetchVariablesQuery = (enabled = true) => {
-  console.log('useFetch var is called');
+  // console.log('useFetch var is called');
 
   const environmentId = dataManagementStore.state.activeEnvironment?.id!;
-  console.log('usefetchVariablesQuery is called');
-  console.log('activeEnvironment ID from Zustand:', environmentId);
-  console.log('Query enabled status:', !!environmentId && enabled);
+  // console.log('usefetchVariablesQuery is called');
+  // console.log('activeEnvironment ID from Zustand:', environmentId);
+  // console.log('Query enabled status:', !!environmentId && enabled);
 
   return useQuery({
     queryKey: ['variables', environmentId],

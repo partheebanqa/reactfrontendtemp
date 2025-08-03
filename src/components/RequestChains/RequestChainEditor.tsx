@@ -156,7 +156,7 @@ const transformRequestDetails = (
     authConfig: transformAuthConfig(requestData.auth || requestData.authConfig),
     timeout: requestData.timeout || 5000,
     retries: requestData.retries || 0,
-    errorHandling: requestData.errorHandling || 'stop',
+    errorHandling: (requestData.errorHandling as 'stop' | 'continue') || 'stop',
     enabled: requestData.enabled !== false,
   };
 };
@@ -179,12 +179,6 @@ export function RequestChainEditor({
     requests: chain?.requests || [],
     variables: chain?.variables || [],
     environment: chain?.environment || 'dev',
-    // schedule: chain?.schedule || {
-    //   enabled: false,
-    //   type: 'once',
-    //   startDate: new Date().toISOString().split('T')[0],
-    //   timezone: 'UTC',
-    // },
   });
   const { environments, activeEnvironment, setActiveEnvironment } =
     useDataManagement();
@@ -247,7 +241,6 @@ export function RequestChainEditor({
   const [expandedRequests, setExpandedRequests] = useState<Set<string>>(
     new Set()
   );
-  // const [selectedEnvironment, setSelectedEnvironment] = useState<string>('');
   const [editingRequestId, setEditingRequestId] = useState<string | null>(null);
   const [globalVariables, setGlobalVariables] = useState<Variable[]>([
     {
@@ -283,8 +276,6 @@ export function RequestChainEditor({
     retry: 2,
     retryDelay: 1000,
   });
-
-  // console.log("Request Details:", requestDetails);
 
   const handleDragStart = (index: number) => {
     dragItem.current = index;
@@ -366,6 +357,32 @@ export function RequestChainEditor({
     ];
     setFormData({ ...formData, requests });
   };
+
+  const addNewRequest = () => {
+    const newRequest: APIRequest = {
+      id: Date.now().toString(),
+      name: 'New Request',
+      method: 'GET',
+      url: '',
+      headers: [],
+      params: [],
+      bodyType: 'none',
+      timeout: 5000,
+      retries: 0,
+      errorHandling: 'stop',
+      dataExtractions: [],
+      testScripts: [],
+      enabled: true,
+      authType: 'none',
+    };
+
+    setFormData({
+      ...formData,
+      requests: [...(formData.requests || []), newRequest],
+    });
+    setExpandedRequests(new Set([...expandedRequests, newRequest.id]));
+  };
+
   const saveChain = async (): Promise<RequestChain | null> => {
     if (!formData.name) {
       toast({
@@ -407,7 +424,6 @@ export function RequestChainEditor({
     localStorage.setItem('extractionLogs', JSON.stringify(updatedChains));
 
     onSave(chainData);
-    // console.log("Chain saved:", chainData);
     return chainData;
   };
 
@@ -422,6 +438,7 @@ export function RequestChainEditor({
     }
     return saved;
   };
+
   const getMethodColor = (method: string) => {
     const colors = {
       GET: 'bg-green-100 text-green-800',
@@ -459,19 +476,48 @@ export function RequestChainEditor({
 
   const handleImportRequests = async (importedRequests: ExtendedRequest[]) => {
     try {
+      console.log('importedRequests', importedRequests);
       toast({
         title: 'Importing Requests',
-        description: `Fetching details for ${importedRequests.length} requests...`,
+        description: `Importing ${importedRequests.length} requests...`,
       });
 
-      setRequestChain((prev) => [...prev, ...importedRequests]);
+      // Transform imported requests directly to APIRequest format
+      const transformedRequests: APIRequest[] = importedRequests.map((req) => ({
+        id: req.id,
+        name: req.name || 'Imported Request',
+        method: (req.method || 'GET').toUpperCase() as APIRequest['method'],
+        url: req.url || req.endpoint || '',
+        headers: [],
+        params: [],
+        bodyType: 'none',
+        body: '',
+        authType: 'none',
+        timeout: 5000,
+        retries: 0,
+        errorHandling: 'stop' as const,
+        dataExtractions: [],
+        testScripts: [],
+        enabled: true,
+      }));
 
-      // Set the pending import IDs to trigger the useQuery
-      const requestIds = importedRequests.map((req) => req.id);
-      setPendingImportIds(requestIds);
+      // Update form data with the transformed requests
+      setFormData((prev) => ({
+        ...prev,
+        requests: [...(prev.requests || []), ...transformedRequests],
+      }));
 
-      // The useQuery will automatically fetch the details
-      await refetchDetails();
+      // Expand newly imported requests
+      setExpandedRequests(
+        (prev) => new Set([...prev, ...transformedRequests.map((r) => r.id)])
+      );
+
+      toast({
+        title: 'Import Successful',
+        description: `Successfully imported ${transformedRequests.length} requests.`,
+      });
+
+      setIsImportModalOpen(false);
     } catch (error) {
       console.error('Import failed:', error);
       toast({
@@ -482,115 +528,7 @@ export function RequestChainEditor({
     }
   };
 
-  // Effect to handle the completion of request details fetching
-  React.useEffect(() => {
-    if (requestDetails && pendingImportIds.length > 0) {
-      try {
-        const detailedRequests: APIRequest[] = [];
-
-        // Process each fetched request detail
-        requestDetails.forEach((detail) => {
-          const transformedDetails = transformRequestDetails(detail);
-
-          const completeRequest: APIRequest = {
-            id: detail.id,
-            name: transformedDetails.name || detail.name || 'Imported Request',
-            method: transformedDetails.method || 'GET',
-            url: transformedDetails.url || detail.endpoint || detail.url || '',
-            headers: transformedDetails.headers || [],
-            params: transformedDetails.params || [],
-            bodyType: transformedDetails.bodyType || 'none',
-            body: transformedDetails.body || '',
-            authType: transformedDetails.authType || 'none',
-            authConfig: transformedDetails.authConfig,
-            timeout: transformedDetails.timeout || 5000,
-            retries: transformedDetails.retries || 0,
-            errorHandling: transformedDetails.errorHandling || 'stop',
-            dataExtractions: [],
-            testScripts: [],
-            enabled: transformedDetails.enabled !== false,
-          };
-
-          detailedRequests.push(completeRequest);
-        });
-
-        // Handle any requests that failed to fetch (fallback to basic config)
-        const fetchedIds = requestDetails.map((d) => d.id);
-        const failedIds = pendingImportIds.filter(
-          (id) => !fetchedIds.includes(id)
-        );
-
-        failedIds.forEach((failedId) => {
-          const fallbackRequest: APIRequest = {
-            id: failedId,
-            name: 'Imported Request',
-            method: 'GET',
-            url: '',
-            headers: [],
-            params: [],
-            bodyType: 'none',
-            timeout: 5000,
-            retries: 0,
-            errorHandling: 'stop',
-            dataExtractions: [],
-            testScripts: [],
-            enabled: true,
-            authType: 'none',
-          };
-
-          detailedRequests.push(fallbackRequest);
-        });
-
-        if (failedIds.length > 0) {
-          toast({
-            title: 'Partial Import',
-            description: `Could not fetch details for ${failedIds.length} request(s). Using basic configuration.`,
-            variant: 'destructive',
-          });
-        }
-
-        // Update form data with the detailed requests
-        setFormData((prev) => ({
-          ...prev,
-          requests: [...(prev.requests || []), ...detailedRequests],
-        }));
-
-        // Expand newly imported requests
-        setExpandedRequests(
-          (prev) => new Set([...prev, ...detailedRequests.map((r) => r.id)])
-        );
-
-        toast({
-          title: 'Import Successful',
-          description: `Successfully imported ${detailedRequests.length} requests with complete details.`,
-        });
-
-        // Clean up
-        setPendingImportIds([]);
-        setIsImportModalOpen(false);
-      } catch (error) {
-        console.error('Error processing imported requests:', error);
-        toast({
-          title: 'Import Error',
-          description: 'Error processing imported requests. Please try again.',
-          variant: 'destructive',
-        });
-        setPendingImportIds([]);
-      }
-    }
-  }, [requestDetails, pendingImportIds, toast]);
-
-  // Handle query errors
-  React.useEffect(() => {
-    if (detailsError && pendingImportIds.length > 0) {
-      toast({
-        title: 'Import Failed',
-        description: 'Failed to fetch request details. Please try again.',
-        variant: 'destructive',
-      });
-      setPendingImportIds([]);
-    }
-  }, [detailsError, pendingImportIds, toast]);
+  // Remove the old useEffect handlers for requestDetails since we're not using them anymore
 
   // If editing a specific request, show the request editor
   if (editingRequestId) {
@@ -776,15 +714,17 @@ export function RequestChainEditor({
                   <Button
                     variant='outline'
                     onClick={() => setIsImportModalOpen(true)}
-                    disabled={isLoadingDetails}
                     className='gap-2'
                   >
-                    {isLoadingDetails ? (
-                      <Loader2 className='w-4 h-4 animate-spin' />
-                    ) : (
-                      <Download className='w-4 h-4' />
-                    )}
-                    {isLoadingDetails ? 'Importing...' : 'Import Request'}
+                    <Download className='w-4 h-4' />
+                    Import Request
+                  </Button>
+                  <Button
+                    onClick={addNewRequest}
+                    className='gap-2 bg-blue-600 text-white hover:bg-blue-700'
+                  >
+                    <Plus className='w-4 h-4' />
+                    Add Request
                   </Button>
                 </div>
               </div>
@@ -945,17 +885,10 @@ export function RequestChainEditor({
                     <Button
                       variant='outline'
                       onClick={() => setIsImportModalOpen(true)}
-                      disabled={isLoadingDetails}
                       className='gap-2'
                     >
-                      {isLoadingDetails ? (
-                        <Loader2 className='w-4 h-4 animate-spin' />
-                      ) : (
-                        <Download className='w-4 h-4' />
-                      )}
-                      {isLoadingDetails
-                        ? 'Importing...'
-                        : 'Import from Collection'}
+                      <Download className='w-4 h-4' />
+                      Import from Collection
                     </Button>
                   </div>
                 </div>
