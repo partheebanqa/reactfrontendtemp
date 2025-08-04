@@ -191,10 +191,8 @@ const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, }) => {
     if (json.info?.schema?.includes('schema.getpostman.com')) {
       specificationType = 'postman';
       collectionName = json.info.name || 'Imported Postman Collection';
-    } else if (json.swagger) {
-      specificationType = 'swagger';
-      collectionName = json.info?.title || 'Imported API';
-    } else if (json.openapi) {
+    } else if (json.swagger || json.openapi) {
+      // specificationType = 'swagger';
       specificationType = 'openapi';
       collectionName = json.info?.title || 'Imported API';
     } else {
