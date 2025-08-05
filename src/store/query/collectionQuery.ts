@@ -129,6 +129,7 @@ export const useCollectionRequestsQuery = () => {
         }
       );
       collectionActions.setCollections(updatedCollection);
+      return requests;
     },
   });
 };

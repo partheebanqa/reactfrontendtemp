@@ -541,7 +541,7 @@ const Sidebar: React.FC = () => {
               <div key={collection.id} className="group">
                 <div
                   className="flex items-center justify-between p-2 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer group"
-                  onClick={() => toggleExpandedCollection(collection.id)}
+                  onClick={async () => await toggleExpandedCollection(collection.id)}
                 >
                   <div className="flex items-center space-x-2">
                     {expandedCollections?.has(collection.id) ? (

@@ -36,6 +36,7 @@ const RequestEditor: React.FC = () => {
     setCollection,
     expandedCollections,
     handleCreateRequest,
+    fetchCollectionRequests
   } = useCollection();
   const { variables, environments, activeEnvironment } = useDataManagement()
   const { error: showError, success: showSuccess } = useToast();
@@ -420,12 +421,17 @@ const RequestEditor: React.FC = () => {
         );
         return;
       }
-
+      let requestCount: number= 0; 
+      if(activeCollection) {
+          const response = await fetchCollectionRequests.mutateAsync(activeCollection.id);
+          requestCount = response.length;
+      } 
+    
       const requestData = {
         collectionId: createdCollectionId ? createdCollectionId : activeCollection?.id,
         description: '',
         name: activeRequest.name || 'New Request',
-        order: (activeCollection?.requests?.length || 0) + 1,
+        order: (requestCount || 0) + 1,
         method: method,
         url: url,
         bodyType: bodyType == 'json' ? 'raw' : bodyType,
@@ -483,7 +489,7 @@ const RequestEditor: React.FC = () => {
         headers: headers,
         // variables: activeRequest.variables || {},
       };
-      console.log("🚀 ~ handleConfirmSave ~ requestData:", requestData)
+      console.log("🚀 ~ handleConfirmSave ~ requestData:", requestData,activeCollection)
       await addRequestMutation.mutateAsync(requestData);
       setShowSaveModal(false);
       setNewCollectionName('');
@@ -1429,12 +1435,12 @@ const RequestEditor: React.FC = () => {
           {!isCreatingCollection ? (
             <div className='space-y-2'>
               <select
-                value={activeCollection?.id}
-                onChange={(e) =>
+                onChange={(e) =>{                  
                   setActiveCollection(
                     collections.find((c) => c.id === e.target.value) ||
                     null
                   )
+                }
                 }
                 className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150'
               >
