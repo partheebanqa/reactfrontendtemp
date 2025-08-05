@@ -59,6 +59,7 @@ const Sidebar: React.FC = () => {
   const [renameValue, setRenameValue] = useState("");
   const [requestId, setRequestId] = useState("");
   const menuRef = useRef<HTMLDivElement>(null);
+  const [requstIndex, setRequestIndex] = useState<number | null>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -473,6 +474,20 @@ const Sidebar: React.FC = () => {
     return colors[method as keyof typeof colors] || "text-gray-600";
   };
 
+  const handleDeleteNewRequest = () => {
+    setCollection(
+      collections.map((col) =>
+        col.id === selectedCollection?.id
+          ? {
+            ...col,
+            requests: col.requests.filter((req, index) => index !== requstIndex),
+          }
+          : col
+      )
+    );
+    setRequestIndex(null);
+  }
+
   const handleClose = () => {
     setShowCollectionModal(false);
     setSelectedCollection(null);
@@ -587,7 +602,7 @@ const Sidebar: React.FC = () => {
 
                 {expandedCollections?.has(collection.id) && (
                   <div className="ml-4 sm:ml-6 space-y-1">
-                    {collection.requests.map((request) => (
+                    {collection.requests.map((request, index) => (
                       <div
                         key={request.order}
                         className={`
@@ -623,6 +638,8 @@ const Sidebar: React.FC = () => {
                               setMenuPosition({ top: rect.bottom, left: rect.left });
                               setSelectedRequest(request);
                               setShowMenu(`request-${request.id}`);
+                              setRequestId(request.id || '');
+                              setRequestIndex(index);
                             }}
                             className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
                           >
@@ -822,6 +839,8 @@ const Sidebar: React.FC = () => {
                 onClick={() => {
                   if (selectedRequest.id) {
                     handleDeleteRequest(selectedRequest.id);
+                  } else {
+                    handleDeleteNewRequest();
                   }
                   setShowMenu(null);
                   setMenuPosition(null);
