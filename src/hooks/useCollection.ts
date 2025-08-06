@@ -51,7 +51,7 @@ export function useCollection() {
   const deleteRequest = collectionActions.deleteRequest;
   const addRequestToCollection = collectionActions.addRequestToCollection;
 
-  const toggleExpandedCollection = (collectionId: string) => {
+  const toggleExpandedCollection = async (collectionId: string) => {
     if (!collectionId) return;
     collectionActions.toggleExpandedCollection(collectionId);
     const targetCollection = collections?.find(
