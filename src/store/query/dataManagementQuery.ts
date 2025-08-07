@@ -168,6 +168,11 @@ export const useDeleteVariableMutation = () => {
 // ---------- Helpers ----------
 
 const filterEnvironment = (environment: ResponseEnvironment): Environment => {
+  console.log(
+    'environmentInFilter:',
+    environment?.environmentVariables?.[0]?.InitialValue
+  );
+
   return {
     id: environment.Id,
     name: environment.Name,
@@ -178,7 +183,7 @@ const filterEnvironment = (environment: ResponseEnvironment): Environment => {
     updatedBy: environment.UpdatedBy,
     createdBy: environment.CreatedBy,
     deletedAt: environment.DeletedAt,
-    baseUrl: '',
+    baseUrl: environment?.environmentVariables?.[0]?.InitialValue ?? '',
     isDefault: false,
   };
 };

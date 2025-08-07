@@ -50,8 +50,7 @@ import {
   Variable,
 } from '@/shared/types/requestChain.model';
 import { ResponseExplorer } from './ResponseExplorer';
-import { useToast } from '@/hooks/useToast';
-import { useDataManagementStore } from '@/store/dataManagementStore';
+import { useToast } from '@/hooks/use-toast';
 import { parseCookies } from '@/lib/cookieUtils';
 import {
   buildRequestPayload,
@@ -67,6 +66,7 @@ interface RequestEditorProps {
   chainName?: string;
   chainDescription?: string;
   chainEnabled?: boolean;
+  environmentBaseUrl?: string; // New prop for environment base URL
 }
 
 interface KeyValuePair {
@@ -86,15 +86,10 @@ export function RequestEditor({
   chainName,
   chainDescription,
   chainEnabled,
+  environmentBaseUrl, // New prop
 }: RequestEditorProps) {
   const [showRequestUrl, setShowRequestUrl] = useState(true);
-  const [isJsonOpen, setIsJsonOpen] = useState(false); // default closed
-
-  const {
-    environments,
-    activeEnvironment,
-    variables: storeVariables,
-  } = useDataManagementStore();
+  const [isJsonOpen, setIsJsonOpen] = useState(false);
 
   const [activeTab, setActiveTab] = useState<
     'params' | 'headers' | 'body' | 'auth' | 'tests' | 'settings'
@@ -107,7 +102,6 @@ export function RequestEditor({
   const [extractedVariables, setExtractedVariables] = useState<
     Record<string, any>
   >({});
-
   const [previousExtractions, setPreviousExtractions] = useState<
     DataExtraction[]
   >([]);
@@ -118,6 +112,7 @@ export function RequestEditor({
 
   const params = request.params || [];
   const headers = request.headers || [];
+  const { toast } = useToast();
 
   const replaceVariables = (text: string, vars: Variable[]): string => {
     let result = text;
@@ -149,18 +144,14 @@ export function RequestEditor({
     extractions: APIRequest['dataExtractions']
   ): Record<string, any> => {
     const extracted: Record<string, any> = {};
-
     extractions.forEach((extraction) => {
       try {
         let value;
-
         if (extraction.source === 'response_body') {
-          // JSON path extraction
           const jsonData =
             typeof response.body === 'string'
               ? JSON.parse(response.body)
               : response.body;
-
           value = getValueByPath(jsonData, extraction.path);
         } else if (extraction.source === 'response_header') {
           value = response.headers[extraction.path.toLowerCase()];
@@ -189,26 +180,8 @@ export function RequestEditor({
         console.error(`Failed to extract ${extraction.variableName}:`, error);
       }
     });
-
     return extracted;
   };
-
-  // const overrideBaseUrl = (originalUrl: string): string => {
-  //   try {
-  //     const baseUrl = storeVariables
-  //       .find((v) => v.name === 'baseUrl')
-  //       ?.initialValue?.trim();
-  //     if (!baseUrl) return originalUrl;
-
-  //     const parsedOriginal = new URL(originalUrl);
-  //     const baseParsed = new URL(baseUrl);
-
-  //     return `${baseParsed.origin}${parsedOriginal.pathname}${parsedOriginal.search}${parsedOriginal.hash}`;
-  //   } catch (error) {
-  //     console.warn('Invalid URL override attempt:', error);
-  //     return originalUrl;
-  //   }
-  // };
 
   const handleExecute = async () => {
     if (!request.url) {
@@ -221,13 +194,9 @@ export function RequestEditor({
     }
 
     setIsExecuting(true);
-
     try {
       const startTime = Date.now();
-
       const payload = buildRequestPayload(request, globalVariables);
-
-      // ✅ Correctly inject previewUrl into the nested request object
       const previewUrl = getPreviewUrl();
       payload.request.url = previewUrl;
 
@@ -246,7 +215,6 @@ export function RequestEditor({
       );
 
       const endTime = Date.now();
-
       const log: ExecutionLog = {
         id: Date.now().toString(),
         chainId: 'current-chain',
@@ -260,7 +228,7 @@ export function RequestEditor({
         duration: result.metrics.responseTime,
         request: {
           method: request.method,
-          url: previewUrl, // ← use preview URL for logging
+          url: previewUrl,
           headers: Object.fromEntries(
             request.headers.map((h) => [h.key, h.value])
           ),
@@ -277,7 +245,6 @@ export function RequestEditor({
       };
 
       setExecutionResult(log);
-
       toast({
         title: 'Execution Complete',
         description: `Request completed with status ${result.statusCode}`,
@@ -285,7 +252,6 @@ export function RequestEditor({
       });
     } catch (error) {
       const endTime = Date.now();
-
       const errorLog: ExecutionLog = {
         id: Date.now().toString(),
         chainId: 'current-chain',
@@ -304,7 +270,6 @@ export function RequestEditor({
       };
 
       setExecutionResult(errorLog);
-
       toast({
         title: 'Execution Failed',
         description: error instanceof Error ? error.message : 'Unknown error',
@@ -315,114 +280,13 @@ export function RequestEditor({
     }
   };
 
-  // const handleExecuteAll = async () => {
-  //   if (!requests || requests.length === 0) return;
-
-  //   toast({
-  //     title: 'Running All Requests',
-  //     description: `Executing ${requests.length} requests sequentially...`,
-  //   });
-
-  //   for (const req of requests) {
-  //     if (!req.url) continue;
-
-  //     try {
-  //       const startTime = Date.now();
-
-  //       const payload = buildRequestPayload(req, globalVariables);
-  //       payload.request.url = getPreviewUrl(); // Preview URL injection
-
-  //       const backendData = await executeRequest(payload);
-  //       const result = backendData?.data?.responses?.[0];
-
-  //       if (!result) throw new Error('No response from executor');
-
-  //       const extractedData = extractDataFromResponse(
-  //         {
-  //           body: result.body,
-  //           headers: result.headers,
-  //           cookies: parseCookies(result.headers?.['set-cookie'] ?? ''),
-  //         },
-  //         req.dataExtractions
-  //       );
-
-  //       const endTime = Date.now();
-
-  //       const log: ExecutionLog = {
-  //         id: Date.now().toString(),
-  //         chainId: 'current-chain',
-  //         requestId: req.id,
-  //         status:
-  //           result.statusCode >= 200 && result.statusCode < 300
-  //             ? 'success'
-  //             : 'error',
-  //         startTime: new Date(startTime).toISOString(),
-  //         endTime: new Date(endTime).toISOString(),
-  //         duration: result.metrics.responseTime,
-  //         request: {
-  //           method: req.method,
-  //           url: payload.request.url,
-  //           headers: Object.fromEntries(
-  //             req.headers.map((h) => [h.key, h.value])
-  //           ),
-  //           body: req.body ?? '',
-  //         },
-  //         response: {
-  //           status: result.statusCode,
-  //           headers: result.headers,
-  //           body: result.body,
-  //           size: result.metrics.bytesReceived,
-  //           cookies: parseCookies(result.headers?.['set-cookie'] ?? ''),
-  //         },
-  //         extractedVariables: extractedData,
-  //       };
-
-  //       setExecutionResult(log);
-  //     } catch (error) {
-  //       const endTime = Date.now();
-
-  //       const errorLog: ExecutionLog = {
-  //         id: Date.now().toString(),
-  //         chainId: 'current-chain',
-  //         requestId: req.id,
-  //         status: 'error',
-  //         startTime: new Date().toISOString(),
-  //         endTime: new Date(endTime).toISOString(),
-  //         duration: 0,
-  //         request: {
-  //           method: req.method,
-  //           url: getPreviewUrl(),
-  //           headers: {},
-  //           body: req.body,
-  //         },
-  //         error: error instanceof Error ? error.message : 'Unknown error',
-  //       };
-
-  //       setExecutionResult(errorLog);
-
-  //       toast({
-  //         title: `Request ${req.name || req.id} Failed`,
-  //         description: error instanceof Error ? error.message : 'Unknown error',
-  //         variant: 'destructive',
-  //       });
-  //     }
-
-  //     // Optional delay between requests
-  //     await new Promise((r) => setTimeout(r, 300)); // 300ms delay
-  //   }
-
-  //   toast({
-  //     title: 'All Requests Completed',
-  //     description: 'Sequential execution finished.',
-  //   });
-  // };
-
+  // Updated getPreviewUrl function to use environmentBaseUrl prop
   const getPreviewUrl = () => {
     const replacedUrl = replaceVariables(request.url, globalVariables);
 
-    const baseUrl = storeVariables
-      .find((v) => v.name === 'baseUrl')
-      ?.initialValue?.trim();
+    // Use the environmentBaseUrl prop instead of storeVariables
+    const baseUrl = environmentBaseUrl?.trim();
+
     if (!baseUrl) return replacedUrl;
 
     try {
@@ -430,7 +294,6 @@ export function RequestEditor({
       const parsedBase = new URL(baseUrl);
       return `${parsedBase.origin}${parsedOriginal.pathname}${parsedOriginal.search}${parsedOriginal.hash}`;
     } catch {
-      // If replacedUrl is relative
       return `${baseUrl.replace(/\/$/, '')}/${replacedUrl.replace(/^\//, '')}`;
     }
   };
@@ -528,7 +391,6 @@ export function RequestEditor({
 
   const handleExtractVariable = (extraction: DataExtraction) => {
     const currentExtractions = request.dataExtractions || [];
-
     const existingChains = JSON.parse(
       localStorage.getItem('extractionLogs') || '[]'
     );
@@ -543,7 +405,6 @@ export function RequestEditor({
     }
 
     const nextOrder = maxOrder + 1;
-
     const extractionWithOrder = {
       ...extraction,
       order: nextOrder,
@@ -575,7 +436,6 @@ export function RequestEditor({
       order: nextOrder,
     };
 
-    // ✅ Try to find existing chain by identity
     const chainIndex = existingChains.findIndex(
       (chain: any) =>
         chain.name === chainName &&
@@ -586,7 +446,6 @@ export function RequestEditor({
     if (chainIndex !== -1) {
       existingChains[chainIndex].chainRequests.push(newRequest);
     } else {
-      // 🆕 New chain
       const newChain = {
         name: chainName || '',
         description: chainDescription || '',
@@ -597,8 +456,6 @@ export function RequestEditor({
     }
 
     localStorage.setItem('extractionLogs', JSON.stringify(existingChains));
-
-    // 🧠 Update state
     setPreviousExtractions(updatedExtractions);
     onUpdate({ dataExtractions: updatedExtractions });
 
@@ -617,17 +474,12 @@ export function RequestEditor({
     );
     onUpdate({ dataExtractions: updatedExtractions });
 
-    // Remove from extracted variables
     const newExtracted = { ...extractedVariables };
     delete newExtracted[variableName];
     setExtractedVariables(newExtracted);
   };
 
   const [copied, setCopied] = useState(false);
-
-  // console.log('copied:', copied);
-  const { toast } = useToast();
-
   const handleCopy = async (value: string) => {
     try {
       await navigator.clipboard.writeText(value);
@@ -635,7 +487,6 @@ export function RequestEditor({
       toast({
         title: 'Copied to Clipboard',
         description: 'The value has been copied successfully.',
-        variant: 'success',
       });
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
@@ -667,7 +518,6 @@ export function RequestEditor({
 
   const addTest = (type: 'status' | 'responseTime' | 'jsonContent') => {
     let newTest: TestScript;
-
     const base = {
       id: Date.now().toString(),
       type,
@@ -756,7 +606,6 @@ export function RequestEditor({
             <div className='col-span-2'>Description</div>
             <div className='col-span-1'></div>
           </div>
-
           {items.map((item) => (
             <div key={item.id} className='grid grid-cols-12 gap-2 items-center'>
               <div className='col-span-1 flex justify-center'>
@@ -853,14 +702,15 @@ export function RequestEditor({
           />
           <Button
             onClick={handleExecute}
+            disabled={isExecuting}
             className='gap-2 bg-primary text-primary-foreground hover:bg-primary/90'
           >
             <Play className='w-4 h-4' />
-            Run
+            {isExecuting ? 'Running...' : 'Run'}
           </Button>
         </div>
 
-        {/* Final URL Preview BELOW the input */}
+        {/* Final URL Preview */}
         <div className='flex items-center space-x-2 mt-2 text-sm'>
           <span className='text-gray-600 dark:text-gray-400 font-medium'>
             Final URL Preview:
@@ -1527,7 +1377,6 @@ export function RequestEditor({
                     max='60000'
                   />
                 </div>
-
                 <div>
                   <label className='block text-sm font-medium text-gray-700 mb-2'>
                     Retries
@@ -1619,10 +1468,9 @@ export function RequestEditor({
           )}
         </div>
 
-        {/* Response Section - New Design */}
+        {/* Response Section */}
         {executionResult && (
           <div className='border-t border-gray-200'>
-            {/* Response Header */}
             <div className='flex items-center justify-between p-4 bg-gray-50 border-b border-gray-200'>
               <div className='flex items-center space-x-4'>
                 {executionResult.status === 'success' ? (
@@ -1663,11 +1511,9 @@ export function RequestEditor({
                         ? 'Server Error'
                         : ''}
                     </span>
-
                     <span className='text-sm text-gray-600'>
                       {executionResult.duration}ms
                     </span>
-
                     <span className='text-sm text-gray-600'>
                       {(executionResult.response.size / 1024).toFixed(2)} KB
                     </span>
@@ -1692,7 +1538,6 @@ export function RequestEditor({
 
             {showResponse && executionResult.response && (
               <>
-                {/* Response Tabs */}
                 <div className='border-b border-gray-200'>
                   <nav className='flex space-x-8 px-6'>
                     {[
@@ -1738,11 +1583,9 @@ export function RequestEditor({
                   </nav>
                 </div>
 
-                {/* Response Content */}
                 <div className='p-6'>
                   {responseTab === 'body' && (
                     <div className='space-y-4'>
-                      {/* Toggle Header */}
                       <div
                         className='flex items-center justify-between cursor-pointer'
                         onClick={() => setIsJsonOpen((prev) => !prev)}
@@ -1757,7 +1600,6 @@ export function RequestEditor({
                             JSON
                           </span>
                         </div>
-
                         <div className='flex items-center space-x-2'>
                           <button
                             onClick={(e) => {
@@ -1769,11 +1611,9 @@ export function RequestEditor({
                             <Copy className='w-3 h-3' />
                             <span>Copy</span>
                           </button>
-                          {/* ... Other buttons like Share, Save, Search ... */}
                         </div>
                       </div>
 
-                      {/* Collapsible content */}
                       {isJsonOpen && (
                         <div className='relative'>
                           <pre className='bg-gray-50 border border-gray-200 rounded-lg p-4 text-sm font-mono overflow-x-auto max-h-96 leading-relaxed'>
@@ -1874,7 +1714,7 @@ export function RequestEditor({
           </div>
         )}
 
-        {/* Variable Extraction Section - After Response */}
+        {/* Variable Extraction Section */}
         {executionResult && executionResult.response && (
           <div className='border-t border-gray-200 p-6'>
             <h3 className='text-lg font-medium text-gray-900 mb-4'>
@@ -1893,10 +1733,6 @@ export function RequestEditor({
         )}
       </div>
     );
-  }
-
-  function uuidv4(): any {
-    throw new Error('Function not implemented.');
   }
 
   // Full view
@@ -1948,6 +1784,15 @@ export function RequestEditor({
               onChange={(e) => onUpdate({ url: e.target.value })}
               placeholder='https://api.example.com/endpoint'
             />
+          </div>
+          {/* Final URL Preview */}
+          <div className='flex items-center space-x-2 mt-2 text-sm'>
+            <span className='text-gray-600 dark:text-gray-400 font-medium'>
+              Final URL Preview:
+            </span>
+            <span className='text-blue-600 dark:text-blue-400 font-mono break-all'>
+              {previewUrl}
+            </span>
           </div>
         </CardContent>
       </Card>
@@ -2014,7 +1859,7 @@ export function RequestEditor({
                 type='headers'
                 items={headers.map((h) => ({
                   ...h,
-                  id: h.id ?? uuidv4(),
+                  id: h.id ?? crypto.randomUUID(),
                 }))}
                 addButtonText='Add Header'
                 emptyStateText="No headers added. Click 'Add Header' to get started."
@@ -2130,7 +1975,6 @@ export function RequestEditor({
         <TabsContent value='settings' className='space-y-6'>
           <div>
             <h3 className='text-lg font-semibold mb-4'>Request Settings</h3>
-
             <div className='grid grid-cols-2 gap-6 mb-6'>
               <div className='space-y-2'>
                 <Label htmlFor='timeout'>Timeout (ms)</Label>
@@ -2165,7 +2009,6 @@ export function RequestEditor({
                   Error Handling
                 </Label>
               </div>
-
               <RadioGroup
                 value={request.errorHandling}
                 onValueChange={(value) =>
@@ -2213,13 +2056,11 @@ export function RequestEditor({
               <div className='space-y-2'>
                 <Label>Run this request only if:</Label>
                 <Textarea
-                  placeholder='// JavaScript condition that returns true/false
-// Example: response.status === 200 && response.data.success'
+                  placeholder='// JavaScript condition that returns true/false// Example: response.status === 200 && response.data.success'
                   rows={4}
                   className='font-mono'
                 />
               </div>
-
               <div className='space-y-2'>
                 <Label>Variable Conditions</Label>
                 <div className='text-sm text-muted-foreground'>

@@ -60,8 +60,8 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
 }) => {
   const { variables, environments, activeEnvironment } = useDataManagement();
 
-  console.log('requests123:', requests);
   console.log('variables:', variables);
+  console.log('environmentsInManageRequest:', environments);
 
   const [selectedRequest, setSelectedRequest] = useState<Request | null>(null);
   const [isTestCaseModalOpen, setIsTestCaseModalOpen] = useState(false);

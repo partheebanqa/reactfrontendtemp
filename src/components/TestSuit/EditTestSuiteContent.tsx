@@ -1,5 +1,4 @@
 'use client';
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
@@ -54,18 +53,19 @@ const EditTestSuiteContent: React.FC = () => {
   // Fix the parameter access by properly handling the params object
   const id = (params as any).id;
   const isCreateMode = location.includes('/create');
-
   console.log('Current location:', location);
   console.log('Is create mode:', isCreateMode);
   console.log('Params:', params);
   console.log('ID:', id);
+
   const { environments, activeEnvironment, setActiveEnvironment } =
     useDataManagement();
+
+  console.log('environmentsuseDataManagement:', environments);
 
   const [testSuiteName, setTestSuiteName] = useState('');
   const [description, setDescription] = useState('');
   const [selectedEnvironment, setSelectedEnvironment] = useState<string>('');
-
   const [requests, setRequests] = useState<Request[]>([]);
   const [originalRequestIds, setOriginalRequestIds] = useState<string[]>([]);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
@@ -81,15 +81,12 @@ const EditTestSuiteContent: React.FC = () => {
     enabled: !!id && !isCreateMode,
   });
 
-  // console.log('activeEnvironmentInTestSuite:', activeEnvironment?.id);
-
   useEffect(() => {
     if (activeEnvironment) {
       setSelectedEnvironment(activeEnvironment.id);
     }
   }, [activeEnvironment]);
 
-  // Handle environment change and update the global active environment
   const handleEnvironmentChange = (environmentId: string) => {
     setSelectedEnvironment(environmentId);
     const selectedEnv = environments.find((env) => env.id === environmentId);
@@ -101,7 +98,6 @@ const EditTestSuiteContent: React.FC = () => {
   const createMutation = useMutation({
     mutationFn: (data: CreateTestSuitePayload) =>
       createTestSuite({ ...data, workspaceId: currentWorkspace!.id }),
-
     onSuccess: (data) => {
       toast({
         title: 'Test suite created',
@@ -113,7 +109,6 @@ const EditTestSuiteContent: React.FC = () => {
       });
       setLocation('/test-suites');
     },
-
     onError: (error: any) => {
       toast({
         title: 'Failed to create test suite',
@@ -146,7 +141,6 @@ const EditTestSuiteContent: React.FC = () => {
       });
       queryClient.invalidateQueries({ queryKey: ['testSuites'] });
       queryClient.invalidateQueries({ queryKey: ['testSuite', id] });
-
       // ✅ Redirect after successful update
       setLocation('/test-suites');
     },
@@ -163,7 +157,6 @@ const EditTestSuiteContent: React.FC = () => {
     if (testSuite && !isCreateMode) {
       setTestSuiteName(testSuite.name || '');
       setDescription(testSuite.description || '');
-
       // Transform and set existing requests
       if (Array.isArray(testSuite.requests) && testSuite.requests.length > 0) {
         const transformedRequests: Request[] = testSuite.requests.map(
@@ -211,7 +204,6 @@ const EditTestSuiteContent: React.FC = () => {
         total: 0,
       },
     }));
-
     setRequests((prev) => [...prev, ...transformedRequests]);
     setIsImportModalOpen(false);
     toast({
@@ -242,17 +234,14 @@ const EditTestSuiteContent: React.FC = () => {
 
   const calculateRequestChanges = () => {
     const currentRequestIds = requests.map((req) => req.id);
-
     // Find added requests (present in current but not in original)
     const addRequestIds = currentRequestIds.filter(
       (id) => !originalRequestIds.includes(id)
     );
-
     // Find removed requests (present in original but not in current)
     const removeRequestIds = originalRequestIds.filter(
       (id) => !currentRequestIds.includes(id)
     );
-
     return { addRequestIds, removeRequestIds };
   };
 
@@ -265,7 +254,6 @@ const EditTestSuiteContent: React.FC = () => {
       });
       return;
     }
-
     if (isCreateMode) {
       createMutation.mutate({
         name: testSuiteName,
@@ -275,7 +263,6 @@ const EditTestSuiteContent: React.FC = () => {
       });
     } else {
       const { addRequestIds, removeRequestIds } = calculateRequestChanges();
-
       updateMutation.mutate({
         id: id!,
         name: testSuiteName,
@@ -298,6 +285,12 @@ const EditTestSuiteContent: React.FC = () => {
   // Get imported request IDs to pass to ImportModal
   const importedRequestIds = requests.map((request) => request.id);
 
+  // Calculate total test cases
+  const totalTestCases = requests.reduce(
+    (total, req) => total + (req.selectedTestCases?.length || 0),
+    0
+  );
+
   return (
     <div className='min-h-screen bg-background'>
       <div className='bg-card border-b px-6 py-4'>
@@ -315,11 +308,6 @@ const EditTestSuiteContent: React.FC = () => {
                     </span>
                     <Badge variant='secondary'>CI/CD Integration</Badge>
                   </>
-                )}
-                {isCreateMode && (
-                  <span className='text-sm text-muted-foreground'>
-                    New Test Suite
-                  </span>
                 )}
               </div>
             </div>
@@ -349,7 +337,9 @@ const EditTestSuiteContent: React.FC = () => {
       <div className='p-6 space-y-6'>
         <Card>
           <CardHeader>
-            <CardTitle>Basic Information</CardTitle>
+            <CardTitle className='text-lg font-medium'>
+              Basic Information
+            </CardTitle>
           </CardHeader>
           <CardContent className='space-y-4'>
             <div>
@@ -380,7 +370,6 @@ const EditTestSuiteContent: React.FC = () => {
               >
                 Environment <span className='text-destructive'>*</span>
               </label>
-
               <Select
                 value={selectedEnvironment}
                 onValueChange={handleEnvironmentChange}
@@ -405,38 +394,82 @@ const EditTestSuiteContent: React.FC = () => {
           </CardContent>
         </Card>
 
-        {requests.length === 0 ? (
-          <Card className='border-2 border-dashed border-border'>
-            <CardContent className='flex flex-col items-center justify-center py-16 px-6'>
-              <div className='w-16 h-16 mb-6 rounded-full bg-muted flex items-center justify-center'>
-                <Download className='w-8 h-8 text-muted-foreground' />
+        {/* Import Requests Section */}
+        <Card>
+          <CardHeader>
+            <div className='flex items-center justify-between'>
+              <div>
+                <h3 className='text-lg font-medium'>
+                  Import Requests & Configure Test Cases
+                </h3>
+                <p className='text-sm text-muted-foreground mt-1'>
+                  Import API requests from collections and configure test cases
+                  for each request
+                </p>
               </div>
-              <h3 className='text-xl font-semibold mb-2'>
-                No requests added yet
-              </h3>
-              <p className='text-muted-foreground text-center mb-6 max-w-md'>
-                Import API requests from your collections to start configuring
-                test cases for this test suite.
-              </p>
               <Button
                 variant='outline'
-                size='lg'
                 onClick={() => setIsImportModalOpen(true)}
+                className='shrink-0'
               >
                 <Download className='w-4 h-4 mr-2' />
                 Import Requests
               </Button>
-            </CardContent>
-          </Card>
-        ) : (
-          <ManageRequests
-            requests={requests}
-            testSuiteId={id || ''}
-            onImport={() => setIsImportModalOpen(true)}
-            onDeleteRequest={handleDeleteRequest}
-            onUpdateTestCases={handleUpdateTestCases}
-          />
-        )}
+            </div>
+          </CardHeader>
+          <CardContent>
+            {requests.length === 0 ? (
+              <>
+                <div className='flex flex-col items-center justify-center py-12 px-6'>
+                  <div className='w-16 h-16 mb-6 rounded-full bg-muted flex items-center justify-center'>
+                    <Download className='w-8 h-8 text-muted-foreground' />
+                  </div>
+                  <h3 className='text-lg font-medium mb-2'>
+                    No requests imported yet
+                  </h3>
+                  <p className='text-muted-foreground text-center mb-6 max-w-md'>
+                    Start by importing API requests from your collections. You
+                    can then configure specific test cases for each request.
+                  </p>
+                  <Button
+                    onClick={() => setIsImportModalOpen(true)}
+                    className='bg-blue-600 hover:bg-blue-700'
+                  >
+                    <Download className='w-4 h-4 mr-2' />
+                    Import Your First Request
+                  </Button>
+                </div>
+
+                {/* Bottom stats */}
+                <div className='border-t pt-4 mt-6'>
+                  <div className='flex justify-between text-sm text-muted-foreground'>
+                    <span>Imported requests: 0</span>
+                    <span>Total test cases: 0</span>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                {/* Show requests when they exist */}
+                <ManageRequests
+                  requests={requests}
+                  testSuiteId={id || ''}
+                  onImport={() => setIsImportModalOpen(true)}
+                  onDeleteRequest={handleDeleteRequest}
+                  onUpdateTestCases={handleUpdateTestCases}
+                />
+
+                {/* Bottom stats for when requests exist */}
+                <div className='border-t pt-4 mt-6'>
+                  <div className='flex justify-between text-sm text-muted-foreground'>
+                    <span>Imported requests: {requests.length}</span>
+                    <span>Total test cases: {totalTestCases}</span>
+                  </div>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
 
         <ImportModal
           isOpen={isImportModalOpen}
