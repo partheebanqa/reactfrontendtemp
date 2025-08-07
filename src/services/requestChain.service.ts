@@ -279,15 +279,6 @@ export async function saveRequestChain(
   return savedChain;
 }
 
-// export async function getRequestChains(
-//   workspaceId: string
-// ): Promise<RequestChain[]> {
-//   await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulate network delay
-
-//   // Return mock data for now
-//   return mockChains.filter((chain) => chain.workspaceId === workspaceId);
-// }
-
 export const getRequestChains = async (
   workspaceId: string
 ): Promise<RequestChain[]> => {

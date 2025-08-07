@@ -1,6 +1,5 @@
 import { queryClient } from '@/lib/queryClient';
 import {
-  FetchVariablesResponse,
   createEnvironment,
   createVariable,
   deleteEnvironment,
@@ -18,62 +17,69 @@ import {
 } from '../dataManagementStore';
 import {
   Environment,
-  fetchEnvironmentsResponse,
   ResponseEnvironment,
   ResponseVariable,
   Variable,
 } from '@/shared/types/datamanagement';
 
 export const usegetEnvironmentQuery = (enabled = true) => {
-  const workspaceId = workspaceStore.state.currentWorkspace?.id!;
+  const workspaceId = workspaceStore.state.currentWorkspace?.id;
+
   return useQuery({
     queryKey: ['environments', workspaceId],
-    enabled,
+    enabled: !!workspaceId && enabled,
     queryFn: async () => {
-      const response: fetchEnvironmentsResponse = await fetchEnvironments(
-        workspaceId
-      );
-      if (response?.environments) {
-        const filteredEnvironments =
-          response.environments.map(filterEnvironment);
+      if (!workspaceId) throw new Error('Workspace ID is missing');
+      const response = await fetchEnvironments(workspaceId);
+      console.log('responsefetchEnvironments123:', response);
+      if (response?.environments?.length) {
+        const filteredEnvironments = response.environments.map(
+          (env: ResponseEnvironment) => filterEnvironment(env)
+        );
         const environment = filteredEnvironments[0];
         dataManagementActions.setEnvironments(filteredEnvironments);
         dataManagementActions.setActiveEnvironment(environment);
+        console.log('environmentReturn:', environment);
         return environment;
       } else {
         dataManagementActions.setEnvironments([]);
         dataManagementActions.setActiveEnvironment(null);
       }
-      return [];
+
+      return null;
     },
   });
 };
 
 export const usefetchVariablesQuery = (enabled = true) => {
-  // console.log('useFetch var is called');
-
-  const environmentId = dataManagementStore.state.activeEnvironment?.id!;
-  // console.log('usefetchVariablesQuery is called');
-  // console.log('activeEnvironment ID from Zustand:', environmentId);
-  // console.log('Query enabled status:', !!environmentId && enabled);
+  const environment = dataManagementStore.state.activeEnvironment;
+  const environmentId = environment?.id;
 
   return useQuery({
     queryKey: ['variables', environmentId],
     enabled: !!environmentId && enabled,
     queryFn: async () => {
-      try {
-        console.log('Running fetchVariables for environment:', environmentId);
+      if (!environmentId) throw new Error('Environment ID is missing');
 
-        const response = await fetchVariables(environmentId);
-        if (response.items.length > 0) {
-          const filteredVariables = response.items.map(filterVariable);
-          dataManagementActions.setVariables(filteredVariables);
-        }
-        return [];
-      } catch (error) {
-        console.error('Error fetching variables:', error);
-        throw error;
+      const response = await fetchVariables(environmentId);
+
+      if (response.items.length > 0) {
+        const filteredVariables = response.items.map(filterVariable);
+        dataManagementActions.setVariables(filteredVariables);
+
+        const baseUrlVar = filteredVariables.find(
+          (v) => v.name.toLowerCase() === 'baseurl'
+        );
+
+        const updatedEnvironment = {
+          ...environment,
+          baseUrl: baseUrlVar?.initialValue || '', // fallback to empty if not found
+        };
+
+        dataManagementActions.setActiveEnvironment(updatedEnvironment);
       }
+
+      return [];
     },
   });
 };
@@ -82,10 +88,11 @@ export const useCreateEnvironmentMutation = () => {
   return useMutation({
     mutationFn: createEnvironment,
     onSuccess: (newEnvironment: ResponseEnvironment) => {
-      dataManagementActions.setEnvironments([
+      const updatedList = [
         ...dataManagementStore.state.environments,
         filterEnvironment(newEnvironment),
-      ]);
+      ];
+      dataManagementActions.setEnvironments(updatedList);
     },
     onError: (error) => {
       console.error('Error creating environment:', error);
@@ -112,8 +119,7 @@ export const useDeleteEnvironmentMutation = () => {
   return useMutation({
     mutationFn: deleteEnvironment,
     onSuccess: () => {
-      console.log('🚀 ~ useDeleteEnvironmentMutation ~ environmentId:');
-      console.log('Environment deleted:');
+      console.log('Environment deleted');
       fetchEnvironmentsQuery.refetch();
     },
     onError: (error) => {
@@ -126,8 +132,7 @@ export const useCreateVariableMutation = () => {
   const fetchVariablesQuery = usefetchVariablesQuery();
   return useMutation({
     mutationFn: createVariable,
-    onSuccess: (newVariable: any) => {
-      console.log('New variable created:', newVariable);
+    onSuccess: () => {
       fetchVariablesQuery.refetch();
     },
   });
@@ -137,8 +142,7 @@ export const useUpdateVariableMutation = () => {
   const fetchVariablesQuery = usefetchVariablesQuery();
   return useMutation({
     mutationFn: updateVariable,
-    onSuccess: (updatedVariable: any) => {
-      console.log('Variable updated:', updatedVariable);
+    onSuccess: () => {
       fetchVariablesQuery.refetch();
     },
     onError: (error) => {
@@ -151,8 +155,7 @@ export const useDeleteVariableMutation = () => {
   const fetchVariablesQuery = usefetchVariablesQuery();
   return useMutation({
     mutationFn: deleteVariable,
-    onSuccess: (variableId: string) => {
-      console.log('Variable deleted:', variableId);
+    onSuccess: () => {
       fetchVariablesQuery.refetch();
     },
     onError: (error) => {
@@ -162,29 +165,35 @@ export const useDeleteVariableMutation = () => {
   });
 };
 
-const filterEnvironment = (environment: ResponseEnvironment) => {
+// ---------- Helpers ----------
+
+const filterEnvironment = (environment: ResponseEnvironment): Environment => {
   return {
     id: environment.Id,
     name: environment.Name,
     workspaceId: environment.WorkspaceId,
     description: environment.Description,
     createdAt: environment.CreatedAt,
+    updatedAt: environment.UpdatedAt,
+    updatedBy: environment.UpdatedBy,
+    createdBy: environment.CreatedBy,
+    deletedAt: environment.DeletedAt,
     baseUrl: '',
     isDefault: false,
-  } as Environment;
+  };
 };
 
-const filterVariable = (variable: ResponseVariable) => {
+const filterVariable = (variable: ResponseVariable): Variable => {
   return {
-    createdAt: variable.CreatedAt, //
-    currentValue: variable.CurrentValue,
-    deletedAt: variable.DeletedAt, //
-    description: variable.Description,
-    environmentId: variable.EnvironmentId,
     id: variable.Id,
-    initialValue: variable.InitialValue,
+    environmentId: variable.EnvironmentId,
     name: variable.Name,
+    description: variable.Description,
     type: variable.Type,
-    updatedAt: variable.UpdatedAt, //
-  } as Variable;
+    initialValue: variable.InitialValue,
+    currentValue: variable.CurrentValue,
+    createdAt: variable.CreatedAt,
+    updatedAt: variable.UpdatedAt,
+    deletedAt: variable.DeletedAt,
+  };
 };

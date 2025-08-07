@@ -1,5 +1,24 @@
-import React, { useState, useMemo } from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import React, { useState, useRef, useEffect } from 'react';
+import {
+  ArrowLeft,
+  Plus,
+  GripVertical,
+  Trash2,
+  Edit,
+  Play,
+  Save,
+  Eye,
+  EyeOff,
+  ChevronDown,
+  Code,
+  Globe,
+  Download,
+  ChevronUp,
+  Copy,
+  Database,
+  Loader2,
+  PlayCircle,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,1488 +32,865 @@ import {
 } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
-import { Checkbox } from '@/components/ui/checkbox';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useToast } from '@/hooks/use-toast';
 import {
-  Plus,
-  Trash2,
-  Eye,
-  EyeOff,
-  Code,
-  Globe,
-  Key,
-  TestTube,
-  Settings,
-  GitBranch,
-  ChevronDown,
-  ChevronRight,
-  TriangleAlert,
-  Play,
-  Copy,
-  Share,
-  Download,
-  Search,
-  AlertTriangle,
-  Shield,
-  FileText,
-  Clock,
-  CheckCircle,
-  XCircle,
-  Database,
-} from 'lucide-react';
-import {
+  RequestChain,
   APIRequest,
-  DataExtraction,
-  ExecutionLog,
-  TestScript,
   Variable,
-  KeyValuePair,
-} from '@/shared/types/requestChain.model';
-import { ResponseExplorer } from './ResponseExplorer';
+  Environment,
+} from '@/types/request';
+import { RequestExecutor } from './RequestExecutor';
+import { RequestEditor } from './RequestEditor';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import { VariablesTable } from './VariablesTable';
 
-interface RequestEditorProps {
-  request: APIRequest;
-  globalVariables: Variable[];
-  onUpdate: (updates: Partial<APIRequest>) => void;
-  onSave?: () => void;
-  compact?: boolean;
-  chainName?: string;
-  chainDescription?: string;
-  chainEnabled?: boolean;
+interface RequestChainEditorProps {
+  chain?: RequestChain;
+  onBack: () => void;
+  onSave: (chain: RequestChain) => void;
 }
 
-export function RequestEditor({
-  request,
-  globalVariables,
-  onUpdate,
+export function RequestChainEditor({
+  chain,
+  onBack,
   onSave,
-  compact = false,
-  chainName,
-  chainDescription,
-  chainEnabled,
-}: RequestEditorProps) {
-  const [showRequestUrl, setShowRequestUrl] = useState(true);
-  const [isJsonOpen, setIsJsonOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<
-    'params' | 'headers' | 'body' | 'auth' | 'tests' | 'settings'
-  >('params');
-  const [isExecuting, setIsExecuting] = useState(false);
-  const [executionResult, setExecutionResult] = useState<ExecutionLog | null>(
-    null
+}: RequestChainEditorProps) {
+  const { toast } = useToast();
+  const dragItem = useRef<number | null>(null);
+  const dragOverItem = useRef<number | null>(null);
+
+  // Mock workspace and environments - replace with actual hooks
+  const currentWorkspace = { id: 'workspace-1' };
+  const environments: Environment[] = [
+    {
+      id: 'env-1',
+      name: 'Development',
+      baseUrl: 'https://api-dev.example.com',
+      variables: [
+        {
+          id: 'v1',
+          name: 'baseUrl',
+          value: 'https://api-dev.example.com',
+          type: 'string',
+        },
+        { id: 'v2', name: 'apiKey', value: 'dev-key-123', type: 'string' },
+      ],
+    },
+    {
+      id: 'env-2',
+      name: 'Production',
+      baseUrl: 'https://api.example.com',
+      variables: [
+        {
+          id: 'v3',
+          name: 'baseUrl',
+          value: 'https://api.example.com',
+          type: 'string',
+        },
+        { id: 'v4', name: 'apiKey', value: 'prod-key-456', type: 'string' },
+      ],
+    },
+  ];
+  const activeEnvironment = environments[0];
+
+  const [formData, setFormData] = useState<Partial<RequestChain>>({
+    name: chain?.name || '',
+    description: chain?.description || '',
+    workspaceId: currentWorkspace?.id || '',
+    enabled: chain?.enabled ?? true,
+    requests: chain?.requests || [],
+    variables: chain?.variables || [],
+    environmentId: chain?.environmentId || environments[0]?.id,
+  });
+
+  const [selectedEnvironment, setSelectedEnvironment] = useState<string>(
+    chain?.environmentId || environments[0]?.id || ''
   );
-  const [showResponse, setShowResponse] = useState(false);
+
+  useEffect(() => {
+    if (activeEnvironment) {
+      setSelectedEnvironment(activeEnvironment.id);
+    }
+  }, [activeEnvironment]);
+
+  const handleEnvironmentChange = (environmentId: string) => {
+    setSelectedEnvironment(environmentId);
+    setFormData({ ...formData, environmentId });
+  };
+
+  const isSaveDisabled =
+    !formData.name?.trim() || (formData.requests?.length ?? 0) === 0;
+
+  const [expandedRequests, setExpandedRequests] = useState<Set<string>>(
+    new Set()
+  );
+  const [editingRequestId, setEditingRequestId] = useState<string | null>(null);
+  const [globalVariables, setGlobalVariables] = useState<Variable[]>([
+    {
+      id: '1',
+      name: 'baseUrl',
+      value: 'https://api.example.com',
+      type: 'string',
+    },
+    { id: '2', name: 'apiKey', value: 'your-api-key', type: 'string' },
+    { id: '3', name: 'timeout', value: '5000', type: 'number' },
+  ]);
+
+  const [executionLogs, setExecutionLogs] = useState<any[]>([]);
   const [extractedVariables, setExtractedVariables] = useState<
     Record<string, any>
   >({});
-  const [responseTab, setResponseTab] = useState<
-    'body' | 'cookies' | 'headers' | 'test-results'
-  >('body');
 
-  // Initialize params, headers if they don't exist
-  const params = request.params || [];
-  const headers = request.headers || [];
+  const [isExecuting, setIsExecuting] = useState(false);
+  const [currentRequestIndex, setCurrentRequestIndex] = useState(-1);
+  const [activeTab, setActiveTab] = useState('requests');
 
-  const replaceVariables = (text: string, vars: Variable[]): string => {
-    let result = text;
-    vars.forEach((variable) => {
-      const regex = new RegExp(`{{${variable.name}}}`, 'g');
-      result = result.replace(regex, variable.value);
+  const handleDragStart = (index: number) => {
+    dragItem.current = index;
+  };
+
+  const handleDragEnter = (index: number) => {
+    dragOverItem.current = index;
+  };
+
+  const handleDragEnd = () => {
+    if (dragItem.current !== null && dragOverItem.current !== null) {
+      const requests = [...(formData.requests || [])];
+      const draggedItem = requests[dragItem.current];
+      requests.splice(dragItem.current, 1);
+      requests.splice(dragOverItem.current, 0, draggedItem);
+
+      setFormData({ ...formData, requests });
+    }
+    dragItem.current = null;
+    dragOverItem.current = null;
+  };
+
+  const toggleRequestExpanded = (requestId: string) => {
+    const newExpanded = new Set(expandedRequests);
+    if (newExpanded.has(requestId)) {
+      newExpanded.delete(requestId);
+    } else {
+      newExpanded.add(requestId);
+    }
+    setExpandedRequests(newExpanded);
+  };
+
+  const removeRequest = (requestId: string) => {
+    setFormData({
+      ...formData,
+      requests: formData.requests?.filter((req) => req.id !== requestId) || [],
     });
-    return result;
+    const newExpanded = new Set(expandedRequests);
+    newExpanded.delete(requestId);
+    setExpandedRequests(newExpanded);
   };
 
-  const parseCookies = (cookieHeader: string): Record<string, string> => {
-    const cookies: Record<string, string> = {};
-    if (!cookieHeader) return cookies;
-
-    cookieHeader.split(',').forEach((cookie) => {
-      const [nameValue] = cookie.trim().split(';');
-      if (nameValue) {
-        const [name, value] = nameValue.split('=');
-        if (name && value) {
-          cookies[name.trim()] = value.trim();
-        }
-      }
+  const updateRequest = (requestId: string, updates: Partial<APIRequest>) => {
+    setFormData({
+      ...formData,
+      requests:
+        formData.requests?.map((req) =>
+          req.id === requestId ? { ...req, ...updates } : req
+        ) || [],
     });
-
-    return cookies;
   };
 
-  const getValueByPath = (obj: any, path: string): any => {
-    return path.split('.').reduce((current, key) => {
-      if (current && typeof current === 'object') {
-        if (key.includes('[') && key.includes(']')) {
-          const arrayKey = key.substring(0, key.indexOf('['));
-          const index = parseInt(
-            key.substring(key.indexOf('[') + 1, key.indexOf(']'))
-          );
-          return current[arrayKey] && current[arrayKey][index];
-        }
-        return current[key];
-      }
-      return undefined;
-    }, obj);
-  };
-
-  const extractDataFromResponse = (
-    response: any,
-    extractions: APIRequest['dataExtractions']
-  ): Record<string, any> => {
-    const extracted: Record<string, any> = {};
-
-    extractions.forEach((extraction) => {
-      try {
-        let value;
-
-        if (extraction.source === 'response_body') {
-          const jsonData =
-            typeof response.body === 'string'
-              ? JSON.parse(response.body)
-              : response.body;
-          value = getValueByPath(jsonData, extraction.path);
-        } else if (extraction.source === 'response_header') {
-          value = response.headers[extraction.path.toLowerCase()];
-        } else if (extraction.source === 'response_cookie') {
-          value = response.cookies?.[extraction.path];
-        }
-
-        if (value !== undefined) {
-          if (extraction.transform) {
-            try {
-              const transformFunction = new Function(
-                'value',
-                `return ${extraction.transform}`
-              );
-              value = transformFunction(value);
-            } catch (transformError) {
-              console.error(
-                `Transform error for ${extraction.variableName}:`,
-                transformError
-              );
-            }
-          }
-          extracted[extraction.variableName] = value;
-        }
-      } catch (error) {
-        console.error(`Failed to extract ${extraction.variableName}:`, error);
-      }
-    });
-
-    return extracted;
-  };
-
-  const handleExecute = async () => {
-    if (!request.url) return;
-
-    setIsExecuting(true);
-    try {
-      const processedUrl = replaceVariables(request.url, globalVariables);
-      const processedHeaders: Record<string, string> = {};
-
-      request.headers.forEach((header) => {
-        if (header.enabled) {
-          processedHeaders[header.key] = replaceVariables(
-            header.value,
-            globalVariables
-          );
-        }
-      });
-
-      let processedBody = request.body
-        ? replaceVariables(request.body, globalVariables)
-        : undefined;
-
-      const url = new URL(processedUrl);
-      request.params.forEach((param) => {
-        if (param.enabled) {
-          url.searchParams.set(
-            param.key,
-            replaceVariables(param.value, globalVariables)
-          );
-        }
-      });
-
-      if (request.bodyType === 'json' && processedBody) {
-        processedHeaders['Content-Type'] = 'application/json';
-      } else if (request?.bodyType === 'x-www-form-urlencoded') {
-        processedHeaders['Content-Type'] = 'application/x-www-form-urlencoded';
-      }
-
-      if (request.authType === 'bearer' && request.authToken) {
-        processedHeaders['Authorization'] = `Bearer ${replaceVariables(
-          request.authToken,
-          globalVariables
-        )}`;
-      } else if (
-        request.authType === 'basic' &&
-        request.authUsername &&
-        request.authPassword
-      ) {
-        const credentials = btoa(
-          `${request.authUsername}:${request.authPassword}`
-        );
-        processedHeaders['Authorization'] = `Basic ${credentials}`;
-      } else if (
-        request.authType === 'apikey' &&
-        request.authApiKey &&
-        request.authApiValue
-      ) {
-        if (request.authApiLocation === 'header') {
-          processedHeaders[request.authApiKey] = replaceVariables(
-            request.authApiValue,
-            globalVariables
-          );
-        } else {
-          url.searchParams.set(
-            request.authApiKey,
-            replaceVariables(request.authApiValue, globalVariables)
-          );
-        }
-      }
-
-      const requestOptions: RequestInit = {
-        method: request.method,
-        headers: processedHeaders,
-        body: processedBody,
-      };
-
-      const startTime = Date.now();
-      const response = await fetch(url.toString(), requestOptions);
-      const endTime = Date.now();
-      const responseBody = await response.text();
-
-      const extractedData = extractDataFromResponse(
-        {
-          body: responseBody,
-          headers: Object.fromEntries(response.headers.entries()),
-          cookies: parseCookies(response.headers.get('set-cookie') || ''),
-        },
-        request.dataExtractions
-      );
-
-      const log: ExecutionLog = {
+  const duplicateRequest = (requestId: string) => {
+    const request = formData.requests?.find((r) => r.id === requestId);
+    if (request) {
+      const duplicated = {
+        ...request,
         id: Date.now().toString(),
-        chainId: 'current-chain',
-        requestId: request.id,
-        status: response.ok ? 'success' : 'error',
-        startTime: new Date(startTime).toISOString(),
-        endTime: new Date(endTime).toISOString(),
-        duration: endTime - startTime,
-        request: {
-          method: request.method,
-          url: url.toString(),
-          headers: processedHeaders,
-          body: processedBody,
-        },
-        response: {
-          status: response.status,
-          headers: Object.fromEntries(response.headers.entries()),
-          body: responseBody,
-          size: responseBody.length,
-          cookies: parseCookies(response.headers.get('set-cookie') || ''),
-        },
-        extractedVariables: extractedData,
+        name: `${request.name} (Copy)`,
       };
-
-      setExecutionResult(log);
-      setShowResponse(true);
-      setExtractedVariables(extractedData);
-    } catch (error) {
-      const endTime = Date.now();
-
-      setExecutionResult({
-        id: Date.now().toString(),
-        chainId: 'current-chain',
-        requestId: request.id,
-        status: 'error',
-        startTime: new Date().toISOString(),
-        endTime: new Date(endTime).toISOString(),
-        duration: 0,
-        request: {
-          method: request.method,
-          url: request.url,
-          headers: {},
-          body: request.body,
-        },
-        error: error instanceof Error ? error.message : 'Unknown error',
+      setFormData({
+        ...formData,
+        requests: [...(formData.requests || []), duplicated],
       });
-      setShowResponse(true);
-    } finally {
-      setIsExecuting(false);
     }
   };
 
-  const addKeyValuePair = (type: 'params' | 'headers') => {
-    const newPair: KeyValuePair = {
+  const addNewRequest = () => {
+    const newRequest: APIRequest = {
       id: Date.now().toString(),
-      key: '',
-      value: '',
+      name: 'New Request',
+      method: 'GET',
+      url: '',
+      headers: [],
+      params: [],
+      bodyType: 'none',
+      timeout: 5000,
+      retries: 0,
+      errorHandling: 'stop',
+      dataExtractions: [],
+      testScripts: [],
       enabled: true,
-      description: '',
+      authType: 'none',
     };
 
-    if (type === 'params') {
-      onUpdate({ params: [...params, newPair] });
-    } else {
-      onUpdate({ headers: [...headers, newPair] });
-    }
+    setFormData({
+      ...formData,
+      requests: [...(formData.requests || []), newRequest],
+    });
+    setExpandedRequests(new Set([...expandedRequests, newRequest.id]));
   };
 
-  const updateKeyValuePair = (
-    type: 'params' | 'headers',
-    id: string,
-    updates: Partial<KeyValuePair>
-  ) => {
-    if (type === 'params') {
-      onUpdate({
-        params: params.map((p) => (p.id === id ? { ...p, ...updates } : p)),
+  const saveChain = async (): Promise<RequestChain | null> => {
+    if (!formData.name) {
+      toast({
+        title: 'Validation Error',
+        description: 'Please enter a chain name',
+        variant: 'destructive',
       });
-    } else {
-      onUpdate({
-        headers: headers.map((h) => (h.id === id ? { ...h, ...updates } : h)),
-      });
+      return null;
     }
-  };
 
-  const removeKeyValuePair = (type: 'params' | 'headers', id: string) => {
-    if (type === 'params') {
-      onUpdate({ params: params.filter((p) => p.id !== id) });
-    } else {
-      onUpdate({ headers: headers.filter((h) => h.id !== id) });
-    }
-  };
-
-  const formatResponseBody = (body: string, contentType?: string) => {
-    try {
-      if (
-        contentType?.includes('application/json') ||
-        body.trim().startsWith('{')
-      ) {
-        return JSON.stringify(JSON.parse(body), null, 2);
-      }
-    } catch {
-      // Return as-is if not valid JSON
-    }
-    return body;
-  };
-
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-  };
-
-  const handleExtractVariable = (extraction: DataExtraction) => {
-    const currentExtractions = request.dataExtractions || [];
-    const updatedExtractions = [...currentExtractions, extraction];
-    onUpdate({ dataExtractions: updatedExtractions });
-
-    if (executionResult?.response) {
-      const extracted = extractDataFromResponse(
-        executionResult.response,
-        updatedExtractions
-      );
-      setExtractedVariables(extracted);
-    }
-  };
-
-  const handleRemoveExtraction = (variableName: string) => {
-    const updatedExtractions = request.dataExtractions.filter(
-      (e) => e.variableName !== variableName
+    const existingChains: RequestChain[] = JSON.parse(
+      localStorage.getItem('requestChains') || '[]'
     );
-    onUpdate({ dataExtractions: updatedExtractions });
 
-    const newExtracted = { ...extractedVariables };
-    delete newExtracted[variableName];
-    setExtractedVariables(newExtracted);
+    const chainData: RequestChain = {
+      id: chain?.id || Date.now().toString(),
+      workspaceId: formData.workspaceId || '',
+      name: formData.name,
+      description: formData.description,
+      environmentId: selectedEnvironment,
+      requests: formData.requests || [],
+      variables: formData.variables || [],
+      enabled: formData.enabled || false,
+      createdAt: chain?.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      lastExecuted: chain?.lastExecuted,
+      executionCount: chain?.executionCount || 0,
+      successRate: chain?.successRate || 0,
+    };
+
+    const updatedChains = [...existingChains];
+    const existingIndex = updatedChains.findIndex((c) => c.id === chainData.id);
+
+    if (existingIndex !== -1) {
+      updatedChains[existingIndex] = chainData;
+    } else {
+      updatedChains.push(chainData);
+    }
+
+    localStorage.setItem('requestChains', JSON.stringify(updatedChains));
+    onSave(chainData);
+    return chainData;
   };
 
-  // Variable suggestions for inputs
-  const getVariableSuggestions = (inputValue: string) => {
-    const cursorPosition = inputValue.indexOf('{{');
-    if (cursorPosition === -1) return [];
+  const handleSave = async () => {
+    const saved = await saveChain();
+    if (saved) {
+      toast({
+        title: 'Chain Saved',
+        description: 'Your request chain has been saved successfully.',
+      });
+    }
+    return saved;
+  };
 
-    const afterCursor = inputValue.slice(cursorPosition + 2);
-    const endBrace = afterCursor.indexOf('}}');
-    const searchTerm =
-      endBrace === -1 ? afterCursor : afterCursor.slice(0, endBrace);
+  const getMethodColor = (method: string) => {
+    const methodLower = method.toLowerCase();
+    return `method-${methodLower}`;
+  };
 
-    return globalVariables.filter((v) =>
-      v.name.toLowerCase().includes(searchTerm.toLowerCase())
+  const addGlobalVariable = () => {
+    const newVar: Variable = {
+      id: Date.now().toString(),
+      name: '',
+      value: '',
+      type: 'string',
+    };
+    setGlobalVariables([...globalVariables, newVar]);
+  };
+
+  const updateGlobalVariable = (id: string, updates: Partial<Variable>) => {
+    setGlobalVariables(
+      globalVariables.map((v) => (v.id === id ? { ...v, ...updates } : v))
     );
   };
 
-  const KeyValueTable = ({
-    type,
-    items,
-    addButtonText,
-    emptyStateText,
-  }: {
-    type: 'params' | 'headers';
-    items: KeyValuePair[];
-    addButtonText: string;
-    emptyStateText: string;
-  }) => (
-    <div className='space-y-4'>
-      <div className='flex items-center justify-between'>
-        <h3 className='text-lg font-semibold'>
-          {type === 'params' ? 'Parameters' : 'Headers'}
-        </h3>
-        <Button
-          variant='outline'
-          size='sm'
-          onClick={() => addKeyValuePair(type)}
-          className='gap-2'
-        >
-          <Plus className='w-4 h-4' />
-          {addButtonText}
-        </Button>
-      </div>
+  const removeGlobalVariable = (id: string) => {
+    setGlobalVariables(globalVariables.filter((v) => v.id !== id));
+  };
 
-      {items.length > 0 ? (
-        <div className='space-y-2'>
-          <div className='hidden md:grid grid-cols-12 gap-2 text-xs font-medium text-muted-foreground border-b pb-2'>
-            <div className='col-span-1'></div>
-            <div className='col-span-4'>Key</div>
-            <div className='col-span-4'>Value</div>
-            <div className='col-span-2'>Description</div>
-            <div className='col-span-1'></div>
-          </div>
+  const handleRunAll = async () => {
+    if (!formData.requests || formData.requests.length === 0) {
+      toast({
+        title: 'No Requests',
+        description: 'Add some requests to the chain before running',
+        variant: 'destructive',
+      });
+      return;
+    }
 
-          {items.map((item) => (
-            <div
-              key={item.id}
-              className='grid grid-cols-1 md:grid-cols-12 gap-2 items-start md:items-center p-2 border rounded-lg'
-            >
-              <div className='md:col-span-1 flex justify-center'>
-                <Checkbox
-                  checked={item.enabled}
-                  onCheckedChange={(checked) =>
-                    updateKeyValuePair(type, item.id!, { enabled: !!checked })
-                  }
-                />
-              </div>
-              <div className='md:col-span-4'>
-                <Input
-                  value={item.key}
-                  onChange={(e) =>
-                    updateKeyValuePair(type, item.id!, { key: e.target.value })
-                  }
-                  placeholder='Key'
-                  className='h-8'
-                />
-              </div>
-              <div className='md:col-span-4 space-y-1'>
-                <Input
-                  value={item.value}
-                  onChange={(e) =>
-                    updateKeyValuePair(type, item.id!, {
-                      value: e.target.value,
-                    })
-                  }
-                  placeholder='Value (use {{variableName}} for variables)'
-                  className='h-8'
-                />
-                {globalVariables.length > 0 && (
-                  <div className='flex flex-wrap gap-1'>
-                    {globalVariables.map((variable) => (
-                      <Badge
-                        key={variable.id}
-                        variant='secondary'
-                        className='text-xs cursor-pointer hover:bg-secondary/80'
-                        onClick={() => {
-                          const currentValue = item.value;
-                          const newValue =
-                            currentValue + `{{${variable.name}}}`;
-                          updateKeyValuePair(type, item.id!, {
-                            value: newValue,
-                          });
-                        }}
-                      >
-                        {variable.name}
-                      </Badge>
-                    ))}
-                  </div>
-                )}
-              </div>
-              <div className='md:col-span-2'>
-                <Input
-                  value={item.description || ''}
-                  onChange={(e) =>
-                    updateKeyValuePair(type, item.id!, {
-                      description: e.target.value,
-                    })
-                  }
-                  placeholder='Description'
-                  className='h-8'
-                />
-              </div>
-              <div className='md:col-span-1 flex justify-center'>
+    // Save the chain first
+    const savedChain = await saveChain();
+    if (!savedChain) {
+      return;
+    }
+
+    // Switch to the execute tab and trigger execution
+    setActiveTab('execute');
+
+    toast({
+      title: 'Starting Execution',
+      description: 'Running all requests in the chain...',
+    });
+  };
+
+  // If editing a specific request, show the request editor
+  if (editingRequestId) {
+    const request = formData.requests?.find((r) => r.id === editingRequestId);
+    if (request) {
+      return (
+        <div className='h-full flex flex-col'>
+          <div className='flex-shrink-0 border-b bg-background px-6 py-4'>
+            <div className='flex items-center justify-between'>
+              <div className='flex items-center space-x-4'>
                 <Button
                   variant='ghost'
                   size='sm'
-                  onClick={() => removeKeyValuePair(type, item.id!)}
-                  className='h-8 w-8 p-0 text-destructive hover:text-destructive/90'
+                  onClick={() => setEditingRequestId(null)}
                 >
-                  <Trash2 className='w-3 h-3' />
+                  <ArrowLeft className='w-4 h-4' />
                 </Button>
+                <div>
+                  <h1 className='text-xl font-semibold'>Edit Request</h1>
+                  <p className='text-sm text-muted-foreground'>
+                    Configure your API request
+                  </p>
+                </div>
               </div>
             </div>
-          ))}
-        </div>
-      ) : (
-        <div className='flex flex-col items-center justify-center py-12'>
-          <div className='w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4'>
-            <Code className='w-8 h-8 text-muted-foreground' />
           </div>
-          <p className='text-muted-foreground'>{emptyStateText}</p>
-        </div>
-      )}
-    </div>
-  );
-
-  if (compact) {
-    return (
-      <div className='space-y-4'>
-        {/* Request URL */}
-        <div className='flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-2'>
-          <Select
-            value={request.method}
-            onValueChange={(value) => onUpdate({ method: value as any })}
-          >
-            <SelectTrigger className='w-full sm:w-24'>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value='GET'>GET</SelectItem>
-              <SelectItem value='POST'>POST</SelectItem>
-              <SelectItem value='PUT'>PUT</SelectItem>
-              <SelectItem value='DELETE'>DELETE</SelectItem>
-              <SelectItem value='PATCH'>PATCH</SelectItem>
-              <SelectItem value='HEAD'>HEAD</SelectItem>
-              <SelectItem value='OPTIONS'>OPTIONS</SelectItem>
-            </SelectContent>
-          </Select>
-          <div className='flex-1 space-y-1'>
-            <Input
-              value={request.url}
-              onChange={(e) => onUpdate({ url: e.target.value })}
-              placeholder='Enter request URL (use {{variableName}} for variables)'
-              className='flex-1'
+          <div className='flex-1 overflow-auto p-6'>
+            <RequestEditor
+              request={request}
+              globalVariables={globalVariables}
+              onUpdate={(updates) => updateRequest(editingRequestId, updates)}
+              onSave={() => setEditingRequestId(null)}
+              chainName={formData.name}
+              chainDescription={formData.description}
+              chainEnabled={formData.enabled}
             />
-            {globalVariables.length > 0 && (
-              <div className='flex flex-wrap gap-1'>
-                {globalVariables.map((variable) => (
-                  <Badge
-                    key={variable.id}
-                    variant='secondary'
-                    className='text-xs cursor-pointer hover:bg-secondary/80'
-                    onClick={() => {
-                      const currentUrl = request.url;
-                      const newUrl = currentUrl + `{{${variable.name}}}`;
-                      onUpdate({ url: newUrl });
-                    }}
-                  >
-                    {variable.name}
-                  </Badge>
-                ))}
-              </div>
-            )}
           </div>
-          <Button
-            onClick={handleExecute}
-            disabled={isExecuting}
-            className='w-full sm:w-auto gap-2'
-          >
-            <Play className='w-4 h-4' />
-            {isExecuting ? 'Running...' : 'Run'}
-          </Button>
         </div>
-
-        {/* Tabs */}
-        <Tabs
-          value={activeTab}
-          onValueChange={(value) => setActiveTab(value as typeof activeTab)}
-          className='w-full'
-        >
-          <TabsList className='grid w-full grid-cols-3 md:grid-cols-6'>
-            <TabsTrigger value='params' className='text-xs'>
-              Params
-            </TabsTrigger>
-            <TabsTrigger value='headers' className='text-xs'>
-              Headers
-            </TabsTrigger>
-            <TabsTrigger value='body' className='text-xs'>
-              Body
-            </TabsTrigger>
-            <TabsTrigger value='auth' className='text-xs'>
-              Auth
-            </TabsTrigger>
-            <TabsTrigger value='tests' className='text-xs'>
-              Tests
-            </TabsTrigger>
-            <TabsTrigger value='settings' className='text-xs'>
-              Settings
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value='params' className='space-y-4'>
-            <KeyValueTable
-              type='params'
-              items={params}
-              addButtonText='Add Parameter'
-              emptyStateText="No parameters added. Click 'Add Parameter' to get started."
-            />
-          </TabsContent>
-
-          <TabsContent value='headers' className='space-y-4'>
-            <KeyValueTable
-              type='headers'
-              items={headers}
-              addButtonText='Add Header'
-              emptyStateText="No headers added. Click 'Add Header' to get started."
-            />
-          </TabsContent>
-
-          <TabsContent value='body' className='space-y-4'>
-            <Card>
-              <CardHeader>
-                <CardTitle>Request Body</CardTitle>
-              </CardHeader>
-              <CardContent className='space-y-4'>
-                <div className='flex flex-wrap items-center gap-4'>
-                  <Label>Body Type:</Label>
-                  <Select
-                    value={request.bodyType || 'none'}
-                    onValueChange={(value) =>
-                      onUpdate({ bodyType: value as any })
-                    }
-                  >
-                    <SelectTrigger className='w-40'>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value='none'>None</SelectItem>
-                      <SelectItem value='json'>JSON</SelectItem>
-                      <SelectItem value='form'>Form Data</SelectItem>
-                      <SelectItem value='raw'>Raw</SelectItem>
-                      <SelectItem value='binary'>Binary</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {request.bodyType !== 'none' && (
-                  <div className='space-y-2'>
-                    <Label>Body Content</Label>
-                    <Textarea
-                      value={request.body || ''}
-                      onChange={(e) => onUpdate({ body: e.target.value })}
-                      placeholder={
-                        request.bodyType === 'json'
-                          ? '{\n  "key": "{{variableName}}",\n  "array": [1, 2, 3]\n}'
-                          : 'Enter request body (use {{variableName}} for variables)'
-                      }
-                      rows={8}
-                      className='font-mono'
-                    />
-                    {globalVariables.length > 0 && (
-                      <div className='flex flex-wrap gap-1'>
-                        {globalVariables.map((variable) => (
-                          <Badge
-                            key={variable.id}
-                            variant='secondary'
-                            className='text-xs cursor-pointer hover:bg-secondary/80'
-                            onClick={() => {
-                              const currentBody = request.body || '';
-                              const newBody =
-                                currentBody + `{{${variable.name}}}`;
-                              onUpdate({ body: newBody });
-                            }}
-                          >
-                            {variable.name}
-                          </Badge>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value='auth' className='space-y-4'>
-            <Card>
-              <CardHeader>
-                <CardTitle>Authentication</CardTitle>
-              </CardHeader>
-              <CardContent className='space-y-4'>
-                <div className='flex flex-wrap items-center gap-4'>
-                  <Label>Auth Type:</Label>
-                  <Select
-                    value={request.authType || 'none'}
-                    onValueChange={(value) =>
-                      onUpdate({ authType: value as any })
-                    }
-                  >
-                    <SelectTrigger className='w-40'>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value='none'>No Auth</SelectItem>
-                      <SelectItem value='bearer'>Bearer Token</SelectItem>
-                      <SelectItem value='basic'>Basic Auth</SelectItem>
-                      <SelectItem value='apikey'>API Key</SelectItem>
-                      <SelectItem value='oauth1'>OAuth 1.0</SelectItem>
-                      <SelectItem value='oauth2'>OAuth 2.0</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {request.authType === 'bearer' && (
-                  <div className='space-y-2'>
-                    <Label>Bearer Token</Label>
-                    <Input
-                      value={request.authToken || ''}
-                      onChange={(e) => onUpdate({ authToken: e.target.value })}
-                      placeholder='Enter bearer token or use {{tokenVariable}}'
-                    />
-                    {globalVariables.length > 0 && (
-                      <div className='flex flex-wrap gap-1'>
-                        {globalVariables.map((variable) => (
-                          <Badge
-                            key={variable.id}
-                            variant='secondary'
-                            className='text-xs cursor-pointer hover:bg-secondary/80'
-                            onClick={() => {
-                              const currentToken = request.authToken || '';
-                              const newToken =
-                                currentToken + `{{${variable.name}}}`;
-                              onUpdate({ authToken: newToken });
-                            }}
-                          >
-                            {variable.name}
-                          </Badge>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {request.authType === 'basic' && (
-                  <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                    <div className='space-y-2'>
-                      <Label>Username</Label>
-                      <Input
-                        value={request.authUsername || ''}
-                        onChange={(e) =>
-                          onUpdate({ authUsername: e.target.value })
-                        }
-                        placeholder='Username'
-                      />
-                    </div>
-                    <div className='space-y-2'>
-                      <Label>Password</Label>
-                      <Input
-                        type='password'
-                        value={request.authPassword || ''}
-                        onChange={(e) =>
-                          onUpdate({ authPassword: e.target.value })
-                        }
-                        placeholder='Password'
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {request.authType === 'apikey' && (
-                  <div className='space-y-4'>
-                    <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                      <div className='space-y-2'>
-                        <Label>Key</Label>
-                        <Input
-                          value={request.authApiKey || ''}
-                          onChange={(e) =>
-                            onUpdate({ authApiKey: e.target.value })
-                          }
-                          placeholder='API Key name'
-                        />
-                      </div>
-                      <div className='space-y-2'>
-                        <Label>Value</Label>
-                        <Input
-                          value={request.authApiValue || ''}
-                          onChange={(e) =>
-                            onUpdate({ authApiValue: e.target.value })
-                          }
-                          placeholder='API Key value'
-                        />
-                      </div>
-                    </div>
-                    <div className='space-y-2'>
-                      <Label>Add to</Label>
-                      <Select
-                        value={request.authApiLocation || 'header'}
-                        onValueChange={(value) =>
-                          onUpdate({
-                            authApiLocation: value as 'header' | 'query',
-                          })
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value='header'>Header</SelectItem>
-                          <SelectItem value='query'>Query Params</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value='tests' className='space-y-4'>
-            <Card>
-              <CardHeader>
-                <CardTitle>Test Scripts</CardTitle>
-              </CardHeader>
-              <CardContent className='space-y-4'>
-                <div className='text-center py-8 text-muted-foreground'>
-                  <TestTube className='w-12 h-12 text-muted mx-auto mb-3' />
-                  <p>Test scripts functionality coming soon...</p>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value='settings' className='space-y-4'>
-            <Card>
-              <CardHeader>
-                <CardTitle>Request Settings</CardTitle>
-              </CardHeader>
-              <CardContent className='space-y-6'>
-                <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                  <div className='space-y-2'>
-                    <Label>Timeout (ms)</Label>
-                    <Input
-                      type='number'
-                      value={request.timeout}
-                      onChange={(e) =>
-                        onUpdate({ timeout: parseInt(e.target.value) || 5000 })
-                      }
-                      placeholder='5000'
-                    />
-                  </div>
-                  <div className='space-y-2'>
-                    <Label>Retries</Label>
-                    <Input
-                      type='number'
-                      value={request.retries}
-                      onChange={(e) =>
-                        onUpdate({ retries: parseInt(e.target.value) || 0 })
-                      }
-                      placeholder='0'
-                    />
-                  </div>
-                </div>
-
-                <div className='space-y-4 p-4 border border-orange-200 bg-orange-50 rounded-lg'>
-                  <div className='flex items-center gap-2 text-orange-600'>
-                    <TriangleAlert className='w-4 h-4' />
-                    <Label className='text-orange-700 font-medium'>
-                      Error Handling
-                    </Label>
-                  </div>
-
-                  <RadioGroup
-                    value={request.errorHandling}
-                    onValueChange={(value) =>
-                      onUpdate({ errorHandling: value as any })
-                    }
-                    className='space-y-3'
-                  >
-                    <div className='flex items-center space-x-2'>
-                      <RadioGroupItem value='stop' id='stop' />
-                      <Label htmlFor='stop' className='text-orange-700'>
-                        Stop chain on failure
-                      </Label>
-                    </div>
-                    <div className='flex items-center space-x-2'>
-                      <RadioGroupItem value='continue' id='continue' />
-                      <Label htmlFor='continue' className='text-orange-700'>
-                        Continue to next step
-                      </Label>
-                    </div>
-                    <div className='flex items-center space-x-2'>
-                      <RadioGroupItem value='retry' id='retry' />
-                      <Label htmlFor='retry' className='text-orange-700'>
-                        Retry with backoff
-                      </Label>
-                    </div>
-                  </RadioGroup>
-                </div>
-
-                <div className='flex items-center space-x-2'>
-                  <Switch
-                    checked={request.enabled}
-                    onCheckedChange={(checked) =>
-                      onUpdate({ enabled: checked })
-                    }
-                  />
-                  <Label>Enable this request</Label>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-
-        {/* Response Section */}
-        {executionResult && (
-          <Card>
-            <CardHeader>
-              <CardTitle className='flex items-center justify-between'>
-                <div className='flex items-center space-x-2'>
-                  {executionResult.status === 'success' ? (
-                    <CheckCircle className='w-5 h-5 text-green-500' />
-                  ) : (
-                    <XCircle className='w-5 h-5 text-red-500' />
-                  )}
-                  <span>Response</span>
-                  {executionResult.response && (
-                    <>
-                      <Badge
-                        variant={
-                          executionResult.response.status < 300
-                            ? 'default'
-                            : 'destructive'
-                        }
-                      >
-                        {executionResult.response.status}
-                      </Badge>
-                      <Badge variant='secondary'>
-                        {executionResult.duration}ms
-                      </Badge>
-                    </>
-                  )}
-                </div>
-                <Button
-                  variant='ghost'
-                  size='sm'
-                  onClick={() => setShowResponse(!showResponse)}
-                >
-                  {showResponse ? (
-                    <ChevronDown className='w-4 h-4' />
-                  ) : (
-                    <ChevronRight className='w-4 h-4' />
-                  )}
-                </Button>
-              </CardTitle>
-            </CardHeader>
-            {showResponse && (
-              <CardContent>
-                {executionResult.response ? (
-                  <Tabs
-                    value={responseTab}
-                    onValueChange={(value) =>
-                      setResponseTab(value as typeof responseTab)
-                    }
-                  >
-                    <TabsList>
-                      <TabsTrigger value='body'>Body</TabsTrigger>
-                      <TabsTrigger value='headers'>
-                        Headers (
-                        {Object.keys(executionResult.response.headers).length})
-                      </TabsTrigger>
-                      <TabsTrigger value='cookies'>Cookies</TabsTrigger>
-                    </TabsList>
-                    <TabsContent value='body' className='space-y-4'>
-                      <div className='relative'>
-                        <pre className='bg-muted p-4 rounded-lg text-sm font-mono overflow-x-auto max-h-96'>
-                          <code>
-                            {formatResponseBody(
-                              executionResult.response.body,
-                              executionResult.response.headers['content-type']
-                            )}
-                          </code>
-                        </pre>
-                        <Button
-                          variant='ghost'
-                          size='sm'
-                          className='absolute top-2 right-2'
-                          onClick={() =>
-                            copyToClipboard(executionResult.response!.body)
-                          }
-                        >
-                          <Copy className='w-4 h-4' />
-                        </Button>
-                      </div>
-                    </TabsContent>
-                    <TabsContent value='headers' className='space-y-2'>
-                      {Object.entries(executionResult.response.headers).map(
-                        ([name, value]) => (
-                          <div
-                            key={name}
-                            className='flex items-center justify-between p-2 bg-muted rounded'
-                          >
-                            <div>
-                              <span className='font-medium'>{name}</span>
-                              <p className='text-sm text-muted-foreground font-mono'>
-                                {value}
-                              </p>
-                            </div>
-                            <Button
-                              variant='ghost'
-                              size='sm'
-                              onClick={() => copyToClipboard(value)}
-                            >
-                              <Copy className='w-4 h-4' />
-                            </Button>
-                          </div>
-                        )
-                      )}
-                    </TabsContent>
-                    <TabsContent value='cookies'>
-                      {executionResult.response.cookies &&
-                      Object.keys(executionResult.response.cookies).length >
-                        0 ? (
-                        <div className='space-y-2'>
-                          {Object.entries(executionResult.response.cookies).map(
-                            ([name, value]) => (
-                              <div
-                                key={name}
-                                className='flex items-center justify-between p-2 bg-muted rounded'
-                              >
-                                <div>
-                                  <span className='font-medium'>{name}</span>
-                                  <p className='text-sm text-muted-foreground font-mono'>
-                                    {value}
-                                  </p>
-                                </div>
-                                <Button
-                                  variant='ghost'
-                                  size='sm'
-                                  onClick={() => copyToClipboard(value)}
-                                >
-                                  <Copy className='w-4 h-4' />
-                                </Button>
-                              </div>
-                            )
-                          )}
-                        </div>
-                      ) : (
-                        <p className='text-muted-foreground text-center py-8'>
-                          No cookies in response
-                        </p>
-                      )}
-                    </TabsContent>
-                  </Tabs>
-                ) : (
-                  <div className='text-destructive'>
-                    <h4 className='font-medium mb-2'>Error</h4>
-                    <p className='text-sm'>{executionResult.error}</p>
-                  </div>
-                )}
-              </CardContent>
-            )}
-          </Card>
-        )}
-
-        {/* Variable Extraction Section */}
-        {executionResult && executionResult.response && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Extract Variables from Response</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ResponseExplorer
-                response={executionResult.response}
-                onExtractVariable={handleExtractVariable}
-                extractedVariables={extractedVariables}
-                existingExtractions={request.dataExtractions}
-                onRemoveExtraction={handleRemoveExtraction}
-              />
-            </CardContent>
-          </Card>
-        )}
-      </div>
-    );
+      );
+    }
   }
 
   return (
-    <div className='space-y-6'>
-      {/* Request Configuration */}
-      <Card>
-        <CardHeader>
-          <CardTitle className='flex items-center gap-2'>
-            <Code className='w-5 h-5' />
-            Request Configuration
-          </CardTitle>
-        </CardHeader>
-        <CardContent className='space-y-4'>
-          <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-            <div className='space-y-2'>
-              <Label>Request Name</Label>
-              <Input
-                value={request.name}
-                onChange={(e) => onUpdate({ name: e.target.value })}
-                placeholder='Enter request name'
-              />
-            </div>
-            <div className='space-y-2'>
-              <Label>Method</Label>
-              <Select
-                value={request.method}
-                onValueChange={(value) => onUpdate({ method: value as any })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value='GET'>GET</SelectItem>
-                  <SelectItem value='POST'>POST</SelectItem>
-                  <SelectItem value='PUT'>PUT</SelectItem>
-                  <SelectItem value='DELETE'>DELETE</SelectItem>
-                  <SelectItem value='PATCH'>PATCH</SelectItem>
-                  <SelectItem value='HEAD'>HEAD</SelectItem>
-                  <SelectItem value='OPTIONS'>OPTIONS</SelectItem>
-                </SelectContent>
-              </Select>
+    <div className='h-full flex flex-col bg-background'>
+      {/* Header */}
+      <div className='flex-shrink-0 border-b bg-card px-6 py-4 card-elevated'>
+        <div className='flex items-center justify-between'>
+          <div className='flex items-center space-x-4'>
+            <Button
+              variant='ghost'
+              size='sm'
+              onClick={onBack}
+              className='transition-fast'
+            >
+              <ArrowLeft className='w-4 h-4' />
+            </Button>
+            <div>
+              <h1 className='text-xl font-semibold text-foreground'>
+                {chain ? 'Edit Request Chain' : 'Create Request Chain'}
+              </h1>
+              <p className='text-sm text-muted-foreground'>
+                Configure your API automation workflow
+              </p>
             </div>
           </div>
-          <div className='space-y-2'>
-            <Label>URL</Label>
-            <Input
-              value={request.url}
-              onChange={(e) => onUpdate({ url: e.target.value })}
-              placeholder='https://api.example.com/endpoint (use {{variableName}} for variables)'
-            />
-            {globalVariables.length > 0 && (
-              <div className='flex flex-wrap gap-1'>
-                {globalVariables.map((variable) => (
-                  <Badge
-                    key={variable.id}
-                    variant='secondary'
-                    className='text-xs cursor-pointer hover:bg-secondary/80'
-                    onClick={() => {
-                      const currentUrl = request.url;
-                      const newUrl = currentUrl + `{{${variable.name}}}`;
-                      onUpdate({ url: newUrl });
-                    }}
-                  >
-                    {variable.name}
-                  </Badge>
-                ))}
-              </div>
-            )}
+          <div className='flex items-center space-x-3'>
+            <Button
+              onClick={handleSave}
+              disabled={isSaveDisabled}
+              className='gap-2 gradient-primary transition-smooth'
+            >
+              <Save className='w-4 h-4' />
+              Save Chain
+            </Button>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
-      {/* Main Tabs */}
-      <Tabs defaultValue='params' className='w-full'>
-        <TabsList className='grid w-full grid-cols-3 md:grid-cols-7'>
-          <TabsTrigger value='params' className='gap-2'>
-            <Globe className='w-4 h-4' />
-            <span className='hidden sm:inline'>Params</span>
-          </TabsTrigger>
-          <TabsTrigger value='headers' className='gap-2'>
-            <Code className='w-4 h-4' />
-            <span className='hidden sm:inline'>Headers</span>
-          </TabsTrigger>
-          <TabsTrigger value='body' className='gap-2'>
-            <Code className='w-4 h-4' />
-            <span className='hidden sm:inline'>Body</span>
-          </TabsTrigger>
-          <TabsTrigger value='auth' className='gap-2'>
-            <Key className='w-4 h-4' />
-            <span className='hidden sm:inline'>Auth</span>
-          </TabsTrigger>
-          <TabsTrigger value='tests' className='gap-2'>
-            <TestTube className='w-4 h-4' />
-            <span className='hidden sm:inline'>Tests</span>
-          </TabsTrigger>
-          <TabsTrigger value='settings' className='gap-2'>
-            <Settings className='w-4 h-4' />
-            <span className='hidden sm:inline'>Settings</span>
-          </TabsTrigger>
-          <TabsTrigger value='conditional' className='gap-2'>
-            <GitBranch className='w-4 h-4' />
-            <span className='hidden sm:inline'>Conditional</span>
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value='params' className='space-y-4'>
-          <Card>
+      <div className='flex-1 overflow-auto'>
+        <div className='p-6 space-y-6'>
+          {/* Basic Information */}
+          <Card className='transition-smooth hover:shadow-md'>
             <CardHeader>
-              <CardTitle>Query Parameters</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <KeyValueTable
-                type='params'
-                items={params}
-                addButtonText='Add Param'
-                emptyStateText="No params added. Click 'Add Param' to get started."
-              />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value='headers' className='space-y-4'>
-          <Card>
-            <CardHeader>
-              <CardTitle>Headers</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <KeyValueTable
-                type='headers'
-                items={headers}
-                addButtonText='Add Header'
-                emptyStateText="No headers added. Click 'Add Header' to get started."
-              />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value='body' className='space-y-4'>
-          <Card>
-            <CardHeader>
-              <CardTitle>Request Body</CardTitle>
+              <CardTitle className='text-foreground'>
+                Basic Information
+              </CardTitle>
             </CardHeader>
             <CardContent className='space-y-4'>
-              <div className='flex items-center space-x-4'>
-                <Label>Body Type:</Label>
-                <Select
-                  value={request.bodyType || 'none'}
-                  onValueChange={(value) =>
-                    onUpdate({ bodyType: value as any })
+              <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                <div className='space-y-2'>
+                  <Label htmlFor='chainName'>Chain Name *</Label>
+                  <Input
+                    id='chainName'
+                    value={formData.name}
+                    onChange={(e) =>
+                      setFormData({ ...formData, name: e.target.value })
+                    }
+                    placeholder='Enter chain name'
+                    className='transition-fast'
+                  />
+                </div>
+                <div className='space-y-2'>
+                  <Label htmlFor='status'>Status</Label>
+                  <Select
+                    value={formData.enabled ? 'enabled' : 'disabled'}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, enabled: value === 'enabled' })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value='enabled'>Enabled</SelectItem>
+                      <SelectItem value='disabled'>Disabled</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className='space-y-2'>
+                <Label htmlFor='description'>Description</Label>
+                <Textarea
+                  id='description'
+                  value={formData.description}
+                  onChange={(e) =>
+                    setFormData({ ...formData, description: e.target.value })
                   }
+                  placeholder='Describe what this chain does'
+                  rows={3}
+                  className='transition-fast'
+                />
+              </div>
+              <div className='space-y-2'>
+                <Label htmlFor='environment-select'>
+                  Environment <span className='text-destructive'>*</span>
+                </Label>
+                <Select
+                  value={selectedEnvironment}
+                  onValueChange={handleEnvironmentChange}
                 >
-                  <SelectTrigger className='w-40'>
-                    <SelectValue />
+                  <SelectTrigger id='environment-select'>
+                    <SelectValue placeholder='Select environment' />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value='none'>None</SelectItem>
-                    <SelectItem value='json'>JSON</SelectItem>
-                    <SelectItem value='form'>Form Data</SelectItem>
-                    <SelectItem value='raw'>Raw</SelectItem>
-                    <SelectItem value='binary'>Binary</SelectItem>
+                    {environments.map((env) => (
+                      <SelectItem key={env.id} value={env.id}>
+                        <div className='flex flex-col text-left'>
+                          <span className='font-medium text-sm'>
+                            {env.name}
+                          </span>
+                          <span className='text-xs text-muted-foreground break-all'>
+                            {env.baseUrl}
+                          </span>
+                        </div>
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
+            </CardContent>
+          </Card>
 
-              {request.bodyType !== 'none' && (
-                <div className='space-y-2'>
-                  <Label>Body Content</Label>
-                  <Textarea
-                    value={request.body || ''}
-                    onChange={(e) => onUpdate({ body: e.target.value })}
-                    placeholder={
-                      request.bodyType === 'json'
-                        ? '{\n  "key": "{{variableName}}",\n  "array": [1, 2, 3]\n}'
-                        : 'Enter request body (use {{variableName}} for variables)'
-                    }
-                    rows={10}
-                    className='font-mono'
-                  />
-                  {globalVariables.length > 0 && (
-                    <div className='flex flex-wrap gap-1'>
-                      {globalVariables.map((variable) => (
-                        <Badge
-                          key={variable.id}
-                          variant='secondary'
-                          className='text-xs cursor-pointer hover:bg-secondary/80'
-                          onClick={() => {
-                            const currentBody = request.body || '';
-                            const newBody =
-                              currentBody + `{{${variable.name}}}`;
-                            onUpdate({ body: newBody });
-                          }}
-                        >
-                          {variable.name}
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
+          {/* Tabs */}
+          <Tabs
+            value={activeTab}
+            onValueChange={setActiveTab}
+            className='w-full'
+          >
+            <TabsList className='grid w-full grid-cols-4 bg-muted'>
+              <TabsTrigger value='requests' className='gap-2 transition-fast'>
+                <Code className='w-4 h-4' />
+                Requests ({formData.requests?.length || 0})
+              </TabsTrigger>
+              <TabsTrigger value='variables' className='gap-2 transition-fast'>
+                <Globe className='w-4 h-4' />
+                Global Variables ({globalVariables.length})
+              </TabsTrigger>
+              <TabsTrigger
+                value='variables-table'
+                className='gap-2 transition-fast'
+              >
+                <Database className='w-4 h-4' />
+                Variables Table
+              </TabsTrigger>
+              <TabsTrigger value='execute' className='gap-2 transition-fast'>
+                <Play className='w-4 h-4' />
+                Execute & Test
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value='requests' className='space-y-4'>
+              <div className='flex items-center justify-between'>
+                <h3 className='text-lg font-medium text-foreground'>
+                  Request Chain
+                </h3>
+                <div className='flex items-center space-x-2'>
+                  <Button
+                    variant='outline'
+                    onClick={handleRunAll}
+                    disabled={isExecuting || !formData.requests?.length}
+                    className='gap-2 transition-smooth'
+                  >
+                    {isExecuting ? (
+                      <Loader2 className='w-4 h-4 animate-spin' />
+                    ) : (
+                      <PlayCircle className='w-4 h-4' />
+                    )}
+                    {isExecuting ? 'Running...' : 'Run All'}
+                  </Button>
+                  <Button onClick={addNewRequest} className='transition-smooth'>
+                    <Plus className='w-4 h-4' />
+                    Add Request
+                  </Button>
+                </div>
+              </div>
+
+              {formData.requests && formData.requests.length > 0 ? (
+                <div className='space-y-3'>
+                  {formData.requests.map((request, index) => (
+                    <Card
+                      key={request.id}
+                      className={`transition-smooth hover:shadow-md ${
+                        currentRequestIndex === index
+                          ? 'execution-glow ring-2 ring-primary'
+                          : ''
+                      }`}
+                    >
+                      <CardContent className='p-4'>
+                        <div className='flex items-center'>
+                          <div className='flex items-center space-x-3'>
+                            <div
+                              className='cursor-move opacity-60 hover:opacity-100 transition-fast'
+                              draggable
+                              onDragStart={() => handleDragStart(index)}
+                              onDragEnter={() => handleDragEnter(index)}
+                              onDragEnd={handleDragEnd}
+                            >
+                              <GripVertical className='w-5 h-5 text-muted-foreground' />
+                            </div>
+                            <div
+                              className={`w-8 h-8 ${
+                                currentRequestIndex === index
+                                  ? 'gradient-execution text-primary-foreground animate-pulse'
+                                  : 'bg-blue-100 text-blue-600'
+                              } rounded-full flex items-center justify-center text-sm font-medium transition-smooth`}
+                            >
+                              {currentRequestIndex === index ? (
+                                <Loader2 className='w-4 h-4 animate-spin' />
+                              ) : (
+                                index + 1
+                              )}
+                            </div>
+                          </div>
+
+                          <div className='flex-1 flex items-center space-x-4 ml-3'>
+                            <Badge
+                              className={`method-badge ${getMethodColor(
+                                request.method
+                              )}`}
+                            >
+                              {request.method}
+                            </Badge>
+                            <div className='flex-1'>
+                              <p className='font-medium text-foreground'>
+                                {request.name}
+                              </p>
+                              <p className='text-sm text-muted-foreground'>
+                                {request.url || 'No URL specified'}
+                              </p>
+                              {request.headers &&
+                                request.headers.length > 0 && (
+                                  <p className='text-xs text-blue-600'>
+                                    {request.headers.length} headers
+                                  </p>
+                                )}
+                              {request.params && request.params.length > 0 && (
+                                <p className='text-xs text-green-600'>
+                                  {request.params.length} params
+                                </p>
+                              )}
+                            </div>
+                            <div className='flex items-center space-x-2'>
+                              {request.enabled ? (
+                                <Eye className='w-4 h-4 text-green-500' />
+                              ) : (
+                                <EyeOff className='w-4 h-4 text-muted-foreground' />
+                              )}
+                            </div>
+                          </div>
+
+                          <TooltipProvider>
+                            <div className='flex items-center space-x-2 ml-4'>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant='ghost'
+                                    size='sm'
+                                    onClick={() =>
+                                      toggleRequestExpanded(request.id)
+                                    }
+                                    className='transition-fast'
+                                  >
+                                    {expandedRequests.has(request.id) ? (
+                                      <ChevronUp className='w-4 h-4' />
+                                    ) : (
+                                      <ChevronDown className='w-4 h-4' />
+                                    )}
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  {expandedRequests.has(request.id)
+                                    ? 'Collapse'
+                                    : 'Expand'}{' '}
+                                  Request
+                                </TooltipContent>
+                              </Tooltip>
+
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant='ghost'
+                                    size='sm'
+                                    onClick={() =>
+                                      setEditingRequestId(request.id)
+                                    }
+                                    className='transition-fast'
+                                  >
+                                    <Edit className='w-4 h-4' />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Edit Request</TooltipContent>
+                              </Tooltip>
+
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant='ghost'
+                                    size='sm'
+                                    onClick={() => duplicateRequest(request.id)}
+                                    className='transition-fast'
+                                  >
+                                    <Copy className='w-4 h-4' />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  Duplicate Request
+                                </TooltipContent>
+                              </Tooltip>
+
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant='ghost'
+                                    size='sm'
+                                    onClick={() => removeRequest(request.id)}
+                                    className='text-red-600 hover:text-red-700 transition-fast'
+                                  >
+                                    <Trash2 className='w-4 h-4' />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Delete Request</TooltipContent>
+                              </Tooltip>
+                            </div>
+                          </TooltipProvider>
+                        </div>
+
+                        {expandedRequests.has(request.id) && (
+                          <div className='mt-4 pt-4 border-t transition-smooth'>
+                            <RequestEditor
+                              request={request}
+                              globalVariables={globalVariables}
+                              onUpdate={(updates) =>
+                                updateRequest(request.id, updates)
+                              }
+                              compact={true}
+                              chainName={formData.name}
+                              chainDescription={formData.description}
+                              chainEnabled={formData.enabled}
+                            />
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <div className='text-center py-8'>
+                  <Code className='w-12 h-12 text-muted-foreground mx-auto mb-3' />
+                  <p className='text-muted-foreground mb-4'>
+                    No requests in this chain
+                  </p>
+                  <div className='flex items-center justify-center space-x-3'>
+                    <Button
+                      onClick={addNewRequest}
+                      className='transition-smooth'
+                    >
+                      <Plus className='w-4 h-4 mr-2' />
+                      Add First Request
+                    </Button>
+                  </div>
                 </div>
               )}
-            </CardContent>
-          </Card>
-        </TabsContent>
+            </TabsContent>
 
-        <TabsContent value='auth' className='space-y-4'>
-          <Card>
-            <CardHeader>
-              <CardTitle>Authentication</CardTitle>
-            </CardHeader>
-            <CardContent className='space-y-4'>
-              <div className='flex items-center space-x-4'>
-                <Label>Auth Type:</Label>
-                <Select
-                  value={request.authType || 'none'}
-                  onValueChange={(value) =>
-                    onUpdate({ authType: value as any })
-                  }
+            <TabsContent value='variables' className='space-y-4'>
+              <div className='flex items-center justify-between'>
+                <div>
+                  <h3 className='text-lg font-medium text-foreground'>
+                    Global Variables
+                  </h3>
+                  <p className='text-sm text-muted-foreground'>
+                    Variables shared across all requests in this chain
+                  </p>
+                </div>
+                <Button
+                  onClick={addGlobalVariable}
+                  className='gap-2 transition-smooth'
                 >
-                  <SelectTrigger className='w-40'>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value='none'>No Auth</SelectItem>
-                    <SelectItem value='bearer'>Bearer Token</SelectItem>
-                    <SelectItem value='basic'>Basic Auth</SelectItem>
-                    <SelectItem value='apikey'>API Key</SelectItem>
-                    <SelectItem value='oauth1'>OAuth 1.0</SelectItem>
-                    <SelectItem value='oauth2'>OAuth 2.0</SelectItem>
-                  </SelectContent>
-                </Select>
+                  <Plus className='w-4 h-4' />
+                  Add Variable
+                </Button>
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
 
-        <TabsContent value='tests' className='space-y-4'>
-          <Card>
-            <CardHeader>
-              <CardTitle>Test Scripts</CardTitle>
-            </CardHeader>
-            <CardContent className='space-y-4'>
-              <div className='space-y-2'>
-                <Label>Pre-request Script</Label>
-                <Textarea
-                  placeholder='// This script will be executed before the request'
-                  rows={6}
-                  className='font-mono'
-                />
-              </div>
-              <div className='space-y-2'>
-                <Label>Test Script</Label>
-                <Textarea
-                  placeholder='// Write your test assertions here'
-                  rows={8}
-                  className='font-mono'
-                />
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+              {globalVariables.length > 0 ? (
+                <div className='space-y-3'>
+                  {globalVariables.map((variable) => (
+                    <Card
+                      key={variable.id}
+                      className='transition-smooth hover:shadow-sm'
+                    >
+                      <CardContent className='p-4'>
+                        <div className='flex items-center space-x-3'>
+                          <div className='flex-1'>
+                            <Input
+                              value={variable.name}
+                              onChange={(e) =>
+                                updateGlobalVariable(variable.id ?? '', {
+                                  name: e.target.value,
+                                })
+                              }
+                              placeholder='Variable name'
+                              className='transition-fast'
+                            />
+                          </div>
+                          <div className='flex-1'>
+                            <Input
+                              value={variable.value}
+                              onChange={(e) =>
+                                updateGlobalVariable(variable.id ?? '', {
+                                  value: e.target.value,
+                                })
+                              }
+                              placeholder='Variable value'
+                              className='transition-fast'
+                            />
+                          </div>
+                          <Select
+                            value={variable.type}
+                            onValueChange={(value: Variable['type']) =>
+                              updateGlobalVariable(variable.id ?? '', {
+                                type: value,
+                              })
+                            }
+                          >
+                            <SelectTrigger className='w-32'>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value='string'>String</SelectItem>
+                              <SelectItem value='number'>Number</SelectItem>
+                              <SelectItem value='boolean'>Boolean</SelectItem>
+                              <SelectItem value='json'>JSON</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <Button
+                            variant='ghost'
+                            size='sm'
+                            onClick={() =>
+                              removeGlobalVariable(variable.id || '')
+                            }
+                            className='text-red-600 transition-fast'
+                          >
+                            <Trash2 className='w-4 h-4' />
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <div className='text-center py-8'>
+                  <Globe className='w-12 h-12 text-muted-foreground mx-auto mb-3' />
+                  <p className='text-muted-foreground mb-4'>
+                    No global variables defined
+                  </p>
+                  <Button
+                    onClick={addGlobalVariable}
+                    className='gap-2 transition-smooth'
+                  >
+                    <Plus className='w-4 h-4' />
+                    Add First Variable
+                  </Button>
+                </div>
+              )}
+            </TabsContent>
 
-        <TabsContent value='settings' className='space-y-6'>
-          <Card>
-            <CardHeader>
-              <CardTitle>Request Settings</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className='grid grid-cols-1 md:grid-cols-2 gap-6 mb-6'>
-                <div className='space-y-2'>
-                  <Label htmlFor='timeout'>Timeout (ms)</Label>
-                  <Input
-                    id='timeout'
-                    type='number'
-                    value={request.timeout}
-                    onChange={(e) =>
-                      onUpdate({ timeout: parseInt(e.target.value) })
+            <TabsContent value='variables-table'>
+              <VariablesTable
+                requests={formData.requests || []}
+                executionLogs={executionLogs}
+                extractedVariables={extractedVariables}
+                isExecuting={isExecuting}
+                currentRequestIndex={currentRequestIndex}
+              />
+            </TabsContent>
+
+            <TabsContent value='execute'>
+              <RequestExecutor
+                requests={formData.requests || []}
+                variables={[...globalVariables, ...(formData.variables || [])]}
+                onExecutionComplete={(logs, extractedVars) => {
+                  setExecutionLogs(logs);
+                  // Update extracted variables for Variables Table
+                  const newExtractedVars: Record<string, any> = {};
+                  logs.forEach((log: any) => {
+                    if (log.extractedVariables) {
+                      Object.assign(newExtractedVars, log.extractedVariables);
                     }
-                    placeholder='5000'
-                  />
-                </div>
-                <div className='space-y-2'>
-                  <Label htmlFor='retries'>Retries</Label>
-                  <Input
-                    id='retries'
-                    type='number'
-                    value={request.retries}
-                    onChange={(e) =>
-                      onUpdate({ retries: parseInt(e.target.value) })
-                    }
-                    placeholder='0'
-                  />
-                </div>
-              </div>
-
-              <div className='space-y-4 p-4 border border-orange-200 bg-orange-50 rounded-lg mb-6'>
-                <div className='flex items-center gap-2 text-orange-600'>
-                  <TriangleAlert className='w-4 h-4' />
-                  <Label className='text-orange-700 font-medium'>
-                    Error Handling
-                  </Label>
-                </div>
-
-                <RadioGroup
-                  value={request.errorHandling}
-                  onValueChange={(value) =>
-                    onUpdate({ errorHandling: value as any })
-                  }
-                  className='space-y-3'
-                >
-                  <div className='flex items-center space-x-2'>
-                    <RadioGroupItem value='stop' id='stop' />
-                    <Label htmlFor='stop' className='text-orange-700'>
-                      Stop chain on failure
-                    </Label>
-                  </div>
-                  <div className='flex items-center space-x-2'>
-                    <RadioGroupItem value='continue' id='continue' />
-                    <Label htmlFor='continue' className='text-orange-700'>
-                      Continue to next step
-                    </Label>
-                  </div>
-                  <div className='flex items-center space-x-2'>
-                    <RadioGroupItem value='retry' id='retry' />
-                    <Label htmlFor='retry' className='text-orange-700'>
-                      Retry with backoff
-                    </Label>
-                  </div>
-                </RadioGroup>
-              </div>
-
-              <div className='flex items-center space-x-2'>
-                <Switch
-                  checked={request.enabled}
-                  onCheckedChange={(checked) => onUpdate({ enabled: checked })}
-                />
-                <Label>Enable this request</Label>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value='conditional' className='space-y-4'>
-          <Card>
-            <CardHeader>
-              <CardTitle>Conditional Logic</CardTitle>
-            </CardHeader>
-            <CardContent className='space-y-4'>
-              <div className='space-y-2'>
-                <Label>Run this request only if:</Label>
-                <Textarea
-                  placeholder='// JavaScript condition that returns true/false
-// Example: response.status === 200 && response.data.success'
-                  rows={4}
-                  className='font-mono'
-                />
-              </div>
-
-              <div className='space-y-2'>
-                <Label>Variable Conditions</Label>
-                <div className='text-sm text-muted-foreground'>
-                  Set conditions based on extracted variables from previous
-                  requests
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-
-      {onSave && (
-        <div className='flex justify-end'>
-          <Button onClick={onSave} className='gap-2'>
-            <Settings className='w-4 h-4' />
-            Save Request
-          </Button>
+                  });
+                  setExtractedVariables(newExtractedVars);
+                }}
+                onVariableUpdate={(variables) => {
+                  setFormData({ ...formData, variables });
+                }}
+                onExecutionStateChange={(executing, requestIndex) => {
+                  setIsExecuting(executing);
+                  setCurrentRequestIndex(requestIndex);
+                }}
+                onPreExecute={saveChain}
+                chainName={formData?.name}
+              />
+            </TabsContent>
+          </Tabs>
         </div>
-      )}
+      </div>
     </div>
   );
 }
