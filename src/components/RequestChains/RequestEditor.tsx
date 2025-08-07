@@ -52,7 +52,11 @@ import {
 import { ResponseExplorer } from './ResponseExplorer';
 import { useToast } from '@/hooks/useToast';
 import { useDataManagementStore } from '@/store/dataManagementStore';
-import { useDataManagement } from '@/hooks/useDataManagement';
+import { parseCookies } from '@/lib/cookieUtils';
+import {
+  buildRequestPayload,
+  executeRequest,
+} from '@/services/executeRequest.service';
 
 interface RequestEditorProps {
   request: APIRequest;
@@ -92,8 +96,6 @@ export function RequestEditor({
     variables: storeVariables,
   } = useDataManagementStore();
 
-  console.log('storeVariables:', storeVariables);
-
   const [activeTab, setActiveTab] = useState<
     'params' | 'headers' | 'body' | 'auth' | 'tests' | 'settings'
   >('params');
@@ -106,8 +108,6 @@ export function RequestEditor({
     Record<string, any>
   >({});
 
-  console.log('extractedVariables:', extractedVariables);
-
   const [previousExtractions, setPreviousExtractions] = useState<
     DataExtraction[]
   >([]);
@@ -116,10 +116,6 @@ export function RequestEditor({
     'body' | 'cookies' | 'headers' | 'test-results'
   >('body');
 
-  // console.log('chainName:', chainName);
-  // console.log('chainDescription:', chainDescription);
-  // console.log('chainEnabled:', chainEnabled);
-  // Initialize params, headers if they don't exist
   const params = request.params || [];
   const headers = request.headers || [];
 
@@ -130,23 +126,6 @@ export function RequestEditor({
       result = result.replace(regex, variable.value);
     });
     return result;
-  };
-
-  const parseCookies = (cookieHeader: string): Record<string, string> => {
-    const cookies: Record<string, string> = {};
-    if (!cookieHeader) return cookies;
-
-    cookieHeader.split(',').forEach((cookie) => {
-      const [nameValue] = cookie.trim().split(';');
-      if (nameValue) {
-        const [name, value] = nameValue.split('=');
-        if (name && value) {
-          cookies[name.trim()] = value.trim();
-        }
-      }
-    });
-
-    return cookies;
   };
 
   const getValueByPath = (obj: any, path: string): any => {
@@ -214,149 +193,100 @@ export function RequestEditor({
     return extracted;
   };
 
-  const overrideBaseUrl = (originalUrl: string): string => {
-    try {
-      const baseUrl = storeVariables
-        .find((v) => v.name === 'baseUrl')
-        ?.initialValue?.trim();
-      if (!baseUrl) return originalUrl;
+  // const overrideBaseUrl = (originalUrl: string): string => {
+  //   try {
+  //     const baseUrl = storeVariables
+  //       .find((v) => v.name === 'baseUrl')
+  //       ?.initialValue?.trim();
+  //     if (!baseUrl) return originalUrl;
 
-      const parsedOriginal = new URL(originalUrl);
-      const baseParsed = new URL(baseUrl);
+  //     const parsedOriginal = new URL(originalUrl);
+  //     const baseParsed = new URL(baseUrl);
 
-      return `${baseParsed.origin}${parsedOriginal.pathname}${parsedOriginal.search}${parsedOriginal.hash}`;
-    } catch (error) {
-      console.warn('Invalid URL override attempt:', error);
-      return originalUrl;
-    }
-  };
+  //     return `${baseParsed.origin}${parsedOriginal.pathname}${parsedOriginal.search}${parsedOriginal.hash}`;
+  //   } catch (error) {
+  //     console.warn('Invalid URL override attempt:', error);
+  //     return originalUrl;
+  //   }
+  // };
 
   const handleExecute = async () => {
-    if (!request.url) return;
+    if (!request.url) {
+      toast({
+        title: 'Error',
+        description: 'Request URL is required',
+        variant: 'destructive',
+      });
+      return;
+    }
 
     setIsExecuting(true);
+
     try {
-      const replacedUrl = replaceVariables(request.url, globalVariables); // Keep your existing logic
-      const processedUrl = overrideBaseUrl(replacedUrl); // Apply only the base domain override
-
-      const processedHeaders: Record<string, string> = {};
-
-      request.headers.forEach((header) => {
-        if (header.enabled) {
-          processedHeaders[header.key] = replaceVariables(
-            header.value,
-            globalVariables
-          );
-        }
-      });
-
-      let processedBody = request.body
-        ? replaceVariables(request.body, globalVariables)
-        : undefined;
-
-      // Add URL parameters
-      const url = new URL(processedUrl);
-      request.params.forEach((param) => {
-        if (param.enabled) {
-          url.searchParams.set(
-            param.key,
-            replaceVariables(param.value, globalVariables)
-          );
-        }
-      });
-
-      // Set content type based on body type
-      if (request.bodyType === 'json' && processedBody) {
-        processedHeaders['Content-Type'] = 'application/json';
-      } else if (request?.bodyType === 'x-www-form-urlencoded') {
-        processedHeaders['Content-Type'] = 'application/x-www-form-urlencoded';
-      }
-
-      // Add authentication
-      if (request.authType === 'bearer' && request.authToken) {
-        processedHeaders['Authorization'] = `Bearer ${replaceVariables(
-          request.authToken,
-          globalVariables
-        )}`;
-      } else if (
-        request.authType === 'basic' &&
-        request.authUsername &&
-        request.authPassword
-      ) {
-        const credentials = btoa(
-          `${request.authUsername}:${request.authPassword}`
-        );
-        processedHeaders['Authorization'] = `Basic ${credentials}`;
-      } else if (
-        request.authType === 'apikey' &&
-        request.authApiKey &&
-        request.authApiValue
-      ) {
-        if (request.authApiLocation === 'header') {
-          processedHeaders[request.authApiKey] = replaceVariables(
-            request.authApiValue,
-            globalVariables
-          );
-        } else {
-          url.searchParams.set(
-            request.authApiKey,
-            replaceVariables(request.authApiValue, globalVariables)
-          );
-        }
-      }
-
-      const requestOptions: RequestInit = {
-        method: request.method,
-        headers: processedHeaders,
-        body: processedBody,
-      };
-
       const startTime = Date.now();
-      const response = await fetch(url.toString(), requestOptions);
-      const endTime = Date.now();
-      const responseBody = await response.text();
 
-      // Extract variables from response
+      const payload = buildRequestPayload(request, globalVariables);
+
+      // ✅ Correctly inject previewUrl into the nested request object
+      const previewUrl = getPreviewUrl();
+      payload.request.url = previewUrl;
+
+      const backendData = await executeRequest(payload);
+      const result = backendData?.data?.responses?.[0];
+
+      if (!result) throw new Error('No response from executor');
+
       const extractedData = extractDataFromResponse(
         {
-          body: responseBody,
-          headers: Object.fromEntries(response.headers.entries()),
-          cookies: parseCookies(response.headers.get('set-cookie') || ''),
+          body: result.body,
+          headers: result.headers,
+          cookies: parseCookies(result.headers?.['set-cookie'] ?? ''),
         },
         request.dataExtractions
       );
+
+      const endTime = Date.now();
 
       const log: ExecutionLog = {
         id: Date.now().toString(),
         chainId: 'current-chain',
         requestId: request.id,
-        status: response.ok ? 'success' : 'error',
+        status:
+          result.statusCode >= 200 && result.statusCode < 300
+            ? 'success'
+            : 'error',
         startTime: new Date(startTime).toISOString(),
         endTime: new Date(endTime).toISOString(),
-        duration: endTime - startTime,
+        duration: result.metrics.responseTime,
         request: {
           method: request.method,
-          url: url.toString(),
-          headers: processedHeaders,
-          body: processedBody,
+          url: previewUrl, // ← use preview URL for logging
+          headers: Object.fromEntries(
+            request.headers.map((h) => [h.key, h.value])
+          ),
+          body: request.body ?? '',
         },
         response: {
-          status: response.status,
-          headers: Object.fromEntries(response.headers.entries()),
-          body: responseBody,
-          size: responseBody.length,
-          cookies: parseCookies(response.headers.get('set-cookie') || ''),
+          status: result.statusCode,
+          headers: result.headers,
+          body: result.body,
+          size: result.metrics.bytesReceived,
+          cookies: parseCookies(result.headers?.['set-cookie'] ?? ''),
         },
         extractedVariables: extractedData,
       };
 
       setExecutionResult(log);
-      setShowResponse(true);
-      setExtractedVariables(extractedData);
+
+      toast({
+        title: 'Execution Complete',
+        description: `Request completed with status ${result.statusCode}`,
+        variant: log.status === 'success' ? 'default' : 'destructive',
+      });
     } catch (error) {
       const endTime = Date.now();
 
-      setExecutionResult({
+      const errorLog: ExecutionLog = {
         id: Date.now().toString(),
         chainId: 'current-chain',
         requestId: request.id,
@@ -366,17 +296,126 @@ export function RequestEditor({
         duration: 0,
         request: {
           method: request.method,
-          url: request.url,
+          url: getPreviewUrl(),
           headers: {},
           body: request.body,
         },
         error: error instanceof Error ? error.message : 'Unknown error',
+      };
+
+      setExecutionResult(errorLog);
+
+      toast({
+        title: 'Execution Failed',
+        description: error instanceof Error ? error.message : 'Unknown error',
+        variant: 'destructive',
       });
-      setShowResponse(true);
     } finally {
       setIsExecuting(false);
     }
   };
+
+  // const handleExecuteAll = async () => {
+  //   if (!requests || requests.length === 0) return;
+
+  //   toast({
+  //     title: 'Running All Requests',
+  //     description: `Executing ${requests.length} requests sequentially...`,
+  //   });
+
+  //   for (const req of requests) {
+  //     if (!req.url) continue;
+
+  //     try {
+  //       const startTime = Date.now();
+
+  //       const payload = buildRequestPayload(req, globalVariables);
+  //       payload.request.url = getPreviewUrl(); // Preview URL injection
+
+  //       const backendData = await executeRequest(payload);
+  //       const result = backendData?.data?.responses?.[0];
+
+  //       if (!result) throw new Error('No response from executor');
+
+  //       const extractedData = extractDataFromResponse(
+  //         {
+  //           body: result.body,
+  //           headers: result.headers,
+  //           cookies: parseCookies(result.headers?.['set-cookie'] ?? ''),
+  //         },
+  //         req.dataExtractions
+  //       );
+
+  //       const endTime = Date.now();
+
+  //       const log: ExecutionLog = {
+  //         id: Date.now().toString(),
+  //         chainId: 'current-chain',
+  //         requestId: req.id,
+  //         status:
+  //           result.statusCode >= 200 && result.statusCode < 300
+  //             ? 'success'
+  //             : 'error',
+  //         startTime: new Date(startTime).toISOString(),
+  //         endTime: new Date(endTime).toISOString(),
+  //         duration: result.metrics.responseTime,
+  //         request: {
+  //           method: req.method,
+  //           url: payload.request.url,
+  //           headers: Object.fromEntries(
+  //             req.headers.map((h) => [h.key, h.value])
+  //           ),
+  //           body: req.body ?? '',
+  //         },
+  //         response: {
+  //           status: result.statusCode,
+  //           headers: result.headers,
+  //           body: result.body,
+  //           size: result.metrics.bytesReceived,
+  //           cookies: parseCookies(result.headers?.['set-cookie'] ?? ''),
+  //         },
+  //         extractedVariables: extractedData,
+  //       };
+
+  //       setExecutionResult(log);
+  //     } catch (error) {
+  //       const endTime = Date.now();
+
+  //       const errorLog: ExecutionLog = {
+  //         id: Date.now().toString(),
+  //         chainId: 'current-chain',
+  //         requestId: req.id,
+  //         status: 'error',
+  //         startTime: new Date().toISOString(),
+  //         endTime: new Date(endTime).toISOString(),
+  //         duration: 0,
+  //         request: {
+  //           method: req.method,
+  //           url: getPreviewUrl(),
+  //           headers: {},
+  //           body: req.body,
+  //         },
+  //         error: error instanceof Error ? error.message : 'Unknown error',
+  //       };
+
+  //       setExecutionResult(errorLog);
+
+  //       toast({
+  //         title: `Request ${req.name || req.id} Failed`,
+  //         description: error instanceof Error ? error.message : 'Unknown error',
+  //         variant: 'destructive',
+  //       });
+  //     }
+
+  //     // Optional delay between requests
+  //     await new Promise((r) => setTimeout(r, 300)); // 300ms delay
+  //   }
+
+  //   toast({
+  //     title: 'All Requests Completed',
+  //     description: 'Sequential execution finished.',
+  //   });
+  // };
 
   const getPreviewUrl = () => {
     const replacedUrl = replaceVariables(request.url, globalVariables);
@@ -1856,6 +1895,10 @@ export function RequestEditor({
     );
   }
 
+  function uuidv4(): any {
+    throw new Error('Function not implemented.');
+  }
+
   // Full view
   return (
     <div className='space-y-6'>
@@ -1950,7 +1993,10 @@ export function RequestEditor({
             <CardContent>
               <KeyValueTable
                 type='params'
-                items={params}
+                items={params.map((param) => ({
+                  ...param,
+                  id: param.id ?? crypto.randomUUID(),
+                }))}
                 addButtonText='Add Param'
                 emptyStateText="No params added. Click 'Add Param' to get started."
               />
@@ -1966,7 +2012,10 @@ export function RequestEditor({
             <CardContent>
               <KeyValueTable
                 type='headers'
-                items={headers}
+                items={headers.map((h) => ({
+                  ...h,
+                  id: h.id ?? uuidv4(),
+                }))}
                 addButtonText='Add Header'
                 emptyStateText="No headers added. Click 'Add Header' to get started."
               />

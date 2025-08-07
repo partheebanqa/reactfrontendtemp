@@ -44,41 +44,6 @@ interface Request {
   selectedTestCases?: string[];
 }
 
-interface Environment {
-  id: string;
-  name: string;
-  baseUrl: string;
-}
-
-// Mock environment data
-const mockEnvironments: Environment[] = [
-  {
-    id: 'development',
-    name: 'Development',
-    baseUrl: 'https://api-dev.example.com',
-  },
-  {
-    id: 'staging',
-    name: 'Staging',
-    baseUrl: 'https://api-staging.example.com',
-  },
-  {
-    id: 'production',
-    name: 'Production',
-    baseUrl: 'https://api.example.com',
-  },
-  {
-    id: 'local',
-    name: 'Local',
-    baseUrl: 'http://localhost:3000',
-  },
-  {
-    id: 'qa',
-    name: 'QA',
-    baseUrl: 'https://api-qa.example.com',
-  },
-];
-
 const EditTestSuiteContent: React.FC = () => {
   const params = useParams();
   const [location, setLocation] = useLocation();
@@ -115,6 +80,8 @@ const EditTestSuiteContent: React.FC = () => {
     queryFn: () => getTestSuites(id!),
     enabled: !!id && !isCreateMode,
   });
+
+  // console.log('activeEnvironmentInTestSuite:', activeEnvironment?.id);
 
   useEffect(() => {
     if (activeEnvironment) {
@@ -161,12 +128,14 @@ const EditTestSuiteContent: React.FC = () => {
       id: string;
       name: string;
       description: string;
+      environmentId: string;
       addRequestIds?: string[];
       removeRequestIds?: string[];
     }) =>
       updateTestSuite(data.id, {
         name: data.name,
         description: data.description,
+        environmentId: data.environmentId,
         addRequestIds: data.addRequestIds,
         removeRequestIds: data.removeRequestIds,
       }),
@@ -301,6 +270,7 @@ const EditTestSuiteContent: React.FC = () => {
       createMutation.mutate({
         name: testSuiteName,
         description: description,
+        environmentId: selectedEnvironment,
         requestIds: requests.map((request) => request.id), // Pass request IDs
       });
     } else {
@@ -310,6 +280,7 @@ const EditTestSuiteContent: React.FC = () => {
         id: id!,
         name: testSuiteName,
         description: description,
+        environmentId: selectedEnvironment,
         addRequestIds: addRequestIds.length > 0 ? addRequestIds : undefined,
         removeRequestIds:
           removeRequestIds.length > 0 ? removeRequestIds : undefined,

@@ -1,3 +1,4 @@
+/** Response from backend for Environment object */
 export interface ResponseEnvironment {
   Id: string;
   WorkspaceId: string;
@@ -10,6 +11,7 @@ export interface ResponseEnvironment {
   DeletedAt: string | null;
 }
 
+/** Internal Environment structure used in frontend */
 export interface Environment {
   id: string;
   workspaceId: string;
@@ -24,41 +26,46 @@ export interface Environment {
   isDefault: boolean;
 }
 
-
+/** Dataset structure (e.g., test data or mock input) */
 export interface Dataset {
   id: string;
   name: string;
   description: string;
-  data: Record<string, any>[];
-  format: "json" | "csv" | "xml";
+  data: Record<string, any>[]; // Array of objects with any key-value shape
+  format: 'json' | 'csv' | 'xml';
   size: number;
   createdAt: string;
 }
 
+/** Redux state slice for environment/variable management */
 export interface DataManagementState {
   environments: Environment[];
   activeEnvironment: Environment | null;
   isLoading: boolean;
   variables: Variable[];
-  variablePage:number;
-  variablePageSize:number;
+  variablePage: number;
+  variablePageSize: number;
 }
 
-interface UpdateEnvironmentPayload {
-  workspaceId:string;
-  name:string;
-  description:string;
+/** Payload to update an environment */
+export interface UpdateEnvironmentPayload {
+  workspaceId: string;
+  name: string;
+  description: string;
   defaultVariables: {
-    baseUrl: string
-  }
+    baseUrl: string;
+  };
 }
 
-export interface fetchEnvironmentsResponse {
+/** Response from API for list of environments */
+export interface FetchEnvironmentsResponse {
   environments: Environment[];
 }
 
-export type VariableType = "static" | "dynamic" | "environment";
+/** Accepted variable types */
+export type VariableType = 'static' | 'dynamic' | 'environment';
 
+/** Variable format returned by backend */
 export interface ResponseVariable {
   Id: string;
   EnvironmentId: string;
@@ -72,13 +79,7 @@ export interface ResponseVariable {
   DeletedAt: string | null;
 }
 
-export interface FetchVariablesResponse {
-  count: number,
-  items: ResponseVariable[],
-  page: number,
-  pageSize: number
-}
-
+/** Frontend-friendly variable format */
 export interface Variable {
   id: string;
   environmentId: string;
@@ -90,4 +91,12 @@ export interface Variable {
   createdAt: string;
   updatedAt: string;
   deletedAt: string | null;
+}
+
+/** Response from API for paginated variable list */
+export interface FetchVariablesResponse {
+  count: number;
+  items: ResponseVariable[];
+  page: number;
+  pageSize: number;
 }

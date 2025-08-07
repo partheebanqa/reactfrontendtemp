@@ -12,12 +12,15 @@ export function encryptData(data: any): string {
   try {
     const jsonString = JSON.stringify(data);
     // Simple XOR encryption with the key
-    const encrypted = Array.from(jsonString).map((char, index) => {
-      return String.fromCharCode(
-        char.charCodeAt(0) ^ ENCRYPTION_KEY.charCodeAt(index % ENCRYPTION_KEY.length)
-      );
-    }).join('');
-    
+    const encrypted = Array.from(jsonString)
+      .map((char, index) => {
+        return String.fromCharCode(
+          char.charCodeAt(0) ^
+            ENCRYPTION_KEY.charCodeAt(index % ENCRYPTION_KEY.length)
+        );
+      })
+      .join('');
+
     // Convert to base64 for safe cookie storage
     return Buffer.from(encrypted).toString('base64');
   } catch (error) {
@@ -32,17 +35,20 @@ export function encryptData(data: any): string {
 export function decryptData(encryptedString: string): any {
   try {
     if (!encryptedString) return null;
-    
+
     // Convert from base64
     const encrypted = Buffer.from(encryptedString, 'base64').toString();
-    
+
     // XOR decrypt with the key
-    const decrypted = Array.from(encrypted).map((char, index) => {
-      return String.fromCharCode(
-        char.charCodeAt(0) ^ ENCRYPTION_KEY.charCodeAt(index % ENCRYPTION_KEY.length)
-      );
-    }).join('');
-    
+    const decrypted = Array.from(encrypted)
+      .map((char, index) => {
+        return String.fromCharCode(
+          char.charCodeAt(0) ^
+            ENCRYPTION_KEY.charCodeAt(index % ENCRYPTION_KEY.length)
+        );
+      })
+      .join('');
+
     return JSON.parse(decrypted);
   } catch (error) {
     console.error('Decryption error:', error);
@@ -72,13 +78,13 @@ export function getEncryptedCookie(name: string): any {
   try {
     const nameEQ = `${name}=`;
     const cookies = document.cookie.split(';');
-    
+
     for (let i = 0; i < cookies.length; i++) {
       let cookie = cookies[i];
       while (cookie.charAt(0) === ' ') {
         cookie = cookie.substring(1, cookie.length);
       }
-      
+
       if (cookie.indexOf(nameEQ) === 0) {
         const encryptedValue = cookie.substring(nameEQ.length, cookie.length);
         return decryptData(encryptedValue);
@@ -97,3 +103,20 @@ export function getEncryptedCookie(name: string): any {
 export function removeCookie(name: string): void {
   document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
 }
+
+export const parseCookies = (cookieHeader: string): Record<string, string> => {
+  const cookies: Record<string, string> = {};
+  if (!cookieHeader) return cookies;
+
+  cookieHeader.split(',').forEach((cookie) => {
+    const [nameValue] = cookie.trim().split(';');
+    if (nameValue) {
+      const [name, value] = nameValue.split('=');
+      if (name && value) {
+        cookies[name.trim()] = value.trim();
+      }
+    }
+  });
+
+  return cookies;
+};

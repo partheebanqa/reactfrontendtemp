@@ -3,6 +3,7 @@ export interface RequestChain {
   workspaceId: string;
   name: string;
   description?: string;
+  environmentId?: string;
   requests: APIRequest[];
   variables: Variable[];
   schedule?: Schedule;
@@ -20,6 +21,7 @@ export interface APIRequest {
   name: string;
   method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'HEAD' | 'OPTIONS';
   url: string;
+  order?: number;
   headers: Header[];
   params: Parameter[];
   body?: string;
@@ -175,7 +177,6 @@ export interface RequestDetailResponse {
   enabled?: boolean;
 }
 
-
 export interface ExtractedVariable {
   name: string;
   path: string;
@@ -198,4 +199,35 @@ export interface ExecutionResponse {
   pageSize: number;
   count: number;
   items: ExecutionItem[];
+}
+
+export interface ExecuteRequestPayload {
+  request: {
+    workspaceId: string;
+    name: string;
+    order: number;
+    method: string;
+    url: string;
+    bodyType?: string;
+    bodyFormData?: any;
+    bodyRawContent?: string;
+    authorizationType?: string;
+    authorization?: { token: string };
+    headers: Array<{ key: string; value: string; enabled: boolean }>;
+    params: Array<{ key: string; value: string; enabled: boolean }>;
+  };
+}
+
+export interface ExecutionResponse {
+  data: {
+    responses: Array<{
+      statusCode: number;
+      headers: Record<string, string>;
+      body: any;
+      metrics: {
+        responseTime: number;
+        bytesReceived: number;
+      };
+    }>;
+  };
 }

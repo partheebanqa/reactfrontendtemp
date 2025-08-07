@@ -68,6 +68,7 @@ export const updateTestSuite = async (
     description: string;
     addRequestIds?: string[];
     removeRequestIds?: string[];
+    environmentId: string;
   }
 ) => {
   try {

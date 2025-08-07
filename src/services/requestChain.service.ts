@@ -238,6 +238,7 @@ export async function getMultipleRequestDetails(
 export async function getCollectionRequests(
   collectionId?: string
 ): Promise<ExtendedRequest[]> {
+  console.log('getCollectionRequests is called');
   try {
     const url = collectionId
       ? `${API_REQUEST}/collections/${collectionId}/requests`
@@ -277,15 +278,6 @@ export async function saveRequestChain(
 
   return savedChain;
 }
-
-// export async function getRequestChains(
-//   workspaceId: string
-// ): Promise<RequestChain[]> {
-//   await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulate network delay
-
-//   // Return mock data for now
-//   return mockChains.filter((chain) => chain.workspaceId === workspaceId);
-// }
 
 export const getRequestChains = async (
   workspaceId: string

@@ -17,6 +17,7 @@ export const fetchEnvironments = async (
   if (!response.ok) {
     throw new Error('Failed to fetch environments');
   }
+
   return response.json();
 };
 

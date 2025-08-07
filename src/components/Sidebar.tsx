@@ -181,6 +181,9 @@ const Sidebar: React.FC = () => {
   const [location] = useLocation();
   const { user, logoutMutation } = useAuth();
   const { currentWorkspace } = useWorkspace();
+
+  console.log('currentWorkspace:', currentWorkspace);
+
   const { hasFeatureAccess, subscriptionPlan } = useFeatureGate();
   const [utilsExpanded, setUtilsExpanded] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
@@ -205,16 +208,21 @@ const Sidebar: React.FC = () => {
       return (
         <Link href={item.path}>
           <div className='relative group'>
-            <TooltipContainer text={item.label} position='right' children={
-              <Button
-                variant={isActive ? 'secondary' : 'ghost'}
-                className={`w-full p-3 flex justify-center ${!hasAccess ? 'opacity-50 cursor-not-allowed' : ''
+            <TooltipContainer
+              text={item.label}
+              position='right'
+              children={
+                <Button
+                  variant={isActive ? 'secondary' : 'ghost'}
+                  className={`w-full p-3 flex justify-center ${
+                    !hasAccess ? 'opacity-50 cursor-not-allowed' : ''
                   }`}
-                disabled={!hasAccess}
-              >
-                <Icon className='w-5 h-5' />
-              </Button>
-            } />
+                  disabled={!hasAccess}
+                >
+                  <Icon className='w-5 h-5' />
+                </Button>
+              }
+            />
 
             <div className='absolute left-full ml-2 hidden  bg-white shadow-md rounded p-2 z-50 whitespace-nowrap'>
               {item.label}
@@ -242,37 +250,42 @@ const Sidebar: React.FC = () => {
 
     return (
       <Link href={item.path}>
-        <TooltipContainer text={item.label} position='right' children={
-          <Button
-            variant={isActive ? 'secondary' : 'ghost'}
-            className={`w-full justify-start relative ${!hasAccess ? 'opacity-50 cursor-not-allowed' : ''
+        <TooltipContainer
+          text={item.label}
+          position='right'
+          children={
+            <Button
+              variant={isActive ? 'secondary' : 'ghost'}
+              className={`w-full justify-start relative ${
+                !hasAccess ? 'opacity-50 cursor-not-allowed' : ''
               }`}
-            disabled={!hasAccess}
-          >
-            <Icon className='w-4 h-4 mr-3' />
-            <span className='flex-1 text-left'>{item.label}</span>
-            {!hasAccess && featureType === 'pro' && (
-              <Badge
-                variant='outline'
-                className='ml-2 text-xs bg-blue-50 text-blue-700 border-blue-200'
-              >
-                PRO
-              </Badge>
-            )}
-            {!hasAccess && featureType === 'enterprise' && (
-              <Badge
-                variant='outline'
-                className='ml-2 text-xs bg-purple-50 text-purple-700 border-purple-200'
-              >
-                ENT
-              </Badge>
-            )}
-            {!hasAccess && !featureType && (
-              <Crown className='w-3 h-3 ml-auto text-yellow-500' />
-            )}
-          </Button>
-        } />
-      </Link >
+              disabled={!hasAccess}
+            >
+              <Icon className='w-4 h-4 mr-3' />
+              <span className='flex-1 text-left'>{item.label}</span>
+              {!hasAccess && featureType === 'pro' && (
+                <Badge
+                  variant='outline'
+                  className='ml-2 text-xs bg-blue-50 text-blue-700 border-blue-200'
+                >
+                  PRO
+                </Badge>
+              )}
+              {!hasAccess && featureType === 'enterprise' && (
+                <Badge
+                  variant='outline'
+                  className='ml-2 text-xs bg-purple-50 text-purple-700 border-purple-200'
+                >
+                  ENT
+                </Badge>
+              )}
+              {!hasAccess && !featureType && (
+                <Crown className='w-3 h-3 ml-auto text-yellow-500' />
+              )}
+            </Button>
+          }
+        />
+      </Link>
     );
   };
 
@@ -288,13 +301,15 @@ const Sidebar: React.FC = () => {
 
   return (
     <aside
-      className={`${collapsed ? 'w-16' : 'w-64'
-        } bg-white shadow-lg flex flex-col border-r transition-all duration-300`}
+      className={`${
+        collapsed ? 'w-16' : 'w-64'
+      } bg-white shadow-lg flex flex-col border-r transition-all duration-300`}
     >
       {/* Logo Section */}
       <div
-        className={`${collapsed ? 'p-3' : 'p-6'
-          } border-b flex justify-between items-center relative`}
+        className={`${
+          collapsed ? 'p-3' : 'p-6'
+        } border-b flex justify-between items-center relative`}
       >
         {collapsed ? (
           <div className='w-8 h-8 bg-primary rounded-lg flex items-center justify-center mx-auto'>
@@ -302,17 +317,20 @@ const Sidebar: React.FC = () => {
           </div>
         ) : (
           <div className='flex items-center space-x-3'>
-            <Link to='/' className='w-8 h-8 bg-primary rounded-lg flex items-center justify-center'>
+            <Link
+              to='/'
+              className='w-8 h-8 bg-primary rounded-lg flex items-center justify-center'
+            >
               <Code className='w-4 h-4 text-primary-foreground' />
-            </Link >
+            </Link>
             <Link to='/'>
               <h1 className='text-xl font-bold'>Optraflow</h1>
               <Badge variant='secondary' className='text-xs'>
                 {subscriptionPlan === 'free'
                   ? 'Free'
                   : subscriptionPlan === 'pro'
-                    ? 'Pro'
-                    : 'Enterprise'}
+                  ? 'Pro'
+                  : 'Enterprise'}
               </Badge>
             </Link>
           </div>
@@ -321,23 +339,21 @@ const Sidebar: React.FC = () => {
           variant='ghost'
           size='sm'
           onClick={() => setCollapsed(!collapsed)}
-          className={`p-1 ${collapsed
-            ? 'absolute left-[50px] top-1/2 transform -translate-y-1/2 bg-[#2094f3] rounded-full h-auto hover:bg-[#1e7bbf]'
-            : ''
-            }`}
+          className={`p-1 ${
+            collapsed
+              ? 'absolute left-[50px] top-1/2 transform -translate-y-1/2 bg-[#2094f3] rounded-full h-auto hover:bg-[#1e7bbf]'
+              : ''
+          }`}
         >
-          {collapsed ? (
-            <ChevronsRight size={10} />
-          ) : (
-            <ChevronsLeft size={16} />
-          )}
+          {collapsed ? <ChevronsRight size={10} /> : <ChevronsLeft size={16} />}
         </Button>
       </div>
 
       {/* Navigation */}
       <nav
-        className={`flex-1 ${collapsed ? 'px-2' : 'px-4'
-          } py-6 space-y-2 overflow-y-auto`}
+        className={`flex-1 ${
+          collapsed ? 'px-2' : 'px-4'
+        } py-6 space-y-2 overflow-y-auto`}
       >
         {/* Core Features */}
         <div className='space-y-1'>
@@ -447,23 +463,23 @@ const Sidebar: React.FC = () => {
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
-                variant="outline"
-                size="icon"
-                className="w-full h-10"
+                variant='outline'
+                size='icon'
+                className='w-full h-10'
                 onClick={() => setShowHelpModal(true)}
               >
-                <HelpCircle className="h-5 w-5" />
+                <HelpCircle className='h-5 w-5' />
               </Button>
             </TooltipTrigger>
-            <TooltipContent side="right">Help & Support</TooltipContent>
+            <TooltipContent side='right'>Help & Support</TooltipContent>
           </Tooltip>
         ) : (
           <Button
-            variant="outline"
-            className="w-full justify-start"
+            variant='outline'
+            className='w-full justify-start'
             onClick={() => setShowHelpModal(true)}
           >
-            <HelpCircle className="mr-2 h-4 w-4" />
+            <HelpCircle className='mr-2 h-4 w-4' />
             Help & Support
           </Button>
         )}

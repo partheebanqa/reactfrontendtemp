@@ -17,6 +17,7 @@ import {
   Copy,
   Database,
   Loader2,
+  PlayCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -39,6 +40,7 @@ import {
   APIRequest,
   Variable,
   RequestDetailResponse,
+  ExecutionLog,
 } from '@/shared/types/requestChain.model';
 import { RequestExecutor } from './RequestExecutor';
 import { ImportModal } from '@/components/TestSuit/ImportModal';
@@ -52,114 +54,20 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { VariablesTable } from './VariablesTable';
-import { useRequestChainData } from '@/hooks/useRequestChainData';
 import { useDataManagement } from '@/hooks/useDataManagement';
 import { useWorkspace } from '@/hooks/useWorkspace';
+import { useDataManagementStore } from '@/store/dataManagementStore';
+import { parseCookies } from '@/lib/cookieUtils';
+import {
+  buildRequestPayload,
+  executeRequest,
+} from '@/services/executeRequest.service';
 
 interface RequestChainEditorProps {
   chain?: RequestChain;
   onBack: () => void;
   onSave: (chain: RequestChain) => void;
 }
-
-interface KeyValuePair {
-  id: string;
-  key: string;
-  value: string;
-  enabled: boolean;
-  description?: string;
-}
-
-const transformRequestDetails = (
-  requestData: RequestDetailResponse
-): Partial<APIRequest> => {
-  // Transform headers from API format to KeyValuePair format
-  const transformHeaders = (headers: any): KeyValuePair[] => {
-    if (!headers) return [];
-    if (Array.isArray(headers)) {
-      return headers.map((header, index) => ({
-        id: `header_${index}_${Date.now()}`,
-        key: header.key || header.name || '',
-        value: header.value || '',
-        enabled: header.enabled !== false,
-        description: header.description || '',
-      }));
-    }
-    // If headers is an object
-    return Object.entries(headers).map(([key, value], index) => ({
-      id: `header_${index}_${Date.now()}`,
-      key,
-      value: String(value),
-      enabled: true,
-      description: '',
-    }));
-  };
-
-  // Transform params from API format to KeyValuePair format
-  const transformParams = (params: any): KeyValuePair[] => {
-    if (!params) return [];
-    if (Array.isArray(params)) {
-      return params.map((param, index) => ({
-        id: `param_${index}_${Date.now()}`,
-        key: param.key || param.name || '',
-        value: param.value || '',
-        enabled: param.enabled !== false,
-        description: param.description || '',
-      }));
-    }
-    // If params is an object
-    return Object.entries(params).map(([key, value], index) => ({
-      id: `param_${index}_${Date.now()}`,
-      key,
-      value: String(value),
-      enabled: true,
-      description: '',
-    }));
-  };
-
-  // Determine body type from the request data
-  const getBodyType = (data: any): APIRequest['bodyType'] => {
-    if (!data.body && !data.bodyFormData) return 'none';
-    if (data.bodyType) return data.bodyType;
-    if (data.bodyFormData) return 'form-data';
-    try {
-      JSON.parse(data.body);
-      return 'json';
-    } catch {
-      return 'raw';
-    }
-  };
-
-  // Transform auth configuration
-  const transformAuthConfig = (authData: any) => {
-    if (!authData) return undefined;
-
-    return {
-      token: authData.token || authData.bearerToken || '',
-      username: authData.username || '',
-      password: authData.password || '',
-      key: authData.key || authData.apiKey || '',
-      value: authData.value || authData.apiValue || '',
-      addTo: authData.addTo || (authData.in === 'query' ? 'query' : 'header'),
-    };
-  };
-
-  return {
-    name: requestData.name || 'Imported Request',
-    method: (requestData.method || 'GET').toUpperCase() as APIRequest['method'],
-    url: requestData.url || requestData.endpoint || '',
-    headers: transformHeaders(requestData.headers),
-    params: transformParams(requestData.params || requestData.queryParams),
-    bodyType: getBodyType(requestData),
-    body: requestData.body || requestData.rawBody || '',
-    authType: requestData.authType || requestData.auth?.type || 'none',
-    authConfig: transformAuthConfig(requestData.auth || requestData.authConfig),
-    timeout: requestData.timeout || 5000,
-    retries: requestData.retries || 0,
-    errorHandling: requestData.errorHandling || 'stop',
-    enabled: requestData.enabled !== false,
-  };
-};
 
 export function RequestChainEditor({
   chain,
@@ -170,6 +78,7 @@ export function RequestChainEditor({
   const dragItem = useRef<number | null>(null);
   const dragOverItem = useRef<number | null>(null);
   const { currentWorkspace } = useWorkspace();
+  const { variables: storeVariables } = useDataManagementStore();
 
   const [formData, setFormData] = useState<Partial<RequestChain>>({
     name: chain?.name || '',
@@ -179,13 +88,8 @@ export function RequestChainEditor({
     requests: chain?.requests || [],
     variables: chain?.variables || [],
     environment: chain?.environment || 'dev',
-    // schedule: chain?.schedule || {
-    //   enabled: false,
-    //   type: 'once',
-    //   startDate: new Date().toISOString().split('T')[0],
-    //   timezone: 'UTC',
-    // },
   });
+
   const { environments, activeEnvironment, setActiveEnvironment } =
     useDataManagement();
 
@@ -197,7 +101,6 @@ export function RequestChainEditor({
     }
   }, [activeEnvironment]);
 
-  // Handle environment change and update the global active environment
   const handleEnvironmentChange = (environmentId: string) => {
     setSelectedEnvironment(environmentId);
     const selectedEnv = environments.find((env) => env.id === environmentId);
@@ -206,48 +109,12 @@ export function RequestChainEditor({
     }
   };
 
-  interface Environment {
-    id: string;
-    name: string;
-    baseUrl: string;
-  }
-
-  // Mock environment data
-  const mockEnvironments: Environment[] = [
-    {
-      id: 'development',
-      name: 'Development',
-      baseUrl: 'https://api-dev.example.com',
-    },
-    {
-      id: 'staging',
-      name: 'Staging',
-      baseUrl: 'https://api-staging.example.com',
-    },
-    {
-      id: 'production',
-      name: 'Production',
-      baseUrl: 'https://api.example.com',
-    },
-    {
-      id: 'local',
-      name: 'Local',
-      baseUrl: 'http://localhost:3000',
-    },
-    {
-      id: 'qa',
-      name: 'QA',
-      baseUrl: 'https://api-qa.example.com',
-    },
-  ];
-
   const isSaveDisabled =
     !formData.name?.trim() || (formData.requests?.length ?? 0) === 0;
 
   const [expandedRequests, setExpandedRequests] = useState<Set<string>>(
     new Set()
   );
-  // const [selectedEnvironment, setSelectedEnvironment] = useState<string>('');
   const [editingRequestId, setEditingRequestId] = useState<string | null>(null);
   const [globalVariables, setGlobalVariables] = useState<Variable[]>([
     {
@@ -260,15 +127,15 @@ export function RequestChainEditor({
     { id: '3', name: 'timeout', value: '5000', type: 'number' },
   ]);
 
-  const [executionLogs, setExecutionLogs] = useState<any[]>([]);
+  const [executionLogs, setExecutionLogs] = useState<ExecutionLog[]>([]);
   const [extractedVariables, setExtractedVariables] = useState<
     Record<string, any>
   >({});
-
   const [isExecuting, setIsExecuting] = useState(false);
   const [currentRequestIndex, setCurrentRequestIndex] = useState(-1);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [pendingImportIds, setPendingImportIds] = useState<string[]>([]);
+  const [activeTab, setActiveTab] = useState('requests');
 
   // Use React Query to fetch request details
   const {
@@ -284,8 +151,336 @@ export function RequestChainEditor({
     retryDelay: 1000,
   });
 
-  // console.log("Request Details:", requestDetails);
+  // Helper function to replace variables in text
+  const replaceVariables = (text: string, vars: Variable[]): string => {
+    let result = text;
+    vars.forEach((variable) => {
+      const regex = new RegExp(`{{${variable.name}}}`, 'g');
+      result = result.replace(regex, variable.value);
+    });
+    return result;
+  };
 
+  // Helper function to get preview URL
+  const getPreviewUrl = (request: APIRequest, variables: Variable[]) => {
+    const replacedUrl = replaceVariables(request.url, variables);
+    const baseUrl = storeVariables
+      .find((v) => v.name === 'baseUrl')
+      ?.initialValue?.trim();
+
+    if (!baseUrl) return replacedUrl;
+
+    try {
+      const parsedOriginal = new URL(replacedUrl);
+      const parsedBase = new URL(baseUrl);
+      return `${parsedBase.origin}${parsedOriginal.pathname}${parsedOriginal.search}${parsedOriginal.hash}`;
+    } catch {
+      // If replacedUrl is relative
+      return `${baseUrl.replace(/\/$/, '')}/${replacedUrl.replace(/^\//, '')}`;
+    }
+  };
+
+  // Helper function to extract data from response
+  const getValueByPath = (obj: any, path: string): any => {
+    return path.split('.').reduce((current, key) => {
+      if (current && typeof current === 'object') {
+        if (key.includes('[') && key.includes(']')) {
+          const arrayKey = key.substring(0, key.indexOf('['));
+          const index = parseInt(
+            key.substring(key.indexOf('[') + 1, key.indexOf(']'))
+          );
+          return current[arrayKey] && current[arrayKey][index];
+        }
+        return current[key];
+      }
+      return undefined;
+    }, obj);
+  };
+
+  const extractDataFromResponse = (
+    response: any,
+    extractions: APIRequest['dataExtractions']
+  ): Record<string, any> => {
+    const extracted: Record<string, any> = {};
+    extractions.forEach((extraction) => {
+      try {
+        let value;
+        if (extraction.source === 'response_body') {
+          const jsonData =
+            typeof response.body === 'string'
+              ? JSON.parse(response.body)
+              : response.body;
+          value = getValueByPath(jsonData, extraction.path);
+        } else if (extraction.source === 'response_header') {
+          value = response.headers[extraction.path.toLowerCase()];
+        } else if (extraction.source === 'response_cookie') {
+          value = response.cookies?.[extraction.path];
+        }
+
+        if (value !== undefined) {
+          if (extraction.transform) {
+            try {
+              const transformFunction = new Function(
+                'value',
+                `return ${extraction.transform}`
+              );
+              value = transformFunction(value);
+            } catch (transformError) {
+              console.error(
+                `Transform error for ${extraction.variableName}:`,
+                transformError
+              );
+            }
+          }
+          extracted[extraction.variableName] = value;
+        }
+      } catch (error) {
+        console.error(`Failed to extract ${extraction.variableName}:`, error);
+      }
+    });
+    return extracted;
+  };
+
+  // Execute a single request
+  const executeSingleRequest = async (
+    request: APIRequest,
+    variables: Variable[],
+    requestIndex: number
+  ): Promise<ExecutionLog> => {
+    if (!request.url) {
+      throw new Error('Request URL is required');
+    }
+
+    const startTime = Date.now();
+    const payload = buildRequestPayload(request, variables);
+    const previewUrl = getPreviewUrl(request, variables);
+    payload.request.url = previewUrl;
+
+    try {
+      const backendData = await executeRequest(payload);
+      const result = backendData?.data?.responses?.[0];
+
+      if (!result) throw new Error('No response from executor');
+
+      const extractedData = extractDataFromResponse(
+        {
+          body: result.body,
+          headers: result.headers,
+          cookies: parseCookies(result.headers?.['set-cookie'] ?? ''),
+        },
+        request.dataExtractions || []
+      );
+
+      const endTime = Date.now();
+      const log: ExecutionLog = {
+        id: Date.now().toString(),
+        chainId: 'current-chain',
+        requestId: request.id,
+        status:
+          result.statusCode >= 200 && result.statusCode < 300
+            ? 'success'
+            : 'error',
+        startTime: new Date(startTime).toISOString(),
+        endTime: new Date(endTime).toISOString(),
+        duration: result.metrics.responseTime,
+        request: {
+          method: request.method,
+          url: previewUrl,
+          headers: Object.fromEntries(
+            request.headers.map((h) => [h.key, h.value])
+          ),
+          body: request.body ?? '',
+        },
+        response: {
+          status: result.statusCode,
+          headers: result.headers,
+          body: result.body,
+          size: result.metrics.bytesReceived,
+          cookies: parseCookies(result.headers?.['set-cookie'] ?? ''),
+        },
+        extractedVariables: extractedData,
+      };
+
+      return log;
+    } catch (error) {
+      const endTime = Date.now();
+      const errorLog: ExecutionLog = {
+        id: Date.now().toString(),
+        chainId: 'current-chain',
+        requestId: request.id,
+        status: 'error',
+        startTime: new Date(startTime).toISOString(),
+        endTime: new Date(endTime).toISOString(),
+        duration: endTime - startTime,
+        request: {
+          method: request.method,
+          url: previewUrl,
+          headers: {},
+          body: request.body,
+        },
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+
+      throw errorLog;
+    }
+  };
+
+  // Run all requests sequentially
+  const handleRunAll = async () => {
+    if (!formData.requests || formData.requests.length === 0) {
+      toast({
+        title: 'No Requests',
+        description: 'Add some requests to the chain before running',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Save the chain first
+    const savedChain = await saveChain();
+
+    if (!savedChain) {
+      console.log('request not saved');
+      return;
+    }
+
+    setIsExecuting(true);
+    setCurrentRequestIndex(0);
+    setExecutionLogs([]);
+    setExtractedVariables({});
+
+    // Switch to the execute tab
+    setActiveTab('execute');
+
+    const allLogs: ExecutionLog[] = [];
+    let currentVariables = [...globalVariables, ...(formData.variables || [])];
+    let allExtractedVars: Record<string, any> = {};
+
+    try {
+      toast({
+        title: 'Starting Execution',
+        description: `Running ${formData.requests.length} requests sequentially...`,
+      });
+
+      for (let i = 0; i < formData.requests.length; i++) {
+        const request = formData.requests[i];
+        setCurrentRequestIndex(i);
+
+        try {
+          toast({
+            title: `Executing Request ${i + 1}`,
+            description: `Running: ${
+              request.name || request.method + ' ' + request.url
+            }`,
+          });
+
+          const log = await executeSingleRequest(request, currentVariables, i);
+          allLogs.push(log);
+
+          // Update extracted variables for next requests
+          if (log.extractedVariables) {
+            Object.assign(allExtractedVars, log.extractedVariables);
+
+            // Convert extracted variables to Variable format and add to current variables
+            Object.entries(log.extractedVariables).forEach(([key, value]) => {
+              const existingVarIndex = currentVariables.findIndex(
+                (v) => v.name === key
+              );
+              const newVar: Variable = {
+                id:
+                  existingVarIndex >= 0
+                    ? currentVariables[existingVarIndex].id
+                    : Date.now().toString() + key,
+                name: key,
+                value: String(value),
+                type:
+                  typeof value === 'number'
+                    ? 'number'
+                    : typeof value === 'boolean'
+                    ? 'boolean'
+                    : 'string',
+              };
+
+              if (existingVarIndex >= 0) {
+                currentVariables[existingVarIndex] = newVar;
+              } else {
+                currentVariables.push(newVar);
+              }
+            });
+          }
+
+          toast({
+            title: `Request ${i + 1} Completed`,
+            description: `Status: ${log.response?.status || 'Error'} - ${
+              log.status
+            }`,
+            variant: log.status === 'success' ? 'default' : 'destructive',
+          });
+
+          // Add a small delay between requests
+          if (i < formData.requests.length - 1) {
+            await new Promise((resolve) => setTimeout(resolve, 500));
+          }
+        } catch (error) {
+          const errorLog = error as ExecutionLog;
+          allLogs.push(errorLog);
+
+          toast({
+            title: `Request ${i + 1} Failed`,
+            description: errorLog.error || 'Unknown error occurred',
+            variant: 'destructive',
+          });
+
+          // Check error handling strategy
+          if (request.errorHandling === 'stop') {
+            toast({
+              title: 'Execution Stopped',
+              description: `Chain execution stopped due to error in request ${
+                i + 1
+              }`,
+              variant: 'destructive',
+            });
+            break;
+          } else if (request.errorHandling === 'retry' && request.retries > 0) {
+            // Implement retry logic here if needed
+            toast({
+              title: 'Retrying Request',
+              description: `Retrying request ${i + 1}...`,
+            });
+            // You can implement retry logic here
+          }
+          // If errorHandling is 'continue', just continue to next request
+        }
+      }
+
+      // Update state with all results
+      setExecutionLogs(allLogs);
+      setExtractedVariables(allExtractedVars);
+
+      const successCount = allLogs.filter(
+        (log) => log.status === 'success'
+      ).length;
+      const totalCount = allLogs.length;
+
+      toast({
+        title: 'Execution Complete',
+        description: `Completed ${successCount}/${totalCount} requests successfully`,
+        variant: successCount === totalCount ? 'default' : 'destructive',
+      });
+    } catch (error) {
+      toast({
+        title: 'Execution Failed',
+        description:
+          error instanceof Error ? error.message : 'Unknown error occurred',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsExecuting(false);
+      setCurrentRequestIndex(-1);
+    }
+  };
+
+  // Rest of your existing functions (drag handlers, toggles, etc.)
   const handleDragStart = (index: number) => {
     dragItem.current = index;
   };
@@ -300,7 +495,6 @@ export function RequestChainEditor({
       const draggedItem = requests[dragItem.current];
       requests.splice(dragItem.current, 1);
       requests.splice(dragOverItem.current, 0, draggedItem);
-
       setFormData({ ...formData, requests });
     }
     dragItem.current = null;
@@ -366,6 +560,31 @@ export function RequestChainEditor({
     ];
     setFormData({ ...formData, requests });
   };
+
+  const addNewRequest = () => {
+    const newRequest: APIRequest = {
+      id: Date.now().toString(),
+      name: 'New Request',
+      method: 'GET',
+      url: '',
+      headers: [],
+      params: [],
+      bodyType: 'none',
+      timeout: 5000,
+      retries: 0,
+      errorHandling: 'stop',
+      dataExtractions: [],
+      testScripts: [],
+      enabled: true,
+      authType: 'none',
+    };
+    setFormData({
+      ...formData,
+      requests: [...(formData.requests || []), newRequest],
+    });
+    setExpandedRequests(new Set([...expandedRequests, newRequest.id]));
+  };
+
   const saveChain = async (): Promise<RequestChain | null> => {
     if (!formData.name) {
       toast({
@@ -385,6 +604,7 @@ export function RequestChainEditor({
       workspaceId: formData.workspaceId || '',
       name: formData.name,
       description: formData.description,
+      environmentId: selectedEnvironment,
       requests: formData.requests || [],
       variables: formData.variables || [],
       enabled: formData.enabled || false,
@@ -405,15 +625,12 @@ export function RequestChainEditor({
     }
 
     localStorage.setItem('extractionLogs', JSON.stringify(updatedChains));
-
     onSave(chainData);
-    // console.log("Chain saved:", chainData);
     return chainData;
   };
 
   const handleSave = async () => {
     const saved = await saveChain();
-    console.log('Chain saved:', saved);
     if (saved) {
       toast({
         title: 'Chain Saved',
@@ -422,6 +639,7 @@ export function RequestChainEditor({
     }
     return saved;
   };
+
   const getMethodColor = (method: string) => {
     const colors = {
       GET: 'bg-green-100 text-green-800',
@@ -455,23 +673,45 @@ export function RequestChainEditor({
     setGlobalVariables(globalVariables.filter((v) => v.id !== id));
   };
 
-  const [requestChain, setRequestChain] = useState<ExtendedRequest[]>([]);
-
   const handleImportRequests = async (importedRequests: ExtendedRequest[]) => {
     try {
       toast({
         title: 'Importing Requests',
-        description: `Fetching details for ${importedRequests.length} requests...`,
+        description: `Importing ${importedRequests.length} requests...`,
       });
 
-      setRequestChain((prev) => [...prev, ...importedRequests]);
+      const transformedRequests: APIRequest[] = importedRequests.map((req) => ({
+        id: req.id,
+        name: req.name || 'Imported Request',
+        method: (req.method || 'GET').toUpperCase() as APIRequest['method'],
+        url: req.url || req.endpoint || '',
+        headers: [],
+        params: [],
+        bodyType: 'none',
+        body: '',
+        authType: 'none',
+        timeout: 5000,
+        retries: 0,
+        errorHandling: 'stop' as const,
+        dataExtractions: [],
+        testScripts: [],
+        enabled: true,
+      }));
 
-      // Set the pending import IDs to trigger the useQuery
-      const requestIds = importedRequests.map((req) => req.id);
-      setPendingImportIds(requestIds);
+      setFormData((prev) => ({
+        ...prev,
+        requests: [...(prev.requests || []), ...transformedRequests],
+      }));
 
-      // The useQuery will automatically fetch the details
-      await refetchDetails();
+      setExpandedRequests(
+        (prev) => new Set([...prev, ...transformedRequests.map((r) => r.id)])
+      );
+
+      toast({
+        title: 'Import Successful',
+        description: `Successfully imported ${transformedRequests.length} requests.`,
+      });
+      setIsImportModalOpen(false);
     } catch (error) {
       console.error('Import failed:', error);
       toast({
@@ -481,116 +721,6 @@ export function RequestChainEditor({
       });
     }
   };
-
-  // Effect to handle the completion of request details fetching
-  React.useEffect(() => {
-    if (requestDetails && pendingImportIds.length > 0) {
-      try {
-        const detailedRequests: APIRequest[] = [];
-
-        // Process each fetched request detail
-        requestDetails.forEach((detail) => {
-          const transformedDetails = transformRequestDetails(detail);
-
-          const completeRequest: APIRequest = {
-            id: detail.id,
-            name: transformedDetails.name || detail.name || 'Imported Request',
-            method: transformedDetails.method || 'GET',
-            url: transformedDetails.url || detail.endpoint || detail.url || '',
-            headers: transformedDetails.headers || [],
-            params: transformedDetails.params || [],
-            bodyType: transformedDetails.bodyType || 'none',
-            body: transformedDetails.body || '',
-            authType: transformedDetails.authType || 'none',
-            authConfig: transformedDetails.authConfig,
-            timeout: transformedDetails.timeout || 5000,
-            retries: transformedDetails.retries || 0,
-            errorHandling: transformedDetails.errorHandling || 'stop',
-            dataExtractions: [],
-            testScripts: [],
-            enabled: transformedDetails.enabled !== false,
-          };
-
-          detailedRequests.push(completeRequest);
-        });
-
-        // Handle any requests that failed to fetch (fallback to basic config)
-        const fetchedIds = requestDetails.map((d) => d.id);
-        const failedIds = pendingImportIds.filter(
-          (id) => !fetchedIds.includes(id)
-        );
-
-        failedIds.forEach((failedId) => {
-          const fallbackRequest: APIRequest = {
-            id: failedId,
-            name: 'Imported Request',
-            method: 'GET',
-            url: '',
-            headers: [],
-            params: [],
-            bodyType: 'none',
-            timeout: 5000,
-            retries: 0,
-            errorHandling: 'stop',
-            dataExtractions: [],
-            testScripts: [],
-            enabled: true,
-            authType: 'none',
-          };
-
-          detailedRequests.push(fallbackRequest);
-        });
-
-        if (failedIds.length > 0) {
-          toast({
-            title: 'Partial Import',
-            description: `Could not fetch details for ${failedIds.length} request(s). Using basic configuration.`,
-            variant: 'destructive',
-          });
-        }
-
-        // Update form data with the detailed requests
-        setFormData((prev) => ({
-          ...prev,
-          requests: [...(prev.requests || []), ...detailedRequests],
-        }));
-
-        // Expand newly imported requests
-        setExpandedRequests(
-          (prev) => new Set([...prev, ...detailedRequests.map((r) => r.id)])
-        );
-
-        toast({
-          title: 'Import Successful',
-          description: `Successfully imported ${detailedRequests.length} requests with complete details.`,
-        });
-
-        // Clean up
-        setPendingImportIds([]);
-        setIsImportModalOpen(false);
-      } catch (error) {
-        console.error('Error processing imported requests:', error);
-        toast({
-          title: 'Import Error',
-          description: 'Error processing imported requests. Please try again.',
-          variant: 'destructive',
-        });
-        setPendingImportIds([]);
-      }
-    }
-  }, [requestDetails, pendingImportIds, toast]);
-
-  // Handle query errors
-  React.useEffect(() => {
-    if (detailsError && pendingImportIds.length > 0) {
-      toast({
-        title: 'Import Failed',
-        description: 'Failed to fetch request details. Please try again.',
-        variant: 'destructive',
-      });
-      setPendingImportIds([]);
-    }
-  }, [detailsError, pendingImportIds, toast]);
 
   // If editing a specific request, show the request editor
   if (editingRequestId) {
@@ -721,7 +851,6 @@ export function RequestChainEditor({
                 >
                   Environment <span className='text-destructive'>*</span>
                 </label>
-
                 <Select
                   value={selectedEnvironment}
                   onValueChange={handleEnvironmentChange}
@@ -749,7 +878,11 @@ export function RequestChainEditor({
           </Card>
 
           {/* Tabs */}
-          <Tabs defaultValue='requests' className='w-full'>
+          <Tabs
+            value={activeTab}
+            onValueChange={setActiveTab}
+            className='w-full'
+          >
             <TabsList className='grid w-full grid-cols-4'>
               <TabsTrigger value='requests' className='gap-2'>
                 <Code className='w-4 h-4' />
@@ -776,15 +909,27 @@ export function RequestChainEditor({
                   <Button
                     variant='outline'
                     onClick={() => setIsImportModalOpen(true)}
-                    disabled={isLoadingDetails}
                     className='gap-2'
                   >
-                    {isLoadingDetails ? (
+                    <Download className='w-4 h-4' />
+                    Import Request
+                  </Button>
+                  <Button
+                    variant='outline'
+                    onClick={handleRunAll}
+                    disabled={isExecuting || !formData.requests?.length}
+                    className='gap-2'
+                  >
+                    {isExecuting ? (
                       <Loader2 className='w-4 h-4 animate-spin' />
                     ) : (
-                      <Download className='w-4 h-4' />
+                      <PlayCircle className='w-4 h-4' />
                     )}
-                    {isLoadingDetails ? 'Importing...' : 'Import Request'}
+                    {isExecuting ? 'Running...' : 'Run All'}
+                  </Button>
+                  <Button onClick={addNewRequest}>
+                    <Plus className='w-4 h-4' />
+                    Add Request
                   </Button>
                 </div>
               </div>
@@ -794,7 +939,11 @@ export function RequestChainEditor({
                   {formData.requests.map((request, index) => (
                     <Card
                       key={request.id}
-                      className='hover:shadow-sm transition-shadow'
+                      className={`hover:shadow-sm transition-shadow ${
+                        currentRequestIndex === index
+                          ? 'ring-2 ring-primary'
+                          : ''
+                      }`}
                     >
                       <CardContent className='p-4'>
                         <div className='flex items-center'>
@@ -808,11 +957,20 @@ export function RequestChainEditor({
                             >
                               <GripVertical className='w-5 h-5 text-muted-foreground' />
                             </div>
-                            <div className='w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-medium'>
-                              {index + 1}
+                            <div
+                              className={`w-8 h-8 ${
+                                currentRequestIndex === index
+                                  ? 'bg-primary text-primary-foreground animate-pulse'
+                                  : 'bg-blue-100 text-blue-600'
+                              } rounded-full flex items-center justify-center text-sm font-medium`}
+                            >
+                              {currentRequestIndex === index ? (
+                                <Loader2 className='w-4 h-4 animate-spin' />
+                              ) : (
+                                index + 1
+                              )}
                             </div>
                           </div>
-
                           <div className='flex-1 flex items-center space-x-4 ml-3'>
                             <Badge className={getMethodColor(request.method)}>
                               {request.method}
@@ -842,7 +1000,6 @@ export function RequestChainEditor({
                               )}
                             </div>
                           </div>
-
                           <TooltipProvider>
                             <div className='flex items-center space-x-2 ml-4'>
                               <Tooltip>
@@ -868,7 +1025,6 @@ export function RequestChainEditor({
                                   Request
                                 </TooltipContent>
                               </Tooltip>
-
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <Button
@@ -883,7 +1039,6 @@ export function RequestChainEditor({
                                 </TooltipTrigger>
                                 <TooltipContent>Edit Request</TooltipContent>
                               </Tooltip>
-
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <Button
@@ -898,7 +1053,6 @@ export function RequestChainEditor({
                                   Duplicate Request
                                 </TooltipContent>
                               </Tooltip>
-
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <Button
@@ -915,7 +1069,6 @@ export function RequestChainEditor({
                             </div>
                           </TooltipProvider>
                         </div>
-
                         {expandedRequests.has(request.id) && (
                           <div className='mt-4 pt-4 border-t'>
                             <RequestEditor
@@ -945,17 +1098,10 @@ export function RequestChainEditor({
                     <Button
                       variant='outline'
                       onClick={() => setIsImportModalOpen(true)}
-                      disabled={isLoadingDetails}
                       className='gap-2'
                     >
-                      {isLoadingDetails ? (
-                        <Loader2 className='w-4 h-4 animate-spin' />
-                      ) : (
-                        <Download className='w-4 h-4' />
-                      )}
-                      {isLoadingDetails
-                        ? 'Importing...'
-                        : 'Import from Collection'}
+                      <Download className='w-4 h-4' />
+                      Import from Collection
                     </Button>
                   </div>
                 </div>
@@ -1067,7 +1213,6 @@ export function RequestChainEditor({
                 variables={[...globalVariables, ...(formData.variables || [])]}
                 onExecutionComplete={(logs, extractedVars) => {
                   setExecutionLogs(logs);
-                  // Update extracted variables for Variables Table
                   const newExtractedVars: Record<string, any> = {};
                   logs.forEach((log) => {
                     if (log.extractedVariables) {
