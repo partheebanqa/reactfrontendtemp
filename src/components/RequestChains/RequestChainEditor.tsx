@@ -96,11 +96,14 @@ export function RequestChainEditor({
 
   const { environments, activeEnvironment, setActiveEnvironment } =
     useDataManagement();
+
   const [selectedEnvironment, setSelectedEnvironment] = useState<string>('');
+  const [environmentBaseUrl, setEnvironmentBaseUrl] = useState<string>('');
 
   useEffect(() => {
     if (activeEnvironment) {
       setSelectedEnvironment(activeEnvironment.id);
+      setEnvironmentBaseUrl(activeEnvironment.baseUrl || '');
     }
   }, [activeEnvironment]);
 
@@ -109,6 +112,7 @@ export function RequestChainEditor({
     const selectedEnv = environments.find((env) => env.id === environmentId);
     if (selectedEnv) {
       setActiveEnvironment(selectedEnv);
+      setEnvironmentBaseUrl(selectedEnv.baseUrl || '');
     }
   };
 
@@ -172,13 +176,13 @@ export function RequestChainEditor({
     return result;
   };
 
-  // Helper function to get preview URL
+  // Helper function to get preview URL using environment baseUrl
   const getPreviewUrl = (request: APIRequest, variables: Variable[]) => {
     const replacedUrl = replaceVariables(request.url, variables);
-    const baseUrl = storeVariables
-      .find((v) => v.name === 'baseUrl')
-      ?.initialValue?.trim();
+    const baseUrl = environmentBaseUrl?.trim();
+
     if (!baseUrl) return replacedUrl;
+
     try {
       const parsedOriginal = new URL(replacedUrl);
       const parsedBase = new URL(baseUrl);
@@ -423,7 +427,6 @@ export function RequestChainEditor({
         } catch (error) {
           const errorLog = error as ExecutionLog;
           allLogs.push(errorLog);
-
           toast({
             title: `Request ${i + 1} Failed`,
             description: errorLog.error || 'Unknown error occurred',
@@ -548,7 +551,6 @@ export function RequestChainEditor({
     const currentExtractions =
       formData.requests?.find((r) => r.id === requestId)?.dataExtractions || [];
     const updatedExtractions = [...currentExtractions, extraction];
-
     updateRequest(requestId, { dataExtractions: updatedExtractions });
 
     // Find the execution log for this request and extract variables
@@ -570,7 +572,6 @@ export function RequestChainEditor({
       formData.requests
         ?.find((r) => r.id === requestId)
         ?.dataExtractions?.filter((e) => e.variableName !== variableName) || [];
-
     updateRequest(requestId, { dataExtractions: updatedExtractions });
 
     // Remove the extracted variable from state
@@ -857,6 +858,7 @@ export function RequestChainEditor({
               chainName={formData.name}
               chainDescription={formData.description}
               chainEnabled={formData.enabled}
+              environmentBaseUrl={environmentBaseUrl}
             />
           </div>
         </div>
@@ -1216,6 +1218,7 @@ export function RequestChainEditor({
                                 chainName={formData.name}
                                 chainDescription={formData.description}
                                 chainEnabled={formData.enabled}
+                                environmentBaseUrl={environmentBaseUrl}
                               />
 
                               {/* Response Section - NEW */}
@@ -1537,7 +1540,6 @@ export function RequestChainEditor({
                                               dataExtractions:
                                                 updatedExtractions,
                                             });
-
                                             // Extract the variable immediately from the current response
                                             const extracted =
                                               extractDataFromResponse(

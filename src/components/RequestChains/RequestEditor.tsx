@@ -51,7 +51,6 @@ import {
 } from '@/shared/types/requestChain.model';
 import { ResponseExplorer } from './ResponseExplorer';
 import { useToast } from '@/hooks/use-toast';
-import { useDataManagementStore } from '@/store/dataManagementStore';
 import { parseCookies } from '@/lib/cookieUtils';
 import {
   buildRequestPayload,
@@ -67,6 +66,7 @@ interface RequestEditorProps {
   chainName?: string;
   chainDescription?: string;
   chainEnabled?: boolean;
+  environmentBaseUrl?: string; // New prop for environment base URL
 }
 
 interface KeyValuePair {
@@ -86,14 +86,10 @@ export function RequestEditor({
   chainName,
   chainDescription,
   chainEnabled,
+  environmentBaseUrl, // New prop
 }: RequestEditorProps) {
   const [showRequestUrl, setShowRequestUrl] = useState(true);
   const [isJsonOpen, setIsJsonOpen] = useState(false);
-  const {
-    environments,
-    activeEnvironment,
-    variables: storeVariables,
-  } = useDataManagementStore();
 
   const [activeTab, setActiveTab] = useState<
     'params' | 'headers' | 'body' | 'auth' | 'tests' | 'settings'
@@ -284,12 +280,15 @@ export function RequestEditor({
     }
   };
 
+  // Updated getPreviewUrl function to use environmentBaseUrl prop
   const getPreviewUrl = () => {
     const replacedUrl = replaceVariables(request.url, globalVariables);
-    const baseUrl = storeVariables
-      .find((v) => v.name === 'baseUrl')
-      ?.initialValue?.trim();
+
+    // Use the environmentBaseUrl prop instead of storeVariables
+    const baseUrl = environmentBaseUrl?.trim();
+
     if (!baseUrl) return replacedUrl;
+
     try {
       const parsedOriginal = new URL(replacedUrl);
       const parsedBase = new URL(baseUrl);
@@ -309,6 +308,7 @@ export function RequestEditor({
       enabled: true,
       description: '',
     };
+
     if (type === 'params') {
       onUpdate({ params: [...params, newPair] });
     } else {
@@ -456,7 +456,6 @@ export function RequestEditor({
     }
 
     localStorage.setItem('extractionLogs', JSON.stringify(existingChains));
-
     setPreviousExtractions(updatedExtractions);
     onUpdate({ dataExtractions: updatedExtractions });
 
@@ -481,7 +480,6 @@ export function RequestEditor({
   };
 
   const [copied, setCopied] = useState(false);
-
   const handleCopy = async (value: string) => {
     try {
       await navigator.clipboard.writeText(value);
@@ -598,6 +596,7 @@ export function RequestEditor({
           {addButtonText}
         </Button>
       </div>
+
       {items.length > 0 ? (
         <div className='space-y-2'>
           <div className='grid grid-cols-12 gap-2 text-xs font-medium text-muted-foreground border-b pb-2'>
@@ -767,6 +766,7 @@ export function RequestEditor({
                   <span>Add Parameter</span>
                 </button>
               </div>
+
               {request.params.length > 0 ? (
                 <div className='space-y-2'>
                   {request.params.map((param, index) => (
@@ -837,6 +837,7 @@ export function RequestEditor({
                   <span>Add Header</span>
                 </button>
               </div>
+
               {request.headers.length > 0 ? (
                 <div className='space-y-2'>
                   {request.headers.map((header, index) => (
@@ -898,6 +899,7 @@ export function RequestEditor({
               <h3 className='text-lg font-medium text-gray-900'>
                 Request Body
               </h3>
+
               <div className='flex items-center space-x-4'>
                 <label className='flex items-center space-x-2'>
                   <input
@@ -960,6 +962,7 @@ export function RequestEditor({
                   <span className='text-sm'>Raw</span>
                 </label>
               </div>
+
               {request.bodyType === 'raw' && (
                 <div className='space-y-2'>
                   <div className='flex items-center justify-end'>
@@ -991,6 +994,7 @@ export function RequestEditor({
                   />
                 </div>
               )}
+
               {request.bodyType !== 'none' && request.bodyType !== 'raw' && (
                 <div className='text-center py-8 text-gray-500'>
                   <FileText className='w-12 h-12 text-gray-300 mx-auto mb-3' />
@@ -1005,6 +1009,7 @@ export function RequestEditor({
               <h3 className='text-lg font-medium text-gray-900'>
                 Authentication
               </h3>
+
               <div className='space-y-4'>
                 <div>
                   <label className='block text-sm font-medium text-gray-700 mb-2'>
@@ -1026,6 +1031,7 @@ export function RequestEditor({
                     <option value='oauth2'>OAuth 2.0</option>
                   </select>
                 </div>
+
                 {request.authType === 'bearer' && (
                   <div>
                     <label className='block text-sm font-medium text-gray-700 mb-2'>
@@ -1040,6 +1046,7 @@ export function RequestEditor({
                     />
                   </div>
                 )}
+
                 {request.authType === 'basic' && (
                   <div className='grid grid-cols-2 gap-4'>
                     <div>
@@ -1072,6 +1079,7 @@ export function RequestEditor({
                     </div>
                   </div>
                 )}
+
                 {request.authType === 'apikey' && (
                   <div className='space-y-4'>
                     <div className='grid grid-cols-2 gap-4'>
@@ -1125,6 +1133,7 @@ export function RequestEditor({
                     </div>
                   </div>
                 )}
+
                 {request.authType === 'oauth2' && (
                   <div className='text-center py-8 text-gray-500'>
                     <Shield className='w-12 h-12 text-gray-300 mx-auto mb-3' />
@@ -1165,6 +1174,7 @@ export function RequestEditor({
                   </button>
                 </div>
               </div>
+
               {request.testScripts && request.testScripts.length > 0 ? (
                 <div className='space-y-3'>
                   {request.testScripts.map((test) => (
@@ -1203,6 +1213,7 @@ export function RequestEditor({
                           </button>
                         </div>
                       </div>
+
                       <div className='grid grid-cols-1 md:grid-cols-3 gap-3 text-sm'>
                         {test.type === 'status' && (
                           <>
@@ -1244,6 +1255,7 @@ export function RequestEditor({
                             </select>
                           </>
                         )}
+
                         {test.type === 'responseTime' && (
                           <>
                             <div>
@@ -1280,6 +1292,7 @@ export function RequestEditor({
                             </div>
                           </>
                         )}
+
                         {test.type === 'jsonContent' && (
                           <>
                             <div className='flex items-center space-x-2'>
@@ -1347,6 +1360,7 @@ export function RequestEditor({
               <h3 className='text-lg font-medium text-gray-900'>
                 Request Settings
               </h3>
+
               <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
                 <div>
                   <label className='block text-sm font-medium text-gray-700 mb-2'>
@@ -1379,6 +1393,7 @@ export function RequestEditor({
                   />
                 </div>
               </div>
+
               <div className='p-4 border border-orange-200 bg-orange-50 rounded-lg'>
                 <div className='flex items-center space-x-2 mb-3'>
                   <AlertTriangle className='w-5 h-5 text-orange-600' />
@@ -1473,6 +1488,7 @@ export function RequestEditor({
                     </span>
                   </div>
                 )}
+
                 {executionResult.response && (
                   <>
                     <span
@@ -1504,6 +1520,7 @@ export function RequestEditor({
                   </>
                 )}
               </div>
+
               <div className='flex items-center space-x-2'>
                 <button
                   onClick={() => setShowResponse(!showResponse)}
@@ -1596,6 +1613,7 @@ export function RequestEditor({
                           </button>
                         </div>
                       </div>
+
                       {isJsonOpen && (
                         <div className='relative'>
                           <pre className='bg-gray-50 border border-gray-200 rounded-lg p-4 text-sm font-mono overflow-x-auto max-h-96 leading-relaxed'>
@@ -1767,6 +1785,15 @@ export function RequestEditor({
               placeholder='https://api.example.com/endpoint'
             />
           </div>
+          {/* Final URL Preview */}
+          <div className='flex items-center space-x-2 mt-2 text-sm'>
+            <span className='text-gray-600 dark:text-gray-400 font-medium'>
+              Final URL Preview:
+            </span>
+            <span className='text-blue-600 dark:text-blue-400 font-mono break-all'>
+              {previewUrl}
+            </span>
+          </div>
         </CardContent>
       </Card>
 
@@ -1867,6 +1894,7 @@ export function RequestEditor({
                   </SelectContent>
                 </Select>
               </div>
+
               {request.bodyType !== 'none' && (
                 <div className='space-y-2'>
                   <Label>Body Content</Label>
@@ -1973,6 +2001,7 @@ export function RequestEditor({
                 />
               </div>
             </div>
+
             <div className='space-y-4 p-4 border border-orange-200 bg-orange-50 rounded-lg'>
               <div className='flex items-center gap-2 text-orange-600'>
                 <TriangleAlert className='w-4 h-4' />
@@ -2007,6 +2036,7 @@ export function RequestEditor({
                 </div>
               </RadioGroup>
             </div>
+
             <div className='flex items-center space-x-2'>
               <Switch
                 checked={request.enabled}
