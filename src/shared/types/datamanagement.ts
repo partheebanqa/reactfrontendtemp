@@ -1,4 +1,17 @@
 /** Response from backend for Environment object */
+export interface EnvironmentVariable {
+  Id: string;
+  EnvironmentId: string;
+  Name: string;
+  Description: string;
+  Type: string;
+  InitialValue: string;
+  CurrentValue: string;
+  CreatedAt: string;
+  UpdatedAt: string;
+  DeletedAt: string | null;
+}
+
 export interface ResponseEnvironment {
   Id: string;
   WorkspaceId: string;
@@ -9,6 +22,7 @@ export interface ResponseEnvironment {
   UpdatedAt: string;
   UpdatedBy: string;
   DeletedAt: string | null;
+  environmentVariables: EnvironmentVariable[] | null;
 }
 
 /** Internal Environment structure used in frontend */

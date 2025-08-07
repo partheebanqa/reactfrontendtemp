@@ -316,11 +316,11 @@ const EditTestSuiteContent: React.FC = () => {
                     <Badge variant='secondary'>CI/CD Integration</Badge>
                   </>
                 )}
-                {isCreateMode && (
+                {/* {isCreateMode && (
                   <span className='text-sm text-muted-foreground'>
                     New Test Suite
                   </span>
-                )}
+                )} */}
               </div>
             </div>
           </div>
