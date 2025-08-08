@@ -24,8 +24,6 @@ export const fetchEnvironments = async (
 export const fetchVariables = async (
   environmentId: string
 ): Promise<FetchVariablesResponse> => {
-  console.log('api is called for variables');
-
   const response = await apiRequest(
     'GET',
     `${API_VARIABLES}?e=${environmentId}&page=1&pageSize=10`
