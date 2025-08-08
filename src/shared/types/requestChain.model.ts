@@ -4,7 +4,7 @@ export interface RequestChain {
   name: string;
   description?: string;
   environmentId?: string;
-  requests: APIRequest[];
+  chainRequests: APIRequest[];
   variables: Variable[];
   schedule?: Schedule;
   enabled: boolean;

@@ -1,7 +1,7 @@
 import {
   dataManagementActions,
   useDataManagementStore,
-} from "@/store/dataManagementStore";
+} from '@/store/dataManagementStore';
 import {
   useCreateEnvironmentMutation,
   useCreateVariableMutation,
@@ -11,25 +11,26 @@ import {
   usegetEnvironmentQuery,
   useUpdateEnvironmentMutation,
   useUpdateVariableMutation,
-} from "@/store/query/dataManagementQuery";
-import { useWorkspace } from "./useWorkspace";
+} from '@/store/query/dataManagementQuery';
+import { useWorkspace } from './useWorkspace';
 
 /**
  * Hook for managing API requests
  * This replaces the RequestContext with a store-based approach
  */
 export function useDataManagement() {
-  const { environments, activeEnvironment, isLoading ,variables} =
+  const { environments, activeEnvironment, isLoading, variables } =
     useDataManagementStore();
 
   const { currentWorkspace } = useWorkspace();
 
-  const { refetch, isLoading: isRefetching,data } = usegetEnvironmentQuery(
-    currentWorkspace?.id ? true : false
-  );
-  const {data: variablesData, isLoading: isVariablesLoading} = usefetchVariablesQuery(
-    data?.id ? true : false,
-  );
+  const {
+    refetch,
+    isLoading: isRefetching,
+    data,
+  } = usegetEnvironmentQuery(currentWorkspace?.id ? true : false);
+  const { data: variablesData, isLoading: isVariablesLoading } =
+    usefetchVariablesQuery(data?.id ? true : false);
 
   const setEnvironments = dataManagementActions.setEnvironments;
   const setActiveEnvironment = dataManagementActions.setActiveEnvironment;
@@ -58,6 +59,6 @@ export function useDataManagement() {
     updateEnvironmentMutation,
     updateVariableMutation,
     deleteEnvironmentMutation,
-    deletedVariableMutation
+    deletedVariableMutation,
   };
 }

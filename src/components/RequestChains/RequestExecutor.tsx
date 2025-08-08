@@ -331,6 +331,8 @@ export function RequestExecutor({
 
   const handleExecuteChain = async () => {
     // ✅ Save the chain before execution
+    console.log('handlesave chain is clicked');
+
     const savedChain = await onPreExecute?.();
 
     console.log('savedChain response from API:', savedChain);

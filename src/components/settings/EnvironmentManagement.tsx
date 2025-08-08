@@ -6,13 +6,33 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Settings, Plus, Globe, Lock, Edit, Trash2, Copy } from 'lucide-react';
-import { useToast } from '@/hooks/useToast';
+import { useToast } from '@/hooks/use-toast';
 import { useDataManagement } from '@/hooks/useDataManagement';
 import { Environment } from '@/shared/types/datamanagement';
 import { useWorkspace } from '@/hooks/useWorkspace';
@@ -20,13 +40,12 @@ import { useWorkspace } from '@/hooks/useWorkspace';
 const environmentSchema = z.object({
   name: z.string().min(1, 'Environment name is required'),
   description: z.string().optional(),
-  baseUrl: z.string().url('Please enter a valid URL'),
+  baseUrl: z
+    .string()
+    .url('Please enter a valid URL')
+    .optional()
+    .or(z.literal('')),
   workspaceId: z.string().min(1, 'Please select a workspace'),
-  variables: z.array(z.object({
-    key: z.string().min(1, 'Key is required'),
-    value: z.string(),
-    isSecret: z.boolean().default(false),
-  })).optional(),
 });
 
 type EnvironmentFormData = z.infer<typeof environmentSchema>;
@@ -34,18 +53,20 @@ interface EditEnvironmentFormData extends EnvironmentFormData {
   id: string;
 }
 
-interface Variable {
-  key: string;
-  value: string;
-  isSecret: boolean;
-}
-
 export function EnvironmentManagement() {
   const { toast } = useToast();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [editingEnvironment, setEditingEnvironment] = useState<EditEnvironmentFormData>();
-  // const [ formVariables, setVariables] = useState<Variable[]>([{ key: '', value: '', isSecret: false }]);
-  const { variables, setVariables, environments, activeEnvironment, setActiveEnvironment, setEnvironments, createEnvironmentMutation, createVariableMutation, updateEnvironmentMutation, deleteEnvironmentMutation } = useDataManagement();
+  const [editingEnvironment, setEditingEnvironment] =
+    useState<EditEnvironmentFormData | null>(null);
+  const {
+    variables,
+    environments,
+    activeEnvironment,
+    setActiveEnvironment,
+    createEnvironmentMutation,
+    updateEnvironmentMutation,
+    deleteEnvironmentMutation,
+  } = useDataManagement();
   const { workspaces } = useWorkspace();
 
   const form = useForm<EnvironmentFormData>({
@@ -54,7 +75,6 @@ export function EnvironmentManagement() {
       name: '',
       description: '',
       baseUrl: '',
-      variables: [],
       workspaceId: '',
     },
   });
@@ -62,71 +82,54 @@ export function EnvironmentManagement() {
   // Effect to populate form when editing an environment
   React.useEffect(() => {
     if (editingEnvironment) {
-      // Reset form with the editing environment data
       form.reset({
         name: editingEnvironment.name,
         description: editingEnvironment.description || '',
+        baseUrl: editingEnvironment.baseUrl || '',
         workspaceId: editingEnvironment.workspaceId,
-        variables: editingEnvironment.variables?.map(v => ({
-          key: v.key,
-          value: v.value,
-          isSecret: v.isSecret || false
-        })) || [],
       });
-
-      // Update variables state if environment has variables
-      // if (editingEnvironment.variables && editingEnvironment.variables.length > 0) {
-      //   setVariables(
-      //     editingEnvironment.variables.map())
-      //   );
-      // } else {
-      //   setVariables([{ key: '', value: '', isSecret: false }]);
-      // }
     }
   }, [editingEnvironment, form]);
-
-
-  const addVariable = () => {
-    setVariables([...variables, { key: '', value: '', isSecret: false }]);
-  };
-
-  const removeVariable = (index: number) => {
-    setVariables(variables.filter((_, i) => i !== index));
-  };
-
-  const updateVariable = (index: number, field: keyof Variable, value: any) => {
-    const updated = [...variables];
-    updated[index] = { ...updated[index], [field]: value };
-    setVariables(updated);
-  };
 
   const onSubmit = async (data: EnvironmentFormData) => {
     const environmentData = {
       workspaceId: data.workspaceId,
       name: data.name,
       description: data.description,
-      defaultVariables: {
-        baseUrl: data.baseUrl,
-      },
+      baseUrl: data.baseUrl || undefined,
+      isDefault: false,
     };
 
-    if (editingEnvironment) {
-      // Update existing environment
-      await updateEnvironmentMutation.mutateAsync({ ...environmentData, id: editingEnvironment.id });
-    } else {
-      await createEnvironmentMutation.mutateAsync(environmentData);
+    try {
+      if (editingEnvironment) {
+        await updateEnvironmentMutation.mutateAsync({
+          ...environmentData,
+          id: editingEnvironment.id,
+        });
+      } else {
+        await createEnvironmentMutation.mutateAsync(environmentData);
+      }
+
+      toast({
+        title: editingEnvironment
+          ? 'Environment updated'
+          : 'Environment created',
+        description: `Environment "${data.name}" has been ${
+          editingEnvironment ? 'updated' : 'created'
+        } successfully.`,
+      });
+
+      setIsCreateDialogOpen(false);
+      setEditingEnvironment(null);
+      form.reset();
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'There was a problem saving the environment.',
+        variant: 'destructive',
+      });
     }
-
-    toast({
-      title: editingEnvironment ? 'Environment updated' : 'Environment created',
-      description: `Environment "${data.name}" has been ${editingEnvironment ? 'updated' : 'created'} successfully.`,
-    });
-
-    setIsCreateDialogOpen(false);
-    setEditingEnvironment(null);
-    form.reset();
   };
-
 
   const handleDelete = async (environment: Environment) => {
     if (environment.isDefault) {
@@ -138,16 +141,18 @@ export function EnvironmentManagement() {
       return;
     }
 
-    if (confirm(`Are you sure you want to delete "${environment.name}"? This action cannot be undone.`)) {
+    if (
+      confirm(
+        `Are you sure you want to delete "${environment.name}"? This action cannot be undone.`
+      )
+    ) {
       try {
         await deleteEnvironmentMutation.mutateAsync(environment.id);
-
         toast({
           title: 'Environment deleted',
           description: `Environment "${environment.name}" has been deleted.`,
         });
       } catch (error) {
-        console.log("🚀 ~ handleDelete ~ error:", error)
         toast({
           title: 'Error deleting environment',
           description: 'There was a problem deleting the environment.',
@@ -158,38 +163,48 @@ export function EnvironmentManagement() {
   };
 
   const handleToggleActive = (environment: Environment) => {
-    setActiveEnvironment(environment);
-    toast({
-      title: `Environment ${environment.id === activeEnvironment?.id ? 'activated' : 'deactivated'}`,
-      description: `${environment.name} is now ${environment.id === activeEnvironment?.id ? 'active' : 'inactive'}.`,
-    });
+    // If clicking on the currently active environment, make it inactive
+    // and activate the fallback environment (one without baseUrl)
+    if (environment.id === activeEnvironment?.id) {
+      const fallbackEnvironment = environments.find(
+        (env) => !env.baseUrl && env.id !== environment.id
+      );
+
+      if (fallbackEnvironment) {
+        setActiveEnvironment(fallbackEnvironment);
+        toast({
+          title: 'Environment switched',
+          description: `${environment.name} is now inactive. ${fallbackEnvironment.name} is now active.`,
+        });
+      } else {
+        toast({
+          title: 'Cannot deactivate',
+          description:
+            'No fallback environment available. At least one environment must be active.',
+          variant: 'destructive',
+        });
+      }
+    } else {
+      // If clicking on an inactive environment, make it active
+      setActiveEnvironment(environment);
+      toast({
+        title: 'Environment activated',
+        description: `${environment.name} is now active.`,
+      });
+    }
   };
 
   const handleDuplicate = async (environment: Environment) => {
-    // const duplicateData = {
-    //   workspaceId: environment.workspaceId,
-    //   name: `${environment.name} (Copy)`,
-    //   description: environment.description,
-    //   defaultVariables: {
-    //     baseUrl: environment.baseUrl,
-    //   },
-    // };
+    const duplicateData = {
+      workspaceId: environment.workspaceId,
+      name: `${environment.name} (Copy)`,
+      description: environment.description,
+      baseUrl: environment.baseUrl,
+      isDefault: false,
+    };
 
     try {
-      // const duplicatedEnv = await createEnvironmentMutation.mutateAsync(duplicateData);
-
-      // If there are variables, duplicate them too
-      // if (environment.variables&& environment.variables.length > 0) {
-      //   for (const variable of environment.variables) {
-      //     await createVariableMutation.mutateAsync({
-      //       environmentId: duplicatedEnv.id,
-      //       key: variable.key,
-      //       value: variable.value,
-      //       isSecret: variable.isSecret || false,
-      //     });
-      //   }
-      // }
-
+      await createEnvironmentMutation.mutateAsync(duplicateData);
       toast({
         title: 'Environment duplicated',
         description: `A copy of "${environment.name}" has been created.`,
@@ -207,52 +222,60 @@ export function EnvironmentManagement() {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
-      day: 'numeric'
+      day: 'numeric',
     });
   };
 
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
-            <Settings className="h-5 w-5" />
+        <div className='flex items-center justify-between'>
+          <CardTitle className='flex items-center gap-2'>
+            <Settings className='h-5 w-5' />
             Manage Environments
           </CardTitle>
-          <Dialog open={isCreateDialogOpen || !!editingEnvironment} onOpenChange={(open) => {
-            if (!open) {
-              setIsCreateDialogOpen(false);
-              setEditingEnvironment(null);
-              form.reset();
-              // setVariables([{ key: '', value: '', isSecret: false }]);
-            }
-          }}>
+          <Dialog
+            open={isCreateDialogOpen || !!editingEnvironment}
+            onOpenChange={(open) => {
+              if (!open) {
+                setIsCreateDialogOpen(false);
+                setEditingEnvironment(null);
+                form.reset();
+              }
+            }}
+          >
             <DialogTrigger asChild>
               <Button onClick={() => setIsCreateDialogOpen(true)}>
-                <Plus className="h-4 w-4 mr-2" />
+                <Plus className='h-4 w-4 mr-2' />
                 Add Environment
               </Button>
             </DialogTrigger>
-            <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className='w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto'>
               <DialogHeader>
                 <DialogTitle>
-                  {editingEnvironment ? 'Edit Environment' : 'Create New Environment'}
+                  {editingEnvironment
+                    ? 'Edit Environment'
+                    : 'Create New Environment'}
                 </DialogTitle>
                 <DialogDescription>
-                  Configure environment settings and variables for your API tests.
+                  Configure environment settings and variables for your API
+                  tests.
                 </DialogDescription>
               </DialogHeader>
               <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <form
+                  onSubmit={form.handleSubmit(onSubmit)}
+                  className='space-y-4'
+                >
+                  <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
                     <FormField
                       control={form.control}
-                      name="name"
+                      name='name'
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Environment Name</FormLabel>
                           <FormControl>
-                            <Input placeholder="Development" {...field} />
+                            <Input placeholder='Development' {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -260,19 +283,25 @@ export function EnvironmentManagement() {
                     />
                     <FormField
                       control={form.control}
-                      name="workspaceId"
+                      name='workspaceId'
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Workspace</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
+                          <Select
+                            onValueChange={field.onChange}
+                            value={field.value}
+                          >
                             <FormControl>
                               <SelectTrigger>
-                                <SelectValue placeholder="Select workspace" />
+                                <SelectValue placeholder='Select workspace' />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
                               {workspaces.map((workspace) => (
-                                <SelectItem key={workspace.id} value={workspace.id}>
+                                <SelectItem
+                                  key={workspace.id}
+                                  value={workspace.id}
+                                >
                                   {workspace.name}
                                 </SelectItem>
                               ))}
@@ -286,12 +315,15 @@ export function EnvironmentManagement() {
 
                   <FormField
                     control={form.control}
-                    name="baseUrl"
+                    name='baseUrl'
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Base URL</FormLabel>
+                        <FormLabel>Base URL (Optional)</FormLabel>
                         <FormControl>
-                          <Input placeholder="https://api.example.com" {...field} />
+                          <Input
+                            placeholder='https://api.example.com'
+                            {...field}
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -300,13 +332,13 @@ export function EnvironmentManagement() {
 
                   <FormField
                     control={form.control}
-                    name="description"
+                    name='description'
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Description (Optional)</FormLabel>
                         <FormControl>
                           <Textarea
-                            placeholder="Environment description"
+                            placeholder='Environment description'
                             rows={2}
                             {...field}
                           />
@@ -316,65 +348,10 @@ export function EnvironmentManagement() {
                     )}
                   />
 
-                  {/* Environment Variables */}
-                  {/* <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <h4 className="text-sm font-medium">Environment Variables</h4>
-                      <Button type="button" variant="outline" size="sm" onClick={addVariable}>
-                        <Plus className="h-4 w-4 mr-1" />
-                        Add Variable
-                      </Button>
-                    </div>
-                    
-                    {variables.map((variable, index) => (
-                      <div key={index} className="grid grid-cols-1 md:grid-cols-12 gap-2 items-end">
-                        <div className="md:col-span-4">
-                          <Input
-                            placeholder="Variable key"
-                            value={variable.key}
-                            onChange={(e) => updateVariable(index, 'key', e.target.value)}
-                            className="text-sm"
-                          />
-                        </div>
-                        <div className="md:col-span-5">
-                          <Input
-                            type={variable.isSecret ? 'password' : 'text'}
-                            placeholder="Variable value"
-                            value={variable.value}
-                            onChange={(e) => updateVariable(index, 'value', e.target.value)}
-                            className="text-sm"
-                          />
-                        </div>
-                        <div className="md:col-span-2 flex items-center gap-2">
-                          <label className="flex items-center gap-1 text-xs">
-                            <input
-                              type="checkbox"
-                              checked={variable.isSecret}
-                              onChange={(e) => updateVariable(index, 'isSecret', e.target.checked)}
-                              className="w-3 h-3"
-                            />
-                            Secret
-                          </label>
-                        </div>
-                        <div className="col-span-1">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => removeVariable(index)}
-                            disabled={variables.length === 1}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div> */}
-
-                  <div className="flex justify-end gap-2 pt-4 border-t">
+                  <div className='flex justify-end gap-2 pt-4 border-t'>
                     <Button
-                      type="button"
-                      variant="outline"
+                      type='button'
+                      variant='outline'
                       onClick={() => {
                         setIsCreateDialogOpen(false);
                         setEditingEnvironment(null);
@@ -383,8 +360,10 @@ export function EnvironmentManagement() {
                     >
                       Cancel
                     </Button>
-                    <Button type="submit">
-                      {editingEnvironment ? 'Update Environment' : 'Create Environment'}
+                    <Button type='submit'>
+                      {editingEnvironment
+                        ? 'Update Environment'
+                        : 'Create Environment'}
                     </Button>
                   </div>
                 </form>
@@ -394,14 +373,18 @@ export function EnvironmentManagement() {
         </div>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
+        <div className='space-y-4'>
           {environments.length === 0 ? (
-            <div className="text-center py-8">
-              <Settings className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No environments found</h3>
-              <p className="text-gray-500 mb-4">Create your first environment to get started.</p>
+            <div className='text-center py-8'>
+              <Settings className='h-12 w-12 text-gray-400 mx-auto mb-4' />
+              <h3 className='text-lg font-medium text-gray-900 mb-2'>
+                No environments found
+              </h3>
+              <p className='text-gray-500 mb-4'>
+                Create your first environment to get started.
+              </p>
               <Button onClick={() => setIsCreateDialogOpen(true)}>
-                <Plus className="h-4 w-4 mr-2" />
+                <Plus className='h-4 w-4 mr-2' />
                 Create Environment
               </Button>
             </div>
@@ -409,136 +392,159 @@ export function EnvironmentManagement() {
             environments.map((environment) => (
               <div
                 key={environment.id}
-                className="border rounded-lg p-3 sm:p-4 hover:bg-gray-50 transition-colors"
+                className='border rounded-lg p-3 sm:p-4 hover:bg-gray-50 transition-colors'
               >
-                <div className="flex flex-col gap-3">
-                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex flex-wrap items-center gap-2 mb-2">
-                        <h3 className="font-medium text-gray-900 text-sm sm:text-base truncate">{environment.name}</h3>
+                <div className='flex flex-col gap-3'>
+                  <div className='flex flex-col sm:flex-row sm:items-start justify-between gap-3'>
+                    <div className='flex-1 min-w-0'>
+                      <div className='flex flex-wrap items-center gap-2 mb-2'>
+                        <h3 className='font-medium text-gray-900 text-sm sm:text-base truncate'>
+                          {environment.name}
+                        </h3>
                         {environment.isDefault && (
-                          <Badge variant="secondary" className="text-xs">
+                          <Badge variant='secondary' className='text-xs'>
                             Default
                           </Badge>
                         )}
                         <Badge
-                          variant={environment.id === activeEnvironment?.id ? "default" : "secondary"}
-                          className={`text-xs ${environment.id === activeEnvironment?.id ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}
+                          variant={
+                            environment.id === activeEnvironment?.id
+                              ? 'default'
+                              : 'secondary'
+                          }
+                          className={`text-xs ${
+                            environment.id === activeEnvironment?.id
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-gray-100 text-gray-800'
+                          }`}
                         >
-                          {environment.id === activeEnvironment?.id ? 'Active' : 'Inactive'}
+                          {environment.id === activeEnvironment?.id
+                            ? 'Active'
+                            : 'Inactive'}
                         </Badge>
                       </div>
                       {environment.description && (
-                        <p className="text-sm text-gray-600 mb-2 line-clamp-2">{environment.description}</p>
+                        <p className='text-sm text-gray-600 mb-2 line-clamp-2'>
+                          {environment.description}
+                        </p>
                       )}
-                      <div className="flex items-center gap-2 mb-2">
-                        <Globe className="h-3 w-3 sm:h-4 sm:w-4 text-gray-400 flex-shrink-0" />
-                        <span className="text-xs sm:text-sm text-gray-600 truncate">{environment.baseUrl}</span>
-                      </div>
+                      {environment.baseUrl && (
+                        <div className='flex items-center gap-2 mb-2'>
+                          <Globe className='h-3 w-3 sm:h-4 sm:w-4 text-gray-400 flex-shrink-0' />
+                          <span className='text-xs sm:text-sm text-gray-600 truncate'>
+                            {environment.baseUrl}
+                          </span>
+                        </div>
+                      )}
                     </div>
 
                     {/* Mobile: Action buttons */}
-                    <div className="flex items-center gap-2 sm:hidden">
-                      <div className="flex items-center gap-1">
-                        <Switch
-                          checked={environment.id === activeEnvironment?.id}
-                          onCheckedChange={() => handleToggleActive(environment)}
-                          className="data-[state=checked]:bg-green-600"
-                        />
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDuplicate(environment)}
-                        className="px-2 py-1"
-                      >
-                        <Copy className="h-3 w-3" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setEditingEnvironment(environment)}
-                        className="px-2 py-1"
-                      >
-                        <Edit className="h-3 w-3" />
-                      </Button>
-                      {!environment.isDefault && (
+                    {environment.baseUrl && (
+                      <div className='flex items-center gap-2 sm:hidden'>
+                        <div className='flex items-center gap-1'>
+                          <Switch
+                            checked={environment.id === activeEnvironment?.id}
+                            onCheckedChange={() =>
+                              handleToggleActive(environment)
+                            }
+                            className='data-[state=checked]:bg-green-600'
+                          />
+                        </div>
                         <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDelete(environment)}
-                          className="text-red-600 hover:text-red-700 px-2 py-1"
+                          variant='outline'
+                          size='sm'
+                          onClick={() => handleDuplicate(environment)}
+                          className='px-2 py-1'
                         >
-                          <Trash2 className="h-3 w-3" />
+                          <Copy className='h-3 w-3' />
                         </Button>
-                      )}
-                    </div>
-
-                    {/* Desktop: Action buttons */}
-                    <div className="hidden sm:flex items-center gap-3">
-                      <div className="flex items-center gap-2">
-                        <Switch
-                          checked={environment.id === activeEnvironment?.id}
-                          onCheckedChange={() => handleToggleActive(environment)}
-                          className="data-[state=checked]:bg-green-600"
-                        />
-                        <span className="text-sm text-gray-600">
-                          {environment.id === activeEnvironment?.id ? 'Active' : 'Inactive'}
-                        </span>
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDuplicate(environment)}
-                      >
-                        <Copy className="h-4 w-4 mr-1" />
-                        Duplicate
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setEditingEnvironment(environment)}
-                      >
-                        <Edit className="h-4 w-4 mr-1" />
-                        Edit
-                      </Button>
-                      {!environment.isDefault && (
                         <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDelete(environment)}
-                          className="text-red-600 hover:text-red-700"
+                          variant='outline'
+                          size='sm'
+                          onClick={() => setEditingEnvironment(environment)}
+                          className='px-2 py-1'
                         >
-                          <Trash2 className="h-4 w-4 mr-1" />
-                          Delete
+                          <Edit className='h-3 w-3' />
                         </Button>
-                      )}
-                    </div>
+                        {!environment.isDefault && (
+                          <Button
+                            variant='outline'
+                            size='sm'
+                            onClick={() => handleDelete(environment)}
+                            className='text-red-600 hover:text-red-700 px-2 py-1'
+                          >
+                            <Trash2 className='h-3 w-3' />
+                          </Button>
+                        )}
+                      </div>
+                    )}
+                    {environment.baseUrl && (
+                      <div className='hidden sm:flex items-center gap-3'>
+                        <div className='flex items-center gap-2'>
+                          <Switch
+                            checked={environment.id === activeEnvironment?.id}
+                            onCheckedChange={() =>
+                              handleToggleActive(environment)
+                            }
+                            className='data-[state=checked]:bg-green-600'
+                          />
+                          <span className='text-sm text-gray-600'>
+                            {environment.id === activeEnvironment?.id
+                              ? 'Active'
+                              : 'Inactive'}
+                          </span>
+                        </div>
+                        <Button
+                          variant='outline'
+                          size='sm'
+                          onClick={() => handleDuplicate(environment)}
+                        >
+                          <Copy className='h-4 w-4 mr-1' />
+                          Duplicate
+                        </Button>
+                        <Button
+                          variant='outline'
+                          size='sm'
+                          onClick={() => setEditingEnvironment(environment)}
+                        >
+                          <Edit className='h-4 w-4 mr-1' />
+                          Edit
+                        </Button>
+                        {!environment.isDefault && (
+                          <Button
+                            variant='outline'
+                            size='sm'
+                            onClick={() => handleDelete(environment)}
+                            className='text-red-600 hover:text-red-700'
+                          >
+                            <Trash2 className='h-4 w-4 mr-1' />
+                            Delete
+                          </Button>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   {/* Mobile: Environment details */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs text-gray-500 pt-2 border-t sm:hidden">
+                  <div className='grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs text-gray-500 pt-2 border-t sm:hidden'>
                     <div>
-                      <span className="font-medium block">{variables.length}</span>
+                      <span className='font-medium block'>
+                        {variables.length}
+                      </span>
                       <span>variables</span>
                     </div>
-                    {/* <div>
-                      <span className="font-medium block">{environment.secretCount}</span>
-                      <span>secrets</span>
-                    </div> */}
                     <div>
-                      <span className="font-medium block">Created:</span>
+                      <span className='font-medium block'>Created:</span>
                       <span>{formatDate(environment.createdAt)}</span>
                     </div>
                   </div>
 
                   {/* Desktop: Environment details */}
-                  <div className="hidden sm:flex items-center gap-4 text-xs text-gray-500 pt-2 border-t">
+                  <div className='hidden sm:flex items-center gap-4 text-xs text-gray-500 pt-2 border-t'>
                     <span>{variables.length} variables</span>
-                    {/* <span className="flex items-center gap-1">
-                      <Lock className="h-3 w-3" />
-                      {environment.secretCount} secrets
-                    </span> */}
+                    <span className='flex items-center gap-1'>
+                      <Lock className='h-3 w-3' />0 secrets
+                    </span>
                     <span>Created {formatDate(environment.createdAt)}</span>
                   </div>
                 </div>
@@ -548,11 +554,12 @@ export function EnvironmentManagement() {
         </div>
 
         {/* Environment Usage Info */}
-        <div className="mt-8 p-4 bg-blue-50 rounded-lg">
-          <h4 className="font-medium text-blue-900 mb-2">Environment Usage</h4>
-          <p className="text-sm text-blue-800">
-            Environments allow you to manage different API endpoints and configurations for development,
-            staging, and production. Variables can be used in your requests using variable_name syntax.
+        <div className='mt-8 p-4 bg-blue-50 rounded-lg'>
+          <h4 className='font-medium text-blue-900 mb-2'>Environment Usage</h4>
+          <p className='text-sm text-blue-800'>
+            Environments allow you to manage different API endpoints and
+            configurations for development, staging, and production. Variables
+            can be used in your requests using variable_name syntax.
           </p>
         </div>
       </CardContent>
