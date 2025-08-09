@@ -430,7 +430,7 @@ export function RequestEditor({
       requestName: request.name,
       bodyType: request.bodyType,
       bodyRawContent: request.body,
-      authorizationType: request.authType,
+      authorizationType: request.authorizationType,
       authorization: {
         token: request.authToken,
         username: request.authUsername,
@@ -1026,10 +1026,11 @@ export function RequestEditor({
                     Auth Type
                   </label>
                   <select
-                    value={request.authType || 'none'}
+                    value={request.authorizationType || 'none'}
                     onChange={(e) =>
                       onUpdate({
-                        authType: e.target.value as APIRequest['authType'],
+                        authorizationType: e.target
+                          .value as APIRequest['authorizationType'],
                       })
                     }
                     className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
@@ -1042,7 +1043,7 @@ export function RequestEditor({
                   </select>
                 </div>
 
-                {request.authType === 'bearer' && (
+                {request.authorizationType === 'bearer' && (
                   <div>
                     <label className='block text-sm font-medium text-gray-700 mb-2'>
                       Bearer Token
@@ -1057,7 +1058,7 @@ export function RequestEditor({
                   </div>
                 )}
 
-                {request.authType === 'basic' && (
+                {request.authorizationType === 'basic' && (
                   <div className='grid grid-cols-2 gap-4'>
                     <div>
                       <label className='block text-sm font-medium text-gray-700 mb-2'>
@@ -1090,7 +1091,7 @@ export function RequestEditor({
                   </div>
                 )}
 
-                {request.authType === 'apikey' && (
+                {request.authorizationType === 'apikey' && (
                   <div className='space-y-4'>
                     <div className='grid grid-cols-2 gap-4'>
                       <div>
@@ -1144,7 +1145,7 @@ export function RequestEditor({
                   </div>
                 )}
 
-                {request.authType === 'oauth2' && (
+                {request.authorizationType === 'oauth2' && (
                   <div className='text-center py-8 text-gray-500'>
                     <Shield className='w-12 h-12 text-gray-300 mx-auto mb-3' />
                     <p>OAuth 2.0 configuration coming soon...</p>
@@ -1934,9 +1935,9 @@ export function RequestEditor({
               <div className='flex items-center space-x-4'>
                 <Label>Auth Type:</Label>
                 <Select
-                  value={request.authType || 'none'}
+                  value={request.authorizationType || 'none'}
                   onValueChange={(value) =>
-                    onUpdate({ authType: value as any })
+                    onUpdate({ authorizationType: value as any })
                   }
                 >
                   <SelectTrigger className='w-40'>

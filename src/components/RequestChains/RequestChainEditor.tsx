@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   ArrowLeft,
   Plus,
@@ -12,7 +12,6 @@ import {
   EyeOff,
   ChevronDown,
   Code,
-  Globe,
   Download,
   ChevronUp,
   Copy,
@@ -21,7 +20,6 @@ import {
   PlayCircle,
   CheckCircle,
   XCircle,
-  ChevronRight,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -38,7 +36,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { useQuery } from '@tanstack/react-query';
 import type {
   RequestChain,
   APIRequest,
@@ -49,10 +46,7 @@ import { RequestExecutor } from './RequestExecutor';
 import { ImportModal } from '@/components/TestSuit/ImportModal';
 import type { ExtendedRequest } from '@/models/collection.model';
 import { RequestEditor } from '@/components/RequestChains/RequestEditor';
-import {
-  getMultipleRequestDetails,
-  saveRequestChain,
-} from '@/services/requestChain.service';
+import { saveRequestChain } from '@/services/requestChain.service';
 import {
   Tooltip,
   TooltipContent,
@@ -166,7 +160,9 @@ export function RequestChainEditor({
   const getPreviewUrl = (request: APIRequest, variables: Variable[]) => {
     const replacedUrl = replaceVariables(request.url, variables);
     const baseUrl = environmentBaseUrl?.trim();
+
     if (!baseUrl) return replacedUrl;
+
     try {
       const parsedOriginal = new URL(replacedUrl);
       const parsedBase = new URL(baseUrl);
@@ -200,6 +196,7 @@ export function RequestChainEditor({
     extractions: APIRequest['extractVariables']
   ): Record<string, any> => {
     const extracted: Record<string, any> = {};
+
     extractions.forEach((extraction) => {
       try {
         let value;
@@ -249,6 +246,7 @@ export function RequestChainEditor({
         console.error(`Failed to extract ${extraction.variableName}:`, error);
       }
     });
+
     return extracted;
   };
 
@@ -270,6 +268,7 @@ export function RequestChainEditor({
     try {
       const backendData = await executeRequest(payload);
       const result = backendData?.data?.responses?.[0];
+
       if (!result) throw new Error('No response from executor');
 
       const extractedData = extractDataFromResponse(
@@ -425,6 +424,7 @@ export function RequestChainEditor({
         } catch (error) {
           const errorLog = error as ExecutionLog;
           allLogs.push(errorLog);
+
           toast({
             title: `Request ${i + 1} Failed`,
             description: errorLog.error || 'Unknown error occurred',
@@ -594,13 +594,61 @@ export function RequestChainEditor({
       extractVariables: [],
       testScripts: [],
       enabled: true,
-      authType: 'none',
+      authorizationType: 'none',
     };
+
     setFormData({
       ...formData,
       chainRequests: [...(formData.chainRequests || []), newRequest],
     });
     setExpandedRequests(new Set([...expandedRequests, newRequest.id]));
+  };
+
+  // Helper function to transform request data before saving
+  const transformRequestForSave = (request: APIRequest): APIRequest => {
+    const transformedRequest = { ...request };
+
+    // Transform authToken to authorization object structure
+    if (request.authorizationType === 'bearer' && request.authToken) {
+      transformedRequest.authorization = {
+        token: request.authToken,
+      };
+      // Remove the old authToken field
+      delete transformedRequest.authToken;
+    }
+
+    // Handle other auth types if needed
+    if (
+      request.authorizationType === 'basic' &&
+      request.authUsername &&
+      request.authPassword
+    ) {
+      transformedRequest.authorization = {
+        username: request.authUsername,
+        password: request.authPassword,
+      };
+      // Remove the old auth fields
+      delete transformedRequest.authUsername;
+      delete transformedRequest.authPassword;
+    }
+
+    if (
+      request.authorizationType === 'apikey' &&
+      request.authApiKey &&
+      request.authApiValue
+    ) {
+      transformedRequest.authorization = {
+        key: request.authApiKey,
+        value: request.authApiValue,
+        addTo: request.authApiLocation || 'header',
+      };
+      // Remove the old auth fields
+      delete transformedRequest.authApiKey;
+      delete transformedRequest.authApiValue;
+      delete transformedRequest.authApiLocation;
+    }
+
+    return transformedRequest;
   };
 
   // Save chain function
@@ -624,13 +672,18 @@ export function RequestChainEditor({
     }
 
     try {
+      // Transform all requests before saving
+      const transformedRequests = formData.chainRequests.map(
+        transformRequestForSave
+      );
+
       const chainData: RequestChain = {
         id: chain?.id || Date.now().toString(),
         workspaceId: formData.workspaceId || currentWorkspace?.id || '',
         name: formData.name,
         description: formData.description || '',
         environmentId: selectedEnvironment,
-        chainRequests: formData.chainRequests || [],
+        chainRequests: transformedRequests,
         variables: formData.variables || [],
         enabled: formData.enabled ?? true,
         createdAt: chain?.createdAt || new Date().toISOString(),
@@ -700,7 +753,7 @@ export function RequestChainEditor({
         params: [],
         bodyType: 'none',
         body: '',
-        authType: 'none',
+        authorizationType: 'none',
         timeout: 5000,
         retries: 0,
         errorHandling: 'stop' as const,
@@ -739,6 +792,7 @@ export function RequestChainEditor({
     const request = formData.chainRequests?.find(
       (r) => r.id === editingRequestId
     );
+
     if (request) {
       return (
         <div className='h-full flex flex-col'>
@@ -1099,7 +1153,6 @@ export function RequestChainEditor({
                                   </div>
                                 </TooltipProvider>
                               </div>
-
                               {expandedRequests.has(request.id) && (
                                 <div className='mt-4 pt-4 border-t space-y-4'>
                                   <RequestEditor
@@ -1114,7 +1167,6 @@ export function RequestChainEditor({
                                     chainEnabled={formData.enabled}
                                     environmentBaseUrl={environmentBaseUrl}
                                   />
-
                                   {/* Response Section */}
                                   {executionLog && (
                                     <div className='border-t border-gray-200 pt-4'>
@@ -1177,7 +1229,6 @@ export function RequestChainEditor({
                                           )}
                                         </div>
                                       </div>
-
                                       {executionLog.response && (
                                         <div className='border-t border-gray-200 p-6'>
                                           <h3 className='text-lg font-medium text-gray-900 mb-4'>
@@ -1233,7 +1284,6 @@ export function RequestChainEditor({
                                           />
                                         </div>
                                       )}
-
                                       {!executionLog.response && (
                                         <div className='p-6'>
                                           <div className='text-red-600'>

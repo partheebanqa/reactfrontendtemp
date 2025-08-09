@@ -44,8 +44,11 @@ export interface APIRequest {
   queryParams?: Record<string, string>;
   variables?: Variable[];
   rawBodyType?: 'text' | 'json' | 'xml' | 'html';
-  authType?: 'none' | 'bearer' | 'basic' | 'apikey' | 'oauth2';
+  authorizationType: 'none' | 'bearer' | 'basic' | 'apikey' | 'oauth2';
   authToken?: string; // Bearer token or reference to AuthToken ID
+  authorization?: {
+    token: string;
+  };
   authUsername?: string; // Basic auth username
   authPassword?: string; // Basic auth password
   authApiKey?: string; // API key name
@@ -170,7 +173,7 @@ export interface RequestDetailResponse {
   bodyFormData?: any;
   auth?: any;
   authConfig?: any;
-  authType?: string;
+  authorizationType?: string;
   timeout?: number;
   retries?: number;
   errorHandling?: string;
@@ -230,4 +233,9 @@ export interface ExecutionResponse {
       };
     }>;
   };
+}
+
+export interface ExecutionRequestChainPayload {
+  requestChainId: string;
+  environmentId?: string;
 }

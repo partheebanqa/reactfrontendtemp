@@ -20,6 +20,9 @@ import type {
 } from '@/shared/types/requestChain.model';
 import { useRequestChainData } from '@/hooks/useRequestChainData';
 import { useDataManagementStore } from '@/store/dataManagementStore';
+import { useMutation } from '@tanstack/react-query';
+import { executeRequestChain } from '@/services/executeRequest.service';
+import { toast } from '@/hooks/use-toast';
 
 interface RequestExecutorProps {
   chainId?: string;
@@ -232,13 +235,13 @@ export function RequestExecutor({
       }
 
       // Add authentication
-      if (request.authType === 'bearer' && request.authToken) {
+      if (request.authorizationType === 'bearer' && request.authToken) {
         processedHeaders['Authorization'] = `Bearer ${replaceVariables(
           request.authToken,
           currentVars
         )}`;
       } else if (
-        request.authType === 'basic' &&
+        request.authorizationType === 'basic' &&
         request.authUsername &&
         request.authPassword
       ) {
@@ -247,7 +250,7 @@ export function RequestExecutor({
         );
         processedHeaders['Authorization'] = `Basic ${credentials}`;
       } else if (
-        request.authType === 'apikey' &&
+        request.authorizationType === 'apikey' &&
         request.authApiKey &&
         request.authApiValue
       ) {
@@ -333,23 +336,63 @@ export function RequestExecutor({
   const { data, isLoading, error } = useRequestChainData(chainId || '');
   console.log('Request Chain Data:', data);
 
+  const useExecuteRequestChain = () => {
+    return useMutation({
+      mutationFn: (payload: {
+        requestChainId: string;
+        environmentId: string;
+      }) => executeRequestChain(payload),
+    });
+  };
+  const { mutateAsync: runRequestChain, isPending } = useExecuteRequestChain();
+
   const handleExecuteChain = async () => {
-    // ✅ Save the chain before execution
     console.log('handlesave chain is clicked');
-    const savedChain = await onPreExecute?.();
-    console.log('savedChain response from API:', savedChain);
+
+    // 1️⃣ Save the chain before execution
+    let savedChain;
+    try {
+      savedChain = await onPreExecute?.();
+    } catch (err: any) {
+      toast({
+        title: 'Save Failed',
+        description: err?.message || 'Unable to save chain before execution.',
+        variant: 'destructive',
+      });
+      return;
+    }
 
     if (!savedChain?.id) {
-      console.warn('Execution aborted: Chain not saved properly.');
+      toast({
+        title: 'Validation Error',
+        description: 'Please enter a chain name',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      const execResponse = await runRequestChain({
+        requestChainId: savedChain.id,
+        environmentId: '28e3fcad-2c07-4d51-a9f5-56f4a4f558e1',
+      });
+      console.log('executeRequestChain response:', execResponse);
+    } catch (err: any) {
+      toast({
+        title: 'Execution Failed',
+        description: err?.message || 'Unable to execute request chain.',
+        variant: 'destructive',
+      });
       return;
     }
 
     if (requests.length === 0) return;
 
+    // 3️⃣ Execute individual requests
     setIsExecuting(true);
     setCurrentRequestIndex(0);
     setExecutionLogs([]);
-    onExecutionStateChange?.(true, 0); // notify parent
+    onExecutionStateChange?.(true, 0);
 
     const currentVars = [...allVariables];
     const logs: ExecutionLog[] = [];
@@ -362,43 +405,58 @@ export function RequestExecutor({
       setCurrentRequestIndex(i);
       onExecutionStateChange?.(true, i);
 
-      const log = await executeRequest(request, currentVars);
-      logs.push(log);
-      setExecutionLogs([...logs]); // Update UI
+      try {
+        const log = await executeRequest(request, currentVars);
+        logs.push(log);
+        setExecutionLogs([...logs]);
 
-      if (log.extractedVariables) {
-        Object.entries(log.extractedVariables).forEach(([name, value]) => {
-          const existingIndex = currentVars.findIndex((v) => v.name === name);
-          const newVar: Variable = {
-            id: `${Date.now()}-${Math.random()}`,
-            name,
-            value: String(value),
-            type:
-              typeof value === 'number'
-                ? 'number'
-                : typeof value === 'boolean'
-                ? 'boolean'
-                : 'string',
-            source: 'extracted',
-            extractionPath: request.extractVariables.find(
-              (e) => e.variableName === name
-            )?.path,
-          };
-
-          if (existingIndex >= 0) {
-            currentVars[existingIndex] = {
-              ...currentVars[existingIndex],
-              ...newVar,
+        if (log.extractedVariables) {
+          Object.entries(log.extractedVariables).forEach(([name, value]) => {
+            const existingIndex = currentVars.findIndex((v) => v.name === name);
+            const newVar: Variable = {
+              id: `${Date.now()}-${Math.random()}`,
+              name,
+              value: String(value),
+              type:
+                typeof value === 'number'
+                  ? 'number'
+                  : typeof value === 'boolean'
+                  ? 'boolean'
+                  : 'string',
+              source: 'extracted',
+              extractionPath: request.extractVariables.find(
+                (e) => e.variableName === name
+              )?.path,
             };
-          } else {
-            currentVars.push(newVar);
-            newExtractedVars.push(newVar);
-          }
-        });
-        setAllVariables([...currentVars]);
-      }
 
-      if (log.status === 'error' && request.errorHandling === 'stop') {
+            if (existingIndex >= 0) {
+              currentVars[existingIndex] = {
+                ...currentVars[existingIndex],
+                ...newVar,
+              };
+            } else {
+              currentVars.push(newVar);
+              newExtractedVars.push(newVar);
+            }
+          });
+          setAllVariables([...currentVars]);
+        }
+
+        if (log.status === 'error' && request.errorHandling === 'stop') {
+          toast({
+            title: 'Execution Stopped',
+            description: `Request ${request.name} failed and chain execution was stopped.`,
+            variant: 'destructive',
+          });
+          break;
+        }
+      } catch (err: any) {
+        toast({
+          title: 'Request Execution Error',
+          description:
+            err?.message || `An error occurred in request ${request.name}.`,
+          variant: 'destructive',
+        });
         break;
       }
     }
