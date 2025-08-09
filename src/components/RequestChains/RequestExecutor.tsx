@@ -23,6 +23,7 @@ import { useDataManagementStore } from '@/store/dataManagementStore';
 import { useMutation } from '@tanstack/react-query';
 import { executeRequestChain } from '@/services/executeRequest.service';
 import { toast } from '@/hooks/use-toast';
+import { useExecuteRequestChain } from '@/shared/hooks/requestChain';
 
 interface RequestExecutorProps {
   chainId?: string;
@@ -38,16 +39,6 @@ interface RequestExecutorProps {
     isExecuting: boolean,
     currentRequestIndex: number
   ) => void;
-}
-
-type RequestExecutorPropsNew = {};
-
-interface KeyValuePair {
-  id: string;
-  key: string;
-  value: string;
-  enabled: boolean;
-  description?: string;
 }
 
 export function RequestExecutor({
@@ -68,16 +59,12 @@ export function RequestExecutor({
     variables: storeVariables,
   } = useDataManagementStore();
 
-  console.log('storeVariables:', storeVariables);
-
   const [isExecuting, setIsExecuting] = useState(false);
   const [currentRequestIndex, setCurrentRequestIndex] = useState(-1);
   const [executionLogs, setExecutionLogs] = useState<ExecutionLog[]>([]);
   const [extractedVariables, setExtractedVariables] = useState<Variable[]>([]);
   const [expandedLogs, setExpandedLogs] = useState<Set<string>>(new Set());
   const [allVariables, setAllVariables] = useState<Variable[]>(variables);
-
-  // console.log('calling executor', allVariables);
 
   // Update local variables when prop changes
   React.useEffect(() => {
@@ -91,10 +78,8 @@ export function RequestExecutor({
       const oldResult = result;
       result = result.replace(regex, variable.value);
       if (oldResult !== result) {
-        // console.log(`✅ Replaced {{${variable.name}}} with: ${variable.value}`);
       }
     });
-    console.log('result', result);
     return result;
   };
 
@@ -334,22 +319,10 @@ export function RequestExecutor({
   };
 
   const { data, isLoading, error } = useRequestChainData(chainId || '');
-  console.log('Request Chain Data:', data);
 
-  const useExecuteRequestChain = () => {
-    return useMutation({
-      mutationFn: (payload: {
-        requestChainId: string;
-        environmentId: string;
-      }) => executeRequestChain(payload),
-    });
-  };
   const { mutateAsync: runRequestChain, isPending } = useExecuteRequestChain();
 
   const handleExecuteChain = async () => {
-    console.log('handlesave chain is clicked');
-
-    // 1️⃣ Save the chain before execution
     let savedChain;
     try {
       savedChain = await onPreExecute?.();
@@ -373,10 +346,8 @@ export function RequestExecutor({
 
     try {
       const execResponse = await runRequestChain({
-        requestChainId: savedChain.id,
-        environmentId: '28e3fcad-2c07-4d51-a9f5-56f4a4f558e1',
+        requestChainId: savedChain?.id,
       });
-      console.log('executeRequestChain response:', execResponse);
     } catch (err: any) {
       toast({
         title: 'Execution Failed',
@@ -515,8 +486,6 @@ export function RequestExecutor({
     }
     return body;
   };
-
-  console.log('storeVariables:', storeVariables);
 
   return (
     <div className='bg-card rounded-xl border border-border p-4 sm:p-6'>

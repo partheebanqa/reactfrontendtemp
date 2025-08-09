@@ -623,10 +623,10 @@ export function RequestChainEditor({
       request.authUsername &&
       request.authPassword
     ) {
-      transformedRequest.authorization = {
-        username: request.authUsername,
-        password: request.authPassword,
-      };
+      // transformedRequest.authorization = {
+      //   username: request.authUsername,
+      //   password: request.authPassword,
+      // };
       // Remove the old auth fields
       delete transformedRequest.authUsername;
       delete transformedRequest.authPassword;
@@ -637,11 +637,11 @@ export function RequestChainEditor({
       request.authApiKey &&
       request.authApiValue
     ) {
-      transformedRequest.authorization = {
-        key: request.authApiKey,
-        value: request.authApiValue,
-        addTo: request.authApiLocation || 'header',
-      };
+      // transformedRequest.authorization = {
+      //   key: request.authApiKey,
+      //   value: request.authApiValue,
+      //   addTo: request.authApiLocation || 'header',
+      // };
       // Remove the old auth fields
       delete transformedRequest.authApiKey;
       delete transformedRequest.authApiValue;

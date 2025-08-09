@@ -53,15 +53,9 @@ const EditTestSuiteContent: React.FC = () => {
   // Fix the parameter access by properly handling the params object
   const id = (params as any).id;
   const isCreateMode = location.includes('/create');
-  console.log('Current location:', location);
-  console.log('Is create mode:', isCreateMode);
-  console.log('Params:', params);
-  console.log('ID:', id);
 
   const { environments, activeEnvironment, setActiveEnvironment } =
     useDataManagement();
-
-  console.log('environmentsuseDataManagement:', environments);
 
   const [testSuiteName, setTestSuiteName] = useState('');
   const [description, setDescription] = useState('');

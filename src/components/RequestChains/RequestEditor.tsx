@@ -100,7 +100,6 @@ export function RequestEditor({
     Record<string, any>
   >({});
 
-  console.log('extractedVariablesInRequestEditor:', extractedVariables);
   const [previousExtractions, setPreviousExtractions] = useState<
     DataExtraction[]
   >([]);

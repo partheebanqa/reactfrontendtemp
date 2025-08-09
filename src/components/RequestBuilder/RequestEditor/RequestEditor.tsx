@@ -1,5 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Play, Save, Edit2, Check, X, FolderPlus, Trash, Trash2, Info } from 'lucide-react';
+import {
+  Play,
+  Save,
+  Edit2,
+  Check,
+  X,
+  FolderPlus,
+  Trash,
+  Trash2,
+  Info,
+} from 'lucide-react';
 import { useRequest } from '@/hooks/useRequest';
 import { useCollection } from '@/hooks/useCollection';
 import { useWorkspace } from '@/hooks/useWorkspace';
@@ -10,7 +20,9 @@ import { makeRequest } from '@/services/request.service';
 import { Collection, CollectionRequest } from '@/shared/types/collection';
 import TooltipContainer from '@/components/ui/tooltip-container';
 import KeyValueEditor from '@/components/ui/KeyValueEditor';
-import KeyValueEditorWithFileUpload, { KeyValuePairWithFile } from '@/components/ui/KeyValueEditorWithFileUpload';
+import KeyValueEditorWithFileUpload, {
+  KeyValuePairWithFile,
+} from '@/components/ui/KeyValueEditorWithFileUpload';
 import ToggleSwitch from '@/components/ui/ToggleSwitch';
 import EditableText from '@/components/ui/EditableText';
 import Modal from '@/components/ui/Modal';
@@ -36,9 +48,9 @@ const RequestEditor: React.FC = () => {
     setCollection,
     expandedCollections,
     handleCreateRequest,
-    fetchCollectionRequests
+    fetchCollectionRequests,
   } = useCollection();
-  const { variables, environments, activeEnvironment } = useDataManagement()
+  const { variables, environments, activeEnvironment } = useDataManagement();
   const { error: showError, success: showSuccess } = useToast();
   const { currentWorkspace } = useWorkspace();
   const [activeTab, setActiveTab] = useState<
@@ -87,9 +99,13 @@ const RequestEditor: React.FC = () => {
       tokenType: 'Bearer',
       refreshToken: '',
       scope: '',
-      grantType: 'authorization_code' as 'authorization_code' | 'client_credentials' | 'password' | 'refresh_token',
+      grantType: 'authorization_code' as
+        | 'authorization_code'
+        | 'client_credentials'
+        | 'password'
+        | 'refresh_token',
       redirectUri: '',
-    }
+    },
   });
   const [preRequestScript, setPreRequestScript] = useState('');
   const [testScript, setTestScript] = useState('');
@@ -133,25 +149,30 @@ const RequestEditor: React.FC = () => {
       setBodyType(
         allowedBodyTypes.includes(bodyTypeValue)
           ? (bodyTypeValue as
-            | 'none'
-            | 'json'
-            | 'form-data'
-            | 'x-www-form-urlencoded'
-            | 'raw'
-            | 'binary')
+              | 'none'
+              | 'json'
+              | 'form-data'
+              | 'x-www-form-urlencoded'
+              | 'raw'
+              | 'binary')
           : 'json'
       );
       setBodyContent(activeRequest.bodyRawContent || '');
 
       // Initialize form fields from the request
       try {
-        if (activeRequest.bodyFormData && typeof activeRequest.bodyFormData === 'object') {
-          const formDataFields = Object.entries(activeRequest.bodyFormData).map(([key, value]) => ({
-            key,
-            value: value?.toString() || '',
-            enabled: true,
-            type: 'text' as const
-          }));
+        if (
+          activeRequest.bodyFormData &&
+          typeof activeRequest.bodyFormData === 'object'
+        ) {
+          const formDataFields = Object.entries(activeRequest.bodyFormData).map(
+            ([key, value]) => ({
+              key,
+              value: value?.toString() || '',
+              enabled: true,
+              type: 'text' as const,
+            })
+          );
           setFormFields(formDataFields);
         } else {
           setFormFields([]);
@@ -163,7 +184,10 @@ const RequestEditor: React.FC = () => {
 
       // Initialize URL encoded fields from the request
       try {
-        if (bodyTypeValue === 'x-www-form-urlencoded' && activeRequest.bodyRawContent) {
+        if (
+          bodyTypeValue === 'x-www-form-urlencoded' &&
+          activeRequest.bodyRawContent
+        ) {
           try {
             const urlParams = new URLSearchParams(activeRequest.bodyRawContent);
             const encodedFields: Param[] = [];
@@ -220,12 +244,12 @@ const RequestEditor: React.FC = () => {
           scope: '',
           grantType: 'authorization_code',
           redirectUri: '',
-        }
+        },
       });
       setPreRequestScript('');
       setTestScript('');
     } else {
-      handleCreateRequest()
+      handleCreateRequest();
     }
     setResponseData(null);
   }, [activeRequest]);
@@ -240,16 +264,20 @@ const RequestEditor: React.FC = () => {
       let requestFormData: FormData | undefined;
 
       if (bodyType === 'form-data') {
-        const fileFields = formFields.filter(f => f.enabled && f.type === 'file' && f.value instanceof File);
+        const fileFields = formFields.filter(
+          (f) => f.enabled && f.type === 'file' && f.value instanceof File
+        );
         if (fileFields.length > 0) {
           requestFormData = new FormData();
-          formFields.filter(f => f.enabled).forEach(field => {
-            if (field.type === 'file' && field.value instanceof File) {
-              requestFormData!.append(field.key, field.value, field.fileName);
-            } else {
-              requestFormData!.append(field.key, String(field.value));
-            }
-          });
+          formFields
+            .filter((f) => f.enabled)
+            .forEach((field) => {
+              if (field.type === 'file' && field.value instanceof File) {
+                requestFormData!.append(field.key, field.value, field.fileName);
+              } else {
+                requestFormData!.append(field.key, String(field.value));
+              }
+            });
         }
       }
 
@@ -260,19 +288,29 @@ const RequestEditor: React.FC = () => {
         headers: headers,
         body: requestFormData || bodyContent,
         bodyType: bodyType,
-        formData: bodyType === 'form-data' ? formFields.filter(f => f.enabled).reduce((acc, field) => {
-          // For file fields, store a reference to the file object
-          if (field.type === 'file' && field.value instanceof File) {
-            acc[field.key] = field.value;
-          } else {
-            acc[field.key] = String(field.value);
-          }
-          return acc;
-        }, {} as Record<string, string | File>) : undefined,
-        urlEncodedData: bodyType === 'x-www-form-urlencoded' ? urlEncodedFields.filter(f => f.enabled).reduce((acc, field) => {
-          acc[field.key] = field.value;
-          return acc;
-        }, {} as Record<string, string>) : undefined,
+        formData:
+          bodyType === 'form-data'
+            ? formFields
+                .filter((f) => f.enabled)
+                .reduce((acc, field) => {
+                  // For file fields, store a reference to the file object
+                  if (field.type === 'file' && field.value instanceof File) {
+                    acc[field.key] = field.value;
+                  } else {
+                    acc[field.key] = String(field.value);
+                  }
+                  return acc;
+                }, {} as Record<string, string | File>)
+            : undefined,
+        urlEncodedData:
+          bodyType === 'x-www-form-urlencoded'
+            ? urlEncodedFields
+                .filter((f) => f.enabled)
+                .reduce((acc, field) => {
+                  acc[field.key] = field.value;
+                  return acc;
+                }, {} as Record<string, string>)
+            : undefined,
         authorizationType: authType,
         authorization: {
           token: authType === 'bearer' ? authData.token : '',
@@ -281,27 +319,33 @@ const RequestEditor: React.FC = () => {
           key: authType === 'apiKey' ? authData.key : '',
           value: authType === 'apiKey' ? authData.value : '',
           addTo: authType === 'apiKey' ? authData.addTo : 'header',
-          oauth1: authType === 'oauth1' ? {
-            consumerKey: authData.oauth1.consumerKey,
-            consumerSecret: authData.oauth1.consumerSecret,
-            token: authData.oauth1.token,
-            tokenSecret: authData.oauth1.tokenSecret,
-            signatureMethod: authData.oauth1.signatureMethod,
-            version: authData.oauth1.version,
-            realm: authData.oauth1.realm,
-            nonce: authData.oauth1.nonce,
-            timestamp: authData.oauth1.timestamp,
-          } : undefined,
-          oauth2: authType === 'oauth2' ? {
-            clientId: authData.oauth2.clientId,
-            clientSecret: authData.oauth2.clientSecret,
-            accessToken: authData.oauth2.accessToken,
-            tokenType: authData.oauth2.tokenType,
-            refreshToken: authData.oauth2.refreshToken,
-            scope: authData.oauth2.scope,
-            grantType: authData.oauth2.grantType,
-            redirectUri: authData.oauth2.redirectUri,
-          } : undefined,
+          oauth1:
+            authType === 'oauth1'
+              ? {
+                  consumerKey: authData.oauth1.consumerKey,
+                  consumerSecret: authData.oauth1.consumerSecret,
+                  token: authData.oauth1.token,
+                  tokenSecret: authData.oauth1.tokenSecret,
+                  signatureMethod: authData.oauth1.signatureMethod,
+                  version: authData.oauth1.version,
+                  realm: authData.oauth1.realm,
+                  nonce: authData.oauth1.nonce,
+                  timestamp: authData.oauth1.timestamp,
+                }
+              : undefined,
+          oauth2:
+            authType === 'oauth2'
+              ? {
+                  clientId: authData.oauth2.clientId,
+                  clientSecret: authData.oauth2.clientSecret,
+                  accessToken: authData.oauth2.accessToken,
+                  tokenType: authData.oauth2.tokenType,
+                  refreshToken: authData.oauth2.refreshToken,
+                  scope: authData.oauth2.scope,
+                  grantType: authData.oauth2.grantType,
+                  redirectUri: authData.oauth2.redirectUri,
+                }
+              : undefined,
         },
       };
       const response = await makeRequest(requestData);
@@ -355,7 +399,10 @@ const RequestEditor: React.FC = () => {
       );
     } catch (error) {
       console.error('Error saving request name:', error);
-      showError('Rename Failed', 'An error occurred while renaming the request name.');
+      showError(
+        'Rename Failed',
+        'An error occurred while renaming the request name.'
+      );
     }
   };
 
@@ -383,8 +430,6 @@ const RequestEditor: React.FC = () => {
       }
     }
   };
-
-
 
   const handleConfirmSave = async () => {
     try {
@@ -421,40 +466,54 @@ const RequestEditor: React.FC = () => {
         );
         return;
       }
-      let requestCount: number= 0; 
-      if(activeCollection) {
-          const response = await fetchCollectionRequests.mutateAsync(activeCollection.id);
-          requestCount = response.length;
-      } 
-    
+      let requestCount: number = 0;
+      if (activeCollection) {
+        const response = await fetchCollectionRequests.mutateAsync(
+          activeCollection.id
+        );
+        requestCount = response.length;
+      }
+
       const requestData = {
-        collectionId: createdCollectionId ? createdCollectionId : activeCollection?.id,
+        collectionId: createdCollectionId
+          ? createdCollectionId
+          : activeCollection?.id,
         description: '',
         name: activeRequest.name || 'New Request',
         order: (requestCount || 0) + 1,
         method: method,
         url: url,
         bodyType: bodyType == 'json' ? 'raw' : bodyType,
-        bodyFormData: bodyType === 'form-data' ? formFields.filter(f => f.enabled).reduce((acc: Record<string, any>, field) => {
-          if (field.key) {
-            if (field.type === 'file' && field.value instanceof File) {
-              acc[field.key] = field.value;
-            } else {
-              acc[field.key] = String(field.value);
-            }
-          }
-          return acc;
-        }, {}) : null,
-        bodyRawContent: bodyType === 'raw' || bodyType === 'json' ? bodyContent :
-          bodyType === 'x-www-form-urlencoded' ?
-            new URLSearchParams(
-              urlEncodedFields.filter(f => f.enabled).reduce((acc, field) => {
-                if (field.key) {
-                  acc[field.key] = field.value;
-                }
-                return acc;
-              }, {} as Record<string, string>)
-            ).toString() : null,
+        bodyFormData:
+          bodyType === 'form-data'
+            ? formFields
+                .filter((f) => f.enabled)
+                .reduce((acc: Record<string, any>, field) => {
+                  if (field.key) {
+                    if (field.type === 'file' && field.value instanceof File) {
+                      acc[field.key] = field.value;
+                    } else {
+                      acc[field.key] = String(field.value);
+                    }
+                  }
+                  return acc;
+                }, {})
+            : null,
+        bodyRawContent:
+          bodyType === 'raw' || bodyType === 'json'
+            ? bodyContent
+            : bodyType === 'x-www-form-urlencoded'
+            ? new URLSearchParams(
+                urlEncodedFields
+                  .filter((f) => f.enabled)
+                  .reduce((acc, field) => {
+                    if (field.key) {
+                      acc[field.key] = field.value;
+                    }
+                    return acc;
+                  }, {} as Record<string, string>)
+              ).toString()
+            : null,
         authorizationType: authType,
         authorization: {
           token: authType === 'bearer' ? authData.token : '',
@@ -463,33 +522,38 @@ const RequestEditor: React.FC = () => {
           key: authType === 'apiKey' ? authData.key : '',
           value: authType === 'apiKey' ? authData.value : '',
           addTo: authType === 'apiKey' ? authData.addTo : 'header',
-          oauth1: authType === 'oauth1' ? {
-            consumerKey: authData.oauth1.consumerKey,
-            consumerSecret: authData.oauth1.consumerSecret,
-            token: authData.oauth1.token,
-            tokenSecret: authData.oauth1.tokenSecret,
-            signatureMethod: authData.oauth1.signatureMethod,
-            version: authData.oauth1.version,
-            realm: authData.oauth1.realm,
-            nonce: authData.oauth1.nonce,
-            timestamp: authData.oauth1.timestamp,
-          } : undefined,
-          oauth2: authType === 'oauth2' ? {
-            clientId: authData.oauth2.clientId,
-            clientSecret: authData.oauth2.clientSecret,
-            accessToken: authData.oauth2.accessToken,
-            tokenType: authData.oauth2.tokenType,
-            refreshToken: authData.oauth2.refreshToken,
-            scope: authData.oauth2.scope,
-            grantType: authData.oauth2.grantType,
-            redirectUri: authData.oauth2.redirectUri,
-          } : undefined,
+          oauth1:
+            authType === 'oauth1'
+              ? {
+                  consumerKey: authData.oauth1.consumerKey,
+                  consumerSecret: authData.oauth1.consumerSecret,
+                  token: authData.oauth1.token,
+                  tokenSecret: authData.oauth1.tokenSecret,
+                  signatureMethod: authData.oauth1.signatureMethod,
+                  version: authData.oauth1.version,
+                  realm: authData.oauth1.realm,
+                  nonce: authData.oauth1.nonce,
+                  timestamp: authData.oauth1.timestamp,
+                }
+              : undefined,
+          oauth2:
+            authType === 'oauth2'
+              ? {
+                  clientId: authData.oauth2.clientId,
+                  clientSecret: authData.oauth2.clientSecret,
+                  accessToken: authData.oauth2.accessToken,
+                  tokenType: authData.oauth2.tokenType,
+                  refreshToken: authData.oauth2.refreshToken,
+                  scope: authData.oauth2.scope,
+                  grantType: authData.oauth2.grantType,
+                  redirectUri: authData.oauth2.redirectUri,
+                }
+              : undefined,
         },
         params: params,
         headers: headers,
         // variables: activeRequest.variables || {},
       };
-      console.log("🚀 ~ handleConfirmSave ~ requestData:", requestData,activeCollection)
       await addRequestMutation.mutateAsync(requestData);
       setShowSaveModal(false);
       setNewCollectionName('');
@@ -507,51 +571,47 @@ const RequestEditor: React.FC = () => {
   };
 
   const substituteVariables = (text: string): string => {
-    let result = text
-    variables.forEach(variable => {
-      const regex = new RegExp(`{{${variable.name}}}`, 'g')
-      result = result.replace(regex, variable.initialValue)
-    })
-    return result
-  }
-
+    let result = text;
+    variables.forEach((variable) => {
+      const regex = new RegExp(`{{${variable.name}}}`, 'g');
+      result = result.replace(regex, variable.initialValue);
+    });
+    return result;
+  };
 
   const buildFinalUrl = (): string => {
     if (!url) return '';
-    let finalUrl = url
-    console.log("🚀 ~ buildFinalUrl ~ url:", url)
+    let finalUrl = url;
 
     // Apply variable substitution
-    finalUrl = substituteVariables(finalUrl)
+    finalUrl = substituteVariables(finalUrl);
 
-    const baseUrVar = variables.find(v => v.name === 'baseUrl')?.initialValue || ''
-    console.log("🚀 ~ buildFinalUrl ~ baseUrVar:", baseUrVar)
+    const baseUrVar =
+      variables.find((v) => v.name === 'baseUrl')?.initialValue || '';
 
     // Apply environment base URL if not "no-environment"
-    console.log("🚀 ~ buildFinalUrl ~ finalUrl:", finalUrl)
     if (baseUrVar) {
       try {
-        const originalUrl = new URL(finalUrl)
-        console.log("🚀 ~ buildFinalUrl ~ originalUrl:", originalUrl)
-        const pathAndQuery = originalUrl.pathname + originalUrl.search + originalUrl.hash
-        console.log("🚀 ~ buildFinalUrl ~ pathAndQuery:", pathAndQuery)
+        const originalUrl = new URL(finalUrl);
+        const pathAndQuery =
+          originalUrl.pathname + originalUrl.search + originalUrl.hash;
 
         // Combine activeEnvironment base URL with the path from original URL
-        const baseUrl = baseUrVar.replace(/\/$/, '')
-        console.log("🚀 ~ buildFinalUrl ~ baseUrl:", baseUrl)
-        finalUrl = `${baseUrl}${pathAndQuery}`
-        console.log("🚀 ~ buildFinalUrl ~ finalUrl:", finalUrl)
+        const baseUrl = baseUrVar.replace(/\/$/, '');
+        finalUrl = `${baseUrl}${pathAndQuery}`;
       } catch (error) {
-        if (!finalUrl.startsWith('http://') && !finalUrl.startsWith('https://')) {
-          finalUrl = finalUrl.startsWith('/') ? finalUrl : `/${finalUrl}`
-          finalUrl = `${baseUrVar.replace(/\/$/, '')}${finalUrl}`
+        if (
+          !finalUrl.startsWith('http://') &&
+          !finalUrl.startsWith('https://')
+        ) {
+          finalUrl = finalUrl.startsWith('/') ? finalUrl : `/${finalUrl}`;
+          finalUrl = `${baseUrVar.replace(/\/$/, '')}${finalUrl}`;
         }
       }
     }
-    return finalUrl
-  }
-  const previewUrl = buildFinalUrl()
-  console.log("🚀 ~ RequestEditor ~ previewUrl:", previewUrl)
+    return finalUrl;
+  };
+  const previewUrl = buildFinalUrl();
 
   const handleCancelSave = () => {
     setShowSaveModal(false);
@@ -597,7 +657,10 @@ const RequestEditor: React.FC = () => {
 
   // Form data field handlers
   const addFormField = () => {
-    setFormFields([...formFields, { key: '', value: '', enabled: true, type: 'text' }]);
+    setFormFields([
+      ...formFields,
+      { key: '', value: '', enabled: true, type: 'text' },
+    ]);
   };
 
   const updateFormField = (
@@ -616,7 +679,10 @@ const RequestEditor: React.FC = () => {
 
   // URL encoded field handlers
   const addUrlEncodedField = () => {
-    setUrlEncodedFields([...urlEncodedFields, { key: '', value: '', enabled: true }]);
+    setUrlEncodedFields([
+      ...urlEncodedFields,
+      { key: '', value: '', enabled: true },
+    ]);
   };
 
   const updateUrlEncodedField = (
@@ -625,7 +691,10 @@ const RequestEditor: React.FC = () => {
     value: string | boolean
   ) => {
     const newUrlEncodedFields = [...urlEncodedFields];
-    newUrlEncodedFields[index] = { ...newUrlEncodedFields[index], [field]: value };
+    newUrlEncodedFields[index] = {
+      ...newUrlEncodedFields[index],
+      [field]: value,
+    };
     setUrlEncodedFields(newUrlEncodedFields);
   };
 
@@ -645,7 +714,10 @@ const RequestEditor: React.FC = () => {
       HEAD: 'text-gray-600 bg-gray-50 border-gray-200',
       OPTIONS: 'text-indigo-600 bg-indigo-50 border-indigo-200',
     };
-    return colors[method as keyof typeof colors] || 'text-gray-600 bg-gray-50 border-gray-200';
+    return (
+      colors[method as keyof typeof colors] ||
+      'text-gray-600 bg-gray-50 border-gray-200'
+    );
   };
 
   if (!activeRequest) {
@@ -672,9 +744,9 @@ const RequestEditor: React.FC = () => {
             <EditableText
               value={activeRequest.name || ''}
               onSave={handleSaveName}
-              placeholder="Request Name"
-              fontSize="lg"
-              fontWeight="semibold"
+              placeholder='Request Name'
+              fontSize='lg'
+              fontWeight='semibold'
             />
           </div>
           <HelpLink />
@@ -694,14 +766,18 @@ const RequestEditor: React.FC = () => {
           <select
             value={method}
             onChange={(e) => setMethod(e.target.value as RequestMethod)}
-            className={`w-full sm:w-auto border rounded-md px-3 py-2 text-sm font-medium hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all duration-150 ${getMethodColor(method)}`}
-            style={{ appearance: 'auto' }} /* Ensures dropdown styling is maintained */
+            className={`w-full sm:w-auto border rounded-md px-3 py-2 text-sm font-medium hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all duration-150 ${getMethodColor(
+              method
+            )}`}
+            style={{
+              appearance: 'auto',
+            }} /* Ensures dropdown styling is maintained */
           >
             {methods.map((m) => (
               <option
                 key={m}
                 value={m}
-                className="bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-200" /* Normal styling for options */
+                className='bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-200' /* Normal styling for options */
               >
                 {m}
               </option>
@@ -730,16 +806,18 @@ const RequestEditor: React.FC = () => {
               </span>
             </button>
 
-            <TooltipContainer text='Save request' children={
-              <button
-                onClick={handleSaveRequest}
-                className='border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 px-3 py-2 rounded-md'
-                aria-label='Save request'
-              >
-                <Save className='h-4 w-4' />
-              </button>
-            } />
-
+            <TooltipContainer
+              text='Save request'
+              children={
+                <button
+                  onClick={handleSaveRequest}
+                  className='border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 px-3 py-2 rounded-md'
+                  aria-label='Save request'
+                >
+                  <Save className='h-4 w-4' />
+                </button>
+              }
+            />
 
             {/* <button
               className="border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 px-3 py-2 rounded-md"
@@ -750,16 +828,18 @@ const RequestEditor: React.FC = () => {
           </div>
         </div>
 
-        {previewUrl && <div className="mt-2 mb-1">
-          <div className="bg-gray-50 dark:bg-gray-800 rounded px-3 py-2 flex gap-2  items-center">
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              <span className="font-medium">Final URL Preview:</span>
-            </p>
-            <p className="text-sm text-blue-600 dark:text-blue-400 font-mono break-all">
-              {previewUrl}
-            </p>
+        {previewUrl && (
+          <div className='mt-2 mb-1'>
+            <div className='bg-gray-50 dark:bg-gray-800 rounded px-3 py-2 flex gap-2  items-center'>
+              <p className='text-sm text-gray-600 dark:text-gray-400'>
+                <span className='font-medium'>Final URL Preview:</span>
+              </p>
+              <p className='text-sm text-blue-600 dark:text-blue-400 font-mono break-all'>
+                {previewUrl}
+              </p>
+            </div>
           </div>
-        </div>}
+        )}
       </div>
 
       {/* Request Tabs */}
@@ -787,9 +867,10 @@ const RequestEditor: React.FC = () => {
               onClick={() => setActiveTab(tab.id as any)}
               className={`
                 py-4 px-2 sm:px-4 border-b-2 font-medium text-sm transition-colors whitespace-nowrap
-                ${activeTab === tab.id
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                ${
+                  activeTab === tab.id
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }
               `}
             >
@@ -812,9 +893,9 @@ const RequestEditor: React.FC = () => {
             onAdd={addParam}
             onUpdate={updateParam}
             onRemove={removeParam}
-            title="Query Parameters"
-            addButtonLabel="Add Parameter"
-            emptyMessage="No query parameters added yet."
+            title='Query Parameters'
+            addButtonLabel='Add Parameter'
+            emptyMessage='No query parameters added yet.'
           />
         )}
 
@@ -824,9 +905,9 @@ const RequestEditor: React.FC = () => {
             onAdd={addHeader}
             onUpdate={updateHeader}
             onRemove={removeHeader}
-            title="Headers"
-            addButtonLabel="Add Header"
-            emptyMessage="No headers added yet."
+            title='Headers'
+            addButtonLabel='Add Header'
+            emptyMessage='No headers added yet.'
           />
         )}
 
@@ -870,8 +951,11 @@ const RequestEditor: React.FC = () => {
 
             {bodyType === 'form-data' && (
               <>
-                <div className="mb-2 text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 p-3 rounded-md border border-gray-200 dark:border-gray-700">
-                  <p>Form fields support both text values and file uploads. Click the "File" button next to any field to upload a file.</p>
+                <div className='mb-2 text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 p-3 rounded-md border border-gray-200 dark:border-gray-700'>
+                  <p>
+                    Form fields support both text values and file uploads. Click
+                    the "File" button next to any field to upload a file.
+                  </p>
                 </div>
                 <KeyValueEditorWithFileUpload
                   items={formFields}
@@ -886,9 +970,16 @@ const RequestEditor: React.FC = () => {
             )}
 
             {bodyType === 'x-www-form-urlencoded' && (
-              <KeyValueEditor items={urlEncodedFields} onAdd={addUrlEncodedField} onUpdate={updateUrlEncodedField} onRemove={removeUrlEncodedField} title='URL encoded fields' addButtonLabel='Add Field' emptyMessage='No URL encoded fields added yet.' />
+              <KeyValueEditor
+                items={urlEncodedFields}
+                onAdd={addUrlEncodedField}
+                onUpdate={updateUrlEncodedField}
+                onRemove={removeUrlEncodedField}
+                title='URL encoded fields'
+                addButtonLabel='Add Field'
+                emptyMessage='No URL encoded fields added yet.'
+              />
             )}
-
 
             {bodyType === 'raw' && (
               <textarea
@@ -1071,7 +1162,10 @@ const RequestEditor: React.FC = () => {
                     onChange={(e) =>
                       setAuthData({
                         ...authData,
-                        oauth1: { ...authData.oauth1, consumerKey: e.target.value }
+                        oauth1: {
+                          ...authData.oauth1,
+                          consumerKey: e.target.value,
+                        },
                       })
                     }
                     placeholder='Enter consumer key'
@@ -1088,7 +1182,10 @@ const RequestEditor: React.FC = () => {
                     onChange={(e) =>
                       setAuthData({
                         ...authData,
-                        oauth1: { ...authData.oauth1, consumerSecret: e.target.value }
+                        oauth1: {
+                          ...authData.oauth1,
+                          consumerSecret: e.target.value,
+                        },
                       })
                     }
                     placeholder='Enter consumer secret'
@@ -1105,7 +1202,7 @@ const RequestEditor: React.FC = () => {
                     onChange={(e) =>
                       setAuthData({
                         ...authData,
-                        oauth1: { ...authData.oauth1, token: e.target.value }
+                        oauth1: { ...authData.oauth1, token: e.target.value },
                       })
                     }
                     placeholder='Enter access token'
@@ -1122,7 +1219,10 @@ const RequestEditor: React.FC = () => {
                     onChange={(e) =>
                       setAuthData({
                         ...authData,
-                        oauth1: { ...authData.oauth1, tokenSecret: e.target.value }
+                        oauth1: {
+                          ...authData.oauth1,
+                          tokenSecret: e.target.value,
+                        },
                       })
                     }
                     placeholder='Enter token secret'
@@ -1138,7 +1238,10 @@ const RequestEditor: React.FC = () => {
                     onChange={(e) =>
                       setAuthData({
                         ...authData,
-                        oauth1: { ...authData.oauth1, signatureMethod: e.target.value }
+                        oauth1: {
+                          ...authData.oauth1,
+                          signatureMethod: e.target.value,
+                        },
                       })
                     }
                     className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-800 text-sm font-medium hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all duration-150'
@@ -1151,7 +1254,8 @@ const RequestEditor: React.FC = () => {
                 </div>
                 <div>
                   <p className='mt-1 text-xs text-gray-500 dark:text-gray-400'>
-                    OAuth 1.0 parameters will be automatically generated and added to the Authorization header.
+                    OAuth 1.0 parameters will be automatically generated and
+                    added to the Authorization header.
                   </p>
                 </div>
               </div>
@@ -1168,13 +1272,20 @@ const RequestEditor: React.FC = () => {
                     onChange={(e) =>
                       setAuthData({
                         ...authData,
-                        oauth2: { ...authData.oauth2, grantType: e.target.value as any }
+                        oauth2: {
+                          ...authData.oauth2,
+                          grantType: e.target.value as any,
+                        },
                       })
                     }
                     className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-800 text-sm font-medium hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all duration-150'
                   >
-                    <option value='authorization_code'>Authorization Code</option>
-                    <option value='client_credentials'>Client Credentials</option>
+                    <option value='authorization_code'>
+                      Authorization Code
+                    </option>
+                    <option value='client_credentials'>
+                      Client Credentials
+                    </option>
                     <option value='password'>Password</option>
                     <option value='refresh_token'>Refresh Token</option>
                   </select>
@@ -1189,7 +1300,10 @@ const RequestEditor: React.FC = () => {
                     onChange={(e) =>
                       setAuthData({
                         ...authData,
-                        oauth2: { ...authData.oauth2, accessToken: e.target.value }
+                        oauth2: {
+                          ...authData.oauth2,
+                          accessToken: e.target.value,
+                        },
                       })
                     }
                     placeholder='Enter access token'
@@ -1206,7 +1320,10 @@ const RequestEditor: React.FC = () => {
                     onChange={(e) =>
                       setAuthData({
                         ...authData,
-                        oauth2: { ...authData.oauth2, clientId: e.target.value }
+                        oauth2: {
+                          ...authData.oauth2,
+                          clientId: e.target.value,
+                        },
                       })
                     }
                     placeholder='Enter client ID'
@@ -1223,7 +1340,10 @@ const RequestEditor: React.FC = () => {
                     onChange={(e) =>
                       setAuthData({
                         ...authData,
-                        oauth2: { ...authData.oauth2, clientSecret: e.target.value }
+                        oauth2: {
+                          ...authData.oauth2,
+                          clientSecret: e.target.value,
+                        },
                       })
                     }
                     placeholder='Enter client secret'
@@ -1241,7 +1361,10 @@ const RequestEditor: React.FC = () => {
                       onChange={(e) =>
                         setAuthData({
                           ...authData,
-                          oauth2: { ...authData.oauth2, redirectUri: e.target.value }
+                          oauth2: {
+                            ...authData.oauth2,
+                            redirectUri: e.target.value,
+                          },
                         })
                       }
                       placeholder='Enter redirect URI'
@@ -1259,7 +1382,7 @@ const RequestEditor: React.FC = () => {
                     onChange={(e) =>
                       setAuthData({
                         ...authData,
-                        oauth2: { ...authData.oauth2, scope: e.target.value }
+                        oauth2: { ...authData.oauth2, scope: e.target.value },
                       })
                     }
                     placeholder='Enter scope (space-separated)'
@@ -1268,7 +1391,8 @@ const RequestEditor: React.FC = () => {
                 </div>
                 <div>
                   <p className='mt-1 text-xs text-gray-500 dark:text-gray-400'>
-                    OAuth 2.0 access token will be sent as a Bearer token in the Authorization header.
+                    OAuth 2.0 access token will be sent as a Bearer token in the
+                    Authorization header.
                   </p>
                 </div>
               </div>
@@ -1347,7 +1471,9 @@ const RequestEditor: React.FC = () => {
               <ToggleSwitch
                 id='followRedirects'
                 checked={settings.followRedirects}
-                onChange={(checked) => setSettings({ ...settings, followRedirects: checked })}
+                onChange={(checked) =>
+                  setSettings({ ...settings, followRedirects: checked })
+                }
                 label='Follow Redirects'
                 description='Automatically follow HTTP redirects'
               />
@@ -1376,7 +1502,9 @@ const RequestEditor: React.FC = () => {
               <ToggleSwitch
                 id='sslVerification'
                 checked={settings.sslVerification}
-                onChange={(checked) => setSettings({ ...settings, sslVerification: checked })}
+                onChange={(checked) =>
+                  setSettings({ ...settings, sslVerification: checked })
+                }
                 label='SSL Certificate Verification'
                 description='Verify SSL certificates when making HTTPS requests'
               />
@@ -1405,7 +1533,7 @@ const RequestEditor: React.FC = () => {
       <Modal
         isOpen={showSaveModal}
         onClose={handleCancelSave}
-        title="Save Request"
+        title='Save Request'
         footer={
           <div className='flex justify-end space-x-3'>
             <button
@@ -1435,22 +1563,19 @@ const RequestEditor: React.FC = () => {
           {!isCreatingCollection ? (
             <div className='space-y-2'>
               <select
-                onChange={(e) =>{                  
+                onChange={(e) => {
                   setActiveCollection(
-                    collections.find((c) => c.id === e.target.value) ||
-                    null
-                  )
-                }
-                }
+                    collections.find((c) => c.id === e.target.value) || null
+                  );
+                }}
                 className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150'
               >
                 <option value=''>Select a collection</option>
-                {collections
-                  .map((collection) => (
-                    <option key={collection.id} value={collection.id}>
-                      {collection.name}
-                    </option>
-                  ))}
+                {collections.map((collection) => (
+                  <option key={collection.id} value={collection.id}>
+                    {collection.name}
+                  </option>
+                ))}
               </select>
 
               <button

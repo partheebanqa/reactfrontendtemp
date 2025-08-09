@@ -174,7 +174,7 @@ export function VariableExtractor({
                         : 'x-request-id'
                     }
                   />
-                  {extraction.source && (
+                  {/* {extraction.source && (
                     <div className='mt-1'>
                       <p className='text-xs text-gray-500'>Examples:</p>
                       <div className='flex flex-wrap gap-1 mt-1'>
@@ -193,7 +193,7 @@ export function VariableExtractor({
                           ))}
                       </div>
                     </div>
-                  )}
+                  )} */}
                 </div>
 
                 <div className='flex items-end'>

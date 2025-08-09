@@ -72,8 +72,6 @@ export function VariablesTable({
     'request' | 'variable' | 'status' | 'timestamp'
   >('request');
 
-  console.log('extractedVariablesInVariableTable:', extractedVariables);
-
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
@@ -207,7 +205,6 @@ export function VariablesTable({
 
   const [copied, setCopied] = useState(false);
 
-  // console.log('copied:', copied);
   const { toast } = useToast();
 
   const handleCopy = async (value: string) => {

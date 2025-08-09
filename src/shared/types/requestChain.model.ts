@@ -237,5 +237,4 @@ export interface ExecutionResponse {
 
 export interface ExecutionRequestChainPayload {
   requestChainId: string;
-  environmentId?: string;
 }

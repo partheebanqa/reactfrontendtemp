@@ -182,8 +182,6 @@ const Sidebar: React.FC = () => {
   const { user, logoutMutation } = useAuth();
   const { currentWorkspace } = useWorkspace();
 
-  console.log('currentWorkspace:', currentWorkspace);
-
   const { hasFeatureAccess, subscriptionPlan } = useFeatureGate();
   const [utilsExpanded, setUtilsExpanded] = useState(false);
   const [collapsed, setCollapsed] = useState(false);

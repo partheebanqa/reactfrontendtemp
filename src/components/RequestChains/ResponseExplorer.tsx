@@ -50,8 +50,6 @@ export function ResponseExplorer({
   handleCopy,
   copied,
 }: ResponseExplorerProps) {
-  // console.log('Extracted Variables:', extractedVariables);
-
   const [activeTab, setActiveTab] = useState<'body' | 'headers' | 'cookies'>(
     'body'
   );
