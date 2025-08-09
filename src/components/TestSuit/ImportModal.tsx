@@ -59,8 +59,6 @@ export const ImportModal: React.FC<ImportModalProps> = ({
     null
   );
 
-  // console.log('apidate123:', apiData);
-
   const collections: TransformedCollection[] = React.useMemo(() => {
     if (!apiData?.collections) return [];
 

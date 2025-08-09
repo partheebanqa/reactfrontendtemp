@@ -46,8 +46,6 @@ export default function EnvironmentDropdown({
   const { environments, activeEnvironment, setActiveEnvironment, variables } =
     useDataManagement();
 
-  console.log('activeEnvironment:', activeEnvironment);
-
   const [_, setLocation] = useLocation();
 
   const getEnvironmentColor = (environment: Environment) => {

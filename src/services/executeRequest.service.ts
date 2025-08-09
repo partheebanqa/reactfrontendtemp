@@ -6,6 +6,7 @@ import {
   ExecutionLog,
   ExecuteRequestPayload,
   ExecutionResponse,
+  ExecutionRequestChainPayload,
 } from '@/shared/types/requestChain.model';
 
 export const executeRequest = async (
@@ -55,9 +56,9 @@ export const buildRequestPayload = (
       bodyType: request.bodyType,
       bodyFormData: request.bodyFormData ?? null,
       bodyRawContent: replace(request.body ?? ''),
-      authorizationType: request.authType,
+      authorizationType: request.authorizationType,
       authorization:
-        request.authType === 'bearer'
+        request.authorizationType === 'bearer'
           ? { token: replace(request.authToken ?? '') }
           : undefined,
       headers: (request.headers || [])
@@ -76,4 +77,25 @@ export const buildRequestPayload = (
         })),
     },
   };
+};
+
+export const executeRequestChain = async (
+  payload: ExecutionRequestChainPayload
+): Promise<ExecutionResponse> => {
+  try {
+    const response = await apiRequest('POST', `${API_EXECUTOR}/request-chain`, {
+      body: JSON.stringify(payload),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to execute request: ${response.statusText}`);
+    }
+
+    return await response.json();
+  } catch (error: any) {
+    throw new Error(error.message || 'Failed to execute request');
+  }
 };

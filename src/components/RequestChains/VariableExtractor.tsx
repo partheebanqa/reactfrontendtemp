@@ -20,21 +20,21 @@ export function VariableExtractor({
       transform: '',
     };
 
-    onUpdate([...request.dataExtractions, newExtraction]);
+    onUpdate([...request.extractVariables, newExtraction]);
   };
 
   const updateExtraction = (
     index: number,
     updates: Partial<DataExtraction>
   ) => {
-    const updated = request.dataExtractions.map((extraction, i) =>
+    const updated = request.extractVariables.map((extraction, i) =>
       i === index ? { ...extraction, ...updates } : extraction
     );
     onUpdate(updated);
   };
 
   const removeExtraction = (index: number) => {
-    const updated = request.dataExtractions.filter((_, i) => i !== index);
+    const updated = request.extractVariables.filter((_, i) => i !== index);
     onUpdate(updated);
   };
 
@@ -115,9 +115,9 @@ export function VariableExtractor({
         </div>
       )}
 
-      {request.dataExtractions.length > 0 ? (
+      {request.extractVariables.length > 0 ? (
         <div className='space-y-3'>
-          {request.dataExtractions.map((extraction, index) => (
+          {request.extractVariables.map((extraction, index) => (
             <div key={index} className='border border-gray-200 rounded-lg p-4'>
               <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4'>
                 <div>
@@ -174,7 +174,7 @@ export function VariableExtractor({
                         : 'x-request-id'
                     }
                   />
-                  {extraction.source && (
+                  {/* {extraction.source && (
                     <div className='mt-1'>
                       <p className='text-xs text-gray-500'>Examples:</p>
                       <div className='flex flex-wrap gap-1 mt-1'>
@@ -193,7 +193,7 @@ export function VariableExtractor({
                           ))}
                       </div>
                     </div>
-                  )}
+                  )} */}
                 </div>
 
                 <div className='flex items-end'>

@@ -27,7 +27,12 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { RequestChain } from '@/shared/types/requestChain.model';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '../ui/tooltip';
 import HelpLink from '../HelpModal/HelpLink';
 
 interface RequestChainsListProps {
@@ -36,6 +41,7 @@ interface RequestChainsListProps {
   onCreateChain: () => void;
   onEditChain: (chain: RequestChain) => void;
   onDeleteChain: (chainId: string) => void;
+  onCloneChain: (chainId: string) => void;
   onToggleChain: (chainId: string) => void;
 }
 
@@ -76,6 +82,7 @@ export function RequestChainsList({
   onCreateChain,
   onEditChain,
   onDeleteChain,
+  onCloneChain,
   onToggleChain,
 }: RequestChainsListProps) {
   const [searchTerm, setSearchTerm] = useState('');
@@ -162,7 +169,6 @@ export function RequestChainsList({
           </Button>
           <HelpLink />
         </div>
-
       </div>
 
       {/* Filters and Search */}
@@ -255,17 +261,17 @@ export function RequestChainsList({
                       </p>
 
                       <div className='flex items-center space-x-4 mt-2 text-sm text-muted-foreground'>
-                        <span>{chain?.requests?.length} steps</span>
+                        <span>{chain?.chainRequests?.length} steps</span>
                         <span>•</span>
                         <span>
-                          {chain.requests.map((r) => r.name).join(', ')}
+                          {chain.chainRequests.map((r) => r.name).join(', ')}
                         </span>
                       </div>
 
                       <div className='flex items-center space-x-6 mt-3'>
                         <div className='text-center'>
                           <p className='text-sm font-medium'>
-                            {chain.requests.length}
+                            {chain.chainRequests.length}
                           </p>
                           <p className='text-xs text-muted-foreground'>
                             Requests
@@ -291,8 +297,8 @@ export function RequestChainsList({
                           <p className='text-sm font-medium'>
                             {chain.lastExecuted
                               ? new Date(
-                                chain.lastExecuted
-                              ).toLocaleDateString()
+                                  chain.lastExecuted
+                                ).toLocaleDateString()
                               : 'Never'}
                           </p>
                           <p className='text-xs text-muted-foreground'>
@@ -358,7 +364,7 @@ export function RequestChainsList({
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent>
-                          {chain.enabled ? 'Disable Chain' : 'Enable Chain'}
+                          {chain.enabled ? 'Execute Chain' : 'Executing'}
                         </TooltipContent>
                       </Tooltip>
 
@@ -384,6 +390,7 @@ export function RequestChainsList({
                             variant='ghost'
                             size='sm'
                             className='text-muted-foreground hover:text-foreground'
+                            onClick={() => onCloneChain(chain.id)}
                           >
                             <Copy className='w-4 h-4' />
                           </Button>
@@ -420,7 +427,6 @@ export function RequestChainsList({
                         <TooltipContent>Delete Chain</TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
-
                   </div>
                 </div>
               </CardContent>

@@ -104,30 +104,30 @@ export const getRequestChains = async (
 
     const data = await response.json();
 
+    console.log('data123:', data);
+
     // Map the API response to the RequestChain interface
     const mappedChains: RequestChain[] = data.requestChains.map(
       (chain: any) => ({
         id: chain.id,
         workspaceId: chain.workspaceId,
         name: chain.name,
-        // Provide default or null values for properties not present in the API response
-        requests: [], // Assuming empty if not provided
-        description: '', // Assuming empty if not provided
-        variables: [], // Assuming empty if not provided
+        chainRequests: [],
+        description: '',
+        variables: [],
         schedule: {
           enabled: false,
           type: 'once',
           startDate: '',
           timezone: '',
-        }, // Default schedule
-        enabled: true, // Default to enabled, or infer from another field if available
+        },
+        enabled: true,
         createdAt: chain.createdAt,
         updatedAt: chain.updatedAt,
-        lastExecuted: null, // Assuming null if not provided
-        executionCount: 0, // Assuming 0 if not provided
-        successRate: 0, // Assuming 0 if not provided
-        // Add other properties as needed, providing defaults if they are missing
-        isImportant: chain.isImportant || false, // Map isImportant if needed
+        lastExecuted: null,
+        executionCount: 0,
+        successRate: 0,
+        isImportant: chain.isImportant || false,
       })
     );
 
@@ -184,5 +184,61 @@ export const getRequestChainData = async (chainId: string) => {
     const data = await response.json();
   } catch (error: any) {
     throw new Error(error.message || 'Failed to fetch test suite');
+  }
+};
+
+export const getRequestChainById = async (
+  chainId: string
+): Promise<RequestChain> => {
+  const response = await apiRequest('GET', `${API_REQUEST_CHAIN}/${chainId}`);
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch request chain with ID: ${chainId}`);
+  }
+
+  const data = await response.json();
+
+  // Transform the API response to match our RequestChain type
+  // The API returns chainRequests, but our components expect both chainRequests and requests
+  const transformedChain: RequestChain = {
+    ...data,
+    requests: data.chainRequests || [], // Map chainRequests to requests for backward compatibility
+    chainRequests: data.chainRequests || [], // Keep chainRequests as primary
+    variables: data.variables || [],
+    environment: data.environmentId || 'dev',
+  };
+
+  return transformedChain;
+};
+
+export const duplicateRequestChainById = async (
+  chainId: string
+): Promise<void> => {
+  try {
+    const response = await apiRequest(
+      'POST',
+      `${API_REQUEST_CHAIN}/${chainId}/duplicate`
+    );
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch request chain with ID: ${chainId}`);
+    }
+  } catch (error: any) {
+    throw new Error(error.message || 'Failed to delete test suite');
+  }
+};
+
+export const deletRequestChainById = async (chainId: string): Promise<void> => {
+  try {
+    const response = await apiRequest(
+      'DELETE',
+      `${API_REQUEST_CHAIN}/${chainId}`
+    );
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch request chain with ID: ${chainId}`);
+    }
+  } catch (error: any) {
+    throw new Error(error.message || 'Failed to delete test suite');
   }
 };

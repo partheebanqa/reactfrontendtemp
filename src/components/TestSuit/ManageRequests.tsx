@@ -60,9 +60,6 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
 }) => {
   const { variables, environments, activeEnvironment } = useDataManagement();
 
-  console.log('variables:', variables);
-  console.log('environmentsInManageRequest:', environments);
-
   const [selectedRequest, setSelectedRequest] = useState<Request | null>(null);
   const [isTestCaseModalOpen, setIsTestCaseModalOpen] = useState(false);
 
@@ -78,30 +75,22 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
   const buildFinalUrl = (url: string): string => {
     if (!url) return '';
     let finalUrl = url;
-    console.log('buildFinalUrl:', url);
 
     // Apply variable substitution
     finalUrl = substituteVariables(finalUrl);
 
     const baseUrVar =
       variables.find((v) => v.name === 'baseUrl')?.initialValue || '';
-    console.log('🚀 ~ buildFinalUrl:', baseUrVar);
 
-    // Apply environment base URL if not "no-environment"
-    console.log('🚀 ~ buildFinalUrl ~ finalUrl:', finalUrl);
     if (baseUrVar) {
       try {
         const originalUrl = new URL(finalUrl);
-        console.log('🚀 ~ buildFinalUrl ~ originalUrl:', originalUrl);
         const pathAndQuery =
           originalUrl.pathname + originalUrl.search + originalUrl.hash;
-        console.log('🚀 ~ buildFinalUrl ~ pathAndQuery:', pathAndQuery);
 
         // Combine activeEnvironment base URL with the path from original URL
         const baseUrl = baseUrVar.replace(/\/$/, '');
-        console.log('🚀 ~ buildFinalUrl ~ baseUrl:', baseUrl);
         finalUrl = `${baseUrl}${pathAndQuery}`;
-        console.log('🚀 ~ buildFinalUrl ~ finalUrl:', finalUrl);
       } catch (error) {
         if (
           !finalUrl.startsWith('http://') &&
@@ -151,7 +140,6 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
         <div className='space-y-3'>
           {requests.map((request) => {
             const finalUrl = buildFinalUrl(request.endpoint);
-            console.log('ManageRequests-finalUrl:', finalUrl);
 
             return (
               <div

@@ -51,7 +51,6 @@ const TestSuites: React.FC = () => {
       console.error('Error fetching test suites:', error);
     }
     if (apiData) {
-      console.log('Test suites from API:', apiData);
       setTestSuitListData(apiData);
     }
   }, [apiData, error]);
@@ -128,7 +127,6 @@ const TestSuites: React.FC = () => {
   };
 
   const handleEditSuite = (suite: TestSuite) => {
-    console.log('Navigating to edit suite with ID:', suite.id);
     setLocation(`/test-suites/${suite.id}/edit`);
   };
 
@@ -157,13 +155,13 @@ const TestSuites: React.FC = () => {
           Create Test Suite
         </Button> */}
 
-       <div className='flex items-center gap-2'>
-         <Button onClick={handleCreateSuite} className='gap-2'>
-          <Plus className='w-4 h-4' />
-          Create Suite
-        </Button>
-        <HelpLink />
-       </div>
+        <div className='flex items-center gap-2'>
+          <Button onClick={handleCreateSuite} className='gap-2'>
+            <Plus className='w-4 h-4' />
+            Create Suite
+          </Button>
+          <HelpLink />
+        </div>
       </div>
 
       <div className='flex items-center space-x-4'>
