@@ -1,7 +1,8 @@
+'use client';
+
 import React, { useState } from 'react';
 import {
   Play,
-  Pause,
   Square,
   Clock,
   CheckCircle,
@@ -10,9 +11,8 @@ import {
   ChevronDown,
   ChevronRight,
   Copy,
-  Download,
 } from 'lucide-react';
-import {
+import type {
   APIRequest,
   ExecutionLog,
   RequestChain,
@@ -37,7 +37,7 @@ interface RequestExecutorProps {
   ) => void;
 }
 
-interface RequestExecutorPropsNew {}
+type RequestExecutorPropsNew = {};
 
 interface KeyValuePair {
   id: string;
@@ -71,7 +71,6 @@ export function RequestExecutor({
   const [currentRequestIndex, setCurrentRequestIndex] = useState(-1);
   const [executionLogs, setExecutionLogs] = useState<ExecutionLog[]>([]);
   const [extractedVariables, setExtractedVariables] = useState<Variable[]>([]);
-
   const [expandedLogs, setExpandedLogs] = useState<Set<string>>(new Set());
   const [allVariables, setAllVariables] = useState<Variable[]>(variables);
 
@@ -84,41 +83,51 @@ export function RequestExecutor({
 
   const replaceVariables = (text: string, vars: Variable[]): string => {
     let result = text;
-
     vars.forEach((variable) => {
       const regex = new RegExp(`{{${variable.name}}}`, 'g');
       const oldResult = result;
       result = result.replace(regex, variable.value);
-
       if (oldResult !== result) {
         // console.log(`✅ Replaced {{${variable.name}}} with: ${variable.value}`);
       }
     });
     console.log('result', result);
-
     return result;
   };
 
+  // FIXED: Updated extractDataFromResponse function to handle header case-insensitivity
   const extractDataFromResponse = (
     response: any,
-    extractions: APIRequest['dataExtractions']
+    extractions: APIRequest['extractVariables']
   ): Record<string, any> => {
     const extracted: Record<string, any> = {};
-
     extractions.forEach((extraction) => {
       try {
         let value;
-
         if (extraction.source === 'response_body') {
           // JSON path extraction
           const jsonData =
             typeof response.body === 'string'
               ? JSON.parse(response.body)
               : response.body;
-
           value = getValueByPath(jsonData, extraction.path);
         } else if (extraction.source === 'response_header') {
-          value = response.headers[extraction.path.toLowerCase()];
+          // FIXED: Handle case-insensitive header lookup
+          const headers = response.headers || {};
+          const headerKey = extraction.path.toLowerCase();
+
+          // First try direct lowercase lookup
+          value = headers[headerKey];
+
+          // If not found, search through all headers case-insensitively
+          if (value === undefined) {
+            const foundKey = Object.keys(headers).find(
+              (key) => key.toLowerCase() === headerKey
+            );
+            if (foundKey) {
+              value = headers[foundKey];
+            }
+          }
         } else if (extraction.source === 'response_cookie') {
           value = response.cookies?.[extraction.path];
         }
@@ -145,7 +154,6 @@ export function RequestExecutor({
         console.error(`Failed to extract ${extraction.variableName}:`, error);
       }
     });
-
     return extracted;
   };
 
@@ -154,7 +162,7 @@ export function RequestExecutor({
       if (current && typeof current === 'object') {
         if (key.includes('[') && key.includes(']')) {
           const arrayKey = key.substring(0, key.indexOf('['));
-          const index = parseInt(
+          const index = Number.parseInt(
             key.substring(key.indexOf('[') + 1, key.indexOf(']'))
           );
           return current[arrayKey] && current[arrayKey][index];
@@ -178,7 +186,6 @@ export function RequestExecutor({
         }
       }
     });
-
     return cookies;
   };
 
@@ -193,7 +200,6 @@ export function RequestExecutor({
       // Replace variables in URL, headers, and body
       const processedUrl = replaceVariables(request.url, currentVars);
       const processedHeaders: Record<string, string> = {};
-
       request.headers.forEach((header) => {
         if (header.enabled) {
           processedHeaders[header.key] = replaceVariables(
@@ -203,7 +209,7 @@ export function RequestExecutor({
         }
       });
 
-      let processedBody = request.body
+      const processedBody = request.body
         ? replaceVariables(request.body, currentVars)
         : undefined;
 
@@ -275,7 +281,7 @@ export function RequestExecutor({
           headers: Object.fromEntries(response.headers.entries()),
           cookies: parseCookies(response.headers.get('set-cookie') || ''),
         },
-        request.dataExtractions
+        request.extractVariables
       );
 
       const log: ExecutionLog = {
@@ -305,7 +311,6 @@ export function RequestExecutor({
       return log;
     } catch (error) {
       const endTime = new Date().toISOString();
-
       return {
         id: logId,
         chainId: 'current-chain',
@@ -326,15 +331,12 @@ export function RequestExecutor({
   };
 
   const { data, isLoading, error } = useRequestChainData(chainId || '');
-
   console.log('Request Chain Data:', data);
 
   const handleExecuteChain = async () => {
     // ✅ Save the chain before execution
     console.log('handlesave chain is clicked');
-
     const savedChain = await onPreExecute?.();
-
     console.log('savedChain response from API:', savedChain);
 
     if (!savedChain?.id) {
@@ -347,10 +349,9 @@ export function RequestExecutor({
     setIsExecuting(true);
     setCurrentRequestIndex(0);
     setExecutionLogs([]);
-
     onExecutionStateChange?.(true, 0); // notify parent
 
-    let currentVars = [...allVariables];
+    const currentVars = [...allVariables];
     const logs: ExecutionLog[] = [];
     const newExtractedVars: Variable[] = [];
 
@@ -368,7 +369,6 @@ export function RequestExecutor({
       if (log.extractedVariables) {
         Object.entries(log.extractedVariables).forEach(([name, value]) => {
           const existingIndex = currentVars.findIndex((v) => v.name === name);
-
           const newVar: Variable = {
             id: `${Date.now()}-${Math.random()}`,
             name,
@@ -380,7 +380,7 @@ export function RequestExecutor({
                 ? 'boolean'
                 : 'string',
             source: 'extracted',
-            extractionPath: request.dataExtractions.find(
+            extractionPath: request.extractVariables.find(
               (e) => e.variableName === name
             )?.path,
           };
@@ -395,7 +395,6 @@ export function RequestExecutor({
             newExtractedVars.push(newVar);
           }
         });
-
         setAllVariables([...currentVars]);
       }
 

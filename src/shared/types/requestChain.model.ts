@@ -54,7 +54,7 @@ export interface APIRequest {
   timeout: number;
   retries: number;
   errorHandling?: string;
-  dataExtractions: DataExtraction[];
+  extractVariables: DataExtraction[];
   testScripts?: TestScript[];
   enabled: boolean;
   description?: string;

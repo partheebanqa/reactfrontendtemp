@@ -1,10 +1,11 @@
-import React, { useState, useRef, useEffect } from 'react';
+'use client';
+
+import { useState, useRef, useEffect, useCallback } from 'react';
 import {
   ArrowLeft,
   Plus,
   GripVertical,
   Trash2,
-  Edit,
   Play,
   Save,
   Eye,
@@ -38,16 +39,15 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery } from '@tanstack/react-query';
-import {
+import type {
   RequestChain,
   APIRequest,
   Variable,
-  RequestDetailResponse,
   ExecutionLog,
 } from '@/shared/types/requestChain.model';
 import { RequestExecutor } from './RequestExecutor';
 import { ImportModal } from '@/components/TestSuit/ImportModal';
-import { ExtendedRequest } from '@/models/collection.model';
+import type { ExtendedRequest } from '@/models/collection.model';
 import { RequestEditor } from '@/components/RequestChains/RequestEditor';
 import {
   getMultipleRequestDetails,
@@ -99,7 +99,6 @@ export function RequestChainEditor({
 
   const { environments, activeEnvironment, setActiveEnvironment } =
     useDataManagement();
-
   const [selectedEnvironment, setSelectedEnvironment] = useState<string>('');
   const [environmentBaseUrl, setEnvironmentBaseUrl] = useState<string>('');
 
@@ -146,27 +145,12 @@ export function RequestChainEditor({
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [pendingImportIds, setPendingImportIds] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState('requests');
-
   const [responseTabStates, setResponseTabStates] = useState<
     Record<string, string>
   >({});
   const [jsonOpenStates, setJsonOpenStates] = useState<Record<string, boolean>>(
     {}
   );
-
-  // Use React Query to fetch request details
-  const {
-    data: requestDetails,
-    isLoading: isLoadingDetails,
-    error: detailsError,
-    refetch: refetchDetails,
-  } = useQuery({
-    queryKey: ['requestDetails', pendingImportIds],
-    queryFn: () => getMultipleRequestDetails(pendingImportIds),
-    enabled: pendingImportIds.length > 0,
-    retry: 2,
-    retryDelay: 1000,
-  });
 
   // Helper function to replace variables in text
   const replaceVariables = (text: string, vars: Variable[]): string => {
@@ -199,7 +183,7 @@ export function RequestChainEditor({
       if (current && typeof current === 'object') {
         if (key.includes('[') && key.includes(']')) {
           const arrayKey = key.substring(0, key.indexOf('['));
-          const index = parseInt(
+          const index = Number.parseInt(
             key.substring(key.indexOf('[') + 1, key.indexOf(']'))
           );
           return current[arrayKey] && current[arrayKey][index];
@@ -210,9 +194,10 @@ export function RequestChainEditor({
     }, obj);
   };
 
+  // Updated extractDataFromResponse function to handle header case-insensitivity
   const extractDataFromResponse = (
     response: any,
-    extractions: APIRequest['dataExtractions']
+    extractions: APIRequest['extractVariables']
   ): Record<string, any> => {
     const extracted: Record<string, any> = {};
     extractions.forEach((extraction) => {
@@ -225,7 +210,20 @@ export function RequestChainEditor({
               : response.body;
           value = getValueByPath(jsonData, extraction.path);
         } else if (extraction.source === 'response_header') {
-          value = response.headers[extraction.path.toLowerCase()];
+          // Handle case-insensitive header lookup
+          const headers = response.headers || {};
+          const headerKey = extraction.path.toLowerCase();
+          // First try direct lowercase lookup
+          value = headers[headerKey];
+          // If not found, search through all headers case-insensitively
+          if (value === undefined) {
+            const foundKey = Object.keys(headers).find(
+              (key) => key.toLowerCase() === headerKey
+            );
+            if (foundKey) {
+              value = headers[foundKey];
+            }
+          }
         } else if (extraction.source === 'response_cookie') {
           value = response.cookies?.[extraction.path];
         }
@@ -272,7 +270,6 @@ export function RequestChainEditor({
     try {
       const backendData = await executeRequest(payload);
       const result = backendData?.data?.responses?.[0];
-
       if (!result) throw new Error('No response from executor');
 
       const extractedData = extractDataFromResponse(
@@ -281,7 +278,7 @@ export function RequestChainEditor({
           headers: result.headers,
           cookies: parseCookies(result.headers?.['set-cookie'] ?? ''),
         },
-        request.dataExtractions || []
+        request.extractVariables || []
       );
 
       const endTime = Date.now();
@@ -337,7 +334,7 @@ export function RequestChainEditor({
     }
   };
 
-  // Run all requests sequentially - UPDATED LOGIC
+  // Run all requests sequentially
   const handleRunAll = async () => {
     if (!formData.chainRequests || formData.chainRequests.length === 0) {
       toast({
@@ -352,13 +349,14 @@ export function RequestChainEditor({
     setCurrentRequestIndex(0);
     setExecutionLogs([]);
     setExtractedVariables({});
-
-    // Switch to the execute tab
     setActiveTab('requests');
 
     const allLogs: ExecutionLog[] = [];
-    let currentVariables = [...globalVariables, ...(formData.variables || [])];
-    let allExtractedVars: Record<string, any> = {};
+    const currentVariables = [
+      ...globalVariables,
+      ...(formData.variables || []),
+    ];
+    const allExtractedVars: Record<string, any> = {};
 
     try {
       toast({
@@ -427,7 +425,6 @@ export function RequestChainEditor({
         } catch (error) {
           const errorLog = error as ExecutionLog;
           allLogs.push(errorLog);
-
           toast({
             title: `Request ${i + 1} Failed`,
             description: errorLog.error || 'Unknown error occurred',
@@ -445,14 +442,11 @@ export function RequestChainEditor({
             });
             break;
           } else if (request.errorHandling === 'retry' && request.retries > 0) {
-            // Implement retry logic here if needed
             toast({
               title: 'Retrying Request',
               description: `Retrying request ${i + 1}...`,
             });
-            // You can implement retry logic here
           }
-          // If errorHandling is 'continue', just continue to next request
         }
       }
 
@@ -518,71 +512,7 @@ export function RequestChainEditor({
     }
   };
 
-  // Helper function to set response tab for a specific request
-  const setResponseTab = (requestId: string, tab: string) => {
-    setResponseTabStates((prev) => ({
-      ...prev,
-      [requestId]: tab,
-    }));
-  };
-
-  // Helper function to get response tab for a specific request
-  const getResponseTab = (requestId: string) => {
-    return responseTabStates[requestId] || 'body';
-  };
-
-  // Helper function to toggle JSON open state for a specific request
-  const toggleJsonOpen = (requestId: string) => {
-    setJsonOpenStates((prev) => ({
-      ...prev,
-      [requestId]: !prev[requestId],
-    }));
-  };
-
-  // Helper function to get JSON open state for a specific request
-  const getJsonOpenState = (requestId: string) => {
-    return jsonOpenStates[requestId] || false;
-  };
-
-  // Helper function to handle variable extraction for chain requests
-  const handleExtractVariableForRequest = (
-    requestId: string,
-    extraction: any
-  ) => {
-    const currentExtractions =
-      formData.chainRequests?.find((r) => r.id === requestId)
-        ?.dataExtractions || [];
-    const updatedExtractions = [...currentExtractions, extraction];
-    updateRequest(requestId, { dataExtractions: updatedExtractions });
-
-    // Find the execution log for this request and extract variables
-    const executionLog = getExecutionLogForRequest(requestId);
-    if (executionLog?.response) {
-      const extracted = extractDataFromResponse(
-        executionLog.response,
-        updatedExtractions
-      );
-      setExtractedVariables((prev) => ({ ...prev, ...extracted }));
-    }
-  };
-
-  const handleRemoveExtractionForRequest = (
-    requestId: string,
-    variableName: string
-  ) => {
-    const updatedExtractions =
-      formData.chainRequests
-        ?.find((r) => r.id === requestId)
-        ?.dataExtractions?.filter((e) => e.variableName !== variableName) || [];
-    updateRequest(requestId, { dataExtractions: updatedExtractions });
-
-    // Remove the extracted variable from state
-    const newExtracted = { ...extractedVariables };
-    delete newExtracted[variableName];
-    setExtractedVariables(newExtracted);
-  };
-
-  // Rest of your existing functions (drag handlers, toggles, etc.)
+  // Drag handlers
   const handleDragStart = (index: number) => {
     dragItem.current = index;
   };
@@ -649,21 +579,6 @@ export function RequestChainEditor({
     }
   };
 
-  const moveRequest = (requestId: string, direction: 'up' | 'down') => {
-    const requests = [...(formData.chainRequests || [])];
-    const index = requests.findIndex((r) => r.id === requestId);
-    if (index === -1) return;
-
-    const newIndex = direction === 'up' ? index - 1 : index + 1;
-    if (newIndex < 0 || newIndex >= requests.length) return;
-
-    [requests[index], requests[newIndex]] = [
-      requests[newIndex],
-      requests[index],
-    ];
-    setFormData({ ...formData, chainRequests: requests });
-  };
-
   const addNewRequest = () => {
     const newRequest: APIRequest = {
       id: Date.now().toString(),
@@ -676,12 +591,11 @@ export function RequestChainEditor({
       timeout: 5000,
       retries: 0,
       errorHandling: 'stop',
-      dataExtractions: [],
+      extractVariables: [],
       testScripts: [],
       enabled: true,
       authType: 'none',
     };
-
     setFormData({
       ...formData,
       chainRequests: [...(formData.chainRequests || []), newRequest],
@@ -689,7 +603,7 @@ export function RequestChainEditor({
     setExpandedRequests(new Set([...expandedRequests, newRequest.id]));
   };
 
-  // NEW: Save chain function that uses the API service
+  // Save chain function
   const saveChainToAPI = async (): Promise<RequestChain | null> => {
     if (!formData.name?.trim()) {
       toast({
@@ -726,13 +640,7 @@ export function RequestChainEditor({
         successRate: chain?.successRate || 0,
       };
 
-      console.log('🟡 Saving chain to API:', chainData);
-
       const savedChain = await saveRequestChain(chainData);
-
-      console.log('✅ Chain saved successfully:', savedChain);
-
-      // Update the form data with the saved chain ID
       setFormData((prev) => ({ ...prev, id: savedChain.id }));
 
       toast({
@@ -742,7 +650,7 @@ export function RequestChainEditor({
 
       return savedChain;
     } catch (error) {
-      console.error('❌ Failed to save chain:', error);
+      console.error('Failed to save chain:', error);
       toast({
         title: 'Save Failed',
         description:
@@ -755,56 +663,10 @@ export function RequestChainEditor({
     }
   };
 
-  const saveChain = async (): Promise<RequestChain | null> => {
-    if (!formData.name) {
-      toast({
-        title: 'Validation Error',
-        description: 'Please enter a chain name',
-        variant: 'destructive',
-      });
-      return null;
-    }
-
-    const existingChains: RequestChain[] = JSON.parse(
-      localStorage.getItem('extractionLogs') || '[]'
-    );
-
-    const chainData: RequestChain = {
-      id: chain?.id || Date.now().toString(),
-      workspaceId: formData.workspaceId || '',
-      name: formData.name,
-      description: formData.description,
-      environmentId: selectedEnvironment,
-      chainRequests: formData.chainRequests || [],
-      variables: formData.variables || [],
-      enabled: formData.enabled || false,
-      createdAt: chain?.createdAt || new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      lastExecuted: chain?.lastExecuted,
-      executionCount: chain?.executionCount || 0,
-      successRate: chain?.successRate || 0,
-    };
-
-    const updatedChains = [...existingChains];
-    const existingIndex = updatedChains.findIndex((c) => c.id === chainData.id);
-    if (existingIndex !== -1) {
-      updatedChains[existingIndex] = chainData;
-    } else {
-      updatedChains.push(chainData);
-    }
-
-    localStorage.setItem('extractionLogs', JSON.stringify(updatedChains));
-    onSave(chainData);
-    return chainData;
-  };
-
   const handleSave = async () => {
-    const saved = await saveChain();
+    const saved = await saveChainToAPI();
     if (saved) {
-      toast({
-        title: 'Chain Saved',
-        description: 'Your request chain has been saved successfully.',
-      });
+      onSave(saved);
     }
     return saved;
   };
@@ -820,26 +682,6 @@ export function RequestChainEditor({
       OPTIONS: 'bg-yellow-100 text-yellow-800',
     };
     return colors[method as keyof typeof colors] || 'bg-gray-100 text-gray-800';
-  };
-
-  const addGlobalVariable = () => {
-    const newVar: Variable = {
-      id: Date.now().toString(),
-      name: '',
-      value: '',
-      type: 'string',
-    };
-    setGlobalVariables([...globalVariables, newVar]);
-  };
-
-  const updateGlobalVariable = (id: string, updates: Partial<Variable>) => {
-    setGlobalVariables(
-      globalVariables.map((v) => (v.id === id ? { ...v, ...updates } : v))
-    );
-  };
-
-  const removeGlobalVariable = (id: string) => {
-    setGlobalVariables(globalVariables.filter((v) => v.id !== id));
   };
 
   const handleImportRequests = async (importedRequests: ExtendedRequest[]) => {
@@ -862,7 +704,7 @@ export function RequestChainEditor({
         timeout: 5000,
         retries: 0,
         errorHandling: 'stop' as const,
-        dataExtractions: [],
+        extractVariables: [],
         testScripts: [],
         enabled: true,
       }));
@@ -1006,7 +848,7 @@ export function RequestChainEditor({
                 </div>
               </div>
               <div className='space-y-2'>
-                <Label htmlFor='description'>Description(optional)</Label>
+                <Label htmlFor='description'>Description (optional)</Label>
                 <Textarea
                   id='description'
                   value={formData.description}
@@ -1061,22 +903,18 @@ export function RequestChainEditor({
                 <Code className='w-4 h-4' />
                 Requests ({formData.chainRequests?.length || 0})
               </TabsTrigger>
-              <TabsTrigger value='variables' className='gap-2'>
-                <Globe className='w-4 h-4' />
-                Global Variables ({globalVariables.length})
-              </TabsTrigger>
               <TabsTrigger value='variables-table' className='gap-2'>
                 <Database className='w-4 h-4' />
-                Variables Table
+                Extracted Variables
               </TabsTrigger>
               <TabsTrigger value='execute' className='gap-2'>
                 <Play className='w-4 h-4' />
-                Execute & Test
+                Save & Execute Chain
               </TabsTrigger>
             </TabsList>
 
             <TabsContent value='requests' className='space-y-4'>
-              {/* Request Chain Section with Border */}
+              {/* Request Chain Section */}
               <Card className='border-2 border-dashed border-gray-200'>
                 <CardHeader>
                   <div className='flex items-center justify-between'>
@@ -1122,9 +960,6 @@ export function RequestChainEditor({
                         const executionLog = getExecutionLogForRequest(
                           request.id
                         );
-                        const responseTab = getResponseTab(request.id);
-                        const isJsonOpen = getJsonOpenState(request.id);
-
                         return (
                           <Card
                             key={request.id}
@@ -1160,7 +995,6 @@ export function RequestChainEditor({
                                     )}
                                   </div>
                                 </div>
-
                                 <div className='flex-1 flex items-center space-x-4 ml-3'>
                                   <Badge
                                     className={getMethodColor(request.method)}
@@ -1174,18 +1008,6 @@ export function RequestChainEditor({
                                     <p className='text-sm text-muted-foreground'>
                                       {request.url || 'No URL specified'}
                                     </p>
-                                    {request.headers &&
-                                      request.headers.length > 0 && (
-                                        <p className='text-xs text-blue-600'>
-                                          {request.headers.length} headers
-                                        </p>
-                                      )}
-                                    {request.params &&
-                                      request.params.length > 0 && (
-                                        <p className='text-xs text-green-600'>
-                                          {request.params.length} params
-                                        </p>
-                                      )}
                                   </div>
                                   <div className='flex items-center space-x-2'>
                                     {request.enabled ? (
@@ -1216,48 +1038,8 @@ export function RequestChainEditor({
                                     )}
                                   </div>
                                 </div>
-
                                 <TooltipProvider>
                                   <div className='flex items-center space-x-2 ml-4'>
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <Button
-                                          variant='ghost'
-                                          size='sm'
-                                          onClick={() =>
-                                            toggleRequestExpanded(request.id)
-                                          }
-                                        >
-                                          {expandedRequests.has(request.id) ? (
-                                            <ChevronUp className='w-4 h-4' />
-                                          ) : (
-                                            <ChevronDown className='w-4 h-4' />
-                                          )}
-                                        </Button>
-                                      </TooltipTrigger>
-                                      <TooltipContent>
-                                        {expandedRequests.has(request.id)
-                                          ? 'Collapse'
-                                          : 'Expand'}{' '}
-                                        Request
-                                      </TooltipContent>
-                                    </Tooltip>
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <Button
-                                          variant='ghost'
-                                          size='sm'
-                                          onClick={() =>
-                                            setEditingRequestId(request.id)
-                                          }
-                                        >
-                                          <Edit className='w-4 h-4' />
-                                        </Button>
-                                      </TooltipTrigger>
-                                      <TooltipContent>
-                                        Edit Request
-                                      </TooltipContent>
-                                    </Tooltip>
                                     <Tooltip>
                                       <TooltipTrigger asChild>
                                         <Button
@@ -1289,6 +1071,29 @@ export function RequestChainEditor({
                                       </TooltipTrigger>
                                       <TooltipContent>
                                         Delete Request
+                                      </TooltipContent>
+                                    </Tooltip>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button
+                                          variant='ghost'
+                                          size='sm'
+                                          onClick={() =>
+                                            toggleRequestExpanded(request.id)
+                                          }
+                                        >
+                                          {expandedRequests.has(request.id) ? (
+                                            <ChevronUp className='w-4 h-4' />
+                                          ) : (
+                                            <ChevronDown className='w-4 h-4' />
+                                          )}
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        {expandedRequests.has(request.id)
+                                          ? 'Collapse'
+                                          : 'Expand'}{' '}
+                                        Request
                                       </TooltipContent>
                                     </Tooltip>
                                   </div>
@@ -1374,310 +1179,59 @@ export function RequestChainEditor({
                                       </div>
 
                                       {executionLog.response && (
-                                        <>
-                                          <div className='border-b border-gray-200'>
-                                            <nav className='flex space-x-8 px-6'>
-                                              {[
-                                                {
-                                                  id: 'body',
-                                                  label: 'Body',
-                                                  count: null,
-                                                },
-                                                {
-                                                  id: 'cookies',
-                                                  label: 'Cookies',
-                                                  count: executionLog.response
-                                                    .cookies
-                                                    ? Object.keys(
-                                                        executionLog.response
-                                                          .cookies
-                                                      ).length
-                                                    : 0,
-                                                },
-                                                {
-                                                  id: 'headers',
-                                                  label: 'Headers',
-                                                  count: Object.keys(
-                                                    executionLog.response
-                                                      .headers
-                                                  ).length,
-                                                },
-                                                {
-                                                  id: 'extracted',
-                                                  label: 'Extracted Variables',
-                                                  count:
-                                                    executionLog.extractedVariables
-                                                      ? Object.keys(
-                                                          executionLog.extractedVariables
-                                                        ).length
-                                                      : 0,
-                                                },
-                                              ].map((tab) => (
-                                                <button
-                                                  key={tab.id}
-                                                  onClick={() =>
-                                                    setResponseTab(
-                                                      request.id,
-                                                      tab.id
-                                                    )
-                                                  }
-                                                  className={`py-3 px-1 border-b-2 font-medium text-sm transition-colors flex items-center space-x-2 ${
-                                                    responseTab === tab.id
-                                                      ? 'border-blue-500 text-blue-600'
-                                                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                                                  }`}
-                                                >
-                                                  <span>{tab.label}</span>
-                                                  {tab.count !== null &&
-                                                    tab.count > 0 && (
-                                                      <span className='ml-1 px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded-full'>
-                                                        {tab.count}
-                                                      </span>
-                                                    )}
-                                                </button>
-                                              ))}
-                                            </nav>
-                                          </div>
-
-                                          <div className='p-6'>
-                                            {responseTab === 'body' && (
-                                              <div className='space-y-4'>
-                                                <div
-                                                  className='flex items-center justify-between cursor-pointer'
-                                                  onClick={() =>
-                                                    toggleJsonOpen(request.id)
-                                                  }
-                                                >
-                                                  <div className='flex items-center space-x-2'>
-                                                    {isJsonOpen ? (
-                                                      <ChevronDown className='w-4 h-4 text-gray-400' />
-                                                    ) : (
-                                                      <ChevronRight className='w-4 h-4 text-gray-400' />
-                                                    )}
-                                                    <span className='text-sm font-medium text-gray-700'>
-                                                      JSON
-                                                    </span>
-                                                  </div>
-                                                  <div className='flex items-center space-x-2'>
-                                                    <button
-                                                      onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        copyToClipboard(
-                                                          executionLog.response!
-                                                            .body
-                                                        );
-                                                      }}
-                                                      className='flex items-center space-x-1 px-2 py-1 text-xs text-gray-600 hover:bg-gray-100 rounded transition-colors'
-                                                    >
-                                                      <Copy className='w-3 h-3' />
-                                                      <span>Copy</span>
-                                                    </button>
-                                                  </div>
-                                                </div>
-                                                {isJsonOpen && (
-                                                  <div className='relative'>
-                                                    <pre className='bg-gray-50 border border-gray-200 rounded-lg p-4 text-sm font-mono overflow-x-auto max-h-96 leading-relaxed'>
-                                                      <code className='text-gray-800'>
-                                                        {formatResponseBody(
-                                                          executionLog.response
-                                                            .body,
-                                                          executionLog.response
-                                                            .headers[
-                                                            'content-type'
-                                                          ]
-                                                        )}
-                                                      </code>
-                                                    </pre>
-                                                  </div>
-                                                )}
-                                              </div>
-                                            )}
-
-                                            {responseTab === 'cookies' && (
-                                              <div className='space-y-3'>
-                                                {executionLog.response
-                                                  .cookies &&
-                                                Object.keys(
-                                                  executionLog.response.cookies
-                                                ).length > 0 ? (
-                                                  Object.entries(
-                                                    executionLog.response
-                                                      .cookies
-                                                  ).map(([name, value]) => (
-                                                    <div
-                                                      key={name}
-                                                      className='flex items-center justify-between p-3 bg-gray-50 rounded-lg border'
-                                                    >
-                                                      <div>
-                                                        <span className='font-medium text-gray-900'>
-                                                          {name}
-                                                        </span>
-                                                        <p className='text-sm text-gray-600 font-mono'>
-                                                          {value}
-                                                        </p>
-                                                      </div>
-                                                      <button
-                                                        onClick={() =>
-                                                          copyToClipboard(value)
-                                                        }
-                                                        className='p-1 text-gray-400 hover:text-gray-600 rounded'
-                                                      >
-                                                        <Copy className='w-4 h-4' />
-                                                      </button>
-                                                    </div>
-                                                  ))
-                                                ) : (
-                                                  <p className='text-gray-500 text-center py-8'>
-                                                    No cookies in response
-                                                  </p>
-                                                )}
-                                              </div>
-                                            )}
-
-                                            {responseTab === 'headers' && (
-                                              <div className='space-y-3'>
-                                                {Object.entries(
-                                                  executionLog.response.headers
-                                                ).map(([name, value]) => (
-                                                  <div
-                                                    key={name}
-                                                    className='flex items-center justify-between p-3 bg-gray-50 rounded-lg border'
-                                                  >
-                                                    <div>
-                                                      <span className='font-medium text-gray-900'>
-                                                        {name}
-                                                      </span>
-                                                      <p className='text-sm text-gray-600 font-mono'>
-                                                        {value}
-                                                      </p>
-                                                    </div>
-                                                    <button
-                                                      onClick={() =>
-                                                        copyToClipboard(value)
-                                                      }
-                                                      className='p-1 text-gray-400 hover:text-gray-600 rounded'
-                                                    >
-                                                      <Copy className='w-4 h-4' />
-                                                    </button>
-                                                  </div>
-                                                ))}
-                                              </div>
-                                            )}
-
-                                            {responseTab === 'extracted' && (
-                                              <div className='space-y-3'>
-                                                {executionLog.extractedVariables &&
-                                                Object.keys(
-                                                  executionLog.extractedVariables
-                                                ).length > 0 ? (
-                                                  Object.entries(
-                                                    executionLog.extractedVariables
-                                                  ).map(([name, value]) => (
-                                                    <div
-                                                      key={name}
-                                                      className='flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200'
-                                                    >
-                                                      <div>
-                                                        <span className='font-medium text-green-900'>
-                                                          {name}
-                                                        </span>
-                                                        <p className='text-sm text-green-700 font-mono'>
-                                                          {typeof value ===
-                                                          'object'
-                                                            ? JSON.stringify(
-                                                                value,
-                                                                null,
-                                                                2
-                                                              )
-                                                            : String(value)}
-                                                        </p>
-                                                      </div>
-                                                      <button
-                                                        onClick={() =>
-                                                          copyToClipboard(
-                                                            typeof value ===
-                                                              'object'
-                                                              ? JSON.stringify(
-                                                                  value
-                                                                )
-                                                              : String(value)
-                                                          )
-                                                        }
-                                                        className='p-1 text-green-400 hover:text-green-600 rounded'
-                                                      >
-                                                        <Copy className='w-4 h-4' />
-                                                      </button>
-                                                    </div>
-                                                  ))
-                                                ) : (
-                                                  <p className='text-gray-500 text-center py-8'>
-                                                    No variables extracted from
-                                                    this response
-                                                  </p>
-                                                )}
-                                              </div>
-                                            )}
-                                          </div>
-
-                                          {/* Extract Variables from Response Section */}
-                                          <div className='border-t border-gray-200 p-6'>
-                                            <h3 className='text-lg font-medium text-gray-900 mb-4'>
-                                              Extract Variables from Response
-                                            </h3>
-                                            <ResponseExplorer
-                                              response={executionLog.response}
-                                              onExtractVariable={(
-                                                extraction
-                                              ) => {
-                                                const currentExtractions =
-                                                  request.dataExtractions || [];
-                                                const updatedExtractions = [
-                                                  ...currentExtractions,
-                                                  extraction,
-                                                ];
-                                                updateRequest(request.id, {
-                                                  dataExtractions:
-                                                    updatedExtractions,
-                                                });
-                                                // Extract the variable immediately from the current response
-                                                const extracted =
-                                                  extractDataFromResponse(
-                                                    executionLog.response,
-                                                    updatedExtractions
-                                                  );
-                                                setExtractedVariables(
-                                                  (prev) => ({
-                                                    ...prev,
-                                                    ...extracted,
-                                                  })
+                                        <div className='border-t border-gray-200 p-6'>
+                                          <h3 className='text-lg font-medium text-gray-900 mb-4'>
+                                            Extract Variables from Response
+                                          </h3>
+                                          <ResponseExplorer
+                                            response={executionLog.response}
+                                            onExtractVariable={(extraction) => {
+                                              const currentExtractions =
+                                                request.extractVariables || [];
+                                              const updatedExtractions = [
+                                                ...currentExtractions,
+                                                extraction,
+                                              ];
+                                              updateRequest(request.id, {
+                                                extractVariables:
+                                                  updatedExtractions,
+                                              });
+                                              // Extract the variable immediately from the current response
+                                              const extracted =
+                                                extractDataFromResponse(
+                                                  executionLog.response,
+                                                  updatedExtractions
                                                 );
-                                              }}
-                                              extractedVariables={
-                                                executionLog.extractedVariables ||
-                                                {}
-                                              }
-                                              existingExtractions={
-                                                request.dataExtractions || []
-                                              }
-                                              onRemoveExtraction={(
-                                                variableName
-                                              ) => {
-                                                const updatedExtractions =
-                                                  request.dataExtractions?.filter(
-                                                    (e) =>
-                                                      e.variableName !==
-                                                      variableName
-                                                  ) || [];
-                                                updateRequest(request.id, {
-                                                  dataExtractions:
-                                                    updatedExtractions,
-                                                });
-                                              }}
-                                              handleCopy={copyToClipboard}
-                                              copied={false}
-                                            />
-                                          </div>
-                                        </>
+                                              setExtractedVariables((prev) => ({
+                                                ...prev,
+                                                ...extracted,
+                                              }));
+                                            }}
+                                            extractedVariables={
+                                              executionLog.extractedVariables ||
+                                              {}
+                                            }
+                                            existingExtractions={
+                                              request.extractVariables || []
+                                            }
+                                            onRemoveExtraction={(
+                                              variableName
+                                            ) => {
+                                              const updatedExtractions =
+                                                request.extractVariables?.filter(
+                                                  (e) =>
+                                                    e.variableName !==
+                                                    variableName
+                                                ) || [];
+                                              updateRequest(request.id, {
+                                                extractVariables:
+                                                  updatedExtractions,
+                                              });
+                                            }}
+                                            handleCopy={copyToClipboard}
+                                            copied={false}
+                                          />
+                                        </div>
                                       )}
 
                                       {!executionLog.response && (
@@ -1731,95 +1285,6 @@ export function RequestChainEditor({
                   )}
                 </CardContent>
               </Card>
-            </TabsContent>
-
-            <TabsContent value='variables' className='space-y-4'>
-              <div className='flex items-center justify-between'>
-                <div>
-                  <h3 className='text-lg font-medium'>Global Variables</h3>
-                  <p className='text-sm text-muted-foreground'>
-                    Variables shared across all requests in this chain
-                  </p>
-                </div>
-                <Button onClick={addGlobalVariable} className='gap-2'>
-                  <Plus className='w-4 h-4' />
-                  Add Variable
-                </Button>
-              </div>
-
-              {globalVariables.length > 0 ? (
-                <div className='space-y-3'>
-                  {globalVariables.map((variable) => (
-                    <Card key={variable.id}>
-                      <CardContent className='p-4'>
-                        <div className='flex items-center space-x-3'>
-                          <div className='flex-1'>
-                            <Input
-                              value={variable.name}
-                              onChange={(e) =>
-                                updateGlobalVariable(variable.id ?? '', {
-                                  name: e.target.value,
-                                })
-                              }
-                              placeholder='Variable name'
-                            />
-                          </div>
-                          <div className='flex-1'>
-                            <Input
-                              value={variable.value}
-                              onChange={(e) =>
-                                updateGlobalVariable(variable.id ?? '', {
-                                  value: e.target.value,
-                                })
-                              }
-                              placeholder='Variable value'
-                            />
-                          </div>
-                          <Select
-                            value={variable.type}
-                            onValueChange={(value: Variable['type']) =>
-                              updateGlobalVariable(variable.id ?? '', {
-                                type: value,
-                              })
-                            }
-                          >
-                            <SelectTrigger className='w-32'>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value='string'>String</SelectItem>
-                              <SelectItem value='number'>Number</SelectItem>
-                              <SelectItem value='boolean'>Boolean</SelectItem>
-                              <SelectItem value='json'>JSON</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <Button
-                            variant='ghost'
-                            size='sm'
-                            onClick={() =>
-                              removeGlobalVariable(variable.id || '')
-                            }
-                            className='text-red-600'
-                          >
-                            <Trash2 className='w-4 h-4' />
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              ) : (
-                <div className='text-center py-8'>
-                  <Globe className='w-12 h-12 text-muted-foreground mx-auto mb-3' />
-                  <p className='text-muted-foreground mb-4'>
-                    No global variables defined
-                  </p>
-                  <Button onClick={addGlobalVariable} className='gap-2'>
-                    <Plus className='w-4 h-4' />
-                    Add First Variable
-                  </Button>
-                </div>
-              )}
             </TabsContent>
 
             <TabsContent value='variables-table'>
