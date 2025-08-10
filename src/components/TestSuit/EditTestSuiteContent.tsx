@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Download } from 'lucide-react';
+import { ArrowLeft, Download, Save } from 'lucide-react';
 import { ManageRequests } from '@/components/TestSuit/ManageRequests';
 import { ImportModal } from '@/components/TestSuit/ImportModal';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -56,6 +56,8 @@ const EditTestSuiteContent: React.FC = () => {
 
   const { environments, activeEnvironment, setActiveEnvironment } =
     useDataManagement();
+
+  // console.log('environmentsuseDataManagement:', environments);
 
   const [testSuiteName, setTestSuiteName] = useState('');
   const [description, setDescription] = useState('');
@@ -286,7 +288,7 @@ const EditTestSuiteContent: React.FC = () => {
   );
 
   return (
-    <div className='min-h-screen bg-background'>
+    <div className='border border-gray-200 rounded-lg min-h-screen bg-background'>
       <div className='bg-card border-b px-6 py-4'>
         <div className='flex items-center justify-between'>
           <div className='flex items-center space-x-4'>
@@ -414,7 +416,7 @@ const EditTestSuiteContent: React.FC = () => {
           <CardContent>
             {requests.length === 0 ? (
               <>
-                <div className='flex flex-col items-center justify-center py-12 px-6'>
+                <div className='p-8 rounded-lg border border-dashed flex flex-col items-center justify-center py-12 px-6'>
                   <div className='w-16 h-16 mb-6 rounded-full bg-muted flex items-center justify-center'>
                     <Download className='w-8 h-8 text-muted-foreground' />
                   </div>
@@ -435,12 +437,40 @@ const EditTestSuiteContent: React.FC = () => {
                 </div>
 
                 {/* Bottom stats */}
-                <div className='border-t pt-4 mt-6'>
+                {/* <div className='border-t pt-4 mt-6'>
                   <div className='flex justify-between text-sm text-muted-foreground'>
                     <span>Imported requests: 0</span>
                     <span>Total test cases: 0</span>
                   </div>
-                </div>
+                </div> */}
+
+       <div className="px-6 py-4 bg-gray-50 mt-5 border-gray-200 flex justify-between items-center">
+            <div className="text-sm text-gray-600">
+              <div className="space-y-1">
+                <div>Imported requests: 0 </div>
+                <div className="font-medium">Total test cases: 0</div>
+              </div>
+            </div>
+            <div className="flex space-x-3">
+            <Button variant='outline' onClick={handleBack}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSaveChanges}
+              disabled={
+                isSaving || !testSuiteName.trim() || requests.length === 0
+              }
+            >
+              {isSaving
+                ? isCreateMode
+                  ? 'Creating...'
+                  : 'Saving...'
+                : isCreateMode
+                ? 'Create Suite'
+                : 'Save Changes'}
+            </Button>
+            </div>
+          </div>
               </>
             ) : (
               <>
@@ -454,12 +484,40 @@ const EditTestSuiteContent: React.FC = () => {
                 />
 
                 {/* Bottom stats for when requests exist */}
-                <div className='border-t pt-4 mt-6'>
+                {/* <div className='border-t pt-4 mt-6'>
                   <div className='flex justify-between text-sm text-muted-foreground'>
                     <span>Imported requests: {requests.length}</span>
                     <span>Total test cases: {totalTestCases}</span>
                   </div>
-                </div>
+                </div> */}
+
+<div className="px-6 py-4 bg-gray-50 mt-5 border-gray-200 flex justify-between items-center">
+            <div className="text-sm text-gray-600">
+              <div className="space-y-1">
+                <div>Imported requests: {requests.length} </div>
+                <div className="font-medium">Total test cases: {totalTestCases}</div>
+              </div>
+            </div>
+            <div className="flex space-x-3">
+            <Button variant='outline' onClick={handleBack}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSaveChanges}
+              disabled={
+                isSaving || !testSuiteName.trim() || requests.length === 0
+              }
+            >
+              {isSaving
+                ? isCreateMode
+                  ? 'Creating...'
+                  : 'Saving...'
+                : isCreateMode
+                ? 'Create Suite'
+                : 'Save Changes'}
+            </Button>
+            </div>
+          </div>
               </>
             )}
           </CardContent>

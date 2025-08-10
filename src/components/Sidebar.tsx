@@ -182,6 +182,8 @@ const Sidebar: React.FC = () => {
   const { user, logoutMutation } = useAuth();
   const { currentWorkspace } = useWorkspace();
 
+  // console.log('currentWorkspace:', currentWorkspace);
+
   const { hasFeatureAccess, subscriptionPlan } = useFeatureGate();
   const [utilsExpanded, setUtilsExpanded] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
@@ -198,7 +200,7 @@ const Sidebar: React.FC = () => {
 
     useEffect(() => {
       if (isMobile) {
-        setCollapsed(true); // Collapse sidebar on mobile
+        setCollapsed(true); 
       }
     }, [isMobile]);
 
@@ -299,10 +301,10 @@ const Sidebar: React.FC = () => {
 
   return (
     <aside
-      className={`${
-        collapsed ? 'w-16' : 'w-64'
-      } bg-white shadow-lg flex flex-col border-r transition-all duration-300`}
-    >
+    className={`hidden md:flex ${
+      collapsed ? 'w-16' : 'w-64'
+    } bg-white shadow-lg flex-col border-r transition-all duration-300`}
+  >
       {/* Logo Section */}
       <div
         className={`${

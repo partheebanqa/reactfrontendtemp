@@ -11,6 +11,8 @@ import {
   Ghost,
   Palette,
   HelpCircle,
+  ChevronsLeft,
+  ChevronsRight,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -33,7 +35,14 @@ import { HelpModal } from '../HelpModal/HelpModal';
 import EnvironmentDropdown from './EnvirementDropdown';
 import { Environment } from '@/shared/types/datamanagement';
 
-export default function Header() {
+
+interface HeaderProps {
+  isDrawerOpen?: boolean;
+  toggleDrawer?: () => void;
+}
+
+
+export default function Header({ isDrawerOpen, toggleDrawer }: HeaderProps) {
   const { user, logoutMutation } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [theme, setTheme] = useState('light');
@@ -158,8 +167,20 @@ export default function Header() {
   return (
     <header className='border-b bg-white dark:bg-gray-900 px-2 sm:px-6 py-2 sm:py-4'>
       <div className='flex items-center justify-between gap-4 sm:gap-6  mx-auto'>
+
+      <div className='md:hidden flex items-center'>
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={toggleDrawer}
+            className="mr-2 bg-primary text-white"
+          >
+            {isDrawerOpen ? <ChevronsLeft size={20} /> : <ChevronsRight size={20} />}
+          </Button>
+        </div>
+
         <div className='flex items-center gap-2 sm:gap-4'>
-          <h5 className='text-md font-semibold text-gray-800 dark:text-gray-200'>
+          <h5 className='hidden md:flex text-md font-semibold text-gray-800 dark:text-gray-200'>
             Workspace :
           </h5>
           <WorkspaceDropdown
@@ -171,7 +192,7 @@ export default function Header() {
         <div className='flex items-center gap-1 sm:gap-4 min-w-0'>
           {!shouldHideEnvironment && (
             <div className='flex items-center gap-2 sm:gap-4'>
-              <h5 className='text-md font-semibold text-gray-800 dark:text-gray-200'>
+              <h5 className='hidden md:flex text-md font-semibold text-gray-800 dark:text-gray-200'>
                 Environment :
               </h5>
               <EnvironmentDropdown
