@@ -42,6 +42,14 @@ import { HelpModal } from './HelpModal/HelpModal';
 import { useIsMobile } from '@/hooks/use-mobile';
 import TooltipContainer from './ui/tooltip-container';
 
+import {
+  X,
+  LayoutDashboard,
+  Layers,
+  BarChart,
+  PlusCircle,
+} from "lucide-react";
+
 const menuItems = [
   {
     label: 'Dashboard',
@@ -300,6 +308,7 @@ const Sidebar: React.FC = () => {
   };
 
   return (
+    <>
     <aside
     className={`hidden md:flex ${
       collapsed ? 'w-16' : 'w-64'
@@ -489,6 +498,106 @@ const Sidebar: React.FC = () => {
         onClose={() => setShowHelpModal(false)}
       />
     </aside>
+
+    <div className='block md:hidden' >
+        {/* Header */}
+        <div className="flex items-center justify-between h-16 px-4 border-b border-primary-600">
+          <div className="flex items-center space-x-2">
+            <span className="text-lg font-semibold">Optraflow</span>
+          </div>
+          <button
+            onClick={() => setCollapsed(!collapsed)}
+            className="lg:hidden text-white hover:text-gray-200"
+
+          >
+            <X className="h-6 w-6" />
+          </button>
+        </div>
+
+        <nav
+        className={`flex-1 ${
+          collapsed ? 'px-2' : 'px-4'
+        } py-6 space-y-2 overflow-y-auto`}
+      >
+        {/* Core Features */}
+        <div className='space-y-1'>
+          {menuItems.map((item) => (
+            <NavItem
+              key={item.path}
+              item={item}
+              isActive={location === item.path}
+              featureType='free'
+            />
+          ))}
+
+          {/* Utils Dropdown */}
+          {!collapsed ? (
+            <div className='w-full'>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant='ghost'
+                    className='w-full justify-start relative group'
+                    onClick={() => setUtilsExpanded(!utilsExpanded)}
+                  >
+                    <Wrench className='w-4 h-4 mr-3' />
+                    <span className='flex-1 text-left'>Utilities</span>
+                    {utilsExpanded ? (
+                      <ChevronDown className='w-4 h-4' />
+                    ) : (
+                      <ChevronRight className='w-4 h-4' />
+                    )}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Utilities</TooltipContent>
+              </Tooltip>
+
+              {utilsExpanded && (
+                <div className='pl-3 space-y-1 mt-1'>
+                  {utilsItems.map((item) => (
+                    <NavItem
+                      key={item.path}
+                      item={item}
+                      isActive={location === item.path}
+                      featureType='free'
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            utilsItems.map((item) => (
+              <NavItem
+                key={item.path}
+                item={item}
+                isActive={location === item.path}
+                featureType='free'
+              />
+            ))
+          )}
+        </div>
+
+        {/* Pro Features */}
+        <div className='pt-4 border-t'>
+          <CategoryHeader title='Pro Features' />
+          <div className='space-y-1'>
+            {proFeatures.map((item) => (
+              <NavItem
+                key={item.path}
+                item={item}
+                isActive={location === item.path}
+                featureType='free'
+              />
+            ))}
+          </div>
+        </div>
+
+     
+
+      </nav>
+
+      </div>
+    </>
   );
 };
 

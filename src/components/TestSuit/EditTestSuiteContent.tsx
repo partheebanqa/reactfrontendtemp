@@ -289,7 +289,7 @@ const EditTestSuiteContent: React.FC = () => {
 
   return (
     <div className='border border-gray-200 rounded-lg min-h-screen bg-background'>
-      <div className='bg-card border-b px-6 py-4'>
+      <div className='border-b px-6 py-4'>
         <div className='flex items-center justify-between'>
           <div className='flex items-center space-x-4'>
             <div>
@@ -308,7 +308,7 @@ const EditTestSuiteContent: React.FC = () => {
               </div>
             </div>
           </div>
-          <div className='flex items-center space-x-2'>
+          {/* <div className='flex items-center space-x-2'>
             <Button variant='outline' onClick={handleBack}>
               Cancel
             </Button>
@@ -326,7 +326,7 @@ const EditTestSuiteContent: React.FC = () => {
                 ? 'Create Suite'
                 : 'Save Changes'}
             </Button>
-          </div>
+          </div> */}
         </div>
       </div>
 
@@ -350,7 +350,7 @@ const EditTestSuiteContent: React.FC = () => {
             </div>
             <div>
               <label className='block text-sm font-medium mb-2'>
-                Description
+                Description (optional)
               </label>
               <Textarea
                 value={description}
@@ -399,7 +399,7 @@ const EditTestSuiteContent: React.FC = () => {
                   Import Requests & Configure Test Cases
                 </h3>
                 <p className='text-sm text-muted-foreground mt-1'>
-                  Import API requests from collections and configure test cases
+                  Import API requesNo requests imported yetts from collections and configure test cases
                   for each request
                 </p>
               </div>
@@ -416,12 +416,12 @@ const EditTestSuiteContent: React.FC = () => {
           <CardContent>
             {requests.length === 0 ? (
               <>
-                <div className='p-8 rounded-lg border border-dashed flex flex-col items-center justify-center py-12 px-6'>
+                <div className='bg-gray-50 p-8 rounded-lg border border-dashed flex flex-col items-center justify-center py-12 px-6'>
                   <div className='w-16 h-16 mb-6 rounded-full bg-muted flex items-center justify-center'>
                     <Download className='w-8 h-8 text-muted-foreground' />
                   </div>
                   <h3 className='text-lg font-medium mb-2'>
-                    No requests imported yet
+                    
                   </h3>
                   <p className='text-muted-foreground text-center mb-6 max-w-md'>
                     Start by importing API requests from your collections. You
@@ -429,7 +429,7 @@ const EditTestSuiteContent: React.FC = () => {
                   </p>
                   <Button
                     onClick={() => setIsImportModalOpen(true)}
-                    className='bg-blue-600 hover:bg-blue-700'
+                   
                   >
                     <Download className='w-4 h-4 mr-2' />
                     Import Your First Request
@@ -461,12 +461,12 @@ const EditTestSuiteContent: React.FC = () => {
                 isSaving || !testSuiteName.trim() || requests.length === 0
               }
             >
-              {isSaving
+               {isSaving
                 ? isCreateMode
-                  ? 'Creating...'
+                  ? 'Creating Test Suite...'
                   : 'Saving...'
                 : isCreateMode
-                ? 'Create Suite'
+                ? 'Create Test Suite'
                 : 'Save Changes'}
             </Button>
             </div>
@@ -510,10 +510,10 @@ const EditTestSuiteContent: React.FC = () => {
             >
               {isSaving
                 ? isCreateMode
-                  ? 'Creating...'
+                  ? 'Creating Test Suite...'
                   : 'Saving...'
                 : isCreateMode
-                ? 'Create Suite'
+                ? 'Create Test Suite'
                 : 'Save Changes'}
             </Button>
             </div>
