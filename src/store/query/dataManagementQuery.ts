@@ -31,12 +31,14 @@ export const usegetEnvironmentQuery = (enabled = true) => {
     queryFn: async () => {
       if (!workspaceId) throw new Error('Workspace ID is missing');
       const response = await fetchEnvironments(workspaceId);
-      console.log('responsefetchEnvironments123:', response);
       if (response?.environments?.length) {
         const filteredEnvironments = response.environments.map(
           (env: ResponseEnvironment) => filterEnvironment(env)
         );
         const environment = filteredEnvironments[0];
+
+        console.log('filteredEnvironments:', filteredEnvironments);
+
         dataManagementActions.setEnvironments(filteredEnvironments);
         dataManagementActions.setActiveEnvironment(environment);
         console.log('environmentReturn:', environment);
@@ -85,14 +87,11 @@ export const usefetchVariablesQuery = (enabled = true) => {
 };
 
 export const useCreateEnvironmentMutation = () => {
+  const fetchEnvironmentsQuery = usegetEnvironmentQuery();
   return useMutation({
     mutationFn: createEnvironment,
-    onSuccess: (newEnvironment: ResponseEnvironment) => {
-      const updatedList = [
-        ...dataManagementStore.state.environments,
-        filterEnvironment(newEnvironment),
-      ];
-      dataManagementActions.setEnvironments(updatedList);
+    onSuccess: async () => {
+      await fetchEnvironmentsQuery.refetch();
     },
     onError: (error) => {
       console.error('Error creating environment:', error);
@@ -168,11 +167,6 @@ export const useDeleteVariableMutation = () => {
 // ---------- Helpers ----------
 
 const filterEnvironment = (environment: ResponseEnvironment): Environment => {
-  console.log(
-    'environmentInFilter:',
-    environment?.environmentVariables?.[0]?.InitialValue
-  );
-
   return {
     id: environment.Id,
     name: environment.Name,
