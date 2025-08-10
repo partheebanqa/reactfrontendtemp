@@ -33,6 +33,17 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '../ui/tooltip';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import HelpLink from '../HelpModal/HelpLink';
 
 interface RequestChainsListProps {
@@ -335,13 +346,6 @@ export function RequestChainsList({
 
                   {/* Right section - Action buttons */}
                   <div className='flex items-center space-x-2 flex-shrink-0 ml-4'>
-                    {/* <Button
-                      variant='ghost'
-                      size='sm'
-                      className='text-green-600 hover:text-green-700'
-                    >
-                      <CheckCircle className='w-4 h-4' />
-                    </Button> */}
                     <TooltipProvider>
                       {/* Enable/Disable Chain */}
                       <Tooltip>
@@ -412,20 +416,44 @@ export function RequestChainsList({
                         <TooltipContent>Download Chain</TooltipContent>
                       </Tooltip>
 
-                      {/* Delete Chain */}
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant='ghost'
-                            size='sm'
-                            onClick={() => onDeleteChain(chain.id)}
-                            className='text-red-600 hover:text-red-700'
-                          >
-                            <Trash2 className='w-4 h-4' />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Delete Chain</TooltipContent>
-                      </Tooltip>
+                      {/* Delete Chain with confirmation */}
+                      <AlertDialog>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant='ghost'
+                                size='sm'
+                                className='text-red-600 hover:text-red-700'
+                              >
+                                <Trash2 className='w-4 h-4' />
+                              </Button>
+                            </AlertDialogTrigger>
+                          </TooltipTrigger>
+                          <TooltipContent>Delete Chain</TooltipContent>
+                        </Tooltip>
+
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>
+                              Delete this chain?
+                            </AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This will permanently delete “{chain.name}”. This
+                              action cannot be undo.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <Button
+                              onClick={() => onDeleteChain(chain.id)}
+                              // className='bg-destructive text-destructive-foreground hover:bg-destructive/90'
+                            >
+                              Delete
+                            </Button>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </TooltipProvider>
                   </div>
                 </div>
