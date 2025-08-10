@@ -36,7 +36,10 @@ export interface Environment {
   updatedAt?: string;
   updatedBy?: string;
   deletedAt?: string | null;
-  baseUrl: string;
+  defaultVariables?: {
+    baseUrl?: string;
+  };
+  baseUrl?: string;
   isDefault: boolean;
 }
 
