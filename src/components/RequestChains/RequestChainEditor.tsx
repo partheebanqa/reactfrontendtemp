@@ -978,14 +978,6 @@ export function RequestChainEditor({
                     <div className='flex items-center space-x-2'>
                       <Button
                         variant='outline'
-                        onClick={() => setIsImportModalOpen(true)}
-                        className='gap-2'
-                      >
-                        <Download className='w-4 h-4' />
-                        Import
-                      </Button>
-                      <Button
-                        variant='outline'
                         onClick={handleRunAll}
                         disabled={
                           isExecuting || !formData.chainRequests?.length
@@ -998,6 +990,14 @@ export function RequestChainEditor({
                           <PlayCircle className='w-4 h-4' />
                         )}
                         {isExecuting ? 'Running...' : 'Run All'}
+                      </Button>
+                      <Button
+                        variant='outline'
+                        onClick={() => setIsImportModalOpen(true)}
+                        className='gap-2'
+                      >
+                        <Download className='w-4 h-4' />
+                        Import
                       </Button>
                       <Button onClick={addNewRequest} className='gap-2'>
                         <Plus className='w-4 h-4' />
