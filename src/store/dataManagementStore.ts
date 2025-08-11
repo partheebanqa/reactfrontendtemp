@@ -1,6 +1,5 @@
-import { DataManagementState } from "@/shared/types/datamanagement";
-import { Store, useStore } from "@tanstack/react-store";
-
+import { DataManagementState } from '@/shared/types/datamanagement';
+import { Store, useStore } from '@tanstack/react-store';
 
 // Initial state for data management
 export const initialDataManagementState: DataManagementState = {
@@ -8,10 +7,9 @@ export const initialDataManagementState: DataManagementState = {
   activeEnvironment: null,
   isLoading: false,
   variables: [],
-  variablePage:1,
-  variablePageSize:10,
+  variablePage: 1,
+  variablePageSize: 10,
 };
-
 
 // Create the store
 export const dataManagementStore = new Store<DataManagementState>(
@@ -27,7 +25,9 @@ export const dataManagementActions = {
     }));
   },
 
-  setActiveEnvironment: (environment: DataManagementState['activeEnvironment']) => {
+  setActiveEnvironment: (
+    environment: DataManagementState['activeEnvironment']
+  ) => {
     dataManagementStore.setState((state) => ({
       ...state,
       activeEnvironment: environment,
@@ -39,7 +39,7 @@ export const dataManagementActions = {
       ...state,
       variables,
     }));
-  }
+  },
 };
 
 // Hook to use the data management store

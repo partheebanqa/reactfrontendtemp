@@ -389,7 +389,7 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
             <div className='p-4'>
               <div className='flex items-center justify-between mb-4'>
                 <h3 className='font-medium'>
-                  Available Tests ({totalAvailableTests})
+                Available testcases ({totalAvailableTests})
                 </h3>
                 <span className='text-sm text-muted-foreground'>
                   {selectedTestCases.length} selected
@@ -544,7 +544,7 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
           <div className='flex-1 bg-muted/20 overflow-y-auto'>
             <div className='p-4'>
               <h3 className='font-medium mb-4'>
-                Selected Tests ({selectedTestCases.length})
+              Selected testcases ({selectedTestCases.length})
               </h3>
 
               {selectedTestCases.length === 0 ? (
