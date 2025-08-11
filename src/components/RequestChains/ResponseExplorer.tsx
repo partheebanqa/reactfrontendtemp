@@ -17,6 +17,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '../ui/tooltip';
+import { Button } from '../ui/button';
 
 interface ResponseExplorerProps {
   response: {
@@ -478,7 +479,7 @@ export function ResponseExplorer({
 
       {/* Extracted Variables Preview */}
       {Object.keys(extractedVariables).length > 0 && (
-        <div className='bg-green-50 border border-green-200 rounded-lg p-6'>
+        <div className='bg-green-50 border border-green-200 rounded-lg p-4'>
           <div className='flex items-center justify-between mb-4'>
             <h4 className='font-medium text-green-900 flex items-center space-x-2'>
               <CheckCircle className='w-5 h-5' />
@@ -534,15 +535,15 @@ export function ResponseExplorer({
                   <div className='text-sm'>
                     <p className='text-gray-600 mb-1'>
                       Path:{' '}
-                      <code className='bg-gray-100 px-1 rounded'>
+                      <code className='bg-gray-100 px-1 rounded overflow-x-auto whitespace-nowrap block'>
                         {extraction?.path}
                       </code>
                     </p>
-                    <p className='text-gray-900 font-mono bg-gray-50 p-2 rounded border text-xs break-all'>
+                    <div className='bg-gray-50 p-2 rounded border text-xs font-mono overflow-x-auto whitespace-nowrap'>
                       {typeof value === 'object'
                         ? JSON.stringify(value)
                         : String(value)}
-                    </p>
+                    </div>
                   </div>
                 </div>
               );
@@ -553,7 +554,7 @@ export function ResponseExplorer({
             <p className='text-sm text-blue-800'>
               <strong>💡 Usage:</strong> Use these variables in other requests
               with the syntax:{' '}
-              <code className='bg-blue-100 px-1 rounded'>{`{{variableName}}`}</code>
+              <code className='bg-blue-100 px-1 rounded overflow-x-auto whitespace-nowrap inline-block'>{`{{variableName}}`}</code>
             </p>
           </div>
         </div>
@@ -563,7 +564,7 @@ export function ResponseExplorer({
       {extractionModal && (
         <div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50'>
           <div className='bg-white rounded-xl shadow-2xl w-full max-w-md'>
-            <div className='p-6 border-b border-gray-200'>
+            <div className='p-4 border-b border-gray-200'>
               <h3 className='text-lg font-semibold text-gray-900'>
                 Extract Variable
               </h3>
@@ -572,69 +573,57 @@ export function ResponseExplorer({
               </p>
             </div>
 
-            <div className='p-6 space-y-4'>
+            <div className='p-4 space-y-3'>
               <div>
-                <label className='block text-sm font-medium text-gray-700 mb-2'>
+                <label className='block text-sm font-medium text-gray-700 mb-1'>
                   Variable Name
                 </label>
-                <div>
-                  {/* <div className='absolute left-3 top-1/2 transform -translate-y-1/2 text-sm text-gray-500 font-mono'>
-                    E_
-                  </div> */}
-                  <input
-                    type='text'
-                    value={variableName}
-                    onChange={(e) => handleVariableNameChange(e.target.value)}
-                    className='w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 font-mono text-sm'
-                    placeholder='variable_name'
-                  />
-                </div>
+                <input
+                  type='text'
+                  value={variableName}
+                  onChange={(e) => handleVariableNameChange(e.target.value)}
+                  className='w-full px-3 py-1.5 border border-gray-300 rounded-lg bg-gray-50 font-mono text-sm overflow-x-auto whitespace-nowrap'
+                  placeholder='variable_name'
+                />
                 <p className='text-xs text-gray-500 mt-1'>
-                  Only letters, numbers, and underscores allowed. Spaces will be
-                  converted to underscores.
+                  Only letters, numbers, and underscores allowed.
                 </p>
               </div>
 
-              <div>
-                <label className='block text-sm font-medium text-gray-700 mb-2'>
+              {/* Source Row */}
+              <div className='flex items-center space-x-2 w-full'>
+                <label className='text-sm font-medium text-gray-700 w-16'>
                   Source
                 </label>
-                <div className='flex items-center space-x-2 p-3 bg-gray-50 rounded-lg'>
-                  {extractionModal.source === 'response_body' && (
-                    <Code className='w-4 h-4 text-blue-600' />
-                  )}
-                  {extractionModal.source === 'response_header' && (
-                    <Hash className='w-4 h-4 text-blue-600' />
-                  )}
-                  {extractionModal.source === 'response_cookie' && (
-                    <Cookie className='w-4 h-4 text-blue-600' />
-                  )}
-                  <span className='text-sm text-gray-700'>
-                    {extractionModal.source
-                      .replace('_', ' ')
-                      .replace(/\b\w/g, (l) => l.toUpperCase())}
-                  </span>
-                </div>
+                <input
+                  type='text'
+                  value={extractionModal.source
+                    .replace('_', ' ')
+                    .replace(/\b\w/g, (l) => l.toUpperCase())}
+                  readOnly
+                  className='flex-1 px-3 py-1.5 border border-gray-300 rounded-lg bg-gray-50 text-sm overflow-x-auto whitespace-nowrap'
+                />
               </div>
 
-              <div>
-                <label className='block text-sm font-medium text-gray-700 mb-2'>
+              {/* Path Row */}
+              <div className='flex items-center space-x-2 w-full'>
+                <label className='text-sm font-medium text-gray-700 w-16'>
                   Path
                 </label>
                 <input
                   type='text'
                   value={extractionModal.path}
                   readOnly
-                  className='w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 font-mono text-sm'
+                  className='flex-1 px-3 py-1.5 border border-gray-300 rounded-lg bg-gray-50 font-mono text-sm overflow-x-auto whitespace-nowrap'
                 />
               </div>
 
               <div>
-                <label className='block text-sm font-medium text-gray-700 mb-2'>
+                <label className='block text-sm font-medium text-gray-700 mb-1'>
                   Preview Value
                 </label>
-                <div className='p-3 bg-gray-50 rounded-lg border'>
-                  <code className='text-sm text-gray-900'>
+                <div className='p-2 bg-gray-50 rounded-lg border overflow-x-auto'>
+                  <code className='text-sm text-gray-900 whitespace-nowrap'>
                     {typeof extractionModal.value === 'object'
                       ? JSON.stringify(extractionModal.value, null, 2)
                       : String(extractionModal.value)}
@@ -643,13 +632,13 @@ export function ResponseExplorer({
               </div>
 
               <div>
-                <label className='block text-sm font-medium text-gray-700 mb-2'>
+                <label className='block text-sm font-medium text-gray-700 mb-1'>
                   Transform (Optional)
                 </label>
                 <input
                   type='text'
                   id='transform'
-                  className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm'
+                  className='w-full px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm overflow-x-auto whitespace-nowrap'
                   placeholder='e.g., value.toUpperCase(), parseInt(value)'
                 />
                 <p className='text-xs text-gray-500 mt-1'>
@@ -659,7 +648,7 @@ export function ResponseExplorer({
               </div>
             </div>
 
-            <div className='flex items-center justify-end space-x-3 p-6 border-t border-gray-200'>
+            <div className='flex items-center justify-end space-x-3 p-4 border-t border-gray-200'>
               <button
                 onClick={() => {
                   setExtractionModal(null);
@@ -669,7 +658,7 @@ export function ResponseExplorer({
               >
                 Cancel
               </button>
-              <button
+              <Button
                 onClick={() => {
                   const transform = (
                     document.getElementById('transform') as HTMLInputElement
@@ -679,10 +668,9 @@ export function ResponseExplorer({
                   }
                 }}
                 disabled={!variableName}
-                className='px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
               >
                 Extract Variable
-              </button>
+              </Button>
             </div>
           </div>
         </div>
