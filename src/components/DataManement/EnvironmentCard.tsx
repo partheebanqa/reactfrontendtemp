@@ -54,7 +54,7 @@ const EnvironmentCard: React.FC<Props> = ({
                 {environment.description}
               </p>
 
-              {environment?.baseUrl && (
+              {environment?.name != 'No Environment' && (
                 <div className='space-y-2'>
                   <div className='flex items-center space-x-2'>
                     <span className='text-sm font-medium'>Base URL:</span>

@@ -69,6 +69,8 @@ export function EnvironmentManagement() {
   } = useDataManagement();
   const { workspaces } = useWorkspace();
 
+  console.log('environments999,', environments);
+
   const form = useForm<EnvironmentFormData>({
     resolver: zodResolver(environmentSchema),
     defaultValues: {
@@ -428,7 +430,7 @@ export function EnvironmentManagement() {
                           {environment.description}
                         </p>
                       )}
-                      {environment.baseUrl && (
+                      {environment.name != 'No Environment' && (
                         <div className='flex items-center gap-2 mb-2'>
                           <Globe className='h-3 w-3 sm:h-4 sm:w-4 text-gray-400 flex-shrink-0' />
                           <span className='text-xs sm:text-sm text-gray-600 truncate'>
@@ -439,7 +441,7 @@ export function EnvironmentManagement() {
                     </div>
 
                     {/* Mobile: Action buttons */}
-                    {environment.baseUrl && (
+                    {environment.name != 'No Environment' && (
                       <div className='flex items-center gap-2 sm:hidden'>
                         <div className='flex items-center gap-1'>
                           <Switch
@@ -478,7 +480,7 @@ export function EnvironmentManagement() {
                         )}
                       </div>
                     )}
-                    {environment.baseUrl && (
+                    {environment.name != 'No Environment' && (
                       <div className='hidden sm:flex items-center gap-3'>
                         <div className='flex items-center gap-2'>
                           <Switch
