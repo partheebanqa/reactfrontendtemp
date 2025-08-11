@@ -1,11 +1,11 @@
-import { USER_COOKIE_NAME } from "@/lib/constants";
-import { getEncryptedCookie } from "@/lib/cookieUtils";
+import { USER_COOKIE_NAME } from '@/lib/constants';
+import { getEncryptedCookie } from '@/lib/cookieUtils';
 import {
   initialWorkspaceState,
   Workspace,
   WorkspaceState,
-} from "@/shared/types/workspace";
-import { Store, useStore } from "@tanstack/react-store";
+} from '@/shared/types/workspace';
+import { Store, useStore } from '@tanstack/react-store';
 
 // Define the shape of our workspace state
 
@@ -58,7 +58,6 @@ export const workspaceActions = {
     }));
   },
 
-  // Initialize with the first workspace as current if available
   initializeCurrentWorkspace: () => {
     const state = workspaceStore.state;
     if (state.workspaces.length > 0 && !state.currentWorkspace) {
@@ -72,10 +71,15 @@ export const workspaceActions = {
         } else {
           workspaceActions.setCurrentWorkspace(state.workspaces[0]);
         }
-      } else{
-          workspaceActions.setCurrentWorkspace(state.workspaces[0]);
+      } else {
+        workspaceActions.setCurrentWorkspace(state.workspaces[0]);
       }
     }
+  },
+
+  // ✅ Add this reset action to clear the workspace state on logout
+  reset: () => {
+    workspaceStore.setState(initialWorkspaceState);
   },
 };
 
