@@ -42,13 +42,7 @@ import { HelpModal } from './HelpModal/HelpModal';
 import { useIsMobile } from '@/hooks/use-mobile';
 import TooltipContainer from './ui/tooltip-container';
 
-import {
-  X,
-  LayoutDashboard,
-  Layers,
-  BarChart,
-  PlusCircle,
-} from "lucide-react";
+import { X, LayoutDashboard, Layers, BarChart, PlusCircle } from 'lucide-react';
 
 const menuItems = [
   {
@@ -208,7 +202,7 @@ const Sidebar: React.FC = () => {
 
     useEffect(() => {
       if (isMobile) {
-        setCollapsed(true); 
+        setCollapsed(true);
       }
     }, [isMobile]);
 
@@ -309,279 +303,201 @@ const Sidebar: React.FC = () => {
 
   return (
     <>
-    <aside
-    className={`hidden md:flex ${
-      collapsed ? 'w-16' : 'w-64'
-    } bg-white shadow-lg flex-col border-r transition-all duration-300`}
-  >
-      {/* Logo Section */}
-      <div
-        className={`${
-          collapsed ? 'p-3' : 'p-6'
-        } border-b flex justify-between items-center relative`}
+      <aside
+        className={`hidden md:flex ${
+          collapsed ? 'w-16' : 'w-64'
+        } bg-white shadow-lg flex-col border-r transition-all duration-300 h-full`}
       >
-        {collapsed ? (
-          <div className='w-8 h-8 bg-primary rounded-lg flex items-center justify-center mx-auto'>
-            <Code className='w-4 h-4 text-primary-foreground' />
-          </div>
-        ) : (
-          <div className='flex items-center space-x-3'>
-            <Link
-              to='/'
-              className='w-8 h-8 bg-primary rounded-lg flex items-center justify-center'
-            >
-              <Code className='w-4 h-4 text-primary-foreground' />
-            </Link>
-            <Link to='/'>
-              <h1 className='text-xl font-bold'>Optraflow</h1>
-              <Badge variant='secondary' className='text-xs'>
-                {subscriptionPlan === 'free'
-                  ? 'Free'
-                  : subscriptionPlan === 'pro'
-                  ? 'Pro'
-                  : 'Enterprise'}
-              </Badge>
-            </Link>
-          </div>
-        )}
-        <Button
-          variant='ghost'
-          size='sm'
-          onClick={() => setCollapsed(!collapsed)}
-          className={`p-1 ${
-            collapsed
-              ? 'absolute left-[50px] top-1/2 transform -translate-y-1/2 bg-[#2094f3] rounded-full h-auto hover:bg-[#1e7bbf]'
-              : ''
-          }`}
+        {/* Logo Section */}
+        <div
+          className={`${
+            collapsed ? 'p-3' : 'p-6'
+          } border-b flex justify-between items-center relative`}
         >
-          {collapsed ? <ChevronsRight size={10} /> : <ChevronsLeft size={16} />}
-        </Button>
-      </div>
-
-      {/* Navigation */}
-      <nav
-        className={`flex-1 ${
-          collapsed ? 'px-2' : 'px-4'
-        } py-6 space-y-2 overflow-y-auto`}
-      >
-        {/* Core Features */}
-        <div className='space-y-1'>
-          {menuItems.map((item) => (
-            <NavItem
-              key={item.path}
-              item={item}
-              isActive={location === item.path}
-              featureType='free'
-            />
-          ))}
-
-          {/* Utils Dropdown */}
-          {!collapsed ? (
-            <div className='w-full'>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant='ghost'
-                    className='w-full justify-start relative group'
-                    onClick={() => setUtilsExpanded(!utilsExpanded)}
-                  >
-                    <Wrench className='w-4 h-4 mr-3' />
-                    <span className='flex-1 text-left'>Utilities</span>
-                    {utilsExpanded ? (
-                      <ChevronDown className='w-4 h-4' />
-                    ) : (
-                      <ChevronRight className='w-4 h-4' />
-                    )}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Utilities</TooltipContent>
-              </Tooltip>
-
-              {utilsExpanded && (
-                <div className='pl-3 space-y-1 mt-1'>
-                  {utilsItems.map((item) => (
-                    <NavItem
-                      key={item.path}
-                      item={item}
-                      isActive={location === item.path}
-                      featureType='free'
-                    />
-                  ))}
-                </div>
-              )}
+          {collapsed ? (
+            <div className='w-8 h-8 bg-primary rounded-lg flex items-center justify-center mx-auto'>
+              <Code className='w-4 h-4 text-primary-foreground' />
             </div>
           ) : (
-            utilsItems.map((item) => (
-              <NavItem
-                key={item.path}
-                item={item}
-                isActive={location === item.path}
-                featureType='free'
-              />
-            ))
+            <div className='flex items-center space-x-3'>
+              <Link
+                to='/'
+                className='w-8 h-8 bg-primary rounded-lg flex items-center justify-center'
+              >
+                <Code className='w-4 h-4 text-primary-foreground' />
+              </Link>
+              <Link to='/'>
+                <h1 className='text-xl font-bold'>Optraflow</h1>
+                <Badge variant='secondary' className='text-xs'>
+                  {subscriptionPlan === 'free'
+                    ? 'Free'
+                    : subscriptionPlan === 'pro'
+                    ? 'Pro'
+                    : 'Enterprise'}
+                </Badge>
+              </Link>
+            </div>
           )}
+          <Button
+            variant='ghost'
+            size='sm'
+            onClick={() => setCollapsed(!collapsed)}
+            className={`p-1 ${
+              collapsed
+                ? 'absolute left-[50px] top-1/2 transform -translate-y-1/2 bg-[#2094f3] rounded-full h-auto hover:bg-[#1e7bbf]'
+                : ''
+            }`}
+          >
+            {collapsed ? (
+              <ChevronsRight size={10} />
+            ) : (
+              <ChevronsLeft size={16} />
+            )}
+          </Button>
         </div>
 
-        {/* Pro Features */}
-        <div className='pt-4 border-t'>
-          <CategoryHeader title='Pro Features' />
-          <div className='space-y-1'>
-            {proFeatures.map((item) => (
-              <NavItem
-                key={item.path}
-                item={item}
-                isActive={location === item.path}
-                featureType='free'
-              />
-            ))}
-          </div>
-        </div>
+        {/* Content area split into nav + help */}
+        <div className='flex-1 flex flex-col'>
+          {/* Navigation */}
+          <nav
+            className={`flex-1 ${
+              collapsed ? 'px-2' : 'px-4'
+            } py-6 space-y-2 overflow-y-auto`}
+          >
+            {/* Core Features */}
+            <div className='space-y-1'>
+              {menuItems.map((item) => (
+                <NavItem
+                  key={item.path}
+                  item={item}
+                  isActive={location === item.path}
+                  featureType='free'
+                />
+              ))}
 
-        {/* Enterprise Features */}
-        {/* <div className='pt-4 border-t'>
-          <CategoryHeader title='Enterprise' />
-          <div className='space-y-1'>
-            {enterpriseFeatures.map((item) => (
-              <NavItem
-                key={item.path}
-                item={item}
-                isActive={location === item.path}
-                featureType='enterprise'
-              />
-            ))}
-          </div>
-        </div> */}
+              {/* Utils Dropdown */}
+              {!collapsed ? (
+                <div className='w-full'>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant='ghost'
+                        className='w-full justify-start relative group'
+                        onClick={() => setUtilsExpanded(!utilsExpanded)}
+                      >
+                        <Wrench className='w-4 h-4 mr-3' />
+                        <span className='flex-1 text-left'>Utilities</span>
+                        {utilsExpanded ? (
+                          <ChevronDown className='w-4 h-4' />
+                        ) : (
+                          <ChevronRight className='w-4 h-4' />
+                        )}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Utilities</TooltipContent>
+                  </Tooltip>
 
-        {/* General Items */}
-        {/* <div className='pt-4 border-t'>
-          <div className='space-y-1'>
-            {generalItems.map((item) => (
-              <NavItem
-                key={item.path}
-                item={item}
-                isActive={location === item.path}
-              />
-            ))}
-          </div>
-        </div> */}
-      </nav>
+                  {utilsExpanded && (
+                    <div className='pl-3 space-y-1 mt-1'>
+                      {utilsItems.map((item) => (
+                        <NavItem
+                          key={item.path}
+                          item={item}
+                          isActive={location === item.path}
+                          featureType='free'
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                utilsItems.map((item) => (
+                  <NavItem
+                    key={item.path}
+                    item={item}
+                    isActive={location === item.path}
+                    featureType='free'
+                  />
+                ))
+              )}
+            </div>
 
-      {/* Help & Support */}
-      <div className={`${collapsed ? 'p-2' : 'p-4'} border-t`}>
-        {collapsed ? (
-          <Tooltip>
-            <TooltipTrigger asChild>
+            {/* Pro Features */}
+            <div className='pt-4 border-t'>
+              <CategoryHeader title='Pro Features' />
+              <div className='space-y-1'>
+                {proFeatures.map((item) => (
+                  <NavItem
+                    key={item.path}
+                    item={item}
+                    isActive={location === item.path}
+                    featureType='free'
+                  />
+                ))}
+              </div>
+            </div>
+          </nav>
+
+          {/* Help & Support at the bottom */}
+          <div className={`${collapsed ? 'p-2' : 'p-4'} border-t`}>
+            {collapsed ? (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant='outline'
+                      size='icon'
+                      className='w-full h-10'
+                      onClick={() => setShowHelpModal(true)}
+                    >
+                      <HelpCircle className='h-5 w-5' />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side='right'>Help & Support</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            ) : (
               <Button
                 variant='outline'
-                size='icon'
-                className='w-full h-10'
+                className='w-full justify-start'
                 onClick={() => setShowHelpModal(true)}
               >
-                <HelpCircle className='h-5 w-5' />
+                <HelpCircle className='mr-2 h-4 w-4' />
+                Help & Support
               </Button>
-            </TooltipTrigger>
-            <TooltipContent side='right'>Help & Support</TooltipContent>
-          </Tooltip>
-        ) : (
-          <Button
-            variant='outline'
-            className='w-full justify-start'
-            onClick={() => setShowHelpModal(true)}
-          >
-            <HelpCircle className='mr-2 h-4 w-4' />
-            Help & Support
-          </Button>
-        )}
-      </div>
-      <HelpModal
-        isOpen={showHelpModal}
-        onClose={() => setShowHelpModal(false)}
-      />
-    </aside>
+            )}
+          </div>
+        </div>
 
-    <div className='block md:hidden' >
+        <HelpModal
+          isOpen={showHelpModal}
+          onClose={() => setShowHelpModal(false)}
+        />
+      </aside>
+
+      {/* Mobile Sidebar */}
+      <div className='block md:hidden'>
         {/* Header */}
-        <div className="flex items-center justify-between h-16 px-4 border-b border-primary-600">
-          <div className="flex items-center space-x-2">
-            <span className="text-lg font-semibold">Optraflow</span>
+        <div className='flex items-center justify-between h-16 px-4 border-b border-primary-600'>
+          <div className='flex items-center space-x-2'>
+            <span className='text-lg font-semibold'>Optraflow</span>
           </div>
           <button
             onClick={() => setCollapsed(!collapsed)}
-            className="lg:hidden text-white hover:text-gray-200"
-
+            className='lg:hidden text-white hover:text-gray-200'
           >
-            <X className="h-6 w-6" />
+            <X className='h-6 w-6' />
           </button>
         </div>
 
         <nav
-        className={`flex-1 ${
-          collapsed ? 'px-2' : 'px-4'
-        } py-6 space-y-2 overflow-y-auto`}
-      >
-        {/* Core Features */}
-        <div className='space-y-1'>
-          {menuItems.map((item) => (
-            <NavItem
-              key={item.path}
-              item={item}
-              isActive={location === item.path}
-              featureType='free'
-            />
-          ))}
-
-          {/* Utils Dropdown */}
-          {!collapsed ? (
-            <div className='w-full'>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant='ghost'
-                    className='w-full justify-start relative group'
-                    onClick={() => setUtilsExpanded(!utilsExpanded)}
-                  >
-                    <Wrench className='w-4 h-4 mr-3' />
-                    <span className='flex-1 text-left'>Utilities</span>
-                    {utilsExpanded ? (
-                      <ChevronDown className='w-4 h-4' />
-                    ) : (
-                      <ChevronRight className='w-4 h-4' />
-                    )}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Utilities</TooltipContent>
-              </Tooltip>
-
-              {utilsExpanded && (
-                <div className='pl-3 space-y-1 mt-1'>
-                  {utilsItems.map((item) => (
-                    <NavItem
-                      key={item.path}
-                      item={item}
-                      isActive={location === item.path}
-                      featureType='free'
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-          ) : (
-            utilsItems.map((item) => (
-              <NavItem
-                key={item.path}
-                item={item}
-                isActive={location === item.path}
-                featureType='free'
-              />
-            ))
-          )}
-        </div>
-
-        {/* Pro Features */}
-        <div className='pt-4 border-t'>
-          <CategoryHeader title='Pro Features' />
+          className={`flex-1 ${
+            collapsed ? 'px-2' : 'px-4'
+          } py-6 space-y-2 overflow-y-auto`}
+        >
+          {/* Core Features */}
           <div className='space-y-1'>
-            {proFeatures.map((item) => (
+            {menuItems.map((item) => (
               <NavItem
                 key={item.path}
                 item={item}
@@ -589,13 +505,69 @@ const Sidebar: React.FC = () => {
                 featureType='free'
               />
             ))}
+
+            {/* Utils Dropdown */}
+            {!collapsed ? (
+              <div className='w-full'>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant='ghost'
+                      className='w-full justify-start relative group'
+                      onClick={() => setUtilsExpanded(!utilsExpanded)}
+                    >
+                      <Wrench className='w-4 h-4 mr-3' />
+                      <span className='flex-1 text-left'>Utilities</span>
+                      {utilsExpanded ? (
+                        <ChevronDown className='w-4 h-4' />
+                      ) : (
+                        <ChevronRight className='w-4 h-4' />
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Utilities</TooltipContent>
+                </Tooltip>
+
+                {utilsExpanded && (
+                  <div className='pl-3 space-y-1 mt-1'>
+                    {utilsItems.map((item) => (
+                      <NavItem
+                        key={item.path}
+                        item={item}
+                        isActive={location === item.path}
+                        featureType='free'
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              utilsItems.map((item) => (
+                <NavItem
+                  key={item.path}
+                  item={item}
+                  isActive={location === item.path}
+                  featureType='free'
+                />
+              ))
+            )}
           </div>
-        </div>
 
-     
-
-      </nav>
-
+          {/* Pro Features */}
+          <div className='pt-4 border-t'>
+            <CategoryHeader title='Pro Features' />
+            <div className='space-y-1'>
+              {proFeatures.map((item) => (
+                <NavItem
+                  key={item.path}
+                  item={item}
+                  isActive={location === item.path}
+                  featureType='free'
+                />
+              ))}
+            </div>
+          </div>
+        </nav>
       </div>
     </>
   );
