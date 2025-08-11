@@ -1,41 +1,42 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { apiRequest } from '@/lib/queryClient';
 import {
   getEncryptedCookie,
   setEncryptedCookie,
   removeCookie,
-} from "@/lib/cookieUtils";
-import { USER_COOKIE_NAME } from "@/lib/constants";
-import { authActions } from "../authStore";
-import { User, ILoginResponse } from "@/shared/types/auth";
-import { queryClient } from "@/lib/queryClient";
+} from '@/lib/cookieUtils';
+import { USER_COOKIE_NAME } from '@/lib/constants';
+import { authActions } from '../authStore';
+import { User, ILoginResponse } from '@/shared/types/auth';
+import { queryClient } from '@/lib/queryClient';
 import {
   changePasswordApi,
   loginApi,
   logoutApi,
   refreshUserData,
   registerApi,
-} from "@/services/auth.service";
-import { DeactivationFormData } from "@/components/settings/AccountDeactivation";
+} from '@/services/auth.service';
+import { DeactivationFormData } from '@/components/settings/AccountDeactivation';
+import { clearAllClientStorage } from '@/utils/logoutCacheClear';
 
 // Query to fetch current user data
 export const useUserQuery = () => {
   return useQuery({
-    queryKey: ["/api/auth/user"],
+    queryKey: ['/api/auth/user'],
     retry: false,
     queryFn: async () => {
       try {
         authActions.setIsLoading(true);
         const data = await refreshUserData();
         const filteredUser = filterUserData(data || {});
-        console.log("🚀 ~ useUserQuery ~ filteredUser:", filteredUser);
+        console.log('🚀 ~ useUserQuery ~ filteredUser:', filteredUser);
         if (filteredUser) {
           authActions.setUser(filteredUser);
         }
         authActions.setIsLoading(false);
         return data;
       } catch (error) {
-        console.error("Auth check error:", error);
+        console.error('Auth check error:', error);
         authActions.setIsLoading(false);
         return null;
       }
@@ -58,7 +59,7 @@ export const useLoginMutation = () => {
           token: data.token,
         };
         setEncryptedCookie(USER_COOKIE_NAME, newUserData);
-        await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+        await queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
         return true;
       }
       return false;
@@ -67,9 +68,9 @@ export const useLoginMutation = () => {
       const errorMessage =
         error instanceof Error
           ? error.message
-          : "An unexpected error occurred during login";
+          : 'An unexpected error occurred during login';
 
-      console.error("Login error:", errorMessage);
+      console.error('Login error:', errorMessage);
       throw new Error(errorMessage);
     },
   });
@@ -78,24 +79,21 @@ export const useLoginMutation = () => {
 // Logout mutation
 export const useLogoutMutation = () => {
   return useMutation({
-    mutationFn: logoutApi,
+    mutationFn: logoutApi, // can be a dummy or no-op function
     onSuccess: async () => {
-      // Clear cookie
       removeCookie(USER_COOKIE_NAME);
-
-      // Clear auth store
       authActions.clearAuth();
+      clearAllClientStorage(); // ✅ Clear local/session storage
 
-      localStorage.clear();
-
-      // Clear queries
-      await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      await queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
       queryClient.clear();
     },
     onError: async (error: any) => {
       removeCookie(USER_COOKIE_NAME);
       authActions.clearAuth();
-      await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      clearAllClientStorage(); // ✅ Ensure it also clears on error
+
+      await queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
     },
   });
 };
@@ -113,9 +111,9 @@ export const useRegisterMutation = () => {
       const errorMessage =
         error instanceof Error
           ? error.message
-          : "An unexpected error occurred during registration";
+          : 'An unexpected error occurred during registration';
 
-      console.error("Registration erroraa:", errorMessage);
+      console.error('Registration erroraa:', errorMessage);
       throw new Error(errorMessage);
     },
   });
@@ -125,12 +123,12 @@ export const useRegisterMutation = () => {
 export const useUpdateProfileMutation = () => {
   return useMutation({
     mutationFn: async (profileData: Partial<User>) => {
-      const response = await apiRequest("PUT", "/api/auth/profile", {
+      const response = await apiRequest('PUT', '/api/auth/profile', {
         body: profileData,
       });
 
       if (!response.ok) {
-        throw new Error("Failed to update profile");
+        throw new Error('Failed to update profile');
       }
 
       return response.json();
@@ -141,7 +139,7 @@ export const useUpdateProfileMutation = () => {
         authActions.setUser(data.user);
 
         // Update in queries
-        await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+        await queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
       }
     },
   });
@@ -151,7 +149,7 @@ export const useChangePasswordMutation = () => {
   return useMutation({
     mutationFn: changePasswordApi,
     onSuccess: () => {
-      console.log("Password changed successfully");
+      console.log('Password changed successfully');
       authActions.clearAuth();
       removeCookie(USER_COOKIE_NAME);
     },

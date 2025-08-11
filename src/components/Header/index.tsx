@@ -34,6 +34,10 @@ import NotificationBell from './Notifications/NotificationBell';
 import { HelpModal } from '../HelpModal/HelpModal';
 import EnvironmentDropdown from './EnvirementDropdown';
 import { Environment } from '@/shared/types/datamanagement';
+import { workspaceActions } from '@/store/workspaceStore';
+import { queryClient } from '@/lib/queryClient';
+import { removeCookie } from '@/lib/cookieUtils';
+import { logoutClientSide } from '@/lib/logoutClientSide';
 
 
 interface HeaderProps {
@@ -74,8 +78,7 @@ export default function Header({ isDrawerOpen, toggleDrawer }: HeaderProps) {
   const { success } = useToast();
 
   const handleLogout = async () => {
-    await logoutMutation.mutateAsync();
-    setLocation('/signin');
+    await logoutClientSide();
   };
 
   const hiddenPaths = ['/request-chains', '/test-suites/create'];
