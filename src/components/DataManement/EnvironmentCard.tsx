@@ -26,7 +26,7 @@ const EnvironmentCard: React.FC<Props> = ({
   onDelete,
 }) => {
   const { toast } = useToast();
-  const { variables } = useDataManagement()
+  const { variables } = useDataManagement();
   const handleCopy = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
     toast({
@@ -54,29 +54,27 @@ const EnvironmentCard: React.FC<Props> = ({
                 {environment.description}
               </p>
 
-              <div className='space-y-2'>
-                <div className='flex items-center space-x-2'>
-                  <span className='text-sm font-medium'>Base URL:</span>
-                  <code className='bg-gray-100 px-2 py-1 rounded text-sm'>
-                    {environment.baseUrl}
-                  </code>
-                  <Button
-                    variant='ghost'
-                    size='sm'
-                    onClick={() => handleCopy(environment.baseUrl, 'Base URL')}
-                  >
-                    <Copy className='w-3 h-3' />
-                  </Button>
+              {environment?.baseUrl && (
+                <div className='space-y-2'>
+                  <div className='flex items-center space-x-2'>
+                    <span className='text-sm font-medium'>Base URL:</span>
+                    <code className='bg-gray-100 px-2 py-1 rounded text-sm'>
+                      {environment.baseUrl}
+                    </code>
+                    <Button
+                      variant='ghost'
+                      size='sm'
+                      onClick={() =>
+                        handleCopy(environment.baseUrl, 'Base URL')
+                      }
+                    >
+                      <Copy className='w-3 h-3' />
+                    </Button>
+                  </div>
                 </div>
-
-                <div className='text-sm text-muted-foreground'>
-                  {Object.keys(variables).length} variables •
-                  Created {new Date(environment.createdAt).toLocaleDateString()}
-                </div>
-              </div>
+              )}
             </div>
           </div>
-
 
           {/* <div className='flex items-center space-x-2'>
             <TooltipProvider>
@@ -107,7 +105,6 @@ const EnvironmentCard: React.FC<Props> = ({
               </Tooltip>
             </TooltipProvider>
           </div> */}
-
         </div>
       </CardContent>
     </Card>

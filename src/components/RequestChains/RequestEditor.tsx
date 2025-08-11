@@ -112,6 +112,11 @@ export function RequestEditor({
   const headers = request.headers || [];
   const { toast } = useToast();
 
+  const updateExtractedVariables = (newVars: Record<string, any>) => {
+    setExtractedVariables(newVars);
+    localStorage.setItem('extractedVariables', JSON.stringify(newVars));
+  };
+
   const replaceVariables = (text: string, vars: Variable[]): string => {
     let result = text;
     vars.forEach((variable) => {
@@ -475,7 +480,7 @@ export function RequestEditor({
         executionResult.response,
         updatedExtractions
       );
-      setExtractedVariables(extracted);
+      updateExtractedVariables(extracted);
     }
   };
 

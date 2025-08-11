@@ -11,6 +11,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../ui/alert-dialog';
 
 interface TestSuite {
   requests: boolean;
@@ -171,7 +172,7 @@ const TestSuiteCard: React.FC<TestSuiteCardProps> = ({
             </Tooltip>
 
             {/* Delete */}
-            <Tooltip>
+            {/* <Tooltip>
               <TooltipTrigger asChild>
                 <Button
                   variant='ghost'
@@ -182,8 +183,46 @@ const TestSuiteCard: React.FC<TestSuiteCardProps> = ({
                   <Trash2 className='w-4 h-4' />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Delete Suite</TooltipContent>
-            </Tooltip>
+              <TooltipContent>Delete Suite</TooltipContent>                    
+            </Tooltip> */}
+
+            <AlertDialog>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <AlertDialogTrigger asChild>
+                                            <Button
+                                              variant='ghost'
+                                              size='sm'
+                                              className='text-red-600 hover:text-red-700'
+                                            >
+                                              <Trash2 className='w-4 h-4' />
+                                            </Button>
+                                          </AlertDialogTrigger>
+                                        </TooltipTrigger>
+                                        <TooltipContent>Delete Suite</TooltipContent>
+                                      </Tooltip>
+              
+                                      <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                          <AlertDialogTitle>
+                                            Delete this suite?
+                                          </AlertDialogTitle>
+                                          <AlertDialogDescription>
+                                            This will permanently delete “{suite.name}”. This
+                                            action cannot be undo.
+                                          </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                          <Button
+                                           onClick={() => onDelete(suite.id)}
+                                           
+                                          >
+                                            Delete
+                                          </Button>
+                                        </AlertDialogFooter>
+                                      </AlertDialogContent>
+                                    </AlertDialog>
           </TooltipProvider>
         </div>
       </div>

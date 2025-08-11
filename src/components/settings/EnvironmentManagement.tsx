@@ -29,6 +29,17 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Settings, Plus, Globe, Lock, Edit, Trash2, Copy } from 'lucide-react';
@@ -96,7 +107,10 @@ export function EnvironmentManagement() {
       workspaceId: data.workspaceId,
       name: data.name,
       description: data.description,
-      baseUrl: data.baseUrl || undefined,
+      defaultVariables: {
+        baseUrl: data.baseUrl || undefined,
+      },
+      // baseUrl: data.baseUrl || undefined,
       isDefault: false,
     };
 
@@ -141,24 +155,18 @@ export function EnvironmentManagement() {
       return;
     }
 
-    if (
-      confirm(
-        `Are you sure you want to delete "${environment.name}"? This action cannot be undone.`
-      )
-    ) {
-      try {
-        await deleteEnvironmentMutation.mutateAsync(environment.id);
-        toast({
-          title: 'Environment deleted',
-          description: `Environment "${environment.name}" has been deleted.`,
-        });
-      } catch (error) {
-        toast({
-          title: 'Error deleting environment',
-          description: 'There was a problem deleting the environment.',
-          variant: 'destructive',
-        });
-      }
+    try {
+      await deleteEnvironmentMutation.mutateAsync(environment.id);
+      toast({
+        title: 'Environment deleted',
+        description: `Environment "${environment.name}" has been deleted.`,
+      });
+    } catch (error) {
+      toast({
+        title: 'Error deleting environment',
+        description: 'There was a problem deleting the environment.',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -467,14 +475,38 @@ export function EnvironmentManagement() {
                           <Edit className='h-3 w-3' />
                         </Button>
                         {!environment.isDefault && (
-                          <Button
-                            variant='outline'
-                            size='sm'
-                            onClick={() => handleDelete(environment)}
-                            className='text-red-600 hover:text-red-700 px-2 py-1'
-                          >
-                            <Trash2 className='h-3 w-3' />
-                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant='outline'
+                                size='sm'
+                                className='text-red-600 hover:text-red-700 px-2 py-1'
+                              >
+                                <Trash2 className='h-3 w-3' />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>
+                                  Delete this environment?
+                                </AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  This will permanently delete "
+                                  {environment.name}". This action cannot be
+                                  undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <Button
+                                  onClick={() => handleDelete(environment)}
+                                  // className='bg-red-600 text-white hover:bg-red-700'
+                                >
+                                  Delete
+                                </Button>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                         )}
                       </div>
                     )}
@@ -511,15 +543,39 @@ export function EnvironmentManagement() {
                           Edit
                         </Button>
                         {!environment.isDefault && (
-                          <Button
-                            variant='outline'
-                            size='sm'
-                            onClick={() => handleDelete(environment)}
-                            className='text-red-600 hover:text-red-700'
-                          >
-                            <Trash2 className='h-4 w-4 mr-1' />
-                            Delete
-                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant='outline'
+                                size='sm'
+                                className='text-red-600 hover:text-red-700'
+                              >
+                                <Trash2 className='h-4 w-4 mr-1' />
+                                Delete
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>
+                                  Delete this environment?
+                                </AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  This will permanently delete "
+                                  {environment.name}". This action cannot be
+                                  undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <Button
+                                  onClick={() => handleDelete(environment)}
+                                  // className='bg-red-600 text-white hover:bg-red-700'
+                                >
+                                  Delete
+                                </Button>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                         )}
                       </div>
                     )}

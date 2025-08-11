@@ -86,6 +86,8 @@ export const useLogoutMutation = () => {
       // Clear auth store
       authActions.clearAuth();
 
+      localStorage.clear();
+
       // Clear queries
       await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       queryClient.clear();

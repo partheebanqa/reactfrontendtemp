@@ -158,7 +158,7 @@ const TestSuites: React.FC = () => {
         <div className='flex items-center gap-2'>
           <Button onClick={handleCreateSuite} className='gap-2'>
             <Plus className='w-4 h-4' />
-            Create Suite
+            Create Test suite
           </Button>
           <HelpLink />
         </div>
