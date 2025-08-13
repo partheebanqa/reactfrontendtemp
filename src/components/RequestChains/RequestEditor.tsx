@@ -54,6 +54,7 @@ import {
   buildRequestPayload,
   executeRequest,
 } from '@/services/executeRequest.service';
+import { useDataManagementStore } from '@/store/dataManagementStore';
 
 interface RequestEditorProps {
   request: APIRequest;
@@ -95,6 +96,10 @@ export function RequestEditor({
   const [executionResult, setExecutionResult] = useState<ExecutionLog | null>(
     null
   );
+  const { variables: storeVariables } = useDataManagementStore();
+
+  console.log('storeVariables:', storeVariables);
+
   const [showResponse, setShowResponse] = useState(false);
   const [extractedVariables, setExtractedVariables] = useState<
     Record<string, any>
@@ -215,9 +220,23 @@ export function RequestEditor({
     setIsExecuting(true);
     try {
       const startTime = Date.now();
-      const payload = buildRequestPayload(request, globalVariables);
+      const payload = buildRequestPayload(
+        request,
+        storeVariables.map((variable) => ({
+          ...variable,
+          value: variable.value || '', // Ensure 'value' is present
+          type: variable.type as 'string' | 'number' | 'boolean' | 'json', // Cast type to match Variable type
+        }))
+      );
+      console.log('payloadAfterBuildRequest:', payload);
+
       const previewUrl = getPreviewUrl();
-      payload.request.url = previewUrl;
+      payload.request.url = previewUrl
+        ? previewUrl.replace(/{{(.*?)}}/g, (_, varName) => {
+            const found = storeVariables.find((v) => v.name === varName);
+            return found?.initialValue ?? '';
+          })
+        : payload.request.url;
 
       const backendData = await executeRequest(payload);
       const result = backendData?.data?.responses?.[0];
@@ -300,8 +319,11 @@ export function RequestEditor({
 
   // Updated getPreviewUrl function to use environmentBaseUrl prop
   const getPreviewUrl = () => {
-    const replacedUrl = replaceVariables(request.url, globalVariables);
-    // Use the environmentBaseUrl prop instead of storeVariables
+    const replacedUrl = request.url.replace(/{{(.*?)}}/g, (_, varName) => {
+      const found = storeVariables.find((v) => v.name === varName);
+      return found?.initialValue ?? '';
+    });
+
     const baseUrl = environmentBaseUrl?.trim();
     if (!baseUrl) return replacedUrl;
 

@@ -98,6 +98,7 @@ export interface ResponseVariable {
 
 /** Frontend-friendly variable format */
 export interface Variable {
+  value: string;
   id: string;
   environmentId: string;
   name: string;

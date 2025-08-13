@@ -35,16 +35,26 @@ export const buildRequestPayload = (
   variables: Variable[],
   workspaceId: string = '01415fe5-b282-4295-a386-267ece622c7b'
 ): ExecuteRequestPayload => {
-  const replaceVariables = (text: string, vars: Variable[]): string => {
+  console.log('variableInbuildRequestPayload:', variables);
+
+  const replaceVariables = (
+    text: string | undefined,
+    vars: Variable[]
+  ): string => {
+    if (!text) return '';
     let result = text;
     vars.forEach((variable) => {
       const regex = new RegExp(`{{${variable.name}}}`, 'g');
-      result = result.replace(regex, variable.value);
+      // Use initialValue instead of value/currentValue
+      result = result.replace(regex, variable.initialValue ?? '');
     });
+
+    console.log('result:', result);
+
     return result;
   };
 
-  const replace = (str: string) => replaceVariables(str, variables);
+  const replace = (str?: string) => replaceVariables(str, variables);
 
   return {
     request: {
@@ -55,11 +65,11 @@ export const buildRequestPayload = (
       url: replace(request.url),
       bodyType: request.bodyType,
       bodyFormData: request.bodyFormData ?? null,
-      bodyRawContent: replace(request.body ?? ''),
+      bodyRawContent: replace(request.body),
       authorizationType: request.authorizationType,
       authorization:
         request.authorizationType === 'bearer'
-          ? { token: replace(request.authToken ?? '') }
+          ? { token: replace(request.authToken) }
           : undefined,
       headers: (request.headers || [])
         .filter((h) => h.enabled)
