@@ -73,6 +73,9 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
   const [selectedRequest, setSelectedRequest] = useState<Request | null>(null);
   const [isTestCaseModalOpen, setIsTestCaseModalOpen] = useState(false);
 
+
+  // console.log(requests, "selectedRequest")
+
   const substituteVariables = (text: string): string => {
     let result = text;
     variables.forEach((variable) => {
@@ -127,6 +130,25 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
     setSelectedRequest(null);
   };
 
+
+  const getCategoryColor = (category: string) => {
+    switch (category) {
+      case 'Functional': return 'bg-blue-100 text-blue-800';
+      case 'Performance': return 'bg-purple-100 text-purple-800';
+      case 'Security': return 'bg-orange-100 text-orange-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getCategoryIcon = (category: string) => {
+    switch (category) {
+      case 'Functional': return '🔧';
+      case 'Performance': return '⚡';
+      case 'Security': return '🛡️';
+      default: return '📋';
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -134,7 +156,7 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
           <CardTitle>Requests ({requests.length})</CardTitle>
 
           <div className="flex items-center space-x-2">
-            <Button variant="outline">
+            <Button variant="outline" onClick={() => window.location.reload()}>
               <RefreshCcw className="w-4 h-4 mr-2" />
               Refresh
             </Button>
@@ -243,24 +265,24 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
                 {testSuiteId && (
                   <div className="mt-4">
                     <h5 className="text-sm font-medium mb-2">Test Cases:</h5>
-                    <div className="flex items-center space-x-4">
+                   
                       {(request.selectedTestCases?.length || 0) > 0 && (
-                        <div className="flex items-center space-x-1">
-                          <span className="text-sm text-muted-foreground">
-                            🧪 Functional
-                          </span>
-                          <span className="text-sm font-medium">
-                            {request.selectedTestCases?.length || 0}
-                          </span>
-                        </div>
+                         <div className="flex items-center justify-between text-xs">
+                         <div className="flex items-center">
+                           <span className="mr-1">{getCategoryIcon('Functional')}</span>
+                           <span className="capitalize text-gray-600">{'Functional'}</span>
+                         </div>
+                         <span className={`px-2 py-0.5 rounded-full font-medium ${getCategoryColor('Functional')}`}>
+                         {request.selectedTestCases?.length || 0}
+                         </span>
+                       </div>
                       )}
-                    </div>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Total:{" "}
-                      <span className="font-medium">
-                        {request.selectedTestCases?.length || 0} test cases
-                      </span>
-                    </p>
+                      <div className="pt-1 border-t border-gray-200 mt-2">
+                    <div className="flex items-center justify-between text-xs font-medium">
+                    <span className="text-gray-700">Total:</span>
+                    <span className="text-gray-900">  {request.selectedTestCases?.length || 0} test cases</span>
+                  </div>
+                  </div>
                   </div>
                 )}
               </div>

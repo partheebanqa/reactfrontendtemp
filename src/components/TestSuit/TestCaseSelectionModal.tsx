@@ -148,6 +148,8 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
     TestCaseCategory[]
   >([]);
 
+  console.log(testCaseCategories, 'testCaseCategories');
+
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -336,6 +338,19 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
   if (!request) return null;
   const { name } = request;
 
+
+  const getCategoryIcon = (category: string) => {
+    switch (category) {
+      case 'Functional': return '🔧';
+      case 'Performance': return '⚡';
+      case 'Security': return '🛡️';
+      default: return '📋';
+    }
+  };
+
+
+  
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className='max-w-6xl max-h-[85vh] overflow-hidden flex flex-col p-0'>
@@ -452,6 +467,8 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
                             ) : (
                               <ChevronRight className='h-4 w-4' />
                             )}
+                            
+                            <span className="mr-2">{getCategoryIcon(category.category)}</span>
                             <span className='font-medium'>
                               {category.category}
                             </span>
@@ -562,17 +579,21 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
                         key={testId}
                         className='bg-white rounded-lg p-3 border'
                       >
+                        
                         <div className='flex items-start justify-between'>
                           <div className='flex-1 min-w-0'>
-                            <h4 className='font-medium text-sm'>
-                              {testInfo.name}
-                            </h4>
-                            <p className='text-xs text-muted-foreground mt-1'>
-                              {testInfo.description}
-                            </p>
-                            <Badge variant='outline' className='mt-2 text-xs'>
-                              {testInfo.category}
-                            </Badge>
+                          <div className="flex items-center">
+                        <span className="mr-2">{getCategoryIcon(testInfo.category)}</span>
+                        <h5 className="text-sm font-medium text-gray-900">{testInfo.name}</h5>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">{testInfo.description}</p>
+                      <span className={`inline-block mt-2 px-2 py-0.5 rounded-full text-xs font-medium ${
+                        testInfo.category === 'Functional' ? 'bg-blue-100 text-blue-800' :
+                        testInfo.category === 'Performance' ? 'bg-purple-100 text-purple-800' :
+                        'bg-orange-100 text-orange-800'
+                      }`}>
+                        {testInfo.category.charAt(0).toUpperCase() + testInfo.category.slice(1)}
+                      </span>
                           </div>
                           <Button
                             variant='ghost'
