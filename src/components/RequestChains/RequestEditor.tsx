@@ -98,12 +98,12 @@ export function RequestEditor({
   );
   const { variables: storeVariables } = useDataManagementStore();
 
-  console.log('storeVariables:', storeVariables);
-
   const [showResponse, setShowResponse] = useState(false);
   const [extractedVariables, setExtractedVariables] = useState<
     Record<string, any>
   >({});
+
+  console.log('extractedVariables:', extractedVariables);
 
   const [previousExtractions, setPreviousExtractions] = useState<
     DataExtraction[]
@@ -121,6 +121,10 @@ export function RequestEditor({
     setExtractedVariables(newVars);
     localStorage.setItem('extractedVariables', JSON.stringify(newVars));
   };
+
+  const extractedVariablesFromLocalStorage = JSON.parse(
+    localStorage.getItem('extractedVariables') || '{}'
+  );
 
   const replaceVariables = (text: string, vars: Variable[]): string => {
     let result = text;
@@ -428,6 +432,11 @@ export function RequestEditor({
   };
 
   const handleExtractVariable = (extraction: DataExtraction) => {
+    console.log('extraction:', extraction);
+
+    const normalizeString = (value?: string) => (value || '').trim();
+    const normalizeBool = (value?: boolean) => !!value;
+
     const currentExtractions = request.extractVariables || [];
     const existingChains = JSON.parse(
       localStorage.getItem('extractionLogs') || '[]'
@@ -474,35 +483,55 @@ export function RequestEditor({
       order: nextOrder,
     };
 
+    // Find matching chain by normalized values
     const chainIndex = existingChains.findIndex(
       (chain: any) =>
-        chain.name === chainName &&
-        chain.description === chainDescription &&
-        chain.isImportant === !!chainEnabled
+        normalizeString(chain.name) === normalizeString(chainName) &&
+        normalizeString(chain.description) ===
+          normalizeString(chainDescription) &&
+        normalizeBool(chain.isImportant) === normalizeBool(chainEnabled)
     );
 
     if (chainIndex !== -1) {
-      existingChains[chainIndex].chainRequests.push(newRequest);
+      // Prevent pushing the same request twice
+      const alreadyExists = existingChains[chainIndex].chainRequests.some(
+        (req: any) => req.url === request.url && req.method === request.method
+      );
+
+      if (!alreadyExists) {
+        existingChains[chainIndex].chainRequests.push(newRequest);
+      }
     } else {
+      // Create new chain
       const newChain = {
-        name: chainName || '',
-        description: chainDescription || '',
-        isImportant: !!chainEnabled,
+        name: normalizeString(chainName),
+        description: normalizeString(chainDescription),
+        isImportant: normalizeBool(chainEnabled),
         chainRequests: [newRequest],
       };
       existingChains.push(newChain);
     }
 
+    // Save updated chains
     localStorage.setItem('extractionLogs', JSON.stringify(existingChains));
+
+    // Update state for request's own extracted variables
     setPreviousExtractions(updatedExtractions);
     onUpdate({ extractVariables: updatedExtractions });
 
+    // If there’s a response, extract the values and update React state + localStorage
+    // If there’s a response, extract the values and update React state + localStorage
     if (executionResult?.response) {
       const extracted = extractDataFromResponse(
         executionResult.response,
         updatedExtractions
       );
-      updateExtractedVariables(extracted);
+
+      setExtractedVariables((prev) => {
+        const merged = { ...prev, ...extracted };
+        updateExtractedVariables(merged); // persist latest merged variables
+        return merged;
+      });
     }
   };
 
