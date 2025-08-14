@@ -95,6 +95,7 @@ export interface DataExtraction {
     | 'response_cookie'
     | 'request_header';
   path: string;
+  value: string;
   transform?: string;
 }
 

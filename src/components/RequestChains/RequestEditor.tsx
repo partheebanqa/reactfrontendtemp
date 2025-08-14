@@ -55,6 +55,7 @@ import {
   executeRequest,
 } from '@/services/executeRequest.service';
 import { useDataManagementStore } from '@/store/dataManagementStore';
+import { useDataManagement } from '@/hooks/useDataManagement';
 
 interface RequestEditorProps {
   request: APIRequest;
@@ -85,7 +86,7 @@ export function RequestEditor({
   chainName,
   chainDescription,
   chainEnabled,
-  environmentBaseUrl, // New prop
+  environmentBaseUrl,
 }: RequestEditorProps) {
   const [showRequestUrl, setShowRequestUrl] = useState(true);
   const [isJsonOpen, setIsJsonOpen] = useState(false);
@@ -102,8 +103,10 @@ export function RequestEditor({
   const [extractedVariables, setExtractedVariables] = useState<
     Record<string, any>
   >({});
+  const { environments, activeEnvironment, setActiveEnvironment } =
+    useDataManagement();
 
-  console.log('extractedVariables:', extractedVariables);
+  console.log('activeEnvironment:', activeEnvironment);
 
   const [previousExtractions, setPreviousExtractions] = useState<
     DataExtraction[]
@@ -120,19 +123,6 @@ export function RequestEditor({
   const updateExtractedVariables = (newVars: Record<string, any>) => {
     setExtractedVariables(newVars);
     localStorage.setItem('extractedVariables', JSON.stringify(newVars));
-  };
-
-  const extractedVariablesFromLocalStorage = JSON.parse(
-    localStorage.getItem('extractedVariables') || '{}'
-  );
-
-  const replaceVariables = (text: string, vars: Variable[]): string => {
-    let result = text;
-    vars.forEach((variable) => {
-      const regex = new RegExp(`{{${variable.name}}}`, 'g');
-      result = result.replace(regex, variable.value);
-    });
-    return result;
   };
 
   const getValueByPath = (obj: any, path: string): any => {
@@ -457,7 +447,12 @@ export function RequestEditor({
       order: nextOrder,
     };
 
-    const updatedExtractions = [...currentExtractions, extractionWithOrder];
+    const updatedExtractions = [
+      ...currentExtractions.filter(
+        (v) => v.variableName !== extraction.variableName
+      ),
+      extractionWithOrder,
+    ];
 
     const newRequest = {
       url: request.url,
@@ -489,7 +484,8 @@ export function RequestEditor({
         normalizeString(chain.name) === normalizeString(chainName) &&
         normalizeString(chain.description) ===
           normalizeString(chainDescription) &&
-        normalizeBool(chain.isImportant) === normalizeBool(chainEnabled)
+        normalizeBool(chain.isImportant) === normalizeBool(chainEnabled) &&
+        chain.environmentId === activeEnvironment?.id
     );
 
     if (chainIndex !== -1) {
@@ -507,6 +503,7 @@ export function RequestEditor({
         name: normalizeString(chainName),
         description: normalizeString(chainDescription),
         isImportant: normalizeBool(chainEnabled),
+        environmentId: activeEnvironment?.id || null,
         chainRequests: [newRequest],
       };
       existingChains.push(newChain);

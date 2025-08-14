@@ -196,6 +196,7 @@ export function ResponseExplorer({
         variableName: finalVariableName,
         source: extractionModal.source,
         path: extractionModal.path,
+        value: extractionModal.value,
         transform,
       };
 
