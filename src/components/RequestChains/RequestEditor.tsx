@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -105,6 +105,7 @@ export function RequestEditor({
   >({});
   const { environments, activeEnvironment, setActiveEnvironment } =
     useDataManagement();
+  const [previewUrl, setPreviewUrl] = useState('');
 
   console.log('activeEnvironment:', activeEnvironment);
 
@@ -140,6 +141,21 @@ export function RequestEditor({
       return undefined;
     }, obj);
   };
+
+  useEffect(() => {
+    const extractedVars = getExtractVariablesByEnvironment(
+      activeEnvironment?.id
+    );
+
+    const mergedVariables = [
+      ...storeVariables.filter(
+        (sv) => !extractedVars.some((ev) => ev.name === sv.name)
+      ),
+      ...extractedVars,
+    ];
+
+    setPreviewUrl(getPreviewUrl(mergedVariables)); // ✅ updates for UI
+  }, [storeVariables, activeEnvironment, request.url]);
 
   // FIXED: Updated extractDataFromResponse function to handle header case-insensitivity
   const extractDataFromResponse = (
@@ -230,11 +246,32 @@ export function RequestEditor({
     }
   };
 
+  // ✅ Updated getPreviewUrl to take variables as argument
+  const getPreviewUrl = (variables: Variable[]) => {
+    const replacedUrl = request.url.replace(/{{(.*?)}}/g, (_, varName) => {
+      const found = variables.find((v) => v.name === varName);
+      return found?.initialValue ?? '';
+    });
+
+    const baseUrl = environmentBaseUrl?.trim();
+    if (!baseUrl) return replacedUrl;
+
+    try {
+      const parsedOriginal = new URL(replacedUrl);
+      const parsedBase = new URL(baseUrl);
+      return `${parsedBase.origin}${parsedOriginal.pathname}${parsedOriginal.search}${parsedOriginal.hash}`;
+    } catch {
+      return `${baseUrl.replace(/\/$/, '')}/${replacedUrl.replace(/^\//, '')}`;
+    }
+  };
+
+  // ✅ Updated handleExecute to pass mergedVariables everywhere
   const handleExecute = async () => {
     const extractedVars = getExtractVariablesByEnvironment(
       activeEnvironment?.id
     );
-    console.log('Matching extractionLogs before execution:', extractedVars);
+
+    console.log('extractedVars:', extractedVars);
 
     const mergedVariables = [
       ...storeVariables.filter(
@@ -258,13 +295,9 @@ export function RequestEditor({
 
       const payload = buildRequestPayload(request, mergedVariables);
 
-      const previewUrl = getPreviewUrl();
-      payload.request.url = previewUrl
-        ? previewUrl.replace(/{{(.*?)}}/g, (_, varName) => {
-            const found = mergedVariables.find((v) => v.name === varName);
-            return found?.initialValue ?? '';
-          })
-        : payload.request.url;
+      // ✅ Always build previewUrl using mergedVariables
+      const previewUrl = getPreviewUrl(mergedVariables);
+      payload.request.url = previewUrl;
 
       const backendData = await executeRequest(payload);
       const result = backendData?.data?.responses?.[0];
@@ -327,7 +360,7 @@ export function RequestEditor({
         duration: 0,
         request: {
           method: request.method,
-          url: getPreviewUrl(),
+          url: getPreviewUrl(mergedVariables), // ✅ Pass mergedVariables here too
           headers: {},
           body: request.body,
         },
@@ -344,25 +377,8 @@ export function RequestEditor({
       setIsExecuting(false);
     }
   };
-  const getPreviewUrl = () => {
-    const replacedUrl = request.url.replace(/{{(.*?)}}/g, (_, varName) => {
-      const found = storeVariables.find((v) => v.name === varName);
-      return found?.initialValue ?? '';
-    });
 
-    const baseUrl = environmentBaseUrl?.trim();
-    if (!baseUrl) return replacedUrl;
-
-    try {
-      const parsedOriginal = new URL(replacedUrl);
-      const parsedBase = new URL(baseUrl);
-      return `${parsedBase.origin}${parsedOriginal.pathname}${parsedOriginal.search}${parsedOriginal.hash}`;
-    } catch {
-      return `${baseUrl.replace(/\/$/, '')}/${replacedUrl.replace(/^\//, '')}`;
-    }
-  };
-
-  const previewUrl = getPreviewUrl();
+  // const previewUrl = getPreviewUrl(mergedVariables);
 
   const addKeyValuePair = (type: 'params' | 'headers') => {
     const newPair: KeyValuePair = {

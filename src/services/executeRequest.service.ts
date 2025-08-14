@@ -37,24 +37,16 @@ export const buildRequestPayload = (
 ): ExecuteRequestPayload => {
   console.log('variableInbuildRequestPayload:', variables);
 
-  const replaceVariables = (
-    text: string | undefined,
-    vars: Variable[]
-  ): string => {
+  const replaceVariables = (text: string | undefined): string => {
     if (!text) return '';
     let result = text;
-    vars.forEach((variable) => {
+    variables.forEach((variable) => {
       const regex = new RegExp(`{{${variable.name}}}`, 'g');
-      // Use initialValue instead of value/currentValue
       result = result.replace(regex, variable.initialValue ?? '');
     });
-
     console.log('result:', result);
-
     return result;
   };
-
-  const replace = (str?: string) => replaceVariables(str, variables);
 
   return {
     request: {
@@ -62,27 +54,27 @@ export const buildRequestPayload = (
       name: request.name,
       order: request.order || 0,
       method: request.method,
-      url: replace(request.url),
+      url: replaceVariables(request.url),
       bodyType: request.bodyType,
       bodyFormData: request.bodyFormData ?? null,
-      bodyRawContent: replace(request.body),
+      bodyRawContent: replaceVariables(request.body),
       authorizationType: request.authorizationType,
       authorization:
         request.authorizationType === 'bearer'
-          ? { token: replace(request.authToken) }
+          ? { token: replaceVariables(request.authToken) }
           : undefined,
       headers: (request.headers || [])
         .filter((h) => h.enabled)
         .map((h) => ({
           key: h.key,
-          value: replace(h.value),
+          value: replaceVariables(h.value),
           enabled: true,
         })),
       params: (request.params || [])
         .filter((p) => p.enabled)
         .map((p) => ({
           key: p.key,
-          value: replace(p.value),
+          value: replaceVariables(p.value),
           enabled: true,
         })),
     },
