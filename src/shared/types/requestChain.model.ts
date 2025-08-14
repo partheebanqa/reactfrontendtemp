@@ -64,6 +64,7 @@ export interface APIRequest {
 }
 
 export interface Variable {
+  initialValue: string;
   id?: string;
   name: string;
   value: string;
@@ -94,6 +95,7 @@ export interface DataExtraction {
     | 'response_cookie'
     | 'request_header';
   path: string;
+  value: string;
   transform?: string;
 }
 

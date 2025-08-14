@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -54,6 +54,8 @@ import {
   buildRequestPayload,
   executeRequest,
 } from '@/services/executeRequest.service';
+import { useDataManagementStore } from '@/store/dataManagementStore';
+import { useDataManagement } from '@/hooks/useDataManagement';
 
 interface RequestEditorProps {
   request: APIRequest;
@@ -84,7 +86,7 @@ export function RequestEditor({
   chainName,
   chainDescription,
   chainEnabled,
-  environmentBaseUrl, // New prop
+  environmentBaseUrl,
 }: RequestEditorProps) {
   const [showRequestUrl, setShowRequestUrl] = useState(true);
   const [isJsonOpen, setIsJsonOpen] = useState(false);
@@ -95,10 +97,17 @@ export function RequestEditor({
   const [executionResult, setExecutionResult] = useState<ExecutionLog | null>(
     null
   );
+  const { variables: storeVariables } = useDataManagementStore();
+
   const [showResponse, setShowResponse] = useState(false);
   const [extractedVariables, setExtractedVariables] = useState<
     Record<string, any>
   >({});
+  const { environments, activeEnvironment, setActiveEnvironment } =
+    useDataManagement();
+  const [previewUrl, setPreviewUrl] = useState('');
+
+  console.log('activeEnvironment:', activeEnvironment);
 
   const [previousExtractions, setPreviousExtractions] = useState<
     DataExtraction[]
@@ -117,15 +126,6 @@ export function RequestEditor({
     localStorage.setItem('extractedVariables', JSON.stringify(newVars));
   };
 
-  const replaceVariables = (text: string, vars: Variable[]): string => {
-    let result = text;
-    vars.forEach((variable) => {
-      const regex = new RegExp(`{{${variable.name}}}`, 'g');
-      result = result.replace(regex, variable.value);
-    });
-    return result;
-  };
-
   const getValueByPath = (obj: any, path: string): any => {
     return path.split('.').reduce((current, key) => {
       if (current && typeof current === 'object') {
@@ -141,6 +141,21 @@ export function RequestEditor({
       return undefined;
     }, obj);
   };
+
+  useEffect(() => {
+    const extractedVars = getExtractVariablesByEnvironment(
+      activeEnvironment?.id
+    );
+
+    const mergedVariables = [
+      ...storeVariables.filter(
+        (sv) => !extractedVars.some((ev) => ev.name === sv.name)
+      ),
+      ...extractedVars,
+    ];
+
+    setPreviewUrl(getPreviewUrl(mergedVariables)); // ✅ updates for UI
+  }, [storeVariables, activeEnvironment, request.url]);
 
   // FIXED: Updated extractDataFromResponse function to handle header case-insensitivity
   const extractDataFromResponse = (
@@ -202,7 +217,69 @@ export function RequestEditor({
     return extracted;
   };
 
+  const getExtractVariablesByEnvironment = (environmentId?: string) => {
+    if (!environmentId) return [];
+
+    try {
+      const rawLogs = localStorage.getItem('extractionLogs');
+      if (!rawLogs) return [];
+
+      const parsedLogs = JSON.parse(rawLogs);
+      if (!Array.isArray(parsedLogs)) return [];
+
+      return parsedLogs
+        .filter((log) => log.environmentId === environmentId)
+        .flatMap(
+          (log) =>
+            log.chainRequests?.flatMap((req: any) =>
+              (req.extractVariables || []).map((v: any) => ({
+                name: v.variableName,
+                initialValue: v.value || '',
+                type: 'string',
+                value: v.value || '',
+              }))
+            ) || []
+        );
+    } catch (err) {
+      console.error('Error reading extractionLogs from localStorage:', err);
+      return [];
+    }
+  };
+
+  // ✅ Updated getPreviewUrl to take variables as argument
+  const getPreviewUrl = (variables: Variable[]) => {
+    const replacedUrl = request.url.replace(/{{(.*?)}}/g, (_, varName) => {
+      const found = variables.find((v) => v.name === varName);
+      return found?.initialValue ?? '';
+    });
+
+    const baseUrl = environmentBaseUrl?.trim();
+    if (!baseUrl) return replacedUrl;
+
+    try {
+      const parsedOriginal = new URL(replacedUrl);
+      const parsedBase = new URL(baseUrl);
+      return `${parsedBase.origin}${parsedOriginal.pathname}${parsedOriginal.search}${parsedOriginal.hash}`;
+    } catch {
+      return `${baseUrl.replace(/\/$/, '')}/${replacedUrl.replace(/^\//, '')}`;
+    }
+  };
+
+  // ✅ Updated handleExecute to pass mergedVariables everywhere
   const handleExecute = async () => {
+    const extractedVars = getExtractVariablesByEnvironment(
+      activeEnvironment?.id
+    );
+
+    console.log('extractedVars:', extractedVars);
+
+    const mergedVariables = [
+      ...storeVariables.filter(
+        (sv) => !extractedVars.some((ev) => ev.name === sv.name)
+      ),
+      ...extractedVars,
+    ];
+
     if (!request.url) {
       toast({
         title: 'Error',
@@ -215,8 +292,11 @@ export function RequestEditor({
     setIsExecuting(true);
     try {
       const startTime = Date.now();
-      const payload = buildRequestPayload(request, globalVariables);
-      const previewUrl = getPreviewUrl();
+
+      const payload = buildRequestPayload(request, mergedVariables);
+
+      // ✅ Always build previewUrl using mergedVariables
+      const previewUrl = getPreviewUrl(mergedVariables);
       payload.request.url = previewUrl;
 
       const backendData = await executeRequest(payload);
@@ -280,7 +360,7 @@ export function RequestEditor({
         duration: 0,
         request: {
           method: request.method,
-          url: getPreviewUrl(),
+          url: getPreviewUrl(mergedVariables), // ✅ Pass mergedVariables here too
           headers: {},
           body: request.body,
         },
@@ -298,23 +378,7 @@ export function RequestEditor({
     }
   };
 
-  // Updated getPreviewUrl function to use environmentBaseUrl prop
-  const getPreviewUrl = () => {
-    const replacedUrl = replaceVariables(request.url, globalVariables);
-    // Use the environmentBaseUrl prop instead of storeVariables
-    const baseUrl = environmentBaseUrl?.trim();
-    if (!baseUrl) return replacedUrl;
-
-    try {
-      const parsedOriginal = new URL(replacedUrl);
-      const parsedBase = new URL(baseUrl);
-      return `${parsedBase.origin}${parsedOriginal.pathname}${parsedOriginal.search}${parsedOriginal.hash}`;
-    } catch {
-      return `${baseUrl.replace(/\/$/, '')}/${replacedUrl.replace(/^\//, '')}`;
-    }
-  };
-
-  const previewUrl = getPreviewUrl();
+  // const previewUrl = getPreviewUrl(mergedVariables);
 
   const addKeyValuePair = (type: 'params' | 'headers') => {
     const newPair: KeyValuePair = {
@@ -406,6 +470,11 @@ export function RequestEditor({
   };
 
   const handleExtractVariable = (extraction: DataExtraction) => {
+    console.log('extraction:', extraction);
+
+    const normalizeString = (value?: string) => (value || '').trim();
+    const normalizeBool = (value?: boolean) => !!value;
+
     const currentExtractions = request.extractVariables || [];
     const existingChains = JSON.parse(
       localStorage.getItem('extractionLogs') || '[]'
@@ -426,7 +495,12 @@ export function RequestEditor({
       order: nextOrder,
     };
 
-    const updatedExtractions = [...currentExtractions, extractionWithOrder];
+    const updatedExtractions = [
+      ...currentExtractions.filter(
+        (v) => v.variableName !== extraction.variableName
+      ),
+      extractionWithOrder,
+    ];
 
     const newRequest = {
       url: request.url,
@@ -452,35 +526,57 @@ export function RequestEditor({
       order: nextOrder,
     };
 
+    // Find matching chain by normalized values
     const chainIndex = existingChains.findIndex(
       (chain: any) =>
-        chain.name === chainName &&
-        chain.description === chainDescription &&
-        chain.isImportant === !!chainEnabled
+        normalizeString(chain.name) === normalizeString(chainName) &&
+        normalizeString(chain.description) ===
+          normalizeString(chainDescription) &&
+        normalizeBool(chain.isImportant) === normalizeBool(chainEnabled) &&
+        chain.environmentId === activeEnvironment?.id
     );
 
     if (chainIndex !== -1) {
-      existingChains[chainIndex].chainRequests.push(newRequest);
+      // Prevent pushing the same request twice
+      const alreadyExists = existingChains[chainIndex].chainRequests.some(
+        (req: any) => req.url === request.url && req.method === request.method
+      );
+
+      if (!alreadyExists) {
+        existingChains[chainIndex].chainRequests.push(newRequest);
+      }
     } else {
+      // Create new chain
       const newChain = {
-        name: chainName || '',
-        description: chainDescription || '',
-        isImportant: !!chainEnabled,
+        name: normalizeString(chainName),
+        description: normalizeString(chainDescription),
+        isImportant: normalizeBool(chainEnabled),
+        environmentId: activeEnvironment?.id || null,
         chainRequests: [newRequest],
       };
       existingChains.push(newChain);
     }
 
+    // Save updated chains
     localStorage.setItem('extractionLogs', JSON.stringify(existingChains));
+
+    // Update state for request's own extracted variables
     setPreviousExtractions(updatedExtractions);
     onUpdate({ extractVariables: updatedExtractions });
 
+    // If there’s a response, extract the values and update React state + localStorage
+    // If there’s a response, extract the values and update React state + localStorage
     if (executionResult?.response) {
       const extracted = extractDataFromResponse(
         executionResult.response,
         updatedExtractions
       );
-      updateExtractedVariables(extracted);
+
+      setExtractedVariables((prev) => {
+        const merged = { ...prev, ...extracted };
+        updateExtractedVariables(merged); // persist latest merged variables
+        return merged;
+      });
     }
   };
 
