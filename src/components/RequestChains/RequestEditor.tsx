@@ -201,7 +201,48 @@ export function RequestEditor({
     return extracted;
   };
 
+  const getExtractVariablesByEnvironment = (environmentId?: string) => {
+    if (!environmentId) return [];
+
+    try {
+      const rawLogs = localStorage.getItem('extractionLogs');
+      if (!rawLogs) return [];
+
+      const parsedLogs = JSON.parse(rawLogs);
+      if (!Array.isArray(parsedLogs)) return [];
+
+      return parsedLogs
+        .filter((log) => log.environmentId === environmentId)
+        .flatMap(
+          (log) =>
+            log.chainRequests?.flatMap((req: any) =>
+              (req.extractVariables || []).map((v: any) => ({
+                name: v.variableName,
+                initialValue: v.value || '',
+                type: 'string',
+                value: v.value || '',
+              }))
+            ) || []
+        );
+    } catch (err) {
+      console.error('Error reading extractionLogs from localStorage:', err);
+      return [];
+    }
+  };
+
   const handleExecute = async () => {
+    const extractedVars = getExtractVariablesByEnvironment(
+      activeEnvironment?.id
+    );
+    console.log('Matching extractionLogs before execution:', extractedVars);
+
+    const mergedVariables = [
+      ...storeVariables.filter(
+        (sv) => !extractedVars.some((ev) => ev.name === sv.name)
+      ),
+      ...extractedVars,
+    ];
+
     if (!request.url) {
       toast({
         title: 'Error',
@@ -214,20 +255,13 @@ export function RequestEditor({
     setIsExecuting(true);
     try {
       const startTime = Date.now();
-      const payload = buildRequestPayload(
-        request,
-        storeVariables.map((variable) => ({
-          ...variable,
-          value: variable.value || '', // Ensure 'value' is present
-          type: variable.type as 'string' | 'number' | 'boolean' | 'json', // Cast type to match Variable type
-        }))
-      );
-      console.log('payloadAfterBuildRequest:', payload);
+
+      const payload = buildRequestPayload(request, mergedVariables);
 
       const previewUrl = getPreviewUrl();
       payload.request.url = previewUrl
         ? previewUrl.replace(/{{(.*?)}}/g, (_, varName) => {
-            const found = storeVariables.find((v) => v.name === varName);
+            const found = mergedVariables.find((v) => v.name === varName);
             return found?.initialValue ?? '';
           })
         : payload.request.url;
@@ -310,8 +344,6 @@ export function RequestEditor({
       setIsExecuting(false);
     }
   };
-
-  // Updated getPreviewUrl function to use environmentBaseUrl prop
   const getPreviewUrl = () => {
     const replacedUrl = request.url.replace(/{{(.*?)}}/g, (_, varName) => {
       const found = storeVariables.find((v) => v.name === varName);
