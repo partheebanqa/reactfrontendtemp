@@ -24,6 +24,7 @@ import { useMutation } from '@tanstack/react-query';
 import { executeRequestChain } from '@/services/executeRequest.service';
 import { toast } from '@/hooks/use-toast';
 import { useExecuteRequestChain } from '@/shared/hooks/requestChain';
+import { getValueByPath, extractDataFromResponse } from '@/lib/request-utils';
 
 interface RequestExecutorProps {
   chainId?: string;
@@ -76,89 +77,11 @@ export function RequestExecutor({
     vars.forEach((variable) => {
       const regex = new RegExp(`{{${variable.name}}}`, 'g');
       const oldResult = result;
-      result = result.replace(regex, variable.value);
+      result = result.replace(regex, variable.value ?? '');
       if (oldResult !== result) {
       }
     });
     return result;
-  };
-
-  // FIXED: Updated extractDataFromResponse function to handle header case-insensitivity
-  const extractDataFromResponse = (
-    response: any,
-    extractions: APIRequest['extractVariables']
-  ): Record<string, any> => {
-    const extracted: Record<string, any> = {};
-    extractions.forEach((extraction) => {
-      try {
-        let value;
-        if (extraction.source === 'response_body') {
-          // JSON path extraction
-          const jsonData =
-            typeof response.body === 'string'
-              ? JSON.parse(response.body)
-              : response.body;
-          value = getValueByPath(jsonData, extraction.path);
-        } else if (extraction.source === 'response_header') {
-          // FIXED: Handle case-insensitive header lookup
-          const headers = response.headers || {};
-          const headerKey = extraction.path.toLowerCase();
-
-          // First try direct lowercase lookup
-          value = headers[headerKey];
-
-          // If not found, search through all headers case-insensitively
-          if (value === undefined) {
-            const foundKey = Object.keys(headers).find(
-              (key) => key.toLowerCase() === headerKey
-            );
-            if (foundKey) {
-              value = headers[foundKey];
-            }
-          }
-        } else if (extraction.source === 'response_cookie') {
-          value = response.cookies?.[extraction.path];
-        }
-
-        if (value !== undefined) {
-          // Apply transformation if specified
-          if (extraction.transform) {
-            try {
-              const transformFunction = new Function(
-                'value',
-                `return ${extraction.transform}`
-              );
-              value = transformFunction(value);
-            } catch (transformError) {
-              console.error(
-                `Transform error for ${extraction.variableName}:`,
-                transformError
-              );
-            }
-          }
-          extracted[extraction.variableName] = value;
-        }
-      } catch (error) {
-        console.error(`Failed to extract ${extraction.variableName}:`, error);
-      }
-    });
-    return extracted;
-  };
-
-  const getValueByPath = (obj: any, path: string): any => {
-    return path.split('.').reduce((current, key) => {
-      if (current && typeof current === 'object') {
-        if (key.includes('[') && key.includes(']')) {
-          const arrayKey = key.substring(0, key.indexOf('['));
-          const index = Number.parseInt(
-            key.substring(key.indexOf('[') + 1, key.indexOf(']'))
-          );
-          return current[arrayKey] && current[arrayKey][index];
-        }
-        return current[key];
-      }
-      return undefined;
-    }, obj);
   };
 
   const parseCookies = (cookieHeader: string): Record<string, string> => {

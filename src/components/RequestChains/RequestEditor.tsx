@@ -56,10 +56,14 @@ import {
 } from '@/services/executeRequest.service';
 import { useDataManagementStore } from '@/store/dataManagementStore';
 import { useDataManagement } from '@/hooks/useDataManagement';
+import {
+  getExtractVariablesByEnvironment,
+  extractDataFromResponse,
+  copyToClipboard,
+} from '@/lib/request-utils';
 
 interface RequestEditorProps {
   request: APIRequest;
-  globalVariables: Variable[];
   onUpdate: (updates: Partial<APIRequest>) => void;
   onSave?: () => void;
   compact?: boolean;
@@ -79,7 +83,6 @@ interface KeyValuePair {
 
 export function RequestEditor({
   request,
-  globalVariables,
   onUpdate,
   onSave,
   compact = false,
@@ -88,7 +91,6 @@ export function RequestEditor({
   chainEnabled,
   environmentBaseUrl,
 }: RequestEditorProps) {
-  const [showRequestUrl, setShowRequestUrl] = useState(true);
   const [isJsonOpen, setIsJsonOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<
     'params' | 'headers' | 'body' | 'auth' | 'tests' | 'settings'
@@ -103,16 +105,12 @@ export function RequestEditor({
   const [extractedVariables, setExtractedVariables] = useState<
     Record<string, any>
   >({});
-  const { environments, activeEnvironment, setActiveEnvironment } =
-    useDataManagement();
+  const { activeEnvironment } = useDataManagement();
   const [previewUrl, setPreviewUrl] = useState('');
-
-  console.log('activeEnvironment:', activeEnvironment);
 
   const [previousExtractions, setPreviousExtractions] = useState<
     DataExtraction[]
   >([]);
-  const [extractionLogs, setExtractionLogs] = useState<any[]>([]);
   const [responseTab, setResponseTab] = useState<
     'body' | 'cookies' | 'headers' | 'test-results'
   >('body');
@@ -124,22 +122,6 @@ export function RequestEditor({
   const updateExtractedVariables = (newVars: Record<string, any>) => {
     setExtractedVariables(newVars);
     localStorage.setItem('extractedVariables', JSON.stringify(newVars));
-  };
-
-  const getValueByPath = (obj: any, path: string): any => {
-    return path.split('.').reduce((current, key) => {
-      if (current && typeof current === 'object') {
-        if (key.includes('[') && key.includes(']')) {
-          const arrayKey = key.substring(0, key.indexOf('['));
-          const index = Number.parseInt(
-            key.substring(key.indexOf('[') + 1, key.indexOf(']'))
-          );
-          return current[arrayKey] && current[arrayKey][index];
-        }
-        return current[key];
-      }
-      return undefined;
-    }, obj);
   };
 
   useEffect(() => {
@@ -154,99 +136,9 @@ export function RequestEditor({
       ...extractedVars,
     ];
 
-    setPreviewUrl(getPreviewUrl(mergedVariables)); // ✅ updates for UI
+    setPreviewUrl(getPreviewUrl(mergedVariables));
   }, [storeVariables, activeEnvironment, request.url]);
 
-  // FIXED: Updated extractDataFromResponse function to handle header case-insensitivity
-  const extractDataFromResponse = (
-    response: any,
-    extractions: APIRequest['extractVariables']
-  ): Record<string, any> => {
-    const extracted: Record<string, any> = {};
-    extractions.forEach((extraction) => {
-      try {
-        let value;
-        if (extraction.source === 'response_body') {
-          const jsonData =
-            typeof response.body === 'string'
-              ? JSON.parse(response.body)
-              : response.body;
-          value = getValueByPath(jsonData, extraction.path);
-        } else if (extraction.source === 'response_header') {
-          // FIXED: Handle case-insensitive header lookup
-          const headers = response.headers || {};
-          const headerKey = extraction.path.toLowerCase();
-
-          // First try direct lowercase lookup
-          value = headers[headerKey];
-
-          // If not found, search through all headers case-insensitively
-          if (value === undefined) {
-            const foundKey = Object.keys(headers).find(
-              (key) => key.toLowerCase() === headerKey
-            );
-            if (foundKey) {
-              value = headers[foundKey];
-            }
-          }
-        } else if (extraction.source === 'response_cookie') {
-          value = response.cookies?.[extraction.path];
-        }
-
-        if (value !== undefined) {
-          if (extraction.transform) {
-            try {
-              const transformFunction = new Function(
-                'value',
-                `return ${extraction.transform}`
-              );
-              value = transformFunction(value);
-            } catch (transformError) {
-              console.error(
-                `Transform error for ${extraction.variableName}:`,
-                transformError
-              );
-            }
-          }
-          extracted[extraction.variableName] = value;
-        }
-      } catch (error) {
-        console.error(`Failed to extract ${extraction.variableName}:`, error);
-      }
-    });
-    return extracted;
-  };
-
-  const getExtractVariablesByEnvironment = (environmentId?: string) => {
-    if (!environmentId) return [];
-
-    try {
-      const rawLogs = localStorage.getItem('extractionLogs');
-      if (!rawLogs) return [];
-
-      const parsedLogs = JSON.parse(rawLogs);
-      if (!Array.isArray(parsedLogs)) return [];
-
-      return parsedLogs
-        .filter((log) => log.environmentId === environmentId)
-        .flatMap(
-          (log) =>
-            log.chainRequests?.flatMap((req: any) =>
-              (req.extractVariables || []).map((v: any) => ({
-                name: v.variableName,
-                initialValue: v.value || '',
-                type: 'string',
-                value: v.value || '',
-              }))
-            ) || []
-        );
-    } catch (err) {
-      console.error('Error reading extractionLogs from localStorage:', err);
-      return [];
-    }
-  };
-
-  // ✅ Updated getPreviewUrl to take variables as argument
   const getPreviewUrl = (variables: Variable[]) => {
     const replacedUrl = request.url.replace(/{{(.*?)}}/g, (_, varName) => {
       const found = variables.find((v) => v.name === varName);
@@ -265,13 +157,10 @@ export function RequestEditor({
     }
   };
 
-  // ✅ Updated handleExecute to pass mergedVariables everywhere
   const handleExecute = async () => {
     const extractedVars = getExtractVariablesByEnvironment(
       activeEnvironment?.id
     );
-
-    console.log('extractedVars:', extractedVars);
 
     const mergedVariables = [
       ...storeVariables.filter(
@@ -378,8 +267,6 @@ export function RequestEditor({
     }
   };
 
-  // const previewUrl = getPreviewUrl(mergedVariables);
-
   const addKeyValuePair = (type: 'params' | 'headers') => {
     const newPair: KeyValuePair = {
       id: Date.now().toString(),
@@ -443,10 +330,6 @@ export function RequestEditor({
     return body;
   };
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-  };
-
   const addParam = () => {
     onUpdate({
       params: [...request.params, { key: '', value: '', enabled: true }],
@@ -470,8 +353,6 @@ export function RequestEditor({
   };
 
   const handleExtractVariable = (extraction: DataExtraction) => {
-    console.log('extraction:', extraction);
-
     const normalizeString = (value?: string) => (value || '').trim();
     const normalizeBool = (value?: boolean) => !!value;
 

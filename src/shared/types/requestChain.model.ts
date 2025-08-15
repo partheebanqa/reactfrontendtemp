@@ -64,10 +64,10 @@ export interface APIRequest {
 }
 
 export interface Variable {
-  initialValue: string;
+  initialValue?: string;
   id?: string;
   name: string;
-  value: string;
+  value?: string;
   type: 'string' | 'number' | 'boolean' | 'json';
   source?: 'extracted' | string;
   extractionPath?: string;

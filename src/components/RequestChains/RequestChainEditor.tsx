@@ -56,13 +56,20 @@ import {
 import { VariablesTable } from './VariablesTable';
 import { useDataManagement } from '@/hooks/useDataManagement';
 import { useWorkspace } from '@/hooks/useWorkspace';
-import { useDataManagementStore } from '@/store/dataManagementStore';
 import { parseCookies } from '@/lib/cookieUtils';
 import {
   buildRequestPayload,
   executeRequest,
 } from '@/services/executeRequest.service';
 import { ResponseExplorer } from './ResponseExplorer';
+
+import {
+  getExtractVariablesByEnvironment,
+  extractDataFromResponse,
+  copyToClipboard,
+  getExecutionLogForRequest,
+  transformRequestForSave,
+} from '@/lib/request-utils';
 
 interface RequestChainEditorProps {
   chain?: RequestChain;
@@ -79,8 +86,6 @@ export function RequestChainEditor({
   const dragItem = useRef<number | null>(null);
   const dragOverItem = useRef<number | null>(null);
   const { currentWorkspace } = useWorkspace();
-  const { variables: storeVariables } = useDataManagementStore();
-
   const [formData, setFormData] = useState<Partial<RequestChain>>({
     name: chain?.name || '',
     description: chain?.description || '',
@@ -103,35 +108,6 @@ export function RequestChainEditor({
     }
   }, [activeEnvironment]);
 
-  const getExtractVariablesByEnvironment = (environmentId?: string) => {
-    if (!environmentId) return [];
-
-    try {
-      const rawLogs = localStorage.getItem('extractionLogs');
-      if (!rawLogs) return [];
-
-      const parsedLogs = JSON.parse(rawLogs);
-      if (!Array.isArray(parsedLogs)) return [];
-
-      return parsedLogs
-        .filter((log) => log.environmentId === environmentId)
-        .flatMap(
-          (log) =>
-            log.chainRequests?.flatMap((req: any) =>
-              (req.extractVariables || []).map((v: any) => ({
-                name: v.variableName,
-                initialValue: v.value || '',
-                type: 'string',
-                value: v.value || '',
-              }))
-            ) || []
-        );
-    } catch (err) {
-      console.error('Error reading extractionLogs from localStorage:', err);
-      return [];
-    }
-  };
-
   const handleEnvironmentChange = (environmentId: string) => {
     setSelectedEnvironment(environmentId);
     const selectedEnv = environments.find((env) => env.id === environmentId);
@@ -148,16 +124,6 @@ export function RequestChainEditor({
     new Set()
   );
   const [editingRequestId, setEditingRequestId] = useState<string | null>(null);
-  const [globalVariables, setGlobalVariables] = useState<Variable[]>([
-    {
-      id: '1',
-      name: 'baseUrl',
-      value: 'https://api.example.com',
-      type: 'string',
-    },
-    { id: '2', name: 'apiKey', value: 'your-api-key', type: 'string' },
-    { id: '3', name: 'timeout', value: '5000', type: 'number' },
-  ]);
 
   const [executionLogs, setExecutionLogs] = useState<ExecutionLog[]>([]);
   const [extractedVariables, setExtractedVariables] = useState<
@@ -166,26 +132,17 @@ export function RequestChainEditor({
   const [isExecuting, setIsExecuting] = useState(false);
   const [currentRequestIndex, setCurrentRequestIndex] = useState(-1);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
-  const [pendingImportIds, setPendingImportIds] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState('requests');
-  const [responseTabStates, setResponseTabStates] = useState<
-    Record<string, string>
-  >({});
-  const [jsonOpenStates, setJsonOpenStates] = useState<Record<string, boolean>>(
-    {}
-  );
 
-  // Helper function to replace variables in text
   const replaceVariables = (text: string, vars: Variable[]): string => {
     let result = text;
     vars.forEach((variable) => {
       const regex = new RegExp(`{{${variable.name}}}`, 'g');
-      result = result.replace(regex, variable.value);
+      result = result.replace(regex, variable?.value ?? '');
     });
     return result;
   };
 
-  // Helper function to get preview URL using environment baseUrl
   const getPreviewUrl = (request: APIRequest, variables: Variable[]) => {
     const replacedUrl = replaceVariables(request.url, variables);
     const baseUrl = environmentBaseUrl?.trim();
@@ -197,86 +154,8 @@ export function RequestChainEditor({
       const parsedBase = new URL(baseUrl);
       return `${parsedBase.origin}${parsedOriginal.pathname}${parsedOriginal.search}${parsedOriginal.hash}`;
     } catch {
-      // If replacedUrl is relative
       return `${baseUrl.replace(/\/$/, '')}/${replacedUrl.replace(/^\//, '')}`;
     }
-  };
-
-  // Helper function to extract data from response
-  const getValueByPath = (obj: any, path: string): any => {
-    return path.split('.').reduce((current, key) => {
-      if (current && typeof current === 'object') {
-        if (key.includes('[') && key.includes(']')) {
-          const arrayKey = key.substring(0, key.indexOf('['));
-          const index = Number.parseInt(
-            key.substring(key.indexOf('[') + 1, key.indexOf(']'))
-          );
-          return current[arrayKey] && current[arrayKey][index];
-        }
-        return current[key];
-      }
-      return undefined;
-    }, obj);
-  };
-
-  // Updated extractDataFromResponse function to handle header case-insensitivity
-  const extractDataFromResponse = (
-    response: any,
-    extractions: APIRequest['extractVariables']
-  ): Record<string, any> => {
-    const extracted: Record<string, any> = {};
-
-    extractions.forEach((extraction) => {
-      try {
-        let value;
-        if (extraction.source === 'response_body') {
-          const jsonData =
-            typeof response.body === 'string'
-              ? JSON.parse(response.body)
-              : response.body;
-          value = getValueByPath(jsonData, extraction.path);
-        } else if (extraction.source === 'response_header') {
-          // Handle case-insensitive header lookup
-          const headers = response.headers || {};
-          const headerKey = extraction.path.toLowerCase();
-          // First try direct lowercase lookup
-          value = headers[headerKey];
-          // If not found, search through all headers case-insensitively
-          if (value === undefined) {
-            const foundKey = Object.keys(headers).find(
-              (key) => key.toLowerCase() === headerKey
-            );
-            if (foundKey) {
-              value = headers[foundKey];
-            }
-          }
-        } else if (extraction.source === 'response_cookie') {
-          value = response.cookies?.[extraction.path];
-        }
-
-        if (value !== undefined) {
-          if (extraction.transform) {
-            try {
-              const transformFunction = new Function(
-                'value',
-                `return ${extraction.transform}`
-              );
-              value = transformFunction(value);
-            } catch (transformError) {
-              console.error(
-                `Transform error for ${extraction.variableName}:`,
-                transformError
-              );
-            }
-          }
-          extracted[extraction.variableName] = value;
-        }
-      } catch (error) {
-        console.error(`Failed to extract ${extraction.variableName}:`, error);
-      }
-    });
-
-    return extracted;
   };
 
   const executeSingleRequest = async (
@@ -393,13 +272,7 @@ export function RequestChainEditor({
       activeEnvironment?.id
     );
 
-    const currentVariables = [
-      ...globalVariables.filter(
-        (sv) => !extractedVars.some((ev) => ev.name === sv.name)
-      ),
-      ...extractedVars,
-      ...(formData.variables || []),
-    ];
+    const currentVariables = [...extractedVars, ...(formData.variables || [])];
     const allExtractedVars: Record<string, any> = {};
 
     try {
@@ -425,12 +298,9 @@ export function RequestChainEditor({
 
           setExecutionLogs([...allLogs]);
 
-          // Update extracted variables for next requests
           if (log.extractedVariables) {
             Object.assign(allExtractedVars, log.extractedVariables);
             setExtractedVariables({ ...allExtractedVars });
-
-            // Convert extracted variables to Variable format and add to current variables
             Object.entries(log.extractedVariables).forEach(([key, value]) => {
               const existingVarIndex = currentVariables.findIndex(
                 (v) => v.name === key
@@ -500,7 +370,6 @@ export function RequestChainEditor({
         }
       }
 
-      // Final update of state with all results
       setExecutionLogs(allLogs);
       setExtractedVariables(allExtractedVars);
 
@@ -524,41 +393,6 @@ export function RequestChainEditor({
     } finally {
       setIsExecuting(false);
       setCurrentRequestIndex(-1);
-    }
-  };
-
-  // Helper function to get execution log for a request
-  const getExecutionLogForRequest = (
-    requestId: string
-  ): ExecutionLog | null => {
-    return executionLogs.find((log) => log.requestId === requestId) || null;
-  };
-
-  // Helper function to format response body
-  const formatResponseBody = (body: string, contentType?: string) => {
-    try {
-      if (
-        contentType?.includes('application/json') ||
-        body.trim().startsWith('{')
-      ) {
-        return JSON.stringify(JSON.parse(body), null, 2);
-      }
-    } catch {
-      // Return as-is if not valid JSON
-    }
-    return body;
-  };
-
-  // Helper function to copy to clipboard
-  const copyToClipboard = async (text: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      toast({
-        title: 'Copied to Clipboard',
-        description: 'The value has been copied successfully.',
-      });
-    } catch (err) {
-      console.error('Failed to copy:', err);
     }
   };
 
@@ -654,54 +488,6 @@ export function RequestChainEditor({
     setExpandedRequests(new Set([...expandedRequests, newRequest.id]));
   };
 
-  // Helper function to transform request data before saving
-  const transformRequestForSave = (request: APIRequest): APIRequest => {
-    const transformedRequest = { ...request };
-
-    // Transform authToken to authorization object structure
-    if (request.authorizationType === 'bearer' && request.authToken) {
-      transformedRequest.authorization = {
-        token: request.authToken,
-      };
-      // Remove the old authToken field
-      delete transformedRequest.authToken;
-    }
-
-    // Handle other auth types if needed
-    if (
-      request.authorizationType === 'basic' &&
-      request.authUsername &&
-      request.authPassword
-    ) {
-      // transformedRequest.authorization = {
-      //   username: request.authUsername,
-      //   password: request.authPassword,
-      // };
-      // Remove the old auth fields
-      delete transformedRequest.authUsername;
-      delete transformedRequest.authPassword;
-    }
-
-    if (
-      request.authorizationType === 'apikey' &&
-      request.authApiKey &&
-      request.authApiValue
-    ) {
-      // transformedRequest.authorization = {
-      //   key: request.authApiKey,
-      //   value: request.authApiValue,
-      //   addTo: request.authApiLocation || 'header',
-      // };
-      // Remove the old auth fields
-      delete transformedRequest.authApiKey;
-      delete transformedRequest.authApiValue;
-      delete transformedRequest.authApiLocation;
-    }
-
-    return transformedRequest;
-  };
-
-  // Save chain function
   const saveChainToAPI = async (): Promise<RequestChain | null> => {
     if (!formData.name?.trim()) {
       toast({
@@ -722,7 +508,6 @@ export function RequestChainEditor({
     }
 
     try {
-      // Transform all requests before saving
       const transformedRequests = formData.chainRequests.map(
         transformRequestForSave
       );
@@ -868,7 +653,7 @@ export function RequestChainEditor({
           <div className='flex-1 overflow-auto p-6'>
             <RequestEditor
               request={request}
-              globalVariables={globalVariables}
+              // globalVariables={globalVariables}
               onUpdate={(updates) => updateRequest(editingRequestId, updates)}
               onSave={() => setEditingRequestId(null)}
               chainName={formData.name}
@@ -1062,6 +847,7 @@ export function RequestChainEditor({
                     <div className='space-y-3'>
                       {formData.chainRequests.map((request, index) => {
                         const executionLog = getExecutionLogForRequest(
+                          executionLogs,
                           request.id
                         );
                         return (
@@ -1207,7 +993,7 @@ export function RequestChainEditor({
                                 <div className='mt-4 pt-4 border-t space-y-4'>
                                   <RequestEditor
                                     request={request}
-                                    globalVariables={globalVariables}
+                                    // globalVariables={globalVariables}
                                     onUpdate={(updates) =>
                                       updateRequest(request.id, updates)
                                     }
@@ -1400,7 +1186,7 @@ export function RequestChainEditor({
             <TabsContent value='execute'>
               <RequestExecutor
                 requests={formData.chainRequests || []}
-                variables={[...globalVariables, ...(formData.variables || [])]}
+                variables={[...(formData.variables || [])]}
                 onExecutionComplete={(logs, extractedVars) => {
                   setExecutionLogs(logs);
                   const newExtractedVars: Record<string, any> = {};
