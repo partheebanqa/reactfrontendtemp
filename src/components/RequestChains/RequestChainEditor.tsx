@@ -103,6 +103,35 @@ export function RequestChainEditor({
     }
   }, [activeEnvironment]);
 
+  const getExtractVariablesByEnvironment = (environmentId?: string) => {
+    if (!environmentId) return [];
+
+    try {
+      const rawLogs = localStorage.getItem('extractionLogs');
+      if (!rawLogs) return [];
+
+      const parsedLogs = JSON.parse(rawLogs);
+      if (!Array.isArray(parsedLogs)) return [];
+
+      return parsedLogs
+        .filter((log) => log.environmentId === environmentId)
+        .flatMap(
+          (log) =>
+            log.chainRequests?.flatMap((req: any) =>
+              (req.extractVariables || []).map((v: any) => ({
+                name: v.variableName,
+                initialValue: v.value || '',
+                type: 'string',
+                value: v.value || '',
+              }))
+            ) || []
+        );
+    } catch (err) {
+      console.error('Error reading extractionLogs from localStorage:', err);
+      return [];
+    }
+  };
+
   const handleEnvironmentChange = (environmentId: string) => {
     setSelectedEnvironment(environmentId);
     const selectedEnv = environments.find((env) => env.id === environmentId);
@@ -250,7 +279,6 @@ export function RequestChainEditor({
     return extracted;
   };
 
-  // Execute a single request
   const executeSingleRequest = async (
     request: APIRequest,
     variables: Variable[],
@@ -260,9 +288,20 @@ export function RequestChainEditor({
       throw new Error('Request URL is required');
     }
 
+    const extractedVars = getExtractVariablesByEnvironment(
+      activeEnvironment?.id
+    );
+
+    const mergedVariables = [
+      ...variables.filter(
+        (sv) => !extractedVars.some((ev) => ev.name === sv.name)
+      ),
+      ...extractedVars,
+    ];
+
     const startTime = Date.now();
-    const payload = buildRequestPayload(request, variables);
-    const previewUrl = getPreviewUrl(request, variables);
+    const payload = buildRequestPayload(request, mergedVariables);
+    const previewUrl = getPreviewUrl(request, mergedVariables);
     payload.request.url = previewUrl;
 
     try {
@@ -333,7 +372,6 @@ export function RequestChainEditor({
     }
   };
 
-  // Run all requests sequentially
   const handleRunAll = async () => {
     if (!formData.chainRequests || formData.chainRequests.length === 0) {
       toast({
@@ -351,8 +389,15 @@ export function RequestChainEditor({
     setActiveTab('requests');
 
     const allLogs: ExecutionLog[] = [];
+    const extractedVars = getExtractVariablesByEnvironment(
+      activeEnvironment?.id
+    );
+
     const currentVariables = [
-      ...globalVariables,
+      ...globalVariables.filter(
+        (sv) => !extractedVars.some((ev) => ev.name === sv.name)
+      ),
+      ...extractedVars,
       ...(formData.variables || []),
     ];
     const allExtractedVars: Record<string, any> = {};
@@ -378,9 +423,13 @@ export function RequestChainEditor({
           const log = await executeSingleRequest(request, currentVariables, i);
           allLogs.push(log);
 
+          setExecutionLogs([...allLogs]);
+
           // Update extracted variables for next requests
           if (log.extractedVariables) {
             Object.assign(allExtractedVars, log.extractedVariables);
+            setExtractedVariables({ ...allExtractedVars });
+
             // Convert extracted variables to Variable format and add to current variables
             Object.entries(log.extractedVariables).forEach(([key, value]) => {
               const existingVarIndex = currentVariables.findIndex(
@@ -424,6 +473,7 @@ export function RequestChainEditor({
         } catch (error) {
           const errorLog = error as ExecutionLog;
           allLogs.push(errorLog);
+          setExecutionLogs([...allLogs]);
 
           toast({
             title: `Request ${i + 1} Failed`,
@@ -450,7 +500,7 @@ export function RequestChainEditor({
         }
       }
 
-      // Update state with all results
+      // Final update of state with all results
       setExecutionLogs(allLogs);
       setExtractedVariables(allExtractedVars);
 
@@ -884,7 +934,7 @@ export function RequestChainEditor({
                   />
                 </div>
                 <div className='space-y-2'>
-                  <Label htmlFor='status'>Status</Label>
+                  <Label htmlFor='status'>Important</Label>
                   <Select
                     value={formData.enabled ? 'enabled' : 'disabled'}
                     onValueChange={(value) =>
