@@ -8,8 +8,6 @@ import {
   Trash2,
   Play,
   Save,
-  Eye,
-  EyeOff,
   ChevronDown,
   Code,
   Download,
@@ -900,11 +898,11 @@ export function RequestChainEditor({
                                     </p>
                                   </div>
                                   <div className='flex items-center space-x-2'>
-                                    {request.enabled ? (
+                                    {/* {request.enabled ? (
                                       <Eye className='w-4 h-4 text-green-500' />
                                     ) : (
                                       <EyeOff className='w-4 h-4 text-muted-foreground' />
-                                    )}
+                                    )} */}
                                     {executionLog && (
                                       <div className='flex items-center space-x-1'>
                                         {executionLog.status === 'success' ? (

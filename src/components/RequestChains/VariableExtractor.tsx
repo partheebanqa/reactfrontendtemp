@@ -18,6 +18,7 @@ export function VariableExtractor({
       source: 'response_body',
       path: '',
       transform: '',
+      value: '',
     };
 
     onUpdate([...request.extractVariables, newExtraction]);

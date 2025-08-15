@@ -20,8 +20,6 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import {
   Plus,
   Trash2,
-  Eye,
-  EyeOff,
   Code,
   Globe,
   Key,
@@ -792,11 +790,11 @@ export function RequestEditor({
                             : 'text-gray-400 hover:bg-gray-50'
                         }`}
                       >
-                        {param.enabled ? (
+                        {/* {param.enabled ? (
                           <Eye className='w-4 h-4' />
                         ) : (
                           <EyeOff className='w-4 h-4' />
-                        )}
+                        )} */}
                       </button>
                       <button
                         onClick={() => removeParam(index)}
@@ -863,11 +861,11 @@ export function RequestEditor({
                             : 'text-gray-400 hover:bg-gray-50'
                         }`}
                       >
-                        {header.enabled ? (
+                        {/* {header.enabled ? (
                           <Eye className='w-4 h-4' />
                         ) : (
                           <EyeOff className='w-4 h-4' />
-                        )}
+                        )} */}
                       </button>
                       <button
                         onClick={() => removeHeader(index)}
@@ -1191,11 +1189,11 @@ export function RequestEditor({
                                 : 'text-gray-400 hover:bg-gray-50'
                             }`}
                           >
-                            {test.enabled ? (
+                            {/* {test.enabled ? (
                               <Eye className='w-4 h-4' />
                             ) : (
                               <EyeOff className='w-4 h-4' />
-                            )}
+                            )} */}
                           </button>
                           <button
                             onClick={() => removeTest(test.id)}
