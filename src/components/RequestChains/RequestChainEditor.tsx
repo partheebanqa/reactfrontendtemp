@@ -63,7 +63,9 @@ import {
   extractDataFromResponse,
   transformRequestForSave,
   getExecutionLogForRequest,
+  copyToClipboard,
 } from '@/lib/request-utils';
+import { ResponseExplorer } from './ResponseExplorer';
 
 interface RequestChainEditorProps {
   chain?: RequestChain;
@@ -82,7 +84,16 @@ export function RequestChainEditor({
   const dragItem = useRef<number | null>(null);
   const dragOverItem = useRef<number | null>(null);
   const { currentWorkspace } = useWorkspace();
-  console.log('chain:', chain);
+  const [globalVariables, setGlobalVariables] = useState<Variable[]>([
+    {
+      id: '1',
+      name: 'baseUrl',
+      value: 'https://api.example.com',
+      type: 'string',
+    },
+    { id: '2', name: 'apiKey', value: 'your-api-key', type: 'string' },
+    { id: '3', name: 'timeout', value: '5000', type: 'number' },
+  ]);
 
   const [formData, setFormData] = useState<Partial<RequestChain>>({
     name: chain?.name || '',
@@ -272,11 +283,10 @@ export function RequestChainEditor({
     setActiveTab('requests');
 
     const allLogs: ExecutionLog[] = [];
-    const extractedVars = getExtractVariablesByEnvironment(
-      activeEnvironment?.id
-    );
-
-    const currentVariables = [...extractedVars, ...(formData.variables || [])];
+    const currentVariables = [
+      ...globalVariables,
+      ...(formData.variables || []),
+    ];
     const allExtractedVars: Record<string, any> = {};
 
     try {
@@ -300,11 +310,10 @@ export function RequestChainEditor({
           const log = await executeSingleRequest(request, currentVariables, i);
           allLogs.push(log);
 
-          setExecutionLogs([...allLogs]);
-
+          // Update extracted variables for next requests
           if (log.extractedVariables) {
             Object.assign(allExtractedVars, log.extractedVariables);
-            setExtractedVariables({ ...allExtractedVars });
+            // Convert extracted variables to Variable format and add to current variables
             Object.entries(log.extractedVariables).forEach(([key, value]) => {
               const existingVarIndex = currentVariables.findIndex(
                 (v) => v.name === key
@@ -347,7 +356,6 @@ export function RequestChainEditor({
         } catch (error) {
           const errorLog = error as ExecutionLog;
           allLogs.push(errorLog);
-          setExecutionLogs([...allLogs]);
 
           toast({
             title: `Request ${i + 1} Failed`,
@@ -374,6 +382,7 @@ export function RequestChainEditor({
         }
       }
 
+      // Update state with all results
       setExecutionLogs(allLogs);
       setExtractedVariables(allExtractedVars);
 
@@ -996,6 +1005,7 @@ export function RequestChainEditor({
                                 <div className='mt-4 pt-4 border-t space-y-4'>
                                   <RequestEditor
                                     request={request}
+                                    // globalVariables={globalVariables}
                                     onUpdate={(updates) =>
                                       updateRequest(request.id, updates)
                                     }
@@ -1004,8 +1014,138 @@ export function RequestChainEditor({
                                     chainDescription={formData.description}
                                     chainEnabled={formData.enabled}
                                     environmentBaseUrl={environmentBaseUrl}
-                                    chainId={chain?.id}
                                   />
+                                  {/* Response Section */}
+                                  {executionLog && (
+                                    <div className='border-t border-gray-200 pt-4'>
+                                      <div className='flex items-center justify-between p-4 bg-gray-50 border-b border-gray-200 rounded-t-lg'>
+                                        <div className='flex items-center space-x-4'>
+                                          {executionLog.status === 'success' ? (
+                                            <div className='flex items-center space-x-2'>
+                                              <CheckCircle className='w-5 h-5 text-green-500' />
+                                              <span className='text-sm font-medium text-green-700'>
+                                                Response
+                                              </span>
+                                            </div>
+                                          ) : (
+                                            <div className='flex items-center space-x-2'>
+                                              <XCircle className='w-5 h-5 text-red-500' />
+                                              <span className='text-sm font-medium text-red-700'>
+                                                Response
+                                              </span>
+                                            </div>
+                                          )}
+                                          {executionLog.response && (
+                                            <>
+                                              <span
+                                                className={`px-2 py-1 text-xs font-medium rounded ${
+                                                  executionLog.response.status <
+                                                  300
+                                                    ? 'bg-green-100 text-green-800'
+                                                    : executionLog.response
+                                                        .status < 400
+                                                    ? 'bg-yellow-100 text-yellow-800'
+                                                    : 'bg-red-100 text-red-800'
+                                                }`}
+                                              >
+                                                {executionLog.response.status}{' '}
+                                                {executionLog.response
+                                                  .status === 200
+                                                  ? 'OK'
+                                                  : executionLog.response
+                                                      .status === 201
+                                                  ? 'Created'
+                                                  : executionLog.response
+                                                      .status === 404
+                                                  ? 'Not Found'
+                                                  : executionLog.response
+                                                      .status === 500
+                                                  ? 'Server Error'
+                                                  : ''}
+                                              </span>
+                                              <span className='text-sm text-gray-600'>
+                                                {executionLog.duration}ms
+                                              </span>
+                                              <span className='text-sm text-gray-600'>
+                                                {(
+                                                  executionLog.response.size /
+                                                  1024
+                                                ).toFixed(2)}{' '}
+                                                KB
+                                              </span>
+                                            </>
+                                          )}
+                                        </div>
+                                      </div>
+                                      {executionLog.response && (
+                                        <div className='border-t border-gray-200 p-6'>
+                                          <h3 className='text-lg font-medium text-gray-900 mb-4'>
+                                            Extract Variables from Response
+                                          </h3>
+                                          <ResponseExplorer
+                                            response={executionLog.response}
+                                            onExtractVariable={(extraction) => {
+                                              const currentExtractions =
+                                                request.extractVariables || [];
+                                              const updatedExtractions = [
+                                                ...currentExtractions,
+                                                extraction,
+                                              ];
+                                              updateRequest(request.id, {
+                                                extractVariables:
+                                                  updatedExtractions,
+                                              });
+                                              // Extract the variable immediately from the current response
+                                              const extracted =
+                                                extractDataFromResponse(
+                                                  executionLog.response,
+                                                  updatedExtractions
+                                                );
+                                              setExtractedVariables((prev) => ({
+                                                ...prev,
+                                                ...extracted,
+                                              }));
+                                            }}
+                                            extractedVariables={
+                                              executionLog.extractedVariables ||
+                                              {}
+                                            }
+                                            existingExtractions={
+                                              request.extractVariables || []
+                                            }
+                                            onRemoveExtraction={(
+                                              variableName
+                                            ) => {
+                                              const updatedExtractions =
+                                                request.extractVariables?.filter(
+                                                  (e) =>
+                                                    e.variableName !==
+                                                    variableName
+                                                ) || [];
+                                              updateRequest(request.id, {
+                                                extractVariables:
+                                                  updatedExtractions,
+                                              });
+                                            }}
+                                            handleCopy={copyToClipboard}
+                                            copied={false}
+                                          />
+                                        </div>
+                                      )}
+                                      {!executionLog.response && (
+                                        <div className='p-6'>
+                                          <div className='text-red-600'>
+                                            <h4 className='font-medium mb-2'>
+                                              Error
+                                            </h4>
+                                            <p className='text-sm'>
+                                              {executionLog.error}
+                                            </p>
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
                                 </div>
                               )}
                             </CardContent>
