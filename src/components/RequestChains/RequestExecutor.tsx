@@ -36,7 +36,7 @@ interface APIRequest {
 }
 
 interface Variable {
-  id: string;
+  id?: string;
   name: string;
   value: string;
   type: string;

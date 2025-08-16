@@ -127,16 +127,20 @@ export const getExecutionLogForRequest = (
 export const transformRequestForSave = (request: APIRequest): APIRequest => {
   const transformedRequest = { ...request };
 
+  if (request.body && ['POST', 'PUT', 'PATCH'].includes(request.method)) {
+    transformedRequest.body = request.body;
+    transformedRequest.bodyRawContent = request.body;
+  }
+
   // Transform authToken to authorization object structure
   if (request.authorizationType === 'bearer' && request.authToken) {
     transformedRequest.authorization = {
       token: request.authToken,
     };
-    // Remove the old authToken field
     delete transformedRequest.authToken;
   }
 
-  // Handle other auth types if needed
+  // Handle Basic Auth
   if (
     request.authorizationType === 'basic' &&
     request.authUsername &&
@@ -146,11 +150,11 @@ export const transformRequestForSave = (request: APIRequest): APIRequest => {
     //   username: request.authUsername,
     //   password: request.authPassword,
     // };
-    // Remove the old auth fields
     delete transformedRequest.authUsername;
     delete transformedRequest.authPassword;
   }
 
+  // Handle API Key Auth
   if (
     request.authorizationType === 'apikey' &&
     request.authApiKey &&
@@ -161,7 +165,6 @@ export const transformRequestForSave = (request: APIRequest): APIRequest => {
     //   value: request.authApiValue,
     //   addTo: request.authApiLocation || 'header',
     // };
-    // Remove the old auth fields
     delete transformedRequest.authApiKey;
     delete transformedRequest.authApiValue;
     delete transformedRequest.authApiLocation;

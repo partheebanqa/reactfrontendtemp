@@ -43,6 +43,7 @@ import type {
 import { ImportModal } from '@/components/TestSuit/ImportModal';
 import type { ExtendedRequest } from '@/models/collection.model';
 import { RequestEditor } from '@/components/RequestChains/RequestEditor';
+import { RequestExecutor } from './RequestExecutor';
 import { saveRequestChain } from '@/services/requestChain.service';
 import {
   Tooltip,
@@ -1192,6 +1193,37 @@ export function RequestChainEditor({
                 extractedVariables={extractedVariables}
                 isExecuting={isExecuting}
                 currentRequestIndex={currentRequestIndex}
+              />
+            </TabsContent>
+            <TabsContent value='execute'>
+              <RequestExecutor
+                requests={formData.chainRequests || []}
+                variables={(formData.variables || []).map((v) => ({
+                  ...v,
+                  id: v.id ?? crypto.randomUUID(),
+                  value: v.value ?? '',
+                  source: v.source ?? 'manual',
+                }))}
+                onExecutionComplete={(logs, extractedVars) => {
+                  setExecutionLogs(logs);
+                  const newExtractedVars: Record<string, any> = {};
+                  logs.forEach((log) => {
+                    if (log.extractedVariables) {
+                      Object.assign(newExtractedVars, log.extractedVariables);
+                    }
+                  });
+                  setExtractedVariables(newExtractedVars);
+                }}
+                onVariableUpdate={(variables) => {
+                  setFormData({ ...formData, variables });
+                }}
+                onExecutionStateChange={(executing, requestIndex) => {
+                  setIsExecuting(executing);
+                  setCurrentRequestIndex(requestIndex);
+                }}
+                onPreExecute={saveChainToAPI}
+                chainName={formData?.name}
+                chainId={formData?.id}
               />
             </TabsContent>
           </Tabs>
