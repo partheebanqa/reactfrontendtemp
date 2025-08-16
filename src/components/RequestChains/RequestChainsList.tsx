@@ -240,9 +240,9 @@ export function RequestChainsList({
       </div>
 
       {/* Chains List */}
-      {loading ? (
-        <LoadingSkeleton />
-      ) : filteredAndSortedChains.length > 0 ? (
+      {loading && <LoadingSkeleton />}
+
+      {!loading && filteredAndSortedChains.length > 0 && (
         <div className='space-y-3'>
           {filteredAndSortedChains.map((chain) => (
             <Card key={chain.id} className='hover:shadow-sm transition-shadow'>
@@ -251,7 +251,6 @@ export function RequestChainsList({
                   {/* Left section - Icon, Name, and Details */}
                   <div className='flex items-center space-x-4 flex-1 min-w-0'>
                     <div className='flex-shrink-0'>{getStatusIcon(chain)}</div>
-
                     <div className='flex-1 min-w-0'>
                       <div className='flex items-center space-x-3'>
                         <h3 className='text-lg font-semibold truncate'>
@@ -266,11 +265,9 @@ export function RequestChainsList({
                           {chain.enabled ? 'Enabled' : 'Disabled'}
                         </Badge>
                       </div>
-
                       <p className='text-sm text-muted-foreground mt-1 line-clamp-1'>
                         {chain.description}
                       </p>
-
                       <div className='flex items-center space-x-4 mt-2 text-sm text-muted-foreground'>
                         <span>{chain?.chainRequests?.length} steps</span>
                         <span>•</span>
@@ -278,7 +275,6 @@ export function RequestChainsList({
                           {chain.chainRequests.map((r) => r.name).join(', ')}
                         </span>
                       </div>
-
                       <div className='flex items-center space-x-6 mt-3'>
                         <div className='text-center'>
                           <p className='text-sm font-medium'>
@@ -288,14 +284,6 @@ export function RequestChainsList({
                             Requests
                           </p>
                         </div>
-                        {/* <div className='text-center'>
-                          <p className='text-sm font-medium'>
-                            {chain.executionCount}
-                          </p>
-                          <p className='text-xs text-muted-foreground'>
-                            Executions
-                          </p>
-                        </div> */}
                         <div className='text-center'>
                           <p className='text-sm font-medium'>
                             {chain.successRate}%
@@ -317,7 +305,6 @@ export function RequestChainsList({
                           </p>
                         </div>
                       </div>
-
                       {/* Schedule info */}
                       {chain?.schedule?.enabled && (
                         <div className='flex items-center space-x-2 mt-2'>
@@ -335,7 +322,6 @@ export function RequestChainsList({
                           </span>
                         </div>
                       )}
-
                       <div className='text-xs text-muted-foreground mt-2'>
                         Created:{' '}
                         {new Date(chain.createdAt).toLocaleDateString()} • ID:{' '}
@@ -440,15 +426,12 @@ export function RequestChainsList({
                             </AlertDialogTitle>
                             <AlertDialogDescription>
                               This will permanently delete “{chain.name}”. This
-                              action cannot be undo.
+                              action cannot be undone.
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
                             <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <Button
-                              onClick={() => onDeleteChain(chain.id)}
-                              // className='bg-destructive text-destructive-foreground hover:bg-destructive/90'
-                            >
+                            <Button onClick={() => onDeleteChain(chain.id)}>
                               Delete
                             </Button>
                           </AlertDialogFooter>
@@ -461,7 +444,9 @@ export function RequestChainsList({
             </Card>
           ))}
         </div>
-      ) : (
+      )}
+
+      {!loading && filteredAndSortedChains.length === 0 && (
         <div className='text-center py-12'>
           <Workflow className='w-16 h-16 text-muted-foreground mx-auto mb-4' />
           <h3 className='text-lg font-medium mb-2'>No request chains found</h3>

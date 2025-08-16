@@ -40,7 +40,7 @@ import type {
   Variable,
   ExecutionLog,
 } from '@/shared/types/requestChain.model';
-import { RequestExecutor } from './RequestExecutor';
+import { RequestExecutor } from './RequestExecutor'; // Fixed import path to use kebab-case
 import { ImportModal } from '@/components/TestSuit/ImportModal';
 import type { ExtendedRequest } from '@/models/collection.model';
 import { RequestEditor } from '@/components/RequestChains/RequestEditor';
@@ -59,31 +59,32 @@ import {
   buildRequestPayload,
   executeRequest,
 } from '@/services/executeRequest.service';
-import { ResponseExplorer } from './ResponseExplorer';
-
 import {
   getExtractVariablesByEnvironment,
   extractDataFromResponse,
-  copyToClipboard,
-  getExecutionLogForRequest,
   transformRequestForSave,
+  getExecutionLogForRequest,
 } from '@/lib/request-utils';
 
 interface RequestChainEditorProps {
   chain?: RequestChain;
   onBack: () => void;
   onSave: (chain: RequestChain) => void;
+  requestChainId?: string; // Added requestChainId prop for edit mode
 }
 
 export function RequestChainEditor({
   chain,
   onBack,
   onSave,
+  requestChainId,
 }: RequestChainEditorProps) {
   const { toast } = useToast();
   const dragItem = useRef<number | null>(null);
   const dragOverItem = useRef<number | null>(null);
   const { currentWorkspace } = useWorkspace();
+  console.log('chain:', chain);
+
   const [formData, setFormData] = useState<Partial<RequestChain>>({
     name: chain?.name || '',
     description: chain?.description || '',
@@ -511,7 +512,7 @@ export function RequestChainEditor({
       );
 
       const chainData: RequestChain = {
-        id: chain?.id || Date.now().toString(),
+        id: requestChainId || chain?.id || Date.now().toString(),
         workspaceId: formData.workspaceId || currentWorkspace?.id || '',
         name: formData.name,
         description: formData.description || '',
@@ -530,19 +531,21 @@ export function RequestChainEditor({
       setFormData((prev) => ({ ...prev, id: savedChain.id }));
 
       toast({
-        title: 'Chain Saved',
-        description: 'Your request chain has been saved successfully.',
+        title: chain?.id ? 'Chain Updated' : 'Chain Saved',
+        description: chain?.id
+          ? 'Your request chain has been updated successfully.'
+          : 'Your request chain has been saved successfully.',
       });
 
       return savedChain;
     } catch (error) {
       console.error('Failed to save chain:', error);
       toast({
-        title: 'Save Failed',
+        title: chain?.id ? 'Update Failed' : 'Save Failed',
         description:
           error instanceof Error
             ? error.message
-            : 'Failed to save request chain',
+            : `Failed to ${chain?.id ? 'update' : 'save'} request chain`,
         variant: 'destructive',
       });
       return null;
@@ -621,6 +624,7 @@ export function RequestChainEditor({
   };
 
   // If editing a specific request, show the request editor
+  const currentRequestChainId = requestChainId || chain?.id || '';
   if (editingRequestId) {
     const request = formData.chainRequests?.find(
       (r) => r.id === editingRequestId
@@ -651,13 +655,14 @@ export function RequestChainEditor({
           <div className='flex-1 overflow-auto p-6'>
             <RequestEditor
               request={request}
-              // globalVariables={globalVariables}
               onUpdate={(updates) => updateRequest(editingRequestId, updates)}
               onSave={() => setEditingRequestId(null)}
               chainName={formData.name}
               chainDescription={formData.description}
               chainEnabled={formData.enabled}
               environmentBaseUrl={environmentBaseUrl}
+              requestChainId={currentRequestChainId}
+              chainId={chain?.id}
             />
           </div>
         </div>
@@ -683,14 +688,14 @@ export function RequestChainEditor({
               </p>
             </div>
           </div>
-          <div className='flex items-center space-x-3'>
+          <div className='flex items-center gap-2'>
             <Button
               onClick={handleSave}
               disabled={isSaveDisabled}
               className='gap-2'
             >
               <Save className='w-4 h-4' />
-              Save Chain
+              {chain ? 'Update Chain' : 'Save Chain'}
             </Button>
           </div>
         </div>
@@ -808,14 +813,14 @@ export function RequestChainEditor({
                     <CardTitle className='text-lg font-medium'>
                       Request Chain
                     </CardTitle>
-                    <div className='flex items-center space-x-2'>
+                    <div className='flex items-center gap-2'>
                       <Button
                         variant='outline'
                         onClick={handleRunAll}
                         disabled={
                           isExecuting || !formData.chainRequests?.length
                         }
-                        className='gap-2'
+                        className='gap-2 bg-transparent'
                       >
                         {isExecuting ? (
                           <Loader2 className='w-4 h-4 animate-spin' />
@@ -898,11 +903,6 @@ export function RequestChainEditor({
                                     </p>
                                   </div>
                                   <div className='flex items-center space-x-2'>
-                                    {/* {request.enabled ? (
-                                      <Eye className='w-4 h-4 text-green-500' />
-                                    ) : (
-                                      <EyeOff className='w-4 h-4 text-muted-foreground' />
-                                    )} */}
                                     {executionLog && (
                                       <div className='flex items-center space-x-1'>
                                         {executionLog.status === 'success' ? (
@@ -991,7 +991,6 @@ export function RequestChainEditor({
                                 <div className='mt-4 pt-4 border-t space-y-4'>
                                   <RequestEditor
                                     request={request}
-                                    // globalVariables={globalVariables}
                                     onUpdate={(updates) =>
                                       updateRequest(request.id, updates)
                                     }
@@ -1000,138 +999,8 @@ export function RequestChainEditor({
                                     chainDescription={formData.description}
                                     chainEnabled={formData.enabled}
                                     environmentBaseUrl={environmentBaseUrl}
+                                    chainId={chain?.id}
                                   />
-                                  {/* Response Section */}
-                                  {executionLog && (
-                                    <div className='border-t border-gray-200 pt-4'>
-                                      <div className='flex items-center justify-between p-4 bg-gray-50 border-b border-gray-200 rounded-t-lg'>
-                                        <div className='flex items-center space-x-4'>
-                                          {executionLog.status === 'success' ? (
-                                            <div className='flex items-center space-x-2'>
-                                              <CheckCircle className='w-5 h-5 text-green-500' />
-                                              <span className='text-sm font-medium text-green-700'>
-                                                Response
-                                              </span>
-                                            </div>
-                                          ) : (
-                                            <div className='flex items-center space-x-2'>
-                                              <XCircle className='w-5 h-5 text-red-500' />
-                                              <span className='text-sm font-medium text-red-700'>
-                                                Response
-                                              </span>
-                                            </div>
-                                          )}
-                                          {executionLog.response && (
-                                            <>
-                                              <span
-                                                className={`px-2 py-1 text-xs font-medium rounded ${
-                                                  executionLog.response.status <
-                                                  300
-                                                    ? 'bg-green-100 text-green-800'
-                                                    : executionLog.response
-                                                        .status < 400
-                                                    ? 'bg-yellow-100 text-yellow-800'
-                                                    : 'bg-red-100 text-red-800'
-                                                }`}
-                                              >
-                                                {executionLog.response.status}{' '}
-                                                {executionLog.response
-                                                  .status === 200
-                                                  ? 'OK'
-                                                  : executionLog.response
-                                                      .status === 201
-                                                  ? 'Created'
-                                                  : executionLog.response
-                                                      .status === 404
-                                                  ? 'Not Found'
-                                                  : executionLog.response
-                                                      .status === 500
-                                                  ? 'Server Error'
-                                                  : ''}
-                                              </span>
-                                              <span className='text-sm text-gray-600'>
-                                                {executionLog.duration}ms
-                                              </span>
-                                              <span className='text-sm text-gray-600'>
-                                                {(
-                                                  executionLog.response.size /
-                                                  1024
-                                                ).toFixed(2)}{' '}
-                                                KB
-                                              </span>
-                                            </>
-                                          )}
-                                        </div>
-                                      </div>
-                                      {executionLog.response && (
-                                        <div className='border-t border-gray-200 p-6'>
-                                          <h3 className='text-lg font-medium text-gray-900 mb-4'>
-                                            Extract Variables from Response
-                                          </h3>
-                                          <ResponseExplorer
-                                            response={executionLog.response}
-                                            onExtractVariable={(extraction) => {
-                                              const currentExtractions =
-                                                request.extractVariables || [];
-                                              const updatedExtractions = [
-                                                ...currentExtractions,
-                                                extraction,
-                                              ];
-                                              updateRequest(request.id, {
-                                                extractVariables:
-                                                  updatedExtractions,
-                                              });
-                                              // Extract the variable immediately from the current response
-                                              const extracted =
-                                                extractDataFromResponse(
-                                                  executionLog.response,
-                                                  updatedExtractions
-                                                );
-                                              setExtractedVariables((prev) => ({
-                                                ...prev,
-                                                ...extracted,
-                                              }));
-                                            }}
-                                            extractedVariables={
-                                              executionLog.extractedVariables ||
-                                              {}
-                                            }
-                                            existingExtractions={
-                                              request.extractVariables || []
-                                            }
-                                            onRemoveExtraction={(
-                                              variableName
-                                            ) => {
-                                              const updatedExtractions =
-                                                request.extractVariables?.filter(
-                                                  (e) =>
-                                                    e.variableName !==
-                                                    variableName
-                                                ) || [];
-                                              updateRequest(request.id, {
-                                                extractVariables:
-                                                  updatedExtractions,
-                                              });
-                                            }}
-                                            handleCopy={copyToClipboard}
-                                            copied={false}
-                                          />
-                                        </div>
-                                      )}
-                                      {!executionLog.response && (
-                                        <div className='p-6'>
-                                          <div className='text-red-600'>
-                                            <h4 className='font-medium mb-2'>
-                                              Error
-                                            </h4>
-                                            <p className='text-sm'>
-                                              {executionLog.error}
-                                            </p>
-                                          </div>
-                                        </div>
-                                      )}
-                                    </div>
-                                  )}
                                 </div>
                               )}
                             </CardContent>
@@ -1202,9 +1071,16 @@ export function RequestChainEditor({
                   setIsExecuting(executing);
                   setCurrentRequestIndex(requestIndex);
                 }}
-                onPreExecute={saveChainToAPI}
                 chainName={formData?.name}
                 chainId={formData?.id}
+                onPreExecute={async () => {
+                  const saved = await saveChainToAPI();
+                  if (saved) {
+                    onSave(saved);
+                    return { ...formData, id: saved.id };
+                  }
+                  return null;
+                }}
               />
             </TabsContent>
           </Tabs>

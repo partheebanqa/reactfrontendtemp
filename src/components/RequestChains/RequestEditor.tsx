@@ -69,6 +69,8 @@ interface RequestEditorProps {
   chainDescription?: string;
   chainEnabled?: boolean;
   environmentBaseUrl?: string; // New prop for environment base URL
+  requestChainId?: string; // Added requestChainId prop
+  chainId?: string;
 }
 
 interface KeyValuePair {
@@ -88,6 +90,8 @@ export function RequestEditor({
   chainDescription,
   chainEnabled,
   environmentBaseUrl,
+  requestChainId, // Added requestChainId parameter
+  chainId,
 }: RequestEditorProps) {
   const [isJsonOpen, setIsJsonOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<
@@ -97,6 +101,7 @@ export function RequestEditor({
   const [executionResult, setExecutionResult] = useState<ExecutionLog | null>(
     null
   );
+
   const { variables: storeVariables } = useDataManagementStore();
 
   const [showResponse, setShowResponse] = useState(false);
@@ -167,7 +172,17 @@ export function RequestEditor({
       ...extractedVars,
     ];
 
-    if (!request.url) {
+    // ✅ Ensure request always has expected fields
+    const safeRequest = {
+      ...request,
+      extractVariables: request.extractVariables ?? [],
+      headers: request.headers ?? [],
+      params: request.params ?? [],
+    };
+
+    console.log('request000:', safeRequest);
+
+    if (!safeRequest.url) {
       toast({
         title: 'Error',
         description: 'Request URL is required',
@@ -180,7 +195,7 @@ export function RequestEditor({
     try {
       const startTime = Date.now();
 
-      const payload = buildRequestPayload(request, mergedVariables);
+      const payload = buildRequestPayload(safeRequest, mergedVariables);
 
       // ✅ Always build previewUrl using mergedVariables
       const previewUrl = getPreviewUrl(mergedVariables);
@@ -196,14 +211,17 @@ export function RequestEditor({
           headers: result.headers,
           cookies: parseCookies(result.headers?.['set-cookie'] ?? ''),
         },
-        request.extractVariables
+        safeRequest.extractVariables
       );
+
+      console.log('result123:', result);
+      console.log('request132:', safeRequest);
 
       const endTime = Date.now();
       const log: ExecutionLog = {
         id: Date.now().toString(),
         chainId: 'current-chain',
-        requestId: request.id,
+        requestId: safeRequest.id,
         status:
           result.statusCode >= 200 && result.statusCode < 300
             ? 'success'
@@ -212,12 +230,12 @@ export function RequestEditor({
         endTime: new Date(endTime).toISOString(),
         duration: result.metrics.responseTime,
         request: {
-          method: request.method,
+          method: safeRequest.method,
           url: previewUrl,
           headers: Object.fromEntries(
-            request.headers.map((h) => [h.key, h.value])
+            safeRequest.headers.map((h) => [h.key, h.value])
           ),
-          body: request.body ?? '',
+          body: safeRequest.body ?? '',
         },
         response: {
           status: result.statusCode,
@@ -374,12 +392,17 @@ export function RequestEditor({
       order: nextOrder,
     };
 
-    const updatedExtractions = [
-      ...currentExtractions.filter(
-        (v) => v.variableName !== extraction.variableName
-      ),
-      extractionWithOrder,
-    ];
+    const updatedExtractions = [...currentExtractions, extraction];
+
+    // Create the update payload with requestChainId
+    const updatePayload: Partial<APIRequest> & { requestChainId?: string } = {
+      extractVariables: updatedExtractions,
+    };
+
+    // Add requestChainId if available (for edit mode)
+    if (requestChainId) {
+      updatePayload.requestChainId = requestChainId;
+    }
 
     const newRequest = {
       url: request.url,
@@ -441,7 +464,7 @@ export function RequestEditor({
 
     // Update state for request's own extracted variables
     setPreviousExtractions(updatedExtractions);
-    onUpdate({ extractVariables: updatedExtractions });
+    onUpdate(updatePayload);
 
     // If there’s a response, extract the values and update React state + localStorage
     // If there’s a response, extract the values and update React state + localStorage
@@ -758,7 +781,7 @@ export function RequestEditor({
                 </button>
               </div>
 
-              {request.params.length > 0 ? (
+              {request?.params?.length > 0 ? (
                 <div className='space-y-2'>
                   {request.params.map((param, index) => (
                     <div key={index} className='flex items-center space-x-2'>
@@ -1750,7 +1773,7 @@ export function RequestEditor({
               <Label>Method</Label>
               <Select
                 value={request.method}
-                onValueChange={(value) => onUpdate({ method: value as any })}
+                onChange={(value) => onUpdate({ method: value as any })}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -2065,7 +2088,7 @@ export function RequestEditor({
         <div className='flex justify-end'>
           <Button onClick={onSave} className='gap-2'>
             <Settings className='w-4 h-4' />
-            Save Request
+            {chainId ? 'Update Service' : 'Save Request'}
           </Button>
         </div>
       )}
