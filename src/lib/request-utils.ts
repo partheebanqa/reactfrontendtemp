@@ -121,7 +121,9 @@ export const getExecutionLogForRequest = (
   executionLogs: ExecutionLog[],
   requestId: string
 ): ExecutionLog | null => {
-  return executionLogs.find((log) => log.requestId === requestId) || null;
+  const executionLogsreturn =
+    executionLogs.find((log) => log.requestId === requestId) || null;
+  return executionLogsreturn;
 };
 
 export const transformRequestForSave = (request: APIRequest): APIRequest => {

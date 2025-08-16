@@ -33,6 +33,7 @@ interface APIRequest {
   authApiLocation?: string;
   errorHandling?: string;
   extractVariables: Array<{ variableName: string; path: string }>;
+  authorization?: { token?: string };
 }
 
 interface Variable {
@@ -196,11 +197,14 @@ export function RequestExecutor({
         processedHeaders['Content-Type'] = 'application/x-www-form-urlencoded';
       }
 
-      if (request.authorizationType === 'bearer' && request.authToken) {
-        processedHeaders['Authorization'] = `Bearer ${replaceVariables(
-          request.authToken,
-          currentVars
-        )}`;
+      if (request.authorizationType === 'bearer') {
+        const bearerToken = request.authorization?.token || request.authToken;
+        if (bearerToken) {
+          processedHeaders['Authorization'] = `Bearer ${replaceVariables(
+            bearerToken,
+            currentVars
+          )}`;
+        }
       } else if (
         request.authorizationType === 'basic' &&
         request.authUsername &&
@@ -354,6 +358,20 @@ export function RequestExecutor({
             newExtractedVars.push(newVar);
           });
           setExtractedVariables(newExtractedVars);
+
+          const updatedAllVars = [...allVariables];
+          newExtractedVars.forEach((newVar) => {
+            const existingIndex = updatedAllVars.findIndex(
+              (v) => v.name === newVar.name
+            );
+            if (existingIndex >= 0) {
+              updatedAllVars[existingIndex] = newVar;
+            } else {
+              updatedAllVars.push(newVar);
+            }
+          });
+          setAllVariables(updatedAllVars);
+          onVariableUpdate(updatedAllVars);
         }
       } catch (error) {
         console.error('Individual request execution failed:', error);

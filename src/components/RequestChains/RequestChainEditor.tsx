@@ -142,6 +142,7 @@ export function RequestChainEditor({
   const [editingRequestId, setEditingRequestId] = useState<string | null>(null);
 
   const [executionLogs, setExecutionLogs] = useState<ExecutionLog[]>([]);
+
   const [extractedVariables, setExtractedVariables] = useState<
     Record<string, any>
   >({});
@@ -182,6 +183,16 @@ export function RequestChainEditor({
     if (!request.url) {
       throw new Error('Request URL is required');
     }
+
+    // ✅ Ensure headers and params always exist as arrays
+    request = {
+      ...request,
+      headers: request.headers ?? [],
+      params: request.params ?? [],
+    };
+
+    console.log('request123:', request);
+    console.log('variables123:', variables);
 
     const extractedVars = getExtractVariablesByEnvironment(
       activeEnvironment?.id
@@ -258,7 +269,7 @@ export function RequestChainEditor({
         request: {
           method: request.method,
           url: previewUrl,
-          headers: {},
+          headers: {}, // fallback in error case
           body: request.body,
         },
         error: error instanceof Error ? error.message : 'Unknown error',

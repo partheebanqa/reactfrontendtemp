@@ -102,6 +102,8 @@ export function RequestEditor({
     null
   );
 
+  console.log('executionResult:', executionResult);
+
   const { variables: storeVariables } = useDataManagementStore();
 
   const [showResponse, setShowResponse] = useState(false);
@@ -172,15 +174,12 @@ export function RequestEditor({
       ...extractedVars,
     ];
 
-    // ✅ Ensure request always has expected fields
     const safeRequest = {
       ...request,
       extractVariables: request.extractVariables ?? [],
       headers: request.headers ?? [],
       params: request.params ?? [],
     };
-
-    console.log('request000:', safeRequest);
 
     if (!safeRequest.url) {
       toast({
@@ -213,9 +212,6 @@ export function RequestEditor({
         },
         safeRequest.extractVariables
       );
-
-      console.log('result123:', result);
-      console.log('request132:', safeRequest);
 
       const endTime = Date.now();
       const log: ExecutionLog = {
@@ -1052,8 +1048,18 @@ export function RequestEditor({
                     </label>
                     <input
                       type='text'
-                      value={request.authToken || ''}
-                      onChange={(e) => onUpdate({ authToken: e.target.value })}
+                      value={
+                        request.authorization?.token || request.authToken || ''
+                      }
+                      onChange={(e) => {
+                        onUpdate({
+                          authToken: e.target.value,
+                          authorization: {
+                            ...request.authorization,
+                            token: e.target.value,
+                          },
+                        });
+                      }}
                       className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
                       placeholder='Enter bearer token or use {{tokenVariable}}'
                     />

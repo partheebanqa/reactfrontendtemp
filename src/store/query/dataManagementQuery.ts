@@ -37,11 +37,8 @@ export const usegetEnvironmentQuery = (enabled = true) => {
         );
         const environment = filteredEnvironments[0];
 
-        console.log('filteredEnvironments:', filteredEnvironments);
-
         dataManagementActions.setEnvironments(filteredEnvironments);
         dataManagementActions.setActiveEnvironment(environment);
-        console.log('environmentReturn:', environment);
         return environment;
       } else {
         dataManagementActions.setEnvironments([]);

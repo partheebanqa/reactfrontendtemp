@@ -291,7 +291,30 @@ export function ResponseExplorer({
 
   const renderJsonTree = () => {
     try {
-      const jsonData = JSON.parse(response.body);
+      let jsonData;
+      let cleanBody = response.body;
+
+      // Try to clean the response body
+      if (typeof cleanBody === 'string') {
+        cleanBody = cleanBody.trim();
+        // Remove any potential BOM or invisible characters
+        cleanBody = cleanBody.replace(/^\uFEFF/, '');
+      }
+
+      try {
+        jsonData = JSON.parse(cleanBody);
+      } catch (firstError) {
+        // If direct parsing fails, try to extract JSON from the response
+        // Sometimes responses have extra text before/after JSON
+        const jsonMatch =
+          cleanBody.match(/\{.*\}/s) || cleanBody.match(/\[.*\]/s);
+        if (jsonMatch) {
+          jsonData = JSON.parse(jsonMatch[0]);
+        } else {
+          throw firstError;
+        }
+      }
+
       const nodes = parseJsonToNodes(jsonData);
 
       if (!nodes || !Array.isArray(nodes) || nodes.length === 0) {
@@ -320,11 +343,34 @@ export function ResponseExplorer({
       );
     } catch (error) {
       return (
-        <div className='p-4 bg-gray-50 rounded border'>
-          <p className='text-gray-600 text-sm'>Response is not valid JSON</p>
-          <pre className='mt-2 text-xs text-gray-700 whitespace-pre-wrap'>
-            {response.body}
-          </pre>
+        <div className='space-y-4'>
+          <div className='p-4 bg-gray-50 rounded border'>
+            <p className='text-gray-600 text-sm mb-2'>
+              Response is not valid JSON
+            </p>
+            <pre className='text-xs text-gray-700 whitespace-pre-wrap max-h-40 overflow-y-auto'>
+              {response.body}
+            </pre>
+          </div>
+
+          <div className='p-3 bg-blue-50 border border-blue-200 rounded'>
+            <p className='text-sm text-blue-800 mb-2'>
+              <strong>Manual Extraction:</strong> You can still extract
+              variables from headers or cookies using the tabs above.
+            </p>
+            <button
+              onClick={() =>
+                handleExtractClick(
+                  'response_body',
+                  'raw_response',
+                  response.body
+                )
+              }
+              className='px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 transition-colors'
+            >
+              Extract Raw Response
+            </button>
+          </div>
         </div>
       );
     }
