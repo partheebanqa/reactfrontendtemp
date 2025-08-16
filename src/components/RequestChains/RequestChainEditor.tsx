@@ -40,7 +40,6 @@ import type {
   Variable,
   ExecutionLog,
 } from '@/shared/types/requestChain.model';
-import { RequestExecutor } from './RequestExecutor'; // Fixed import path to use kebab-case
 import { ImportModal } from '@/components/TestSuit/ImportModal';
 import type { ExtendedRequest } from '@/models/collection.model';
 import { RequestEditor } from '@/components/RequestChains/RequestEditor';
@@ -90,7 +89,13 @@ export function RequestChainEditor({
     description: chain?.description || '',
     workspaceId: currentWorkspace?.id || '',
     enabled: chain?.enabled ?? true,
-    chainRequests: chain?.chainRequests || (chain as any)?.requests || [],
+    chainRequests: (chain?.chainRequests || (chain as any)?.requests || []).map(
+      (req: any) => ({
+        ...req,
+        body: req.body || req.bodyRawContent || '', // Map bodyRawContent to body
+        bodyType: req.bodyType || (req.bodyRawContent ? 'raw' : 'none'), // Set bodyType based on content
+      })
+    ),
     variables: chain?.variables || [],
     environment: chain?.environment || 'dev',
   });
@@ -1047,40 +1052,6 @@ export function RequestChainEditor({
                 extractedVariables={extractedVariables}
                 isExecuting={isExecuting}
                 currentRequestIndex={currentRequestIndex}
-              />
-            </TabsContent>
-
-            <TabsContent value='execute'>
-              <RequestExecutor
-                requests={formData.chainRequests || []}
-                variables={[...(formData.variables || [])]}
-                onExecutionComplete={(logs, extractedVars) => {
-                  setExecutionLogs(logs);
-                  const newExtractedVars: Record<string, any> = {};
-                  logs.forEach((log) => {
-                    if (log.extractedVariables) {
-                      Object.assign(newExtractedVars, log.extractedVariables);
-                    }
-                  });
-                  setExtractedVariables(newExtractedVars);
-                }}
-                onVariableUpdate={(variables) => {
-                  setFormData({ ...formData, variables });
-                }}
-                onExecutionStateChange={(executing, requestIndex) => {
-                  setIsExecuting(executing);
-                  setCurrentRequestIndex(requestIndex);
-                }}
-                chainName={formData?.name}
-                chainId={formData?.id}
-                onPreExecute={async () => {
-                  const saved = await saveChainToAPI();
-                  if (saved) {
-                    onSave(saved);
-                    return { ...formData, id: saved.id };
-                  }
-                  return null;
-                }}
               />
             </TabsContent>
           </Tabs>

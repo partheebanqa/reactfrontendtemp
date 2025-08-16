@@ -1773,7 +1773,9 @@ export function RequestEditor({
               <Label>Method</Label>
               <Select
                 value={request.method}
-                onChange={(value) => onUpdate({ method: value as any })}
+                onValueChange={(value) =>
+                  onUpdate({ method: value as APIRequest['method'] })
+                }
               >
                 <SelectTrigger>
                   <SelectValue />
