@@ -389,7 +389,7 @@ export function RequestChainsList({
                       </Tooltip>
 
                       {/* Download Chain */}
-                      <Tooltip>
+                      {/* <Tooltip>
                         <TooltipTrigger asChild>
                           <Button
                             variant='ghost'
@@ -400,7 +400,7 @@ export function RequestChainsList({
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent>Download Chain</TooltipContent>
-                      </Tooltip>
+                      </Tooltip> */}
 
                       {/* Delete Chain with confirmation */}
                       <AlertDialog>

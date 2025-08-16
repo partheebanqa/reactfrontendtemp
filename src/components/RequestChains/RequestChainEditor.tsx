@@ -44,7 +44,10 @@ import { ImportModal } from '@/components/TestSuit/ImportModal';
 import type { ExtendedRequest } from '@/models/collection.model';
 import { RequestEditor } from '@/components/RequestChains/RequestEditor';
 import { RequestExecutor } from './RequestExecutor';
-import { saveRequestChain } from '@/services/requestChain.service';
+import {
+  saveRequestChain,
+  updateRequestChain,
+} from '@/services/requestChain.service';
 import {
   Tooltip,
   TooltipContent,
@@ -184,7 +187,6 @@ export function RequestChainEditor({
       throw new Error('Request URL is required');
     }
 
-    // ✅ Ensure headers and params always exist as arrays
     request = {
       ...request,
       headers: request.headers ?? [],
@@ -322,10 +324,8 @@ export function RequestChainEditor({
           const log = await executeSingleRequest(request, currentVariables, i);
           allLogs.push(log);
 
-          // Update extracted variables for next requests
           if (log.extractedVariables) {
             Object.assign(allExtractedVars, log.extractedVariables);
-            // Convert extracted variables to Variable format and add to current variables
             Object.entries(log.extractedVariables).forEach(([key, value]) => {
               const existingVarIndex = currentVariables.findIndex(
                 (v) => v.name === key
@@ -538,7 +538,7 @@ export function RequestChainEditor({
       );
 
       const chainData: RequestChain = {
-        id: requestChainId || chain?.id || Date.now().toString(),
+        id: requestChainId || chain?.id || '',
         workspaceId: formData.workspaceId || currentWorkspace?.id || '',
         name: formData.name,
         description: formData.description || '',
@@ -553,14 +553,24 @@ export function RequestChainEditor({
         successRate: chain?.successRate || 0,
       };
 
-      const savedChain = await saveRequestChain(chainData);
+      let savedChain: RequestChain;
+
+      if (chainData.id === '') {
+        // SAVE (new chain)
+        savedChain = await saveRequestChain(chainData);
+      } else {
+        // UPDATE (existing chain)
+        savedChain = await updateRequestChain(chainData, chainData.id);
+      }
+
       setFormData((prev) => ({ ...prev, id: savedChain.id }));
 
       toast({
-        title: chain?.id ? 'Chain Updated' : 'Chain Saved',
-        description: chain?.id
-          ? 'Your request chain has been updated successfully.'
-          : 'Your request chain has been saved successfully.',
+        title: chainData.id === '' ? 'Chain Saved' : 'Chain Updated',
+        description:
+          chainData.id === ''
+            ? 'Your request chain has been saved successfully.'
+            : 'Your request chain has been updated successfully.',
       });
 
       return savedChain;

@@ -107,10 +107,11 @@ export const extractDataFromResponse = (
 
 export const copyToClipboard = async (text: string) => {
   try {
-    await navigator.clipboard.writeText(text);
+    const formattedText = `{{${text}}}`;
+    await navigator.clipboard.writeText(formattedText);
     toast({
       title: 'Copied to Clipboard',
-      description: 'The value has been copied successfully.',
+      description: `Copied: ${formattedText}`,
     });
   } catch (err) {
     console.error('Failed to copy:', err);

@@ -492,11 +492,12 @@ export function RequestEditor({
   const [copied, setCopied] = useState(false);
   const handleCopy = async (value: string) => {
     try {
-      await navigator.clipboard.writeText(value);
+      const formattedValue = `{{${value}}}`;
+      await navigator.clipboard.writeText(formattedValue);
       setCopied(true);
       toast({
         title: 'Copied to Clipboard',
-        description: 'The value has been copied successfully.',
+        description: `Copied: ${formattedValue}`,
       });
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {

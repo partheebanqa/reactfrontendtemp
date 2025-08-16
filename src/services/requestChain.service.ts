@@ -52,7 +52,6 @@ export async function getMultipleRequestDetails(
 export async function getCollectionRequests(
   collectionId?: string
 ): Promise<ExtendedRequest[]> {
-  console.log('getCollectionRequests is called');
   try {
     const url = collectionId
       ? `${API_REQUEST}/collections/${collectionId}/requests`
@@ -74,8 +73,6 @@ export async function getCollectionRequests(
 export async function saveRequestChain(
   chain: RequestChain
 ): Promise<RequestChain> {
-  console.log('🟡 Saving chain (request payload):', chain);
-
   const response = await apiRequest('POST', API_REQUEST_CHAIN, {
     body: JSON.stringify(chain),
     headers: {
@@ -88,9 +85,28 @@ export async function saveRequestChain(
   }
 
   const savedChain: RequestChain = await response.json();
-  console.log('✅ Response from backend:', savedChain);
 
   return savedChain;
+}
+
+export async function updateRequestChain(
+  chain: RequestChain,
+  id: string
+): Promise<RequestChain> {
+  const response = await apiRequest('PUT', `${API_REQUEST_CHAIN}/${id}`, {
+    body: JSON.stringify(chain),
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`);
+  }
+
+  const updatedChain: RequestChain = await response.json();
+
+  return updatedChain;
 }
 
 export const getRequestChains = async (

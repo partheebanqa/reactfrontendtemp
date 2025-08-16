@@ -95,6 +95,7 @@ const Index = () => {
   const handleSaveChain = async (
     chain: RequestChain
   ): Promise<RequestChain | null> => {
+    console.log('RequestChainEditor:', chain);
     return new Promise((resolve) => {
       saveChain(chain, {
         onSuccess: (saved) => {
