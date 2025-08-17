@@ -90,6 +90,7 @@ interface RequestExecutorProps {
     currentRequestIndex: number
   ) => void;
   onPreExecute?: () => Promise<RequestChain | null>;
+  onPostExecute?: () => void;
   request?: APIRequest;
   onResponse?: (response: any) => void;
 }
@@ -101,6 +102,7 @@ export function RequestExecutor({
   onVariableUpdate,
   onExecutionStateChange,
   onPreExecute,
+  onPostExecute,
   chainName,
   chainId,
   request,
@@ -461,6 +463,22 @@ export function RequestExecutor({
     onExecutionComplete(logs, newExtractedVars);
     onVariableUpdate(currentVars);
     onExecutionStateChange?.(false, -1);
+
+    const successCount = logs.filter((log) => log.status === 'success').length;
+    const totalCount = logs.length;
+
+    toast({
+      title: 'Execution Complete',
+      description: `Completed ${successCount}/${totalCount} requests successfully`,
+      variant: successCount === totalCount ? 'default' : 'destructive',
+    });
+
+    if (onPostExecute && savedChain?.id) {
+      // Small delay to let user see the completion toast
+      setTimeout(() => {
+        onPostExecute();
+      }, 1500);
+    }
   };
 
   const stopExecution = () => {

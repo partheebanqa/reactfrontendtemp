@@ -1,4 +1,6 @@
-import React, { useState, useMemo } from 'react';
+'use client';
+
+import { useState, useMemo } from 'react';
 import {
   Plus,
   Search,
@@ -12,8 +14,6 @@ import {
   XCircle,
   Settings,
   Copy,
-  Download,
-  Filter,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,9 +24,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { RequestChain } from '@/shared/types/requestChain.model';
+import type { RequestChain } from '@/shared/types/requestChain.model';
 import {
   Tooltip,
   TooltipContent,
@@ -35,7 +35,6 @@ import {
 } from '../ui/tooltip';
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -106,7 +105,7 @@ export function RequestChainsList({
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
   const filteredAndSortedChains = useMemo(() => {
-    let filtered = chains.filter((chain) => {
+    const filtered = chains.filter((chain) => {
       const matchesSearch =
         chain.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         chain.description?.toLowerCase().includes(searchTerm.toLowerCase());

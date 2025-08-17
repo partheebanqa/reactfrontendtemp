@@ -591,6 +591,8 @@ export function RequestChainEditor({
     const saved = await saveChainToAPI();
     if (saved) {
       onSave(saved);
+      // Redirect to list view after successful save
+      onBack();
     }
     return saved;
   };
@@ -1249,6 +1251,10 @@ export function RequestChainEditor({
                   setCurrentRequestIndex(requestIndex);
                 }}
                 onPreExecute={saveChainToAPI}
+                onPostExecute={() => {
+                  // Redirect to list view after successful execution
+                  onBack();
+                }}
                 chainName={formData?.name}
                 chainId={formData?.id}
               />
