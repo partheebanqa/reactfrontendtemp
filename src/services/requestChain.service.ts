@@ -7,7 +7,6 @@ import {
   RequestChain,
   RequestDetailResponse,
 } from '@/shared/types/requestChain.model';
-import axios from 'axios';
 
 export async function getRequestDetails(
   requestId: string

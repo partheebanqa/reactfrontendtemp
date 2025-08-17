@@ -1,11 +1,12 @@
-// ExecutionDetailsDialog.tsx
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
 
-export const ExecutionDetailsDialog = ({
-  open,
-  onClose,
-  execution,
-}: any) => {
+export const ExecutionDetailsDialog = ({ open, onClose, execution }: any) => {
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent>
@@ -16,7 +17,7 @@ export const ExecutionDetailsDialog = ({
           </DialogDescription>
         </DialogHeader>
         {execution && (
-          <pre className="text-xs whitespace-pre-wrap">
+          <pre className='text-xs whitespace-pre-wrap'>
             {JSON.stringify(execution, null, 2)}
           </pre>
         )}

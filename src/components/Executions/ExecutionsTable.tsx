@@ -1,4 +1,3 @@
-// ExecutionsTable.tsx
 import {
   Table,
   TableBody,
@@ -10,8 +9,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Copy, Calendar, GitBranch, Play, Eye } from 'lucide-react';
-import { format, formatDistanceToNow } from 'date-fns';
-import { Link } from 'wouter';
+import { formatDistanceToNow } from 'date-fns';
 
 export const ExecutionsTable = ({
   executions,
@@ -22,6 +20,8 @@ export const ExecutionsTable = ({
   getStatusColor,
   getStatusIcon,
 }: any) => {
+  console.log('executions:', executions);
+
   return (
     <Table>
       <TableHeader>
@@ -42,24 +42,20 @@ export const ExecutionsTable = ({
           const schedule = schedules?.find(
             (s: any) => s.id === execution.scheduleId
           );
-          const environment = schedule?.environment || 'production';
+          const environment = schedule?.environment || execution.environment;
 
           return (
             <TableRow key={execution.id} className='hover:bg-slate-50'>
               <TableCell>
                 <div>
                   {execution.testSuite ? (
-                    <Link href='/test-suites'>
-                      <p className='font-medium text-orange-600 hover:text-orange-700 cursor-pointer'>
-                        {execution.testSuite.name}
-                      </p>
-                    </Link>
+                    <p className='font-medium text-orange-600 hover:text-orange-700 cursor-pointer'>
+                      {execution.testSuite.name}
+                    </p>
                   ) : (
-                    <Link href='/request-chains'>
-                      <p className='font-medium text-orange-600 hover:text-orange-700 cursor-pointer'>
-                        Request Chain
-                      </p>
-                    </Link>
+                    <p className='font-medium text-orange-600 hover:text-orange-700 cursor-pointer'>
+                      {execution.requestChain?.name || 'Request Chain'}
+                    </p>
                   )}
                   <div className='flex items-center gap-2 mt-1'>
                     <p className='text-sm text-slate-500'>ID: {execution.id}</p>
@@ -97,7 +93,7 @@ export const ExecutionsTable = ({
                 </span>
               </TableCell>
               <TableCell>
-              <Badge >
+                <Badge>
                   <span className='mr-1'>
                     {getStatusIcon(execution.status)}
                   </span>
@@ -106,11 +102,7 @@ export const ExecutionsTable = ({
               </TableCell>
               <TableCell>
                 <div>
-                  <p className='text-sm text-slate-900'>
-                    {/* {format(new Date(execution.startTime), 'MMM d, yyyy')} */}
-                  </p>
                   <p className='text-xs text-slate-500'>
-                    {/* {format(new Date(execution.startTime), 'h:mm a')} •{' '} */}
                     {formatDistanceToNow(new Date(execution.startTime), {
                       addSuffix: true,
                     })}
