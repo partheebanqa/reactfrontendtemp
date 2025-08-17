@@ -837,9 +837,8 @@ export function RequestChainEditor({
                 </TabsList>
 
                 <TabsContent value='requests' className='space-y-4'>
-                  {/* Request Chain Section */}
-                  <div className='border-2 border-dashed border-gray-200 rounded-lg'>
-                    <div className='p-4'>
+                  <div className='bg-card rounded-xl border border-border overflow-hidden'>
+                    <div className='p-4 sm:p-6 border-b border-border'>
                       <div className='flex items-center justify-between mb-4'>
                         <h3 className='text-lg font-medium'>Request Chain</h3>
                         <div className='flex items-center gap-2'>
@@ -1189,17 +1188,31 @@ export function RequestChainEditor({
                           })}
                         </div>
                       ) : (
-                        <div className='flex flex-col items-center justify-center py-12'>
-                          <div className='w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4'>
-                            <Code className='w-8 h-8 text-muted-foreground' />
+                        <div className='text-center py-12'>
+                          <div className='w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4'>
+                            <Code className='w-8 h-8 text-gray-400' />
                           </div>
-                          <p className='text-muted-foreground mb-4'>
-                            No requests in this chain yet
+                          <h3 className='text-lg font-medium text-gray-900 mb-2'>
+                            No requests in this chain
+                          </h3>
+                          <p className='text-sm text-gray-500 mb-6'>
+                            Get started by adding your first request or
+                            importing from a collection
                           </p>
-                          <Button onClick={addNewRequest} className='gap-2'>
-                            <Plus className='w-4 h-4' />
-                            Add First Request
-                          </Button>
+                          <div className='flex items-center justify-center space-x-3'>
+                            <Button
+                              variant='outline'
+                              onClick={() => setIsImportModalOpen(true)}
+                              className='gap-2'
+                            >
+                              <Download className='w-4 h-4' />
+                              Import from Collection
+                            </Button>
+                            <Button onClick={addNewRequest} className='gap-2'>
+                              <Plus className='w-4 h-4' />
+                              Add First Request
+                            </Button>
+                          </div>
                         </div>
                       )}
                     </div>
