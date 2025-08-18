@@ -102,8 +102,6 @@ export function RequestEditor({
     null
   );
 
-  console.log('executionResult:', executionResult);
-
   const { variables: storeVariables } = useDataManagementStore();
 
   const [showResponse, setShowResponse] = useState(false);

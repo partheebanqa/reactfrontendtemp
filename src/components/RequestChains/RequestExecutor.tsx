@@ -13,28 +13,7 @@ import {
   Copy,
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-
-interface APIRequest {
-  id: string;
-  name: string;
-  method: string;
-  url: string;
-  enabled: boolean;
-  headers: Array<{ key: string; value: string; enabled: boolean }>;
-  params: Array<{ key: string; value: string; enabled: boolean }>;
-  body?: string;
-  bodyType?: string;
-  authorizationType?: string;
-  authToken?: string;
-  authUsername?: string;
-  authPassword?: string;
-  authApiKey?: string;
-  authApiValue?: string;
-  authApiLocation?: string;
-  errorHandling?: string;
-  extractVariables: Array<{ variableName: string; path: string }>;
-  authorization?: { token?: string };
-}
+import { APIRequest, ExecutionLog } from '@/shared/types/requestChain.model';
 
 interface Variable {
   id?: string;
@@ -43,31 +22,6 @@ interface Variable {
   type: string;
   source: string;
   extractionPath?: string;
-}
-
-interface ExecutionLog {
-  id: string;
-  chainId: string;
-  requestId: string;
-  status: 'success' | 'error' | 'timeout';
-  startTime: string;
-  endTime: string;
-  duration: number;
-  request: {
-    method: string;
-    url: string;
-    headers: Record<string, string>;
-    body?: string;
-  };
-  response?: {
-    status: number;
-    headers: Record<string, string>;
-    body: string;
-    size: number;
-    cookies: Record<string, string>;
-  };
-  error?: string;
-  extractedVariables?: Record<string, any>;
 }
 
 interface RequestChain {
@@ -143,6 +97,8 @@ export function RequestExecutor({
     });
     return cookies;
   };
+
+  console.log('chainId:', chainId);
 
   const extractDataFromResponse = (
     response: any,
@@ -556,7 +512,11 @@ export function RequestExecutor({
             <button
               onClick={handleExecuteChain}
               disabled={
-                request
+                chainId
+                  ? request
+                    ? !request.url
+                    : false
+                  : request
                   ? !request.url
                   : !chainName?.trim() ||
                     requests.filter((r) => r.enabled).length === 0
@@ -567,11 +527,15 @@ export function RequestExecutor({
               <span className='hidden sm:inline'>
                 {request
                   ? 'Run'
+                  : chainId
+                  ? 'Update Chain & Execute'
                   : onPreExecute
-                  ? 'Save chain & Execute'
+                  ? 'Save Chain & Execute'
                   : 'Execute'}
               </span>
-              <span className='sm:hidden'>{request ? 'Run' : 'Execute'}</span>
+              <span className='sm:hidden'>
+                {request ? 'Run' : chainId ? 'Update' : 'Execute'}
+              </span>
             </button>
           )}
         </div>

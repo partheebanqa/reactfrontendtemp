@@ -552,16 +552,13 @@ export function RequestChainEditor({
         successRate: chain?.successRate || 0,
       };
 
-      let savedChain: RequestChain;
+      // save or update
+      const savedChain =
+        chainData.id === ''
+          ? await saveRequestChain(chainData)
+          : await updateRequestChain(chainData, chainData.id);
 
-      if (chainData.id === '') {
-        // SAVE (new chain)
-        savedChain = await saveRequestChain(chainData);
-      } else {
-        // UPDATE (existing chain)
-        savedChain = await updateRequestChain(chainData, chainData.id);
-      }
-
+      // ensure formData has the latest id
       setFormData((prev) => ({ ...prev, id: savedChain.id }));
 
       toast({
@@ -725,7 +722,7 @@ export function RequestChainEditor({
               </p>
             </div>
           </div>
-          <div className='flex items-center gap-2'>
+          {/* <div className='flex items-center gap-2'>
             <Button
               onClick={handleSave}
               disabled={isSaveDisabled}
@@ -734,7 +731,7 @@ export function RequestChainEditor({
               <Save className='w-4 h-4' />
               {chain ? 'Update Chain' : 'Save Chain'}
             </Button>
-          </div>
+          </div> */}
         </div>
       </div>
 
@@ -1269,7 +1266,7 @@ export function RequestChainEditor({
                   onBack();
                 }}
                 chainName={formData?.name}
-                chainId={formData?.id}
+                chainId={chain?.id}
               />
             </CardContent>
           </Card>

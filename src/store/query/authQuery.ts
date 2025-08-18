@@ -29,7 +29,6 @@ export const useUserQuery = () => {
         authActions.setIsLoading(true);
         const data = await refreshUserData();
         const filteredUser = filterUserData(data || {});
-        console.log('🚀 ~ useUserQuery ~ filteredUser:', filteredUser);
         if (filteredUser) {
           authActions.setUser(filteredUser);
         }
