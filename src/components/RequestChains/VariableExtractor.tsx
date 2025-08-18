@@ -20,6 +20,7 @@ export function VariableExtractor({
   const addExtraction = () => {
     const newExtraction: DataExtraction = {
       variableName: '',
+      name: '',
       source: 'response_body',
       path: '',
       transform: '',

@@ -220,6 +220,7 @@ const Index = () => {
           chain={editingChain} // This will be undefined for new chains, or the fetched chain for editing
           onBack={handleBackToList}
           onSave={handleSaveChain}
+          onToggleChain={handlePlayChain}
         />
         {data.id && (
           <RequestExecutor

@@ -74,7 +74,8 @@ interface RequestChainEditorProps {
   chain?: RequestChain;
   onBack: () => void;
   onSave: (chain: RequestChain) => void;
-  requestChainId?: string; // Added requestChainId prop for edit mode
+  requestChainId?: string;
+  onToggleChain: (chainId: string) => void;
 }
 
 export function RequestChainEditor({
@@ -82,6 +83,7 @@ export function RequestChainEditor({
   onBack,
   onSave,
   requestChainId,
+  onToggleChain,
 }: RequestChainEditorProps) {
   const { toast } = useToast();
   const dragItem = useRef<number | null>(null);
@@ -558,6 +560,12 @@ export function RequestChainEditor({
           ? await saveRequestChain(chainData)
           : await updateRequestChain(chainData, chainData.id);
 
+      console.log('savedChain:', savedChain);
+
+      if (savedChain?.id) {
+        onToggleChain(savedChain?.id);
+      }
+
       // ensure formData has the latest id
       setFormData((prev) => ({ ...prev, id: savedChain.id }));
 
@@ -589,7 +597,7 @@ export function RequestChainEditor({
     if (saved) {
       onSave(saved);
       // Redirect to list view after successful save
-      onBack();
+      // onBack();
     }
     return saved;
   };

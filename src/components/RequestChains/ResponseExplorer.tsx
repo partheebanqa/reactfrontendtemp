@@ -188,6 +188,7 @@ export function ResponseExplorer({
 
       const extraction: DataExtraction = {
         variableName: finalVariableName,
+        name: finalVariableName,
         source: extractionModal.source,
         path: extractionModal.path,
         value: extractionModal.value,

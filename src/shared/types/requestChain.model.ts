@@ -90,6 +90,7 @@ export interface Parameter {
 
 export interface DataExtraction {
   variableName: string;
+  name: string;
   source:
     | 'response_body'
     | 'response_header'
