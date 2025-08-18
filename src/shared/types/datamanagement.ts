@@ -109,7 +109,14 @@ export interface Variable {
   createdAt: string;
   updatedAt: string;
   deletedAt: string | null;
+  scope: 'global' | 'project' | 'environment';
+  isGlobal: boolean,
+  isSecret: boolean,
+  generatorFunction?: string ,
+  generatorConfig?: Record<string, any>;
 }
+
+
 
 /** Response from API for paginated variable list */
 export interface FetchVariablesResponse {

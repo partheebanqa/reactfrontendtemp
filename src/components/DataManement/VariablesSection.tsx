@@ -34,6 +34,10 @@ const VariablesSection: React.FC = () => {
     createdAt: '',
     updatedAt: '',
     deletedAt: null,
+    value: '',
+    scope: 'global', 
+    isGlobal: false,
+    isSecret: false,
   });
   const [search, setSearch] = useState('');
   const [environmentFilter, setEnvironmentFilter] = useState('all');
@@ -58,17 +62,21 @@ const VariablesSection: React.FC = () => {
       return;
     }
     setNewVariable({
-      id: '',
-      environmentId: '',
-      name: '',
-      description: '',
-      type: 'string',
-      initialValue: '',
-      currentValue: '',
-      createdAt: '',
-      updatedAt: '',
-      deletedAt: null,
-    });
+          id: '',
+          environmentId: '',
+          name: '',
+          description: '',
+          type: 'string',
+          initialValue: '',
+          currentValue: '',
+          createdAt: '',
+          updatedAt: '',
+          deletedAt: null,
+          value: '',
+          scope: 'global', 
+          isGlobal: false,
+          isSecret: false,
+        });
     setIsCreateOpen(false);
   };
 

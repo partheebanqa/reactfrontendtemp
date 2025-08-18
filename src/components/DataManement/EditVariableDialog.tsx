@@ -70,6 +70,8 @@ const EditVariableDialog: React.FC<Props> = ({
             </div>
 
             {/* Type */}
+
+            
             <div>
               <label className='text-sm font-medium'>Variable Type</label>
               <Select
