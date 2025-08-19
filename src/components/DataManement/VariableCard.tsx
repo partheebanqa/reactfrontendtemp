@@ -83,14 +83,8 @@ const VariableCard: React.FC<VariableListProps> = ({
                       <Button
                         variant='ghost'
                         size='sm'
-                        // onClick={() => copyToClipboard(variable.key, "Variable name")}/
-                        onClick={() =>
-                          handleCopy(
-                            variable.type === 'secret'
-                              ? '••••••••'
-                              : variable.initialValue
-                          )
-                        }
+                      
+                        onClick={() => handleCopy(variable.name)}
                         title='Copy variable name'
                         className='p-1 h-auto'
                       >

@@ -48,9 +48,18 @@ const VariablesSection: React.FC = () => {
 
   const handleCreate = async () => {
     try {
+
+      let finalName = newVariable.name;
+
+      if (newVariable.type === 'static' && !newVariable.name.startsWith('S_')) {
+        finalName = `S_${newVariable.name}`;
+      } else if (newVariable.type === 'dynamic' && !newVariable.name.startsWith('D_')) {
+        finalName = `D_${newVariable.name}`;
+      }
+
       await createVariableMutation.mutateAsync({
         environmentId: newVariable.environmentId,
-        name: newVariable.name,
+        name:finalName,
         description: newVariable.description,
         type: newVariable.type,
         initialValue: newVariable.initialValue,
