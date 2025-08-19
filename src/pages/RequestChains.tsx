@@ -170,6 +170,9 @@ const Index = () => {
   const handleBackToList = () => {
     setCurrentView('list');
     setEditingChainId(undefined);
+    queryClient.refetchQueries({
+      queryKey: ['requestChains', currentWorkspace?.id || ''],
+    });
   };
 
   if (currentView === 'editor') {

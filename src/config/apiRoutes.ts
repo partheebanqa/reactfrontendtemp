@@ -20,3 +20,4 @@ export const API_TEST_CASES = ENV.API_BASE_URL + '/test-cases';
 export const API_REQUEST = ENV.API_BASE_URL + '/requests';
 export const API_EXECUTOR = ENV.API_BASE_URL + '/executor';
 export const API_REQUEST_CHAIN = ENV.API_BASE_URL + '/request-chains';
+export const API_REPORTS = ENV.API_BASE_URL + '/reports';

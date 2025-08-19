@@ -13,7 +13,12 @@ import {
   Copy,
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import { APIRequest, ExecutionLog } from '@/shared/types/requestChain.model';
+import {
+  APIRequest,
+  ExecutionLog,
+  ExecutionRequestChainPayload,
+} from '@/shared/types/requestChain.model';
+import { useExecuteRequestChain } from '@/shared/hooks/requestChain';
 
 interface Variable {
   id?: string;
@@ -68,6 +73,7 @@ export function RequestExecutor({
   const [extractedVariables, setExtractedVariables] = useState<Variable[]>([]);
   const [expandedLogs, setExpandedLogs] = useState<Set<string>>(new Set());
   const [allVariables, setAllVariables] = useState<Variable[]>(variables);
+  const { mutateAsync: playChain } = useExecuteRequestChain();
 
   React.useEffect(() => {
     setAllVariables(variables);
@@ -285,6 +291,28 @@ export function RequestExecutor({
           variant: 'destructive',
         });
         return;
+      }
+
+      if (savedChain?.id) {
+        try {
+          const payload: ExecutionRequestChainPayload = {
+            requestChainId: savedChain?.id,
+          };
+
+          const result = await playChain(payload);
+          console.log('result00:', result);
+          toast({
+            title: 'Execution Started',
+            description: `Request chain ${chainId} started successfully.`,
+          });
+        } catch (error: any) {
+          toast({
+            title: 'Execution Failed',
+            description:
+              error?.message || 'Could not execute the request chain.',
+            variant: 'destructive',
+          });
+        }
       }
     }
 

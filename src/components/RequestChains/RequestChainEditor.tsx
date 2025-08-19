@@ -1269,10 +1269,10 @@ export function RequestChainEditor({
                   setCurrentRequestIndex(requestIndex);
                 }}
                 onPreExecute={saveChainToAPI}
-                onPostExecute={() => {
-                  // Redirect to list view after successful execution
-                  onBack();
-                }}
+                // onPostExecute={() => {
+                //   // Redirect to list view after successful execution
+                //   onBack();
+                // }}
                 chainName={formData?.name}
                 chainId={chain?.id}
               />
