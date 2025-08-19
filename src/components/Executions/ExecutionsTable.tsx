@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Copy, Calendar, GitBranch, Play, Eye } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import { useLocation } from 'wouter';
 
 export const ExecutionsTable = ({
   executions,
@@ -21,6 +22,29 @@ export const ExecutionsTable = ({
   getStatusIcon,
 }: any) => {
   console.log('executions:', executions);
+
+  const [_, setLocation] = useLocation();
+
+
+  const goToReport = (execution: any, environment: string) => {
+    const type = execution?.executionType; 
+    const entityId =
+      type === 'test_suite'
+        ? (execution?.testSuite?.id ?? execution?.entityId)
+        : (execution?.requestChain?.id ?? execution?.entityId);
+  
+    if (!type || !entityId) {
+      console.warn('Missing type or entityId for report navigation', { type, entityId, execution });
+      return;
+    }
+  
+    const env = encodeURIComponent(environment || '');
+    const started = encodeURIComponent(String(execution?.startTime ?? ''));
+  
+    setLocation(`/executions/report/${type}/${entityId}?env=${env}&started=${started}`);
+  };
+  
+
 
   return (
     <Table>
@@ -83,7 +107,7 @@ export const ExecutionsTable = ({
                     <GitBranch className='text-purple-600' size={16} />
                   )}
                   <span className='text-sm text-slate-700'>
-                    {execution?.testSuite ? 'Test Suite' : 'Request Chain'}
+                    {execution?.executionType}
                   </span>
                 </div>
               </TableCell>
@@ -141,10 +165,17 @@ export const ExecutionsTable = ({
               </TableCell>
               <TableCell>
                 <div className='flex items-center gap-1'>
-                  <Button
+                  {/* <Button
                     size='sm'
                     variant='outline'
                     onClick={() => openExecutionDetails(execution)}
+                  >
+                    <Eye size={14} />
+                  </Button> */}
+                  <Button
+                    size='sm'
+                    variant='outline'
+                    onClick={() => goToReport(execution, environment)}
                   >
                     <Eye size={14} />
                   </Button>
