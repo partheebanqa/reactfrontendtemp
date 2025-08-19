@@ -279,7 +279,7 @@ export function RequestEditor({
 
   const addKeyValuePair = (type: 'params' | 'headers') => {
     const newPair: KeyValuePair = {
-      id: Date.now().toString(),
+      id: `temp_${Date.now().toString()}`,
       key: '',
       value: '',
       enabled: true,
@@ -528,7 +528,7 @@ export function RequestEditor({
   const addTest = (type: 'status' | 'responseTime' | 'jsonContent') => {
     let newTest: TestScript;
     const base = {
-      id: Date.now().toString(),
+      id: `temp_${Date.now().toString()}`,
       type,
       enabled: true,
     };
@@ -1856,11 +1856,12 @@ export function RequestEditor({
               <CardTitle>Query Parameters</CardTitle>
             </CardHeader>
             <CardContent>
+              {/* Ensure temp IDs are used for display but not persisted */}
               <KeyValueTable
                 type='params'
                 items={params.map((param) => ({
                   ...param,
-                  id: param.id ?? crypto.randomUUID(),
+                  id: param.id ?? `temp_${crypto.randomUUID()}`,
                 }))}
                 addButtonText='Add Param'
                 emptyStateText="No params added. Click 'Add Param' to get started."
@@ -1879,7 +1880,7 @@ export function RequestEditor({
                 type='headers'
                 items={headers.map((h) => ({
                   ...h,
-                  id: h.id ?? crypto.randomUUID(),
+                  id: h.id ?? `temp_${crypto.randomUUID()}`,
                 }))}
                 addButtonText='Add Header'
                 emptyStateText="No headers added. Click 'Add Header' to get started."

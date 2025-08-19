@@ -6,7 +6,6 @@ import {
   Plus,
   GripVertical,
   Trash2,
-  Save,
   ChevronDown,
   Code,
   Download,
@@ -154,6 +153,7 @@ export function RequestChainEditor({
   const [currentRequestIndex, setCurrentRequestIndex] = useState(-1);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('requests');
+  const [isSaving, setIsSaving] = useState(false);
 
   const replaceVariables = (text: string, vars: Variable[]): string => {
     let result = text;
@@ -479,8 +479,17 @@ export function RequestChainEditor({
     if (request) {
       const duplicated = {
         ...request,
-        id: Date.now().toString(),
+        id: undefined,
         name: `${request.name} (Copy)`,
+        headers: request.headers?.map((h) => ({ ...h, id: undefined })) || [],
+        params: request.params?.map((p) => ({ ...p, id: undefined })) || [],
+        extractVariables:
+          request.extractVariables?.map((v) => ({ ...v })) || [],
+        testScripts:
+          request.testScripts?.map((t) => ({
+            ...t,
+            id: `temp_${Date.now()}_${Math.random()}`,
+          })) || [],
       };
       setFormData({
         ...formData,
@@ -491,7 +500,6 @@ export function RequestChainEditor({
 
   const addNewRequest = () => {
     const newRequest: APIRequest = {
-      id: Date.now().toString(),
       name: 'New Request',
       method: 'GET',
       url: '',
@@ -511,30 +519,63 @@ export function RequestChainEditor({
       ...formData,
       chainRequests: [...(formData.chainRequests || []), newRequest],
     });
-    setExpandedRequests(new Set([...expandedRequests, newRequest.id]));
+    const tempId = Date.now().toString();
+    setExpandedRequests(new Set([...expandedRequests, tempId]));
   };
 
   const saveChainToAPI = async (): Promise<RequestChain | null> => {
     if (!formData.name?.trim()) {
       toast({
         title: 'Validation Error',
-        description: 'Please enter a chain name',
-        variant: 'destructive',
-      });
-      return null;
-    }
-
-    if (!formData.chainRequests || formData.chainRequests.length === 0) {
-      toast({
-        title: 'Validation Error',
-        description: 'Please add at least one request to the chain',
+        description: 'Chain name is required',
         variant: 'destructive',
       });
       return null;
     }
 
     try {
-      const transformedRequests = formData.chainRequests.map(
+      setIsSaving(true);
+
+      const originalRequestIds = new Set(
+        chain?.chainRequests?.map((r) => r.id) || []
+      );
+
+      const chainDataForBackend = {
+        ...formData,
+        chainRequests: formData.chainRequests?.map((request) => {
+          const isExistingRequest =
+            request.id && originalRequestIds.has(request.id);
+
+          if (isExistingRequest) {
+            return {
+              ...request,
+              headers:
+                request.headers?.map((h) =>
+                  h.id && !h.id.startsWith('temp_')
+                    ? h
+                    : { ...h, id: undefined }
+                ) || [],
+              params:
+                request.params?.map((p) =>
+                  p.id && !p.id.startsWith('temp_')
+                    ? p
+                    : { ...p, id: undefined }
+                ) || [],
+            };
+          } else {
+            return {
+              ...request,
+              id: undefined,
+              headers:
+                request.headers?.map((h) => ({ ...h, id: undefined })) || [],
+              params:
+                request.params?.map((p) => ({ ...p, id: undefined })) || [],
+            };
+          }
+        }),
+      };
+
+      const transformedRequests = chainDataForBackend.chainRequests.map(
         transformRequestForSave
       );
 
@@ -554,7 +595,6 @@ export function RequestChainEditor({
         successRate: chain?.successRate || 0,
       };
 
-      // save or update
       const savedChain =
         chainData.id === ''
           ? await saveRequestChain(chainData)
@@ -566,7 +606,6 @@ export function RequestChainEditor({
         onToggleChain(savedChain?.id);
       }
 
-      // ensure formData has the latest id
       setFormData((prev) => ({ ...prev, id: savedChain.id }));
 
       toast({
@@ -589,6 +628,8 @@ export function RequestChainEditor({
         variant: 'destructive',
       });
       return null;
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -665,7 +706,6 @@ export function RequestChainEditor({
     }
   };
 
-  // If editing a specific request, show the request editor
   const currentRequestChainId = requestChainId || chain?.id || '';
   if (editingRequestId) {
     const request = formData.chainRequests?.find(

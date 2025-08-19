@@ -124,9 +124,11 @@ export function VariablesTable({
   const filteredResults = useMemo(() => {
     const filtered = extractionResults.filter((result) => {
       const matchesSearch =
-        result.variableName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        result.requestName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        result.extractionPath.toLowerCase().includes(searchTerm.toLowerCase());
+        result?.variableName
+          .toLowerCase()
+          .includes(searchTerm?.toLowerCase()) ||
+        result?.requestName.toLowerCase().includes(searchTerm?.toLowerCase()) ||
+        result?.extractionPath.toLowerCase().includes(searchTerm.toLowerCase());
 
       const matchesStatus =
         statusFilter === 'all' || result.status === statusFilter;
