@@ -23,6 +23,7 @@ export interface ApiExecutionResponse {
 
 export interface MappedExecution {
   id: string;
+  entityId: string;
   testSuite?: { name: string };
   requestChain?: { name: string };
   status: string;
