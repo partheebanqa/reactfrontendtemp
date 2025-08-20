@@ -25,26 +25,29 @@ export const ExecutionsTable = ({
 
   const [_, setLocation] = useLocation();
 
-
   const goToReport = (execution: any, environment: string) => {
-    const type = execution?.executionType; 
+    const type = execution?.executionType;
     const entityId =
       type === 'test_suite'
-        ? (execution?.testSuite?.id ?? execution?.entityId)
-        : (execution?.requestChain?.id ?? execution?.entityId);
-  
+        ? execution?.testSuite?.id ?? execution?.entityId
+        : execution?.requestChain?.id ?? execution?.entityId;
+
     if (!type || !entityId) {
-      console.warn('Missing type or entityId for report navigation', { type, entityId, execution });
+      console.warn('Missing type or entityId for report navigation', {
+        type,
+        entityId,
+        execution,
+      });
       return;
     }
-  
+
     const env = encodeURIComponent(environment || '');
     const started = encodeURIComponent(String(execution?.startTime ?? ''));
-  
-    setLocation(`/executions/report/${type}/${entityId}?env=${env}&started=${started}`);
-  };
-  
 
+    setLocation(
+      `/executions/report/${type}/${entityId}?env=${env}&started=${started}`
+    );
+  };
 
   return (
     <Table>

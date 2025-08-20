@@ -75,7 +75,10 @@ const fetchExecutionHistory = async (params: {
   // const response = await fetch(
   //   `${domain}/executor/execution-history?page=${page}&limit=${limit}`
   // );
-  const response = await apiRequest('GET', `${API_EXECUTOR}/execution-history`);
+  const response = await apiRequest(
+    'GET',
+    `${API_EXECUTOR}/execution-history?page_size=100`
+  );
 
   return response.json();
 };
