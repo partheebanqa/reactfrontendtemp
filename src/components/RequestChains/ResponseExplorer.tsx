@@ -1,5 +1,5 @@
+// ResponseExplorer.tsx
 'use client';
-
 import { useState } from 'react';
 import {
   ChevronDown,
@@ -51,9 +51,6 @@ export function ResponseExplorer({
   const [activeTab, setActiveTab] = useState<'body' | 'headers' | 'cookies'>(
     'body'
   );
-
-  console.log('extractedVariables111:', extractedVariables);
-
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(
     new Set(['root'])
   );
@@ -83,7 +80,6 @@ export function ResponseExplorer({
     level = 0
   ): JsonNode[] => {
     const nodes: JsonNode[] = [];
-
     if (obj === null) {
       return [
         {
@@ -95,7 +91,6 @@ export function ResponseExplorer({
         },
       ];
     }
-
     if (Array.isArray(obj)) {
       obj.forEach((item, index) => {
         const currentPath = parentPath
@@ -108,7 +103,6 @@ export function ResponseExplorer({
           : typeof item === 'object'
           ? 'object'
           : typeof item;
-
         nodes.push({
           key: `[${index}]`,
           value: item,
@@ -116,7 +110,6 @@ export function ResponseExplorer({
           type: itemType as JsonNode['type'],
           level,
         });
-
         if (typeof item === 'object' && item !== null) {
           nodes.push(...parseJsonToNodes(item, currentPath, level + 1));
         }
@@ -131,7 +124,6 @@ export function ResponseExplorer({
           : typeof value === 'object'
           ? 'object'
           : typeof value;
-
         nodes.push({
           key,
           value,
@@ -139,13 +131,11 @@ export function ResponseExplorer({
           type: valueType as JsonNode['type'],
           level,
         });
-
         if (typeof value === 'object' && value !== null) {
           nodes.push(...parseJsonToNodes(value, currentPath, level + 1));
         }
       });
     }
-
     return nodes;
   };
 
@@ -166,7 +156,6 @@ export function ResponseExplorer({
   ) => {
     const suggestedName =
       path.split('.').pop()?.replace(/[[\]]/g, '') || 'extractedValue';
-
     const sanitizedName = sanitizeVariableName(suggestedName);
     setVariableName(sanitizedName);
     setExtractionModal({
@@ -188,7 +177,6 @@ export function ResponseExplorer({
     if (extractionModal && inputVariableName) {
       const sanitized = sanitizeVariableName(inputVariableName); // clean + convert spaces
       const finalVariableName = `E_${sanitized}`;
-
       const extraction: DataExtraction = {
         variableName: finalVariableName,
         name: finalVariableName,
@@ -197,7 +185,6 @@ export function ResponseExplorer({
         value: extractionModal.value,
         transform,
       };
-
       onExtractVariable(extraction);
       setExtractionModal(null);
       setVariableName('');
@@ -206,13 +193,11 @@ export function ResponseExplorer({
 
   const renderJsonValue = (node: JsonNode, isVisible: boolean) => {
     if (!isVisible) return null;
-
     const isExpanded = expandedNodes.has(node.path);
     const hasChildren = node.type === 'object' || node.type === 'array';
     const isAlreadyExtracted = existingExtractions.some(
       (e) => e.path === node.path
     );
-
     return (
       <div
         key={node.path}
@@ -233,11 +218,9 @@ export function ResponseExplorer({
                 )}
               </button>
             )}
-
             <span className='text-blue-600 font-medium mr-2 text-sm'>
               {node.key}
             </span>
-
             {!hasChildren && (
               <span
                 className={`text-sm font-mono ${
@@ -256,7 +239,6 @@ export function ResponseExplorer({
               </span>
             )}
           </div>
-
           {!hasChildren && (
             <div className='flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity'>
               <button
@@ -268,7 +250,6 @@ export function ResponseExplorer({
               >
                 <Copy className='w-3 h-3' />
               </button>
-
               {isAlreadyExtracted ? (
                 <div className='flex items-center space-x-1 px-2 py-1 bg-green-100 text-green-700 rounded text-xs'>
                   <CheckCircle className='w-3 h-3' />
@@ -297,14 +278,12 @@ export function ResponseExplorer({
     try {
       let jsonData;
       let cleanBody = response.body;
-
       // Try to clean the response body
       if (typeof cleanBody === 'string') {
         cleanBody = cleanBody.trim();
         // Remove any potential BOM or invisible characters
         cleanBody = cleanBody.replace(/^\uFEFF/, '');
       }
-
       try {
         jsonData = JSON.parse(cleanBody);
       } catch (firstError) {
@@ -318,9 +297,7 @@ export function ResponseExplorer({
           throw firstError;
         }
       }
-
       const nodes = parseJsonToNodes(jsonData);
-
       if (!nodes || !Array.isArray(nodes) || nodes.length === 0) {
         return (
           <div className='p-4 bg-gray-50 rounded border'>
@@ -330,12 +307,10 @@ export function ResponseExplorer({
           </div>
         );
       }
-
       return (
         <div className='space-y-1'>
           {nodes.map((node) => {
             if (!node) return null;
-
             const parentPath =
               node.path.substring(0, node.path.lastIndexOf('.')) ||
               node.path.substring(0, node.path.lastIndexOf('[')) ||
@@ -356,8 +331,7 @@ export function ResponseExplorer({
               {response.body}
             </pre>
           </div>
-
-          <div className='p-3 bg-blue-50 border border-blue-200 rounded'>
+          <div className='p-3 bg-blue-50 border border-blue-200 rounded-lg'>
             <p className='text-sm text-blue-800 mb-2'>
               <strong>Manual Extraction:</strong> You can still extract
               variables from headers or cookies using the tabs above.
@@ -386,11 +360,9 @@ export function ResponseExplorer({
         typeof response.headers === 'object' &&
         Object.entries(response.headers).map(([key, value]) => {
           if (!key || value === undefined || value === null) return null;
-
           const isAlreadyExtracted = existingExtractions.some(
             (e) => e.source === 'response_header' && e.path === key
           );
-
           return (
             <div
               key={key}
@@ -407,7 +379,6 @@ export function ResponseExplorer({
                   {value}
                 </p>
               </div>
-
               <div className='flex items-center space-x-2 ml-4'>
                 <button
                   onClick={() => navigator.clipboard.writeText(value)}
@@ -416,7 +387,6 @@ export function ResponseExplorer({
                 >
                   <Copy className='w-4 h-4' />
                 </button>
-
                 {isAlreadyExtracted ? (
                   <div className='flex items-center space-x-1 px-2 py-1 bg-green-100 text-green-700 rounded text-xs'>
                     <CheckCircle className='w-3 h-3' />
@@ -455,11 +425,9 @@ export function ResponseExplorer({
       Object.keys(response.cookies).length > 0 ? (
         Object.entries(response.cookies).map(([key, value]) => {
           if (!key || value === undefined || value === null) return null;
-
           const isAlreadyExtracted = existingExtractions.some(
             (e) => e.source === 'response_cookie' && e.path === key
           );
-
           return (
             <div
               key={key}
@@ -476,7 +444,6 @@ export function ResponseExplorer({
                   {value}
                 </p>
               </div>
-
               <div className='flex items-center space-x-2 ml-4'>
                 <button
                   onClick={() => navigator.clipboard.writeText(value)}
@@ -485,7 +452,6 @@ export function ResponseExplorer({
                 >
                   <Copy className='w-4 h-4' />
                 </button>
-
                 {isAlreadyExtracted ? (
                   <div className='flex items-center space-x-1 px-2 py-1 bg-green-100 text-green-700 rounded text-xs'>
                     <CheckCircle className='w-3 h-3' />
@@ -544,7 +510,6 @@ export function ResponseExplorer({
             })}
           </nav>
         </div>
-
         <div className='p-6 max-h-96 overflow-auto'>
           {activeTab === 'body' && renderJsonTree()}
           {activeTab === 'headers' && renderHeadersTab()}
@@ -561,15 +526,14 @@ export function ResponseExplorer({
               <h4 className='font-medium text-green-900 flex items-center space-x-2'>
                 <CheckCircle className='w-5 h-5' />
                 <span>
-                  Extracted Variables ({Object.keys(extractedVariables).length})
+                  Extracted Variables from This Request (
+                  {Object.keys(extractedVariables).length})
                 </span>
               </h4>
             </div>
-
             <div className='grid grid-cols-1 md:grid-cols-2 gap-3'>
               {Object.entries(extractedVariables).map(([name, value]) => {
                 if (!name || value === undefined) return null;
-
                 const extraction = existingExtractions.find(
                   (e) => e.variableName === name
                 );
@@ -599,7 +563,6 @@ export function ResponseExplorer({
                           <TooltipContent>Copy variable name</TooltipContent>
                         </Tooltip>
                       </div>
-
                       <div className='flex items-center space-x-2'>
                         <span className='text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded'>
                           {extraction?.source?.replace('_', ' ')}
@@ -630,11 +593,10 @@ export function ResponseExplorer({
                 );
               })}
             </div>
-
             <div className='mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg'>
               <p className='text-sm text-blue-800'>
-                <strong>💡 Usage:</strong> Use these variables in other requests
-                with the syntax:{' '}
+                <strong>💡 Usage:</strong> Use these variables in subsequent
+                requests with the syntax:{' '}
                 <code className='bg-blue-100 px-1 rounded overflow-x-auto whitespace-nowrap inline-block'>{`{{variableName}}`}</code>
               </p>
             </div>
@@ -653,7 +615,6 @@ export function ResponseExplorer({
                 Configure how to extract and store this value
               </p>
             </div>
-
             <div className='p-4 space-y-3'>
               <div>
                 <label className='block text-sm font-medium text-gray-700 mb-1'>
@@ -670,7 +631,6 @@ export function ResponseExplorer({
                   Only letters, numbers, and underscores allowed.
                 </p>
               </div>
-
               {/* Source Row */}
               <div className='flex items-center space-x-2 w-full'>
                 <label className='text-sm font-medium text-gray-700 w-16'>
@@ -685,7 +645,6 @@ export function ResponseExplorer({
                   className='flex-1 px-3 py-1.5 border border-gray-300 rounded-lg bg-gray-50 text-sm overflow-x-auto whitespace-nowrap'
                 />
               </div>
-
               {/* Path Row */}
               <div className='flex items-center space-x-2 w-full'>
                 <label className='text-sm font-medium text-gray-700 w-16'>
@@ -698,7 +657,6 @@ export function ResponseExplorer({
                   className='flex-1 px-3 py-1.5 border border-gray-300 rounded-lg bg-gray-50 font-mono text-sm overflow-x-auto whitespace-nowrap'
                 />
               </div>
-
               <div>
                 <label className='block text-sm font-medium text-gray-700 mb-1'>
                   Preview Value
@@ -711,7 +669,6 @@ export function ResponseExplorer({
                   </code>
                 </div>
               </div>
-
               <div>
                 <label className='block text-sm font-medium text-gray-700 mb-1'>
                   Transform (Optional)
@@ -728,7 +685,6 @@ export function ResponseExplorer({
                 </p>
               </div>
             </div>
-
             <div className='flex items-center justify-end space-x-3 p-4 border-t border-gray-200'>
               <button
                 onClick={() => {
