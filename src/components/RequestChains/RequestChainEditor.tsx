@@ -1,5 +1,5 @@
+// RequestChainEditor.tsx
 'use client';
-
 import { useState, useRef, useEffect } from 'react';
 import {
   ArrowLeft,
@@ -37,6 +37,7 @@ import type {
   APIRequest,
   Variable,
   ExecutionLog,
+  DataExtraction,
 } from '@/shared/types/requestChain.model';
 import { ImportModal } from '@/components/TestSuit/ImportModal';
 import type { ExtendedRequest } from '@/models/collection.model';
@@ -65,7 +66,6 @@ import {
   extractDataFromResponse,
   transformRequestForSave,
   getExecutionLogForRequest,
-  copyToClipboard,
 } from '@/lib/request-utils';
 import { ResponseExplorer } from './ResponseExplorer';
 
@@ -98,7 +98,6 @@ export function RequestChainEditor({
     { id: '2', name: 'apiKey', value: 'your-api-key', type: 'string' },
     { id: '3', name: 'timeout', value: '5000', type: 'number' },
   ]);
-
   const [formData, setFormData] = useState<Partial<RequestChain>>({
     name: chain?.name || '',
     description: chain?.description || '',
@@ -114,7 +113,6 @@ export function RequestChainEditor({
     variables: chain?.variables || [],
     environment: chain?.environment || 'dev',
   });
-
   const { environments, activeEnvironment, setActiveEnvironment } =
     useDataManagement();
   const [selectedEnvironment, setSelectedEnvironment] = useState<string>('');
@@ -138,20 +136,16 @@ export function RequestChainEditor({
 
   const isSaveDisabled =
     !formData.name?.trim() || (formData.chainRequests?.length ?? 0) === 0;
-
   const [expandedRequests, setExpandedRequests] = useState<Set<string>>(
     new Set()
   );
   const [editingRequestId, setEditingRequestId] = useState<string | null>(null);
-
   const [executionLogs, setExecutionLogs] = useState<ExecutionLog[]>([]);
-
   const [extractedVariables, setExtractedVariables] = useState<
     Record<string, any>
   >({});
-
-  console.log('extractedVariables222:', extractedVariables);
-
+  const [extractedVariablesByRequest, setExtractedVariablesByRequest] =
+    useState<Record<string, Record<string, any>>>({});
   const [isExecuting, setIsExecuting] = useState(false);
   const [currentRequestIndex, setCurrentRequestIndex] = useState(-1);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
@@ -170,9 +164,7 @@ export function RequestChainEditor({
   const getPreviewUrl = (request: APIRequest, variables: Variable[]) => {
     const replacedUrl = replaceVariables(request.url, variables);
     const baseUrl = environmentBaseUrl?.trim();
-
     if (!baseUrl) return replacedUrl;
-
     try {
       const parsedOriginal = new URL(replacedUrl);
       const parsedBase = new URL(baseUrl);
@@ -190,27 +182,21 @@ export function RequestChainEditor({
     if (!request.url) {
       throw new Error('Request URL is required');
     }
-
     request = {
       ...request,
       headers: request.headers ?? [],
       params: request.params ?? [],
     };
 
-    console.log('request123:', request);
-    console.log('variables123:', variables);
-
     const extractedVars = getExtractVariablesByEnvironment(
       activeEnvironment?.id
     );
-
     const mergedVariables = [
       ...variables.filter(
         (sv) => !extractedVars.some((ev) => ev.name === sv.name)
       ),
       ...extractedVars,
     ];
-
     const startTime = Date.now();
     const payload = buildRequestPayload(request, mergedVariables);
     const previewUrl = getPreviewUrl(request, mergedVariables);
@@ -219,7 +205,6 @@ export function RequestChainEditor({
     try {
       const backendData = await executeRequest(payload);
       const result = backendData?.data?.responses?.[0];
-
       if (!result) throw new Error('No response from executor');
 
       const extractedData = extractDataFromResponse(
@@ -260,7 +245,6 @@ export function RequestChainEditor({
         },
         extractedVariables: extractedData,
       };
-
       return log;
     } catch (error) {
       const endTime = Date.now();
@@ -298,6 +282,7 @@ export function RequestChainEditor({
     setCurrentRequestIndex(0);
     setExecutionLogs([]);
     setExtractedVariables({});
+    setExtractedVariablesByRequest({});
     setActiveTab('requests');
 
     const allLogs: ExecutionLog[] = [];
@@ -306,6 +291,7 @@ export function RequestChainEditor({
       ...(formData.variables || []),
     ];
     const allExtractedVars: Record<string, any> = {};
+    const variablesByRequest: Record<string, Record<string, any>> = {};
 
     try {
       toast({
@@ -328,7 +314,16 @@ export function RequestChainEditor({
           const log = await executeSingleRequest(request, currentVariables, i);
           allLogs.push(log);
 
+          // Update executionLogs immediately after each request completes
+          setExecutionLogs((prev) => [...prev, log]);
+
           if (log.extractedVariables) {
+            variablesByRequest[log.requestId] = { ...log.extractedVariables };
+            setExtractedVariablesByRequest((prev) => ({
+              ...prev,
+              [log.requestId]: { ...log.extractedVariables },
+            }));
+
             Object.assign(allExtractedVars, log.extractedVariables);
             Object.entries(log.extractedVariables).forEach(([key, value]) => {
               const existingVarIndex = currentVariables.findIndex(
@@ -348,13 +343,13 @@ export function RequestChainEditor({
                     ? 'boolean'
                     : 'string',
               };
-
               if (existingVarIndex >= 0) {
                 currentVariables[existingVarIndex] = newVar;
               } else {
                 currentVariables.push(newVar);
               }
             });
+            updateExtractedVariables(allExtractedVars);
           }
 
           toast({
@@ -372,6 +367,9 @@ export function RequestChainEditor({
         } catch (error) {
           const errorLog = error as ExecutionLog;
           allLogs.push(errorLog);
+
+          // Update executionLogs immediately after each request completes (even for errors)
+          setExecutionLogs((prev) => [...prev, errorLog]);
 
           toast({
             title: `Request ${i + 1} Failed`,
@@ -422,6 +420,86 @@ export function RequestChainEditor({
     } finally {
       setIsExecuting(false);
       setCurrentRequestIndex(-1);
+    }
+  };
+
+  const handleExtractVariableForRequest = (
+    requestId: string,
+    extraction: DataExtraction
+  ) => {
+    const request = formData.chainRequests.find((r) => r.id === requestId);
+    if (!request) return;
+
+    const updatedExtractions = [
+      ...(request.extractVariables || []),
+      extraction,
+    ];
+    const updatedRequests = formData.chainRequests.map((r) =>
+      r.id === requestId ? { ...r, extractVariables: updatedExtractions } : r
+    );
+
+    setFormData({ ...formData, chainRequests: updatedRequests });
+
+    // Update the extracted variables for this request
+    const log = executionLogs.find((l) => l.requestId === requestId);
+    if (log?.response) {
+      const extracted = extractDataFromResponse(
+        log.response,
+        updatedExtractions
+      );
+      setExtractedVariablesByRequest((prev) => ({
+        ...prev,
+        [requestId]: { ...prev[requestId], ...extracted },
+      }));
+    }
+  };
+
+  const handleRemoveExtractionForRequest = (
+    requestId: string,
+    variableName: string
+  ) => {
+    const request = formData.chainRequests.find((r) => r.id === requestId);
+    if (!request) return;
+
+    const updatedExtractions = (request.extractVariables || []).filter(
+      (e) => e.variableName !== variableName
+    );
+    const updatedRequests = formData.chainRequests.map((r) =>
+      r.id === requestId ? { ...r, extractVariables: updatedExtractions } : r
+    );
+
+    setFormData({ ...formData, chainRequests: updatedRequests });
+
+    // Remove from extracted variables for this request
+    setExtractedVariablesByRequest((prev) => {
+      const updated = { ...prev };
+      if (updated[requestId]) {
+        delete updated[requestId][variableName];
+      }
+      return updated;
+    });
+  };
+
+  const [copiedStates, setCopiedStates] = useState<Record<string, boolean>>({});
+
+  const handleCopyForRequest = async (requestId: string, value: string) => {
+    try {
+      const formattedValue = `{{${value}}}`;
+      await navigator.clipboard.writeText(formattedValue);
+      setCopiedStates((prev) => ({ ...prev, [requestId]: true }));
+      toast({
+        title: 'Copied to Clipboard',
+        description: `Variable ${formattedValue} copied to clipboard`,
+      });
+      setTimeout(() => {
+        setCopiedStates((prev) => ({ ...prev, [requestId]: false }));
+      }, 2000);
+    } catch (error) {
+      toast({
+        title: 'Copy Failed',
+        description: 'Failed to copy to clipboard',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -517,7 +595,6 @@ export function RequestChainEditor({
       enabled: true,
       authorizationType: 'none',
     };
-
     setFormData({
       ...formData,
       chainRequests: [...(formData.chainRequests || []), newRequest],
@@ -538,7 +615,6 @@ export function RequestChainEditor({
 
     try {
       setIsSaving(true);
-
       const originalRequestIds = new Set(
         chain?.chainRequests?.map((r) => r.id) || []
       );
@@ -548,7 +624,6 @@ export function RequestChainEditor({
         chainRequests: formData.chainRequests?.map((request) => {
           const isExistingRequest =
             request.id && originalRequestIds.has(request.id);
-
           if (isExistingRequest) {
             return {
               ...request,
@@ -603,8 +678,6 @@ export function RequestChainEditor({
           ? await saveRequestChain(chainData)
           : await updateRequestChain(chainData, chainData.id);
 
-      console.log('savedChain:', savedChain);
-
       if (savedChain?.id) {
         onToggleChain(savedChain?.id);
       }
@@ -640,8 +713,6 @@ export function RequestChainEditor({
     const saved = await saveChainToAPI();
     if (saved) {
       onSave(saved);
-      // Redirect to list view after successful save
-      // onBack();
     }
     return saved;
   };
@@ -710,11 +781,11 @@ export function RequestChainEditor({
   };
 
   const currentRequestChainId = requestChainId || chain?.id || '';
+
   if (editingRequestId) {
     const request = formData.chainRequests?.find(
       (r) => r.id === editingRequestId
     );
-
     if (request) {
       return (
         <div className='h-full flex flex-col'>
@@ -773,16 +844,6 @@ export function RequestChainEditor({
               </p>
             </div>
           </div>
-          {/* <div className='flex items-center gap-2'>
-            <Button
-              onClick={handleSave}
-              disabled={isSaveDisabled}
-              className='gap-2'
-            >
-              <Save className='w-4 h-4' />
-              {chain ? 'Update Chain' : 'Save Chain'}
-            </Button>
-          </div> */}
         </div>
       </div>
 
@@ -928,6 +989,7 @@ export function RequestChainEditor({
                               executionLogs,
                               request.id
                             );
+
                             return (
                               <Card
                                 key={request.id}
@@ -1074,11 +1136,11 @@ export function RequestChainEditor({
                                       </div>
                                     </TooltipProvider>
                                   </div>
+
                                   {expandedRequests.has(request.id) && (
                                     <div className='mt-4 pt-4 border-t space-y-4'>
                                       <RequestEditor
                                         request={request}
-                                        // globalVariables={globalVariables}
                                         onUpdate={(updates) =>
                                           updateRequest(request.id, updates)
                                         }
@@ -1088,6 +1150,7 @@ export function RequestChainEditor({
                                         chainEnabled={formData.enabled}
                                         environmentBaseUrl={environmentBaseUrl}
                                       />
+
                                       {/* Response Section */}
                                       {executionLog && (
                                         <div className='border-t border-gray-200 pt-4'>
@@ -1154,6 +1217,7 @@ export function RequestChainEditor({
                                               )}
                                             </div>
                                           </div>
+
                                           {executionLog.response && (
                                             <div className='border-t border-gray-200 p-6'>
                                               <h3 className='text-lg font-medium text-gray-900 mb-4'>
@@ -1163,59 +1227,47 @@ export function RequestChainEditor({
                                                 response={executionLog.response}
                                                 onExtractVariable={(
                                                   extraction
-                                                ) => {
-                                                  const currentExtractions =
-                                                    request.extractVariables ||
-                                                    [];
-                                                  const updatedExtractions = [
-                                                    ...currentExtractions,
-                                                    extraction,
-                                                  ];
-
-                                                  updateRequest(request.id, {
-                                                    extractVariables:
-                                                      updatedExtractions,
-                                                  });
-
-                                                  // Extract the variable immediately from the current response
-                                                  const extracted =
-                                                    extractDataFromResponse(
-                                                      executionLog.response,
-                                                      updatedExtractions
-                                                    );
-
-                                                  setExtractedVariables(
-                                                    (prev) => ({
-                                                      ...prev,
-                                                      ...extracted,
-                                                    })
-                                                  );
-                                                }}
+                                                ) =>
+                                                  handleExtractVariableForRequest(
+                                                    executionLog.requestId,
+                                                    extraction
+                                                  )
+                                                }
                                                 extractedVariables={
-                                                  extractedVariables
-                                                } // ✅ use your state here
+                                                  extractedVariablesByRequest[
+                                                    executionLog.requestId
+                                                  ] || {}
+                                                }
                                                 existingExtractions={
-                                                  request.extractVariables || []
+                                                  formData.chainRequests.find(
+                                                    (r) =>
+                                                      r.id ===
+                                                      executionLog.requestId
+                                                  )?.extractVariables || []
                                                 }
                                                 onRemoveExtraction={(
                                                   variableName
-                                                ) => {
-                                                  const updatedExtractions =
-                                                    request.extractVariables?.filter(
-                                                      (e) =>
-                                                        e.variableName !==
-                                                        variableName
-                                                    ) || [];
-                                                  updateRequest(request.id, {
-                                                    extractVariables:
-                                                      updatedExtractions,
-                                                  });
-                                                }}
-                                                handleCopy={copyToClipboard}
-                                                copied={false}
+                                                ) =>
+                                                  handleRemoveExtractionForRequest(
+                                                    executionLog.requestId,
+                                                    variableName
+                                                  )
+                                                }
+                                                handleCopy={(value) =>
+                                                  handleCopyForRequest(
+                                                    executionLog.requestId,
+                                                    value
+                                                  )
+                                                }
+                                                copied={
+                                                  copiedStates[
+                                                    executionLog.requestId
+                                                  ] || false
+                                                }
                                               />
                                             </div>
                                           )}
+
                                           {!executionLog.response && (
                                             <div className='p-6'>
                                               <div className='text-red-600'>
@@ -1314,10 +1366,6 @@ export function RequestChainEditor({
                   setCurrentRequestIndex(requestIndex);
                 }}
                 onPreExecute={saveChainToAPI}
-                // onPostExecute={() => {
-                //   // Redirect to list view after successful execution
-                //   onBack();
-                // }}
                 chainName={formData?.name}
                 chainId={chain?.id}
               />
@@ -1334,4 +1382,36 @@ export function RequestChainEditor({
       />
     </div>
   );
+
+  function updateExtractedVariables(allExtractedVars: Record<string, any>) {
+    setExtractedVariables(allExtractedVars);
+    setGlobalVariables((prevGlobalVariables) => {
+      const updatedGlobalVariables = [...prevGlobalVariables];
+      Object.entries(allExtractedVars).forEach(([key, value]) => {
+        const existingVarIndex = updatedGlobalVariables.findIndex(
+          (v) => v.name === key
+        );
+        const newVar: Variable = {
+          id:
+            existingVarIndex >= 0
+              ? updatedGlobalVariables[existingVarIndex].id
+              : Date.now().toString() + key,
+          name: key,
+          value: String(value),
+          type:
+            typeof value === 'number'
+              ? 'number'
+              : typeof value === 'boolean'
+              ? 'boolean'
+              : 'string',
+        };
+        if (existingVarIndex >= 0) {
+          updatedGlobalVariables[existingVarIndex] = newVar;
+        } else {
+          updatedGlobalVariables.push(newVar);
+        }
+      });
+      return updatedGlobalVariables;
+    });
+  }
 }
