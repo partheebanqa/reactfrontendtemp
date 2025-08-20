@@ -51,6 +51,9 @@ export function ResponseExplorer({
   const [activeTab, setActiveTab] = useState<'body' | 'headers' | 'cookies'>(
     'body'
   );
+
+  console.log('extractedVariables111:', extractedVariables);
+
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(
     new Set(['root'])
   );

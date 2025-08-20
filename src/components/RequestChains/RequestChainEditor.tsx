@@ -149,6 +149,9 @@ export function RequestChainEditor({
   const [extractedVariables, setExtractedVariables] = useState<
     Record<string, any>
   >({});
+
+  console.log('extractedVariables222:', extractedVariables);
+
   const [isExecuting, setIsExecuting] = useState(false);
   const [currentRequestIndex, setCurrentRequestIndex] = useState(-1);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
@@ -1168,16 +1171,19 @@ export function RequestChainEditor({
                                                     ...currentExtractions,
                                                     extraction,
                                                   ];
+
                                                   updateRequest(request.id, {
                                                     extractVariables:
                                                       updatedExtractions,
                                                   });
+
                                                   // Extract the variable immediately from the current response
                                                   const extracted =
                                                     extractDataFromResponse(
                                                       executionLog.response,
                                                       updatedExtractions
                                                     );
+
                                                   setExtractedVariables(
                                                     (prev) => ({
                                                       ...prev,
@@ -1186,9 +1192,8 @@ export function RequestChainEditor({
                                                   );
                                                 }}
                                                 extractedVariables={
-                                                  executionLog.extractedVariables ||
-                                                  {}
-                                                }
+                                                  extractedVariables
+                                                } // ✅ use your state here
                                                 existingExtractions={
                                                   request.extractVariables || []
                                                 }
