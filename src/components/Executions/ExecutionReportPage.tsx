@@ -8,8 +8,17 @@ import DetailedTestResults from '@/components/Reports/Components/DetailedTestRes
 import TestCategoryCard from '@/components/Reports/Components/TestCategoryCard';
 import RequestChainExecutionFlow from '@/components/Reports/Components/RequestChainExecutionFlow';
 import VariablesAndDataFlow from '@/components/Reports/Components/VariablesAndDataFlow';
-import { FileCode, Settings2, Shield, ShieldCheck, Zap } from 'lucide-react';
+import {
+  Download,
+  FileCode,
+  Settings2,
+  Share2,
+  Shield,
+  ShieldCheck,
+  Zap,
+} from 'lucide-react';
 import { formatDistanceToNow, isValid } from 'date-fns';
+import { Button } from '../ui/button';
 
 type RouteParams = {
   type: 'test_suite' | 'request_chain';
@@ -21,14 +30,17 @@ const useQueryParams = () => {
   return React.useMemo(() => new URLSearchParams(search), [search]);
 };
 
-// ✅ Helper to safely render executedAt
+// ✅ SAFE helper to render "executedAt"
 const safeExecutedAt = (startedQS: string | null): string => {
   if (!startedQS) return 'Unknown';
+
+  // If it’s numeric (epoch ms), use Number; otherwise try to construct from string
   const asNumber = Number(startedQS);
   const date =
     Number.isFinite(asNumber) && startedQS.trim() !== ''
       ? new Date(asNumber)
       : new Date(startedQS);
+
   if (!isValid(date)) return 'Unknown';
   return formatDistanceToNow(date, { addSuffix: true });
 };
@@ -37,20 +49,19 @@ const ExecutionReportPage: React.FC = () => {
   const { type, entityId } = useParams<RouteParams>();
   const qs = useQueryParams();
   const environment = qs.get('env') || 'Unknown';
-  const started = qs.get('started');
+  const started = qs.get('started'); // string | null
 
   const { data: reportData, isLoading } = useQuery({
     queryKey: ['execution-report', entityId, type],
-    queryFn: async () => {
+    queryFn: () => {
       if (!entityId || !type) return null;
       return type === 'test_suite'
-        ? executionService.getTestSuiteReport(entityId)
-        : executionService.getRequestChainReport(entityId);
+        ? executionService?.getTestSuiteReport(entityId)
+        : executionService?.getRequestChainReport(entityId);
     },
     enabled: !!entityId && !!type,
   });
 
-  // ✅ Test Suite Renderer
   const renderTestSuiteReport = (data: any) => {
     const testCategories = [
       {
@@ -59,8 +70,8 @@ const ExecutionReportPage: React.FC = () => {
         testCount: data.generalTests?.total || 0,
         tests:
           data.generalTests?.apis?.map((api: any) => ({
-            name: api?.name,
-            method: api?.method,
+            name: api.name,
+            method: api.method,
             endpoint: api.url,
             duration: `${api.duration}ms`,
             statusCode: 200,
@@ -140,8 +151,8 @@ const ExecutionReportPage: React.FC = () => {
           }
           successRate={`${data.successRate || 0}%`}
           meta={{
-            environment: String(environment),
-            executedAt: safeExecutedAt(started),
+            environment,
+            executedAt: safeExecutedAt(started), // ← use safe helper
             duration: `${Math.round((data.duration || 0) / 1000)}s`,
             executedBy: data.executedBy || 'Unknown',
           }}
@@ -218,7 +229,6 @@ const ExecutionReportPage: React.FC = () => {
     );
   };
 
-  // ✅ Request Chain Renderer
   const renderRequestChainReport = (data: any) => {
     const steps =
       data.requestExecutions?.map((req: any, index: number) => ({
@@ -233,7 +243,7 @@ const ExecutionReportPage: React.FC = () => {
         extractedVars:
           req.extractedVariables?.map((v: any) => ({
             key: v.name,
-            value: String(v.value),
+            value: v.value,
           })) || [],
         errorMessage: req.status === 'failed' ? 'Request failed' : undefined,
       })) || [];
@@ -252,8 +262,8 @@ const ExecutionReportPage: React.FC = () => {
           description='Request chain execution flow with variable extraction and data flow analysis'
           successRate={`${data.successRate || 0}%`}
           meta={{
-            environment: String(environment),
-            executedAt: safeExecutedAt(started),
+            environment,
+            executedAt: safeExecutedAt(started), // ← use safe helper
             duration: `${Math.round((data.duration || 0) / 1000)}s`,
             executedBy: data.executedBy || 'Unknown',
           }}
@@ -287,8 +297,8 @@ const ExecutionReportPage: React.FC = () => {
 
         <div className='bg-[#FAFAFA]'>
           <VariablesAndDataFlow
-            globalVariables={JSON.stringify(globalVars, null, 2)}
-            extractedVariables={JSON.stringify(extractedVars, null, 2)}
+            globalVariables={globalVars}
+            extractedVariables={extractedVars}
           />
         </div>
 
@@ -299,13 +309,34 @@ const ExecutionReportPage: React.FC = () => {
 
   return (
     <div className='mx-auto p-1 sm:p-1'>
+      <h1 className='text-2xl font-semibold mb-4'></h1>
       <header className='border border-gray-200 bg-background rounded-lg px-6 py-4 animate-fade-in'>
         <div className='flex items-center justify-between'>
-          <h2 className='text-2xl font-semibold text-foreground'>
-            {type === 'test_suite'
-              ? 'Test Suite Report'
-              : 'Request Chain Report'}
-          </h2>
+          <div>
+            <h2 className='text-2xl font-semibold text-foreground'>
+              {' '}
+              {type === 'test_suite'
+                ? 'Test Suite Report'
+                : 'Request Chain Report'}
+            </h2>
+          </div>
+          <div className='flex items-center space-x-4'>
+            {/* <Button
+              variant="outline"
+              className="hover-scale"
+            
+            >
+              <Share2 className="mr-2" size={16} />
+              Share
+            </Button> */}
+
+            {/* <Button className="hover-scale"
+         
+             >
+              <Download className="mr-2" size={16} />
+              Download
+            </Button> */}
+          </div>
         </div>
       </header>
 
@@ -316,11 +347,11 @@ const ExecutionReportPage: React.FC = () => {
             <p className='text-gray-500'>Loading report...</p>
           </div>
         </div>
-      ) : reportData ? (
+      ) : reportData?.data ? (
         type === 'test_suite' ? (
-          renderTestSuiteReport(reportData)
+          renderTestSuiteReport(reportData.data)
         ) : (
-          renderRequestChainReport(reportData)
+          renderRequestChainReport(reportData.data)
         )
       ) : (
         <div className='text-center py-8'>
