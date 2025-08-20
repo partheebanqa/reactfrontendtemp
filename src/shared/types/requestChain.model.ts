@@ -25,6 +25,7 @@ export interface APIRequest {
   headers: Header[];
   params: Parameter[];
   body?: string;
+  bodyRawContent?: string;
   bodyType:
     | 'none'
     | 'json'
@@ -64,11 +65,11 @@ export interface APIRequest {
 }
 
 export interface Variable {
-  initialValue: string;
+  initialValue?: string;
   id?: string;
   name: string;
-  value: string;
-  type: 'string' | 'number' | 'boolean' | 'json';
+  value?: string;
+  type: string;
   source?: 'extracted' | string;
   extractionPath?: string;
 }
@@ -89,6 +90,7 @@ export interface Parameter {
 
 export interface DataExtraction {
   variableName: string;
+  name: string;
   source:
     | 'response_body'
     | 'response_header'

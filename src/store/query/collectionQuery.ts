@@ -96,7 +96,6 @@ export const useSetFavouriteCollectionMutation = () => {
 };
 
 export const useCollectionRequestsQuery = () => {
-  console.log('useCollectionRequestsQuery is called');
   return useMutation({
     mutationFn: getCollectionRequests,
     onSuccess: (requests, collectionId) => {

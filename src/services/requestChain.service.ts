@@ -1,13 +1,10 @@
-import { ExtendedRequest } from '@/models/collection.model';
+import type { ExtendedRequest } from '@/models/collection.model';
 import { API_REQUEST, API_REQUEST_CHAIN } from '@/config/apiRoutes';
 import { apiRequest } from '@/lib/queryClient';
-import {
-  ExecutionItem,
-  ExecutionResponse,
+import type {
   RequestChain,
   RequestDetailResponse,
 } from '@/shared/types/requestChain.model';
-import axios from 'axios';
 
 export async function getRequestDetails(
   requestId: string
@@ -52,7 +49,6 @@ export async function getMultipleRequestDetails(
 export async function getCollectionRequests(
   collectionId?: string
 ): Promise<ExtendedRequest[]> {
-  console.log('getCollectionRequests is called');
   try {
     const url = collectionId
       ? `${API_REQUEST}/collections/${collectionId}/requests`
@@ -74,8 +70,6 @@ export async function getCollectionRequests(
 export async function saveRequestChain(
   chain: RequestChain
 ): Promise<RequestChain> {
-  console.log('🟡 Saving chain (request payload):', chain);
-
   const response = await apiRequest('POST', API_REQUEST_CHAIN, {
     body: JSON.stringify(chain),
     headers: {
@@ -88,9 +82,28 @@ export async function saveRequestChain(
   }
 
   const savedChain: RequestChain = await response.json();
-  console.log('✅ Response from backend:', savedChain);
 
   return savedChain;
+}
+
+export async function updateRequestChain(
+  chain: RequestChain,
+  id: string
+): Promise<RequestChain> {
+  const response = await apiRequest('PUT', `${API_REQUEST_CHAIN}/${id}`, {
+    body: JSON.stringify(chain),
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`);
+  }
+
+  const updatedChain: RequestChain = await response.json();
+
+  return updatedChain;
 }
 
 export const getRequestChains = async (
@@ -103,8 +116,6 @@ export const getRequestChains = async (
     );
 
     const data = await response.json();
-
-    console.log('data123:', data);
 
     // Map the API response to the RequestChain interface
     const mappedChains: RequestChain[] = data.requestChains.map(
@@ -137,43 +148,38 @@ export const getRequestChains = async (
   }
 };
 
-// 8d9ea72f-7f74-4821-8909-e953066d9a8b
+export const getRequestChainVariables = async (
+  requestChainId: string,
+  page = 1,
+  pageSize = 10
+): Promise<{
+  page: number;
+  pageSize: number;
+  count: number;
+  items: Array<{
+    id: string;
+    executionId: string;
+    chainRequestId: string;
+    requestChainId: string;
+    extractedVariables: string; // JSON string containing the variables array
+  }>;
+}> => {
+  try {
+    const response = await apiRequest(
+      'GET',
+      `${API_REQUEST_CHAIN}/${requestChainId}/variables?page=${page}&pageSize=${pageSize}`
+    );
 
-// export const getRequestChainData = async (
-//   chainId: string
-// ): Promise<ExecutionResponse> => {
-//   try {
-//     const response = await apiRequest('GET', `/request-chains/${chainId}/data`);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
 
-//     if (!response.ok) {
-//       throw new Error(`HTTP error! status: ${response.status}`);
-//     }
-
-//     const rawData: ExecutionResponse = await response.json();
-
-//     // Parse nested JSON fields
-//     const items: ExecutionItem[] = rawData.items.map((item) => ({
-//       ...item,
-//       data: safeJsonParse(item.data),
-//       extractedVariables: safeJsonParse(item.extractedVariables) || [],
-//     }));
-
-//     return {
-//       ...rawData,
-//       items,
-//     };
-//   } catch (error: any) {
-//     throw new Error(error.message || 'Failed to fetch execution data');
-//   }
-// };
-
-// const safeJsonParse = (input: any) => {
-//   try {
-//     return typeof input === 'string' ? JSON.parse(input) : input;
-//   } catch {
-//     return null;
-//   }
-// };
+    const data = await response.json();
+    return data;
+  } catch (error: any) {
+    throw new Error(error.message || 'Failed to fetch request chain variables');
+  }
+};
 
 export const getRequestChainData = async (chainId: string) => {
   try {

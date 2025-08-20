@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+'use client';
+
+import { useState } from 'react';
 import {
   ChevronDown,
   ChevronRight,
@@ -10,13 +12,8 @@ import {
   CheckCircle,
   Trash2,
 } from 'lucide-react';
-import { DataExtraction } from '@/shared/types/requestChain.model';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '../ui/tooltip';
+import type { DataExtraction } from '@/shared/types/requestChain.model';
+import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
 import { Button } from '../ui/button';
 
 interface ResponseExplorerProps {
@@ -54,6 +51,9 @@ export function ResponseExplorer({
   const [activeTab, setActiveTab] = useState<'body' | 'headers' | 'cookies'>(
     'body'
   );
+
+  console.log('extractedVariables111:', extractedVariables);
+
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(
     new Set(['root'])
   );
@@ -165,10 +165,7 @@ export function ResponseExplorer({
     value: any
   ) => {
     const suggestedName =
-      path
-        .split('.')
-        .pop()
-        ?.replace(/[\[\]]/g, '') || 'extractedValue';
+      path.split('.').pop()?.replace(/[[\]]/g, '') || 'extractedValue';
 
     const sanitizedName = sanitizeVariableName(suggestedName);
     setVariableName(sanitizedName);
@@ -194,6 +191,7 @@ export function ResponseExplorer({
 
       const extraction: DataExtraction = {
         variableName: finalVariableName,
+        name: finalVariableName,
         source: extractionModal.source,
         path: extractionModal.path,
         value: extractionModal.value,
@@ -297,12 +295,47 @@ export function ResponseExplorer({
 
   const renderJsonTree = () => {
     try {
-      const jsonData = JSON.parse(response.body);
+      let jsonData;
+      let cleanBody = response.body;
+
+      // Try to clean the response body
+      if (typeof cleanBody === 'string') {
+        cleanBody = cleanBody.trim();
+        // Remove any potential BOM or invisible characters
+        cleanBody = cleanBody.replace(/^\uFEFF/, '');
+      }
+
+      try {
+        jsonData = JSON.parse(cleanBody);
+      } catch (firstError) {
+        // If direct parsing fails, try to extract JSON from the response
+        // Sometimes responses have extra text before/after JSON
+        const jsonMatch =
+          cleanBody.match(/\{.*\}/s) || cleanBody.match(/\[.*\]/s);
+        if (jsonMatch) {
+          jsonData = JSON.parse(jsonMatch[0]);
+        } else {
+          throw firstError;
+        }
+      }
+
       const nodes = parseJsonToNodes(jsonData);
+
+      if (!nodes || !Array.isArray(nodes) || nodes.length === 0) {
+        return (
+          <div className='p-4 bg-gray-50 rounded border'>
+            <p className='text-gray-600 text-sm'>
+              Unable to parse response structure
+            </p>
+          </div>
+        );
+      }
 
       return (
         <div className='space-y-1'>
           {nodes.map((node) => {
+            if (!node) return null;
+
             const parentPath =
               node.path.substring(0, node.path.lastIndexOf('.')) ||
               node.path.substring(0, node.path.lastIndexOf('[')) ||
@@ -314,11 +347,34 @@ export function ResponseExplorer({
       );
     } catch (error) {
       return (
-        <div className='p-4 bg-gray-50 rounded border'>
-          <p className='text-gray-600 text-sm'>Response is not valid JSON</p>
-          <pre className='mt-2 text-xs text-gray-700 whitespace-pre-wrap'>
-            {response.body}
-          </pre>
+        <div className='space-y-4'>
+          <div className='p-4 bg-gray-50 rounded border'>
+            <p className='text-gray-600 text-sm mb-2'>
+              Response is not valid JSON
+            </p>
+            <pre className='text-xs text-gray-700 whitespace-pre-wrap max-h-40 overflow-y-auto'>
+              {response.body}
+            </pre>
+          </div>
+
+          <div className='p-3 bg-blue-50 border border-blue-200 rounded'>
+            <p className='text-sm text-blue-800 mb-2'>
+              <strong>Manual Extraction:</strong> You can still extract
+              variables from headers or cookies using the tabs above.
+            </p>
+            <button
+              onClick={() =>
+                handleExtractClick(
+                  'response_body',
+                  'raw_response',
+                  response.body
+                )
+              }
+              className='px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 transition-colors'
+            >
+              Extract Raw Response
+            </button>
+          </div>
         </div>
       );
     }
@@ -326,62 +382,80 @@ export function ResponseExplorer({
 
   const renderHeadersTab = () => (
     <div className='space-y-2'>
-      {Object.entries(response.headers).map(([key, value]) => {
-        const isAlreadyExtracted = existingExtractions.some(
-          (e) => e.source === 'response_header' && e.path === key
-        );
+      {response.headers &&
+        typeof response.headers === 'object' &&
+        Object.entries(response.headers).map(([key, value]) => {
+          if (!key || value === undefined || value === null) return null;
 
-        return (
-          <div
-            key={key}
-            className='group flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50'
-          >
-            <div className='flex-1 min-w-0'>
-              <div className='flex items-center space-x-2'>
-                <Hash className='w-4 h-4 text-gray-400' />
-                <span className='font-medium text-gray-900 text-sm'>{key}</span>
-              </div>
-              <p className='text-sm text-gray-600 font-mono mt-1 break-all'>
-                {value}
-              </p>
-            </div>
+          const isAlreadyExtracted = existingExtractions.some(
+            (e) => e.source === 'response_header' && e.path === key
+          );
 
-            <div className='flex items-center space-x-2 ml-4'>
-              <button
-                onClick={() => navigator.clipboard.writeText(value)}
-                className='p-1 text-gray-400 hover:text-gray-600 rounded'
-                title='Copy value'
-              >
-                <Copy className='w-4 h-4' />
-              </button>
-
-              {isAlreadyExtracted ? (
-                <div className='flex items-center space-x-1 px-2 py-1 bg-green-100 text-green-700 rounded text-xs'>
-                  <CheckCircle className='w-3 h-3' />
-                  <span>Extracted</span>
+          return (
+            <div
+              key={key}
+              className='group flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50'
+            >
+              <div className='flex-1 min-w-0'>
+                <div className='flex items-center space-x-2'>
+                  <Hash className='w-4 h-4 text-gray-400' />
+                  <span className='font-medium text-gray-900 text-sm'>
+                    {key}
+                  </span>
                 </div>
-              ) : (
+                <p className='text-sm text-gray-600 font-mono mt-1 break-all'>
+                  {value}
+                </p>
+              </div>
+
+              <div className='flex items-center space-x-2 ml-4'>
                 <button
-                  onClick={() =>
-                    handleExtractClick('response_header', key, value)
-                  }
-                  className='px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 transition-colors'
+                  onClick={() => navigator.clipboard.writeText(value)}
+                  className='p-1 text-gray-400 hover:text-gray-600 rounded'
+                  title='Copy value'
                 >
-                  <Plus className='w-4 h-4 mr-1 inline' />
-                  Extract
+                  <Copy className='w-4 h-4' />
                 </button>
-              )}
+
+                {isAlreadyExtracted ? (
+                  <div className='flex items-center space-x-1 px-2 py-1 bg-green-100 text-green-700 rounded text-xs'>
+                    <CheckCircle className='w-3 h-3' />
+                    <span>Extracted</span>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() =>
+                      handleExtractClick('response_header', key, value)
+                    }
+                    className='px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 transition-colors'
+                  >
+                    <Plus className='w-4 h-4 mr-1 inline' />
+                    Extract
+                  </button>
+                )}
+              </div>
             </div>
-          </div>
-        );
-      })}
+          );
+        })}
+      {(!response.headers ||
+        typeof response.headers !== 'object' ||
+        Object.keys(response.headers).length === 0) && (
+        <div className='text-center py-8 text-gray-500'>
+          <Hash className='w-12 h-12 text-gray-300 mx-auto mb-3' />
+          <p>No headers found in response</p>
+        </div>
+      )}
     </div>
   );
 
   const renderCookiesTab = () => (
     <div className='space-y-2'>
-      {response.cookies && Object.keys(response.cookies).length > 0 ? (
+      {response.cookies &&
+      typeof response.cookies === 'object' &&
+      Object.keys(response.cookies).length > 0 ? (
         Object.entries(response.cookies).map(([key, value]) => {
+          if (!key || value === undefined || value === null) return null;
+
           const isAlreadyExtracted = existingExtractions.some(
             (e) => e.source === 'response_cookie' && e.path === key
           );
@@ -479,87 +553,93 @@ export function ResponseExplorer({
       </div>
 
       {/* Extracted Variables Preview */}
-      {Object.keys(extractedVariables).length > 0 && (
-        <div className='bg-green-50 border border-green-200 rounded-lg p-4'>
-          <div className='flex items-center justify-between mb-4'>
-            <h4 className='font-medium text-green-900 flex items-center space-x-2'>
-              <CheckCircle className='w-5 h-5' />
-              <span>
-                Extracted Variables ({Object.keys(extractedVariables).length})
-              </span>
-            </h4>
-          </div>
+      {extractedVariables &&
+        typeof extractedVariables === 'object' &&
+        Object.keys(extractedVariables).length > 0 && (
+          <div className='bg-green-50 border border-green-200 rounded-lg p-4'>
+            <div className='flex items-center justify-between mb-4'>
+              <h4 className='font-medium text-green-900 flex items-center space-x-2'>
+                <CheckCircle className='w-5 h-5' />
+                <span>
+                  Extracted Variables ({Object.keys(extractedVariables).length})
+                </span>
+              </h4>
+            </div>
 
-          <div className='grid grid-cols-1 md:grid-cols-2 gap-3'>
-            {Object.entries(extractedVariables).map(([name, value]) => {
-              const extraction = existingExtractions.find(
-                (e) => e.variableName === name
-              );
-              return (
-                <div
-                  key={name}
-                  className='bg-white border border-green-200 rounded-lg p-3'
-                >
-                  <div className='flex items-center justify-between mb-2'>
-                    <div className='flex items-center space-x-2'>
-                      <span className='font-medium text-gray-900'>{name}</span>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <button
-                            onClick={() => handleCopy(name)}
-                            className='p-1 text-blue-600 hover:bg-blue-50 rounded'
-                          >
-                            {copied ? (
-                              <Copy className='w-3 h-3 text-green-600' />
-                            ) : (
-                              <Copy className='w-3 h-3' />
-                            )}
-                          </button>
-                        </TooltipTrigger>
-                        <TooltipContent>Copy variable name</TooltipContent>
-                      </Tooltip>
+            <div className='grid grid-cols-1 md:grid-cols-2 gap-3'>
+              {Object.entries(extractedVariables).map(([name, value]) => {
+                if (!name || value === undefined) return null;
+
+                const extraction = existingExtractions.find(
+                  (e) => e.variableName === name
+                );
+                return (
+                  <div
+                    key={name}
+                    className='bg-white border border-green-200 rounded-lg p-3'
+                  >
+                    <div className='flex items-center justify-between mb-2'>
+                      <div className='flex items-center space-x-2'>
+                        <span className='font-medium text-gray-900'>
+                          {name}
+                        </span>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              onClick={() => handleCopy(name)}
+                              className='p-1 text-blue-600 hover:bg-blue-50 rounded'
+                            >
+                              {copied ? (
+                                <Copy className='w-3 h-3 text-green-600' />
+                              ) : (
+                                <Copy className='w-3 h-3' />
+                              )}
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent>Copy variable name</TooltipContent>
+                        </Tooltip>
+                      </div>
+
+                      <div className='flex items-center space-x-2'>
+                        <span className='text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded'>
+                          {extraction?.source?.replace('_', ' ')}
+                        </span>
+                        <button
+                          onClick={() => onRemoveExtraction(name)}
+                          className='p-1 text-red-600 hover:bg-red-50 rounded'
+                          title='Remove extraction'
+                        >
+                          <Trash2 className='w-3 h-3' />
+                        </button>
+                      </div>
                     </div>
-
-                    <div className='flex items-center space-x-2'>
-                      <span className='text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded'>
-                        {extraction?.source?.replace('_', ' ')}
-                      </span>
-                      <button
-                        onClick={() => onRemoveExtraction(name)}
-                        className='p-1 text-red-600 hover:bg-red-50 rounded'
-                        title='Remove extraction'
-                      >
-                        <Trash2 className='w-3 h-3' />
-                      </button>
+                    <div className='text-sm'>
+                      <p className='text-gray-600 mb-1'>
+                        Path:{' '}
+                        <code className='bg-gray-100 px-1 rounded overflow-x-auto whitespace-nowrap block'>
+                          {extraction?.path}
+                        </code>
+                      </p>
+                      <div className='bg-gray-50 p-2 rounded border text-xs font-mono overflow-x-auto whitespace-nowrap'>
+                        {typeof value === 'object'
+                          ? JSON.stringify(value)
+                          : String(value)}
+                      </div>
                     </div>
                   </div>
-                  <div className='text-sm'>
-                    <p className='text-gray-600 mb-1'>
-                      Path:{' '}
-                      <code className='bg-gray-100 px-1 rounded overflow-x-auto whitespace-nowrap block'>
-                        {extraction?.path}
-                      </code>
-                    </p>
-                    <div className='bg-gray-50 p-2 rounded border text-xs font-mono overflow-x-auto whitespace-nowrap'>
-                      {typeof value === 'object'
-                        ? JSON.stringify(value)
-                        : String(value)}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
 
-          <div className='mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg'>
-            <p className='text-sm text-blue-800'>
-              <strong>💡 Usage:</strong> Use these variables in other requests
-              with the syntax:{' '}
-              <code className='bg-blue-100 px-1 rounded overflow-x-auto whitespace-nowrap inline-block'>{`{{variableName}}`}</code>
-            </p>
+            <div className='mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg'>
+              <p className='text-sm text-blue-800'>
+                <strong>💡 Usage:</strong> Use these variables in other requests
+                with the syntax:{' '}
+                <code className='bg-blue-100 px-1 rounded overflow-x-auto whitespace-nowrap inline-block'>{`{{variableName}}`}</code>
+              </p>
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
       {/* Extraction Modal */}
       {extractionModal && (

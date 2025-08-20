@@ -1,6 +1,11 @@
-import React, { useState } from 'react';
+'use client';
+
+import { useState } from 'react';
 import { Plus, Trash2, Eye, Code, Hash, Type, HelpCircle } from 'lucide-react';
-import { DataExtraction, APIRequest } from '@/shared/types/requestChain.model';
+import type {
+  DataExtraction,
+  APIRequest,
+} from '@/shared/types/requestChain.model';
 interface VariableExtractorProps {
   request: APIRequest;
   onUpdate: (extractions: DataExtraction[]) => void;
@@ -15,26 +20,31 @@ export function VariableExtractor({
   const addExtraction = () => {
     const newExtraction: DataExtraction = {
       variableName: '',
+      name: '',
       source: 'response_body',
       path: '',
       transform: '',
+      value: '',
     };
 
-    onUpdate([...request.extractVariables, newExtraction]);
+    const currentExtractions = request.extractVariables || [];
+    onUpdate([...currentExtractions, newExtraction]);
   };
 
   const updateExtraction = (
     index: number,
     updates: Partial<DataExtraction>
   ) => {
-    const updated = request.extractVariables.map((extraction, i) =>
+    const currentExtractions = request.extractVariables || [];
+    const updated = currentExtractions.map((extraction, i) =>
       i === index ? { ...extraction, ...updates } : extraction
     );
     onUpdate(updated);
   };
 
   const removeExtraction = (index: number) => {
-    const updated = request.extractVariables.filter((_, i) => i !== index);
+    const currentExtractions = request.extractVariables || [];
+    const updated = currentExtractions.filter((_, i) => i !== index);
     onUpdate(updated);
   };
 
@@ -67,6 +77,8 @@ export function VariableExtractor({
     ],
     request_header: ['authorization', 'x-request-id', 'user-agent'],
   };
+
+  const extractVariables = request.extractVariables || [];
 
   return (
     <div className='space-y-4'>
@@ -115,9 +127,9 @@ export function VariableExtractor({
         </div>
       )}
 
-      {request.extractVariables.length > 0 ? (
+      {extractVariables.length > 0 ? (
         <div className='space-y-3'>
-          {request.extractVariables.map((extraction, index) => (
+          {extractVariables.map((extraction, index) => (
             <div key={index} className='border border-gray-200 rounded-lg p-4'>
               <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4'>
                 <div>

@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState, useMemo } from 'react';
 import {
   Search,
@@ -15,19 +17,13 @@ import {
   Cookie,
   ChevronDown,
   ChevronUp,
-  MoreVertical,
 } from 'lucide-react';
-import {
+import type {
   ExecutionLog,
   APIRequest,
   DataExtraction,
 } from '@/shared/types/requestChain.model';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '../ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
 import { useToast } from '@/hooks/useToast';
 
 interface VariableExtractionResult {
@@ -126,11 +122,13 @@ export function VariablesTable({
 
   // Filter and sort results
   const filteredResults = useMemo(() => {
-    let filtered = extractionResults.filter((result) => {
+    const filtered = extractionResults.filter((result) => {
       const matchesSearch =
-        result.variableName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        result.requestName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        result.extractionPath.toLowerCase().includes(searchTerm.toLowerCase());
+        result?.variableName
+          .toLowerCase()
+          .includes(searchTerm?.toLowerCase()) ||
+        result?.requestName.toLowerCase().includes(searchTerm?.toLowerCase()) ||
+        result?.extractionPath.toLowerCase().includes(searchTerm.toLowerCase());
 
       const matchesStatus =
         statusFilter === 'all' || result.status === statusFilter;

@@ -95,6 +95,7 @@ const Index = () => {
   const handleSaveChain = async (
     chain: RequestChain
   ): Promise<RequestChain | null> => {
+    console.log('RequestChainEditor:', chain);
     return new Promise((resolve) => {
       saveChain(chain, {
         onSuccess: (saved) => {
@@ -169,6 +170,9 @@ const Index = () => {
   const handleBackToList = () => {
     setCurrentView('list');
     setEditingChainId(undefined);
+    queryClient.refetchQueries({
+      queryKey: ['requestChains', currentWorkspace?.id || ''],
+    });
   };
 
   if (currentView === 'editor') {
@@ -219,6 +223,7 @@ const Index = () => {
           chain={editingChain} // This will be undefined for new chains, or the fetched chain for editing
           onBack={handleBackToList}
           onSave={handleSaveChain}
+          onToggleChain={handlePlayChain}
         />
         {data.id && (
           <RequestExecutor

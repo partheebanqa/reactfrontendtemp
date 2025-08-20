@@ -12,18 +12,27 @@ import {
   ChevronRight,
   Copy,
 } from 'lucide-react';
-import type {
+import { toast } from '@/hooks/use-toast';
+import {
   APIRequest,
   ExecutionLog,
-  RequestChain,
-  Variable,
+  ExecutionRequestChainPayload,
 } from '@/shared/types/requestChain.model';
-import { useRequestChainData } from '@/hooks/useRequestChainData';
-import { useDataManagementStore } from '@/store/dataManagementStore';
-import { useMutation } from '@tanstack/react-query';
-import { executeRequestChain } from '@/services/executeRequest.service';
-import { toast } from '@/hooks/use-toast';
 import { useExecuteRequestChain } from '@/shared/hooks/requestChain';
+
+interface Variable {
+  id?: string;
+  name: string;
+  value: string;
+  type: string;
+  source: string;
+  extractionPath?: string;
+}
+
+interface RequestChain {
+  id: string;
+  name: string;
+}
 
 interface RequestExecutorProps {
   chainId?: string;
@@ -39,6 +48,10 @@ interface RequestExecutorProps {
     isExecuting: boolean,
     currentRequestIndex: number
   ) => void;
+  onPreExecute?: () => Promise<RequestChain | null>;
+  onPostExecute?: () => void;
+  request?: APIRequest;
+  onResponse?: (response: any) => void;
 }
 
 export function RequestExecutor({
@@ -48,25 +61,20 @@ export function RequestExecutor({
   onVariableUpdate,
   onExecutionStateChange,
   onPreExecute,
+  onPostExecute,
   chainName,
   chainId,
-}: RequestExecutorProps & {
-  onPreExecute?: () => Promise<RequestChain | null>;
-}) {
-  const {
-    environments,
-    activeEnvironment,
-    variables: storeVariables,
-  } = useDataManagementStore();
-
+  request,
+  onResponse,
+}: RequestExecutorProps) {
   const [isExecuting, setIsExecuting] = useState(false);
   const [currentRequestIndex, setCurrentRequestIndex] = useState(-1);
   const [executionLogs, setExecutionLogs] = useState<ExecutionLog[]>([]);
   const [extractedVariables, setExtractedVariables] = useState<Variable[]>([]);
   const [expandedLogs, setExpandedLogs] = useState<Set<string>>(new Set());
   const [allVariables, setAllVariables] = useState<Variable[]>(variables);
+  const { mutateAsync: playChain } = useExecuteRequestChain();
 
-  // Update local variables when prop changes
   React.useEffect(() => {
     setAllVariables(variables);
   }, [variables]);
@@ -75,90 +83,9 @@ export function RequestExecutor({
     let result = text;
     vars.forEach((variable) => {
       const regex = new RegExp(`{{${variable.name}}}`, 'g');
-      const oldResult = result;
-      result = result.replace(regex, variable.value);
-      if (oldResult !== result) {
-      }
+      result = result.replace(regex, variable.value ?? '');
     });
     return result;
-  };
-
-  // FIXED: Updated extractDataFromResponse function to handle header case-insensitivity
-  const extractDataFromResponse = (
-    response: any,
-    extractions: APIRequest['extractVariables']
-  ): Record<string, any> => {
-    const extracted: Record<string, any> = {};
-    extractions.forEach((extraction) => {
-      try {
-        let value;
-        if (extraction.source === 'response_body') {
-          // JSON path extraction
-          const jsonData =
-            typeof response.body === 'string'
-              ? JSON.parse(response.body)
-              : response.body;
-          value = getValueByPath(jsonData, extraction.path);
-        } else if (extraction.source === 'response_header') {
-          // FIXED: Handle case-insensitive header lookup
-          const headers = response.headers || {};
-          const headerKey = extraction.path.toLowerCase();
-
-          // First try direct lowercase lookup
-          value = headers[headerKey];
-
-          // If not found, search through all headers case-insensitively
-          if (value === undefined) {
-            const foundKey = Object.keys(headers).find(
-              (key) => key.toLowerCase() === headerKey
-            );
-            if (foundKey) {
-              value = headers[foundKey];
-            }
-          }
-        } else if (extraction.source === 'response_cookie') {
-          value = response.cookies?.[extraction.path];
-        }
-
-        if (value !== undefined) {
-          // Apply transformation if specified
-          if (extraction.transform) {
-            try {
-              const transformFunction = new Function(
-                'value',
-                `return ${extraction.transform}`
-              );
-              value = transformFunction(value);
-            } catch (transformError) {
-              console.error(
-                `Transform error for ${extraction.variableName}:`,
-                transformError
-              );
-            }
-          }
-          extracted[extraction.variableName] = value;
-        }
-      } catch (error) {
-        console.error(`Failed to extract ${extraction.variableName}:`, error);
-      }
-    });
-    return extracted;
-  };
-
-  const getValueByPath = (obj: any, path: string): any => {
-    return path.split('.').reduce((current, key) => {
-      if (current && typeof current === 'object') {
-        if (key.includes('[') && key.includes(']')) {
-          const arrayKey = key.substring(0, key.indexOf('['));
-          const index = Number.parseInt(
-            key.substring(key.indexOf('[') + 1, key.indexOf(']'))
-          );
-          return current[arrayKey] && current[arrayKey][index];
-        }
-        return current[key];
-      }
-      return undefined;
-    }, obj);
   };
 
   const parseCookies = (cookieHeader: string): Record<string, string> => {
@@ -177,6 +104,24 @@ export function RequestExecutor({
     return cookies;
   };
 
+  console.log('chainId:', chainId);
+
+  const extractDataFromResponse = (
+    response: any,
+    extractVariables: any[]
+  ): Record<string, any> => {
+    const extracted: Record<string, any> = {};
+    extractVariables.forEach((variable) => {
+      const value = response.body
+        ? JSON.parse(response.body)[variable.path]
+        : undefined;
+      if (value !== undefined) {
+        extracted[variable.variableName] = value;
+      }
+    });
+    return extracted;
+  };
+
   const executeRequest = async (
     request: APIRequest,
     currentVars: Variable[]
@@ -185,7 +130,6 @@ export function RequestExecutor({
     const logId = Date.now().toString() + Math.random();
 
     try {
-      // Replace variables in URL, headers, and body
       const processedUrl = replaceVariables(request.url, currentVars);
       const processedHeaders: Record<string, string> = {};
       request.headers.forEach((header) => {
@@ -201,7 +145,6 @@ export function RequestExecutor({
         ? replaceVariables(request.body, currentVars)
         : undefined;
 
-      // Add URL parameters
       const url = new URL(processedUrl);
       request.params.forEach((param) => {
         if (param.enabled) {
@@ -212,19 +155,20 @@ export function RequestExecutor({
         }
       });
 
-      // Set content type based on body type
       if (request.bodyType === 'json' && processedBody) {
         processedHeaders['Content-Type'] = 'application/json';
       } else if (request.bodyType === 'x-www-form-urlencoded') {
         processedHeaders['Content-Type'] = 'application/x-www-form-urlencoded';
       }
 
-      // Add authentication
-      if (request.authorizationType === 'bearer' && request.authToken) {
-        processedHeaders['Authorization'] = `Bearer ${replaceVariables(
-          request.authToken,
-          currentVars
-        )}`;
+      if (request.authorizationType === 'bearer') {
+        const bearerToken = request.authorization?.token || request.authToken;
+        if (bearerToken) {
+          processedHeaders['Authorization'] = `Bearer ${replaceVariables(
+            bearerToken,
+            currentVars
+          )}`;
+        }
       } else if (
         request.authorizationType === 'basic' &&
         request.authUsername &&
@@ -262,7 +206,6 @@ export function RequestExecutor({
       const responseBody = await response.text();
       const endTime = new Date().toISOString();
 
-      // Extract variables from response
       const extractedData = extractDataFromResponse(
         {
           body: responseBody,
@@ -274,7 +217,7 @@ export function RequestExecutor({
 
       const log: ExecutionLog = {
         id: logId,
-        chainId: 'current-chain',
+        chainId: chainId || 'current-chain',
         requestId: request.id,
         status: response.ok ? 'success' : 'error',
         startTime,
@@ -301,7 +244,7 @@ export function RequestExecutor({
       const endTime = new Date().toISOString();
       return {
         id: logId,
-        chainId: 'current-chain',
+        chainId: chainId || 'current-chain',
         requestId: request.id,
         status: 'error',
         startTime,
@@ -318,48 +261,114 @@ export function RequestExecutor({
     }
   };
 
-  const { data, isLoading, error } = useRequestChainData(chainId || '');
-
-  const { mutateAsync: runRequestChain, isPending } = useExecuteRequestChain();
-
   const handleExecuteChain = async () => {
     let savedChain;
-    try {
-      savedChain = await onPreExecute?.();
-    } catch (err: any) {
-      toast({
-        title: 'Save Failed',
-        description: err?.message || 'Unable to save chain before execution.',
-        variant: 'destructive',
-      });
-      return;
+    if (onPreExecute) {
+      try {
+        savedChain = await onPreExecute();
+      } catch (err: any) {
+        toast({
+          title: 'Save Failed',
+          description: err?.message || 'Unable to save chain before execution.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      if (!chainName?.trim()) {
+        toast({
+          title: 'Validation Error',
+          description: 'Please enter a chain name',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      if (!savedChain?.id) {
+        toast({
+          title: 'Validation Error',
+          description: 'Chain must be saved before execution',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      if (savedChain?.id) {
+        try {
+          const payload: ExecutionRequestChainPayload = {
+            requestChainId: savedChain?.id,
+          };
+
+          const result = await playChain(payload);
+          console.log('result00:', result);
+          toast({
+            title: 'Execution Started',
+            description: `Request chain ${chainId} started successfully.`,
+          });
+        } catch (error: any) {
+          toast({
+            title: 'Execution Failed',
+            description:
+              error?.message || 'Could not execute the request chain.',
+            variant: 'destructive',
+          });
+        }
+      }
     }
 
-    if (!savedChain?.id) {
-      toast({
-        title: 'Validation Error',
-        description: 'Please enter a chain name',
-        variant: 'destructive',
-      });
-      return;
-    }
+    if (request && onResponse) {
+      setIsExecuting(true);
+      try {
+        const log = await executeRequest(request, allVariables);
+        onResponse(log);
+        setExecutionLogs([log]);
 
-    try {
-      const execResponse = await runRequestChain({
-        requestChainId: savedChain?.id,
-      });
-    } catch (err: any) {
-      toast({
-        title: 'Execution Failed',
-        description: err?.message || 'Unable to execute request chain.',
-        variant: 'destructive',
-      });
+        if (log.extractedVariables) {
+          const newExtractedVars: Variable[] = [];
+          Object.entries(log.extractedVariables).forEach(([name, value]) => {
+            const newVar: Variable = {
+              id: `${Date.now()}-${Math.random()}`,
+              name,
+              value: String(value),
+              type:
+                typeof value === 'number'
+                  ? 'number'
+                  : typeof value === 'boolean'
+                  ? 'boolean'
+                  : 'string',
+              source: 'extracted',
+              extractionPath: request.extractVariables.find(
+                (e) => e.variableName === name
+              )?.path,
+            };
+            newExtractedVars.push(newVar);
+          });
+          setExtractedVariables(newExtractedVars);
+
+          const updatedAllVars = [...allVariables];
+          newExtractedVars.forEach((newVar) => {
+            const existingIndex = updatedAllVars.findIndex(
+              (v) => v.name === newVar.name
+            );
+            if (existingIndex >= 0) {
+              updatedAllVars[existingIndex] = newVar;
+            } else {
+              updatedAllVars.push(newVar);
+            }
+          });
+          setAllVariables(updatedAllVars);
+          onVariableUpdate(updatedAllVars);
+        }
+      } catch (error) {
+        console.error('Individual request execution failed:', error);
+      } finally {
+        setIsExecuting(false);
+      }
       return;
     }
 
     if (requests.length === 0) return;
 
-    // 3️⃣ Execute individual requests
     setIsExecuting(true);
     setCurrentRequestIndex(0);
     setExecutionLogs([]);
@@ -438,6 +447,22 @@ export function RequestExecutor({
     onExecutionComplete(logs, newExtractedVars);
     onVariableUpdate(currentVars);
     onExecutionStateChange?.(false, -1);
+
+    const successCount = logs.filter((log) => log.status === 'success').length;
+    const totalCount = logs.length;
+
+    toast({
+      title: 'Execution Complete',
+      description: `Completed ${successCount}/${totalCount} requests successfully`,
+      variant: successCount === totalCount ? 'default' : 'destructive',
+    });
+
+    if (onPostExecute && savedChain?.id) {
+      // Small delay to let user see the completion toast
+      setTimeout(() => {
+        onPostExecute();
+      }, 1500);
+    }
   };
 
   const stopExecution = () => {
@@ -495,7 +520,11 @@ export function RequestExecutor({
             Request Execution
           </h3>
           <p className='text-sm text-muted-foreground'>
-            {requests.filter((r) => r.enabled).length} enabled requests
+            {request
+              ? 'Individual request execution'
+              : `${
+                  requests?.filter((r) => r.enabled).length ?? 0
+                } enabled requests`}
           </p>
         </div>
         <div className='flex space-x-3'>
@@ -511,21 +540,36 @@ export function RequestExecutor({
             <button
               onClick={handleExecuteChain}
               disabled={
-                !chainName?.trim() ||
-                requests.filter((r) => r.enabled).length === 0
+                chainId
+                  ? request
+                    ? !request.url
+                    : false
+                  : request
+                  ? !request.url
+                  : !chainName?.trim() ||
+                    requests.filter((r) => r.enabled).length === 0
               }
               className='flex items-center justify-center space-x-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors w-full sm:w-auto'
             >
               <Play className='w-4 h-4' />
-              <span className='hidden sm:inline'>Save chain & Execute</span>
-              <span className='sm:hidden'>Execute</span>
+              <span className='hidden sm:inline'>
+                {request
+                  ? 'Run'
+                  : chainId
+                  ? 'Update Chain & Execute'
+                  : onPreExecute
+                  ? 'Save Chain & Execute'
+                  : 'Execute'}
+              </span>
+              <span className='sm:hidden'>
+                {request ? 'Run' : chainId ? 'Update' : 'Execute'}
+              </span>
             </button>
           )}
         </div>
       </div>
 
-      {/* Execution Progress */}
-      {isExecuting && (
+      {isExecuting && !request && (
         <div className='mb-6 p-4 bg-primary/10 border border-primary/20 rounded-lg'>
           <div className='flex items-center space-x-3'>
             <div className='animate-spin rounded-full h-5 w-5 border-b-2 border-primary'></div>
@@ -542,7 +586,6 @@ export function RequestExecutor({
         </div>
       )}
 
-      {/* Extracted Variables */}
       {extractedVariables.length > 0 && (
         <div className='mb-6 p-4 bg-accent/20 border border-accent/30 rounded-lg'>
           <h4 className='font-medium text-accent-foreground mb-2'>
@@ -571,23 +614,22 @@ export function RequestExecutor({
         </div>
       )}
 
-      {/* Execution Logs */}
       {executionLogs.length > 0 && (
         <div className='space-y-3'>
-          <h4 className='font-medium text-gray-900'>Execution Logs</h4>
+          <h4 className='font-medium text-foreground'>Execution Logs</h4>
           {executionLogs.map((log) => (
-            <div key={log.id} className='border border-gray-200 rounded-lg'>
+            <div key={log.id} className='border border-border rounded-lg'>
               <div
-                className='flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50'
+                className='flex items-center justify-between p-4 cursor-pointer hover:bg-muted/50'
                 onClick={() => toggleLogExpanded(log.id)}
               >
                 <div className='flex items-center space-x-3 min-w-0 flex-1'>
                   {getStatusIcon(log.status)}
                   <div className='min-w-0 flex-1'>
-                    <p className='font-medium text-gray-900 truncate'>
+                    <p className='font-medium text-foreground truncate'>
                       {log.request.method} {new URL(log.request.url).pathname}
                     </p>
-                    <p className='text-sm text-gray-500'>
+                    <p className='text-sm text-muted-foreground'>
                       {log.duration}ms •{' '}
                       {new Date(log.startTime).toLocaleTimeString()}
                     </p>
@@ -606,32 +648,31 @@ export function RequestExecutor({
                     {log.response?.status || log.status}
                   </span>
                   {expandedLogs.has(log.id) ? (
-                    <ChevronDown className='w-4 h-4 text-gray-400' />
+                    <ChevronDown className='w-4 h-4 text-muted-foreground' />
                   ) : (
-                    <ChevronRight className='w-4 h-4 text-gray-400' />
+                    <ChevronRight className='w-4 h-4 text-muted-foreground' />
                   )}
                 </div>
               </div>
 
               {expandedLogs.has(log.id) && (
-                <div className='border-t border-gray-200 p-4 bg-gray-50'>
+                <div className='border-t border-border p-4 bg-muted/30'>
                   <div className='grid grid-cols-1 xl:grid-cols-2 gap-6'>
-                    {/* Request Details */}
                     <div>
-                      <h5 className='font-medium text-gray-900 mb-2'>
+                      <h5 className='font-medium text-foreground mb-2'>
                         Request
                       </h5>
                       <div className='space-y-2 text-sm'>
                         <div>
                           <span className='font-medium'>URL:</span>
-                          <p className='font-mono text-gray-700 break-all text-xs sm:text-sm'>
+                          <p className='font-mono text-muted-foreground break-all text-xs sm:text-sm'>
                             {log.request.url}
                           </p>
                         </div>
                         {Object.keys(log.request.headers).length > 0 && (
                           <div>
                             <span className='font-medium'>Headers:</span>
-                            <pre className='font-mono text-gray-700 bg-white p-2 rounded border text-xs overflow-x-auto max-h-32'>
+                            <pre className='font-mono text-muted-foreground bg-card p-2 rounded border text-xs overflow-x-auto max-h-32'>
                               {JSON.stringify(log.request.headers, null, 2)}
                             </pre>
                           </div>
@@ -639,7 +680,7 @@ export function RequestExecutor({
                         {log.request.body && (
                           <div>
                             <span className='font-medium'>Body:</span>
-                            <pre className='font-mono text-gray-700 bg-white p-2 rounded border text-xs overflow-x-auto max-h-32'>
+                            <pre className='font-mono text-muted-foreground bg-card p-2 rounded border text-xs overflow-x-auto max-h-32'>
                               {formatResponseBody(log.request.body)}
                             </pre>
                           </div>
@@ -647,14 +688,15 @@ export function RequestExecutor({
                       </div>
                     </div>
 
-                    {/* Response Details */}
                     <div>
                       <div className='flex items-center justify-between mb-2'>
-                        <h5 className='font-medium text-gray-900'>Response</h5>
+                        <h5 className='font-medium text-foreground'>
+                          Response
+                        </h5>
                         {log.response && (
                           <button
                             onClick={() => copyResponse(log.response!.body)}
-                            className='flex items-center space-x-1 px-2 py-1 text-xs text-gray-600 hover:bg-gray-200 rounded transition-colors'
+                            className='flex items-center space-x-1 px-2 py-1 text-xs text-muted-foreground hover:bg-muted rounded transition-colors'
                           >
                             <Copy className='w-3 h-3' />
                             <span className='hidden sm:inline'>Copy</span>
@@ -679,13 +721,13 @@ export function RequestExecutor({
                           </div>
                           <div>
                             <span className='font-medium'>Size:</span>
-                            <span className='ml-2 text-gray-700'>
+                            <span className='ml-2 text-muted-foreground'>
                               {log.response.size} bytes
                             </span>
                           </div>
                           <div>
                             <span className='font-medium'>Body:</span>
-                            <pre className='font-mono text-gray-700 bg-white p-2 rounded border text-xs overflow-x-auto max-h-40'>
+                            <pre className='font-mono text-muted-foreground bg-card p-2 rounded border text-xs overflow-x-auto max-h-40'>
                               {formatResponseBody(
                                 log.response.body,
                                 log.response.headers['content-type']
@@ -694,7 +736,7 @@ export function RequestExecutor({
                           </div>
                         </div>
                       ) : (
-                        <div className='text-red-600'>
+                        <div className='text-destructive'>
                           <span className='font-medium'>Error:</span>
                           <p className='text-sm break-words'>{log.error}</p>
                         </div>
@@ -702,11 +744,10 @@ export function RequestExecutor({
                     </div>
                   </div>
 
-                  {/* Extracted Variables */}
                   {log.extractedVariables &&
                     Object.keys(log.extractedVariables).length > 0 && (
-                      <div className='mt-4 pt-4 border-t border-gray-200'>
-                        <h5 className='font-medium text-gray-900 mb-2'>
+                      <div className='mt-4 pt-4 border-t border-border'>
+                        <h5 className='font-medium text-foreground mb-2'>
                           Extracted Variables
                         </h5>
                         <div className='grid grid-cols-1 sm:grid-cols-2 gap-2'>
@@ -714,12 +755,12 @@ export function RequestExecutor({
                             ([name, value]) => (
                               <div
                                 key={name}
-                                className='flex flex-col sm:flex-row sm:items-center justify-between p-2 bg-white rounded border gap-1'
+                                className='flex flex-col sm:flex-row sm:items-center justify-between p-2 bg-card rounded border gap-1'
                               >
-                                <span className='font-medium text-gray-900'>
+                                <span className='font-medium text-foreground'>
                                   {name}
                                 </span>
-                                <span className='text-sm text-gray-700 font-mono bg-gray-100 px-2 py-1 rounded break-all'>
+                                <span className='text-sm text-muted-foreground font-mono bg-muted px-2 py-1 rounded break-all'>
                                   {String(value)}
                                 </span>
                               </div>

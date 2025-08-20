@@ -143,6 +143,16 @@ export const routeConfig: RouteConfig[] = [
     },
   },
   {
+    path: '/executions/:id/report',
+    name: 'Execution Report',
+    component: 'ExecutionReportPage',
+    requiresAuth: true,
+    meta: {
+      title: 'Execution Report - APIFlow',
+      description: 'Detailed execution report',
+    },
+  },
+  {
     path: '/data-management',
     name: 'Data Management',
     component: 'DataManagementPage',

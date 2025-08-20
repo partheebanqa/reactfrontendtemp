@@ -35,8 +35,6 @@ export const buildRequestPayload = (
   variables: Variable[],
   workspaceId: string = '01415fe5-b282-4295-a386-267ece622c7b'
 ): ExecuteRequestPayload => {
-  console.log('variableInbuildRequestPayload:', variables);
-
   const replaceVariables = (text: string | undefined): string => {
     if (!text) return '';
     let result = text;
@@ -44,7 +42,6 @@ export const buildRequestPayload = (
       const regex = new RegExp(`{{${variable.name}}}`, 'g');
       result = result.replace(regex, variable.initialValue ?? '');
     });
-    console.log('result:', result);
     return result;
   };
 

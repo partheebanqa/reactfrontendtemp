@@ -34,6 +34,10 @@ const VariablesSection: React.FC = () => {
     createdAt: '',
     updatedAt: '',
     deletedAt: null,
+    value: '',
+    scope: 'global', 
+    isGlobal: false,
+    isSecret: false,
   });
   const [search, setSearch] = useState('');
   const [environmentFilter, setEnvironmentFilter] = useState('all');
@@ -44,9 +48,18 @@ const VariablesSection: React.FC = () => {
 
   const handleCreate = async () => {
     try {
+
+      let finalName = newVariable.name;
+
+      if (newVariable.type === 'static' && !newVariable.name.startsWith('S_')) {
+        finalName = `S_${newVariable.name}`;
+      } else if (newVariable.type === 'dynamic' && !newVariable.name.startsWith('D_')) {
+        finalName = `D_${newVariable.name}`;
+      }
+
       await createVariableMutation.mutateAsync({
         environmentId: newVariable.environmentId,
-        name: newVariable.name,
+        name:finalName,
         description: newVariable.description,
         type: newVariable.type,
         initialValue: newVariable.initialValue,
@@ -58,17 +71,21 @@ const VariablesSection: React.FC = () => {
       return;
     }
     setNewVariable({
-      id: '',
-      environmentId: '',
-      name: '',
-      description: '',
-      type: 'string',
-      initialValue: '',
-      currentValue: '',
-      createdAt: '',
-      updatedAt: '',
-      deletedAt: null,
-    });
+          id: '',
+          environmentId: '',
+          name: '',
+          description: '',
+          type: 'string',
+          initialValue: '',
+          currentValue: '',
+          createdAt: '',
+          updatedAt: '',
+          deletedAt: null,
+          value: '',
+          scope: 'global', 
+          isGlobal: false,
+          isSecret: false,
+        });
     setIsCreateOpen(false);
   };
 

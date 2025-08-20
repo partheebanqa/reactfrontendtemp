@@ -6,10 +6,6 @@ import {
   Plus,
   GripVertical,
   Trash2,
-  Play,
-  Save,
-  Eye,
-  EyeOff,
   ChevronDown,
   Code,
   Download,
@@ -42,11 +38,14 @@ import type {
   Variable,
   ExecutionLog,
 } from '@/shared/types/requestChain.model';
-import { RequestExecutor } from './RequestExecutor';
 import { ImportModal } from '@/components/TestSuit/ImportModal';
 import type { ExtendedRequest } from '@/models/collection.model';
 import { RequestEditor } from '@/components/RequestChains/RequestEditor';
-import { saveRequestChain } from '@/services/requestChain.service';
+import { RequestExecutor } from './RequestExecutor';
+import {
+  saveRequestChain,
+  updateRequestChain,
+} from '@/services/requestChain.service';
 import {
   Tooltip,
   TooltipContent,
@@ -56,37 +55,62 @@ import {
 import { VariablesTable } from './VariablesTable';
 import { useDataManagement } from '@/hooks/useDataManagement';
 import { useWorkspace } from '@/hooks/useWorkspace';
-import { useDataManagementStore } from '@/store/dataManagementStore';
 import { parseCookies } from '@/lib/cookieUtils';
 import {
   buildRequestPayload,
   executeRequest,
 } from '@/services/executeRequest.service';
+import {
+  getExtractVariablesByEnvironment,
+  extractDataFromResponse,
+  transformRequestForSave,
+  getExecutionLogForRequest,
+  copyToClipboard,
+} from '@/lib/request-utils';
 import { ResponseExplorer } from './ResponseExplorer';
 
 interface RequestChainEditorProps {
   chain?: RequestChain;
   onBack: () => void;
   onSave: (chain: RequestChain) => void;
+  requestChainId?: string;
+  onToggleChain: (chainId: string) => void;
 }
 
 export function RequestChainEditor({
   chain,
   onBack,
   onSave,
+  requestChainId,
+  onToggleChain,
 }: RequestChainEditorProps) {
   const { toast } = useToast();
   const dragItem = useRef<number | null>(null);
   const dragOverItem = useRef<number | null>(null);
   const { currentWorkspace } = useWorkspace();
-  const { variables: storeVariables } = useDataManagementStore();
+  const [globalVariables, setGlobalVariables] = useState<Variable[]>([
+    {
+      id: '1',
+      name: 'baseUrl',
+      value: 'https://api.example.com',
+      type: 'string',
+    },
+    { id: '2', name: 'apiKey', value: 'your-api-key', type: 'string' },
+    { id: '3', name: 'timeout', value: '5000', type: 'number' },
+  ]);
 
   const [formData, setFormData] = useState<Partial<RequestChain>>({
     name: chain?.name || '',
     description: chain?.description || '',
     workspaceId: currentWorkspace?.id || '',
     enabled: chain?.enabled ?? true,
-    chainRequests: chain?.chainRequests || (chain as any)?.requests || [],
+    chainRequests: (chain?.chainRequests || (chain as any)?.requests || []).map(
+      (req: any) => ({
+        ...req,
+        body: req.body || req.bodyRawContent || '', // Map bodyRawContent to body
+        bodyType: req.bodyType || (req.bodyRawContent ? 'raw' : 'none'), // Set bodyType based on content
+      })
+    ),
     variables: chain?.variables || [],
     environment: chain?.environment || 'dev',
   });
@@ -119,44 +143,30 @@ export function RequestChainEditor({
     new Set()
   );
   const [editingRequestId, setEditingRequestId] = useState<string | null>(null);
-  const [globalVariables, setGlobalVariables] = useState<Variable[]>([
-    {
-      id: '1',
-      name: 'baseUrl',
-      value: 'https://api.example.com',
-      type: 'string',
-    },
-    { id: '2', name: 'apiKey', value: 'your-api-key', type: 'string' },
-    { id: '3', name: 'timeout', value: '5000', type: 'number' },
-  ]);
 
   const [executionLogs, setExecutionLogs] = useState<ExecutionLog[]>([]);
+
   const [extractedVariables, setExtractedVariables] = useState<
     Record<string, any>
   >({});
+
+  console.log('extractedVariables222:', extractedVariables);
+
   const [isExecuting, setIsExecuting] = useState(false);
   const [currentRequestIndex, setCurrentRequestIndex] = useState(-1);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
-  const [pendingImportIds, setPendingImportIds] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState('requests');
-  const [responseTabStates, setResponseTabStates] = useState<
-    Record<string, string>
-  >({});
-  const [jsonOpenStates, setJsonOpenStates] = useState<Record<string, boolean>>(
-    {}
-  );
+  const [isSaving, setIsSaving] = useState(false);
 
-  // Helper function to replace variables in text
   const replaceVariables = (text: string, vars: Variable[]): string => {
     let result = text;
     vars.forEach((variable) => {
       const regex = new RegExp(`{{${variable.name}}}`, 'g');
-      result = result.replace(regex, variable.value);
+      result = result.replace(regex, variable?.value ?? '');
     });
     return result;
   };
 
-  // Helper function to get preview URL using environment baseUrl
   const getPreviewUrl = (request: APIRequest, variables: Variable[]) => {
     const replacedUrl = replaceVariables(request.url, variables);
     const baseUrl = environmentBaseUrl?.trim();
@@ -168,89 +178,10 @@ export function RequestChainEditor({
       const parsedBase = new URL(baseUrl);
       return `${parsedBase.origin}${parsedOriginal.pathname}${parsedOriginal.search}${parsedOriginal.hash}`;
     } catch {
-      // If replacedUrl is relative
       return `${baseUrl.replace(/\/$/, '')}/${replacedUrl.replace(/^\//, '')}`;
     }
   };
 
-  // Helper function to extract data from response
-  const getValueByPath = (obj: any, path: string): any => {
-    return path.split('.').reduce((current, key) => {
-      if (current && typeof current === 'object') {
-        if (key.includes('[') && key.includes(']')) {
-          const arrayKey = key.substring(0, key.indexOf('['));
-          const index = Number.parseInt(
-            key.substring(key.indexOf('[') + 1, key.indexOf(']'))
-          );
-          return current[arrayKey] && current[arrayKey][index];
-        }
-        return current[key];
-      }
-      return undefined;
-    }, obj);
-  };
-
-  // Updated extractDataFromResponse function to handle header case-insensitivity
-  const extractDataFromResponse = (
-    response: any,
-    extractions: APIRequest['extractVariables']
-  ): Record<string, any> => {
-    const extracted: Record<string, any> = {};
-
-    extractions.forEach((extraction) => {
-      try {
-        let value;
-        if (extraction.source === 'response_body') {
-          const jsonData =
-            typeof response.body === 'string'
-              ? JSON.parse(response.body)
-              : response.body;
-          value = getValueByPath(jsonData, extraction.path);
-        } else if (extraction.source === 'response_header') {
-          // Handle case-insensitive header lookup
-          const headers = response.headers || {};
-          const headerKey = extraction.path.toLowerCase();
-          // First try direct lowercase lookup
-          value = headers[headerKey];
-          // If not found, search through all headers case-insensitively
-          if (value === undefined) {
-            const foundKey = Object.keys(headers).find(
-              (key) => key.toLowerCase() === headerKey
-            );
-            if (foundKey) {
-              value = headers[foundKey];
-            }
-          }
-        } else if (extraction.source === 'response_cookie') {
-          value = response.cookies?.[extraction.path];
-        }
-
-        if (value !== undefined) {
-          if (extraction.transform) {
-            try {
-              const transformFunction = new Function(
-                'value',
-                `return ${extraction.transform}`
-              );
-              value = transformFunction(value);
-            } catch (transformError) {
-              console.error(
-                `Transform error for ${extraction.variableName}:`,
-                transformError
-              );
-            }
-          }
-          extracted[extraction.variableName] = value;
-        }
-      } catch (error) {
-        console.error(`Failed to extract ${extraction.variableName}:`, error);
-      }
-    });
-
-    return extracted;
-  };
-
-  // Execute a single request
   const executeSingleRequest = async (
     request: APIRequest,
     variables: Variable[],
@@ -260,9 +191,29 @@ export function RequestChainEditor({
       throw new Error('Request URL is required');
     }
 
+    request = {
+      ...request,
+      headers: request.headers ?? [],
+      params: request.params ?? [],
+    };
+
+    console.log('request123:', request);
+    console.log('variables123:', variables);
+
+    const extractedVars = getExtractVariablesByEnvironment(
+      activeEnvironment?.id
+    );
+
+    const mergedVariables = [
+      ...variables.filter(
+        (sv) => !extractedVars.some((ev) => ev.name === sv.name)
+      ),
+      ...extractedVars,
+    ];
+
     const startTime = Date.now();
-    const payload = buildRequestPayload(request, variables);
-    const previewUrl = getPreviewUrl(request, variables);
+    const payload = buildRequestPayload(request, mergedVariables);
+    const previewUrl = getPreviewUrl(request, mergedVariables);
     payload.request.url = previewUrl;
 
     try {
@@ -324,7 +275,7 @@ export function RequestChainEditor({
         request: {
           method: request.method,
           url: previewUrl,
-          headers: {},
+          headers: {}, // fallback in error case
           body: request.body,
         },
         error: error instanceof Error ? error.message : 'Unknown error',
@@ -333,7 +284,6 @@ export function RequestChainEditor({
     }
   };
 
-  // Run all requests sequentially
   const handleRunAll = async () => {
     if (!formData.chainRequests || formData.chainRequests.length === 0) {
       toast({
@@ -378,10 +328,8 @@ export function RequestChainEditor({
           const log = await executeSingleRequest(request, currentVariables, i);
           allLogs.push(log);
 
-          // Update extracted variables for next requests
           if (log.extractedVariables) {
             Object.assign(allExtractedVars, log.extractedVariables);
-            // Convert extracted variables to Variable format and add to current variables
             Object.entries(log.extractedVariables).forEach(([key, value]) => {
               const existingVarIndex = currentVariables.findIndex(
                 (v) => v.name === key
@@ -477,41 +425,6 @@ export function RequestChainEditor({
     }
   };
 
-  // Helper function to get execution log for a request
-  const getExecutionLogForRequest = (
-    requestId: string
-  ): ExecutionLog | null => {
-    return executionLogs.find((log) => log.requestId === requestId) || null;
-  };
-
-  // Helper function to format response body
-  const formatResponseBody = (body: string, contentType?: string) => {
-    try {
-      if (
-        contentType?.includes('application/json') ||
-        body.trim().startsWith('{')
-      ) {
-        return JSON.stringify(JSON.parse(body), null, 2);
-      }
-    } catch {
-      // Return as-is if not valid JSON
-    }
-    return body;
-  };
-
-  // Helper function to copy to clipboard
-  const copyToClipboard = async (text: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      toast({
-        title: 'Copied to Clipboard',
-        description: 'The value has been copied successfully.',
-      });
-    } catch (err) {
-      console.error('Failed to copy:', err);
-    }
-  };
-
   // Drag handlers
   const handleDragStart = (index: number) => {
     dragItem.current = index;
@@ -569,8 +482,17 @@ export function RequestChainEditor({
     if (request) {
       const duplicated = {
         ...request,
-        id: Date.now().toString(),
+        id: undefined,
         name: `${request.name} (Copy)`,
+        headers: request.headers?.map((h) => ({ ...h, id: undefined })) || [],
+        params: request.params?.map((p) => ({ ...p, id: undefined })) || [],
+        extractVariables:
+          request.extractVariables?.map((v) => ({ ...v })) || [],
+        testScripts:
+          request.testScripts?.map((t) => ({
+            ...t,
+            id: `temp_${Date.now()}_${Math.random()}`,
+          })) || [],
       };
       setFormData({
         ...formData,
@@ -581,7 +503,6 @@ export function RequestChainEditor({
 
   const addNewRequest = () => {
     const newRequest: APIRequest = {
-      id: Date.now().toString(),
       name: 'New Request',
       method: 'GET',
       url: '',
@@ -601,84 +522,68 @@ export function RequestChainEditor({
       ...formData,
       chainRequests: [...(formData.chainRequests || []), newRequest],
     });
-    setExpandedRequests(new Set([...expandedRequests, newRequest.id]));
+    const tempId = Date.now().toString();
+    setExpandedRequests(new Set([...expandedRequests, tempId]));
   };
 
-  // Helper function to transform request data before saving
-  const transformRequestForSave = (request: APIRequest): APIRequest => {
-    const transformedRequest = { ...request };
-
-    // Transform authToken to authorization object structure
-    if (request.authorizationType === 'bearer' && request.authToken) {
-      transformedRequest.authorization = {
-        token: request.authToken,
-      };
-      // Remove the old authToken field
-      delete transformedRequest.authToken;
-    }
-
-    // Handle other auth types if needed
-    if (
-      request.authorizationType === 'basic' &&
-      request.authUsername &&
-      request.authPassword
-    ) {
-      // transformedRequest.authorization = {
-      //   username: request.authUsername,
-      //   password: request.authPassword,
-      // };
-      // Remove the old auth fields
-      delete transformedRequest.authUsername;
-      delete transformedRequest.authPassword;
-    }
-
-    if (
-      request.authorizationType === 'apikey' &&
-      request.authApiKey &&
-      request.authApiValue
-    ) {
-      // transformedRequest.authorization = {
-      //   key: request.authApiKey,
-      //   value: request.authApiValue,
-      //   addTo: request.authApiLocation || 'header',
-      // };
-      // Remove the old auth fields
-      delete transformedRequest.authApiKey;
-      delete transformedRequest.authApiValue;
-      delete transformedRequest.authApiLocation;
-    }
-
-    return transformedRequest;
-  };
-
-  // Save chain function
   const saveChainToAPI = async (): Promise<RequestChain | null> => {
     if (!formData.name?.trim()) {
       toast({
         title: 'Validation Error',
-        description: 'Please enter a chain name',
-        variant: 'destructive',
-      });
-      return null;
-    }
-
-    if (!formData.chainRequests || formData.chainRequests.length === 0) {
-      toast({
-        title: 'Validation Error',
-        description: 'Please add at least one request to the chain',
+        description: 'Chain name is required',
         variant: 'destructive',
       });
       return null;
     }
 
     try {
-      // Transform all requests before saving
-      const transformedRequests = formData.chainRequests.map(
+      setIsSaving(true);
+
+      const originalRequestIds = new Set(
+        chain?.chainRequests?.map((r) => r.id) || []
+      );
+
+      const chainDataForBackend = {
+        ...formData,
+        chainRequests: formData.chainRequests?.map((request) => {
+          const isExistingRequest =
+            request.id && originalRequestIds.has(request.id);
+
+          if (isExistingRequest) {
+            return {
+              ...request,
+              headers:
+                request.headers?.map((h) =>
+                  h.id && !h.id.startsWith('temp_')
+                    ? h
+                    : { ...h, id: undefined }
+                ) || [],
+              params:
+                request.params?.map((p) =>
+                  p.id && !p.id.startsWith('temp_')
+                    ? p
+                    : { ...p, id: undefined }
+                ) || [],
+            };
+          } else {
+            return {
+              ...request,
+              id: undefined,
+              headers:
+                request.headers?.map((h) => ({ ...h, id: undefined })) || [],
+              params:
+                request.params?.map((p) => ({ ...p, id: undefined })) || [],
+            };
+          }
+        }),
+      };
+
+      const transformedRequests = chainDataForBackend.chainRequests.map(
         transformRequestForSave
       );
 
       const chainData: RequestChain = {
-        id: chain?.id || Date.now().toString(),
+        id: requestChainId || chain?.id || '',
         workspaceId: formData.workspaceId || currentWorkspace?.id || '',
         name: formData.name,
         description: formData.description || '',
@@ -693,26 +598,41 @@ export function RequestChainEditor({
         successRate: chain?.successRate || 0,
       };
 
-      const savedChain = await saveRequestChain(chainData);
+      const savedChain =
+        chainData.id === ''
+          ? await saveRequestChain(chainData)
+          : await updateRequestChain(chainData, chainData.id);
+
+      console.log('savedChain:', savedChain);
+
+      if (savedChain?.id) {
+        onToggleChain(savedChain?.id);
+      }
+
       setFormData((prev) => ({ ...prev, id: savedChain.id }));
 
       toast({
-        title: 'Chain Saved',
-        description: 'Your request chain has been saved successfully.',
+        title: chainData.id === '' ? 'Chain Saved' : 'Chain Updated',
+        description:
+          chainData.id === ''
+            ? 'Your request chain has been saved successfully.'
+            : 'Your request chain has been updated successfully.',
       });
 
       return savedChain;
     } catch (error) {
       console.error('Failed to save chain:', error);
       toast({
-        title: 'Save Failed',
+        title: chain?.id ? 'Update Failed' : 'Save Failed',
         description:
           error instanceof Error
             ? error.message
-            : 'Failed to save request chain',
+            : `Failed to ${chain?.id ? 'update' : 'save'} request chain`,
         variant: 'destructive',
       });
       return null;
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -720,6 +640,8 @@ export function RequestChainEditor({
     const saved = await saveChainToAPI();
     if (saved) {
       onSave(saved);
+      // Redirect to list view after successful save
+      // onBack();
     }
     return saved;
   };
@@ -787,7 +709,7 @@ export function RequestChainEditor({
     }
   };
 
-  // If editing a specific request, show the request editor
+  const currentRequestChainId = requestChainId || chain?.id || '';
   if (editingRequestId) {
     const request = formData.chainRequests?.find(
       (r) => r.id === editingRequestId
@@ -818,13 +740,14 @@ export function RequestChainEditor({
           <div className='flex-1 overflow-auto p-6'>
             <RequestEditor
               request={request}
-              globalVariables={globalVariables}
               onUpdate={(updates) => updateRequest(editingRequestId, updates)}
               onSave={() => setEditingRequestId(null)}
               chainName={formData.name}
               chainDescription={formData.description}
               chainEnabled={formData.enabled}
               environmentBaseUrl={environmentBaseUrl}
+              requestChainId={currentRequestChainId}
+              chainId={chain?.id}
             />
           </div>
         </div>
@@ -850,22 +773,22 @@ export function RequestChainEditor({
               </p>
             </div>
           </div>
-          <div className='flex items-center space-x-3'>
+          {/* <div className='flex items-center gap-2'>
             <Button
               onClick={handleSave}
               disabled={isSaveDisabled}
               className='gap-2'
             >
               <Save className='w-4 h-4' />
-              Save Chain
+              {chain ? 'Update Chain' : 'Save Chain'}
             </Button>
-          </div>
+          </div> */}
         </div>
       </div>
 
       <div className='flex-1 overflow-auto'>
         <div className='p-6 space-y-6'>
-          {/* Basic Information */}
+          {/* 1. Basic Information Box */}
           <Card>
             <CardHeader>
               <CardTitle>Basic Information</CardTitle>
@@ -884,7 +807,7 @@ export function RequestChainEditor({
                   />
                 </div>
                 <div className='space-y-2'>
-                  <Label htmlFor='status'>Status</Label>
+                  <Label htmlFor='status'>Important</Label>
                   <Select
                     value={formData.enabled ? 'enabled' : 'disabled'}
                     onValueChange={(value) =>
@@ -924,20 +847,13 @@ export function RequestChainEditor({
                   value={selectedEnvironment}
                   onValueChange={handleEnvironmentChange}
                 >
-                  <SelectTrigger id='environment-select'>
+                  <SelectTrigger>
                     <SelectValue placeholder='Select environment' />
                   </SelectTrigger>
                   <SelectContent>
                     {environments.map((env) => (
                       <SelectItem key={env.id} value={env.id}>
-                        <div className='flex flex-col text-left'>
-                          <span className='font-medium text-sm'>
-                            {env.name}
-                          </span>
-                          <span className='text-xs text-muted-foreground break-all'>
-                            {env.baseUrl}
-                          </span>
-                        </div>
+                        {env.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -946,411 +862,440 @@ export function RequestChainEditor({
             </CardContent>
           </Card>
 
-          {/* Tabs */}
-          <Tabs
-            value={activeTab}
-            onValueChange={setActiveTab}
-            className='w-full'
-          >
-            <TabsList className='grid w-full grid-cols-4'>
-              <TabsTrigger value='requests' className='gap-2'>
-                <Code className='w-4 h-4' />
-                Requests ({formData.chainRequests?.length || 0})
-              </TabsTrigger>
-              <TabsTrigger value='variables-table' className='gap-2'>
-                <Database className='w-4 h-4' />
-                Extracted Variables
-              </TabsTrigger>
-              <TabsTrigger value='execute' className='gap-2'>
-                <Play className='w-4 h-4' />
-                Save & Execute Chain
-              </TabsTrigger>
-            </TabsList>
+          {/* 2. Requests and Extracted Variables Box */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Requests and Extracted Variables</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Tabs
+                value={activeTab}
+                onValueChange={setActiveTab}
+                className='w-full'
+              >
+                <TabsList className='grid w-full grid-cols-2'>
+                  <TabsTrigger value='requests' className='gap-2'>
+                    <Code className='w-4 h-4' />
+                    Requests ({formData.chainRequests?.length || 0})
+                  </TabsTrigger>
+                  <TabsTrigger value='variables-table' className='gap-2'>
+                    <Database className='w-4 h-4' />
+                    Extracted Variables
+                  </TabsTrigger>
+                </TabsList>
 
-            <TabsContent value='requests' className='space-y-4'>
-              {/* Request Chain Section */}
-              <Card className='border-2 border-dashed border-gray-200'>
-                <CardHeader>
-                  <div className='flex items-center justify-between'>
-                    <CardTitle className='text-lg font-medium'>
-                      Request Chain
-                    </CardTitle>
-                    <div className='flex items-center space-x-2'>
-                      <Button
-                        variant='outline'
-                        onClick={handleRunAll}
-                        disabled={
-                          isExecuting || !formData.chainRequests?.length
-                        }
-                        className='gap-2'
-                      >
-                        {isExecuting ? (
-                          <Loader2 className='w-4 h-4 animate-spin' />
-                        ) : (
-                          <PlayCircle className='w-4 h-4' />
-                        )}
-                        {isExecuting ? 'Running...' : 'Run All'}
-                      </Button>
-                      <Button
-                        variant='outline'
-                        onClick={() => setIsImportModalOpen(true)}
-                        className='gap-2'
-                      >
-                        <Download className='w-4 h-4' />
-                        Import
-                      </Button>
-                      <Button onClick={addNewRequest} className='gap-2'>
-                        <Plus className='w-4 h-4' />
-                        Add Request
-                      </Button>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  {formData.chainRequests &&
-                  formData.chainRequests.length > 0 ? (
-                    <div className='space-y-3'>
-                      {formData.chainRequests.map((request, index) => {
-                        const executionLog = getExecutionLogForRequest(
-                          request.id
-                        );
-                        return (
-                          <Card
-                            key={request.id}
-                            className={`hover:shadow-sm transition-shadow ${
-                              currentRequestIndex === index
-                                ? 'ring-2 ring-primary'
-                                : ''
-                            }`}
+                <TabsContent value='requests' className='space-y-4'>
+                  <div className='bg-card rounded-xl border border-border overflow-hidden'>
+                    <div className='p-4 sm:p-6 border-b border-border'>
+                      <div className='flex items-center justify-between mb-4'>
+                        <h3 className='text-lg font-medium'>Request Chain</h3>
+                        <div className='flex items-center gap-2'>
+                          <Button
+                            variant='outline'
+                            onClick={handleRunAll}
+                            disabled={
+                              isExecuting || !formData.chainRequests?.length
+                            }
+                            className='gap-2 bg-transparent'
                           >
-                            <CardContent className='p-4'>
-                              <div className='flex items-center'>
-                                <div className='flex items-center space-x-3'>
-                                  <div
-                                    className='cursor-move'
-                                    draggable
-                                    onDragStart={() => handleDragStart(index)}
-                                    onDragEnter={() => handleDragEnter(index)}
-                                    onDragEnd={handleDragEnd}
-                                  >
-                                    <GripVertical className='w-5 h-5 text-muted-foreground' />
-                                  </div>
-                                  <div
-                                    className={`w-8 h-8 ${
-                                      currentRequestIndex === index
-                                        ? 'bg-primary text-primary-foreground animate-pulse'
-                                        : 'bg-blue-100 text-blue-600'
-                                    } rounded-full flex items-center justify-center text-sm font-medium`}
-                                  >
-                                    {currentRequestIndex === index ? (
-                                      <Loader2 className='w-4 h-4 animate-spin' />
-                                    ) : (
-                                      index + 1
-                                    )}
-                                  </div>
-                                </div>
-                                <div className='flex-1 flex items-center space-x-4 ml-3'>
-                                  <Badge
-                                    className={getMethodColor(request.method)}
-                                  >
-                                    {request.method}
-                                  </Badge>
-                                  <div className='flex-1'>
-                                    <p className='font-medium'>
-                                      {request.name}
-                                    </p>
-                                    <p className='text-sm text-muted-foreground'>
-                                      {request.url || 'No URL specified'}
-                                    </p>
-                                  </div>
-                                  <div className='flex items-center space-x-2'>
-                                    {request.enabled ? (
-                                      <Eye className='w-4 h-4 text-green-500' />
-                                    ) : (
-                                      <EyeOff className='w-4 h-4 text-muted-foreground' />
-                                    )}
-                                    {executionLog && (
-                                      <div className='flex items-center space-x-1'>
-                                        {executionLog.status === 'success' ? (
-                                          <CheckCircle className='w-4 h-4 text-green-500' />
+                            {isExecuting ? (
+                              <Loader2 className='w-4 h-4 animate-spin' />
+                            ) : (
+                              <PlayCircle className='w-4 h-4' />
+                            )}
+                            {isExecuting ? 'Running...' : 'Run All'}
+                          </Button>
+                          <Button
+                            variant='outline'
+                            onClick={() => setIsImportModalOpen(true)}
+                            className='gap-2'
+                          >
+                            <Download className='w-4 h-4' />
+                            Import
+                          </Button>
+                          <Button onClick={addNewRequest} className='gap-2'>
+                            <Plus className='w-4 h-4' />
+                            Add Request
+                          </Button>
+                        </div>
+                      </div>
+
+                      {formData.chainRequests &&
+                      formData.chainRequests.length > 0 ? (
+                        <div className='space-y-3'>
+                          {formData.chainRequests.map((request, index) => {
+                            const executionLog = getExecutionLogForRequest(
+                              executionLogs,
+                              request.id
+                            );
+                            return (
+                              <Card
+                                key={request.id}
+                                className={`hover:shadow-sm transition-shadow ${
+                                  currentRequestIndex === index
+                                    ? 'ring-2 ring-primary'
+                                    : ''
+                                }`}
+                              >
+                                <CardContent className='p-4'>
+                                  <div className='flex items-center'>
+                                    <div className='flex items-center space-x-3'>
+                                      <div
+                                        className='cursor-move'
+                                        draggable
+                                        onDragStart={() =>
+                                          handleDragStart(index)
+                                        }
+                                        onDragEnter={() =>
+                                          handleDragEnter(index)
+                                        }
+                                        onDragEnd={handleDragEnd}
+                                      >
+                                        <GripVertical className='w-5 h-5 text-muted-foreground' />
+                                      </div>
+                                      <div
+                                        className={`w-8 h-8 ${
+                                          currentRequestIndex === index
+                                            ? 'bg-primary text-primary-foreground animate-pulse'
+                                            : 'bg-blue-100 text-blue-600'
+                                        } rounded-full flex items-center justify-center text-sm font-medium`}
+                                      >
+                                        {currentRequestIndex === index ? (
+                                          <Loader2 className='w-4 h-4 animate-spin' />
                                         ) : (
-                                          <XCircle className='w-4 h-4 text-red-500' />
-                                        )}
-                                        {executionLog.response && (
-                                          <Badge
-                                            variant={
-                                              executionLog.response.status < 300
-                                                ? 'default'
-                                                : 'destructive'
-                                            }
-                                            className='text-xs'
-                                          >
-                                            {executionLog.response.status}
-                                          </Badge>
+                                          index + 1
                                         )}
                                       </div>
-                                    )}
-                                  </div>
-                                </div>
-                                <TooltipProvider>
-                                  <div className='flex items-center space-x-2 ml-4'>
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <Button
-                                          variant='ghost'
-                                          size='sm'
-                                          onClick={() =>
-                                            duplicateRequest(request.id)
-                                          }
-                                        >
-                                          <Copy className='w-4 h-4' />
-                                        </Button>
-                                      </TooltipTrigger>
-                                      <TooltipContent>
-                                        Duplicate Request
-                                      </TooltipContent>
-                                    </Tooltip>
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <Button
-                                          variant='ghost'
-                                          size='sm'
-                                          onClick={() =>
-                                            removeRequest(request.id)
-                                          }
-                                          className='text-red-600 hover:text-red-700'
-                                        >
-                                          <Trash2 className='w-4 h-4' />
-                                        </Button>
-                                      </TooltipTrigger>
-                                      <TooltipContent>
-                                        Delete Request
-                                      </TooltipContent>
-                                    </Tooltip>
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <Button
-                                          variant='ghost'
-                                          size='sm'
-                                          onClick={() =>
-                                            toggleRequestExpanded(request.id)
-                                          }
-                                        >
-                                          {expandedRequests.has(request.id) ? (
-                                            <ChevronUp className='w-4 h-4' />
-                                          ) : (
-                                            <ChevronDown className='w-4 h-4' />
-                                          )}
-                                        </Button>
-                                      </TooltipTrigger>
-                                      <TooltipContent>
-                                        {expandedRequests.has(request.id)
-                                          ? 'Collapse'
-                                          : 'Expand'}{' '}
-                                        Request
-                                      </TooltipContent>
-                                    </Tooltip>
-                                  </div>
-                                </TooltipProvider>
-                              </div>
-                              {expandedRequests.has(request.id) && (
-                                <div className='mt-4 pt-4 border-t space-y-4'>
-                                  <RequestEditor
-                                    request={request}
-                                    globalVariables={globalVariables}
-                                    onUpdate={(updates) =>
-                                      updateRequest(request.id, updates)
-                                    }
-                                    compact={true}
-                                    chainName={formData.name}
-                                    chainDescription={formData.description}
-                                    chainEnabled={formData.enabled}
-                                    environmentBaseUrl={environmentBaseUrl}
-                                  />
-                                  {/* Response Section */}
-                                  {executionLog && (
-                                    <div className='border-t border-gray-200 pt-4'>
-                                      <div className='flex items-center justify-between p-4 bg-gray-50 border-b border-gray-200 rounded-t-lg'>
-                                        <div className='flex items-center space-x-4'>
-                                          {executionLog.status === 'success' ? (
-                                            <div className='flex items-center space-x-2'>
-                                              <CheckCircle className='w-5 h-5 text-green-500' />
-                                              <span className='text-sm font-medium text-green-700'>
-                                                Response
-                                              </span>
-                                            </div>
-                                          ) : (
-                                            <div className='flex items-center space-x-2'>
-                                              <XCircle className='w-5 h-5 text-red-500' />
-                                              <span className='text-sm font-medium text-red-700'>
-                                                Response
-                                              </span>
-                                            </div>
-                                          )}
-                                          {executionLog.response && (
-                                            <>
-                                              <span
-                                                className={`px-2 py-1 text-xs font-medium rounded ${
+                                    </div>
+                                    <div className='flex-1 flex items-center space-x-4 ml-3'>
+                                      <Badge
+                                        className={getMethodColor(
+                                          request.method
+                                        )}
+                                      >
+                                        {request.method}
+                                      </Badge>
+                                      <div className='flex-1'>
+                                        <p className='font-medium'>
+                                          {request.name}
+                                        </p>
+                                        <p className='text-sm text-muted-foreground'>
+                                          {request.url || 'No URL specified'}
+                                        </p>
+                                      </div>
+                                      <div className='flex items-center space-x-2'>
+                                        {executionLog && (
+                                          <div className='flex items-center space-x-1'>
+                                            {executionLog.status ===
+                                            'success' ? (
+                                              <CheckCircle className='w-4 h-4 text-green-500' />
+                                            ) : (
+                                              <XCircle className='w-4 h-4 text-red-500' />
+                                            )}
+                                            {executionLog.response && (
+                                              <Badge
+                                                variant={
                                                   executionLog.response.status <
                                                   300
-                                                    ? 'bg-green-100 text-green-800'
-                                                    : executionLog.response
-                                                        .status < 400
-                                                    ? 'bg-yellow-100 text-yellow-800'
-                                                    : 'bg-red-100 text-red-800'
-                                                }`}
+                                                    ? 'default'
+                                                    : 'destructive'
+                                                }
+                                                className='text-xs'
                                               >
-                                                {executionLog.response.status}{' '}
-                                                {executionLog.response
-                                                  .status === 200
-                                                  ? 'OK'
-                                                  : executionLog.response
-                                                      .status === 201
-                                                  ? 'Created'
-                                                  : executionLog.response
-                                                      .status === 404
-                                                  ? 'Not Found'
-                                                  : executionLog.response
-                                                      .status === 500
-                                                  ? 'Server Error'
-                                                  : ''}
-                                              </span>
-                                              <span className='text-sm text-gray-600'>
-                                                {executionLog.duration}ms
-                                              </span>
-                                              <span className='text-sm text-gray-600'>
-                                                {(
-                                                  executionLog.response.size /
-                                                  1024
-                                                ).toFixed(2)}{' '}
-                                                KB
-                                              </span>
-                                            </>
-                                          )}
-                                        </div>
-                                      </div>
-                                      {executionLog.response && (
-                                        <div className='border-t border-gray-200 p-6'>
-                                          <h3 className='text-lg font-medium text-gray-900 mb-4'>
-                                            Extract Variables from Response
-                                          </h3>
-                                          <ResponseExplorer
-                                            response={executionLog.response}
-                                            onExtractVariable={(extraction) => {
-                                              const currentExtractions =
-                                                request.extractVariables || [];
-                                              const updatedExtractions = [
-                                                ...currentExtractions,
-                                                extraction,
-                                              ];
-                                              updateRequest(request.id, {
-                                                extractVariables:
-                                                  updatedExtractions,
-                                              });
-                                              // Extract the variable immediately from the current response
-                                              const extracted =
-                                                extractDataFromResponse(
-                                                  executionLog.response,
-                                                  updatedExtractions
-                                                );
-                                              setExtractedVariables((prev) => ({
-                                                ...prev,
-                                                ...extracted,
-                                              }));
-                                            }}
-                                            extractedVariables={
-                                              executionLog.extractedVariables ||
-                                              {}
-                                            }
-                                            existingExtractions={
-                                              request.extractVariables || []
-                                            }
-                                            onRemoveExtraction={(
-                                              variableName
-                                            ) => {
-                                              const updatedExtractions =
-                                                request.extractVariables?.filter(
-                                                  (e) =>
-                                                    e.variableName !==
-                                                    variableName
-                                                ) || [];
-                                              updateRequest(request.id, {
-                                                extractVariables:
-                                                  updatedExtractions,
-                                              });
-                                            }}
-                                            handleCopy={copyToClipboard}
-                                            copied={false}
-                                          />
-                                        </div>
-                                      )}
-                                      {!executionLog.response && (
-                                        <div className='p-6'>
-                                          <div className='text-red-600'>
-                                            <h4 className='font-medium mb-2'>
-                                              Error
-                                            </h4>
-                                            <p className='text-sm'>
-                                              {executionLog.error}
-                                            </p>
+                                                {executionLog.response.status}
+                                              </Badge>
+                                            )}
                                           </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                    <TooltipProvider>
+                                      <div className='flex items-center space-x-2 ml-4'>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <Button
+                                              variant='ghost'
+                                              size='sm'
+                                              onClick={() =>
+                                                duplicateRequest(request.id)
+                                              }
+                                            >
+                                              <Copy className='w-4 h-4' />
+                                            </Button>
+                                          </TooltipTrigger>
+                                          <TooltipContent>
+                                            Duplicate Request
+                                          </TooltipContent>
+                                        </Tooltip>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <Button
+                                              variant='ghost'
+                                              size='sm'
+                                              onClick={() =>
+                                                removeRequest(request.id)
+                                              }
+                                              className='text-red-600 hover:text-red-700'
+                                            >
+                                              <Trash2 className='w-4 h-4' />
+                                            </Button>
+                                          </TooltipTrigger>
+                                          <TooltipContent>
+                                            Delete Request
+                                          </TooltipContent>
+                                        </Tooltip>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <Button
+                                              variant='ghost'
+                                              size='sm'
+                                              onClick={() =>
+                                                toggleRequestExpanded(
+                                                  request.id
+                                                )
+                                              }
+                                            >
+                                              {expandedRequests.has(
+                                                request.id
+                                              ) ? (
+                                                <ChevronUp className='w-4 h-4' />
+                                              ) : (
+                                                <ChevronDown className='w-4 h-4' />
+                                              )}
+                                            </Button>
+                                          </TooltipTrigger>
+                                          <TooltipContent>
+                                            {expandedRequests.has(request.id)
+                                              ? 'Collapse'
+                                              : 'Expand'}{' '}
+                                            Request
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      </div>
+                                    </TooltipProvider>
+                                  </div>
+                                  {expandedRequests.has(request.id) && (
+                                    <div className='mt-4 pt-4 border-t space-y-4'>
+                                      <RequestEditor
+                                        request={request}
+                                        // globalVariables={globalVariables}
+                                        onUpdate={(updates) =>
+                                          updateRequest(request.id, updates)
+                                        }
+                                        compact={true}
+                                        chainName={formData.name}
+                                        chainDescription={formData.description}
+                                        chainEnabled={formData.enabled}
+                                        environmentBaseUrl={environmentBaseUrl}
+                                      />
+                                      {/* Response Section */}
+                                      {executionLog && (
+                                        <div className='border-t border-gray-200 pt-4'>
+                                          <div className='flex items-center justify-between p-4 bg-gray-50 border-b border-gray-200 rounded-t-lg'>
+                                            <div className='flex items-center space-x-4'>
+                                              {executionLog.status ===
+                                              'success' ? (
+                                                <div className='flex items-center space-x-2'>
+                                                  <CheckCircle className='w-5 h-5 text-green-500' />
+                                                  <span className='text-sm font-medium text-green-700'>
+                                                    Response
+                                                  </span>
+                                                </div>
+                                              ) : (
+                                                <div className='flex items-center space-x-2'>
+                                                  <XCircle className='w-5 h-5 text-red-500' />
+                                                  <span className='text-sm font-medium text-red-700'>
+                                                    Response
+                                                  </span>
+                                                </div>
+                                              )}
+                                              {executionLog.response && (
+                                                <>
+                                                  <span
+                                                    className={`px-2 py-1 text-xs font-medium rounded ${
+                                                      executionLog.response
+                                                        .status < 300
+                                                        ? 'bg-green-100 text-green-800'
+                                                        : executionLog.response
+                                                            .status < 400
+                                                        ? 'bg-yellow-100 text-yellow-800'
+                                                        : 'bg-red-100 text-red-800'
+                                                    }`}
+                                                  >
+                                                    {
+                                                      executionLog.response
+                                                        .status
+                                                    }{' '}
+                                                    {executionLog.response
+                                                      .status === 200
+                                                      ? 'OK'
+                                                      : executionLog.response
+                                                          .status === 201
+                                                      ? 'Created'
+                                                      : executionLog.response
+                                                          .status === 404
+                                                      ? 'Not Found'
+                                                      : executionLog.response
+                                                          .status === 500
+                                                      ? 'Server Error'
+                                                      : ''}
+                                                  </span>
+                                                  <span className='text-sm text-gray-600'>
+                                                    {executionLog.duration}ms
+                                                  </span>
+                                                  <span className='text-sm text-gray-600'>
+                                                    {(
+                                                      executionLog.response
+                                                        .size / 1024
+                                                    ).toFixed(2)}{' '}
+                                                    KB
+                                                  </span>
+                                                </>
+                                              )}
+                                            </div>
+                                          </div>
+                                          {executionLog.response && (
+                                            <div className='border-t border-gray-200 p-6'>
+                                              <h3 className='text-lg font-medium text-gray-900 mb-4'>
+                                                Extract Variables from Response
+                                              </h3>
+                                              <ResponseExplorer
+                                                response={executionLog.response}
+                                                onExtractVariable={(
+                                                  extraction
+                                                ) => {
+                                                  const currentExtractions =
+                                                    request.extractVariables ||
+                                                    [];
+                                                  const updatedExtractions = [
+                                                    ...currentExtractions,
+                                                    extraction,
+                                                  ];
+
+                                                  updateRequest(request.id, {
+                                                    extractVariables:
+                                                      updatedExtractions,
+                                                  });
+
+                                                  // Extract the variable immediately from the current response
+                                                  const extracted =
+                                                    extractDataFromResponse(
+                                                      executionLog.response,
+                                                      updatedExtractions
+                                                    );
+
+                                                  setExtractedVariables(
+                                                    (prev) => ({
+                                                      ...prev,
+                                                      ...extracted,
+                                                    })
+                                                  );
+                                                }}
+                                                extractedVariables={
+                                                  extractedVariables
+                                                } // ✅ use your state here
+                                                existingExtractions={
+                                                  request.extractVariables || []
+                                                }
+                                                onRemoveExtraction={(
+                                                  variableName
+                                                ) => {
+                                                  const updatedExtractions =
+                                                    request.extractVariables?.filter(
+                                                      (e) =>
+                                                        e.variableName !==
+                                                        variableName
+                                                    ) || [];
+                                                  updateRequest(request.id, {
+                                                    extractVariables:
+                                                      updatedExtractions,
+                                                  });
+                                                }}
+                                                handleCopy={copyToClipboard}
+                                                copied={false}
+                                              />
+                                            </div>
+                                          )}
+                                          {!executionLog.response && (
+                                            <div className='p-6'>
+                                              <div className='text-red-600'>
+                                                <h4 className='font-medium mb-2'>
+                                                  Error
+                                                </h4>
+                                                <p className='text-sm'>
+                                                  {executionLog.error}
+                                                </p>
+                                              </div>
+                                            </div>
+                                          )}
                                         </div>
                                       )}
                                     </div>
                                   )}
-                                </div>
-                              )}
-                            </CardContent>
-                          </Card>
-                        );
-                      })}
+                                </CardContent>
+                              </Card>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className='text-center py-12'>
+                          <div className='w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4'>
+                            <Code className='w-8 h-8 text-gray-400' />
+                          </div>
+                          <h3 className='text-lg font-medium text-gray-900 mb-2'>
+                            No requests in this chain
+                          </h3>
+                          <p className='text-sm text-gray-500 mb-6'>
+                            Get started by adding your first request or
+                            importing from a collection
+                          </p>
+                          <div className='flex items-center justify-center space-x-3'>
+                            <Button
+                              variant='outline'
+                              onClick={() => setIsImportModalOpen(true)}
+                              className='gap-2'
+                            >
+                              <Download className='w-4 h-4' />
+                              Import from Collection
+                            </Button>
+                            <Button onClick={addNewRequest} className='gap-2'>
+                              <Plus className='w-4 h-4' />
+                              Add First Request
+                            </Button>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  ) : (
-                    <div className='text-center py-12'>
-                      <div className='w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4'>
-                        <Code className='w-8 h-8 text-gray-400' />
-                      </div>
-                      <h3 className='text-lg font-medium text-gray-900 mb-2'>
-                        No requests in this chain
-                      </h3>
-                      <p className='text-sm text-gray-500 mb-6'>
-                        Get started by adding your first request or importing
-                        from a collection
-                      </p>
-                      <div className='flex items-center justify-center space-x-3'>
-                        <Button
-                          variant='outline'
-                          onClick={() => setIsImportModalOpen(true)}
-                          className='gap-2'
-                        >
-                          <Download className='w-4 h-4' />
-                          Import from Collection
-                        </Button>
-                        <Button onClick={addNewRequest} className='gap-2'>
-                          <Plus className='w-4 h-4' />
-                          Add First Request
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
+                  </div>
+                </TabsContent>
 
-            <TabsContent value='variables-table'>
-              <VariablesTable
-                requests={formData.chainRequests || []}
-                executionLogs={executionLogs}
-                extractedVariables={extractedVariables}
-                isExecuting={isExecuting}
-                currentRequestIndex={currentRequestIndex}
-              />
-            </TabsContent>
+                <TabsContent value='variables-table'>
+                  <VariablesTable
+                    requests={formData.chainRequests || []}
+                    executionLogs={executionLogs}
+                    extractedVariables={extractedVariables}
+                    isExecuting={isExecuting}
+                    currentRequestIndex={currentRequestIndex}
+                  />
+                </TabsContent>
+              </Tabs>
+            </CardContent>
+          </Card>
 
-            <TabsContent value='execute'>
+          {/* 3. Save & Execute Chain Box */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Save & Execute Chain</CardTitle>
+            </CardHeader>
+            <CardContent>
               <RequestExecutor
                 requests={formData.chainRequests || []}
-                variables={[...globalVariables, ...(formData.variables || [])]}
+                variables={(formData.variables || []).map((v) => ({
+                  ...v,
+                  id: v.id ?? crypto.randomUUID(),
+                  value: v.value ?? '',
+                  source: v.source ?? 'manual',
+                }))}
                 onExecutionComplete={(logs, extractedVars) => {
                   setExecutionLogs(logs);
                   const newExtractedVars: Record<string, any> = {};
@@ -1369,11 +1314,15 @@ export function RequestChainEditor({
                   setCurrentRequestIndex(requestIndex);
                 }}
                 onPreExecute={saveChainToAPI}
+                // onPostExecute={() => {
+                //   // Redirect to list view after successful execution
+                //   onBack();
+                // }}
                 chainName={formData?.name}
-                chainId={formData?.id}
+                chainId={chain?.id}
               />
-            </TabsContent>
-          </Tabs>
+            </CardContent>
+          </Card>
         </div>
       </div>
 

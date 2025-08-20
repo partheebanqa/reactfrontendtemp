@@ -36,6 +36,8 @@ import ContactPage from '@/pages/ContactPage';
 import ExecutionReportsPage from '@/pages/ExecutionReportsPage';
 import RequestChainReport from '@/pages/RequestChainReport';
 import TestSuiteReport from '@/pages/TestSuiteReport';
+import { ExecutionDetailsDialog } from '@/components/Executions/ExecutionDetailsDialog';
+import ExecutionReportPage from '@/components/Executions/ExecutionReportPage';
 
 export default function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -58,9 +60,7 @@ export default function Router() {
         </>
       ) : (
         <AppLayout>
-          <Route path='/' children={
-            <Redirect to='/dashboard' />
-          }/>
+          <Route path='/' children={<Redirect to='/dashboard' />} />
           <Route path='/dashboard' component={Dashboard} />
           <Route path='/json-parser' component={JsonParser} />
           <Route path='/swagger-parser' component={SwaggerParser} />
@@ -78,11 +78,11 @@ export default function Router() {
           <Route path='/notifications' component={Notifications} />
           <Route path='/settings/account' component={AccountSettingsPage} />
           <Route path='/cicd-configuration' component={CICDConfiguration} />
-          <Route path='/executions' component={ExecutionsNew} /> 
-           <Route path='/executions-reports' component={ExecutionReportsPage} />
+          <Route path='/executions' component={Executions} />
+          <Route path='/executions-reports' component={ExecutionReportsPage} />
+          <Route path="/executions/report/:type/:entityId" component={ExecutionReportPage} />
           <Route path='/request-chain-reports' component={RequestChainReport} />
           <Route path='/test-suite-reports' component={TestSuiteReport} />
-
         </AppLayout>
       )}
       <Route path='/pricing' component={Pricing} />

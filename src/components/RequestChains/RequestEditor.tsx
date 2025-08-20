@@ -20,8 +20,6 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import {
   Plus,
   Trash2,
-  Eye,
-  EyeOff,
   Code,
   Globe,
   Key,
@@ -56,10 +54,14 @@ import {
 } from '@/services/executeRequest.service';
 import { useDataManagementStore } from '@/store/dataManagementStore';
 import { useDataManagement } from '@/hooks/useDataManagement';
+import {
+  getExtractVariablesByEnvironment,
+  extractDataFromResponse,
+  copyToClipboard,
+} from '@/lib/request-utils';
 
 interface RequestEditorProps {
   request: APIRequest;
-  globalVariables: Variable[];
   onUpdate: (updates: Partial<APIRequest>) => void;
   onSave?: () => void;
   compact?: boolean;
@@ -67,6 +69,8 @@ interface RequestEditorProps {
   chainDescription?: string;
   chainEnabled?: boolean;
   environmentBaseUrl?: string; // New prop for environment base URL
+  requestChainId?: string; // Added requestChainId prop
+  chainId?: string;
 }
 
 interface KeyValuePair {
@@ -79,7 +83,6 @@ interface KeyValuePair {
 
 export function RequestEditor({
   request,
-  globalVariables,
   onUpdate,
   onSave,
   compact = false,
@@ -87,8 +90,9 @@ export function RequestEditor({
   chainDescription,
   chainEnabled,
   environmentBaseUrl,
+  requestChainId, // Added requestChainId parameter
+  chainId,
 }: RequestEditorProps) {
-  const [showRequestUrl, setShowRequestUrl] = useState(true);
   const [isJsonOpen, setIsJsonOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<
     'params' | 'headers' | 'body' | 'auth' | 'tests' | 'settings'
@@ -97,22 +101,19 @@ export function RequestEditor({
   const [executionResult, setExecutionResult] = useState<ExecutionLog | null>(
     null
   );
+
   const { variables: storeVariables } = useDataManagementStore();
 
   const [showResponse, setShowResponse] = useState(false);
   const [extractedVariables, setExtractedVariables] = useState<
     Record<string, any>
   >({});
-  const { environments, activeEnvironment, setActiveEnvironment } =
-    useDataManagement();
+  const { activeEnvironment } = useDataManagement();
   const [previewUrl, setPreviewUrl] = useState('');
-
-  console.log('activeEnvironment:', activeEnvironment);
 
   const [previousExtractions, setPreviousExtractions] = useState<
     DataExtraction[]
   >([]);
-  const [extractionLogs, setExtractionLogs] = useState<any[]>([]);
   const [responseTab, setResponseTab] = useState<
     'body' | 'cookies' | 'headers' | 'test-results'
   >('body');
@@ -124,22 +125,6 @@ export function RequestEditor({
   const updateExtractedVariables = (newVars: Record<string, any>) => {
     setExtractedVariables(newVars);
     localStorage.setItem('extractedVariables', JSON.stringify(newVars));
-  };
-
-  const getValueByPath = (obj: any, path: string): any => {
-    return path.split('.').reduce((current, key) => {
-      if (current && typeof current === 'object') {
-        if (key.includes('[') && key.includes(']')) {
-          const arrayKey = key.substring(0, key.indexOf('['));
-          const index = Number.parseInt(
-            key.substring(key.indexOf('[') + 1, key.indexOf(']'))
-          );
-          return current[arrayKey] && current[arrayKey][index];
-        }
-        return current[key];
-      }
-      return undefined;
-    }, obj);
   };
 
   useEffect(() => {
@@ -154,99 +139,9 @@ export function RequestEditor({
       ...extractedVars,
     ];
 
-    setPreviewUrl(getPreviewUrl(mergedVariables)); // ✅ updates for UI
+    setPreviewUrl(getPreviewUrl(mergedVariables));
   }, [storeVariables, activeEnvironment, request.url]);
 
-  // FIXED: Updated extractDataFromResponse function to handle header case-insensitivity
-  const extractDataFromResponse = (
-    response: any,
-    extractions: APIRequest['extractVariables']
-  ): Record<string, any> => {
-    const extracted: Record<string, any> = {};
-    extractions.forEach((extraction) => {
-      try {
-        let value;
-        if (extraction.source === 'response_body') {
-          const jsonData =
-            typeof response.body === 'string'
-              ? JSON.parse(response.body)
-              : response.body;
-          value = getValueByPath(jsonData, extraction.path);
-        } else if (extraction.source === 'response_header') {
-          // FIXED: Handle case-insensitive header lookup
-          const headers = response.headers || {};
-          const headerKey = extraction.path.toLowerCase();
-
-          // First try direct lowercase lookup
-          value = headers[headerKey];
-
-          // If not found, search through all headers case-insensitively
-          if (value === undefined) {
-            const foundKey = Object.keys(headers).find(
-              (key) => key.toLowerCase() === headerKey
-            );
-            if (foundKey) {
-              value = headers[foundKey];
-            }
-          }
-        } else if (extraction.source === 'response_cookie') {
-          value = response.cookies?.[extraction.path];
-        }
-
-        if (value !== undefined) {
-          if (extraction.transform) {
-            try {
-              const transformFunction = new Function(
-                'value',
-                `return ${extraction.transform}`
-              );
-              value = transformFunction(value);
-            } catch (transformError) {
-              console.error(
-                `Transform error for ${extraction.variableName}:`,
-                transformError
-              );
-            }
-          }
-          extracted[extraction.variableName] = value;
-        }
-      } catch (error) {
-        console.error(`Failed to extract ${extraction.variableName}:`, error);
-      }
-    });
-    return extracted;
-  };
-
-  const getExtractVariablesByEnvironment = (environmentId?: string) => {
-    if (!environmentId) return [];
-
-    try {
-      const rawLogs = localStorage.getItem('extractionLogs');
-      if (!rawLogs) return [];
-
-      const parsedLogs = JSON.parse(rawLogs);
-      if (!Array.isArray(parsedLogs)) return [];
-
-      return parsedLogs
-        .filter((log) => log.environmentId === environmentId)
-        .flatMap(
-          (log) =>
-            log.chainRequests?.flatMap((req: any) =>
-              (req.extractVariables || []).map((v: any) => ({
-                name: v.variableName,
-                initialValue: v.value || '',
-                type: 'string',
-                value: v.value || '',
-              }))
-            ) || []
-        );
-    } catch (err) {
-      console.error('Error reading extractionLogs from localStorage:', err);
-      return [];
-    }
-  };
-
-  // ✅ Updated getPreviewUrl to take variables as argument
   const getPreviewUrl = (variables: Variable[]) => {
     const replacedUrl = request.url.replace(/{{(.*?)}}/g, (_, varName) => {
       const found = variables.find((v) => v.name === varName);
@@ -265,13 +160,10 @@ export function RequestEditor({
     }
   };
 
-  // ✅ Updated handleExecute to pass mergedVariables everywhere
   const handleExecute = async () => {
     const extractedVars = getExtractVariablesByEnvironment(
       activeEnvironment?.id
     );
-
-    console.log('extractedVars:', extractedVars);
 
     const mergedVariables = [
       ...storeVariables.filter(
@@ -280,7 +172,14 @@ export function RequestEditor({
       ...extractedVars,
     ];
 
-    if (!request.url) {
+    const safeRequest = {
+      ...request,
+      extractVariables: request.extractVariables ?? [],
+      headers: request.headers ?? [],
+      params: request.params ?? [],
+    };
+
+    if (!safeRequest.url) {
       toast({
         title: 'Error',
         description: 'Request URL is required',
@@ -293,7 +192,7 @@ export function RequestEditor({
     try {
       const startTime = Date.now();
 
-      const payload = buildRequestPayload(request, mergedVariables);
+      const payload = buildRequestPayload(safeRequest, mergedVariables);
 
       // ✅ Always build previewUrl using mergedVariables
       const previewUrl = getPreviewUrl(mergedVariables);
@@ -309,14 +208,14 @@ export function RequestEditor({
           headers: result.headers,
           cookies: parseCookies(result.headers?.['set-cookie'] ?? ''),
         },
-        request.extractVariables
+        safeRequest.extractVariables
       );
 
       const endTime = Date.now();
       const log: ExecutionLog = {
         id: Date.now().toString(),
         chainId: 'current-chain',
-        requestId: request.id,
+        requestId: safeRequest.id,
         status:
           result.statusCode >= 200 && result.statusCode < 300
             ? 'success'
@@ -325,12 +224,12 @@ export function RequestEditor({
         endTime: new Date(endTime).toISOString(),
         duration: result.metrics.responseTime,
         request: {
-          method: request.method,
+          method: safeRequest.method,
           url: previewUrl,
           headers: Object.fromEntries(
-            request.headers.map((h) => [h.key, h.value])
+            safeRequest.headers.map((h) => [h.key, h.value])
           ),
-          body: request.body ?? '',
+          body: safeRequest.body ?? '',
         },
         response: {
           status: result.statusCode,
@@ -378,11 +277,9 @@ export function RequestEditor({
     }
   };
 
-  // const previewUrl = getPreviewUrl(mergedVariables);
-
   const addKeyValuePair = (type: 'params' | 'headers') => {
     const newPair: KeyValuePair = {
-      id: Date.now().toString(),
+      id: `temp_${Date.now().toString()}`,
       key: '',
       value: '',
       enabled: true,
@@ -443,10 +340,6 @@ export function RequestEditor({
     return body;
   };
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-  };
-
   const addParam = () => {
     onUpdate({
       params: [...request.params, { key: '', value: '', enabled: true }],
@@ -470,8 +363,6 @@ export function RequestEditor({
   };
 
   const handleExtractVariable = (extraction: DataExtraction) => {
-    console.log('extraction:', extraction);
-
     const normalizeString = (value?: string) => (value || '').trim();
     const normalizeBool = (value?: boolean) => !!value;
 
@@ -495,12 +386,17 @@ export function RequestEditor({
       order: nextOrder,
     };
 
-    const updatedExtractions = [
-      ...currentExtractions.filter(
-        (v) => v.variableName !== extraction.variableName
-      ),
-      extractionWithOrder,
-    ];
+    const updatedExtractions = [...currentExtractions, extraction];
+
+    // Create the update payload with requestChainId
+    const updatePayload: Partial<APIRequest> & { requestChainId?: string } = {
+      extractVariables: updatedExtractions,
+    };
+
+    // Add requestChainId if available (for edit mode)
+    if (requestChainId) {
+      updatePayload.requestChainId = requestChainId;
+    }
 
     const newRequest = {
       url: request.url,
@@ -562,7 +458,7 @@ export function RequestEditor({
 
     // Update state for request's own extracted variables
     setPreviousExtractions(updatedExtractions);
-    onUpdate({ extractVariables: updatedExtractions });
+    onUpdate(updatePayload);
 
     // If there’s a response, extract the values and update React state + localStorage
     // If there’s a response, extract the values and update React state + localStorage
@@ -594,11 +490,12 @@ export function RequestEditor({
   const [copied, setCopied] = useState(false);
   const handleCopy = async (value: string) => {
     try {
-      await navigator.clipboard.writeText(value);
+      const formattedValue = `{{${value}}}`;
+      await navigator.clipboard.writeText(formattedValue);
       setCopied(true);
       toast({
         title: 'Copied to Clipboard',
-        description: 'The value has been copied successfully.',
+        description: `Copied: ${formattedValue}`,
       });
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
@@ -631,7 +528,7 @@ export function RequestEditor({
   const addTest = (type: 'status' | 'responseTime' | 'jsonContent') => {
     let newTest: TestScript;
     const base = {
-      id: Date.now().toString(),
+      id: `temp_${Date.now().toString()}`,
       type,
       enabled: true,
     };
@@ -879,7 +776,7 @@ export function RequestEditor({
                 </button>
               </div>
 
-              {request.params.length > 0 ? (
+              {request?.params?.length > 0 ? (
                 <div className='space-y-2'>
                   {request.params.map((param, index) => (
                     <div key={index} className='flex items-center space-x-2'>
@@ -911,11 +808,11 @@ export function RequestEditor({
                             : 'text-gray-400 hover:bg-gray-50'
                         }`}
                       >
-                        {param.enabled ? (
+                        {/* {param.enabled ? (
                           <Eye className='w-4 h-4' />
                         ) : (
                           <EyeOff className='w-4 h-4' />
-                        )}
+                        )} */}
                       </button>
                       <button
                         onClick={() => removeParam(index)}
@@ -982,11 +879,11 @@ export function RequestEditor({
                             : 'text-gray-400 hover:bg-gray-50'
                         }`}
                       >
-                        {header.enabled ? (
+                        {/* {header.enabled ? (
                           <Eye className='w-4 h-4' />
                         ) : (
                           <EyeOff className='w-4 h-4' />
-                        )}
+                        )} */}
                       </button>
                       <button
                         onClick={() => removeHeader(index)}
@@ -1150,8 +1047,18 @@ export function RequestEditor({
                     </label>
                     <input
                       type='text'
-                      value={request.authToken || ''}
-                      onChange={(e) => onUpdate({ authToken: e.target.value })}
+                      value={
+                        request.authorization?.token || request.authToken || ''
+                      }
+                      onChange={(e) => {
+                        onUpdate({
+                          authToken: e.target.value,
+                          authorization: {
+                            ...request.authorization,
+                            token: e.target.value,
+                          },
+                        });
+                      }}
                       className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
                       placeholder='Enter bearer token or use {{tokenVariable}}'
                     />
@@ -1310,11 +1217,11 @@ export function RequestEditor({
                                 : 'text-gray-400 hover:bg-gray-50'
                             }`}
                           >
-                            {test.enabled ? (
+                            {/* {test.enabled ? (
                               <Eye className='w-4 h-4' />
                             ) : (
                               <EyeOff className='w-4 h-4' />
-                            )}
+                            )} */}
                           </button>
                           <button
                             onClick={() => removeTest(test.id)}
@@ -1871,7 +1778,9 @@ export function RequestEditor({
               <Label>Method</Label>
               <Select
                 value={request.method}
-                onValueChange={(value) => onUpdate({ method: value as any })}
+                onValueChange={(value) =>
+                  onUpdate({ method: value as APIRequest['method'] })
+                }
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -1947,11 +1856,12 @@ export function RequestEditor({
               <CardTitle>Query Parameters</CardTitle>
             </CardHeader>
             <CardContent>
+              {/* Ensure temp IDs are used for display but not persisted */}
               <KeyValueTable
                 type='params'
                 items={params.map((param) => ({
                   ...param,
-                  id: param.id ?? crypto.randomUUID(),
+                  id: param.id ?? `temp_${crypto.randomUUID()}`,
                 }))}
                 addButtonText='Add Param'
                 emptyStateText="No params added. Click 'Add Param' to get started."
@@ -1970,7 +1880,7 @@ export function RequestEditor({
                 type='headers'
                 items={headers.map((h) => ({
                   ...h,
-                  id: h.id ?? crypto.randomUUID(),
+                  id: h.id ?? `temp_${crypto.randomUUID()}`,
                 }))}
                 addButtonText='Add Header'
                 emptyStateText="No headers added. Click 'Add Header' to get started."
@@ -2186,7 +2096,7 @@ export function RequestEditor({
         <div className='flex justify-end'>
           <Button onClick={onSave} className='gap-2'>
             <Settings className='w-4 h-4' />
-            Save Request
+            {chainId ? 'Update Service' : 'Save Request'}
           </Button>
         </div>
       )}
