@@ -340,7 +340,7 @@ const ExecutionsNew: React.FC = () => {
           clearAllFilters={clearAllFilters}
         />
 
-        {/* <ExecutionsTable
+        <ExecutionsTable
           executions={paginatedExecutions}
           getStatusIcon={getStatusIcon}
           getStatusBadge={getStatusBadge}
@@ -349,7 +349,7 @@ const ExecutionsNew: React.FC = () => {
           openExecutionDetails={openExecutionDetails}
           stopExecutionMutation={stopExecutionMutation}
           retryExecutionMutation={retryExecutionMutation}
-        /> */}
+        />
 
         <ExecutionsPagination
           totalItems={filteredExecutions.length}
