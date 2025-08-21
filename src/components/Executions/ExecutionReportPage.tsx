@@ -8,7 +8,15 @@ import DetailedTestResults from '@/components/Reports/Components/DetailedTestRes
 import TestCategoryCard from '@/components/Reports/Components/TestCategoryCard';
 import RequestChainExecutionFlow from '@/components/Reports/Components/RequestChainExecutionFlow';
 import VariablesAndDataFlow from '@/components/Reports/Components/VariablesAndDataFlow';
-import { Download, FileCode, Settings2, Share2, Shield, ShieldCheck, Zap } from 'lucide-react';
+import {
+  Download,
+  FileCode,
+  Settings2,
+  Share2,
+  Shield,
+  ShieldCheck,
+  Zap,
+} from 'lucide-react';
 import { formatDistanceToNow, isValid } from 'date-fns';
 import { Button } from '../ui/button';
 
@@ -18,8 +26,7 @@ type RouteParams = {
 };
 
 const useQueryParams = () => {
-  const search =
-    typeof window !== 'undefined' ? window.location.search : '';
+  const search = typeof window !== 'undefined' ? window.location.search : '';
   return React.useMemo(() => new URLSearchParams(search), [search]);
 };
 
@@ -69,9 +76,11 @@ const ExecutionReportPage: React.FC = () => {
             duration: `${api.duration}ms`,
             statusCode: 200,
             status:
-              api.status === 'passed' ? 'success'
-              : api.status === 'failed' ? 'fail'
-              : 'warning',
+              api.status === 'passed'
+                ? 'success'
+                : api.status === 'failed'
+                ? 'fail'
+                : 'warning',
           })) || [],
       },
       {
@@ -86,9 +95,11 @@ const ExecutionReportPage: React.FC = () => {
             duration: `${api.duration}ms`,
             statusCode: 200,
             status:
-              api.status === 'passed' ? 'success'
-              : api.status === 'failed' ? 'fail'
-              : 'warning',
+              api.status === 'passed'
+                ? 'success'
+                : api.status === 'failed'
+                ? 'fail'
+                : 'warning',
           })) || [],
       },
       {
@@ -103,9 +114,11 @@ const ExecutionReportPage: React.FC = () => {
             duration: `${api.duration}ms`,
             statusCode: 200,
             status:
-              api.status === 'passed' ? 'success'
-              : api.status === 'failed' ? 'fail'
-              : 'warning',
+              api.status === 'passed'
+                ? 'success'
+                : api.status === 'failed'
+                ? 'fail'
+                : 'warning',
           })) || [],
       },
       {
@@ -120,9 +133,11 @@ const ExecutionReportPage: React.FC = () => {
             duration: `${api.duration}ms`,
             statusCode: 200,
             status:
-              api.status === 'passed' ? 'success'
-              : api.status === 'failed' ? 'fail'
-              : 'warning',
+              api.status === 'passed'
+                ? 'success'
+                : api.status === 'failed'
+                ? 'fail'
+                : 'warning',
           })) || [],
       },
     ];
@@ -131,19 +146,41 @@ const ExecutionReportPage: React.FC = () => {
       <>
         <AnalyticsReport
           title={data.name || 'Test Suite Report'}
-          description={data.description || 'Comprehensive test suite execution report'}
+          description={
+            data.description || 'Comprehensive test suite execution report'
+          }
           successRate={`${data.successRate || 0}%`}
           meta={{
             environment,
-            executedAt: safeExecutedAt(started),   // ← use safe helper
+            executedAt: safeExecutedAt(started), // ← use safe helper
             duration: `${Math.round((data.duration || 0) / 1000)}s`,
             executedBy: data.executedBy || 'Unknown',
           }}
           stats={[
-            { value: data.totalTestCases?.toString() || '0', label: 'Total Tests', bgColor: 'bg-gray-100', textColor: 'text-gray-800' },
-            { value: data.successfulTestCases?.toString() || '0', label: 'Successful', bgColor: 'bg-green-100', textColor: 'text-green-700' },
-            { value: data.failedTestCases?.toString() || '0', label: 'Failed', bgColor: 'bg-red-100', textColor: 'text-red-700' },
-            { value: data.skippedTestCases?.toString() || '0', label: 'Skipped', bgColor: 'bg-yellow-100', textColor: 'text-yellow-700' },
+            {
+              value: data.totalTestCases?.toString() || '0',
+              label: 'Total Tests',
+              bgColor: 'bg-gray-100',
+              textColor: 'text-gray-800',
+            },
+            {
+              value: data.successfulTestCases?.toString() || '0',
+              label: 'Successful',
+              bgColor: 'bg-green-100',
+              textColor: 'text-green-700',
+            },
+            {
+              value: data.failedTestCases?.toString() || '0',
+              label: 'Failed',
+              bgColor: 'bg-red-100',
+              textColor: 'text-red-700',
+            },
+            {
+              value: data.skippedTestCases?.toString() || '0',
+              label: 'Skipped',
+              bgColor: 'bg-yellow-100',
+              textColor: 'text-yellow-700',
+            },
           ]}
         />
 
@@ -226,15 +263,35 @@ const ExecutionReportPage: React.FC = () => {
           successRate={`${data.successRate || 0}%`}
           meta={{
             environment,
-            executedAt: safeExecutedAt(started),   // ← use safe helper
+            executedAt: safeExecutedAt(started), // ← use safe helper
             duration: `${Math.round((data.duration || 0) / 1000)}s`,
             executedBy: data.executedBy || 'Unknown',
           }}
           stats={[
-            { value: data.totalRequests?.toString() || '0', label: 'Total Requests', bgColor: 'bg-gray-100', textColor: 'text-gray-800' },
-            { value: data.successfulRequests?.toString() || '0', label: 'Successful', bgColor: 'bg-green-100', textColor: 'text-green-700' },
-            { value: data.failedRequests?.toString() || '0', label: 'Failed', bgColor: 'bg-red-100', textColor: 'text-red-700' },
-            { value: data.skippedRequests?.toString() || '0', label: 'Skipped', bgColor: 'bg-yellow-100', textColor: 'text-yellow-700' },
+            {
+              value: data.totalRequests?.toString() || '0',
+              label: 'Total Requests',
+              bgColor: 'bg-gray-100',
+              textColor: 'text-gray-800',
+            },
+            {
+              value: data.successfulRequests?.toString() || '0',
+              label: 'Successful',
+              bgColor: 'bg-green-100',
+              textColor: 'text-green-700',
+            },
+            {
+              value: data.failedRequests?.toString() || '0',
+              label: 'Failed',
+              bgColor: 'bg-red-100',
+              textColor: 'text-red-700',
+            },
+            {
+              value: data.skippedRequests?.toString() || '0',
+              label: 'Skipped',
+              bgColor: 'bg-yellow-100',
+              textColor: 'text-yellow-700',
+            },
           ]}
         />
 
@@ -252,16 +309,18 @@ const ExecutionReportPage: React.FC = () => {
 
   return (
     <div className='mx-auto p-1 sm:p-1'>
-      <h1 className='text-2xl font-semibold mb-4'>
-       
-      </h1>
-      <header className="border border-gray-200 bg-background rounded-lg px-6 py-4 animate-fade-in">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-semibold text-foreground"> {type === 'test_suite' ? 'Test Suite Report' : 'Request Chain Report'}</h2>
-        </div>
-        <div className="flex items-center space-x-4">
-         
+      <h1 className='text-2xl font-semibold mb-4'></h1>
+      <header className='border border-gray-200 bg-background rounded-lg px-6 py-4 animate-fade-in'>
+        <div className='flex items-center justify-between'>
+          <div>
+            <h2 className='text-2xl font-semibold text-foreground'>
+              {' '}
+              {type === 'test_suite'
+                ? 'Test Suite Report'
+                : 'Request Chain Report'}
+            </h2>
+          </div>
+          <div className='flex items-center space-x-4'>
             {/* <Button
               variant="outline"
               className="hover-scale"
@@ -270,18 +329,16 @@ const ExecutionReportPage: React.FC = () => {
               <Share2 className="mr-2" size={16} />
               Share
             </Button> */}
-     
-         
+
             {/* <Button className="hover-scale"
          
              >
               <Download className="mr-2" size={16} />
               Download
             </Button> */}
-         
+          </div>
         </div>
-      </div>
-    </header>
+      </header>
 
       {isLoading ? (
         <div className='flex items-center justify-center py-12'>
@@ -291,9 +348,11 @@ const ExecutionReportPage: React.FC = () => {
           </div>
         </div>
       ) : reportData?.data ? (
-        type === 'test_suite'
-          ? renderTestSuiteReport(reportData.data)
-          : renderRequestChainReport(reportData.data)
+        type === 'test_suite' ? (
+          renderTestSuiteReport(reportData.data)
+        ) : (
+          renderRequestChainReport(reportData.data)
+        )
       ) : (
         <div className='text-center py-8'>
           <p className='text-gray-500'>No report data available</p>

@@ -1,9 +1,7 @@
-import { ExtendedRequest } from '@/models/collection.model';
+import type { ExtendedRequest } from '@/models/collection.model';
 import { API_REQUEST, API_REQUEST_CHAIN } from '@/config/apiRoutes';
 import { apiRequest } from '@/lib/queryClient';
-import {
-  ExecutionItem,
-  ExecutionResponse,
+import type {
   RequestChain,
   RequestDetailResponse,
 } from '@/shared/types/requestChain.model';
@@ -150,43 +148,38 @@ export const getRequestChains = async (
   }
 };
 
-// 8d9ea72f-7f74-4821-8909-e953066d9a8b
+export const getRequestChainVariables = async (
+  requestChainId: string,
+  page = 1,
+  pageSize = 10
+): Promise<{
+  page: number;
+  pageSize: number;
+  count: number;
+  items: Array<{
+    id: string;
+    executionId: string;
+    chainRequestId: string;
+    requestChainId: string;
+    extractedVariables: string; // JSON string containing the variables array
+  }>;
+}> => {
+  try {
+    const response = await apiRequest(
+      'GET',
+      `${API_REQUEST_CHAIN}/${requestChainId}/variables?page=${page}&pageSize=${pageSize}`
+    );
 
-// export const getRequestChainData = async (
-//   chainId: string
-// ): Promise<ExecutionResponse> => {
-//   try {
-//     const response = await apiRequest('GET', `/request-chains/${chainId}/data`);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
 
-//     if (!response.ok) {
-//       throw new Error(`HTTP error! status: ${response.status}`);
-//     }
-
-//     const rawData: ExecutionResponse = await response.json();
-
-//     // Parse nested JSON fields
-//     const items: ExecutionItem[] = rawData.items.map((item) => ({
-//       ...item,
-//       data: safeJsonParse(item.data),
-//       extractedVariables: safeJsonParse(item.extractedVariables) || [],
-//     }));
-
-//     return {
-//       ...rawData,
-//       items,
-//     };
-//   } catch (error: any) {
-//     throw new Error(error.message || 'Failed to fetch execution data');
-//   }
-// };
-
-// const safeJsonParse = (input: any) => {
-//   try {
-//     return typeof input === 'string' ? JSON.parse(input) : input;
-//   } catch {
-//     return null;
-//   }
-// };
+    const data = await response.json();
+    return data;
+  } catch (error: any) {
+    throw new Error(error.message || 'Failed to fetch request chain variables');
+  }
+};
 
 export const getRequestChainData = async (chainId: string) => {
   try {

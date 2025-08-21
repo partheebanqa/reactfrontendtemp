@@ -72,7 +72,17 @@ export interface MappedExecutionResponse {
   const page = params?.page ?? 1;
   const limit = params?.limit ?? 10;
 
+
   const url = `${API_EXECUTOR}/execution-history?page=${encodeURIComponent(page)}&limit=${encodeURIComponent(limit)}`;
+
+  // const response = await fetch(
+  //   `${domain}/executor/execution-history?page=${page}&limit=${limit}`
+  // );
+  const response = await apiRequest(
+    'GET',
+    `${API_EXECUTOR}/execution-history?page_size=100`
+  );
+
 
   const res = await apiRequest('GET', url);
   if (!res.ok) {

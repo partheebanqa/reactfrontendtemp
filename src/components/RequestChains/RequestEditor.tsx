@@ -1,5 +1,5 @@
+// RequestEditor.tsx
 'use client';
-
 import { useEffect, useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -68,8 +68,8 @@ interface RequestEditorProps {
   chainName?: string;
   chainDescription?: string;
   chainEnabled?: boolean;
-  environmentBaseUrl?: string; // New prop for environment base URL
-  requestChainId?: string; // Added requestChainId prop
+  environmentBaseUrl?: string;
+  requestChainId?: string;
   chainId?: string;
 }
 
@@ -90,7 +90,7 @@ export function RequestEditor({
   chainDescription,
   chainEnabled,
   environmentBaseUrl,
-  requestChainId, // Added requestChainId parameter
+  requestChainId,
   chainId,
 }: RequestEditorProps) {
   const [isJsonOpen, setIsJsonOpen] = useState(false);
@@ -101,23 +101,19 @@ export function RequestEditor({
   const [executionResult, setExecutionResult] = useState<ExecutionLog | null>(
     null
   );
-
   const { variables: storeVariables } = useDataManagementStore();
-
   const [showResponse, setShowResponse] = useState(false);
   const [extractedVariables, setExtractedVariables] = useState<
     Record<string, any>
   >({});
   const { activeEnvironment } = useDataManagement();
   const [previewUrl, setPreviewUrl] = useState('');
-
   const [previousExtractions, setPreviousExtractions] = useState<
     DataExtraction[]
   >([]);
   const [responseTab, setResponseTab] = useState<
     'body' | 'cookies' | 'headers' | 'test-results'
   >('body');
-
   const params = request.params || [];
   const headers = request.headers || [];
   const { toast } = useToast();
@@ -131,14 +127,12 @@ export function RequestEditor({
     const extractedVars = getExtractVariablesByEnvironment(
       activeEnvironment?.id
     );
-
     const mergedVariables = [
       ...storeVariables.filter(
         (sv) => !extractedVars.some((ev) => ev.name === sv.name)
       ),
       ...extractedVars,
     ];
-
     setPreviewUrl(getPreviewUrl(mergedVariables));
   }, [storeVariables, activeEnvironment, request.url]);
 
@@ -147,10 +141,8 @@ export function RequestEditor({
       const found = variables.find((v) => v.name === varName);
       return found?.initialValue ?? '';
     });
-
     const baseUrl = environmentBaseUrl?.trim();
     if (!baseUrl) return replacedUrl;
-
     try {
       const parsedOriginal = new URL(replacedUrl);
       const parsedBase = new URL(baseUrl);
@@ -164,21 +156,18 @@ export function RequestEditor({
     const extractedVars = getExtractVariablesByEnvironment(
       activeEnvironment?.id
     );
-
     const mergedVariables = [
       ...storeVariables.filter(
         (sv) => !extractedVars.some((ev) => ev.name === sv.name)
       ),
       ...extractedVars,
     ];
-
     const safeRequest = {
       ...request,
       extractVariables: request.extractVariables ?? [],
       headers: request.headers ?? [],
       params: request.params ?? [],
     };
-
     if (!safeRequest.url) {
       toast({
         title: 'Error',
@@ -187,21 +176,15 @@ export function RequestEditor({
       });
       return;
     }
-
     setIsExecuting(true);
     try {
       const startTime = Date.now();
-
       const payload = buildRequestPayload(safeRequest, mergedVariables);
-
-      // ✅ Always build previewUrl using mergedVariables
       const previewUrl = getPreviewUrl(mergedVariables);
       payload.request.url = previewUrl;
-
       const backendData = await executeRequest(payload);
       const result = backendData?.data?.responses?.[0];
       if (!result) throw new Error('No response from executor');
-
       const extractedData = extractDataFromResponse(
         {
           body: result.body,
@@ -210,7 +193,6 @@ export function RequestEditor({
         },
         safeRequest.extractVariables
       );
-
       const endTime = Date.now();
       const log: ExecutionLog = {
         id: Date.now().toString(),
@@ -240,7 +222,6 @@ export function RequestEditor({
         },
         extractedVariables: extractedData,
       };
-
       setExecutionResult(log);
       toast({
         title: 'Execution Complete',
@@ -259,13 +240,12 @@ export function RequestEditor({
         duration: 0,
         request: {
           method: request.method,
-          url: getPreviewUrl(mergedVariables), // ✅ Pass mergedVariables here too
+          url: getPreviewUrl(mergedVariables),
           headers: {},
           body: request.body,
         },
         error: error instanceof Error ? error.message : 'Unknown error',
       };
-
       setExecutionResult(errorLog);
       toast({
         title: 'Execution Failed',
@@ -285,7 +265,6 @@ export function RequestEditor({
       enabled: true,
       description: '',
     };
-
     if (type === 'params') {
       onUpdate({ params: [...params, newPair] });
     } else {
@@ -365,12 +344,10 @@ export function RequestEditor({
   const handleExtractVariable = (extraction: DataExtraction) => {
     const normalizeString = (value?: string) => (value || '').trim();
     const normalizeBool = (value?: boolean) => !!value;
-
     const currentExtractions = request.extractVariables || [];
     const existingChains = JSON.parse(
       localStorage.getItem('extractionLogs') || '[]'
     );
-
     let maxOrder = 0;
     for (const chain of existingChains) {
       for (const req of chain.chainRequests || []) {
@@ -379,25 +356,20 @@ export function RequestEditor({
         }
       }
     }
-
     const nextOrder = maxOrder + 1;
     const extractionWithOrder = {
       ...extraction,
       order: nextOrder,
     };
-
     const updatedExtractions = [...currentExtractions, extraction];
-
     // Create the update payload with requestChainId
     const updatePayload: Partial<APIRequest> & { requestChainId?: string } = {
       extractVariables: updatedExtractions,
     };
-
     // Add requestChainId if available (for edit mode)
     if (requestChainId) {
       updatePayload.requestChainId = requestChainId;
     }
-
     const newRequest = {
       url: request.url,
       method: request.method,
@@ -421,7 +393,6 @@ export function RequestEditor({
       description: request.description,
       order: nextOrder,
     };
-
     // Find matching chain by normalized values
     const chainIndex = existingChains.findIndex(
       (chain: any) =>
@@ -431,13 +402,11 @@ export function RequestEditor({
         normalizeBool(chain.isImportant) === normalizeBool(chainEnabled) &&
         chain.environmentId === activeEnvironment?.id
     );
-
     if (chainIndex !== -1) {
       // Prevent pushing the same request twice
       const alreadyExists = existingChains[chainIndex].chainRequests.some(
         (req: any) => req.url === request.url && req.method === request.method
       );
-
       if (!alreadyExists) {
         existingChains[chainIndex].chainRequests.push(newRequest);
       }
@@ -452,22 +421,17 @@ export function RequestEditor({
       };
       existingChains.push(newChain);
     }
-
     // Save updated chains
     localStorage.setItem('extractionLogs', JSON.stringify(existingChains));
-
     // Update state for request's own extracted variables
     setPreviousExtractions(updatedExtractions);
     onUpdate(updatePayload);
-
-    // If there’s a response, extract the values and update React state + localStorage
-    // If there’s a response, extract the values and update React state + localStorage
+    // If there's a response, extract the values and update React state + localStorage
     if (executionResult?.response) {
       const extracted = extractDataFromResponse(
         executionResult.response,
         updatedExtractions
       );
-
       setExtractedVariables((prev) => {
         const merged = { ...prev, ...extracted };
         updateExtractedVariables(merged); // persist latest merged variables
@@ -481,7 +445,6 @@ export function RequestEditor({
       (e) => e.variableName !== variableName
     );
     onUpdate({ extractVariables: updatedExtractions });
-
     const newExtracted = { ...extractedVariables };
     delete newExtracted[variableName];
     setExtractedVariables(newExtracted);
@@ -532,7 +495,6 @@ export function RequestEditor({
       type,
       enabled: true,
     };
-
     if (type === 'status') {
       newTest = {
         ...base,
@@ -558,7 +520,6 @@ export function RequestEditor({
           'JSON value at path $.property should contain expected value',
       };
     }
-
     onUpdate({
       testScripts: [...(request.testScripts || []), newTest],
     });
@@ -605,7 +566,6 @@ export function RequestEditor({
           {addButtonText}
         </Button>
       </div>
-
       {items.length > 0 ? (
         <div className='space-y-2'>
           <div className='grid grid-cols-12 gap-2 text-xs font-medium text-muted-foreground border-b pb-2'>
@@ -718,7 +678,6 @@ export function RequestEditor({
             {isExecuting ? 'Running...' : 'Run'}
           </Button>
         </div>
-
         {/* Final URL Preview */}
         <div className='flex items-center space-x-2 mt-2 text-sm'>
           <span className='text-gray-600 dark:text-gray-400 font-medium'>
@@ -728,7 +687,6 @@ export function RequestEditor({
             {previewUrl}
           </span>
         </div>
-
         {/* Tabs */}
         <div className='border-b border-gray-200'>
           <nav className='flex space-x-8 px-6'>
@@ -758,7 +716,6 @@ export function RequestEditor({
             })}
           </nav>
         </div>
-
         {/* Tab Content */}
         <div className='p-6'>
           {activeTab === 'params' && (
@@ -775,7 +732,6 @@ export function RequestEditor({
                   <span>Add Parameter</span>
                 </button>
               </div>
-
               {request?.params?.length > 0 ? (
                 <div className='space-y-2'>
                   {request.params.map((param, index) => (
@@ -833,7 +789,6 @@ export function RequestEditor({
               )}
             </div>
           )}
-
           {activeTab === 'headers' && (
             <div className='space-y-4'>
               <div className='flex items-center justify-between'>
@@ -846,7 +801,6 @@ export function RequestEditor({
                   <span>Add Header</span>
                 </button>
               </div>
-
               {request.headers.length > 0 ? (
                 <div className='space-y-2'>
                   {request.headers.map((header, index) => (
@@ -902,7 +856,6 @@ export function RequestEditor({
               )}
             </div>
           )}
-
           {activeTab === 'body' && (
             <div className='space-y-4'>
               <h3 className='text-lg font-medium text-gray-900'>
@@ -970,7 +923,6 @@ export function RequestEditor({
                   <span className='text-sm'>Raw</span>
                 </label>
               </div>
-
               {request.bodyType === 'raw' && (
                 <div className='space-y-2'>
                   <div className='flex items-center justify-end'>
@@ -1002,7 +954,6 @@ export function RequestEditor({
                   />
                 </div>
               )}
-
               {request.bodyType !== 'none' && request.bodyType !== 'raw' && (
                 <div className='text-center py-8 text-gray-500'>
                   <FileText className='w-12 h-12 text-gray-300 mx-auto mb-3' />
@@ -1011,7 +962,6 @@ export function RequestEditor({
               )}
             </div>
           )}
-
           {activeTab === 'auth' && (
             <div className='space-y-4'>
               <h3 className='text-lg font-medium text-gray-900'>
@@ -1039,7 +989,6 @@ export function RequestEditor({
                     <option value='oauth2'>OAuth 2.0</option>
                   </select>
                 </div>
-
                 {request.authorizationType === 'bearer' && (
                   <div>
                     <label className='block text-sm font-medium text-gray-700 mb-2'>
@@ -1064,7 +1013,6 @@ export function RequestEditor({
                     />
                   </div>
                 )}
-
                 {request.authorizationType === 'basic' && (
                   <div className='grid grid-cols-2 gap-4'>
                     <div>
@@ -1097,7 +1045,6 @@ export function RequestEditor({
                     </div>
                   </div>
                 )}
-
                 {request.authorizationType === 'apikey' && (
                   <div className='space-y-4'>
                     <div className='grid grid-cols-2 gap-4'>
@@ -1151,7 +1098,6 @@ export function RequestEditor({
                     </div>
                   </div>
                 )}
-
                 {request.authorizationType === 'oauth2' && (
                   <div className='text-center py-8 text-gray-500'>
                     <Shield className='w-12 h-12 text-gray-300 mx-auto mb-3' />
@@ -1161,7 +1107,6 @@ export function RequestEditor({
               </div>
             </div>
           )}
-
           {activeTab === 'tests' && (
             <div className='space-y-4'>
               <div className='flex items-center justify-between'>
@@ -1192,7 +1137,6 @@ export function RequestEditor({
                   </button>
                 </div>
               </div>
-
               {request.testScripts && request.testScripts.length > 0 ? (
                 <div className='space-y-3'>
                   {request.testScripts.map((test) => (
@@ -1231,7 +1175,6 @@ export function RequestEditor({
                           </button>
                         </div>
                       </div>
-
                       <div className='grid grid-cols-1 md:grid-cols-3 gap-3 text-sm'>
                         {test.type === 'status' && (
                           <>
@@ -1273,7 +1216,6 @@ export function RequestEditor({
                             </select>
                           </>
                         )}
-
                         {test.type === 'responseTime' && (
                           <>
                             <div>
@@ -1310,7 +1252,6 @@ export function RequestEditor({
                             </div>
                           </>
                         )}
-
                         {test.type === 'jsonContent' && (
                           <>
                             <div className='flex items-center space-x-2'>
@@ -1372,7 +1313,6 @@ export function RequestEditor({
               )}
             </div>
           )}
-
           {activeTab === 'settings' && (
             <div className='space-y-6'>
               <h3 className='text-lg font-medium text-gray-900'>
@@ -1487,7 +1427,6 @@ export function RequestEditor({
             </div>
           )}
         </div>
-
         {/* Response Section */}
         {executionResult && (
           <div className='border-t border-gray-200'>
@@ -1553,7 +1492,6 @@ export function RequestEditor({
                 </button>
               </div>
             </div>
-
             {showResponse && executionResult.response && (
               <>
                 <div className='border-b border-gray-200'>
@@ -1600,7 +1538,6 @@ export function RequestEditor({
                     ))}
                   </nav>
                 </div>
-
                 <div className='p-6'>
                   {responseTab === 'body' && (
                     <div className='space-y-4'>
@@ -1631,7 +1568,6 @@ export function RequestEditor({
                           </button>
                         </div>
                       </div>
-
                       {isJsonOpen && (
                         <div className='relative'>
                           <pre className='bg-gray-50 border border-gray-200 rounded-lg p-4 text-sm font-mono overflow-x-auto max-h-96 leading-relaxed'>
@@ -1646,7 +1582,6 @@ export function RequestEditor({
                       )}
                     </div>
                   )}
-
                   {responseTab === 'cookies' && (
                     <div className='space-y-3'>
                       {executionResult.response.cookies &&
@@ -1682,7 +1617,6 @@ export function RequestEditor({
                       )}
                     </div>
                   )}
-
                   {responseTab === 'headers' && (
                     <div className='space-y-3'>
                       {Object.entries(executionResult.response.headers).map(
@@ -1710,7 +1644,6 @@ export function RequestEditor({
                       )}
                     </div>
                   )}
-
                   {responseTab === 'test-results' && (
                     <div className='text-center py-8 text-gray-500'>
                       <TestTube className='w-12 h-12 text-gray-300 mx-auto mb-3' />
@@ -1720,7 +1653,6 @@ export function RequestEditor({
                 </div>
               </>
             )}
-
             {showResponse && !executionResult.response && (
               <div className='p-6'>
                 <div className='text-red-600'>
@@ -1731,7 +1663,6 @@ export function RequestEditor({
             )}
           </div>
         )}
-
         {/* Variable Extraction Section */}
         {executionResult && executionResult.response && (
           <div className='border-t border-gray-200 p-6'>
@@ -1752,7 +1683,6 @@ export function RequestEditor({
       </div>
     );
   }
-
   // Full view
   return (
     <div className='space-y-6'>
@@ -1816,7 +1746,6 @@ export function RequestEditor({
           </div>
         </CardContent>
       </Card>
-
       {/* Main Tabs */}
       <Tabs defaultValue='params' className='w-full'>
         <TabsList className='grid w-full grid-cols-7'>
@@ -1849,7 +1778,6 @@ export function RequestEditor({
             Conditional
           </TabsTrigger>
         </TabsList>
-
         <TabsContent value='params' className='space-y-4'>
           <Card>
             <CardHeader>
@@ -1869,7 +1797,6 @@ export function RequestEditor({
             </CardContent>
           </Card>
         </TabsContent>
-
         <TabsContent value='headers' className='space-y-4'>
           <Card>
             <CardHeader>
@@ -1888,7 +1815,6 @@ export function RequestEditor({
             </CardContent>
           </Card>
         </TabsContent>
-
         <TabsContent value='body' className='space-y-4'>
           <Card>
             <CardHeader>
@@ -1915,7 +1841,6 @@ export function RequestEditor({
                   </SelectContent>
                 </Select>
               </div>
-
               {request.bodyType !== 'none' && (
                 <div className='space-y-2'>
                   <Label>Body Content</Label>
@@ -1935,7 +1860,6 @@ export function RequestEditor({
             </CardContent>
           </Card>
         </TabsContent>
-
         <TabsContent value='auth' className='space-y-4'>
           <Card>
             <CardHeader>
@@ -1966,7 +1890,6 @@ export function RequestEditor({
             </CardContent>
           </Card>
         </TabsContent>
-
         <TabsContent value='tests' className='space-y-4'>
           <Card>
             <CardHeader>
@@ -1992,7 +1915,6 @@ export function RequestEditor({
             </CardContent>
           </Card>
         </TabsContent>
-
         <TabsContent value='settings' className='space-y-6'>
           <div>
             <h3 className='text-lg font-semibold mb-4'>Request Settings</h3>
@@ -2065,7 +1987,6 @@ export function RequestEditor({
             </div>
           </div>
         </TabsContent>
-
         <TabsContent value='conditional' className='space-y-4'>
           <Card>
             <CardHeader>
@@ -2091,7 +2012,6 @@ export function RequestEditor({
           </Card>
         </TabsContent>
       </Tabs>
-
       {onSave && (
         <div className='flex justify-end'>
           <Button onClick={onSave} className='gap-2'>

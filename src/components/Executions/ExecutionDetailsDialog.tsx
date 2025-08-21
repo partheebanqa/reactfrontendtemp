@@ -28,7 +28,7 @@ export const ExecutionDetailsDialog = ({ open, onClose, execution }: any) => {
       if (execution.executionType === 'test_suite') {
         return executionService.getTestSuiteReport(execution.entityId);
       } else {
-        return executionService.getRequestChainReport(execution.entityId);
+        return executionService.getRequestChainReport(execution?.entityId);
       }
     },
     enabled: open && !!execution?.entityId && !!execution?.executionType,
