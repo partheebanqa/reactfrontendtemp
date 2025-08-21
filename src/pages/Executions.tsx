@@ -78,6 +78,8 @@ const Executions = () => {
     },
   ];
 
+  const apiPage = currentPage;
+
   // Fetch execution data
   const {
     data: executionData,
@@ -88,9 +90,9 @@ const Executions = () => {
     queryFn: () =>
       executionService
         .getExecutionHistory({
-          page: currentPage,
+          page: apiPage,
           limit: itemsPerPage,
-          domain: 'localhost', // Replace with actual domain
+         
         })
         .then(executionService.mapData),
   });

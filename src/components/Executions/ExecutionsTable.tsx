@@ -21,7 +21,7 @@ export const ExecutionsTable = ({
   getStatusColor,
   getStatusIcon,
 }: any) => {
-  console.log('executions:', executions);
+  // console.log('executions:', executions);
 
   const [_, setLocation] = useLocation();
 

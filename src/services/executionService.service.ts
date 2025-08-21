@@ -65,19 +65,21 @@ export interface MappedExecutionResponse {
   limit: number;
 }
 
-const fetchExecutionHistory = async (params: {
-  page?: number;
+ const fetchExecutionHistory = async (params: {
+  page?: number;   // already converted to API's expectation
   limit?: number;
-  domain?: string;
 }): Promise<ApiExecutionResponse> => {
-  const { page = 1, limit = 10, domain = 'localhost' } = params;
+  const page = params?.page ?? 1;
+  const limit = params?.limit ?? 10;
 
-  // const response = await fetch(
-  //   `${domain}/executor/execution-history?page=${page}&limit=${limit}`
-  // );
-  const response = await apiRequest('GET', `${API_EXECUTOR}/execution-history`);
+  const url = `${API_EXECUTOR}/execution-history?page=${encodeURIComponent(page)}&limit=${encodeURIComponent(limit)}`;
 
-  return response.json();
+  const res = await apiRequest('GET', url);
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(`Failed to fetch execution history (${res.status}): ${text}`);
+  }
+  return res.json();
 };
 
 // Report API functions
