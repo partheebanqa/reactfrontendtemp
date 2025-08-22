@@ -101,6 +101,10 @@ export function RequestEditor({
   const [executionResult, setExecutionResult] = useState<ExecutionLog | null>(
     null
   );
+  console.log('executionResult:', executionResult);
+  console.log('requestChainId:', requestChainId);
+  console.log('chainId:', chainId);
+
   const { variables: storeVariables } = useDataManagementStore();
   const [showResponse, setShowResponse] = useState(false);
   const [extractedVariables, setExtractedVariables] = useState<
@@ -1677,6 +1681,7 @@ export function RequestEditor({
               onRemoveExtraction={handleRemoveExtraction}
               handleCopy={handleCopy}
               copied={copied}
+              chainId={chainId || requestChainId || ''}
             />
           </div>
         )}

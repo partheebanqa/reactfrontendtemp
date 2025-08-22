@@ -786,6 +786,7 @@ export function RequestChainEditor({
     const request = formData.chainRequests?.find(
       (r) => r.id === editingRequestId
     );
+
     if (request) {
       return (
         <div className='h-full flex flex-col'>
@@ -1149,6 +1150,7 @@ export function RequestChainEditor({
                                         chainDescription={formData.description}
                                         chainEnabled={formData.enabled}
                                         environmentBaseUrl={environmentBaseUrl}
+                                        chainId={chain?.id || ''}
                                       />
 
                                       {/* Response Section */}
@@ -1259,11 +1261,13 @@ export function RequestChainEditor({
                                                     value
                                                   )
                                                 }
+                                                chainId={chain?.id ?? ''}
                                                 copied={
                                                   copiedStates[
                                                     executionLog.requestId
                                                   ] || false
                                                 }
+                                                // chainId={chain?.id ?? ''}
                                               />
                                             </div>
                                           )}
@@ -1337,8 +1341,11 @@ export function RequestChainEditor({
           {/* 3. Save & Execute Chain Box */}
           <Card>
             <CardHeader>
-              <CardTitle>Save & Execute Chain</CardTitle>
+              <CardTitle>
+                {chain?.id ? 'Update & Execute Chain' : 'Save & Execute Chain'}
+              </CardTitle>
             </CardHeader>
+
             <CardContent>
               <RequestExecutor
                 requests={formData.chainRequests || []}
