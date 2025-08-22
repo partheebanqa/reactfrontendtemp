@@ -53,9 +53,9 @@ export function ResponseExplorer({
     'body'
   );
 
-  console.log('extractedVariables123:', extractedVariables);
-  console.log('response123:', response);
-  console.log('existingExtractions123:', existingExtractions);
+  console.log('chainId123:', chainId);
+
+  // const chainId = 'df0a82cf-3d91-4379-b4c4-a79d45c1d43d'
 
   // Auto-extract variables in edit mode from existingExtractions
   const getAutoExtractedVariables = () => {

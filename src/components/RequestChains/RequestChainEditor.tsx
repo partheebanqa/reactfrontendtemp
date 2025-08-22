@@ -786,6 +786,7 @@ export function RequestChainEditor({
     const request = formData.chainRequests?.find(
       (r) => r.id === editingRequestId
     );
+
     if (request) {
       return (
         <div className='h-full flex flex-col'>
@@ -1149,6 +1150,7 @@ export function RequestChainEditor({
                                         chainDescription={formData.description}
                                         chainEnabled={formData.enabled}
                                         environmentBaseUrl={environmentBaseUrl}
+                                        chainId={chain?.id || ''}
                                       />
 
                                       {/* Response Section */}
@@ -1259,12 +1261,13 @@ export function RequestChainEditor({
                                                     value
                                                   )
                                                 }
+                                                chainId={chain?.id ?? ''}
                                                 copied={
                                                   copiedStates[
                                                     executionLog.requestId
                                                   ] || false
                                                 }
-                                                chainId={chain?.id ?? ''}
+                                                // chainId={chain?.id ?? ''}
                                               />
                                             </div>
                                           )}
