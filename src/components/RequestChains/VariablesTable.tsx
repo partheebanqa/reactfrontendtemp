@@ -23,8 +23,12 @@ import type {
   APIRequest,
   DataExtraction,
 } from '@/shared/types/requestChain.model';
-import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
-import { useToast } from '@/hooks/useToast';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import { useToast } from '@/hooks/use-toast';
 
 interface VariableExtractionResult {
   id: string;
@@ -60,6 +64,10 @@ export function VariablesTable({
   const [statusFilter, setStatusFilter] = useState<
     'all' | 'success' | 'failed' | 'pending'
   >('all');
+  console.log('requests:', requests);
+  console.log('executionLogs:', executionLogs);
+  console.log('extractedVariables:', extractedVariables);
+
   const [requestFilter, setRequestFilter] = useState<string>('all');
   const [sourceFilter, setSourceFilter] = useState<
     'all' | 'response_body' | 'response_header' | 'response_cookie'
@@ -78,15 +86,33 @@ export function VariablesTable({
 
     requests.forEach((request, requestIndex) => {
       request.extractVariables.forEach((extraction) => {
+        // Handle different field structures
+        const variableName = extraction.variableName || extraction.name;
+        const extractionSource = extraction.source || 'response_body';
+        const extractionPath = extraction.path || '';
+
+        // Skip if no variable name is available
+        if (!variableName) return;
+
         const log = executionLogs.find((l) => l.requestId === request.id);
         const extractedValue =
-          log?.extractedVariables?.[extraction.variableName];
+          log?.extractedVariables?.[variableName] ||
+          extraction.value ||
+          extractedVariables[variableName];
 
         let status: 'success' | 'failed' | 'pending' = 'pending';
         if (log) {
-          if (log.status === 'success' && extractedValue !== undefined) {
+          if (
+            log.status === 'success' &&
+            extractedValue !== undefined &&
+            extractedValue !== null
+          ) {
             status = 'success';
-          } else if (log.status === 'error' || extractedValue === undefined) {
+          } else if (
+            log.status === 'error' ||
+            extractedValue === undefined ||
+            extractedValue === null
+          ) {
             status = 'failed';
           }
         } else if (isExecuting && requestIndex <= currentRequestIndex) {
@@ -94,15 +120,14 @@ export function VariablesTable({
         }
 
         results.push({
-          id: `${request.id}-${extraction.variableName}`,
+          id: `${request.id}-${variableName}`,
           requestIndex,
-          requestName: request.name,
-          requestMethod: request.method,
-          variableName: extraction.variableName,
-          extractionPath: extraction.path,
-          extractionSource: extraction.source,
-          extractedValue:
-            extractedValue || extractedVariables[extraction.variableName],
+          requestName: request.name || 'Unnamed Request',
+          requestMethod: request.method || 'GET',
+          variableName,
+          extractionPath,
+          extractionSource: extractionSource as DataExtraction['source'],
+          extractedValue,
           status,
           timestamp: log?.endTime || new Date().toISOString(),
           requestId: request.id,
@@ -212,7 +237,6 @@ export function VariablesTable({
       toast({
         title: 'Copied to Clipboard',
         description: 'The value has been copied successfully.',
-        variant: 'success',
       });
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
@@ -550,7 +574,8 @@ export function VariablesTable({
                         </td>
                         <td className='px-6 py-4'>
                           <div className='max-w-xs'>
-                            {result.extractedValue !== undefined ? (
+                            {result.extractedValue !== undefined &&
+                            result.extractedValue !== null ? (
                               <div className='flex items-center space-x-2'>
                                 <code className='px-2 py-1 bg-green-50 text-green-800 rounded text-sm font-mono truncate'>
                                   {typeof result.extractedValue === 'object'
@@ -601,15 +626,18 @@ export function VariablesTable({
                         </td>
                         <td className='px-6 py-4 whitespace-nowrap'>
                           <div className='flex items-center space-x-2'>
-                            {result.extractedValue !== undefined && (
-                              <button
-                                onClick={() => copyValue(result.extractedValue)}
-                                className='p-1 text-gray-400 hover:text-gray-600 rounded transition-colors'
-                                title='Copy value'
-                              >
-                                <Copy className='w-4 h-4' />
-                              </button>
-                            )}
+                            {result.extractedValue !== undefined &&
+                              result.extractedValue !== null && (
+                                <button
+                                  onClick={() =>
+                                    copyValue(result.extractedValue)
+                                  }
+                                  className='p-1 text-gray-400 hover:text-gray-600 rounded transition-colors'
+                                  title='Copy value'
+                                >
+                                  <Copy className='w-4 h-4' />
+                                </button>
+                              )}
                             {isExecuting && result.status === 'pending' && (
                               <RefreshCw className='w-4 h-4 text-yellow-500 animate-spin' />
                             )}
@@ -619,7 +647,8 @@ export function VariablesTable({
 
                       {/* Expanded Row */}
                       {expandedRows.has(result.id) &&
-                        result.extractedValue !== undefined && (
+                        result.extractedValue !== undefined &&
+                        result.extractedValue !== null && (
                           <tr>
                             <td colSpan={7} className='px-6 py-4 bg-gray-50'>
                               <div className='space-y-3'>
@@ -718,45 +747,47 @@ export function VariablesTable({
                     </code>
                   </div>
 
-                  {result.extractedValue !== undefined && (
-                    <div>
-                      <p className='text-xs text-gray-500 mb-1'>Value</p>
-                      <div className='flex items-center justify-between'>
-                        <code className='text-sm font-mono bg-green-50 text-green-800 px-2 py-1 rounded truncate flex-1 mr-2'>
-                          {typeof result.extractedValue === 'object'
-                            ? JSON.stringify(result.extractedValue).substring(
-                                0,
-                                30
-                              ) + '...'
-                            : String(result.extractedValue).substring(0, 30) +
-                              (String(result.extractedValue).length > 30
-                                ? '...'
-                                : '')}
-                        </code>
-                        <div className='flex items-center space-x-1'>
-                          <button
-                            onClick={() => copyValue(result.extractedValue)}
-                            className='p-1 text-gray-400 hover:text-gray-600 rounded'
-                          >
-                            <Copy className='w-4 h-4' />
-                          </button>
-                          {(typeof result.extractedValue === 'object' ||
-                            String(result.extractedValue).length > 30) && (
+                  {result.extractedValue !== undefined &&
+                    result.extractedValue !== null && (
+                      <div>
+                        <p className='text-xs text-gray-500 mb-1'>Value</p>
+                        <div className='flex items-center justify-between'>
+                          <code className='text-sm font-mono bg-green-50 text-green-800 px-2 py-1 rounded truncate flex-1 mr-2'>
+                            {typeof result.extractedValue === 'object'
+                              ? JSON.stringify(result.extractedValue).substring(
+                                  0,
+                                  30
+                                ) + '...'
+                              : String(result.extractedValue).substring(0, 30) +
+                                (String(result.extractedValue).length > 30
+                                  ? '...'
+                                  : '')}
+                          </code>
+                          <div className='flex items-center space-x-1'>
                             <button
-                              onClick={() => toggleRowExpanded(result.id)}
+                              onClick={() => copyValue(result.extractedValue)}
                               className='p-1 text-gray-400 hover:text-gray-600 rounded'
                             >
-                              <Eye className='w-4 h-4' />
+                              <Copy className='w-4 h-4' />
                             </button>
-                          )}
+                            {(typeof result.extractedValue === 'object' ||
+                              String(result.extractedValue).length > 30) && (
+                              <button
+                                onClick={() => toggleRowExpanded(result.id)}
+                                className='p-1 text-gray-400 hover:text-gray-600 rounded'
+                              >
+                                <Eye className='w-4 h-4' />
+                              </button>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  )}
+                    )}
 
                   {/* Expanded Content for Mobile */}
                   {expandedRows.has(result.id) &&
-                    result.extractedValue !== undefined && (
+                    result.extractedValue !== undefined &&
+                    result.extractedValue !== null && (
                       <div className='space-y-2 pt-2 border-t border-gray-200'>
                         <h5 className='font-medium text-gray-900 text-sm'>
                           Full Value:
