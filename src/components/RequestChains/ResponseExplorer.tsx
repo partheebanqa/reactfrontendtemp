@@ -1,4 +1,3 @@
-// ResponseExplorer.tsx
 'use client';
 import { useState } from 'react';
 import {
@@ -29,6 +28,7 @@ interface ResponseExplorerProps {
   onRemoveExtraction: (variableName: string) => void;
   handleCopy: (value: string) => void;
   copied?: boolean;
+  chainId: string;
 }
 
 interface JsonNode {
@@ -47,10 +47,82 @@ export function ResponseExplorer({
   onRemoveExtraction,
   handleCopy,
   copied,
+  chainId,
 }: ResponseExplorerProps) {
   const [activeTab, setActiveTab] = useState<'body' | 'headers' | 'cookies'>(
     'body'
   );
+
+  console.log('extractedVariables123:', extractedVariables);
+  console.log('response123:', response);
+  console.log('existingExtractions123:', existingExtractions);
+
+  // Auto-extract variables in edit mode from existingExtractions
+  const getAutoExtractedVariables = () => {
+    if (!chainId || !existingExtractions || existingExtractions.length === 0) {
+      return extractedVariables || {};
+    }
+
+    const autoExtracted: Record<string, any> = { ...extractedVariables };
+
+    existingExtractions.forEach((extraction) => {
+      if (!extraction.path || (!extraction.variableName && !extraction.name))
+        return;
+
+      const variableName = extraction.variableName || extraction.name;
+
+      // Skip if already extracted
+      if (autoExtracted[variableName] !== undefined) return;
+
+      try {
+        let sourceData;
+        const source = extraction.source || 'response_body';
+
+        switch (source) {
+          case 'response_header':
+            sourceData = response.headers;
+            break;
+          case 'response_cookie':
+            sourceData = response.cookies;
+            break;
+          case 'response_body':
+          default:
+            try {
+              sourceData = JSON.parse(response.body);
+            } catch {
+              sourceData = response.body;
+            }
+            break;
+        }
+
+        // Extract value using path
+        if (sourceData && extraction.path) {
+          let value = sourceData;
+          const pathParts = extraction.path.split('.');
+
+          for (const part of pathParts) {
+            if (value && typeof value === 'object' && part in value) {
+              value = value[part];
+            } else {
+              value = undefined;
+              break;
+            }
+          }
+
+          if (value !== undefined) {
+            autoExtracted[variableName] = value;
+          }
+        }
+      } catch (error) {
+        console.error('Error auto-extracting variable:', error);
+      }
+    });
+
+    return autoExtracted;
+  };
+
+  const finalExtractedVariables = getAutoExtractedVariables();
+
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(
     new Set(['root'])
   );
@@ -198,6 +270,8 @@ export function ResponseExplorer({
     const isAlreadyExtracted = existingExtractions.some(
       (e) => e.path === node.path
     );
+    console.log('isAlreadyExtracted:', isAlreadyExtracted);
+
     return (
       <div
         key={node.path}
@@ -518,24 +592,24 @@ export function ResponseExplorer({
       </div>
 
       {/* Extracted Variables Preview */}
-      {extractedVariables &&
-        typeof extractedVariables === 'object' &&
-        Object.keys(extractedVariables).length > 0 && (
+      {finalExtractedVariables &&
+        typeof finalExtractedVariables === 'object' &&
+        Object.keys(finalExtractedVariables).length > 0 && (
           <div className='bg-green-50 border border-green-200 rounded-lg p-4'>
             <div className='flex items-center justify-between mb-4'>
               <h4 className='font-medium text-green-900 flex items-center space-x-2'>
                 <CheckCircle className='w-5 h-5' />
                 <span>
-                  Extracted Variables from This Request (
-                  {Object.keys(extractedVariables).length})
+                  Extracted Variables (
+                  {Object.keys(finalExtractedVariables).length})
                 </span>
               </h4>
             </div>
             <div className='grid grid-cols-1 md:grid-cols-2 gap-3'>
-              {Object.entries(extractedVariables).map(([name, value]) => {
+              {Object.entries(finalExtractedVariables).map(([name, value]) => {
                 if (!name || value === undefined) return null;
                 const extraction = existingExtractions.find(
-                  (e) => e.variableName === name
+                  (e) => e.variableName === name || e.name === name
                 );
                 return (
                   <div
@@ -565,7 +639,10 @@ export function ResponseExplorer({
                       </div>
                       <div className='flex items-center space-x-2'>
                         <span className='text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded'>
-                          {extraction?.source?.replace('_', ' ')}
+                          {(extraction?.source || 'response body').replace(
+                            '_',
+                            ' '
+                          )}
                         </span>
                         <button
                           onClick={() => onRemoveExtraction(name)}

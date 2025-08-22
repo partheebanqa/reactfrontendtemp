@@ -1264,6 +1264,7 @@ export function RequestChainEditor({
                                                     executionLog.requestId
                                                   ] || false
                                                 }
+                                                chainId={chain?.id ?? ''}
                                               />
                                             </div>
                                           )}
@@ -1337,8 +1338,11 @@ export function RequestChainEditor({
           {/* 3. Save & Execute Chain Box */}
           <Card>
             <CardHeader>
-              <CardTitle>Save & Execute Chain</CardTitle>
+              <CardTitle>
+                {chain?.id ? 'Update & Execute Chain' : 'Save & Execute Chain'}
+              </CardTitle>
             </CardHeader>
+
             <CardContent>
               <RequestExecutor
                 requests={formData.chainRequests || []}

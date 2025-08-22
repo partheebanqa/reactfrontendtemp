@@ -1677,6 +1677,7 @@ export function RequestEditor({
               onRemoveExtraction={handleRemoveExtraction}
               handleCopy={handleCopy}
               copied={copied}
+              chainId={chainId ?? ''}
             />
           </div>
         )}
