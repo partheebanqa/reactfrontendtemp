@@ -53,10 +53,6 @@ export function ResponseExplorer({
     'body'
   );
 
-  console.log('chainId123:', chainId);
-
-  // const chainId = 'df0a82cf-3d91-4379-b4c4-a79d45c1d43d'
-
   // Auto-extract variables in edit mode from existingExtractions
   const getAutoExtractedVariables = () => {
     if (!chainId || !existingExtractions || existingExtractions.length === 0) {

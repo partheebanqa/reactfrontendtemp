@@ -518,7 +518,13 @@ export function RequestChainEditor({
       const draggedItem = requests[dragItem.current];
       requests.splice(dragItem.current, 1);
       requests.splice(dragOverItem.current, 0, draggedItem);
-      setFormData({ ...formData, chainRequests: requests });
+
+      const reorderedRequests = requests.map((request, index) => ({
+        ...request,
+        order: index + 1,
+      }));
+
+      setFormData({ ...formData, chainRequests: reorderedRequests });
     }
     dragItem.current = null;
     dragOverItem.current = null;
@@ -621,12 +627,13 @@ export function RequestChainEditor({
 
       const chainDataForBackend = {
         ...formData,
-        chainRequests: formData.chainRequests?.map((request) => {
+        chainRequests: formData.chainRequests?.map((request, index) => {
           const isExistingRequest =
             request.id && originalRequestIds.has(request.id);
           if (isExistingRequest) {
             return {
               ...request,
+              order: index + 1,
               headers:
                 request.headers?.map((h) =>
                   h.id && !h.id.startsWith('temp_')
@@ -644,6 +651,7 @@ export function RequestChainEditor({
             return {
               ...request,
               id: undefined,
+              order: index + 1,
               headers:
                 request.headers?.map((h) => ({ ...h, id: undefined })) || [],
               params:
