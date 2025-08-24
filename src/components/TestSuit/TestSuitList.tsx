@@ -24,6 +24,7 @@ import {
 import { TestSuite } from '@/shared/types/TestSuite.model';
 import { useWorkspace } from '@/hooks/useWorkspace';
 import HelpLink from '../HelpModal/HelpLink';
+import { TestSuitePagination } from './TestSuitePagination';
 
 const TestSuites: React.FC = () => {
   const { toast } = useToast();
@@ -35,6 +36,20 @@ const TestSuites: React.FC = () => {
   >(undefined);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All statuses');
+
+  // NEW: pagination state
+const [currentPage, setCurrentPage] = useState(1);
+const [itemsPerPage] = useState(10);
+
+// Reset to page 1 when filters/search change
+useEffect(() => {
+  setCurrentPage(1);
+}, [searchQuery, statusFilter]);
+
+
+
+
+
 
   const {
     data: apiData,
@@ -150,6 +165,12 @@ const TestSuites: React.FC = () => {
     return matchesSearch && matchesStatus;
   });
 
+  // NEW: compute page slice
+const totalItems = filteredSuites.length;
+const startIndex = (currentPage - 1) * itemsPerPage;
+const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
+const paginatedSuites = filteredSuites.slice(startIndex, endIndex);
+
   return (
     <div className='p-6 space-y-6'>
       <div className='flex items-center justify-between'>
@@ -203,25 +224,36 @@ const TestSuites: React.FC = () => {
       </div>
 
       <div className='bg-white rounded-lg border'>
-        {filteredSuites.length === 0 ? (
-          <div className='text-center py-12'>
-            <p className='text-gray-500'>No test suites found</p>
-          </div>
-        ) : (
-          <div className='divide-y'>
-            {filteredSuites.map((suite) => (
-              <TestSuiteCard
-                key={suite.id}
-                suite={suite}
-                onEdit={handleEditSuite}
-                onDelete={handleDeleteSuite}
-                onExecute={handleExecuteSuite}
-                onClone={handleClonseSuite}
-              />
-            ))}
-          </div>
-        )}
+  {paginatedSuites.length === 0 ? (
+    <div className='text-center py-12'>
+      <p className='text-gray-500'>No test suites found</p>
+    </div>
+  ) : (
+    <>
+      <div className='divide-y'>
+        {paginatedSuites.map((suite) => (
+          <TestSuiteCard
+            key={suite.id}
+            suite={suite}
+            onEdit={handleEditSuite}
+            onDelete={handleDeleteSuite}
+            onExecute={handleExecuteSuite}
+            onClone={handleClonseSuite}
+          />
+        ))}
       </div>
+
+      {/* Pagination footer */}
+      <TestSuitePagination
+        totalItems={totalItems}
+        itemsPerPage={itemsPerPage}
+        currentPage={currentPage}
+        setCurrentPage={setCurrentPage}
+      />
+    </>
+  )}
+</div>
+
     </div>
   );
 };

@@ -69,13 +69,16 @@ const EditTestSuiteContent: React.FC = () => {
   const {
     data: testSuite,
     isLoading: isLoadingTestSuite,
-    error,
     isError,
+    error,
+    refetch: refetchRequests,       
   } = useQuery({
     queryKey: ['testSuite', id],
     queryFn: () => getTestSuites(id!),
     enabled: !!id && !isCreateMode,
   });
+
+  console.log('testSuite:', testSuite);
 
   useEffect(() => {
     if (activeEnvironment) {
@@ -481,6 +484,10 @@ const EditTestSuiteContent: React.FC = () => {
                   onImport={() => setIsImportModalOpen(true)}
                   onDeleteRequest={handleDeleteRequest}
                   onUpdateTestCases={handleUpdateTestCases}
+                  onRefreshRequests={async () => {
+                    await refetchRequests();
+                  }}
+                  requestStats={testSuite?.stats?.requestStats ?? []}
                 />
 
                 {/* Bottom stats for when requests exist */}

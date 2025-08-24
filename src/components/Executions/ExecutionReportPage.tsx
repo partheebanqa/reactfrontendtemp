@@ -309,7 +309,7 @@ const ExecutionReportPage: React.FC = () => {
 
   return (
     <div className='mx-auto p-1 sm:p-1'>
-      <h1 className='text-2xl font-semibold mb-4'></h1>
+    
       <header className='border border-gray-200 bg-background rounded-lg px-6 py-4 animate-fade-in'>
         <div className='flex items-center justify-between'>
           <div>

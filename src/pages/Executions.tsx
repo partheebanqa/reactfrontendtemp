@@ -100,64 +100,59 @@ const Executions = () => {
   // Filter executions based on current filters
   const filteredExecutions = useMemo(() => {
     if (!executionData?.executions) return [];
-
+  
+    const q = searchQuery.trim().toLowerCase();              
+    const idFilter = executionIdFilter.trim().toLowerCase(); 
+  
     return executionData.executions.filter((execution) => {
-      // Search query filter
+     
       if (
-        searchQuery &&
-        !execution.testSuite?.name
-          ?.toLowerCase()
-          .includes(searchQuery.toLowerCase()) &&
-        !execution.requestChain?.name
-          ?.toLowerCase()
-          .includes(searchQuery.toLowerCase()) &&
-        !execution.id.toLowerCase().includes(searchQuery.toLowerCase())
+        q &&
+        !(execution.testSuite?.name ?? '').toLowerCase().includes(q) &&
+        !(execution.requestChain?.name ?? '').toLowerCase().includes(q) &&
+        (execution.id ?? '').toLowerCase().indexOf(q) === -1
       ) {
         return false;
       }
-
+  
       // Environment filter
       if (
         environmentFilter !== 'all' &&
-        execution.environment.toLowerCase() !== environmentFilter.toLowerCase()
+        (execution.environment ?? '').toLowerCase() !== environmentFilter.toLowerCase()
       ) {
         return false;
       }
-
+  
       // Type filter
       if (typeFilter !== 'all') {
         if (typeFilter === 'test-suite' && !execution.testSuite) return false;
-        if (typeFilter === 'request-chain' && !execution.requestChain)
-          return false;
+        if (typeFilter === 'request-chain' && !execution.requestChain) return false;
       }
-
+  
       // Status filter
       if (statusFilter !== 'all' && execution.status !== statusFilter) {
         return false;
       }
-
+  
       // Trigger filter
       if (triggerFilter !== 'all') {
         const isScheduled = execution.scheduleId != null;
         if (triggerFilter === 'scheduled' && !isScheduled) return false;
         if (triggerFilter === 'manual' && isScheduled) return false;
       }
-
-      // Execution ID filter
-      if (
-        executionIdFilter &&
-        !execution.id.toLowerCase().includes(executionIdFilter.toLowerCase())
-      ) {
+  
+      // Execution ID filter (trimmed)
+      if (idFilter && !(execution.id ?? '').toLowerCase().includes(idFilter)) {
         return false;
       }
-
+  
       // Date range filter
       if (dateRange.from || dateRange.to) {
         const executionDate = new Date(execution.startTime);
         if (dateRange.from && executionDate < dateRange.from) return false;
         if (dateRange.to && executionDate > dateRange.to) return false;
       }
-
+  
       // Duration range filter
       if (
         execution.duration < durationRange.min ||
@@ -165,7 +160,7 @@ const Executions = () => {
       ) {
         return false;
       }
-
+  
       return true;
     });
   }, [
@@ -179,6 +174,7 @@ const Executions = () => {
     dateRange,
     durationRange,
   ]);
+  
 
   // Helper functions
   const getStatusColor = (status: string) => {
@@ -315,7 +311,7 @@ const Executions = () => {
     <div className='min-h-screen bg-gray-50'>
       <ExecutionsHeader />
 
-      <main className='max-w-7xl mx-auto py-6 px-6'>
+      <main className='max-w-7xl mx-auto py-6'>
         <ExecutionsFilters
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
