@@ -5,17 +5,14 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { RequestChainsList } from '@/components/RequestChains/RequestChainsList';
 import { RequestChainEditor } from '@/components/RequestChains/RequestChainEditor';
 import type {
-  ExecutionLog,
   ExecutionRequestChainPayload,
   RequestChain,
-  Variable,
 } from '@/shared/types/requestChain.model';
 import {
   getRequestChains,
   getRequestChainById,
   saveRequestChain,
 } from '@/services/requestChain.service';
-import { RequestExecutor } from '@/components/RequestChains/RequestExecutor';
 import { useWorkspace } from '@/hooks/useWorkspace';
 import { Loader2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
@@ -28,10 +25,6 @@ import {
 const Index = () => {
   const [currentView, setCurrentView] = useState<'list' | 'editor'>('list');
   const [editingChainId, setEditingChainId] = useState<string | undefined>();
-  const [data, setData] = useState<{ id: string; name: string }>({
-    id: '',
-    name: '',
-  });
 
   const { currentWorkspace } = useWorkspace();
   const queryClient = useQueryClient();
@@ -99,9 +92,6 @@ const Index = () => {
     return new Promise((resolve) => {
       saveChain(chain, {
         onSuccess: (saved) => {
-          setData(
-            saved ? { id: saved.id, name: saved.name } : { id: '', name: '' }
-          );
           resolve(saved);
         },
         onError: (err) => {
@@ -225,22 +215,6 @@ const Index = () => {
           onSave={handleSaveChain}
           onToggleChain={handlePlayChain}
         />
-        {data.id && (
-          <RequestExecutor
-            chainId={data.id}
-            requests={[]}
-            variables={[]}
-            onExecutionComplete={(
-              logs: ExecutionLog[],
-              extractedVariables: Variable[]
-            ): void => {
-              throw new Error('Function not implemented.');
-            }}
-            onVariableUpdate={(variables: Variable[]): void => {
-              throw new Error('Function not implemented.');
-            }}
-          />
-        )}
       </>
     );
   }

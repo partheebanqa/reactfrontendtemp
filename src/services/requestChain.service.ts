@@ -159,38 +159,38 @@ export const getRequestChains = async (
   }
 };
 
-export const getRequestChainVariables = async (
-  requestChainId: string,
-  page = 1,
-  pageSize = 10
-): Promise<{
-  page: number;
-  pageSize: number;
-  count: number;
-  items: Array<{
-    id: string;
-    executionId: string;
-    chainRequestId: string;
-    requestChainId: string;
-    extractedVariables: string; // JSON string containing the variables array
-  }>;
-}> => {
-  try {
-    const response = await apiRequest(
-      'GET',
-      `${API_REQUEST_CHAIN}/${requestChainId}/variables?page=${page}&pageSize=${pageSize}`
-    );
+// export const getRequestChainVariables = async (
+//   requestChainId: string,
+//   page = 1,
+//   pageSize = 10
+// ): Promise<{
+//   page: number;
+//   pageSize: number;
+//   count: number;
+//   items: Array<{
+//     id: string;
+//     executionId: string;
+//     chainRequestId: string;
+//     requestChainId: string;
+//     extractedVariables: string; // JSON string containing the variables array
+//   }>;
+// }> => {
+//   try {
+//     const response = await apiRequest(
+//       'GET',
+//       `${API_REQUEST_CHAIN}/${requestChainId}/variables?page=${page}&pageSize=${pageSize}`
+//     );
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
+//     if (!response.ok) {
+//       throw new Error(`HTTP error! status: ${response.status}`);
+//     }
 
-    const data = await response.json();
-    return data;
-  } catch (error: any) {
-    throw new Error(error.message || 'Failed to fetch request chain variables');
-  }
-};
+//     const data = await response.json();
+//     return data;
+//   } catch (error: any) {
+//     throw new Error(error.message || 'Failed to fetch request chain variables');
+//   }
+// };
 
 export const getRequestChainData = async (chainId: string) => {
   try {
@@ -257,5 +257,38 @@ export const deletRequestChainById = async (chainId: string): Promise<void> => {
     }
   } catch (error: any) {
     throw new Error(error.message || 'Failed to delete test suite');
+  }
+};
+
+export const getRequestChainVariables = async (
+  requestChainId: string,
+  page = 1,
+  pageSize = 10
+): Promise<{
+  page: number;
+  pageSize: number;
+  count: number;
+  items: Array<{
+    id: string;
+    executionId: string;
+    chainRequestId: string;
+    requestChainId: string;
+    extractedVariables: string; // JSON string containing the variables array
+  }>;
+}> => {
+  try {
+    const response = await apiRequest(
+      'GET',
+      `${API_REQUEST_CHAIN}/${requestChainId}/variables?page=${page}&pageSize=${pageSize}`
+    );
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error: any) {
+    throw new Error(error.message || 'Failed to fetch request chain variables');
   }
 };

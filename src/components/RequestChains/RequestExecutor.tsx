@@ -13,12 +13,13 @@ import {
   Copy,
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import {
+import type {
   APIRequest,
   ExecutionLog,
   ExecutionRequestChainPayload,
 } from '@/shared/types/requestChain.model';
 import { useExecuteRequestChain } from '@/shared/hooks/requestChain';
+import { getRequestChainVariables } from '@/services/requestChain.service';
 
 interface Variable {
   id?: string;
@@ -301,10 +302,76 @@ export function RequestExecutor({
 
           const result = await playChain(payload);
           console.log('result00:', result);
-          toast({
-            title: 'Execution Started',
-            description: `Request chain ${chainId} started successfully.`,
-          });
+
+          try {
+            const variablesResponse = await getRequestChainVariables(
+              savedChain.id
+            );
+            console.log('Variables API Response:', variablesResponse);
+
+            if (variablesResponse.items && variablesResponse.items.length > 0) {
+              const extractedVars: Variable[] = [];
+
+              variablesResponse.items.forEach((item) => {
+                try {
+                  const parsedVariables = JSON.parse(item.extractedVariables);
+                  parsedVariables.forEach((variable: any) => {
+                    const newVar: Variable = {
+                      id: item.id,
+                      name: variable.name,
+                      value: variable.value,
+                      type:
+                        typeof variable.value === 'number'
+                          ? 'number'
+                          : typeof variable.value === 'boolean'
+                          ? 'boolean'
+                          : 'string',
+                      source: 'extracted',
+                      extractionPath: variable.path,
+                    };
+                    extractedVars.push(newVar);
+                  });
+                } catch (parseError) {
+                  console.error(
+                    'Error parsing extracted variables:',
+                    parseError
+                  );
+                }
+              });
+
+              setExtractedVariables(extractedVars);
+              const updatedAllVars = [...allVariables];
+              extractedVars.forEach((newVar) => {
+                const existingIndex = updatedAllVars.findIndex(
+                  (v) => v.name === newVar.name
+                );
+                if (existingIndex >= 0) {
+                  updatedAllVars[existingIndex] = newVar;
+                } else {
+                  updatedAllVars.push(newVar);
+                }
+              });
+              setAllVariables(updatedAllVars);
+              onVariableUpdate(updatedAllVars);
+
+              toast({
+                title: 'Execution Completed Successfully',
+                description: `Request chain executed and ${extractedVars.length} variables extracted.`,
+              });
+            } else {
+              toast({
+                title: 'Execution Started',
+                description: `Request chain ${chainId} started successfully.`,
+              });
+            }
+          } catch (variablesError: any) {
+            console.error('Error fetching variables:', variablesError);
+            toast({
+              title: 'Execution Started',
+              description: `Request chain started, but failed to fetch variables: ${variablesError.message}`,
+              variant: 'destructive',
+            });
+          }
         } catch (error: any) {
           toast({
             title: 'Execution Failed',
@@ -458,7 +525,6 @@ export function RequestExecutor({
     });
 
     if (onPostExecute && savedChain?.id) {
-      // Small delay to let user see the completion toast
       setTimeout(() => {
         onPostExecute();
       }, 1500);
