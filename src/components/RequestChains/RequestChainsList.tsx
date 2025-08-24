@@ -255,6 +255,7 @@ export function RequestChainsList({
                   {/* Left section - Icon, Name, and Details */}
                   <div className='flex items-center space-x-4 flex-1 min-w-0'>
                     <div className='flex-shrink-0'>{getStatusIcon(chain)}</div>
+
                     <div className='flex-1 min-w-0'>
                       <div className='flex items-center space-x-3'>
                         <h3 className='text-lg font-semibold truncate'>
@@ -275,16 +276,11 @@ export function RequestChainsList({
                       <div className='flex items-center space-x-4 mt-2 text-sm text-muted-foreground'>
                         <span>{chain?.chainRequests?.length} steps</span>
                         <span>•</span>
-                        {/* <span>{chain?.environment?.name}</span> */}
                         <span>
-                          Environment:{' '}
                           {chain.chainRequests.map((r) => r.name).join(', ')}
                         </span>
-                        <span>
-                          {' '}
-                          {chain.environment?.name || 'No Environment'}
-                        </span>
                       </div>
+
                       <div className='flex items-center space-x-6 mt-3'>
                         <div className='text-center'>
                           <p className='text-sm font-medium'>
@@ -315,23 +311,32 @@ export function RequestChainsList({
                           </p>
                         </div>
                       </div>
-                      {/* Schedule info */}
-                      {chain?.schedule?.enabled && (
-                        <div className='flex items-center space-x-2 mt-2'>
-                          <Badge
-                            variant='outline'
-                            className='text-blue-600 border-blue-200'
-                          >
-                            <Settings className='w-3 h-3 mr-1' />
-                            Scheduled
-                          </Badge>
-                          <span className='text-xs text-blue-600'>
-                            {chain.schedule.type === 'once'
-                              ? 'One-time'
-                              : 'Recurring'}
+
+                      <div className='flex items-center space-x-6 mt-3'>
+                        <div className='text-center'>
+                          <span>Environment: </span>
+                          <span>
+                            {chain.environment?.name || 'No Environment'}
                           </span>
                         </div>
-                      )}
+                        {chain?.schedule?.enabled && (
+                          <div className='flex items-center space-x-2 mt-2'>
+                            <Badge
+                              variant='outline'
+                              className='text-blue-600 border-blue-200'
+                            >
+                              <Settings className='w-3 h-3 mr-1' />
+                              Scheduled
+                            </Badge>
+                            <span className='text-xs text-blue-600'>
+                              {chain.schedule.type === 'once'
+                                ? 'One-time'
+                                : 'Recurring'}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
                       <div className='text-xs text-muted-foreground mt-2'>
                         Created:{' '}
                         {new Date(chain.createdAt).toLocaleDateString()} • ID:{' '}
@@ -397,20 +402,6 @@ export function RequestChainsList({
                         </TooltipTrigger>
                         <TooltipContent>Copy Chain</TooltipContent>
                       </Tooltip>
-
-                      {/* Download Chain */}
-                      {/* <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant='ghost'
-                            size='sm'
-                            className='text-muted-foreground hover:text-foreground'
-                          >
-                            <Download className='w-4 h-4' />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Download Chain</TooltipContent>
-                      </Tooltip> */}
 
                       {/* Delete Chain with confirmation */}
                       <AlertDialog>

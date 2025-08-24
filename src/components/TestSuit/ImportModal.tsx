@@ -379,7 +379,9 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                                         }
                                       />
                                     )}
-                                    <MethodBadge method={request.method} />
+                                    <MethodBadge
+                                      method={request.method || ''}
+                                    />
                                     <div className='flex-1'>
                                       <div className='flex items-center space-x-2'>
                                         <h4 className='font-medium'>
@@ -543,7 +545,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                               }
                             />
                           )}
-                          <MethodBadge method={request.method} />
+                          <MethodBadge method={request.method || ''} />
                           <div className='flex-1'>
                             <div className='flex items-center space-x-2'>
                               <h4 className='font-medium'>{request.name}</h4>
