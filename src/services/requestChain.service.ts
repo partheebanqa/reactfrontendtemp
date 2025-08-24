@@ -116,6 +116,7 @@ export const getRequestChains = async (
     );
 
     const data = await response.json();
+    console.log('Data:', data);
 
     // Map the API response to the RequestChain interface
     const mappedChains: RequestChain[] = data.requestChains.map(
@@ -132,6 +133,7 @@ export const getRequestChains = async (
           startDate: '',
           timezone: '',
         },
+        environmentName: chain.environment.name || 'No Environment',
         enabled: true,
         createdAt: chain.createdAt,
         updatedAt: chain.updatedAt,

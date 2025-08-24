@@ -106,9 +106,16 @@ export function RequestChainsList({
 
   const filteredAndSortedChains = useMemo(() => {
     const filtered = chains.filter((chain) => {
+      const term = searchTerm.toLowerCase();
+
       const matchesSearch =
-        chain.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        chain.description?.toLowerCase().includes(searchTerm.toLowerCase());
+        chain.name.toLowerCase().includes(term) ||
+        chain.description?.toLowerCase().includes(term) ||
+        chain.id.toLowerCase().includes(term) ||
+        chain.environment?.name?.toLowerCase().includes(term) ||
+        chain.createdAt.toLowerCase().includes(term) ||
+        chain.updatedAt.toLowerCase().includes(term);
+
       const matchesStatus =
         statusFilter === 'all' ||
         (statusFilter === 'active' && chain.enabled) ||
@@ -119,7 +126,6 @@ export function RequestChainsList({
 
     filtered.sort((a, b) => {
       let comparison = 0;
-
       switch (sortBy) {
         case 'name':
           comparison = a.name.localeCompare(b.name);
@@ -141,7 +147,6 @@ export function RequestChainsList({
           comparison = a.successRate - b.successRate;
           break;
       }
-
       return sortOrder === 'asc' ? comparison : -comparison;
     });
 
@@ -270,8 +275,14 @@ export function RequestChainsList({
                       <div className='flex items-center space-x-4 mt-2 text-sm text-muted-foreground'>
                         <span>{chain?.chainRequests?.length} steps</span>
                         <span>•</span>
+                        {/* <span>{chain?.environment?.name}</span> */}
                         <span>
+                          Environment:{' '}
                           {chain.chainRequests.map((r) => r.name).join(', ')}
+                        </span>
+                        <span>
+                          {' '}
+                          {chain.environment?.name || 'No Environment'}
                         </span>
                       </div>
                       <div className='flex items-center space-x-6 mt-3'>

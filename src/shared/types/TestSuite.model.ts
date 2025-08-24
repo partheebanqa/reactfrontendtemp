@@ -7,6 +7,10 @@ export interface TestSuite {
   functionalTests: number;
   performanceTests: number;
   securityTests: number;
+  environment?: {
+    id: string;
+    name: string;
+  };
   status: 'Not Run' | 'Running' | 'Passed' | 'Failed';
 }
 

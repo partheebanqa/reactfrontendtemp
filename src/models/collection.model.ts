@@ -1,15 +1,43 @@
 export interface ExtendedRequest {
-  description: string;
+  description?: string;
   id: string;
-  name: string;
-  method: string;
-  url: string;
-  endpoint: string;
+  name?: string;
+  method?: string;
+  url?: string;
+  endpoint?: string;
+  params?: {
+    id?: string;
+    key?: string;
+    value?: string;
+    enabled?: boolean;
+  }[];
   queryParams?: { key: string; value: string }[];
-  headers?: any[];
+  headers?: {
+    id?: string;
+    key?: string;
+    value?: string;
+    enabled?: boolean;
+  }[];
   body?: any;
-  testCases: { functional: number; total: number };
+  bodyRawContent?: string;
+  bodyType?: string;
+  authorizationType?: 'none' | 'bearer' | 'basic' | 'apikey' | 'oauth2';
+  authorization?: {
+    token?: string;
+    username?: string;
+    password?: string;
+    key?: string;
+    value?: string;
+    addTo?: 'header' | 'query';
+  };
+  testCases?: { functional: number; total: number };
   folderName?: string;
+  timeout?: number;
+  retries?: number;
+  errorHandling?: 'stop' | 'continue';
+  extractVariables?: any[];
+  testScripts?: any[];
+  enabled?: boolean;
 }
 
 export interface TransformedCollection {

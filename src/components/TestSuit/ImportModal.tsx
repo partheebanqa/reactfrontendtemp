@@ -81,11 +81,12 @@ export const ImportModal: React.FC<ImportModalProps> = ({
     }
   }, [collections, expandedCollections.length]);
 
+  console.log('collections:', collections);
+
   const filteredCollections = collections.filter(
     (collection: TransformedCollection) =>
-      collection.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       collection.requests.some((request) =>
-        request.name.toLowerCase().includes(searchQuery.toLowerCase())
+        (request.name ?? '').toLowerCase().includes(searchQuery.toLowerCase())
       )
   );
 

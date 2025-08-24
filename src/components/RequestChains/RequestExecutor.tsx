@@ -13,7 +13,7 @@ import {
   Copy,
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import type {
+import {
   APIRequest,
   ExecutionLog,
   ExecutionRequestChainPayload,
@@ -303,18 +303,8 @@ export function RequestExecutor({
           console.log('result00:', result);
           toast({
             title: 'Execution Started',
-            description: `Request chain ${
-              savedChain.name || chainName
-            } started successfully.`,
+            description: `Request chain ${chainId} started successfully.`,
           });
-
-          if (onPostExecute) {
-            setTimeout(() => {
-              onPostExecute();
-            }, 1500);
-          }
-
-          return; // Return early after API execution to avoid duplicate execution
         } catch (error: any) {
           toast({
             title: 'Execution Failed',
@@ -322,7 +312,6 @@ export function RequestExecutor({
               error?.message || 'Could not execute the request chain.',
             variant: 'destructive',
           });
-          return; // Return early on error to avoid fallback execution
         }
       }
     }
@@ -467,6 +456,13 @@ export function RequestExecutor({
       description: `Completed ${successCount}/${totalCount} requests successfully`,
       variant: successCount === totalCount ? 'default' : 'destructive',
     });
+
+    if (onPostExecute && savedChain?.id) {
+      // Small delay to let user see the completion toast
+      setTimeout(() => {
+        onPostExecute();
+      }, 1500);
+    }
   };
 
   const stopExecution = () => {
