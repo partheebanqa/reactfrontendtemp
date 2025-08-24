@@ -15,7 +15,7 @@ export const RequestChainPagination = ({
     <div className='flex items-center justify-between px-6 py-4 border-t'>
    
 <div className='text-sm text-slate-500'>
-  Showing {startIndex + 1} to {endIndex} of {totalItems} test suites
+  Showing {startIndex + 1} to {endIndex} of {totalItems} Request Chains
 </div>
 
       <div className='flex items-center space-x-2'>
