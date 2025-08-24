@@ -32,6 +32,7 @@ interface Variable {
 interface RequestChain {
   id: string;
   name: string;
+  requestchain: { id: string };
 }
 
 interface RequestExecutorProps {
@@ -262,6 +263,7 @@ export function RequestExecutor({
   };
 
   const handleExecuteChain = async () => {
+    setIsExecuting(true);
     let savedChain;
     if (onPreExecute) {
       try {
@@ -317,7 +319,214 @@ export function RequestExecutor({
     }
 
     if (request && onResponse) {
-      setIsExecuting(true);
+      try {
+        const log = await executeRequest(request, allVariables);
+        onResponse(log);
+        setExecutionLogs([log]);
+
+        if (log.extractedVariables) {
+          const newExtractedVars: Variable[] = [];
+          Object.entries(log.extractedVariables).forEach(([name, value]) => {
+            const newVar: Variable = {
+              id: `${Date.now()}-${Math.random()}`,
+              name,
+              value: String(value),
+              type:
+                typeof value === 'number'
+                  ? 'number'
+                  : typeof value === 'boolean'
+                  ? 'boolean'
+                  : 'string',
+              source: 'extracted',
+              extractionPath: request.extractVariables.find(
+                (e) => e.variableName === name
+              )?.path,
+            };
+            newExtractedVars.push(newVar);
+          });
+          setExtractedVariables(newExtractedVars);
+
+          const updatedAllVars = [...allVariables];
+          newExtractedVars.forEach((newVar) => {
+            const existingIndex = updatedAllVars.findIndex(
+              (v) => v.name === newVar.name
+            );
+            if (existingIndex >= 0) {
+              updatedAllVars[existingIndex] = newVar;
+            } else {
+              updatedAllVars.push(newVar);
+            }
+          });
+          setAllVariables(updatedAllVars);
+          onVariableUpdate(updatedAllVars);
+        }
+      } catch (error) {
+        console.error('Individual request execution failed:', error);
+      } finally {
+        setIsExecuting(false);
+      }
+      return;
+    }
+
+    if (requests.length === 0) return;
+
+    setIsExecuting(true);
+    setCurrentRequestIndex(0);
+    setExecutionLogs([]);
+    onExecutionStateChange?.(true, 0);
+
+    const currentVars = [...allVariables];
+    const logs: ExecutionLog[] = [];
+    const newExtractedVars: Variable[] = [];
+
+    for (let i = 0; i < requests.length; i++) {
+      const request = requests[i];
+      if (!request.enabled) continue;
+
+      setCurrentRequestIndex(i);
+      onExecutionStateChange?.(true, i);
+
+      try {
+        const log = await executeRequest(request, currentVars);
+        logs.push(log);
+        setExecutionLogs([...logs]);
+
+        if (log.extractedVariables) {
+          Object.entries(log.extractedVariables).forEach(([name, value]) => {
+            const existingIndex = currentVars.findIndex((v) => v.name === name);
+            const newVar: Variable = {
+              id: `${Date.now()}-${Math.random()}`,
+              name,
+              value: String(value),
+              type:
+                typeof value === 'number'
+                  ? 'number'
+                  : typeof value === 'boolean'
+                  ? 'boolean'
+                  : 'string',
+              source: 'extracted',
+              extractionPath: request.extractVariables.find(
+                (e) => e.variableName === name
+              )?.path,
+            };
+
+            if (existingIndex >= 0) {
+              currentVars[existingIndex] = {
+                ...currentVars[existingIndex],
+                ...newVar,
+              };
+            } else {
+              currentVars.push(newVar);
+              newExtractedVars.push(newVar);
+            }
+          });
+          setAllVariables([...currentVars]);
+        }
+
+        if (log.status === 'error' && request.errorHandling === 'stop') {
+          toast({
+            title: 'Execution Stopped',
+            description: `Request ${request.name} failed and chain execution was stopped.`,
+            variant: 'destructive',
+          });
+          break;
+        }
+      } catch (err: any) {
+        toast({
+          title: 'Request Execution Error',
+          description:
+            err?.message || `An error occurred in request ${request.name}.`,
+          variant: 'destructive',
+        });
+        break;
+      }
+    }
+
+    setIsExecuting(false);
+    setCurrentRequestIndex(-1);
+    setExtractedVariables(newExtractedVars);
+    onExecutionComplete(logs, newExtractedVars);
+    onVariableUpdate(currentVars);
+    onExecutionStateChange?.(false, -1);
+
+    const successCount = logs.filter((log) => log.status === 'success').length;
+    const totalCount = logs.length;
+
+    toast({
+      title: 'Execution Complete',
+      description: `Completed ${successCount}/${totalCount} requests successfully`,
+      variant: successCount === totalCount ? 'default' : 'destructive',
+    });
+
+    if (onPostExecute && savedChain?.id) {
+      // Small delay to let user see the completion toast
+      setTimeout(() => {
+        onPostExecute();
+      }, 1500);
+    }
+  };
+
+  const handleUpdateExecute = async () => {
+    setIsExecuting(true);
+
+    let savedChain;
+    if (onPreExecute) {
+      try {
+        savedChain = await onPreExecute();
+      } catch (err: any) {
+        toast({
+          title: 'Save Failed',
+          description: err?.message || 'Unable to save chain before execution.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      if (!chainName?.trim()) {
+        toast({
+          title: 'Validation Error',
+          description: 'Please enter a chain name',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      if (!savedChain?.requestchain?.id) {
+        toast({
+          title: 'Validation Error',
+          description: 'Chain must be saved before execution',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      if (savedChain?.requestchain?.id) {
+        try {
+          console.log('calling playchain');
+
+          const payload: ExecutionRequestChainPayload = {
+            requestChainId: savedChain?.requestchain?.id,
+          };
+          console.log('payload:', payload);
+
+          const result = await playChain(payload);
+          console.log('result00:', result);
+          toast({
+            title: 'Execution Started',
+            description: `Request chain ${chainId} started successfully.`,
+          });
+        } catch (error: any) {
+          toast({
+            title: 'Execution Failed',
+            description:
+              error?.message || 'Could not execute the request chain.',
+            variant: 'destructive',
+          });
+        }
+      }
+    }
+
+    if (request && onResponse) {
       try {
         const log = await executeRequest(request, allVariables);
         onResponse(log);
@@ -536,15 +745,21 @@ export function RequestExecutor({
               <Square className='w-4 h-4' />
               <span>Stop</span>
             </button>
+          ) : chainId ? (
+            <button
+              onClick={handleUpdateExecute}
+              disabled={request ? !request.url : false}
+              className='flex items-center justify-center space-x-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors w-full sm:w-auto'
+            >
+              <Play className='w-4 h-4' />
+              <span className='hidden sm:inline'>Update Chain & Execute</span>
+              <span className='sm:hidden'>Update</span>
+            </button>
           ) : (
             <button
               onClick={handleExecuteChain}
               disabled={
-                chainId
-                  ? request
-                    ? !request.url
-                    : false
-                  : request
+                request
                   ? !request.url
                   : !chainName?.trim() ||
                     requests.filter((r) => r.enabled).length === 0
@@ -555,15 +770,11 @@ export function RequestExecutor({
               <span className='hidden sm:inline'>
                 {request
                   ? 'Run'
-                  : chainId
-                  ? 'Update Chain & Execute'
                   : onPreExecute
                   ? 'Save Chain & Execute'
                   : 'Execute'}
               </span>
-              <span className='sm:hidden'>
-                {request ? 'Run' : chainId ? 'Update' : 'Execute'}
-              </span>
+              <span className='sm:hidden'>{request ? 'Run' : 'Execute'}</span>
             </button>
           )}
         </div>
