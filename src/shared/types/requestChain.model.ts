@@ -13,7 +13,10 @@ export interface RequestChain {
   lastExecuted?: string;
   executionCount: number;
   successRate: number;
-  environment?: 'dev' | 'prod' | 'uat';
+  environment?: {
+    id: string;
+    name: string;
+  };
 }
 
 export interface APIRequest {
@@ -33,6 +36,7 @@ export interface APIRequest {
     | 'x-www-form-urlencoded'
     | 'raw'
     | 'binary';
+
   authConfig?: {
     token?: string;
     username?: string;

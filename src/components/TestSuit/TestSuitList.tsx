@@ -135,11 +135,18 @@ const TestSuites: React.FC = () => {
   };
 
   const filteredSuites = (testSuitListData ?? []).filter((suite) => {
+    const term = searchQuery.toLowerCase();
+
     const matchesSearch =
-      suite.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      suite.description.toLowerCase().includes(searchQuery.toLowerCase());
+      suite.name.toLowerCase().includes(term) ||
+      suite.description.toLowerCase().includes(term) ||
+      suite.id.toLowerCase().includes(term) ||
+      suite.environment?.name?.toLowerCase().includes(term) ||
+      suite.createdAt.toLowerCase().includes(term);
+
     const matchesStatus =
       statusFilter === 'All statuses' || suite.status === statusFilter;
+
     return matchesSearch && matchesStatus;
   });
 

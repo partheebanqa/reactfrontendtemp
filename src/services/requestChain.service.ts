@@ -112,35 +112,46 @@ export const getRequestChains = async (
   try {
     const response = await apiRequest(
       'GET',
-      `${API_REQUEST_CHAIN}?ws=${workspaceId}`
+      `${API_REQUEST_CHAIN}/with-chainrequests?ws=${workspaceId}`
     );
 
     const data = await response.json();
+    console.log('Data:', data);
 
     // Map the API response to the RequestChain interface
-    const mappedChains: RequestChain[] = data.requestChains.map(
-      (chain: any) => ({
-        id: chain.id,
-        workspaceId: chain.workspaceId,
-        name: chain.name,
-        chainRequests: [],
-        description: '',
+    const mappedChains: RequestChain[] = data.data.map((chain: any) => ({
+      id: chain.requestchainId,
+      workspaceId: chain.workspaceId,
+      name: chain.requestchainName,
+      chainRequests: chain.chainrequests.map((req: any) => ({
+        id: req.chainrequestId,
+        name: req.chainrequestName,
+        url: req.chainrequestUrl,
+        method: req.chainrequestMethod,
+        headers: [],
+        body: '',
         variables: [],
-        schedule: {
-          enabled: false,
-          type: 'once',
-          startDate: '',
-          timezone: '',
-        },
+        tests: [],
         enabled: true,
-        createdAt: chain.createdAt,
-        updatedAt: chain.updatedAt,
-        lastExecuted: null,
-        executionCount: 0,
-        successRate: 0,
-        isImportant: chain.isImportant || false,
-      })
-    );
+      })),
+      description: chain.description || '',
+      variables: [],
+      schedule: {
+        enabled: false,
+        type: 'once',
+        startDate: '',
+        timezone: '',
+      },
+      environment: chain.environment,
+      environmentName: chain.environment.name || 'No Environment',
+      enabled: true,
+      createdAt: chain.createdAt,
+      updatedAt: chain.createdAt, // Using createdAt as updatedAt since it's not in the response
+      lastExecuted: null,
+      executionCount: 0,
+      successRate: 0,
+      isImportant: chain.isImportant || false,
+    }));
 
     return mappedChains;
   } catch (error: any) {

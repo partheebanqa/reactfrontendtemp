@@ -106,7 +106,7 @@ export function RequestChainEditor({
     chainRequests: (chain?.chainRequests || (chain as any)?.requests || []).map(
       (req: any) => ({
         ...req,
-        body: req.body || req.bodyRawContent || '', // Map bodyRawContent to body
+        body: req.body || req.bodyRawContent || '',
         bodyType: req.bodyType || (req.bodyRawContent ? 'raw' : 'none'), // Set bodyType based on content
       })
     ),
@@ -518,7 +518,13 @@ export function RequestChainEditor({
       const draggedItem = requests[dragItem.current];
       requests.splice(dragItem.current, 1);
       requests.splice(dragOverItem.current, 0, draggedItem);
-      setFormData({ ...formData, chainRequests: requests });
+
+      const reorderedRequests = requests.map((request, index) => ({
+        ...request,
+        order: index + 1,
+      }));
+
+      setFormData({ ...formData, chainRequests: reorderedRequests });
     }
     dragItem.current = null;
     dragOverItem.current = null;
@@ -621,12 +627,13 @@ export function RequestChainEditor({
 
       const chainDataForBackend = {
         ...formData,
-        chainRequests: formData.chainRequests?.map((request) => {
+        chainRequests: formData.chainRequests?.map((request, index) => {
           const isExistingRequest =
             request.id && originalRequestIds.has(request.id);
           if (isExistingRequest) {
             return {
               ...request,
+              order: index + 1,
               headers:
                 request.headers?.map((h) =>
                   h.id && !h.id.startsWith('temp_')
@@ -644,6 +651,7 @@ export function RequestChainEditor({
             return {
               ...request,
               id: undefined,
+              order: index + 1,
               headers:
                 request.headers?.map((h) => ({ ...h, id: undefined })) || [],
               params:
@@ -737,23 +745,83 @@ export function RequestChainEditor({
         description: `Importing ${importedRequests.length} requests...`,
       });
 
-      const transformedRequests: APIRequest[] = importedRequests.map((req) => ({
-        id: req.id,
-        name: req.name || 'Imported Request',
-        method: (req.method || 'GET').toUpperCase() as APIRequest['method'],
-        url: req.url || req.endpoint || '',
-        headers: [],
-        params: [],
-        bodyType: 'none',
-        body: '',
-        authorizationType: 'none',
-        timeout: 5000,
-        retries: 0,
-        errorHandling: 'stop' as const,
-        extractVariables: [],
-        testScripts: [],
-        enabled: true,
-      }));
+      const transformedRequests: APIRequest[] = importedRequests.map((req) => {
+        // Handle body data
+        // Handle body data
+        const hasBody = req.bodyRawContent && req.bodyRawContent.trim() !== '';
+        const bodyType: APIRequest['bodyType'] = hasBody
+          ? (req.bodyType as APIRequest['bodyType']) || 'raw'
+          : 'none';
+
+        // Handle headers
+        const headers = Array.isArray(req.headers)
+          ? req.headers.map((header: any) => ({
+              id: header.id || `temp_${Date.now()}_${Math.random()}`,
+              key: header.key || '',
+              value: header.value || '',
+              enabled: header.enabled !== false,
+            }))
+          : [];
+
+        // Handle authorization
+        let authorizationType: APIRequest['authorizationType'] = 'none';
+        let authToken = '';
+        let authUsername = '';
+        let authPassword = '';
+        let authApiKey = '';
+        let authApiValue = '';
+        let authApiLocation = 'header';
+
+        if (req.authorizationType && req.authorizationType !== 'none') {
+          authorizationType = req.authorizationType;
+
+          if (req.authorizationType === 'bearer' && req.authorization?.token) {
+            authToken = req.authorization.token;
+          } else if (req.authorizationType === 'basic' && req.authorization) {
+            authUsername = req.authorization.username || '';
+            authPassword = req.authorization.password || '';
+          } else if (req.authorizationType === 'apikey' && req.authorization) {
+            authApiKey = req.authorization.key || '';
+            authApiValue = req.authorization.value || '';
+            authApiLocation = req.authorization.addTo || 'header';
+          }
+        }
+
+        // Handle query parameters
+        const params = Array.isArray(req.params)
+          ? req.params.map((param: any) => ({
+              id: param.id || `temp_${Date.now()}_${Math.random()}`,
+              key: param.key || '',
+              value: param.value || '',
+              enabled: param.enabled !== false,
+            }))
+          : [];
+
+        return {
+          id: req.id,
+          name: req.name || 'Imported Request',
+          method: (req.method || 'GET').toUpperCase() as APIRequest['method'],
+          url: req.url || req.endpoint || '',
+          headers,
+          params,
+          bodyType,
+          body: hasBody ? req.bodyRawContent : '',
+          authorizationType,
+          authToken,
+          authUsername,
+          authPassword,
+          authApiKey,
+          authApiValue,
+          authApiLocation,
+          timeout: req.timeout || 5000,
+          retries: req.retries || 0,
+          errorHandling:
+            (req.errorHandling as APIRequest['errorHandling']) || 'stop',
+          extractVariables: req.extractVariables || [],
+          testScripts: req.testScripts || [],
+          enabled: req.enabled !== false,
+        };
+      });
 
       setFormData((prev) => ({
         ...prev,
@@ -766,7 +834,7 @@ export function RequestChainEditor({
 
       toast({
         title: 'Import Successful',
-        description: `Successfully imported ${transformedRequests.length} requests.`,
+        description: `Successfully imported ${transformedRequests.length} requests with full configuration.`,
       });
 
       setIsImportModalOpen(false);
@@ -909,13 +977,20 @@ export function RequestChainEditor({
                   value={selectedEnvironment}
                   onValueChange={handleEnvironmentChange}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger id='environment-select'>
                     <SelectValue placeholder='Select environment' />
                   </SelectTrigger>
                   <SelectContent>
                     {environments.map((env) => (
                       <SelectItem key={env.id} value={env.id}>
-                        {env.name}
+                        <div className='flex flex-col text-left'>
+                          <span className='font-medium text-sm'>
+                            {env.name}
+                          </span>
+                          <span className='text-xs text-muted-foreground break-all'>
+                            {env.baseUrl}
+                          </span>
+                        </div>
                       </SelectItem>
                     ))}
                   </SelectContent>
