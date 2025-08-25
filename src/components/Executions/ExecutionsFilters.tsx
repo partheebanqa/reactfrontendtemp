@@ -14,7 +14,15 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { CalendarDays, Clock, X, Play, Filter, Save } from 'lucide-react';
+import {
+  CalendarDays,
+  Clock,
+  X,
+  Play,
+  Filter,
+  Save,
+  Calendar,
+} from 'lucide-react';
 import { format } from 'date-fns';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import {
@@ -23,6 +31,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Label } from '@/components/ui/label';
+import { cn } from '@/lib/utils';
 
 export interface SavedFilter {
   id: string;
@@ -139,7 +148,7 @@ export const ExecutionsFilters = ({
           variant='ghost'
           size='sm'
           onClick={() => applyQuickFilter('clear')}
-          className='h-8 text-slate-500'
+          className='h-8 text-muted-foreground'
         >
           <X size={14} className='mr-1' />
           Clear all
@@ -147,14 +156,14 @@ export const ExecutionsFilters = ({
       </div>
 
       {/* Search & Filters */}
-      <div className='bg-white p-4 rounded-lg border border-slate-200 flex flex-col lg:flex-row gap-4'>
+      <div className='bg-card p-4 rounded-lg border border-border flex flex-col lg:flex-row gap-4'>
         {/* Search */}
         <div className='flex-1 max-w-md relative'>
           <Input
             placeholder='Search by test suite name or execution ID...'
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className='pl-10'
+            className='pl-4'
           />
         </div>
 
@@ -164,11 +173,12 @@ export const ExecutionsFilters = ({
             value={environmentFilter}
             onValueChange={setEnvironmentFilter}
           >
-            <SelectTrigger className='w-32'>
-              <SelectValue placeholder='Environment' />
+            <SelectTrigger className='w-40'>
+              <SelectValue placeholder='All...' />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value='all'>All Environments</SelectItem>
+              <SelectItem value='all'>All...</SelectItem>
+              <SelectItem value='No Environment'>No Environment</SelectItem>
               <SelectItem value='development'>Development</SelectItem>
               <SelectItem value='staging'>Staging</SelectItem>
               <SelectItem value='production'>Production</SelectItem>
@@ -176,13 +186,13 @@ export const ExecutionsFilters = ({
           </Select>
 
           <Select value={typeFilter} onValueChange={setTypeFilter}>
-            <SelectTrigger className='w-32'>
-              <SelectValue placeholder='Type' />
+            <SelectTrigger className='w-36'>
+              <SelectValue placeholder='All Types' />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value='all'>All Types</SelectItem>
-              <SelectItem value='test-suite'>Test Suite</SelectItem>
-              <SelectItem value='request-chain'>Request Chain</SelectItem>
+              <SelectItem value='test_suite'>Test Suite</SelectItem>
+              <SelectItem value='request_chain'>Request Chain</SelectItem>
             </SelectContent>
           </Select>
 
@@ -197,59 +207,168 @@ export const ExecutionsFilters = ({
                 Advanced
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className='max-w-lg'>
               <DialogHeader>
                 <DialogTitle>Advanced Search</DialogTitle>
               </DialogHeader>
-              <div className='space-y-4'>
-                <Label>Date Range</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant='outline'
-                      className='w-full justify-start mt-2'
-                    >
-                      <CalendarDays size={14} className='mr-2' />
-                      {dateRange.from && dateRange.to
-                        ? `${format(dateRange.from, 'MMM d, yyyy')} - ${format(
-                            dateRange.to,
-                            'MMM d, yyyy'
-                          )}`
-                        : 'Select date range'}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent>
-                    <CalendarComponent
-                      mode='range'
-                      selected={{ from: dateRange.from, to: dateRange.to }}
-                      onSelect={(range) =>
-                        setDateRange({
-                          from: range?.from,
-                          to: range?.to,
+              <div className='space-y-6'>
+                {/* Date Range Picker */}
+                <div>
+                  <Label className='text-sm font-medium mb-2 block'>
+                    Date Range
+                  </Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant='outline'
+                        className={cn(
+                          'w-full justify-start text-left font-normal',
+                          !dateRange.from &&
+                            !dateRange.to &&
+                            'text-muted-foreground'
+                        )}
+                      >
+                        <Calendar size={14} className='mr-2' />
+                        {dateRange.from && dateRange.to
+                          ? `${format(
+                              dateRange.from,
+                              'MMM d, yyyy'
+                            )} - ${format(dateRange.to, 'MMM d, yyyy')}`
+                          : 'Select date range'}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className='w-auto p-0' align='start'>
+                      <CalendarComponent
+                        mode='range'
+                        selected={{ from: dateRange.from, to: dateRange.to }}
+                        onSelect={(range) =>
+                          setDateRange({ from: range?.from, to: range?.to })
+                        }
+                        numberOfMonths={2}
+                        className={cn('p-3 pointer-events-auto')}
+                      />
+                      <div className='p-3 border-t'>
+                        <Button
+                          variant='outline'
+                          size='sm'
+                          onClick={() =>
+                            setDateRange({ from: undefined, to: undefined })
+                          }
+                          className='w-full'
+                        >
+                          Clear dates
+                        </Button>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                {/* Status Filter */}
+                <div>
+                  <Label className='text-sm font-medium mb-2 block'>
+                    Status
+                  </Label>
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className='w-full'>
+                      <SelectValue placeholder='All Status' />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value='all'>All Status</SelectItem>
+                      <SelectItem value='success'>Success</SelectItem>
+                      <SelectItem value='failed'>Failed</SelectItem>
+                      <SelectItem value='running'>Running</SelectItem>
+                      <SelectItem value='cancelled'>Cancelled</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Trigger Filter */}
+                <div>
+                  <Label className='text-sm font-medium mb-2 block'>
+                    Trigger
+                  </Label>
+                  <Select
+                    value={triggerFilter}
+                    onValueChange={setTriggerFilter}
+                  >
+                    <SelectTrigger className='w-full'>
+                      <SelectValue placeholder='All Triggers' />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value='all'>All Triggers</SelectItem>
+                      <SelectItem value='manual'>Manual</SelectItem>
+                      <SelectItem value='scheduled'>Scheduled</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Execution ID */}
+                <div>
+                  <Label
+                    htmlFor='executionId'
+                    className='text-sm font-medium mb-2 block'
+                  >
+                    Execution ID
+                  </Label>
+                  <Input
+                    id='executionId'
+                    placeholder='Enter execution ID'
+                    value={executionIdFilter}
+                    onChange={(e) => setExecutionIdFilter(e.target.value)}
+                  />
+                </div>
+
+                {/* Duration Range */}
+                <div>
+                  <Label className='text-sm font-medium mb-2 block'>
+                    Duration Range (ms)
+                  </Label>
+                  <div className='flex gap-2'>
+                    <Input
+                      type='number'
+                      placeholder='0'
+                      value={durationRange.min || ''}
+                      onChange={(e) =>
+                        setDurationRange({
+                          ...durationRange,
+                          min: parseInt(e.target.value) || 0,
                         })
                       }
                     />
-                    <Button
-                      variant='outline'
-                      size='sm'
-                      onClick={() =>
-                        setDateRange({ from: undefined, to: undefined })
+                    <Input
+                      type='number'
+                      placeholder='10000'
+                      value={durationRange.max || ''}
+                      onChange={(e) =>
+                        setDurationRange({
+                          ...durationRange,
+                          max: parseInt(e.target.value) || 100000,
+                        })
                       }
-                      className='w-full mt-2'
-                    >
-                      Clear dates
-                    </Button>
-                  </PopoverContent>
-                </Popover>
+                    />
+                  </div>
+                </div>
+
+                <div className='flex gap-2 pt-4 border-t'>
+                  <Button
+                    onClick={() => setShowAdvancedSearch(false)}
+                    className='flex-1'
+                  >
+                    Apply Filters
+                  </Button>
+                  <Button variant='outline' onClick={clearAllFilters}>
+                    Clear All
+                  </Button>
+                </div>
               </div>
             </DialogContent>
           </Dialog>
 
           {/* Save filters */}
-          <Button variant='ghost' size='sm' onClick={saveCurrentFilter}>
+          {/* <Button variant='ghost' size='sm' onClick={saveCurrentFilter}>
             <Save size={14} className='mr-2' />
             Save
-          </Button>
+          </Button> */}
 
           {/* Saved Filters */}
           {savedFilters.length > 0 && (

@@ -1,13 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import {
-  CheckCircle,
-  XCircle,
-  Clock,
-  Play,
-  AlertCircle,
-  Copy,
-} from 'lucide-react';
+import { CheckCircle, XCircle, Clock, Play, AlertCircle } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { executionService } from '@/services/executionService.service';
 import { ExecutionsHeader } from '@/components/Executions/ExecutionsHeader';
@@ -18,8 +11,6 @@ import { ExecutionDetailsDialog } from '@/components/Executions/ExecutionDetails
 import { MappedExecution, SavedFilter } from '@/shared/types/execution';
 
 const Executions = () => {
-  console.log('execution page is coming');
-
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
@@ -78,8 +69,6 @@ const Executions = () => {
     },
   ];
 
-  const apiPage = currentPage;
-
   // Fetch execution data
   const {
     data: executionData,
@@ -90,9 +79,8 @@ const Executions = () => {
     queryFn: () =>
       executionService
         .getExecutionHistory({
-          page: apiPage,
+          page: currentPage,
           limit: itemsPerPage,
-         
         })
         .then(executionService.mapData),
   });
@@ -100,12 +88,12 @@ const Executions = () => {
   // Filter executions based on current filters
   const filteredExecutions = useMemo(() => {
     if (!executionData?.executions) return [];
-  
-    const q = searchQuery.trim().toLowerCase();              
-    const idFilter = executionIdFilter.trim().toLowerCase(); 
-  
+
+    const q = searchQuery.trim().toLowerCase();
+    const idFilter = executionIdFilter.trim().toLowerCase();
+
     return executionData.executions.filter((execution) => {
-     
+      // Search filter
       if (
         q &&
         !(execution.testSuite?.name ?? '').toLowerCase().includes(q) &&
@@ -114,45 +102,47 @@ const Executions = () => {
       ) {
         return false;
       }
-  
+
       // Environment filter
       if (
         environmentFilter !== 'all' &&
-        (execution.environment ?? '').toLowerCase() !== environmentFilter.toLowerCase()
+        (execution.environment ?? '').toLowerCase() !==
+          environmentFilter.toLowerCase()
       ) {
         return false;
       }
-  
+
       // Type filter
       if (typeFilter !== 'all') {
-        if (typeFilter === 'test-suite' && !execution.testSuite) return false;
-        if (typeFilter === 'request-chain' && !execution.requestChain) return false;
+        if (typeFilter === 'test_suite' && !execution.testSuite) return false;
+        if (typeFilter === 'request_chain' && !execution.requestChain)
+          return false;
       }
-  
+
       // Status filter
       if (statusFilter !== 'all' && execution.status !== statusFilter) {
         return false;
       }
-  
+
       // Trigger filter
       if (triggerFilter !== 'all') {
         const isScheduled = execution.scheduleId != null;
         if (triggerFilter === 'scheduled' && !isScheduled) return false;
         if (triggerFilter === 'manual' && isScheduled) return false;
       }
-  
-      // Execution ID filter (trimmed)
+
+      // Execution ID filter
       if (idFilter && !(execution.id ?? '').toLowerCase().includes(idFilter)) {
         return false;
       }
-  
+
       // Date range filter
       if (dateRange.from || dateRange.to) {
         const executionDate = new Date(execution.startTime);
         if (dateRange.from && executionDate < dateRange.from) return false;
         if (dateRange.to && executionDate > dateRange.to) return false;
       }
-  
+
       // Duration range filter
       if (
         execution.duration < durationRange.min ||
@@ -160,7 +150,7 @@ const Executions = () => {
       ) {
         return false;
       }
-  
+
       return true;
     });
   }, [
@@ -174,7 +164,6 @@ const Executions = () => {
     dateRange,
     durationRange,
   ]);
-  
 
   // Helper functions
   const getStatusColor = (status: string) => {
@@ -250,8 +239,8 @@ const Executions = () => {
       case 'failed':
         setStatusFilter('failed');
         break;
-      case 'running':
-        setStatusFilter('running');
+      case 'success':
+        setStatusFilter('success');
         break;
       case 'clear':
         clearAllFilters();
@@ -298,20 +287,20 @@ const Executions = () => {
     return (
       <div className='min-h-screen flex items-center justify-center'>
         <div className='text-center'>
-          <h2 className='text-2xl font-bold text-red-600 mb-2'>
+          <h2 className='text-2xl font-bold text-destructive mb-2'>
             Error Loading Executions
           </h2>
-          <p className='text-gray-600'>Please try again later</p>
+          <p className='text-muted-foreground'>Please try again later</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className='min-h-screen bg-gray-50'>
-      <ExecutionsHeader />
+    <div className='min-h-screen bg-background'>
+      <div className='max-w-7xl mx-auto p-6'>
+        <ExecutionsHeader />
 
-      <main className='max-w-7xl mx-auto py-6'>
         <ExecutionsFilters
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
@@ -339,12 +328,12 @@ const Executions = () => {
           clearAllFilters={clearAllFilters}
         />
 
-        <div className='bg-white rounded-lg shadow-sm border border-gray-200'>
+        <div className='bg-card rounded-lg shadow-sm border border-border'>
           {isLoading ? (
             <div className='flex items-center justify-center py-12'>
               <div className='text-center'>
-                <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4'></div>
-                <p className='text-gray-500'>Loading executions...</p>
+                <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4'></div>
+                <p className='text-muted-foreground'>Loading executions...</p>
               </div>
             </div>
           ) : (
@@ -368,13 +357,13 @@ const Executions = () => {
             </>
           )}
         </div>
-      </main>
 
-      <ExecutionDetailsDialog
-        open={!!selectedExecution}
-        onClose={() => setSelectedExecution(null)}
-        execution={selectedExecution}
-      />
+        <ExecutionDetailsDialog
+          open={!!selectedExecution}
+          onClose={() => setSelectedExecution(null)}
+          execution={selectedExecution}
+        />
+      </div>
     </div>
   );
 };
