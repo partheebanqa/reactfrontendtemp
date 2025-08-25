@@ -38,18 +38,13 @@ const TestSuites: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState('All statuses');
 
   // NEW: pagination state
-const [currentPage, setCurrentPage] = useState(1);
-const [itemsPerPage] = useState(10);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
 
-// Reset to page 1 when filters/search change
-useEffect(() => {
-  setCurrentPage(1);
-}, [searchQuery, statusFilter]);
-
-
-
-
-
+  // Reset to page 1 when filters/search change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, statusFilter]);
 
   const {
     data: apiData,
@@ -116,8 +111,8 @@ useEffect(() => {
     mutationFn: executeTestSuite,
     onSuccess: () => {
       toast({
-        title: 'Executed',
-        description: 'Test suite executed successfully.',
+        title: 'Queued',
+        description: 'Test suite has been added to the queue for execution.',
       });
       queryClient.invalidateQueries({ queryKey: ['testSuites'] });
     },
@@ -166,10 +161,10 @@ useEffect(() => {
   });
 
   // NEW: compute page slice
-const totalItems = filteredSuites.length;
-const startIndex = (currentPage - 1) * itemsPerPage;
-const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
-const paginatedSuites = filteredSuites.slice(startIndex, endIndex);
+  const totalItems = filteredSuites.length;
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
+  const paginatedSuites = filteredSuites.slice(startIndex, endIndex);
 
   return (
     <div className='p-6 space-y-6'>
@@ -224,36 +219,35 @@ const paginatedSuites = filteredSuites.slice(startIndex, endIndex);
       </div>
 
       <div className='bg-white rounded-lg border'>
-  {paginatedSuites.length === 0 ? (
-    <div className='text-center py-12'>
-      <p className='text-gray-500'>No test suites found</p>
-    </div>
-  ) : (
-    <>
-      <div className='divide-y'>
-        {paginatedSuites.map((suite) => (
-          <TestSuiteCard
-            key={suite.id}
-            suite={suite}
-            onEdit={handleEditSuite}
-            onDelete={handleDeleteSuite}
-            onExecute={handleExecuteSuite}
-            onClone={handleClonseSuite}
-          />
-        ))}
+        {paginatedSuites.length === 0 ? (
+          <div className='text-center py-12'>
+            <p className='text-gray-500'>No test suites found</p>
+          </div>
+        ) : (
+          <>
+            <div className='divide-y'>
+              {paginatedSuites.map((suite) => (
+                <TestSuiteCard
+                  key={suite.id}
+                  suite={suite}
+                  onEdit={handleEditSuite}
+                  onDelete={handleDeleteSuite}
+                  onExecute={handleExecuteSuite}
+                  onClone={handleClonseSuite}
+                />
+              ))}
+            </div>
+
+            {/* Pagination footer */}
+            <TestSuitePagination
+              totalItems={totalItems}
+              itemsPerPage={itemsPerPage}
+              currentPage={currentPage}
+              setCurrentPage={setCurrentPage}
+            />
+          </>
+        )}
       </div>
-
-      {/* Pagination footer */}
-      <TestSuitePagination
-        totalItems={totalItems}
-        itemsPerPage={itemsPerPage}
-        currentPage={currentPage}
-        setCurrentPage={setCurrentPage}
-      />
-    </>
-  )}
-</div>
-
     </div>
   );
 };
