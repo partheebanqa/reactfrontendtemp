@@ -10,7 +10,12 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Copy, Calendar, GitBranch, Play, Eye } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
-import { useLocation } from 'wouter';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 export const ExecutionsTable = ({
   executions,
@@ -21,10 +26,6 @@ export const ExecutionsTable = ({
   getStatusColor,
   getStatusIcon,
 }: any) => {
-  // console.log('executions:', executions);
-
-  const [_, setLocation] = useLocation();
-
   const goToReport = (execution: any, environment: string) => {
     const type = execution?.executionType;
     const entityId =
@@ -41,12 +42,8 @@ export const ExecutionsTable = ({
       return;
     }
 
-    const env = encodeURIComponent(environment || '');
-    const started = encodeURIComponent(String(execution?.startTime ?? ''));
-
-    setLocation(
-      `/executions/report/${type}/${entityId}?env=${env}&started=${started}`
-    );
+    // For now, just open the execution details
+    openExecutionDetails(execution);
   };
 
   return (
@@ -72,20 +69,22 @@ export const ExecutionsTable = ({
           const environment = schedule?.environment || execution.environment;
 
           return (
-            <TableRow key={execution.id} className='hover:bg-slate-50'>
+            <TableRow key={execution.id} className='hover:bg-muted/50'>
               <TableCell>
                 <div>
                   {execution.testSuite ? (
-                    <p className='font-medium text-orange-600 hover:text-orange-700 cursor-pointer'>
+                    <p className='font-medium text-primary hover:text-primary/80 cursor-pointer'>
                       {execution.testSuite.name}
                     </p>
                   ) : (
-                    <p className='font-medium text-orange-600 hover:text-orange-700 cursor-pointer'>
+                    <p className='font-medium text-primary hover:text-primary/80 cursor-pointer'>
                       {execution.requestChain?.name || 'Request Chain'}
                     </p>
                   )}
                   <div className='flex items-center gap-2 mt-1'>
-                    <p className='text-sm text-slate-500'>ID: {execution.id}</p>
+                    <p className='text-sm text-muted-foreground'>
+                      ID: {execution.id}
+                    </p>
                     <Button
                       variant='ghost'
                       size='sm'
@@ -96,7 +95,7 @@ export const ExecutionsTable = ({
                     >
                       <Copy
                         size={12}
-                        className='text-slate-400 hover:text-slate-600'
+                        className='text-muted-foreground hover:text-foreground'
                       />
                     </Button>
                   </div>
@@ -109,18 +108,26 @@ export const ExecutionsTable = ({
                   ) : (
                     <GitBranch className='text-purple-600' size={16} />
                   )}
-                  <span className='text-sm text-slate-700'>
+                  <span className='text-sm text-foreground'>
                     {execution?.executionType}
                   </span>
                 </div>
               </TableCell>
               <TableCell>
-                <span className='text-sm text-slate-700 capitalize'>
+                <span className='text-sm text-foreground capitalize'>
                   {environment}
                 </span>
               </TableCell>
               <TableCell>
-                <Badge>
+                <Badge
+                  variant={
+                    execution.status === 'success'
+                      ? 'default'
+                      : execution.status === 'failed'
+                      ? 'destructive'
+                      : 'secondary'
+                  }
+                >
                   <span className='mr-1'>
                     {getStatusIcon(execution.status)}
                   </span>
@@ -129,29 +136,29 @@ export const ExecutionsTable = ({
               </TableCell>
               <TableCell>
                 <div>
-                  <p className='text-xs text-slate-500'>
+                  <p className='text-xs text-muted-foreground'>
                     {formatDistanceToNow(new Date(execution.startTime), {
                       addSuffix: true,
                     })}
                   </p>
                 </div>
               </TableCell>
-              <TableCell className='text-sm text-slate-600'>
+              <TableCell className='text-sm text-foreground'>
                 {formatDuration(execution.duration)}
               </TableCell>
               <TableCell>
                 {execution.results ? (
                   <div className='text-sm'>
-                    <p className='text-slate-900'>
+                    <p className='text-foreground'>
                       {execution.results.passed}/{execution.results.total}{' '}
                       passed
                     </p>
-                    <p className='text-xs text-slate-500'>
+                    <p className='text-xs text-muted-foreground'>
                       {execution.results.failed} failed
                     </p>
                   </div>
                 ) : (
-                  <span className='text-sm text-slate-500'>N/A</span>
+                  <span className='text-sm text-muted-foreground'>N/A</span>
                 )}
               </TableCell>
               <TableCell>
@@ -159,41 +166,29 @@ export const ExecutionsTable = ({
                   {execution.scheduleId ? (
                     <Calendar className='text-blue-600' size={12} />
                   ) : (
-                    <Play className='text-slate-500' size={12} />
+                    <Play className='text-muted-foreground' size={12} />
                   )}
-                  <span className='text-sm text-slate-600'>
+                  <span className='text-sm text-foreground'>
                     {execution.scheduleId ? 'Scheduled' : 'Manual'}
                   </span>
                 </div>
               </TableCell>
               <TableCell>
                 <div className='flex items-center gap-1'>
-                  {/* <Button
-                    size='sm'
-                    variant='outline'
-                    onClick={() => openExecutionDetails(execution)}
-                  >
-                    <Eye size={14} />
-                  </Button> */}
-                  <Button
-                    size='sm'
-                    variant='outline'
-                    onClick={() => goToReport(execution, environment)}
-                  >
-                    <Eye size={14} />
-                  </Button>
-                  <Button
-                    size='sm'
-                    variant='ghost'
-                    onClick={() =>
-                      copyToClipboard(
-                        JSON.stringify(execution, null, 2),
-                        'Execution details'
-                      )
-                    }
-                  >
-                    <Copy size={14} />
-                  </Button>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          size='sm'
+                          variant='outline'
+                          onClick={() => goToReport(execution, environment)}
+                        >
+                          <Eye size={14} />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>View execution details</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </div>
               </TableCell>
             </TableRow>

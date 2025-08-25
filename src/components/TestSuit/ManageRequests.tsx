@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -36,12 +36,28 @@ interface Request {
   selectedTestCases?: string[];
 }
 
+interface RequestStat {
+  requestId: string;
+  startTime?: string;
+  endTime?: string;
+  status?: string;
+  lastGeneratedAt?: string;
+  meta?: {
+    totalTests?: number;
+    selectedTests?: number;
+  };
+}
+
+
+
 interface ManageRequestsProps {
   requests: Request[];
   testSuiteId: string;
   onImport: () => void;
   onDeleteRequest: (requestId: string) => void;
   onUpdateTestCases: (requestId: string, testCaseIds: string[]) => void;
+  onRefreshRequests?: () => Promise<void> | void;
+  requestStats?: RequestStat[]; 
 }
 
 const getMethodBadgeColor = (method: string) => {
@@ -67,6 +83,8 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
   onImport,
   onDeleteRequest,
   onUpdateTestCases,
+  onRefreshRequests,
+  requestStats = [],
 }) => {
   const { variables, environments, activeEnvironment } = useDataManagement();
 
@@ -75,6 +93,12 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
 
 
   // console.log(requests, "selectedRequest")
+
+  const statMap = useMemo(() => {
+    const m = new Map<string, RequestStat>();
+    requestStats.forEach(s => m.set(s.requestId, s));
+    return m;
+  }, [requestStats]);
 
   const substituteVariables = (text: string): string => {
     let result = text;
@@ -149,6 +173,20 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
     }
   };
 
+  // console.log(requests, "requests");
+
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    if (!onRefreshRequests) return;
+    try {
+      setRefreshing(true);
+      await onRefreshRequests();
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -156,9 +194,13 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
           <CardTitle>Requests ({requests.length})</CardTitle>
 
           <div className="flex items-center space-x-2">
-            <Button variant="outline" onClick={() => window.location.reload()}>
-              <RefreshCcw className="w-4 h-4 mr-2" />
-              Refresh
+          <Button
+              variant="outline"
+              onClick={handleRefresh}
+              disabled={refreshing}
+            >
+              <RefreshCcw className={`w-4 h-4 mr-2 ${refreshing ? "animate-spin" : ""}`} />
+              {refreshing ? "Refreshing..." : "Refresh"}
             </Button>
             <Button variant="outline" onClick={onImport}>
               <Download className="w-4 h-4 mr-2" />
@@ -172,6 +214,10 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
         <div className="space-y-3">
           {requests.map((request) => {
             const finalUrl = buildFinalUrl(request.endpoint);
+            const stat = statMap.get(request.id);
+            const totalTests = stat?.meta?.totalTests ?? 0;
+            const selectedCountFromServer = stat?.meta?.selectedTests ?? 0;
+            const selectedCount = (request.selectedTestCases?.length ?? 0) || selectedCountFromServer;
 
             return (
               <div
@@ -264,9 +310,9 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
                 </div>
                 {testSuiteId && (
                   <div className="mt-4">
-                    <h5 className="text-sm font-medium mb-2">Test Cases:</h5>
+                    <h5 className="text-sm font-medium mb-2">Test Cases</h5>
                    
-                      {(request.selectedTestCases?.length || 0) > 0 && (
+                      {/* {(request.selectedTestCases?.length || 0) > 0 && (
                          <div className="flex items-center justify-between text-xs">
                          <div className="flex items-center">
                            <span className="mr-1">{getCategoryIcon('Functional')}</span>
@@ -276,11 +322,23 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
                          {request.selectedTestCases?.length || 0}
                          </span>
                        </div>
-                      )}
+                      )} */}
+
+{selectedCount > 0 && (
+                      <div className="flex items-center justify-between text-xs">
+                        <div className="flex items-center">
+                          <span className="mr-1">{getCategoryIcon('Functional')}</span>
+                          <span className="capitalize text-gray-600">{'Functional'}</span>
+                        </div>
+                        <span className={`px-2 py-0.5 rounded-full font-medium ${getCategoryColor('Functional')}`}>
+                          {selectedCount}
+                        </span>
+                      </div>
+                    )}
                       <div className="pt-1 border-t border-gray-200 mt-2">
                     <div className="flex items-center justify-between text-xs font-medium">
                     <span className="text-gray-700">Total:</span>
-                    <span className="text-gray-900">  {request.selectedTestCases?.length || 0} test cases</span>
+                    <span className="text-gray-900">   {totalTests ? <>  {totalTests}</> : null} test cases</span>
                   </div>
                   </div>
                   </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   Plus,
   Search,
@@ -44,6 +44,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import HelpLink from '../HelpModal/HelpLink';
+import { RequestChainPagination } from './RequestChainPagination';
 
 interface RequestChainsListProps {
   chains: RequestChain[];
@@ -107,6 +108,8 @@ export function RequestChainsList({
   const filteredAndSortedChains = useMemo(() => {
     const filtered = chains.filter((chain) => {
       const term = searchTerm.toLowerCase();
+        // NEW: pagination
+ 
 
       const matchesSearch =
         chain.name.toLowerCase().includes(term) ||
@@ -152,6 +155,21 @@ export function RequestChainsList({
 
     return filtered;
   }, [chains, searchTerm, statusFilter, sortBy, sortOrder]);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
+
+  // Reset to page 1 whenever filters/search/sort change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter, sortBy, sortOrder]);
+
+   // NEW: slice for current page
+   const totalItems = filteredAndSortedChains.length;
+   const startIndex = (currentPage - 1) * itemsPerPage;
+   const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
+   const paginatedChains = filteredAndSortedChains.slice(startIndex, endIndex);
+ 
 
   const getStatusIcon = (chain: RequestChain) => {
     if (!chain.enabled) {
@@ -246,9 +264,12 @@ export function RequestChainsList({
       {/* Chains List */}
       {loading && <LoadingSkeleton />}
 
-      {!loading && filteredAndSortedChains.length > 0 && (
-        <div className='space-y-3'>
-          {filteredAndSortedChains.map((chain) => (
+     
+
+{!loading && paginatedChains.length > 0 && (
+        <>
+          <div className='space-y-3'>
+          {paginatedChains.map((chain) => (
             <Card key={chain.id} className='hover:shadow-sm transition-shadow'>
               <CardContent className='p-6'>
                 <div className='flex items-center justify-between'>
@@ -444,7 +465,16 @@ export function RequestChainsList({
               </CardContent>
             </Card>
           ))}
-        </div>
+          </div>
+
+          {/* NEW: pagination footer */}
+          <RequestChainPagination
+            totalItems={totalItems}
+            itemsPerPage={itemsPerPage}
+            currentPage={currentPage}
+            setCurrentPage={setCurrentPage}
+          />
+        </>
       )}
 
       {!loading && filteredAndSortedChains.length === 0 && (
