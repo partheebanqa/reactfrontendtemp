@@ -130,7 +130,9 @@ export default function EnvironmentDropdown({
                   return (
                     <DropdownMenuItem
                       key={environment.id}
-                      onClick={() => setActiveEnvironment(environment)}
+                     
+onClick={() => setActiveEnvironment(environment)}
+
                       className={`justify-between text-xs sm:text-sm py-2 rounded-md ${
                         isSelected
                           ? 'bg-gray-50 text-gray-800 border border-gray-200 shadow-sm'
