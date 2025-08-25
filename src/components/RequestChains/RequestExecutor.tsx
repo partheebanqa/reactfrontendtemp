@@ -70,6 +70,9 @@ export function RequestExecutor({
 }: RequestExecutorProps) {
   const [isExecuting, setIsExecuting] = useState(false);
   const [currentRequestIndex, setCurrentRequestIndex] = useState(-1);
+  const [savedChainId, setSavedChainId] = useState<string | undefined>(
+    undefined
+  );
   const [executionLogs, setExecutionLogs] = useState<ExecutionLog[]>([]);
   const [extractedVariables, setExtractedVariables] = useState<Variable[]>([]);
   const [expandedLogs, setExpandedLogs] = useState<Set<string>>(new Set());
@@ -104,8 +107,6 @@ export function RequestExecutor({
     });
     return cookies;
   };
-
-  console.log('chainId:', chainId);
 
   const extractDataFromResponse = (
     response: any,
@@ -264,57 +265,64 @@ export function RequestExecutor({
 
   const handleExecuteChain = async () => {
     setIsExecuting(true);
-    let savedChain;
-    if (onPreExecute) {
+    let currentChainId = savedChainId;
+
+    // Only call save API if we don't have a saved chain ID
+    if (onPreExecute && !currentChainId) {
       try {
-        savedChain = await onPreExecute();
+        const savedChain = await onPreExecute();
+        currentChainId = savedChain?.id;
+        setSavedChainId(currentChainId);
+
+        if (!chainName?.trim()) {
+          toast({
+            title: 'Validation Error',
+            description: 'Please enter a chain name',
+            variant: 'destructive',
+          });
+          setIsExecuting(false);
+          return;
+        }
+
+        if (!currentChainId) {
+          toast({
+            title: 'Validation Error',
+            description: 'Chain must be saved before execution',
+            variant: 'destructive',
+          });
+          setIsExecuting(false);
+          return;
+        }
       } catch (err: any) {
         toast({
           title: 'Save Failed',
           description: err?.message || 'Unable to save chain before execution.',
           variant: 'destructive',
         });
+        setIsExecuting(false);
         return;
       }
+    }
 
-      if (!chainName?.trim()) {
+    // Execute the chain if we have a chain ID
+    if (currentChainId) {
+      try {
+        const payload: ExecutionRequestChainPayload = {
+          requestChainId: currentChainId,
+        };
+
+        const result = await playChain(payload);
+        console.log('result00:', result);
         toast({
-          title: 'Validation Error',
-          description: 'Please enter a chain name',
+          title: 'Execution Started',
+          description: `Request chain execution started successfully.`,
+        });
+      } catch (error: any) {
+        toast({
+          title: 'Execution Failed',
+          description: error?.message || 'Could not execute the request chain.',
           variant: 'destructive',
         });
-        return;
-      }
-
-      if (!savedChain?.id) {
-        toast({
-          title: 'Validation Error',
-          description: 'Chain must be saved before execution',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      if (savedChain?.id) {
-        try {
-          const payload: ExecutionRequestChainPayload = {
-            requestChainId: savedChain?.id,
-          };
-
-          const result = await playChain(payload);
-          console.log('result00:', result);
-          toast({
-            title: 'Execution Started',
-            description: `Request chain ${chainId} started successfully.`,
-          });
-        } catch (error: any) {
-          toast({
-            title: 'Execution Failed',
-            description:
-              error?.message || 'Could not execute the request chain.',
-            variant: 'destructive',
-          });
-        }
       }
     }
 
@@ -458,7 +466,7 @@ export function RequestExecutor({
       variant: successCount === totalCount ? 'default' : 'destructive',
     });
 
-    if (onPostExecute && savedChain?.id) {
+    if (onPostExecute && currentChainId) {
       // Small delay to let user see the completion toast
       setTimeout(() => {
         onPostExecute();
@@ -469,60 +477,64 @@ export function RequestExecutor({
   const handleUpdateExecute = async () => {
     setIsExecuting(true);
 
-    let savedChain;
-    if (onPreExecute) {
+    // Use existing saved chain ID if available, otherwise save first
+    let currentChainId = savedChainId;
+
+    if (onPreExecute && !currentChainId) {
       try {
-        savedChain = await onPreExecute();
+        const savedChain = await onPreExecute();
+        currentChainId = savedChain?.requestchain?.id || savedChain?.id;
+        setSavedChainId(currentChainId);
+
+        if (!chainName?.trim()) {
+          toast({
+            title: 'Validation Error',
+            description: 'Please enter a chain name',
+            variant: 'destructive',
+          });
+          setIsExecuting(false);
+          return;
+        }
+
+        if (!currentChainId) {
+          toast({
+            title: 'Validation Error',
+            description: 'Chain must be saved before execution',
+            variant: 'destructive',
+          });
+          setIsExecuting(false);
+          return;
+        }
       } catch (err: any) {
         toast({
           title: 'Save Failed',
           description: err?.message || 'Unable to save chain before execution.',
           variant: 'destructive',
         });
+        setIsExecuting(false);
         return;
       }
+    }
 
-      if (!chainName?.trim()) {
+    // Execute the chain
+    if (currentChainId) {
+      try {
+        const payload: ExecutionRequestChainPayload = {
+          requestChainId: currentChainId,
+        };
+
+        const result = await playChain(payload);
+        console.log('result00:', result);
         toast({
-          title: 'Validation Error',
-          description: 'Please enter a chain name',
+          title: 'Execution Started',
+          description: `Request chain execution started successfully.`,
+        });
+      } catch (error: any) {
+        toast({
+          title: 'Execution Failed',
+          description: error?.message || 'Could not execute the request chain.',
           variant: 'destructive',
         });
-        return;
-      }
-
-      if (!savedChain?.requestchain?.id) {
-        toast({
-          title: 'Validation Error',
-          description: 'Chain must be saved before execution',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      if (savedChain?.requestchain?.id) {
-        try {
-          console.log('calling playchain');
-
-          const payload: ExecutionRequestChainPayload = {
-            requestChainId: savedChain?.requestchain?.id,
-          };
-          console.log('payload:', payload);
-
-          const result = await playChain(payload);
-          console.log('result00:', result);
-          toast({
-            title: 'Execution Started',
-            description: `Request chain ${chainId} started successfully.`,
-          });
-        } catch (error: any) {
-          toast({
-            title: 'Execution Failed',
-            description:
-              error?.message || 'Could not execute the request chain.',
-            variant: 'destructive',
-          });
-        }
       }
     }
 
@@ -666,7 +678,7 @@ export function RequestExecutor({
       variant: successCount === totalCount ? 'default' : 'destructive',
     });
 
-    if (onPostExecute && savedChain?.id) {
+    if (onPostExecute && currentChainId) {
       // Small delay to let user see the completion toast
       setTimeout(() => {
         onPostExecute();
@@ -752,8 +764,12 @@ export function RequestExecutor({
               className='flex items-center justify-center space-x-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors w-full sm:w-auto'
             >
               <Play className='w-4 h-4' />
-              <span className='hidden sm:inline'>Update Chain & Execute</span>
-              <span className='sm:hidden'>Update</span>
+              <span className='hidden sm:inline'>
+                {savedChainId ? 'Execute' : 'Update Chain & Execute'}
+              </span>
+              <span className='sm:hidden'>
+                {savedChainId ? 'Execute' : 'Update'}
+              </span>
             </button>
           ) : (
             <button
@@ -771,7 +787,9 @@ export function RequestExecutor({
                 {request
                   ? 'Run'
                   : onPreExecute
-                  ? 'Save Chain & Execute'
+                  ? savedChainId
+                    ? 'Execute'
+                    : 'Save Chain & Execute'
                   : 'Execute'}
               </span>
               <span className='sm:hidden'>{request ? 'Run' : 'Execute'}</span>
