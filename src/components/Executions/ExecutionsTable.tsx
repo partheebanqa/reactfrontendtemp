@@ -16,6 +16,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { useLocation } from 'wouter';
 
 export const ExecutionsTable = ({
   executions,
@@ -26,15 +27,19 @@ export const ExecutionsTable = ({
   getStatusColor,
   getStatusIcon,
 }: any) => {
+ 
+
+  const [_, setLocation] = useLocation();
+
   const goToReport = (execution: any, environment: string) => {
     const type = execution?.executionType;
     const entityId =
-      type === 'test_suite'
+      type === "test_suite"
         ? execution?.testSuite?.id ?? execution?.entityId
         : execution?.requestChain?.id ?? execution?.entityId;
 
     if (!type || !entityId) {
-      console.warn('Missing type or entityId for report navigation', {
+      console.warn("Missing type or entityId for report navigation", {
         type,
         entityId,
         execution,
@@ -42,8 +47,12 @@ export const ExecutionsTable = ({
       return;
     }
 
-    // For now, just open the execution details
-    openExecutionDetails(execution);
+    const env = encodeURIComponent(environment || "");
+    const started = encodeURIComponent(String(execution?.startTime ?? ""));
+
+    setLocation(
+      `/executions/report/${type}/${entityId}?env=${env}&started=${started}`
+    );
   };
 
   return (
