@@ -66,8 +66,6 @@ export const saveTestCasesForRequest = async (
       testCaseId,
       isSelected: selectedTestCaseIds.includes(testCaseId),
     }));
-    console.log('testSuiteId123:', testSuiteId);
-    console.log('requestId123:', requestId);
 
     const response = await apiRequest(
       'PUT',
