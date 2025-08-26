@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Play,
   Square,
@@ -13,7 +13,7 @@ import {
   Copy,
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import {
+import type {
   APIRequest,
   ExecutionLog,
   ExecutionRequestChainPayload,
@@ -79,6 +79,13 @@ export function RequestExecutor({
   const [allVariables, setAllVariables] = useState<Variable[]>(variables);
   const { mutateAsync: playChain } = useExecuteRequestChain();
 
+  const processedRequests = useMemo(() => {
+    return requests.map((req) => ({
+      ...req,
+      enabled: req.enabled !== false, // Default to true if not explicitly false
+    }));
+  }, [requests]);
+
   React.useEffect(() => {
     setAllVariables(variables);
   }, [variables]);
@@ -113,14 +120,16 @@ export function RequestExecutor({
     extractVariables: any[]
   ): Record<string, any> => {
     const extracted: Record<string, any> = {};
-    extractVariables.forEach((variable) => {
-      const value = response.body
-        ? JSON.parse(response.body)[variable.path]
-        : undefined;
-      if (value !== undefined) {
-        extracted[variable.variableName] = value;
-      }
-    });
+    if (extractVariables && Array.isArray(extractVariables)) {
+      extractVariables.forEach((variable) => {
+        const value = response.body
+          ? JSON.parse(response.body)[variable.path]
+          : undefined;
+        if (value !== undefined) {
+          extracted[variable.name] = value; // Changed from variable.variableName to variable.name
+        }
+      });
+    }
     return extracted;
   };
 
@@ -214,7 +223,7 @@ export function RequestExecutor({
           headers: Object.fromEntries(response.headers.entries()),
           cookies: parseCookies(response.headers.get('set-cookie') || ''),
         },
-        request.extractVariables
+        request.extractVariables || []
       );
 
       const log: ExecutionLog = {
@@ -267,7 +276,6 @@ export function RequestExecutor({
     setIsExecuting(true);
     let currentChainId = savedChainId;
 
-    // Only call save API if we don't have a saved chain ID
     if (onPreExecute && !currentChainId) {
       try {
         const savedChain = await onPreExecute();
@@ -304,7 +312,6 @@ export function RequestExecutor({
       }
     }
 
-    // Execute the chain if we have a chain ID
     if (currentChainId) {
       try {
         const payload: ExecutionRequestChainPayload = {
@@ -313,10 +320,159 @@ export function RequestExecutor({
 
         const result = await playChain(payload);
         console.log('result00:', result);
-        toast({
-          title: 'Execution Started',
-          description: `Request chain execution started successfully.`,
-        });
+
+        if (result?.data?.responses) {
+          const logs: ExecutionLog[] = [];
+          const newExtractedVars: Variable[] = [];
+          const currentVars = [...allVariables];
+
+          result.data.responses.forEach((response: any) => {
+            let requestUrl = '';
+            if (response.requestCurl) {
+              // Extract URL from curl command - look for quoted URLs first
+              const quotedUrlMatch =
+                response.requestCurl.match(/'(https?:\/\/[^']+)'/g);
+              if (quotedUrlMatch && quotedUrlMatch.length > 0) {
+                // Get the last quoted URL (usually the actual request URL)
+                const lastQuotedUrl = quotedUrlMatch[quotedUrlMatch.length - 1];
+                requestUrl = lastQuotedUrl.replace(/'/g, '');
+              } else {
+                // Fallback: look for any HTTP URL in the curl command
+                const urlMatch =
+                  response.requestCurl.match(/https?:\/\/[^\s'"]+/);
+                requestUrl = urlMatch ? urlMatch[0] : '';
+              }
+            }
+
+            const log: ExecutionLog = {
+              id: response.requestId,
+              chainId: currentChainId || 'current-chain',
+              requestId: response.requestId,
+              status:
+                response.statusCode >= 200 && response.statusCode < 300
+                  ? 'success'
+                  : 'error',
+              startTime: new Date().toISOString(),
+              endTime: new Date().toISOString(),
+              duration: response.metrics?.responseTime || 0,
+              request: {
+                method:
+                  response.requestCurl?.split(' ')[1]?.replace("'", '') ||
+                  'GET',
+                url: requestUrl,
+                headers: {},
+                body: '',
+              },
+              response: {
+                status: response.statusCode,
+                headers: response.headers || {},
+                body: response.body,
+                size:
+                  response.metrics?.bytesReceived || response.body?.length || 0,
+                cookies: {},
+              },
+              extractedVariables: {},
+            };
+
+            const req = processedRequests.find(
+              (r) =>
+                r.name === response.requestName ||
+                r.id === response.requestId ||
+                r.url === requestUrl ||
+                r.name === response.requestName?.trim()
+            );
+
+            console.log('[v0] Matching request:', {
+              responseRequestName: response.requestName,
+              responseRequestId: response.requestId,
+              foundRequest: req?.name,
+              extractVariables: req?.extractVariables,
+            });
+
+            if (
+              req?.extractVariables &&
+              Array.isArray(req.extractVariables) &&
+              response.body
+            ) {
+              try {
+                const responseData = JSON.parse(response.body);
+                console.log('[v0] Response data for extraction:', responseData);
+
+                req.extractVariables.forEach((variable: any) => {
+                  console.log(
+                    '[v0] Extracting variable:',
+                    variable.name,
+                    'from path:',
+                    variable.path
+                  );
+                  const value = responseData[variable.path];
+                  console.log('[v0] Extracted value:', value);
+
+                  if (value !== undefined) {
+                    log.extractedVariables![variable.name] = value; // Changed from variable.variableName
+
+                    const newVar: Variable = {
+                      id: `${Date.now()}-${Math.random()}`,
+                      name: variable.name, // Changed from variable.variableName
+                      value: String(value),
+                      type:
+                        typeof value === 'number'
+                          ? 'number'
+                          : typeof value === 'boolean'
+                          ? 'boolean'
+                          : 'string',
+                      source: 'extracted',
+                      extractionPath: variable.path,
+                    };
+
+                    const existingIndex = currentVars.findIndex(
+                      (v) => v.name === newVar.name
+                    );
+                    if (existingIndex >= 0) {
+                      currentVars[existingIndex] = newVar;
+                    } else {
+                      currentVars.push(newVar);
+                      newExtractedVars.push(newVar);
+                    }
+                  }
+                });
+              } catch (error) {
+                console.error(
+                  'Error parsing response body for variable extraction:',
+                  error
+                );
+              }
+            } else {
+              console.log(
+                '[v0] No extraction variables found or invalid response body'
+              );
+            }
+
+            logs.push(log);
+          });
+
+          setExecutionLogs(logs);
+          setExtractedVariables(newExtractedVars);
+          setAllVariables(currentVars);
+          onExecutionComplete(logs, newExtractedVars);
+          onVariableUpdate(currentVars);
+
+          const successCount = logs.filter(
+            (log) => log.status === 'success'
+          ).length;
+          const totalCount = logs.length;
+
+          toast({
+            title: 'Execution Complete',
+            description: `Completed ${successCount}/${totalCount} requests successfully`,
+            variant: successCount === totalCount ? 'default' : 'destructive',
+          });
+        } else {
+          toast({
+            title: 'Execution Started',
+            description: `Request chain execution started successfully.`,
+          });
+        }
       } catch (error: any) {
         toast({
           title: 'Execution Failed',
@@ -347,7 +503,7 @@ export function RequestExecutor({
                   : 'string',
               source: 'extracted',
               extractionPath: request.extractVariables.find(
-                (e) => e.variableName === name
+                (e) => e.name === name
               )?.path,
             };
             newExtractedVars.push(newVar);
@@ -360,7 +516,10 @@ export function RequestExecutor({
               (v) => v.name === newVar.name
             );
             if (existingIndex >= 0) {
-              updatedAllVars[existingIndex] = newVar;
+              updatedAllVars[existingIndex] = {
+                ...updatedAllVars[existingIndex],
+                ...newVar,
+              };
             } else {
               updatedAllVars.push(newVar);
             }
@@ -376,7 +535,7 @@ export function RequestExecutor({
       return;
     }
 
-    if (requests.length === 0) return;
+    if (processedRequests.length === 0) return;
 
     setIsExecuting(true);
     setCurrentRequestIndex(0);
@@ -387,15 +546,15 @@ export function RequestExecutor({
     const logs: ExecutionLog[] = [];
     const newExtractedVars: Variable[] = [];
 
-    for (let i = 0; i < requests.length; i++) {
-      const request = requests[i];
-      if (!request.enabled) continue;
+    for (let i = 0; i < processedRequests.length; i++) {
+      const req = processedRequests[i];
+      if (!req.enabled) continue;
 
       setCurrentRequestIndex(i);
       onExecutionStateChange?.(true, i);
 
       try {
-        const log = await executeRequest(request, currentVars);
+        const log = await executeRequest(req, currentVars);
         logs.push(log);
         setExecutionLogs([...logs]);
 
@@ -413,8 +572,8 @@ export function RequestExecutor({
                   ? 'boolean'
                   : 'string',
               source: 'extracted',
-              extractionPath: request.extractVariables.find(
-                (e) => e.variableName === name
+              extractionPath: (req.extractVariables || []).find(
+                (e) => e.name === name
               )?.path,
             };
 
@@ -431,10 +590,10 @@ export function RequestExecutor({
           setAllVariables([...currentVars]);
         }
 
-        if (log.status === 'error' && request.errorHandling === 'stop') {
+        if (log.status === 'error' && req.errorHandling === 'stop') {
           toast({
             title: 'Execution Stopped',
-            description: `Request ${request.name} failed and chain execution was stopped.`,
+            description: `Request ${req.name} failed and chain execution was stopped.`,
             variant: 'destructive',
           });
           break;
@@ -443,7 +602,7 @@ export function RequestExecutor({
         toast({
           title: 'Request Execution Error',
           description:
-            err?.message || `An error occurred in request ${request.name}.`,
+            err?.message || `An error occurred in request ${req.name}.`,
           variant: 'destructive',
         });
         break;
@@ -467,17 +626,15 @@ export function RequestExecutor({
     });
 
     if (onPostExecute && currentChainId) {
-      // Small delay to let user see the completion toast
       setTimeout(() => {
         onPostExecute();
-      }, 1500);
+      }, 5000);
     }
   };
 
   const handleUpdateExecute = async () => {
     setIsExecuting(true);
 
-    // Use existing saved chain ID if available, otherwise save first
     let currentChainId = savedChainId;
 
     if (onPreExecute && !currentChainId) {
@@ -516,7 +673,6 @@ export function RequestExecutor({
       }
     }
 
-    // Execute the chain
     if (currentChainId) {
       try {
         const payload: ExecutionRequestChainPayload = {
@@ -525,10 +681,159 @@ export function RequestExecutor({
 
         const result = await playChain(payload);
         console.log('result00:', result);
-        toast({
-          title: 'Execution Started',
-          description: `Request chain execution started successfully.`,
-        });
+
+        if (result?.data?.responses) {
+          const logs: ExecutionLog[] = [];
+          const newExtractedVars: Variable[] = [];
+          const currentVars = [...allVariables];
+
+          result.data.responses.forEach((response: any) => {
+            let requestUrl = '';
+            if (response.requestCurl) {
+              // Extract URL from curl command - look for quoted URLs first
+              const quotedUrlMatch =
+                response.requestCurl.match(/'(https?:\/\/[^']+)'/g);
+              if (quotedUrlMatch && quotedUrlMatch.length > 0) {
+                // Get the last quoted URL (usually the actual request URL)
+                const lastQuotedUrl = quotedUrlMatch[quotedUrlMatch.length - 1];
+                requestUrl = lastQuotedUrl.replace(/'/g, '');
+              } else {
+                // Fallback: look for any HTTP URL in the curl command
+                const urlMatch =
+                  response.requestCurl.match(/https?:\/\/[^\s'"]+/);
+                requestUrl = urlMatch ? urlMatch[0] : '';
+              }
+            }
+
+            const log: ExecutionLog = {
+              id: response.requestId,
+              chainId: currentChainId || 'current-chain',
+              requestId: response.requestId,
+              status:
+                response.statusCode >= 200 && response.statusCode < 300
+                  ? 'success'
+                  : 'error',
+              startTime: new Date().toISOString(),
+              endTime: new Date().toISOString(),
+              duration: response.metrics?.responseTime || 0,
+              request: {
+                method:
+                  response.requestCurl?.split(' ')[1]?.replace("'", '') ||
+                  'GET',
+                url: requestUrl,
+                headers: {},
+                body: '',
+              },
+              response: {
+                status: response.statusCode,
+                headers: response.headers || {},
+                body: response.body,
+                size:
+                  response.metrics?.bytesReceived || response.body?.length || 0,
+                cookies: {},
+              },
+              extractedVariables: {},
+            };
+
+            const req = processedRequests.find(
+              (r) =>
+                r.name === response.requestName ||
+                r.id === response.requestId ||
+                r.url === requestUrl ||
+                r.name === response.requestName?.trim()
+            );
+
+            console.log('[v0] Matching request:', {
+              responseRequestName: response.requestName,
+              responseRequestId: response.requestId,
+              foundRequest: req?.name,
+              extractVariables: req?.extractVariables,
+            });
+
+            if (
+              req?.extractVariables &&
+              Array.isArray(req.extractVariables) &&
+              response.body
+            ) {
+              try {
+                const responseData = JSON.parse(response.body);
+                console.log('[v0] Response data for extraction:', responseData);
+
+                req.extractVariables.forEach((variable: any) => {
+                  console.log(
+                    '[v0] Extracting variable:',
+                    variable.name,
+                    'from path:',
+                    variable.path
+                  );
+                  const value = responseData[variable.path];
+                  console.log('[v0] Extracted value:', value);
+
+                  if (value !== undefined) {
+                    log.extractedVariables![variable.name] = value; // Changed from variable.variableName
+
+                    const newVar: Variable = {
+                      id: `${Date.now()}-${Math.random()}`,
+                      name: variable.name, // Changed from variable.variableName
+                      value: String(value),
+                      type:
+                        typeof value === 'number'
+                          ? 'number'
+                          : typeof value === 'boolean'
+                          ? 'boolean'
+                          : 'string',
+                      source: 'extracted',
+                      extractionPath: variable.path,
+                    };
+
+                    const existingIndex = currentVars.findIndex(
+                      (v) => v.name === newVar.name
+                    );
+                    if (existingIndex >= 0) {
+                      currentVars[existingIndex] = newVar;
+                    } else {
+                      currentVars.push(newVar);
+                      newExtractedVars.push(newVar);
+                    }
+                  }
+                });
+              } catch (error) {
+                console.error(
+                  'Error parsing response body for variable extraction:',
+                  error
+                );
+              }
+            } else {
+              console.log(
+                '[v0] No extraction variables found or invalid response body'
+              );
+            }
+
+            logs.push(log);
+          });
+
+          setExecutionLogs(logs);
+          setExtractedVariables(newExtractedVars);
+          setAllVariables(currentVars);
+          onExecutionComplete(logs, newExtractedVars);
+          onVariableUpdate(currentVars);
+
+          const successCount = logs.filter(
+            (log) => log.status === 'success'
+          ).length;
+          const totalCount = logs.length;
+
+          toast({
+            title: 'Execution Complete',
+            description: `Completed ${successCount}/${totalCount} requests successfully`,
+            variant: successCount === totalCount ? 'default' : 'destructive',
+          });
+        } else {
+          toast({
+            title: 'Execution Started',
+            description: `Request chain execution started successfully.`,
+          });
+        }
       } catch (error: any) {
         toast({
           title: 'Execution Failed',
@@ -538,151 +843,14 @@ export function RequestExecutor({
       }
     }
 
-    if (request && onResponse) {
-      try {
-        const log = await executeRequest(request, allVariables);
-        onResponse(log);
-        setExecutionLogs([log]);
-
-        if (log.extractedVariables) {
-          const newExtractedVars: Variable[] = [];
-          Object.entries(log.extractedVariables).forEach(([name, value]) => {
-            const newVar: Variable = {
-              id: `${Date.now()}-${Math.random()}`,
-              name,
-              value: String(value),
-              type:
-                typeof value === 'number'
-                  ? 'number'
-                  : typeof value === 'boolean'
-                  ? 'boolean'
-                  : 'string',
-              source: 'extracted',
-              extractionPath: request.extractVariables.find(
-                (e) => e.variableName === name
-              )?.path,
-            };
-            newExtractedVars.push(newVar);
-          });
-          setExtractedVariables(newExtractedVars);
-
-          const updatedAllVars = [...allVariables];
-          newExtractedVars.forEach((newVar) => {
-            const existingIndex = updatedAllVars.findIndex(
-              (v) => v.name === newVar.name
-            );
-            if (existingIndex >= 0) {
-              updatedAllVars[existingIndex] = newVar;
-            } else {
-              updatedAllVars.push(newVar);
-            }
-          });
-          setAllVariables(updatedAllVars);
-          onVariableUpdate(updatedAllVars);
-        }
-      } catch (error) {
-        console.error('Individual request execution failed:', error);
-      } finally {
-        setIsExecuting(false);
-      }
-      return;
-    }
-
-    if (requests.length === 0) return;
-
-    setIsExecuting(true);
-    setCurrentRequestIndex(0);
-    setExecutionLogs([]);
-    onExecutionStateChange?.(true, 0);
-
-    const currentVars = [...allVariables];
-    const logs: ExecutionLog[] = [];
-    const newExtractedVars: Variable[] = [];
-
-    for (let i = 0; i < requests.length; i++) {
-      const request = requests[i];
-      if (!request.enabled) continue;
-
-      setCurrentRequestIndex(i);
-      onExecutionStateChange?.(true, i);
-
-      try {
-        const log = await executeRequest(request, currentVars);
-        logs.push(log);
-        setExecutionLogs([...logs]);
-
-        if (log.extractedVariables) {
-          Object.entries(log.extractedVariables).forEach(([name, value]) => {
-            const existingIndex = currentVars.findIndex((v) => v.name === name);
-            const newVar: Variable = {
-              id: `${Date.now()}-${Math.random()}`,
-              name,
-              value: String(value),
-              type:
-                typeof value === 'number'
-                  ? 'number'
-                  : typeof value === 'boolean'
-                  ? 'boolean'
-                  : 'string',
-              source: 'extracted',
-              extractionPath: request.extractVariables.find(
-                (e) => e.variableName === name
-              )?.path,
-            };
-
-            if (existingIndex >= 0) {
-              currentVars[existingIndex] = {
-                ...currentVars[existingIndex],
-                ...newVar,
-              };
-            } else {
-              currentVars.push(newVar);
-              newExtractedVars.push(newVar);
-            }
-          });
-          setAllVariables([...currentVars]);
-        }
-
-        if (log.status === 'error' && request.errorHandling === 'stop') {
-          toast({
-            title: 'Execution Stopped',
-            description: `Request ${request.name} failed and chain execution was stopped.`,
-            variant: 'destructive',
-          });
-          break;
-        }
-      } catch (err: any) {
-        toast({
-          title: 'Request Execution Error',
-          description:
-            err?.message || `An error occurred in request ${request.name}.`,
-          variant: 'destructive',
-        });
-        break;
-      }
-    }
-
     setIsExecuting(false);
     setCurrentRequestIndex(-1);
-    setExtractedVariables(newExtractedVars);
-    onExecutionComplete(logs, newExtractedVars);
-    onVariableUpdate(currentVars);
     onExecutionStateChange?.(false, -1);
 
-    const successCount = logs.filter((log) => log.status === 'success').length;
-    const totalCount = logs.length;
-
-    toast({
-      title: 'Execution Complete',
-      description: `Completed ${successCount}/${totalCount} requests successfully`,
-      variant: successCount === totalCount ? 'default' : 'destructive',
-    });
-
     if (onPostExecute && currentChainId) {
-      // Small delay to let user see the completion toast
       setTimeout(() => {
         onPostExecute();
-      }, 1500);
+      }, 5000);
     }
   };
 
@@ -733,6 +901,21 @@ export function RequestExecutor({
     return body;
   };
 
+  const getRequestDisplayUrl = (url: string) => {
+    try {
+      if (!url || url.trim() === '') {
+        return url || 'Invalid URL';
+      }
+
+      // Check if it's a valid URL
+      const urlObj = new URL(url);
+      return urlObj.pathname;
+    } catch (error) {
+      // If URL construction fails, return the original string
+      return url || 'Invalid URL';
+    }
+  };
+
   return (
     <div className='bg-card rounded-xl border border-border p-4 sm:p-6'>
       <div className='flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4'>
@@ -744,7 +927,7 @@ export function RequestExecutor({
             {request
               ? 'Individual request execution'
               : `${
-                  requests?.filter((r) => r.enabled).length ?? 0
+                  processedRequests?.filter((r) => r.enabled).length ?? 0
                 } enabled requests`}
           </p>
         </div>
@@ -778,7 +961,7 @@ export function RequestExecutor({
                 request
                   ? !request.url
                   : !chainName?.trim() ||
-                    requests.filter((r) => r.enabled).length === 0
+                    processedRequests.filter((r) => r.enabled).length === 0
               }
               className='flex items-center justify-center space-x-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors w-full sm:w-auto'
             >
@@ -805,10 +988,10 @@ export function RequestExecutor({
             <div className='min-w-0 flex-1'>
               <p className='font-medium text-primary truncate'>
                 Executing request {currentRequestIndex + 1} of{' '}
-                {requests.filter((r) => r.enabled).length}
+                {processedRequests.filter((r) => r.enabled).length}
               </p>
               <p className='text-sm text-primary/80 truncate'>
-                {requests[currentRequestIndex]?.name}
+                {processedRequests[currentRequestIndex]?.name}
               </p>
             </div>
           </div>
@@ -856,7 +1039,8 @@ export function RequestExecutor({
                   {getStatusIcon(log.status)}
                   <div className='min-w-0 flex-1'>
                     <p className='font-medium text-foreground truncate'>
-                      {log.request.method} {new URL(log.request.url).pathname}
+                      {log.request.method}{' '}
+                      {getRequestDisplayUrl(log.request.url)}
                     </p>
                     <p className='text-sm text-muted-foreground'>
                       {log.duration}ms •{' '}
