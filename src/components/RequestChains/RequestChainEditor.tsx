@@ -16,6 +16,7 @@ import {
   PlayCircle,
   CheckCircle,
   XCircle,
+  Info,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -1015,9 +1016,23 @@ export function RequestChainEditor({
                     <Code className='w-4 h-4' />
                     Requests ({formData.chainRequests?.length || 0})
                   </TabsTrigger>
-                  <TabsTrigger value='variables-table' className='gap-2'>
+
+                  <TabsTrigger
+                    value='variables-table'
+                    className='gap-2 flex items-center'
+                  >
                     <Database className='w-4 h-4' />
                     Extracted Variables
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Info className='w-4 h-4 cursor-pointer text-muted-foreground' />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          View all variables extracted from this request.
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </TabsTrigger>
                 </TabsList>
 
