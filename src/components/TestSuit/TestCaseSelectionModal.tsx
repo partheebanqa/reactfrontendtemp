@@ -63,10 +63,10 @@ type TestCaseSelectionModalProps = {
 // Helper function to map category numbers to category names
 const getCategoryName = (categoryNumber: number): string => {
   const categoryMap: { [key: number]: string } = {
-    0: 'Performance',
+    0: 'General',
     1: 'Functional',
-    2: 'Security',
-    3: 'Integration',
+    2: 'Performance',
+    3: 'Security',
     4: 'Regression',
   };
   return categoryMap[categoryNumber] || 'Other';
@@ -205,6 +205,8 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
       setSelectedTestCases([]);
     }
   }, [isOpen, request?.selectedTestCases]);
+
+  console.log('testCasesData:', testCasesData);
 
   // Transform and set test cases when data changes
   useEffect(() => {

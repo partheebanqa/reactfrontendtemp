@@ -16,6 +16,8 @@ export const getTestCasesByRequestId = async (
       `${API_TEST_CASES}?r=${requestId}&ts=${testSuiteId}`
     );
 
+    console.log('response:', response);
+
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
