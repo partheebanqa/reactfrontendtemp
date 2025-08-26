@@ -29,7 +29,7 @@ import {
   getTestCasesByRequestId,
   saveTestCasesForRequest,
 } from '@/services/testcase.service';
-import { useToast } from '@/hooks/useToast';
+import { useToast } from '@/hooks/use-toast';
 import { ApiTestCase } from '@/shared/types/testcase.model';
 
 type TestCase = {
@@ -158,9 +158,9 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
     isLoading,
     error,
   } = useQuery({
-    queryKey: ['testCases', request?.id],
-    queryFn: () => getTestCasesByRequestId(request!.id),
-    enabled: !!request?.id && isOpen,
+    queryKey: ['testCases', request?.id, testSuiteId],
+    queryFn: () => getTestCasesByRequestId(request!.id, testSuiteId),
+    enabled: !!request?.id && !!testSuiteId && isOpen,
   });
 
   const saveTestCasesMutation = useMutation({
@@ -338,18 +338,18 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
   if (!request) return null;
   const { name } = request;
 
-
   const getCategoryIcon = (category: string) => {
     switch (category) {
-      case 'Functional': return '🔧';
-      case 'Performance': return '⚡';
-      case 'Security': return '🛡️';
-      default: return '📋';
+      case 'Functional':
+        return '🔧';
+      case 'Performance':
+        return '⚡';
+      case 'Security':
+        return '🛡️';
+      default:
+        return '📋';
     }
   };
-
-
-  
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -404,7 +404,7 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
             <div className='p-4'>
               <div className='flex items-center justify-between mb-4'>
                 <h3 className='font-medium'>
-                Available testcases ({totalAvailableTests})
+                  Available testcases ({totalAvailableTests})
                 </h3>
                 <span className='text-sm text-muted-foreground'>
                   {selectedTestCases.length} selected
@@ -467,8 +467,10 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
                             ) : (
                               <ChevronRight className='h-4 w-4' />
                             )}
-                            
-                            <span className="mr-2">{getCategoryIcon(category.category)}</span>
+
+                            <span className='mr-2'>
+                              {getCategoryIcon(category.category)}
+                            </span>
                             <span className='font-medium'>
                               {category.category}
                             </span>
@@ -561,7 +563,7 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
           <div className='flex-1 bg-muted/20 overflow-y-auto'>
             <div className='p-4'>
               <h3 className='font-medium mb-4'>
-              Selected testcases ({selectedTestCases.length})
+                Selected testcases ({selectedTestCases.length})
               </h3>
 
               {selectedTestCases.length === 0 ? (
@@ -579,21 +581,31 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
                         key={testId}
                         className='bg-white rounded-lg p-3 border'
                       >
-                        
                         <div className='flex items-start justify-between'>
                           <div className='flex-1 min-w-0'>
-                          <div className="flex items-center">
-                        <span className="mr-2">{getCategoryIcon(testInfo.category)}</span>
-                        <h5 className="text-sm font-medium text-gray-900">{testInfo.name}</h5>
-                      </div>
-                      <p className="text-xs text-gray-500 mt-1">{testInfo.description}</p>
-                      <span className={`inline-block mt-2 px-2 py-0.5 rounded-full text-xs font-medium ${
-                        testInfo.category === 'Functional' ? 'bg-blue-100 text-blue-800' :
-                        testInfo.category === 'Performance' ? 'bg-purple-100 text-purple-800' :
-                        'bg-orange-100 text-orange-800'
-                      }`}>
-                        {testInfo.category.charAt(0).toUpperCase() + testInfo.category.slice(1)}
-                      </span>
+                            <div className='flex items-center'>
+                              <span className='mr-2'>
+                                {getCategoryIcon(testInfo.category)}
+                              </span>
+                              <h5 className='text-sm font-medium text-gray-900'>
+                                {testInfo.name}
+                              </h5>
+                            </div>
+                            <p className='text-xs text-gray-500 mt-1'>
+                              {testInfo.description}
+                            </p>
+                            <span
+                              className={`inline-block mt-2 px-2 py-0.5 rounded-full text-xs font-medium ${
+                                testInfo.category === 'Functional'
+                                  ? 'bg-blue-100 text-blue-800'
+                                  : testInfo.category === 'Performance'
+                                  ? 'bg-purple-100 text-purple-800'
+                                  : 'bg-orange-100 text-orange-800'
+                              }`}
+                            >
+                              {testInfo.category.charAt(0).toUpperCase() +
+                                testInfo.category.slice(1)}
+                            </span>
                           </div>
                           <Button
                             variant='ghost'
