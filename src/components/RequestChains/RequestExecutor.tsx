@@ -535,95 +535,9 @@ export function RequestExecutor({
       return;
     }
 
-    if (processedRequests.length === 0) return;
-
-    setIsExecuting(true);
-    setCurrentRequestIndex(0);
-    setExecutionLogs([]);
-    onExecutionStateChange?.(true, 0);
-
-    const currentVars = [...allVariables];
-    const logs: ExecutionLog[] = [];
-    const newExtractedVars: Variable[] = [];
-
-    for (let i = 0; i < processedRequests.length; i++) {
-      const req = processedRequests[i];
-      if (!req.enabled) continue;
-
-      setCurrentRequestIndex(i);
-      onExecutionStateChange?.(true, i);
-
-      try {
-        const log = await executeRequest(req, currentVars);
-        logs.push(log);
-        setExecutionLogs([...logs]);
-
-        if (log.extractedVariables) {
-          Object.entries(log.extractedVariables).forEach(([name, value]) => {
-            const existingIndex = currentVars.findIndex((v) => v.name === name);
-            const newVar: Variable = {
-              id: `${Date.now()}-${Math.random()}`,
-              name,
-              value: String(value),
-              type:
-                typeof value === 'number'
-                  ? 'number'
-                  : typeof value === 'boolean'
-                  ? 'boolean'
-                  : 'string',
-              source: 'extracted',
-              extractionPath: (req.extractVariables || []).find(
-                (e) => e.name === name
-              )?.path,
-            };
-
-            if (existingIndex >= 0) {
-              currentVars[existingIndex] = {
-                ...currentVars[existingIndex],
-                ...newVar,
-              };
-            } else {
-              currentVars.push(newVar);
-              newExtractedVars.push(newVar);
-            }
-          });
-          setAllVariables([...currentVars]);
-        }
-
-        if (log.status === 'error' && req.errorHandling === 'stop') {
-          toast({
-            title: 'Execution Stopped',
-            description: `Request ${req.name} failed and chain execution was stopped.`,
-            variant: 'destructive',
-          });
-          break;
-        }
-      } catch (err: any) {
-        toast({
-          title: 'Request Execution Error',
-          description:
-            err?.message || `An error occurred in request ${req.name}.`,
-          variant: 'destructive',
-        });
-        break;
-      }
-    }
-
     setIsExecuting(false);
     setCurrentRequestIndex(-1);
-    setExtractedVariables(newExtractedVars);
-    onExecutionComplete(logs, newExtractedVars);
-    onVariableUpdate(currentVars);
     onExecutionStateChange?.(false, -1);
-
-    const successCount = logs.filter((log) => log.status === 'success').length;
-    const totalCount = logs.length;
-
-    toast({
-      title: 'Execution Complete',
-      description: `Completed ${successCount}/${totalCount} requests successfully`,
-      variant: successCount === totalCount ? 'default' : 'destructive',
-    });
 
     if (onPostExecute && currentChainId) {
       setTimeout(() => {
