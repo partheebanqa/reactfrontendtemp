@@ -9,6 +9,7 @@ import { ExecutionsTable } from '@/components/Executions/ExecutionsTable';
 import { ExecutionsPagination } from '@/components/Executions/ExecutionsPagination';
 import { ExecutionDetailsDialog } from '@/components/Executions/ExecutionDetailsDialog';
 import { MappedExecution, SavedFilter } from '@/shared/types/execution';
+import { useWorkspace } from '@/hooks/useWorkspace';
 
 const Executions = () => {
   // Pagination state
@@ -70,20 +71,29 @@ const Executions = () => {
   ];
 
   // Fetch execution data
+
+  const { currentWorkspace } = useWorkspace();
+  const workspaceId = currentWorkspace?.id;
+  
+  console.log("workspaceId", workspaceId);
+  
   const {
     data: executionData,
     isLoading,
     error,
   } = useQuery({
-    queryKey: ['executions', currentPage, itemsPerPage],
+    queryKey: ['executions', currentPage, itemsPerPage, workspaceId],
     queryFn: () =>
       executionService
         .getExecutionHistory({
           page: currentPage,
           limit: itemsPerPage,
+          workspaceId: workspaceId!, // safe since we only enable when it's truthy
         })
         .then(executionService.mapData),
+    enabled: !!workspaceId, // 👈 only run when workspaceId is available
   });
+  
 
   // Filter executions based on current filters
   const filteredExecutions = useMemo(() => {

@@ -68,15 +68,18 @@ export interface MappedExecutionResponse {
 const fetchExecutionHistory = async (params: {
   page?: number; // already converted to API's expectation
   limit?: number;
+  workspaceId: string;
 }): Promise<ApiExecutionResponse> => {
   const page = params?.page ?? 1;
   const limit = params?.limit ?? 10;
+  const workspaceId = params.workspaceId;
+
 
   const url = `${API_EXECUTOR}/execution-history?page=${encodeURIComponent(
     page
-  )}&limit=${encodeURIComponent(limit)}`;
-
-  const response = await apiRequest('GET', `${API_EXECUTOR}/execution-history`);
+  )}&limit=${encodeURIComponent(limit)}&workspace_id=${encodeURIComponent(
+    workspaceId
+  )}`;
 
   const res = await apiRequest('GET', url);
   if (!res.ok) {
