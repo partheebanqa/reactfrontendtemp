@@ -15,19 +15,29 @@ export const ExecutionDetailsDialog = ({ open, onClose, execution }: any) => {
       'execution-report',
       execution?.entityId,
       execution?.executionType,
+      execution?.id,
     ],
     queryFn: async () => {
-      if (!execution?.entityId || !execution?.executionType) return null;
+      if (!execution?.entityId || !execution?.executionType || !execution?.id)
+        return null;
 
       if (execution.executionType === 'test_suite') {
-        return await executionService.getTestSuiteReport(execution.entityId);
+        return await executionService.getTestSuiteReport(
+          execution.entityId,
+          execution.id
+        );
       } else {
         return await executionService.getRequestChainReport(
-          execution?.entityId
+          execution?.entityId,
+          execution.id
         );
       }
     },
-    enabled: open && !!execution?.entityId && !!execution?.executionType,
+    enabled:
+      open &&
+      !!execution?.entityId &&
+      !!execution?.executionType &&
+      !!execution?.id,
   });
 
   const renderTestSuiteReport = (data: any) => {

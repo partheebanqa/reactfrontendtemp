@@ -76,9 +76,6 @@ const fetchExecutionHistory = async (params: {
     page
   )}&limit=${encodeURIComponent(limit)}`;
 
-  // const response = await fetch(
-  //   `${domain}/executor/execution-history?page=${page}&limit=${limit}`
-  // );
   const response = await apiRequest('GET', `${API_EXECUTOR}/execution-history`);
 
   const res = await apiRequest('GET', url);
@@ -92,10 +89,10 @@ const fetchExecutionHistory = async (params: {
 };
 
 // Report API functions
-const getTestSuiteReport = async (testSuiteId: string) => {
+const getTestSuiteReport = async (testSuiteId: string, executionId: string) => {
   const response = await apiRequest(
     'GET',
-    `${API_REPORTS}/test-suites/${testSuiteId}`
+    `${API_REPORTS}/test-suites/${testSuiteId}?execution_id=${executionId}`
   );
 
   if (!response.ok) {
@@ -104,10 +101,13 @@ const getTestSuiteReport = async (testSuiteId: string) => {
   return response.json();
 };
 
-const getRequestChainReport = async (requestChainId: string) => {
+const getRequestChainReport = async (
+  requestChainId: string,
+  executionId: string
+) => {
   const response = await apiRequest(
     'GET',
-    `${API_REPORTS}/request-chains/${requestChainId}`
+    `${API_REPORTS}/request-chains/${requestChainId}?execution_id=${executionId}`
   );
   if (!response.ok) {
     throw new Error('Failed to fetch request chain report');
