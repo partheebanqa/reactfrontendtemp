@@ -10,20 +10,24 @@ type KV =
 
 function normalize(input: KV): Record<string, string> {
   if (!input) return {};
+
+  const result: Record<string, string> = {};
+
   if (Array.isArray(input)) {
-    return input.reduce<Record<string, string>>((acc, item) => {
+    input.forEach((item) => {
       const k = String(item?.name ?? '');
       const v = item?.value;
-      acc[k] =
+      result[k] =
         v == null ? '' : typeof v === 'object' ? JSON.stringify(v) : String(v);
-      return acc;
-    }, {});
+    });
+  } else {
+    Object.entries(input).forEach(([k, v]) => {
+      result[String(k)] =
+        v == null ? '' : typeof v === 'object' ? JSON.stringify(v) : String(v);
+    });
   }
-  return Object.entries(input).reduce<Record<string, string>>((acc, [k, v]) => {
-    acc[String(k)] =
-      v == null ? '' : typeof v === 'object' ? JSON.stringify(v) : String(v);
-    return acc;
-  }, {});
+
+  return result;
 }
 
 interface VariablesAndDataFlowProps {
@@ -45,19 +49,15 @@ const VariablesAndDataFlow = ({
     } catch {}
   };
 
-  const Row = ({
-    k,
-    v,
-    bg,
-  }: {
-    k: string;
-    v: string;
-    bg: string;
-  }) => (
-    <div className={`flex justify-between items-center ${bg} px-3 py-2 rounded-md`}>
+  const Row = ({ k, v, bg }: { k: string; v: string; bg: string }) => (
+    <div
+      className={`flex justify-between items-center ${bg} px-3 py-2 rounded-md`}
+    >
       <span className='text-gray-700 font-medium mr-2 truncate'>{k}</span>
       <div className='flex items-center gap-1 min-w-0'>
-        <span className='text-gray-600 truncate max-w-[60%] text-right'>{v}</span>
+        <span className='text-gray-600 truncate max-w-[60%] text-right'>
+          {v}
+        </span>
         <Button
           variant='ghost'
           size='icon'
@@ -91,7 +91,9 @@ const VariablesAndDataFlow = ({
         <div className='flex flex-col md:flex-row divide-y md:divide-y-0 md:divide-x border-t text-sm'>
           {/* Global Variables */}
           <div className='w-full md:w-1/2 p-5'>
-            <h3 className='font-semibold mb-2 text-gray-700'>Global Variables</h3>
+            <h3 className='font-semibold mb-2 text-gray-700'>
+              Global Variables
+            </h3>
             <div className='space-y-2'>
               {Object.keys(globals).length === 0 ? (
                 <div className='text-xs text-gray-500 italic bg-gray-50 p-2 rounded border border-dashed'>
@@ -107,7 +109,9 @@ const VariablesAndDataFlow = ({
 
           {/* Extracted Variables */}
           <div className='w-full md:w-1/2 p-5'>
-            <h3 className='font-semibold mb-2 text-gray-700'>Extracted Variables</h3>
+            <h3 className='font-semibold mb-2 text-gray-700'>
+              Extracted Variables
+            </h3>
             <div className='space-y-2'>
               {Object.keys(extracted).length === 0 ? (
                 <div className='text-xs text-gray-500 italic bg-gray-50 p-2 rounded border border-dashed'>

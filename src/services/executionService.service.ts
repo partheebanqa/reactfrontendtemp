@@ -68,18 +68,18 @@ export interface MappedExecutionResponse {
 const fetchExecutionHistory = async (params: {
   page?: number; // already converted to API's expectation
   limit?: number;
+  workspaceId: string;
 }): Promise<ApiExecutionResponse> => {
   const page = params?.page ?? 1;
   const limit = params?.limit ?? 10;
+  const workspaceId = params.workspaceId;
+
 
   const url = `${API_EXECUTOR}/execution-history?page=${encodeURIComponent(
     page
-  )}&limit=${encodeURIComponent(limit)}`;
-
-  // const response = await fetch(
-  //   `${domain}/executor/execution-history?page=${page}&limit=${limit}`
-  // );
-  const response = await apiRequest('GET', `${API_EXECUTOR}/execution-history`);
+  )}&limit=${encodeURIComponent(limit)}&workspace_id=${encodeURIComponent(
+    workspaceId
+  )}`;
 
   const res = await apiRequest('GET', url);
   if (!res.ok) {
@@ -92,10 +92,10 @@ const fetchExecutionHistory = async (params: {
 };
 
 // Report API functions
-const getTestSuiteReport = async (testSuiteId: string) => {
+const getTestSuiteReport = async (testSuiteId: string, executionId: string) => {
   const response = await apiRequest(
     'GET',
-    `${API_REPORTS}/test-suites/${testSuiteId}`
+    `${API_REPORTS}/test-suites/${testSuiteId}?execution_id=${executionId}`
   );
 
   if (!response.ok) {
@@ -104,10 +104,13 @@ const getTestSuiteReport = async (testSuiteId: string) => {
   return response.json();
 };
 
-const getRequestChainReport = async (requestChainId: string) => {
+const getRequestChainReport = async (
+  requestChainId: string,
+  executionId: string
+) => {
   const response = await apiRequest(
     'GET',
-    `${API_REPORTS}/request-chains/${requestChainId}`
+    `${API_REPORTS}/request-chains/${requestChainId}?execution_id=${executionId}`
   );
   if (!response.ok) {
     throw new Error('Failed to fetch request chain report');

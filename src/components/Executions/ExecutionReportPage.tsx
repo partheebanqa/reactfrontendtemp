@@ -18,7 +18,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { formatDistanceToNow, isValid } from 'date-fns';
-import { Button } from '../ui/button';
+import { Button } from '@/components/ui/button';
 
 type RouteParams = {
   type: 'test_suite' | 'request_chain';
@@ -34,7 +34,7 @@ const useQueryParams = () => {
 const safeExecutedAt = (startedQS: string | null): string => {
   if (!startedQS) return 'Unknown';
 
-  // If it’s numeric (epoch ms), use Number; otherwise try to construct from string
+  // If it's numeric (epoch ms), use Number; otherwise try to construct from string
   const asNumber = Number(startedQS);
   const date =
     Number.isFinite(asNumber) && startedQS.trim() !== ''
@@ -50,16 +50,17 @@ const ExecutionReportPage: React.FC = () => {
   const qs = useQueryParams();
   const environment = qs.get('env') || 'Unknown';
   const started = qs.get('started'); // string | null
+  const executionId = qs.get('executionId');
 
   const { data: reportData, isLoading } = useQuery({
-    queryKey: ['execution-report', entityId, type],
+    queryKey: ['execution-report', entityId, type, executionId],
     queryFn: () => {
-      if (!entityId || !type) return null;
+      if (!entityId || !type || !executionId) return null;
       return type === 'test_suite'
-        ? executionService?.getTestSuiteReport(entityId)
-        : executionService?.getRequestChainReport(entityId);
+        ? executionService?.getTestSuiteReport(entityId, executionId)
+        : executionService?.getRequestChainReport(entityId, executionId);
     },
-    enabled: !!entityId && !!type,
+    enabled: !!entityId && !!type && !!executionId,
   });
 
   const renderTestSuiteReport = (data: any) => {
@@ -309,7 +310,6 @@ const ExecutionReportPage: React.FC = () => {
 
   return (
     <div className='mx-auto p-1 sm:p-1'>
-    
       <header className='border border-gray-200 bg-background rounded-lg px-6 py-4 animate-fade-in'>
         <div className='flex items-center justify-between'>
           <div>

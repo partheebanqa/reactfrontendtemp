@@ -11,8 +11,8 @@ interface ExecutionMeta {
 interface Stat {
   value: string;
   label: string;
-  bgColor: string; // e.g., 'bg-[#F5F8FF]'
-  textColor: string; // e.g., 'text-blue-800'
+  bgColor: string;
+  textColor: string;
 }
 
 export interface AnalyticsReportProps {
