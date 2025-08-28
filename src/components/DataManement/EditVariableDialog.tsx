@@ -34,6 +34,8 @@ const EditVariableDialog: React.FC<Props> = ({
   onSave,
   setOpen,
 }) => {
+  console.log('editingVariable:', editingVariable);
+
   const handleChange = (field: keyof Variable, value: any) => {
     if (editingVariable) {
       setEditingVariable({
@@ -71,7 +73,6 @@ const EditVariableDialog: React.FC<Props> = ({
 
             {/* Type */}
 
-            
             <div>
               <label className='text-sm font-medium'>Variable Type</label>
               <Select
