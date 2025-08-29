@@ -1001,7 +1001,7 @@ export function RequestChainEditor({
             </CardContent>
           </Card>
 
-          {/* 2. Requests and Extracted Variables Box */}
+          {/* 2. Requests and Extracted Variables Boxs */}
           <Card>
             <CardHeader>
               <CardTitle>Requests and Extracted Variables</CardTitle>
