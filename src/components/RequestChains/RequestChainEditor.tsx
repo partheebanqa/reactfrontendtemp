@@ -1030,7 +1030,7 @@ export function RequestChainEditor({
                           <Info className='w-4 h-4 cursor-pointer text-muted-foreground' />
                         </TooltipTrigger>
                         <TooltipContent>
-                          View all variables extracted from this request.
+                          View all variables extracted for the request chain.
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>

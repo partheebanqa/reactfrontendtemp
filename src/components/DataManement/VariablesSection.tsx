@@ -16,12 +16,17 @@ import { useDataManagement } from '@/hooks/useDataManagement';
 import { useToast } from '@/hooks/useToast';
 import PaginationControls from '@/admin/PaginationControls';
 
-
-
 const VariablesSection: React.FC = () => {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
-  const { environments, variables, setVariables, createVariableMutation, deletedVariableMutation, updateVariableMutation } = useDataManagement();
+  const {
+    environments,
+    variables,
+    setVariables,
+    createVariableMutation,
+    deletedVariableMutation,
+    updateVariableMutation,
+  } = useDataManagement();
   const [editingVariable, setEditingVariable] = useState<Variable | null>(null);
   const [newVariable, setNewVariable] = useState<Variable>({
     id: '',
@@ -35,7 +40,7 @@ const VariablesSection: React.FC = () => {
     updatedAt: '',
     deletedAt: null,
     value: '',
-    scope: 'global', 
+    scope: 'global',
     isGlobal: false,
     isSecret: false,
   });
@@ -48,44 +53,47 @@ const VariablesSection: React.FC = () => {
 
   const handleCreate = async () => {
     try {
-
       let finalName = newVariable.name;
 
       if (newVariable.type === 'static' && !newVariable.name.startsWith('S_')) {
         finalName = `S_${newVariable.name}`;
-      } else if (newVariable.type === 'dynamic' && !newVariable.name.startsWith('D_')) {
+      } else if (
+        newVariable.type === 'dynamic' &&
+        !newVariable.name.startsWith('D_')
+      ) {
         finalName = `D_${newVariable.name}`;
       }
 
       await createVariableMutation.mutateAsync({
         environmentId: newVariable.environmentId,
-        name:finalName,
+        name: finalName,
         description: newVariable.description,
         type: newVariable.type,
         initialValue: newVariable.initialValue,
         currentValue: newVariable.currentValue,
       });
-
     } catch (error: any) {
-      errorToast(error instanceof Error ? error.message : 'Failed to create variable');
+      errorToast(
+        error instanceof Error ? error.message : 'Failed to create variable'
+      );
       return;
     }
     setNewVariable({
-          id: '',
-          environmentId: '',
-          name: '',
-          description: '',
-          type: 'string',
-          initialValue: '',
-          currentValue: '',
-          createdAt: '',
-          updatedAt: '',
-          deletedAt: null,
-          value: '',
-          scope: 'global', 
-          isGlobal: false,
-          isSecret: false,
-        });
+      id: '',
+      environmentId: '',
+      name: '',
+      description: '',
+      type: 'string',
+      initialValue: '',
+      currentValue: '',
+      createdAt: '',
+      updatedAt: '',
+      deletedAt: null,
+      value: '',
+      scope: 'global',
+      isGlobal: false,
+      isSecret: false,
+    });
     setIsCreateOpen(false);
   };
 
@@ -94,31 +102,33 @@ const VariablesSection: React.FC = () => {
       if (editingVariable) {
         updateVariableMutation.mutate({
           ...editingVariable,
-          updatedAt: new Date().toISOString()
+          updatedAt: new Date().toISOString(),
         });
       }
       setEditingVariable(null);
       setIsEditOpen(false);
-      
     } catch (error: any) {
-      errorToast(error instanceof Error ? error.message : 'Failed to update variable');
+      errorToast(
+        error instanceof Error ? error.message : 'Failed to update variable'
+      );
       return;
     }
-
   };
-
 
   const handleDelete = async (id: string, label: string) => {
     try {
       await deletedVariableMutation.mutateAsync(id);
     } catch (error) {
-      errorToast(error instanceof Error ? error.message : 'Failed to delete variable');
+      errorToast(
+        error instanceof Error ? error.message : 'Failed to delete variable'
+      );
       return;
     }
   };
 
   const handleCopy = (text: string) => {
-    navigator.clipboard.writeText(text);
+    const formatted = `{{${text}}}`;
+    navigator.clipboard.writeText(formatted);
     successToast('Variable copied to clipboard');
   };
 
@@ -128,8 +138,7 @@ const VariablesSection: React.FC = () => {
         v.name.toLowerCase().includes(search.toLowerCase()) ||
         v.description?.toLowerCase().includes(search.toLowerCase());
       const matchesEnv =
-        environmentFilter === 'all' ||
-        v.environmentId === environmentFilter;
+        environmentFilter === 'all' || v.environmentId === environmentFilter;
       const matchesType = typeFilter === 'all' || v.type === typeFilter;
       return matchesSearch && matchesEnv && matchesType;
     });
@@ -225,10 +234,12 @@ const VariablesSection: React.FC = () => {
       </div>
 
       {filteredVariables.length > 0 && (
-        <div className="mt-6">
-          <div className="flex justify-between items-center mb-2">
-            <div className="text-sm text-muted-foreground">
-              Showing {startIndex + 1} to {Math.min(endIndex, filteredVariables.length)} of {filteredVariables.length} variables
+        <div className='mt-6'>
+          <div className='flex justify-between items-center mb-2'>
+            <div className='text-sm text-muted-foreground'>
+              Showing {startIndex + 1} to{' '}
+              {Math.min(endIndex, filteredVariables.length)} of{' '}
+              {filteredVariables.length} variables
             </div>
             <Select
               value={itemsPerPage.toString()}
@@ -237,15 +248,15 @@ const VariablesSection: React.FC = () => {
                 setCurrentPage(1);
               }}
             >
-              <SelectTrigger className="w-[140px]">
-                <SelectValue placeholder="Items per page" />
+              <SelectTrigger className='w-[140px]'>
+                <SelectValue placeholder='Items per page' />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="5">5 per page</SelectItem>
-                <SelectItem value="10">10 per page</SelectItem>
-                <SelectItem value="20">20 per page</SelectItem>
-                <SelectItem value="50">50 per page</SelectItem>
-                <SelectItem value="100">100 per page</SelectItem>
+                <SelectItem value='5'>5 per page</SelectItem>
+                <SelectItem value='10'>10 per page</SelectItem>
+                <SelectItem value='20'>20 per page</SelectItem>
+                <SelectItem value='50'>50 per page</SelectItem>
+                <SelectItem value='100'>100 per page</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -258,8 +269,10 @@ const VariablesSection: React.FC = () => {
       )}
 
       {filteredVariables.length === 0 && (
-        <div className="text-center p-8">
-          <p className="text-muted-foreground">No variables found with the current filters.</p>
+        <div className='text-center p-8'>
+          <p className='text-muted-foreground'>
+            No variables found with the current filters.
+          </p>
         </div>
       )}
 
