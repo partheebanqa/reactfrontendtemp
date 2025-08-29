@@ -748,7 +748,6 @@ export function RequestChainEditor({
 
       const transformedRequests: APIRequest[] = importedRequests.map((req) => {
         // Handle body data
-        // Handle body data
         const hasBody = req.bodyRawContent && req.bodyRawContent.trim() !== '';
         const bodyType: APIRequest['bodyType'] = hasBody
           ? (req.bodyType as APIRequest['bodyType']) || 'raw'
@@ -820,27 +819,29 @@ export function RequestChainEditor({
             (req.errorHandling as APIRequest['errorHandling']) || 'stop',
           extractVariables: req.extractVariables || [],
           testScripts: req.testScripts || [],
-          enabled: req.enabled !== false,
         };
       });
 
-      setFormData((prev) => ({
-        ...prev,
-        chainRequests: [...(prev.chainRequests || []), ...transformedRequests],
-      }));
+      const newExpandedRequests = new Set(expandedRequests);
+      // Don't add imported request IDs to expandedRequests, keeping them collapsed by default
 
-      setExpandedRequests(
-        (prev) => new Set([...prev, ...transformedRequests.map((r) => r.id)])
-      );
+      setFormData({
+        ...formData,
+        chainRequests: [
+          ...(formData.chainRequests || []),
+          ...transformedRequests,
+        ],
+      });
+
+      // Keep expandedRequests unchanged so new requests remain collapsed
+      setExpandedRequests(newExpandedRequests);
 
       toast({
         title: 'Import Successful',
-        description: `Successfully imported ${transformedRequests.length} requests with full configuration.`,
+        description: `Successfully imported ${importedRequests.length} requests`,
       });
-
-      setIsImportModalOpen(false);
     } catch (error) {
-      console.error('Import failed:', error);
+      console.error('Error importing requests:', error);
       toast({
         title: 'Import Failed',
         description: 'Failed to import requests. Please try again.',
@@ -1000,7 +1001,7 @@ export function RequestChainEditor({
             </CardContent>
           </Card>
 
-          {/* 2. Requests and Extracted Variables Box */}
+          {/* 2. Requests and Extracted Variables Boxs */}
           <Card>
             <CardHeader>
               <CardTitle>Requests and Extracted Variables</CardTitle>
@@ -1029,7 +1030,7 @@ export function RequestChainEditor({
                           <Info className='w-4 h-4 cursor-pointer text-muted-foreground' />
                         </TooltipTrigger>
                         <TooltipContent>
-                          View all variables extracted from this request.
+                          View all variables extracted for the request chain.
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>

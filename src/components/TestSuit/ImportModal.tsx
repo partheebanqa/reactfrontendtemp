@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState } from 'react';
 import {
   Dialog,
@@ -12,7 +14,7 @@ import { Search, ChevronDown, ChevronUp, Check, Upload } from 'lucide-react';
 import { MethodBadge } from './MethodBadge';
 import { useQuery } from '@tanstack/react-query';
 import { getCollectionsWithRequests } from '@/services/collection.service';
-import {
+import type {
   ExtendedRequest,
   TransformedCollection,
 } from '@/models/collection.model';
@@ -75,11 +77,11 @@ export const ImportModal: React.FC<ImportModalProps> = ({
     }));
   }, [apiData]);
 
-  React.useEffect(() => {
-    if (collections.length > 0 && expandedCollections.length === 0) {
-      setExpandedCollections(collections.map((c) => c.id));
-    }
-  }, [collections, expandedCollections.length]);
+  // React.useEffect(() => {
+  //   if (collections.length > 0 && expandedCollections.length === 0) {
+  //     setExpandedCollections(collections.map((c) => c.id));
+  //   }
+  // }, [collections, expandedCollections.length]);
 
   console.log('collections:', collections);
 
@@ -183,15 +185,104 @@ export const ImportModal: React.FC<ImportModalProps> = ({
           } else if (item.request) {
             const method = item.request.method;
             const url = item.request.url?.raw || item.request.url;
+
+            // Extract headers
+            const headers = item.request.header
+              ? item.request.header.map((h: any) => ({
+                  id: `header_${Date.now()}_${Math.random()}`,
+                  key: h.key || '',
+                  value: h.value || '',
+                  enabled: !h.disabled,
+                }))
+              : [];
+
+            // Extract query parameters
+            const params = item.request.url?.query
+              ? item.request.url.query.map((q: any) => ({
+                  id: `param_${Date.now()}_${Math.random()}`,
+                  key: q.key || '',
+                  value: q.value || '',
+                  enabled: !q.disabled,
+                }))
+              : [];
+
+            // Extract body
+            let bodyRawContent = '';
+            let bodyType = 'none';
+            if (item.request.body) {
+              if (item.request.body.mode === 'raw') {
+                bodyRawContent = item.request.body.raw || '';
+                bodyType = 'raw';
+              } else if (item.request.body.mode === 'formdata') {
+                bodyType = 'form-data';
+                // Convert form-data to a readable format
+                if (item.request.body.formdata) {
+                  bodyRawContent = item.request.body.formdata
+                    .map((fd: any) => `${fd.key}: ${fd.value || fd.src || ''}`)
+                    .join('\n');
+                }
+              } else if (item.request.body.mode === 'urlencoded') {
+                bodyType = 'x-www-form-urlencoded';
+                if (item.request.body.urlencoded) {
+                  bodyRawContent = item.request.body.urlencoded
+                    .map((ue: any) => `${ue.key}=${ue.value || ''}`)
+                    .join('&');
+                }
+              }
+            }
+
+            // Extract authorization
+            let authorizationType = 'none';
+            let authorization: any = {};
+            if (item.request.auth) {
+              const authType = item.request.auth.type;
+              if (authType === 'bearer') {
+                authorizationType = 'bearer';
+                authorization = {
+                  token: item.request.auth.bearer?.[0]?.value || '',
+                };
+              } else if (authType === 'basic') {
+                authorizationType = 'basic';
+                authorization = {
+                  username:
+                    item.request.auth.basic?.find(
+                      (b: any) => b.key === 'username'
+                    )?.value || '',
+                  password:
+                    item.request.auth.basic?.find(
+                      (b: any) => b.key === 'password'
+                    )?.value || '',
+                };
+              } else if (authType === 'apikey') {
+                authorizationType = 'apikey';
+                const keyData = item.request.auth.apikey || [];
+                authorization = {
+                  key: keyData.find((k: any) => k.key === 'key')?.value || '',
+                  value:
+                    keyData.find((k: any) => k.key === 'value')?.value || '',
+                  addTo:
+                    keyData.find((k: any) => k.key === 'in')?.value || 'header',
+                };
+              }
+            }
+
             requests.push({
-              id: `${item.name}-${method}`,
+              id: `${item.name}-${method}-${Date.now()}`,
               name: item.name,
               method,
               url,
               endpoint: url,
               folderName: folder,
               testCases: { functional: 0, total: 0 },
-              description: '',
+              description: item.request.description || '',
+              headers,
+              params,
+              bodyRawContent,
+              bodyType,
+              authorizationType,
+              authorization,
+              timeout: 5000,
+              retries: 0,
             });
           }
         }
