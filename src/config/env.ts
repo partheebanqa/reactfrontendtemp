@@ -1,7 +1,12 @@
 // Environment configuration for the client application
 export const ENV = {
   // API Configuration
-  API_BASE_URL: import.meta.env.VITE_API_BASE_URL || window.location.origin,
+ API_BASE_URL:
+    import.meta.env.VITE_API_BASE_URL ||
+    "https://apibackenddev.onrender.com" ||
+    window.location.origin,
+  // Authentication
+  AUTH_PROVIDER: import.meta.env.VITE_AUTH_PROVIDER || "replit",
 
   // Feature Flags
   ENABLE_BETA_FEATURES: import.meta.env.VITE_ENABLE_BETA_FEATURES === "true",

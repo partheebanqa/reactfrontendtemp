@@ -1,5 +1,5 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { apiRequest } from '@/lib/queryClient';
+import { apiRequest, queryClient } from '@/lib/queryClient';
 import {
   getEncryptedCookie,
   setEncryptedCookie,
@@ -8,13 +8,14 @@ import {
 import { USER_COOKIE_NAME } from '@/lib/constants';
 import { authActions } from '../authStore';
 import { User, ILoginResponse } from '@/shared/types/auth';
-import { queryClient } from '@/lib/queryClient';
 import {
   changePasswordApi,
   loginApi,
   logoutApi,
   refreshUserData,
   registerApi,
+  forgotPasswordApi,
+  resetPasswordApi,
 } from '@/services/auth.service';
 import { DeactivationFormData } from '@/components/settings/AccountDeactivation';
 import { clearAllClientStorage } from '@/utils/logoutCacheClear';
@@ -68,7 +69,6 @@ export const useLoginMutation = () => {
         error instanceof Error
           ? error.message
           : 'An unexpected error occurred during login';
-
       console.error('Login error:', errorMessage);
       throw new Error(errorMessage);
     },
@@ -78,20 +78,19 @@ export const useLoginMutation = () => {
 // Logout mutation
 export const useLogoutMutation = () => {
   return useMutation({
-    mutationFn: logoutApi, // can be a dummy or no-op function
+    mutationFn: logoutApi,
     onSuccess: async () => {
       removeCookie(USER_COOKIE_NAME);
       authActions.clearAuth();
-      clearAllClientStorage(); // ✅ Clear local/session storage
-
+      clearAllClientStorage();
       await queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
       queryClient.clear();
     },
-    onError: async (error: any) => {
+    onError: async () => {
+      // Ensure full client-side logout even if server logout fails
       removeCookie(USER_COOKIE_NAME);
       authActions.clearAuth();
-      clearAllClientStorage(); // ✅ Ensure it also clears on error
-
+      clearAllClientStorage();
       await queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
     },
   });
@@ -111,8 +110,7 @@ export const useRegisterMutation = () => {
         error instanceof Error
           ? error.message
           : 'An unexpected error occurred during registration';
-
-      console.error('Registration erroraa:', errorMessage);
+      console.error('Registration error:', errorMessage);
       throw new Error(errorMessage);
     },
   });
@@ -134,10 +132,7 @@ export const useUpdateProfileMutation = () => {
     },
     onSuccess: async (data) => {
       if (data?.user) {
-        // Update user in store
         authActions.setUser(data.user);
-
-        // Update in queries
         await queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
       }
     },
@@ -155,6 +150,33 @@ export const useChangePasswordMutation = () => {
   });
 };
 
+// NEW: Forgot password mutation
+export const useForgotPasswordMutation = () => {
+  return useMutation({
+    mutationFn: forgotPasswordApi,
+    onError: (error: any) => {
+      const msg = error instanceof Error ? error.message : 'Unexpected error';
+      console.error('Forgot password error:', msg);
+      throw new Error(msg);
+    },
+  });
+};
+
+// NEW: Reset password mutation
+export const useResetPasswordMutation = () => {
+  return useMutation({
+    mutationFn: resetPasswordApi,
+    onSuccess: () => {
+      console.log('Password reset successful');
+    },
+    onError: (error: any) => {
+      const msg = error instanceof Error ? error.message : 'Unexpected error';
+      console.error('Reset password error:', msg);
+      throw new Error(msg);
+    },
+  });
+};
+
 export const useDeactiveAccountMutation = () => {
   return useMutation({
     mutationFn: async (data: DeactivationFormData) => {
@@ -166,18 +188,14 @@ export const useDeactiveAccountMutation = () => {
       return response.json();
     },
     onSuccess: () => {
-      toast({
-        title: 'Account deactivated',
-        description: 'Your account has been successfully deactivated.',
-      });
-      setIsDeactivationDialogOpen(false);
-      // Redirect to login or home page
+      // UI side-effects can be handled by caller if needed
       window.location.href = '/';
     },
   });
 };
 
-const filterUserData = (user) => {
+const filterUserData = (user: any) => {
+  if (!user) return null;
   return {
     id: user.Id,
     firstName: user.firstName,

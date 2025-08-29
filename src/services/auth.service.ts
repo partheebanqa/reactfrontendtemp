@@ -4,6 +4,8 @@ import {
   API_LOGOUT,
   API_PASSWORD_CHANGE,
   API_REGISTER,
+  API_FORGOT_PASSWORD,
+  API_RESET_PASSWORD,
 } from "@/config/apiRoutes";
 import { apiRequest } from "@/lib/queryClient";
 import { ILoginResponse, SingUpForm, User } from "@/shared/types/auth";
@@ -15,7 +17,7 @@ export const refreshUserData = async () => {
       throw new Error(`${res.status}: ${res.statusText}`);
     }
     return res.json();
-  } catch (error) {
+  } catch {
     return null;
   }
 };
@@ -37,7 +39,6 @@ export const loginApi = async (credentials: {
 
 export const logoutApi = async () => {
   try {
-    // Make the logout request
     const response = await apiRequest("POST", API_LOGOUT);
     if (!response.ok) {
       throw new Error(`Logout failed with status: ${response.status}`);
@@ -76,6 +77,32 @@ export const changePasswordApi = async (passwordData: {
   });
   if (!response.ok) {
     throw new Error("Failed to change password");
+  }
+  return response.json();
+};
+
+// NEW: Forgot Password (send reset link)
+export const forgotPasswordApi = async (email: string) => {
+  const response = await apiRequest("POST", API_FORGOT_PASSWORD, {
+    body: JSON.stringify({ email }),
+  });
+  // Do not disclose existence of email; backend should return 200 in all cases
+  if (!response.ok) {
+    throw new Error("Failed to send reset email");
+  }
+  return response.json();
+};
+
+// NEW: Reset Password (use token from email)
+export const resetPasswordApi = async (data: {
+  token: string;
+  newPassword: string;
+}) => {
+  const response = await apiRequest("POST", API_RESET_PASSWORD, {
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) {
+    throw new Error("Failed to reset password");
   }
   return response.json();
 };
