@@ -38,6 +38,7 @@ import RequestChainReport from '@/pages/RequestChainReport';
 import TestSuiteReport from '@/pages/TestSuiteReport';
 import { ExecutionDetailsDialog } from '@/components/Executions/ExecutionDetailsDialog';
 import ExecutionReportPage from '@/components/Executions/ExecutionReportPage';
+import FAQ from '@/pages/FAQ';
 
 export default function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -83,6 +84,7 @@ export default function Router() {
           <Route path="/executions/report/:type/:entityId" component={ExecutionReportPage} />
           <Route path='/request-chain-reports' component={RequestChainReport} />
           <Route path='/test-suite-reports' component={TestSuiteReport} />
+          <Route path='/faq' component={FAQ} />
         </AppLayout>
       )}
       <Route path='/pricing' component={Pricing} />

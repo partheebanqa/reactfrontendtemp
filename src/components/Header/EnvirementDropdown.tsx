@@ -43,8 +43,10 @@ export default function EnvironmentDropdown({
   setEnvironmentModalState,
   handleDeleteEnvironment,
 }: EnvironmentDropdownProps): ReactElement {
-  const { environments, activeEnvironment, setActiveEnvironment, variables } =
-    useDataManagement();
+  const { environments, activeEnvironment, setActiveEnvironment, variables } =useDataManagement();
+
+  // console.log('Environments:', environments);
+  // console.log('Active Environment:', activeEnvironment);
 
   const [_, setLocation] = useLocation();
 

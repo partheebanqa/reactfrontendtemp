@@ -32,6 +32,8 @@ import {
 } from '@/components/ui/popover';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
+import { useMemo } from 'react';
+import { useDataManagement } from '@/hooks/useDataManagement';
 
 export interface SavedFilter {
   id: string;
@@ -76,6 +78,8 @@ interface ExecutionsFiltersProps {
   durationRange: { min: number; max: number };
   setDurationRange: (range: { min: number; max: number }) => void;
   clearAllFilters: () => void;
+  handleDeleteEnvironment: (environmentId: string) => void;
+ 
 }
 
 export const ExecutionsFilters = ({
@@ -103,7 +107,17 @@ export const ExecutionsFilters = ({
   durationRange,
   setDurationRange,
   clearAllFilters,
+  handleDeleteEnvironment,
+
 }: ExecutionsFiltersProps) => {
+
+  const { environments } = useDataManagement();
+  const envOptions = useMemo(() => {
+    const set = new Set<string>();
+    environments?.forEach(e => e?.name && set.add(e.name));
+    return ['all', ...Array.from(set).sort((a,b)=>a.localeCompare(b))];
+  }, [environments]);
+ 
   return (
     <div className='mb-6 space-y-4'>
       {/* Quick Filters */}
@@ -169,7 +183,7 @@ export const ExecutionsFilters = ({
 
         {/* Dropdowns */}
         <div className='flex flex-wrap gap-3 items-center'>
-          <Select
+          {/* <Select
             value={environmentFilter}
             onValueChange={setEnvironmentFilter}
           >
@@ -182,6 +196,29 @@ export const ExecutionsFilters = ({
               <SelectItem value='development'>Development</SelectItem>
               <SelectItem value='staging'>Staging</SelectItem>
               <SelectItem value='production'>Production</SelectItem>
+            </SelectContent>
+          </Select> */}
+           
+           <Select
+            value={environmentFilter}
+            onValueChange={setEnvironmentFilter}
+          >
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder="All environments" />
+            </SelectTrigger>
+            <SelectContent>
+              {envOptions.map((name) => (
+                <SelectItem key={name} value={name}>
+                  {name === 'all' ? (
+                    'All'
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      
+                      <span>{name}</span>
+                    </div>
+                  )}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
 
