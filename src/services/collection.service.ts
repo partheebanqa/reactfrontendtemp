@@ -113,13 +113,9 @@ export const renameCollection = async ({
   name: string;
 }) => {
   try {
-    const response = await apiRequest(
-      'PUT',
-      `${API_COLLECTIONS}/${id}/rename`,
-      {
-        body: JSON.stringify({ name: name }),
-      }
-    );
+    const response = await apiRequest('PUT', `${API_COLLECTIONS}/${id}`, {
+      body: JSON.stringify({ name: name }),
+    });
     if (!response.ok) {
       throw new Error('Failed to rename collection');
     }
@@ -269,7 +265,7 @@ export const renameRequest = async ({
   try {
     const response = await apiRequest(
       'PUT',
-      `${API_COLLECTION_REQUESTS}/${requestId}/rename`,
+      `${API_COLLECTION_REQUESTS}/${requestId}`,
       {
         body: newName ? JSON.stringify({ name: newName }) : undefined,
       }
