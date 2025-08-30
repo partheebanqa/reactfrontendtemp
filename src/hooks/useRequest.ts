@@ -6,14 +6,13 @@ import { useRequestStore, requestActions } from '@/store/requestStore';
  */
 export function useRequest() {
   // Get request state from store
-  const { requestData,isLoading,responseData,error } = useRequestStore();
+  const { requestData, isLoading, responseData, error } = useRequestStore();
 
   const clearError = requestActions.clearError;
   const setRequestData = requestActions.updateRequestData;
   const setResponseData = requestActions.setResponseData;
   const setLoading = requestActions.setIsLoading;
   const setError = requestActions.setError;
-
 
   return {
     requestData,
@@ -26,6 +25,5 @@ export function useRequest() {
     setResponseData,
     setLoading,
     setError,
-  }
-  
+  };
 }
