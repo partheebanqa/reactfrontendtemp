@@ -207,26 +207,30 @@ const Sidebar: React.FC = () => {
     }
   };
 
-  const handleDeleteCollection = async () => {
-    if (!selectedCollection) return;
+// Add proper async handling
+const handleDeleteCollection = async () => {
+  if (!selectedCollection) return;
 
-    try {
-      await deleteCollectionMutation.mutateAsync(selectedCollection.id);
+  try {
+    await deleteCollectionMutation.mutateAsync(selectedCollection.id);
+    setShowMenu(null);
+    setSelectedCollection(null); // Clear selection after delete
+    
+    toast({
+      title: "Collection deleted",
+      description: "The collection has been successfully deleted",
+      variant: "success",
+    });
+  } catch (error) {
+    console.error("Error deleting collection:", error);
+    toast({
+      title: "Error",
+      description: "Failed to delete the collection. Please try again.",
+      variant: "destructive",
+    });
+  }
+};
 
-      toast({
-        title: "Collection deleted",
-        description: "The collection has been successfully deleted",
-        variant: "success",
-      });
-    } catch (error) {
-      console.error("Error deleting collection:", error);
-      toast({
-        title: "Error",
-        description: "Failed to delete the collection. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
 
   const handleExportCollection = async (collection: Collection) => {
     try {
@@ -388,32 +392,37 @@ const Sidebar: React.FC = () => {
   };
 
   // URL parsing helper functions
-  const getProtocol = (url: string): string[] => {
-    try {
-      const match = url.match(/^(https?):\/\//);
-      return match ? [match[1]] : [];
-    } catch (e) {
-      return [];
-    }
-  };
+// Add try-catch to URL parsing functions
+const getProtocol = (url: string): string[] => {
+  try {
+    const urlObj = new URL(url);
+    return [urlObj.protocol.replace(':', '')];
+  } catch (e) {
+    const match = url.match(/^(https?):\/\//);
+    return match ? [match[1]] : [];
+  }
+};
 
-  const getHost = (url: string): string[] => {
-    try {
-      const match = url.match(/^(?:https?:\/\/)?([^\/]+)/i);
-      return match ? match[1].split(".") : [];
-    } catch (e) {
-      return [];
-    }
-  };
+const getHost = (url: string): string[] => {
+  try {
+    const urlObj = new URL(url);
+    return urlObj.hostname.split('.');
+  } catch (e) {
+    const match = url.match(/^(?:https?:\/\/)?([^\/]+)/i);
+    return match ? match[1].split('.') : [];
+  }
+};
 
-  const getPath = (url: string): string[] => {
-    try {
-      const match = url.match(/^(?:https?:\/\/)?[^\/]+(\/[^?#]*)/i);
-      return match && match[1] ? match[1].split("/").filter(Boolean) : [];
-    } catch (e) {
-      return [];
-    }
-  };
+const getPath = (url: string): string[] => {
+  try {
+    const urlObj = new URL(url);
+    return urlObj.pathname.split('/').filter(Boolean);
+  } catch (e) {
+    const match = url.match(/^(?:https?:\/\/)?[^\/]+(\/[^?#]*)/i);
+    return match && match[1] ? match[1].split('/').filter(Boolean) : [];
+  }
+};
+
 
   const getAuthDetails = (request: CollectionRequest) => {
     switch (request.authorizationType) {

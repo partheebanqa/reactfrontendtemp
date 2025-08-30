@@ -1,46 +1,29 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Mail, ArrowLeft, CheckCircle } from "lucide-react";
-import { apiRequest } from "@/lib/queryClient";
+import { useForgotPasswordMutation } from "@/store/query/authQuery";
 
 export default function ForgotPassword() {
   const [, setLocation] = useLocation();
   const [email, setEmail] = useState("");
   const [isSubmitted, setIsSubmitted] = useState(false);
 
-  const resetMutation = useMutation({
-    mutationFn: async (email: string) => {
-      const response = await fetch("/api/auth/forgot-password", {
-        method: "POST",
-        body: JSON.stringify({ email }),
-        headers: {
-          "Content-Type": "application/json"
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error("Failed to send reset email");
-      }
-      
-      return response.json();
-    },
-    onSuccess: () => {
-      setIsSubmitted(true);
-    },
-    onError: (error: any) => {
-      console.error("Password reset error:", error);
-    }
-  });
+  const { mutate, isPending, isError } = useForgotPasswordMutation();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    resetMutation.mutate(email);
+    if (!email) return;
+    mutate(email, {
+      onSuccess: () => {
+        // Always show success to avoid user enumeration
+        setIsSubmitted(true);
+      },
+    });
   };
 
   if (isSubmitted) {
@@ -54,12 +37,12 @@ export default function ForgotPassword() {
               </div>
               <CardTitle className="mt-4">Check your email</CardTitle>
               <CardDescription>
-                We've sent password reset instructions to {email}
+                We&apos;ve sent password reset instructions to {email}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="text-sm text-gray-600 dark:text-gray-400 text-center">
-                <p>Didn't receive the email? Check your spam folder or</p>
+                <p>Didn&apos;t receive the email? Check the spam folder or</p>
                 <button
                   className="text-blue-600 hover:text-blue-500 font-medium"
                   onClick={() => setIsSubmitted(false)}
@@ -91,7 +74,7 @@ export default function ForgotPassword() {
             Forgot your password?
           </h2>
           <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-            Enter your email and we'll send you a reset link
+            Enter the email address to receive a reset link
           </p>
         </div>
 
@@ -99,14 +82,14 @@ export default function ForgotPassword() {
           <CardHeader>
             <CardTitle>Reset password</CardTitle>
             <CardDescription>
-              We'll send you an email with instructions to reset your password
+              We&apos;ll send an email with instructions to reset your password
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            {resetMutation.isError && (
+            {isError && (
               <Alert variant="destructive">
                 <AlertDescription>
-                  Failed to send reset email. Please try again.
+                  Failed to send reset email. Please try again later.
                 </AlertDescription>
               </Alert>
             )}
@@ -131,9 +114,9 @@ export default function ForgotPassword() {
               <Button
                 type="submit"
                 className="w-full"
-                disabled={resetMutation.isPending || !email}
+                disabled={isPending || !email}
               >
-                {resetMutation.isPending ? "Sending..." : "Send reset link"}
+                {isPending ? "Sending..." : "Send reset link"}
               </Button>
             </form>
 

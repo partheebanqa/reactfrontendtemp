@@ -5,6 +5,12 @@ export const API_LOGOUT = ENV.API_BASE_URL + '/auth/logout';
 export const API_REGISTER = ENV.API_BASE_URL + '/auth/register';
 export const API_PASSWORD_CHANGE = ENV.API_BASE_URL + '/auth/change-password';
 export const API_GET_USER = ENV.API_BASE_URL + '/auth/details';
+export const API_PROFILE = ENV.API_BASE_URL + '/auth/profile';
+
+// Added for forgotten and reset password
+export const API_FORGOT_PASSWORD = ENV.API_BASE_URL + '/auth/forgot-password';
+export const API_RESET_PASSWORD = ENV.API_BASE_URL + '/auth/reset-password';
+
 export const API_WORKSPACES = ENV.API_BASE_URL + '/workspaces';
 export const API_COLLECTIONS = ENV.API_BASE_URL + '/collections';
 export const API_COLLECTION_REQUESTS = ENV.API_BASE_URL + '/requests';
