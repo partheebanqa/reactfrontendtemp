@@ -108,6 +108,7 @@ export const ExecutionsFilters = ({
   setDurationRange,
   clearAllFilters,
   handleDeleteEnvironment,
+ 
 
 }: ExecutionsFiltersProps) => {
 
