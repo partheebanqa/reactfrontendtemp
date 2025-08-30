@@ -11,6 +11,7 @@ import { ExecutionDetailsDialog } from '@/components/Executions/ExecutionDetails
 import { MappedExecution, SavedFilter } from '@/shared/types/execution';
 import { useWorkspace } from '@/hooks/useWorkspace';
 
+
 const Executions = () => {
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -75,7 +76,7 @@ const Executions = () => {
   const { currentWorkspace } = useWorkspace();
   const workspaceId = currentWorkspace?.id;
   
-  console.log("workspaceId", workspaceId);
+  // console.log("workspaceId", workspaceId);
   
   const {
     data: executionData,
@@ -306,6 +307,16 @@ const Executions = () => {
     );
   }
 
+   const handleDeleteEnvironment = async () => {
+      if (!currentWorkspace) return;
+      try {
+      } catch (error) {
+        console.error('Error deleting environment:', error);
+      }
+    };
+
+    
+
   return (
     <div className='min-h-screen bg-background'>
       <div className='max-w-7xl mx-auto p-6'>
@@ -336,6 +347,8 @@ const Executions = () => {
           durationRange={durationRange}
           setDurationRange={setDurationRange}
           clearAllFilters={clearAllFilters}
+          handleDeleteEnvironment={handleDeleteEnvironment}
+          
         />
 
         <div className='bg-card rounded-lg shadow-sm border border-border'>

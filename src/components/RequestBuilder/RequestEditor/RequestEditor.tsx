@@ -29,6 +29,7 @@ import Modal from '@/components/ui/Modal';
 import HighlightedUrlInput from '../HighlightedUrlInput';
 import { useDataManagement } from '@/hooks/useDataManagement';
 import HelpLink from '@/components/HelpModal/HelpLink';
+import { executeRequest } from '@/services/executeRequest.service';
 
 const RequestEditor: React.FC = () => {
   const { isLoading, clearError, setLoading, setError, setResponseData } =
@@ -50,6 +51,9 @@ const RequestEditor: React.FC = () => {
     handleCreateRequest,
     fetchCollectionRequests,
   } = useCollection();
+
+  console.log('activerequest in editor:', activeRequest);
+
   const { variables, environments, activeEnvironment } = useDataManagement();
   const { error: showError, success: showSuccess } = useToast();
   const { currentWorkspace } = useWorkspace();
@@ -255,6 +259,7 @@ const RequestEditor: React.FC = () => {
   }, [activeRequest]);
 
   const handleSendRequest = async () => {
+    console.log('activeRequest:', activeRequest);
     if (!activeRequest) return;
     clearError();
     setLoading(true);
@@ -282,80 +287,103 @@ const RequestEditor: React.FC = () => {
       }
 
       const requestData = {
-        method: method,
-        url: newUrl,
-        params: params,
-        headers: headers,
-        body: requestFormData || bodyContent,
-        bodyType: bodyType,
-        formData:
-          bodyType === 'form-data'
-            ? formFields
-                .filter((f) => f.enabled)
-                .reduce((acc, field) => {
-                  // For file fields, store a reference to the file object
-                  if (field.type === 'file' && field.value instanceof File) {
+        request: {
+          name: activeRequest.name || 'New Request',
+          workspaceId: currentWorkspace?.id || '',
+          method: method,
+          url: newUrl,
+          params: params,
+          headers: headers,
+          body: requestFormData || bodyContent,
+          bodyType: bodyType,
+          formData:
+            bodyType === 'form-data'
+              ? formFields
+                  .filter((f) => f.enabled)
+                  .reduce((acc, field) => {
+                    // For file fields, store a reference to the file object
+                    if (field.type === 'file' && field.value instanceof File) {
+                      acc[field.key] = field.value;
+                    } else {
+                      acc[field.key] = String(field.value);
+                    }
+                    return acc;
+                  }, {} as Record<string, string | File>)
+              : undefined,
+          urlEncodedData:
+            bodyType === 'x-www-form-urlencoded'
+              ? urlEncodedFields
+                  .filter((f) => f.enabled)
+                  .reduce((acc, field) => {
                     acc[field.key] = field.value;
-                  } else {
-                    acc[field.key] = String(field.value);
+                    return acc;
+                  }, {} as Record<string, string>)
+              : undefined,
+          authorizationType: authType,
+          authorization: {
+            token: authType === 'bearer' ? authData.token : '',
+            username: authType === 'basic' ? authData.username : '',
+            password: authType === 'basic' ? authData.password : '',
+            key: authType === 'apiKey' ? authData.key : '',
+            value: authType === 'apiKey' ? authData.value : '',
+            addTo: authType === 'apiKey' ? authData.addTo : 'header',
+            oauth1:
+              authType === 'oauth1'
+                ? {
+                    consumerKey: authData.oauth1.consumerKey,
+                    consumerSecret: authData.oauth1.consumerSecret,
+                    token: authData.oauth1.token,
+                    tokenSecret: authData.oauth1.tokenSecret,
+                    signatureMethod: authData.oauth1.signatureMethod,
+                    version: authData.oauth1.version,
+                    realm: authData.oauth1.realm,
+                    nonce: authData.oauth1.nonce,
+                    timestamp: authData.oauth1.timestamp,
                   }
-                  return acc;
-                }, {} as Record<string, string | File>)
-            : undefined,
-        urlEncodedData:
-          bodyType === 'x-www-form-urlencoded'
-            ? urlEncodedFields
-                .filter((f) => f.enabled)
-                .reduce((acc, field) => {
-                  acc[field.key] = field.value;
-                  return acc;
-                }, {} as Record<string, string>)
-            : undefined,
-        authorizationType: authType,
-        authorization: {
-          token: authType === 'bearer' ? authData.token : '',
-          username: authType === 'basic' ? authData.username : '',
-          password: authType === 'basic' ? authData.password : '',
-          key: authType === 'apiKey' ? authData.key : '',
-          value: authType === 'apiKey' ? authData.value : '',
-          addTo: authType === 'apiKey' ? authData.addTo : 'header',
-          oauth1:
-            authType === 'oauth1'
-              ? {
-                  consumerKey: authData.oauth1.consumerKey,
-                  consumerSecret: authData.oauth1.consumerSecret,
-                  token: authData.oauth1.token,
-                  tokenSecret: authData.oauth1.tokenSecret,
-                  signatureMethod: authData.oauth1.signatureMethod,
-                  version: authData.oauth1.version,
-                  realm: authData.oauth1.realm,
-                  nonce: authData.oauth1.nonce,
-                  timestamp: authData.oauth1.timestamp,
-                }
-              : undefined,
-          oauth2:
-            authType === 'oauth2'
-              ? {
-                  clientId: authData.oauth2.clientId,
-                  clientSecret: authData.oauth2.clientSecret,
-                  accessToken: authData.oauth2.accessToken,
-                  tokenType: authData.oauth2.tokenType,
-                  refreshToken: authData.oauth2.refreshToken,
-                  scope: authData.oauth2.scope,
-                  grantType: authData.oauth2.grantType,
-                  redirectUri: authData.oauth2.redirectUri,
-                }
-              : undefined,
+                : undefined,
+            oauth2:
+              authType === 'oauth2'
+                ? {
+                    clientId: authData.oauth2.clientId,
+                    clientSecret: authData.oauth2.clientSecret,
+                    accessToken: authData.oauth2.accessToken,
+                    tokenType: authData.oauth2.tokenType,
+                    refreshToken: authData.oauth2.refreshToken,
+                    scope: authData.oauth2.scope,
+                    grantType: authData.oauth2.grantType,
+                    redirectUri: authData.oauth2.redirectUri,
+                  }
+                : undefined,
+          },
         },
       };
-      const response = await makeRequest(requestData);
-      setResponseData(response);
-      if (response.data?.error) {
-        setError({
-          title: response.data.error.message || 'Request Failed',
-          description: response.data.error.description,
-          suggestions: response.data.error.suggestions,
-        });
+      console.log('requestData123:', requestData);
+
+      // const response = await makeRequest(requestData);
+      const backendData = await executeRequest(requestData);
+
+      const result = backendData?.data?.responses?.[0];
+
+      if (result) {
+        let parsedBody: any = result.body;
+        if (typeof result.body === 'string') {
+          try {
+            parsedBody = JSON.parse(result.body);
+          } catch {
+            parsedBody = result.body;
+          }
+        }
+
+        const normalizedResponse = {
+          status: result.statusCode,
+          statusCode: result.statusCode,
+          headers: result.headers ?? {},
+          body: parsedBody,
+          rawBody: result.body,
+          metrics: result.metrics ?? {},
+        };
+
+        setResponseData(normalizedResponse as any);
       }
     } catch (error: any) {
       setError({

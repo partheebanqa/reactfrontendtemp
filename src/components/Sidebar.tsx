@@ -99,6 +99,12 @@ const menuItems = [
     icon: FileText,
     feature: 'reports',
   },
+  {
+    label: 'Faqs & Guides',
+    path: '/faq',
+    icon: FileText,
+    feature: 'reports',
+  },
   // {
   //   label: 'CI/CD Configuration',
   //   path: '/cicd-configuration',
