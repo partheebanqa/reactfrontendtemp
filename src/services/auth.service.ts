@@ -6,6 +6,7 @@ import {
   API_REGISTER,
   API_FORGOT_PASSWORD,
   API_RESET_PASSWORD,
+  API_PROFILE,
 } from "@/config/apiRoutes";
 import { apiRequest } from "@/lib/queryClient";
 import { ILoginResponse, SingUpForm, User } from "@/shared/types/auth";
@@ -104,5 +105,36 @@ export const resetPasswordApi = async (data: {
   if (!response.ok) {
     throw new Error("Failed to reset password");
   }
+  return response.json();
+};
+
+/**
+ * Update the authenticated user's profile.
+ * Adjust the payload shape to match backend DTO.
+ */
+export const updateProfileApi = async (
+  profileData: Partial<User> & {
+    bio?: string | null;
+    company?: string | null;
+    companyWebsite?: string | null;
+    sector?: string | null;
+    jobTitle?: string | null;
+    phone?: string | null;
+    avatarUrl?: string | null;
+  }
+): Promise<{ user: User; message?: string }> => {
+  const response = await apiRequest("PUT", API_PROFILE, {
+    body: JSON.stringify(profileData), // apiRequest should set headers for JSON unless it's FormData
+  });
+
+  if (!response.ok) {
+    let msg = "Failed to update profile";
+    try {
+      const err = await response.json();
+      msg = err?.error || err?.message || msg;
+    } catch {}
+    throw new Error(msg);
+  }
+
   return response.json();
 };

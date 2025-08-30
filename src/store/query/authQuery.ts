@@ -16,6 +16,7 @@ import {
   registerApi,
   forgotPasswordApi,
   resetPasswordApi,
+  updateProfileApi
 } from '@/services/auth.service';
 import { DeactivationFormData } from '@/components/settings/AccountDeactivation';
 import { clearAllClientStorage } from '@/utils/logoutCacheClear';
@@ -119,22 +120,23 @@ export const useRegisterMutation = () => {
 // Update profile mutation
 export const useUpdateProfileMutation = () => {
   return useMutation({
+    // Prefer centralized service (handles errors consistently)
     mutationFn: async (profileData: Partial<User>) => {
-      const response = await apiRequest('PUT', '/api/auth/profile', {
-        body: profileData,
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to update profile');
-      }
-
-      return response.json();
+      // If sending JSON, service will JSON.stringify or apiRequest adds headers
+      // If sending FormData (e.g., avatar), pass FormData directly and adapt service
+      return updateProfileApi(profileData);
     },
     onSuccess: async (data) => {
-      if (data?.user) {
-        authActions.setUser(data.user);
-        await queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
+      // Many backends return { user, message }
+      const updatedUser = (data as any)?.user ?? (data as any);
+      if (updatedUser) {
+        // Update store immediately for optimistic UX
+        authActions.setUser(updatedUser);
       }
+
+      // Invalidate the canonical user query key to refetch fresh data
+      // This should match the key used in useUserQuery
+      await queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
     },
   });
 };
