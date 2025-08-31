@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState } from 'react';
 import {
   useAddCollectionMutation,
   useAddRequestMutation,
@@ -11,12 +11,13 @@ import {
   useRenameCollectionMutation,
   useRenameRequestMutation,
   useSetFavouriteCollectionMutation,
-} from "@/store/query/collectionQuery";
-import { collectionActions, useCollectionStore } from "@/store/collectionStore";
-import { useAuth } from "./useAuth";
-import { useWorkspace } from "./useWorkspace";
-import { Collection, CollectionRequest } from "@/shared/types/collection";
-import { useRequest } from "./useRequest";
+  useUnsetFavouriteCollectionMutation,
+} from '@/store/query/collectionQuery';
+import { collectionActions, useCollectionStore } from '@/store/collectionStore';
+import { useAuth } from './useAuth';
+import { useWorkspace } from './useWorkspace';
+import { Collection, CollectionRequest } from '@/shared/types/collection';
+import { useRequest } from './useRequest';
 
 /**
  * Hook for managing API requests
@@ -85,12 +86,12 @@ export function useCollection() {
 
   const handleCreateRequest = async (collection?: Collection) => {
     const newRequest: CollectionRequest = {
-      name: "New Request",
-      method: "GET",
-      url: "",
-      bodyType: "json",
+      name: 'New Request',
+      method: 'GET',
+      url: '',
+      bodyType: 'json',
       bodyFormData: null,
-      authorizationType: "none",
+      authorizationType: 'none',
       authorization: {},
       variables: {},
       headers: [],
@@ -133,6 +134,8 @@ export function useCollection() {
   const addCollectionMutation = useAddCollectionMutation();
   const renameCollectionMutation = useRenameCollectionMutation();
   const setFavouriteCollectionMutation = useSetFavouriteCollectionMutation();
+  const unsetFavouriteCollectionMutation =
+    useUnsetFavouriteCollectionMutation();
   const fetchCollectionRequests = useCollectionRequestsQuery();
   const deleteCollectionMutation = useDeleteCollectionMutation();
   const importCollectionMutation = useImpotPostmanCollectionMutation();
@@ -170,6 +173,7 @@ export function useCollection() {
     renameRequestMutation,
     duplicateRequestMutation,
     setFavouriteCollectionMutation,
+    unsetFavouriteCollectionMutation,
     deleteCollectionMutation,
     deleteRequestMutation,
   };

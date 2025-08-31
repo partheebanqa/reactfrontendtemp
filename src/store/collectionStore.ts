@@ -1,15 +1,15 @@
-import { Store, useStore } from "@tanstack/react-store";
+import { Store, useStore } from '@tanstack/react-store';
 import {
   RequestData,
   ResponseData,
   KeyValuePair,
-} from "@/shared/types/request";
-import { Collection, CollectionRequest } from "@/shared/types/collection";
-import { rename } from "fs";
+} from '@/shared/types/request';
+import { Collection, CollectionRequest } from '@/shared/types/collection';
+import { rename } from 'fs';
 
 // Define the shape of our request state
 interface CollectionState {
-  responseLayout: "bottom" | "right";
+  responseLayout: 'bottom' | 'right';
   activeRequest: CollectionRequest | null;
   activeCollection: Collection | null;
   collections: Collection[];
@@ -21,7 +21,7 @@ interface CollectionState {
 
 // Initial state for request
 export const initialCollectionState: CollectionState = {
-  responseLayout: "bottom", // Default layout
+  responseLayout: 'bottom', // Default layout
   activeCollection: null,
   activeRequest: null,
   collections: [],
@@ -39,7 +39,7 @@ export const collectionStore = new Store<CollectionState>(
 // Define actions to update the store
 export const collectionActions = {
   // Update response layout
-  setResponseLayout: (layout: "bottom" | "right") => {
+  setResponseLayout: (layout: 'bottom' | 'right') => {
     collectionStore.setState((state) => ({
       ...state,
       responseLayout: layout,
@@ -139,6 +139,15 @@ export const collectionActions = {
       ...state,
       collections: state.collections.map((c) =>
         c.id === id ? { ...c, IsImportant } : c
+      ),
+    }));
+  },
+
+  setUnFavouriteCollection: (id: string) => {
+    collectionStore.setState((state) => ({
+      ...state,
+      collections: state.collections.map((c) =>
+        c.id === id ? { ...c, isImportant: false } : c
       ),
     }));
   },

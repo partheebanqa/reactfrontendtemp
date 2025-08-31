@@ -58,10 +58,10 @@ export const setFavouriteCollection = async ({
   try {
     const response = await apiRequest(
       'PUT',
-      `${API_COLLECTIONS}/${collectionId}/favourite`,
-      {
-        body: JSON.stringify({ IsImportant }),
-      }
+      `${API_COLLECTIONS}/${collectionId}/mark-important`
+      // {
+      //   body: JSON.stringify({ IsImportant }),
+      // }
     );
     if (!response.ok) {
       throw new Error('Failed to update collection');
@@ -71,6 +71,14 @@ export const setFavouriteCollection = async ({
     console.error('Error updating collection:', error);
     throw error;
   }
+};
+
+export const unsetFavouriteCollection = async (collectionId: string) => {
+  const response = await apiRequest(
+    'PUT',
+    `${API_COLLECTIONS}/${collectionId}/mark-not-important`
+  );
+  return response;
 };
 
 export const deleteCollection = async (collectionId: string) => {
@@ -268,6 +276,32 @@ export const renameRequest = async ({
       `${API_COLLECTION_REQUESTS}/${requestId}`,
       {
         body: newName ? JSON.stringify({ name: newName }) : undefined,
+      }
+    );
+    if (!response.ok) {
+      throw new Error('Failed to duplicate request');
+    }
+    const data = await response.json();
+    return formatRequest(data);
+  } catch (error: any) {
+    console.error('Error duplicating request:', error);
+    throw error;
+  }
+};
+
+export const updateRequest = async ({
+  requestId,
+  requestData,
+}: {
+  requestId: string;
+  requestData: any;
+}) => {
+  try {
+    const response = await apiRequest(
+      'PUT',
+      `${API_COLLECTION_REQUESTS}/${requestId}`,
+      {
+        body: JSON.stringify(requestData),
       }
     );
     if (!response.ok) {

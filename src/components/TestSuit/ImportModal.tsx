@@ -347,16 +347,20 @@ export const ImportModal: React.FC<ImportModalProps> = ({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className='max-w-4xl max-h-[90vh] overflow-auto flex flex-col'>
-        <DialogTitle>Collections</DialogTitle>
+        <DialogTitle>Import Collections</DialogTitle>
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList
             className={`grid w-full ${
               isRequestChainsRoute ? 'grid-cols-2' : 'grid-cols-1'
             }`}
           >
-            <TabsTrigger value='Internal'>Import from Collection</TabsTrigger>
+            <TabsTrigger value='Internal'>
+              Import from existing Collection
+            </TabsTrigger>
             {isRequestChainsRoute && (
-              <TabsTrigger value='extranal'>Import from External</TabsTrigger>
+              <TabsTrigger value='extranal'>
+                Import from new External
+              </TabsTrigger>
             )}
           </TabsList>
 
@@ -554,7 +558,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                       htmlFor='externalFileUpload'
                       className='text-sm text-primary hover:underline cursor-pointer'
                     >
-                      Change file
+                      Import new file
                     </label>
                   </div>
                 )}
