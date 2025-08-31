@@ -210,7 +210,7 @@ const Index = () => {
     return (
       <>
         <RequestChainEditor
-          chain={editingChain} // This will be undefined for new chains, or the fetched chain for editing
+          chain={editingChain}
           onBack={handleBackToList}
           onSave={handleSaveChain}
           onToggleChain={handlePlayChain}
@@ -220,7 +220,6 @@ const Index = () => {
   }
 
   return (
-    <div className='min-h-screen bg-background p-6'>
       <RequestChainsList
         chains={chains}
         loading={loading}
@@ -230,7 +229,6 @@ const Index = () => {
         onCloneChain={handleCloneChain}
         onToggleChain={handlePlayChain}
       />
-    </div>
   );
 };
 

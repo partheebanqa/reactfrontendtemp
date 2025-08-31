@@ -3,7 +3,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Play, Edit, Copy, Trash2, Info, Workflow } from 'lucide-react';
+import { Play, Edit, Copy, Trash2, Info, Workflow, Pencil } from 'lucide-react';
 import { formatDate } from '@/utils/formatDate';
 import {
   Tooltip,
@@ -97,8 +97,8 @@ const TestSuiteCard: React.FC<TestSuiteCardProps> = ({
   };
 
   return (
-    <div className='p-6 hover:bg-gray-50 transition-colors'>
-      <div className='flex items-start justify-between'>
+    <div className='bg-white rounded-lg border mb-3 p-4'>
+      <div className='flex items-center justify-between'>
         <div className='flex-1'>
           <div className='flex items-center space-x-3 mb-2'>
             <h3 className='font-semibold text-lg'>{suite.name}</h3>
@@ -106,17 +106,7 @@ const TestSuiteCard: React.FC<TestSuiteCardProps> = ({
           </div>
 
           <p className='text-gray-600 text-sm mb-3'>{suite.description}</p>
-          {/* <Badge
-            variant='outline'
-            className='text-purple-600 border-purple-200'
-          >
-            <Workflow className='w-3 h-3 mr-1' />
-            {suite?.environment?.name || 'No Environment'}
-          </Badge> */}
-
-          {/* <span>Environment: </span>
-          <span> {suite?.environment?.name || 'No Environment'}</span> */}
-
+       
           <div className='flex items-center space-x-1 text-sm text-gray-500 mb-3'>
             <span>Environment:</span>
             <div className='flex items-center'>
@@ -180,7 +170,7 @@ const TestSuiteCard: React.FC<TestSuiteCardProps> = ({
                   className='text-gray-600 hover:text-blue-600'
                   onClick={() => onEdit(suite)}
                 >
-                  <Edit className='w-4 h-4' />
+                  <Pencil className='w-4 h-4' />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>Edit Suite</TooltipContent>
@@ -201,20 +191,6 @@ const TestSuiteCard: React.FC<TestSuiteCardProps> = ({
               <TooltipContent>Duplicate Suite</TooltipContent>
             </Tooltip>
 
-            {/* Delete */}
-            {/* <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant='ghost'
-                  size='icon'
-                  className='text-gray-600 hover:text-red-600'
-                  onClick={() => onDelete(suite.id)}
-                >
-                  <Trash2 className='w-4 h-4' />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Delete Suite</TooltipContent>                    
-            </Tooltip> */}
 
             <AlertDialog>
               <Tooltip>
