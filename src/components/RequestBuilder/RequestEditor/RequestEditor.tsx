@@ -1,35 +1,27 @@
-import React, { useState, useEffect } from 'react';
-import {
-  Play,
-  Save,
-  Edit2,
-  Check,
-  X,
-  FolderPlus,
-  Trash,
-  Trash2,
-  Info,
-} from 'lucide-react';
+'use client';
+
+import type React from 'react';
+import { useState, useEffect } from 'react';
+import { Play, Save, FolderPlus } from 'lucide-react';
 import { useRequest } from '@/hooks/useRequest';
 import { useCollection } from '@/hooks/useCollection';
 import { useWorkspace } from '@/hooks/useWorkspace';
-import { Header, Param, RequestMethod } from '@/shared/types/request';
+import type { Header, Param, RequestMethod } from '@/shared/types/request';
 import SchemaPage from '../SchemaPage';
 import { useToast } from '@/hooks/useToast';
-import { makeRequest } from '@/services/request.service';
-import { Collection, CollectionRequest } from '@/shared/types/collection';
 import TooltipContainer from '@/components/ui/tooltip-container';
 import KeyValueEditor from '@/components/ui/KeyValueEditor';
 import KeyValueEditorWithFileUpload, {
-  KeyValuePairWithFile,
+  type KeyValuePairWithFile,
 } from '@/components/ui/KeyValueEditorWithFileUpload';
 import ToggleSwitch from '@/components/ui/ToggleSwitch';
 import EditableText from '@/components/ui/EditableText';
 import Modal from '@/components/ui/Modal';
-import HighlightedUrlInput from '../HighlightedUrlInput';
 import { useDataManagement } from '@/hooks/useDataManagement';
 import HelpLink from '@/components/HelpModal/HelpLink';
 import { executeRequest } from '@/services/executeRequest.service';
+import { updateRequest } from '@/services/collection.service';
+import { useMutation } from '@tanstack/react-query';
 
 const RequestEditor: React.FC = () => {
   const { isLoading, clearError, setLoading, setError, setResponseData } =
@@ -53,9 +45,10 @@ const RequestEditor: React.FC = () => {
   } = useCollection();
 
   console.log('activerequest in editor:', activeRequest);
+  console.log('activeCollection in editor:', activeCollection);
 
   const { variables, environments, activeEnvironment } = useDataManagement();
-  const { error: showError, success: showSuccess } = useToast();
+  const { error: showError, success: showSuccess, toast } = useToast();
   const { currentWorkspace } = useWorkspace();
   const [activeTab, setActiveTab] = useState<
     'params' | 'headers' | 'body' | 'auth' | 'scripts' | 'settings' | 'schemas'
@@ -117,6 +110,21 @@ const RequestEditor: React.FC = () => {
     followRedirects: true,
     timeout: 30000, // 30 seconds
     sslVerification: true,
+  });
+
+  const updateRequestMutation = useMutation({
+    mutationFn: ({
+      requestId,
+      requestData,
+    }: {
+      requestId: string;
+      requestData: any;
+    }) => updateRequest({ requestId, requestData }),
+    onSuccess: async (data) => {
+      if (activeCollection?.id) {
+        await fetchCollectionRequests.mutateAsync(activeCollection.id);
+      }
+    },
   });
 
   useEffect(() => {
@@ -408,6 +416,11 @@ const RequestEditor: React.FC = () => {
           requestId: activeRequest.id,
           newName: newName.trim(),
         });
+        toast({
+          title: 'Request renamed successfully!',
+          duration: 3000,
+          type: 'success',
+        });
       }
       const active = { ...activeRequest, name: newName.trim() };
       setActiveRequest(active);
@@ -443,6 +456,7 @@ const RequestEditor: React.FC = () => {
       );
       return;
     }
+
     setShowSaveModal(true);
     if (activeRequest.collectionId) {
       const collection = collections.find(
@@ -456,6 +470,131 @@ const RequestEditor: React.FC = () => {
       if (workspaceCollections.length > 0) {
         setActiveCollection(workspaceCollections[0]);
       }
+    }
+  };
+
+  const handleUpdateRequest = async () => {
+    try {
+      if (!activeRequest || !currentWorkspace) return;
+      if (!url.trim()) {
+        showError(
+          'URL Required',
+          'Please enter a URL before saving the request.'
+        );
+        return;
+      }
+
+      let requestCount = 0;
+      if (activeCollection) {
+        const response = await fetchCollectionRequests.mutateAsync(
+          activeCollection.id
+        );
+        requestCount = response.length;
+      }
+
+      const requestData = {
+        collectionId: activeRequest.collectionId,
+        description: '',
+        name: activeRequest.name || 'New Request',
+        order: (requestCount || 0) + 1,
+        method: method,
+        url: url,
+        bodyType: bodyType == 'json' ? 'raw' : bodyType,
+        bodyFormData:
+          bodyType === 'form-data'
+            ? formFields
+                .filter((f) => f.enabled)
+                .reduce((acc: Record<string, any>, field) => {
+                  if (field.key) {
+                    if (field.type === 'file' && field.value instanceof File) {
+                      acc[field.key] = field.value;
+                    } else {
+                      acc[field.key] = String(field.value);
+                    }
+                  }
+                  return acc;
+                }, {})
+            : null,
+        bodyRawContent:
+          bodyType === 'raw' || bodyType === 'json'
+            ? bodyContent
+            : bodyType === 'x-www-form-urlencoded'
+            ? new URLSearchParams(
+                urlEncodedFields
+                  .filter((f) => f.enabled)
+                  .reduce((acc, field) => {
+                    if (field.key) acc[field.key] = field.value;
+                    return acc;
+                  }, {} as Record<string, string>)
+              ).toString()
+            : null,
+        authorizationType: authType,
+        authorization: {
+          token: authType === 'bearer' ? authData.token : '',
+          username: authType === 'basic' ? authData.username : '',
+          password: authType === 'basic' ? authData.password : '',
+          key: authType === 'apiKey' ? authData.key : '',
+          value: authType === 'apiKey' ? authData.value : '',
+          addTo: authType === 'apiKey' ? authData.addTo : 'header',
+          oauth1:
+            authType === 'oauth1'
+              ? {
+                  consumerKey: authData.oauth1.consumerKey,
+                  consumerSecret: authData.oauth1.consumerSecret,
+                  token: authData.oauth1.token,
+                  tokenSecret: authData.oauth1.tokenSecret,
+                  signatureMethod: authData.oauth1.signatureMethod,
+                  version: '1.0',
+                  realm: authData.oauth1.realm,
+                  nonce: authData.oauth1.nonce,
+                  timestamp: authData.oauth1.timestamp,
+                }
+              : undefined,
+          oauth2:
+            authType === 'oauth2'
+              ? {
+                  clientId: authData.oauth2.clientId,
+                  clientSecret: authData.oauth2.clientSecret,
+                  accessToken: authData.oauth2.accessToken,
+                  tokenType: authData.oauth2.tokenType,
+                  refreshToken: authData.oauth2.refreshToken,
+                  scope: authData.oauth2.scope,
+                  grantType: authData.oauth2.grantType,
+                  redirectUri: authData.oauth2.redirectUri,
+                }
+              : undefined,
+        },
+        params: params,
+        headers: headers,
+      };
+
+      if (!activeRequest.id) {
+        showError('Missing ID', 'Cannot update a request without an id.');
+        return;
+      }
+
+      await updateRequestMutation.mutateAsync({
+        requestId: activeRequest.id,
+        requestData,
+      });
+      toast({
+        title: 'Request updated successfully!',
+        duration: 3000,
+        type: 'success',
+      });
+
+      // setShowSaveModal(false);
+      // setNewCollectionName('');
+      // setIsCreatingCollection(false);
+      // showSuccess('Request updated successfully!');
+      // handleCreateRequest();
+    } catch (error) {
+      console.error('Error updating request:', error);
+      showError('Save Failed', 'An error occurred while saving the request.');
+      setError({
+        title: 'Save Failed',
+        description: 'An error occurred while saving the request.',
+      });
     }
   };
 
@@ -494,7 +633,7 @@ const RequestEditor: React.FC = () => {
         );
         return;
       }
-      let requestCount: number = 0;
+      let requestCount = 0;
       if (activeCollection) {
         const response = await fetchCollectionRequests.mutateAsync(
           activeCollection.id
@@ -834,9 +973,8 @@ const RequestEditor: React.FC = () => {
               </span>
             </button>
 
-            <TooltipContainer
-              text='Save request'
-              children={
+            <TooltipContainer text='Save request'>
+              {!activeRequest.id ? (
                 <button
                   onClick={handleSaveRequest}
                   className='border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 px-3 py-2 rounded-md'
@@ -844,8 +982,16 @@ const RequestEditor: React.FC = () => {
                 >
                   <Save className='h-4 w-4' />
                 </button>
-              }
-            />
+              ) : (
+                <button
+                  onClick={handleUpdateRequest}
+                  className='border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 px-3 py-2 rounded-md'
+                  aria-label='Save request'
+                >
+                  <Save className='h-4 w-4' />
+                </button>
+              )}
+            </TooltipContainer>
 
             {/* <button
               className="border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 px-3 py-2 rounded-md"
@@ -1517,7 +1663,7 @@ const RequestEditor: React.FC = () => {
                   onChange={(e) =>
                     setSettings({
                       ...settings,
-                      timeout: parseInt(e.target.value),
+                      timeout: Number.parseInt(e.target.value),
                     })
                   }
                   className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 bg-white dark:bg-gray-800 text-sm'

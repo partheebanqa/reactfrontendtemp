@@ -399,7 +399,7 @@ const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose }) => {
                     </p>
 
                     <p className='text-xs text-gray-500'>
-                      Postman Collection, OpenAPI/Swagger, cURL or JSON
+                      Postman Collection & OpenAPI/Swagger.{' '}
                     </p>
 
                     {selectedFile && (
