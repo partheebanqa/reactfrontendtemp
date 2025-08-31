@@ -17,6 +17,9 @@ import {
   CheckCircle,
   XCircle,
   Info,
+  Check,
+  X,
+  Pencil,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -482,6 +485,8 @@ export function RequestChainEditor({
   };
 
   const [copiedStates, setCopiedStates] = useState<Record<string, boolean>>({});
+  const [editingNameId, setEditingNameId] = useState<string | null>(null);
+  const [tempName, setTempName] = useState<string>('');
 
   const handleCopyForRequest = async (requestId: string, value: string) => {
     try {
@@ -852,6 +857,14 @@ export function RequestChainEditor({
 
   const currentRequestChainId = requestChainId || chain?.id || '';
 
+  function commitRequestName(index: number, nameValue: string) {
+    const finalName = nameValue.trim();
+    const updated = (formData.chainRequests || []).map((r, i) =>
+      i === index ? { ...r, name: finalName || r.url || r.name } : r
+    );
+    setFormData({ ...formData, chainRequests: updated });
+  }
+
   if (editingRequestId) {
     const request = formData.chainRequests?.find(
       (r) => r.id === editingRequestId
@@ -1130,11 +1143,75 @@ export function RequestChainEditor({
                                         {request.method}
                                       </Badge>
                                       <div className='flex-1'>
-                                        <p className='font-medium'>
-                                          {request.name}
-                                        </p>
+                                        {editingNameId === request.id ? (
+                                          <div className='flex items-center gap-2'>
+                                            <Input
+                                              value={tempName}
+                                              onChange={(e) =>
+                                                setTempName(e.target.value)
+                                              }
+                                              className='h-8 max-w-[280px]'
+                                              placeholder='Request name'
+                                              autoFocus
+                                            />
+                                            <Button
+                                              variant='ghost'
+                                              size='icon'
+                                              aria-label='Save name'
+                                              onClick={() => {
+                                                commitRequestName(
+                                                  index,
+                                                  tempName
+                                                );
+                                                setEditingNameId(null);
+                                                setTempName('');
+                                              }}
+                                              className='text-green-600 hover:text-green-700'
+                                              title='Save'
+                                            >
+                                              <Check className='w-4 h-4' />
+                                            </Button>
+                                            <Button
+                                              variant='ghost'
+                                              size='icon'
+                                              aria-label='Cancel'
+                                              onClick={() => {
+                                                setEditingNameId(null);
+                                                setTempName('');
+                                              }}
+                                              className='text-red-600 hover:text-red-700'
+                                              title='Cancel'
+                                            >
+                                              <X className='w-4 h-4' />
+                                            </Button>
+                                          </div>
+                                        ) : (
+                                          <div className='flex items-center gap-2'>
+                                            <p className='font-medium'>
+                                              {request.name ||
+                                                request.url ||
+                                                'New Request'}
+                                            </p>
+                                            <Button
+                                              variant='ghost'
+                                              size='icon'
+                                              aria-label='Edit name'
+                                              onClick={() => {
+                                                setEditingNameId(request.id);
+                                                setTempName(
+                                                  request.name ||
+                                                    request.url ||
+                                                    ''
+                                                );
+                                              }}
+                                              title='Edit name'
+                                            >
+                                              <Pencil className='w-4 h-4' />
+                                            </Button>
+                                          </div>
+                                        )}
                                         <p className='text-sm text-muted-foreground'>
-                                          {request.url || 'No URL specified'}
+                                          {/* {request.url || 'No URL specified'} */}
                                         </p>
                                       </div>
                                       <div className='flex items-center space-x-2'>

@@ -1,6 +1,6 @@
 // RequestEditor.tsx
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -126,6 +126,8 @@ export function RequestEditor({
     setExtractedVariables(newVars);
     localStorage.setItem('extractedVariables', JSON.stringify(newVars));
   };
+
+  const hasManuallyEditedNameRef = useRef(false);
 
   useEffect(() => {
     const extractedVars = getExtractVariablesByEnvironment(
@@ -669,7 +671,18 @@ export function RequestEditor({
           </Select>
           <Input
             value={request.url}
-            onChange={(e) => onUpdate({ url: e.target.value })}
+            onChange={(e) => {
+              const value = e.target.value;
+              const shouldSyncName =
+                !hasManuallyEditedNameRef.current &&
+                (!request.name ||
+                  request.name === 'New Request' ||
+                  request.name === request.url);
+
+              onUpdate(
+                shouldSyncName ? { url: value, name: value } : { url: value }
+              );
+            }}
             placeholder='Enter request URL'
             className='flex-1'
           />
@@ -1705,7 +1718,10 @@ export function RequestEditor({
               <Label>Request Name</Label>
               <Input
                 value={request.name}
-                onChange={(e) => onUpdate({ name: e.target.value })}
+                onChange={(e) => {
+                  hasManuallyEditedNameRef.current = true;
+                  onUpdate({ name: e.target.value });
+                }}
                 placeholder='Enter request name'
               />
             </div>
@@ -1736,7 +1752,18 @@ export function RequestEditor({
             <Label>URL</Label>
             <Input
               value={request.url}
-              onChange={(e) => onUpdate({ url: e.target.value })}
+              onChange={(e) => {
+                const value = e.target.value;
+                const shouldSyncName =
+                  !hasManuallyEditedNameRef.current &&
+                  (!request.name ||
+                    request.name === 'New Request' ||
+                    request.name === request.url);
+
+                onUpdate(
+                  shouldSyncName ? { url: value, name: value } : { url: value }
+                );
+              }}
               placeholder='https://api.example.com/endpoint'
             />
           </div>
