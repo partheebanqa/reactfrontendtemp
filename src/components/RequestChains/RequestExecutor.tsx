@@ -680,35 +680,54 @@ export function RequestExecutor({
             </button>
           ) : (
             <>
-              {/* Save/Update Button */}
+              {/* Save / Update / Execute Buttons */}
               {onPreExecute && (
-                <button
-                  onClick={chainId ? handleUpdateChain : handleSaveChain}
-                  disabled={!chainName?.trim()}
-                  className='flex items-center justify-center space-x-2 px-4 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors w-full sm:w-auto'
-                >
-                  <Save className='w-4 h-4' />
-                  <span className='hidden sm:inline'>
-                    {chainId ? 'Update Chain' : 'Save Chain'}
-                  </span>
-                  <span className='sm:hidden'>
-                    {chainId ? 'Update' : 'Save'}
-                  </span>
-                </button>
-              )}
+                <>
+                  {/* Save or Update Button */}
+                  <button
+                    onClick={chainId ? handleUpdateChain : handleSaveChain}
+                    disabled={
+                      !chainName?.trim() || (!chainId && !!savedChainId)
+                    }
+                    className={`flex items-center justify-center space-x-2 px-4 py-2 rounded-lg transition-colors w-full sm:w-auto
+        ${
+          !chainName?.trim() || (!chainId && !!savedChainId)
+            ? 'bg-secondary text-secondary-foreground cursor-not-allowed opacity-50'
+            : 'bg-primary text-primary-foreground hover:bg-primary/90'
+        }`}
+                  >
+                    <Save className='w-4 h-4' />
+                    <span className='hidden sm:inline'>
+                      {chainId ? 'Update Chain' : 'Save Chain'}
+                    </span>
+                    <span className='sm:hidden'>
+                      {chainId ? 'Update' : 'Save'}
+                    </span>
+                  </button>
 
-              {/* Execute Button */}
-              <button
-                onClick={handleExecuteChain}
-                disabled={
-                  processedRequests.filter((r) => r.enabled).length === 0 ||
-                  (!savedChainId && !chainId)
-                }
-                className='flex items-center justify-center space-x-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors w-full sm:w-auto'
-              >
-                <Play className='w-4 h-4' />
-                <span>Execute</span>
-              </button>
+                  {/* Execute button only if new chain (no chainId) */}
+                  {!chainId && (
+                    <button
+                      onClick={handleExecuteChain}
+                      disabled={
+                        processedRequests.filter((r) => r.enabled).length ===
+                          0 ||
+                        (!savedChainId && !chainId)
+                      }
+                      className={`flex items-center justify-center space-x-2 px-4 py-2 rounded-lg transition-colors w-full sm:w-auto
+          ${
+            processedRequests.filter((r) => r.enabled).length === 0 ||
+            (!savedChainId && !chainId)
+              ? 'bg-secondary text-secondary-foreground cursor-not-allowed opacity-50'
+              : 'bg-primary text-primary-foreground hover:bg-primary/90'
+          }`}
+                    >
+                      <Play className='w-4 h-4' />
+                      <span>Execute</span>
+                    </button>
+                  )}
+                </>
+              )}
             </>
           )}
         </div>
