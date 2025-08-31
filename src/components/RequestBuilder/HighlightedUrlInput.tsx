@@ -93,56 +93,60 @@ export default function HighlightedUrlInput({
     }, [variables, activeEnvironment]);
 
     // Update Slate value when URL changes externally
-    useEffect(() => {
-        // Don't update if editor is focused to prevent cursor jumping
-        if (!ReactEditor.isFocused(editor)) {
-            parseUrlToSlateValue(url || '');
-        }
-    }, [url]);
+// Improve the URL update logic
+useEffect(() => {
+  // Only update if the URL actually changed and editor is not focused
+  if (!ReactEditor.isFocused(editor)) {
+    const currentValue = Node.string(slateValue[0] || { children: [{ text: '' }] });
+    if (currentValue !== (url || '')) {
+      parseUrlToSlateValue(url || '');
+    }
+  }
+}, [url, editor]); // Remove slateValue from dependencies
 
     // Parse URL string into Slate nodes with variable identification
-    const parseUrlToSlateValue = useCallback((urlString: string) => {
-        const varRegex = /{{(.*?)}}/g;
-        const nodes: Descendant[] = [];
-        const paragraph: CustomElement = { type: 'paragraph', children: [] };
+   // Improve variable regex to handle edge cases
+const parseUrlToSlateValue = useCallback((urlString: string) => {
+  const varRegex = /\{\{([^{}]+)\}\}/g; // Ensure at least one character inside
+  const nodes: Descendant[] = [];
+  const paragraph: CustomElement = { type: 'paragraph', children: [] };
 
-        let lastIndex = 0;
-        let match;
+  let lastIndex = 0;
+  let match;
 
-        // Find all variable matches
-        while ((match = varRegex.exec(urlString)) !== null) {
-            // Add text before variable
-            if (match.index > lastIndex) {
-                paragraph.children.push({
-                    text: urlString.substring(lastIndex, match.index)
-                });
-            }
+  while ((match = varRegex.exec(urlString)) !== null) {
+    // Add text before variable
+    if (match.index > lastIndex) {
+      paragraph.children.push({
+        text: urlString.substring(lastIndex, match.index)
+      });
+    }
 
-            // Add variable
-            paragraph.children.push({
-                text: match[0],
-                variable: true,
-                variableName: match[1]
-            });
+    // Add variable - trim whitespace from variable name
+    paragraph.children.push({
+      text: match[0],
+      variable: true,
+      variableName: match[1].trim()
+    });
 
-            lastIndex = match.index + match[0].length;
-        }
+    lastIndex = match.index + match[0].length;
+  }
 
-        // Add remaining text
-        if (lastIndex < urlString.length) {
-            paragraph.children.push({
-                text: urlString.substring(lastIndex)
-            });
-        }
+  // Add remaining text
+  if (lastIndex < urlString.length) {
+    paragraph.children.push({
+      text: urlString.substring(lastIndex)
+    });
+  }
 
-        // If no text at all, add empty text node
-        if (paragraph.children.length === 0) {
-            paragraph.children.push({ text: '' });
-        }
+  // Ensure we always have at least one text node
+  if (paragraph.children.length === 0) {
+    paragraph.children.push({ text: '' });
+  }
 
-        nodes.push(paragraph);
-        setSlateValue(nodes);
-    }, []);
+  setSlateValue([paragraph]);
+}, []);
+
 
     // Handle slate value change and update URL string
     const handleSlateChange = (newValue: Descendant[]) => {

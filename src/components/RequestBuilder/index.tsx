@@ -98,12 +98,15 @@ const RequestBuilder = () => {
   }, [showSidebar]);
 
   // Fetch collection data when workspace changes
-  useEffect(() => {
+  // Fix the useEffect dependency issue
+useEffect(() => {
+  if (currentWorkspace?.id) {
     refetchCollection();
     setActiveCollection(null);
     handleCreateRequest();
-    
-  }, [currentWorkspace?.id, refetchCollection]);
+  }
+}, [currentWorkspace?.id]); // Remove refetchCollection from dependencies
+
 
   // Adjust layout based on mobile/desktop
   useEffect(() => {

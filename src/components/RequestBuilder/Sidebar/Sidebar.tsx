@@ -218,6 +218,7 @@ const Sidebar: React.FC = () => {
     }
   };
 
+  // Add proper async handling
   const handleDeleteCollection = async () => {
     if (!selectedCollection) return;
 
@@ -399,12 +400,14 @@ const Sidebar: React.FC = () => {
   };
 
   // URL parsing helper functions
+  // Add try-catch to URL parsing functions
   const getProtocol = (url: string): string[] => {
     try {
+      const urlObj = new URL(url);
+      return [urlObj.protocol.replace(':', '')];
+    } catch (e) {
       const match = url.match(/^(https?):\/\//);
       return match ? [match[1]] : [];
-    } catch (e) {
-      return [];
     }
   };
 
