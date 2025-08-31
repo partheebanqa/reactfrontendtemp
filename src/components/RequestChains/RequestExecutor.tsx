@@ -13,7 +13,7 @@ import {
   Copy,
   Save,
 } from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
+import { toast, useToast } from '@/hooks/use-toast';
 import type {
   APIRequest,
   ExecutionLog,
@@ -74,6 +74,7 @@ export function RequestExecutor({
   const [savedChainId, setSavedChainId] = useState<string | undefined>(
     undefined
   );
+  const { toast } = useToast();
   const [executionLogs, setExecutionLogs] = useState<ExecutionLog[]>([]);
   const [extractedVariables, setExtractedVariables] = useState<Variable[]>([]);
   const [expandedLogs, setExpandedLogs] = useState<Set<string>>(new Set());
@@ -287,6 +288,7 @@ export function RequestExecutor({
       }
 
       const savedChain = await onPreExecute();
+
       const currentChainId = savedChain?.id;
       setSavedChainId(currentChainId);
 
@@ -299,11 +301,6 @@ export function RequestExecutor({
         return;
       }
 
-      toast({
-        title: 'Chain Saved',
-        description: 'Request chain saved successfully.',
-        variant: 'default',
-      });
       return;
     } catch (err: any) {
       toast({
@@ -427,6 +424,16 @@ export function RequestExecutor({
       };
 
       const result = await playChain(payload);
+
+      // console.log('result from playChain:', result.message);
+
+      if (result) {
+        console.log('toast is coming');
+        toast({
+          title: 'Execution progress',
+          description: result.message,
+        });
+      }
 
       if (result?.data?.responses) {
         const logs: ExecutionLog[] = [];

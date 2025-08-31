@@ -210,6 +210,7 @@ export interface ExecutionResponse {
   pageSize: number;
   count: number;
   items: ExecutionItem[];
+  message?: string;
 }
 
 export interface ExecuteRequestPayload {

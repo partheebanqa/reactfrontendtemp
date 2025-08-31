@@ -941,7 +941,9 @@ export function RequestChainEditor({
             <CardContent className='space-y-4'>
               <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
                 <div className='space-y-2'>
-                  <Label htmlFor='chainName'>Chain Name *</Label>
+                  <Label htmlFor='chainName'>
+                    Chain Name <span className='text-destructive'>*</span>
+                  </Label>
                   <Input
                     id='chainName'
                     value={formData.name}
@@ -1000,11 +1002,14 @@ export function RequestChainEditor({
                       <SelectItem key={env.id} value={env.id}>
                         <div className='flex flex-col text-left'>
                           <span className='font-medium text-sm'>
-                            {env.name}
+                            {env.name} -{' '}
+                            <span className='text-xs text-muted-foreground break-all'>
+                              {env.baseUrl}
+                            </span>
                           </span>
-                          <span className='text-xs text-muted-foreground break-all'>
+                          {/* <span className='text-xs text-muted-foreground break-all'>
                             {env.baseUrl}
-                          </span>
+                          </span> */}
                         </div>
                       </SelectItem>
                     ))}
