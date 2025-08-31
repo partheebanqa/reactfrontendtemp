@@ -12,7 +12,7 @@ import {
   renameCollection,
   renameRequest,
   setFavouriteCollection,
-  uploadSchema,
+  unsetFavouriteCollection,
 } from '@/services/collection.service';
 import { workspaceStore } from '../workspaceStore';
 import {
@@ -95,6 +95,15 @@ export const useSetFavouriteCollectionMutation = () => {
   });
 };
 
+export const useUnsetFavouriteCollectionMutation = () => {
+  return useMutation({
+    mutationFn: unsetFavouriteCollection,
+    onSuccess: (data, id) => {
+      collectionActions.setUnFavouriteCollection(id);
+    },
+  });
+};
+
 export const useCollectionRequestsQuery = () => {
   return useMutation({
     mutationFn: getCollectionRequests,
@@ -152,7 +161,7 @@ export const useImpotPostmanCollectionMutation = () => {
 export const useImpotCollectionJsonMutation = () => {
   const collectionQuery = useCollectionQuery();
   return useMutation({
-    mutationFn: importCollectionJson,
+    // mutationFn: importCollectionJson,
     onSuccess: async (response) => {
       collectionQuery.refetch();
       return response;
