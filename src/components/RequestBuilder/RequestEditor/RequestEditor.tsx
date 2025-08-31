@@ -44,9 +44,6 @@ const RequestEditor: React.FC = () => {
     fetchCollectionRequests,
   } = useCollection();
 
-  console.log('activerequest in editor:', activeRequest);
-  console.log('activeCollection in editor:', activeCollection);
-
   const { variables, environments, activeEnvironment } = useDataManagement();
   const { error: showError, success: showSuccess, toast } = useToast();
   const { currentWorkspace } = useWorkspace();
