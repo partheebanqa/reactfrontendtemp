@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect } from "react";
 import {
   Plus,
   Search,
@@ -14,25 +14,31 @@ import {
   XCircle,
   Settings,
   Copy,
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+  Dot,
+  Link2,
+  Pencil,
+  Eye,
+  Info,
+  EllipsisVertical,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import type { RequestChain } from '@/shared/types/requestChain.model';
+} from "@/components/ui/select";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import type { RequestChain } from "@/shared/types/requestChain.model";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from '../ui/tooltip';
+} from "../ui/tooltip";
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -42,9 +48,18 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
-import HelpLink from '../HelpModal/HelpLink';
-import { RequestChainPagination } from './RequestChainPagination';
+} from "@/components/ui/alert-dialog";
+import HelpLink from "../HelpModal/HelpLink";
+import { RequestChainPagination } from "./RequestChainPagination";
+import BreadCum from "../BreadCum/Breadcum";
+import { useDataManagement } from "@/hooks/useDataManagement";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { RequestChainPreviewDialog } from "./RequestChainPreview";
 
 interface RequestChainsListProps {
   chains: RequestChain[];
@@ -58,26 +73,26 @@ interface RequestChainsListProps {
 
 // Loading skeleton component
 const LoadingSkeleton = () => (
-  <div className='space-y-3'>
+  <div className="space-y-3">
     {[1, 2, 3].map((i) => (
-      <Card key={i} className='animate-pulse'>
-        <CardContent className='p-6'>
-          <div className='flex items-center justify-between'>
-            <div className='flex items-center space-x-4 flex-1'>
-              <div className='w-4 h-4 bg-muted rounded-full'></div>
-              <div className='flex-1'>
-                <div className='h-5 bg-muted rounded w-1/3 mb-2'></div>
-                <div className='h-4 bg-muted rounded w-2/3 mb-3'></div>
-                <div className='flex space-x-6'>
-                  <div className='h-4 bg-muted rounded w-16'></div>
-                  <div className='h-4 bg-muted rounded w-16'></div>
-                  <div className='h-4 bg-muted rounded w-16'></div>
+      <Card key={i} className="animate-pulse">
+        <CardContent className="p-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4 flex-1">
+              <div className="w-4 h-4 bg-muted rounded-full"></div>
+              <div className="flex-1">
+                <div className="h-5 bg-muted rounded w-1/3 mb-2"></div>
+                <div className="h-4 bg-muted rounded w-2/3 mb-3"></div>
+                <div className="flex space-x-6">
+                  <div className="h-4 bg-muted rounded w-16"></div>
+                  <div className="h-4 bg-muted rounded w-16"></div>
+                  <div className="h-4 bg-muted rounded w-16"></div>
                 </div>
               </div>
             </div>
-            <div className='flex space-x-2'>
+            <div className="flex space-x-2">
               {[1, 2, 3, 4, 5].map((j) => (
-                <div key={j} className='w-8 h-8 bg-muted rounded'></div>
+                <div key={j} className="w-8 h-8 bg-muted rounded"></div>
               ))}
             </div>
           </div>
@@ -96,20 +111,38 @@ export function RequestChainsList({
   onCloneChain,
   onToggleChain,
 }: RequestChainsListProps) {
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<
-    'all' | 'active' | 'inactive'
-  >('all');
+    "all" | "active" | "inactive"
+  >("all");
   const [sortBy, setSortBy] = useState<
-    'name' | 'created' | 'executed' | 'success'
-  >('name');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+    "name" | "created" | "executed" | "success"
+  >("name");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+
+  const [environmentFilter, setEnvironmentFilter] = useState<string>("all");
+  const { environments, activeEnvironment } = useDataManagement();
+
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewChain, setPreviewChain] = useState<RequestChain | null>(null);
+
+  // Build env options from store
+  const envOptions = useMemo(() => {
+    const set = new Set<string>();
+    environments?.forEach((e) => e?.name && set.add(e.name));
+    return ["all", ...Array.from(set).sort((a, b) => a.localeCompare(b))];
+  }, [environments]);
+
+  // Optional: default to active environment on first load
+  // useEffect(() => {
+  //   if (environmentFilter === "all" && activeEnvironment?.name) {
+  //     setEnvironmentFilter(activeEnvironment.name);
+  //   }
+  // }, [activeEnvironment?.name]);
 
   const filteredAndSortedChains = useMemo(() => {
     const filtered = chains.filter((chain) => {
       const term = searchTerm.toLowerCase();
-        // NEW: pagination
- 
 
       const matchesSearch =
         chain.name.toLowerCase().includes(term) ||
@@ -120,24 +153,30 @@ export function RequestChainsList({
         chain.updatedAt.toLowerCase().includes(term);
 
       const matchesStatus =
-        statusFilter === 'all' ||
-        (statusFilter === 'active' && chain.enabled) ||
-        (statusFilter === 'inactive' && !chain.enabled);
+        statusFilter === "all" ||
+        (statusFilter === "active" && chain.enabled) ||
+        (statusFilter === "inactive" && !chain.enabled);
 
-      return matchesSearch && matchesStatus;
+      // 🔹 NEW: environment filtering
+      const envName = chain.environment?.name.toLowerCase();
+      const matchesEnvironment =
+        environmentFilter === "all" ||
+        envName === environmentFilter.toLowerCase();
+
+      return matchesSearch && matchesStatus && matchesEnvironment;
     });
 
     filtered.sort((a, b) => {
       let comparison = 0;
       switch (sortBy) {
-        case 'name':
+        case "name":
           comparison = a.name.localeCompare(b.name);
           break;
-        case 'created':
+        case "created":
           comparison =
             new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
           break;
-        case 'executed':
+        case "executed": {
           const aExecuted = a.lastExecuted
             ? new Date(a.lastExecuted).getTime()
             : 0;
@@ -146,163 +185,245 @@ export function RequestChainsList({
             : 0;
           comparison = aExecuted - bExecuted;
           break;
-        case 'success':
+        }
+        case "success":
           comparison = a.successRate - b.successRate;
           break;
       }
-      return sortOrder === 'asc' ? comparison : -comparison;
+      return sortOrder === "asc" ? comparison : -comparison;
     });
 
     return filtered;
-  }, [chains, searchTerm, statusFilter, sortBy, sortOrder]);
+  }, [chains, searchTerm, statusFilter, sortBy, sortOrder, environmentFilter]);
 
+  // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
 
   // Reset to page 1 whenever filters/search/sort change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, statusFilter, sortBy, sortOrder]);
+  }, [searchTerm, statusFilter, sortBy, sortOrder, environmentFilter]);
 
-   // NEW: slice for current page
-   const totalItems = filteredAndSortedChains.length;
-   const startIndex = (currentPage - 1) * itemsPerPage;
-   const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
-   const paginatedChains = filteredAndSortedChains.slice(startIndex, endIndex);
- 
+  // NEW: slice for current page
+  const totalItems = filteredAndSortedChains.length;
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
+  const paginatedChains = filteredAndSortedChains.slice(startIndex, endIndex);
 
   const getStatusIcon = (chain: RequestChain) => {
     if (!chain.enabled) {
-      return <Pause className='w-4 h-4 text-muted-foreground' />;
+      return <Pause className="w-4 h-4 text-muted-foreground" />;
     }
 
     if (chain.successRate >= 90) {
-      return <CheckCircle className='w-4 h-4 text-green-500' />;
+      return <Link2 className="w-4 h-4 text-green-500" />;
     } else if (chain.successRate >= 70) {
-      return <Clock className='w-4 h-4 text-yellow-500' />;
+      return <Link2 className="w-4 h-4 text-yellow-500" />;
     } else {
-      return <XCircle className='w-4 h-4 text-red-500' />;
+      return (
+        <Link2 className="bg-[#f9e3fc] p-2 rounded" color="#660275" size={40} />
+      );
     }
   };
 
   return (
-    <div className='space-y-6'>
-      {/* Header */}
-      <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4'>
-        <div>
-          <h1 className='text-3xl font-bold'>Request Chains</h1>
-          <p className='text-muted-foreground'>
-            Manage your API automation workflows
-          </p>
-        </div>
-        <div className='flex items-center gap-2'>
-          <Button onClick={onCreateChain} className='gap-2'>
-            <Plus className='w-4 h-4' />
-            Create Chain
-          </Button>
-          <HelpLink />
-        </div>
-      </div>
+    <div className="space-y-3">
+      <BreadCum
+        title="Request Chains"
+        subtitle="Manage your API automation workflows"
+        buttonTitle="Create Request Chain"
+        onClickQuickGuide={() => console.log("Exporting...")}
+        onClickCreateNew={onCreateChain}
+      />
 
       {/* Filters and Search */}
-      <div className='flex flex-col lg:flex-row gap-4'>
-        <div className='relative flex-1'>
-          <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground' />
+      <div className="flex flex-col lg:flex-row gap-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
-            placeholder='Search request chains...'
+            placeholder="Search request chains..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className='pl-10'
+            className="pl-10"
           />
         </div>
 
-        <div className='flex flex-col sm:flex-row gap-2'>
+        <div className="flex flex-col sm:flex-row gap-2">
+          <Select
+            value={environmentFilter}
+            onValueChange={setEnvironmentFilter}
+          >
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder="All environments" />
+            </SelectTrigger>
+            <SelectContent>
+              {envOptions.map((name) => (
+                <SelectItem key={name} value={name}>
+                  {name === "all" ? (
+                    "All environments"
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <span>{name}</span>
+                    </div>
+                  )}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Select
             value={statusFilter}
             onValueChange={(value: typeof statusFilter) =>
               setStatusFilter(value)
             }
           >
-            <SelectTrigger className='w-full sm:w-[180px]'>
-              <SelectValue placeholder='Filter by status' />
+            <SelectTrigger className="w-full sm:w-[180px]">
+              <SelectValue placeholder="Filter by status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value='all'>All Chains</SelectItem>
-              <SelectItem value='active'>Active</SelectItem>
-              <SelectItem value='inactive'>Inactive</SelectItem>
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="active">Enabled</SelectItem>
+              <SelectItem value="inactive">Disabled</SelectItem>
             </SelectContent>
           </Select>
 
           <Select
             value={`${sortBy}-${sortOrder}`}
             onValueChange={(value) => {
-              const [field, order] = value.split('-');
+              const [field, order] = value.split("-");
               setSortBy(field as typeof sortBy);
               setSortOrder(order as typeof sortOrder);
             }}
           >
-            <SelectTrigger className='w-full sm:w-[180px]'>
-              <SelectValue placeholder='Sort by' />
+            <SelectTrigger className="w-full sm:w-[180px]">
+              <SelectValue placeholder="Sort by" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value='name-asc'>Name A-Z</SelectItem>
-              <SelectItem value='name-desc'>Name Z-A</SelectItem>
-              <SelectItem value='created-desc'>Newest First</SelectItem>
-              <SelectItem value='created-asc'>Oldest First</SelectItem>
-              <SelectItem value='executed-desc'>Recently Executed</SelectItem>
-              <SelectItem value='success-desc'>Highest Success Rate</SelectItem>
+              <SelectItem value="name-asc">Name A-Z</SelectItem>
+              <SelectItem value="name-desc">Name Z-A</SelectItem>
+              <SelectItem value="created-desc">Newest First</SelectItem>
+              <SelectItem value="created-asc">Oldest First</SelectItem>
+              <SelectItem value="executed-desc">Recently Executed</SelectItem>
+              <SelectItem value="success-desc">Highest Success Rate</SelectItem>
             </SelectContent>
           </Select>
         </div>
       </div>
 
       {/* Results Summary */}
-      <div className='text-sm text-muted-foreground'>
+      <div className="text-sm text-muted-foreground">
         Showing {filteredAndSortedChains.length} of {chains.length} chains
       </div>
 
       {/* Chains List */}
       {loading && <LoadingSkeleton />}
 
-     
-
-{!loading && paginatedChains.length > 0 && (
+      {!loading && paginatedChains.length > 0 && (
         <>
-          <div className='space-y-3'>
-          {paginatedChains.map((chain) => (
-            <Card key={chain.id} className='hover:shadow-sm transition-shadow'>
-              <CardContent className='p-6'>
-                <div className='flex items-center justify-between'>
-                  {/* Left section - Icon, Name, and Details */}
-                  <div className='flex items-center space-x-4 flex-1 min-w-0'>
-                    <div className='flex-shrink-0'>{getStatusIcon(chain)}</div>
-
-                    <div className='flex-1 min-w-0'>
-                      <div className='flex items-center space-x-3'>
-                        <h3 className='text-lg font-semibold truncate'>
-                          {chain.name}
-                        </h3>
-                        <Badge
-                          variant={chain.enabled ? 'default' : 'secondary'}
-                          className={
-                            chain.enabled ? 'bg-green-100 text-green-800' : ''
-                          }
-                        >
-                          {chain.enabled ? 'Enabled' : 'Disabled'}
-                        </Badge>
+          <div className="space-y-3">
+            {paginatedChains.map((chain) => (
+              <Card
+                key={chain.id}
+                className="shadow-none hover:transition-shadow"
+              >
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    {/* Left section - Icon, Name, and Details */}
+                    <div className="flex items-center space-x-4 flex-1 min-w-0">
+                      <div className="flex-shrink-0">
+                        {getStatusIcon(chain)}
                       </div>
-                      <p className='text-sm text-muted-foreground mt-1 line-clamp-1'>
-                        {chain.description}
-                      </p>
-                      <div className='flex items-center space-x-4 mt-2 text-sm text-muted-foreground'>
-                        <span>{chain?.chainRequests?.length} steps</span>
-                        <span>•</span>
-                        <span>
-                          {chain.chainRequests.map((r) => r.name).join(', ')}
-                        </span>
-                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center space-x-3">
+                          <h3 className="text-lg font-[600] truncate">
+                            {chain.name}
+                          </h3>
+                          <Badge
+                            variant="outline"
+                            className={`
+    flex items-center gap-1
+    ${
+      chain.environment?.name?.toLowerCase().includes("prod")
+        ? "bg-green-100 text-green-800 border-green-200"
+        : ""
+    }
+    ${
+      chain.environment?.name?.toLowerCase().includes("stage")
+        ? "bg-yellow-100 text-yellow-800 border-yellow-200"
+        : ""
+    }
+    ${
+      chain.environment?.name?.toLowerCase().includes("dev")
+        ? "bg-blue-100 text-blue-800 border-blue-200"
+        : ""
+    }
+    ${
+      !chain.environment?.name || chain.environment?.name === "No Environment"
+        ? "bg-gray-100 text-gray-700 border-gray-200"
+        : ""
+    }
+  `}
+                          >
+                            {/* Dot */}
+                            <span
+                              className={`h-2 w-2 rounded-full 
+      ${
+        chain.environment?.name?.toLowerCase().includes("prod")
+          ? "bg-green-600"
+          : ""
+      }
+      ${
+        chain.environment?.name?.toLowerCase().includes("stage")
+          ? "bg-yellow-600"
+          : ""
+      }
+      ${
+        chain.environment?.name?.toLowerCase().includes("dev")
+          ? "bg-blue-600"
+          : ""
+      }
+      ${
+        !chain.environment?.name || chain.environment?.name === "No Environment"
+          ? "bg-gray-500"
+          : ""
+      }
+    `}
+                            />
 
-                      <div className='flex items-center space-x-6 mt-3'>
+                            {chain.environment?.name || "No Environment"}
+                          </Badge>
+
+                          <Badge
+                            variant={chain.enabled ? "default" : "secondary"}
+                            className={
+                              chain.enabled ? "bg-green-100 text-green-800" : ""
+                            }
+                          >
+                            {chain.enabled ? "Enabled" : "Disabled"}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground mt-1 line-clamp-1">
+                          {chain.description}
+                        </p>
+                        <div className="flex items-center space-x-3 mt-1 text-sm text-muted-foreground">
+                          <span className="flex items-center font-[500] text-[#64748b] text-[13px]">
+                            <Dot size={40} className="text-red-500" />
+                            {chain?.chainRequests?.length} steps
+                          </span>
+                          <span>-</span>
+                          <span className="font-[500] text-[#64748b] text-[13px]">
+                            {chain.chainRequests.length > 5
+                              ? chain.chainRequests
+                                  .slice(0, 5)
+                                  .map((r) => r.name)
+                                  .join(" → ") + " → ..."
+                              : chain.chainRequests
+                                  .map((r) => r.name)
+                                  .join(" → ")}
+                          </span>
+                        </div>
+
+                        {/* <div className='flex items-center space-x-6 mt-3'>
                         <div className='text-center'>
                           <p className='text-sm font-medium'>
                             {chain.chainRequests.length}
@@ -331,140 +452,168 @@ export function RequestChainsList({
                             Last Execution
                           </p>
                         </div>
-                      </div>
+                      </div> */}
 
-                      <div className='flex items-center space-x-6 mt-3'>
-                        <div className='text-center'>
-                          <span>Environment: </span>
-                          <span>
-                            {chain.environment?.name || 'No Environment'}
-                          </span>
-                        </div>
-                        {chain?.schedule?.enabled && (
-                          <div className='flex items-center space-x-2 mt-2'>
-                            <Badge
-                              variant='outline'
-                              className='text-blue-600 border-blue-200'
-                            >
-                              <Settings className='w-3 h-3 mr-1' />
-                              Scheduled
-                            </Badge>
-                            <span className='text-xs text-blue-600'>
-                              {chain.schedule.type === 'once'
-                                ? 'One-time'
-                                : 'Recurring'}
+                        <div className="flex items-center space-x-6">
+                          {/* <div className="text-center">
+                            <span>Environment: </span>
+                            <span>
+                              {chain.environment?.name || "No Environment"}
                             </span>
-                          </div>
-                        )}
-                      </div>
+                          </div> */}
+                          {chain?.schedule?.enabled && (
+                            <div className="flex items-center space-x-2 mt-2">
+                              <Badge
+                                variant="outline"
+                                className="text-blue-600 border-blue-200"
+                              >
+                                <Settings className="w-3 h-3 mr-1" />
+                                Scheduled
+                              </Badge>
+                              <span className="text-xs text-blue-600">
+                                {chain.schedule.type === "once"
+                                  ? "One-time"
+                                  : "Recurring"}
+                              </span>
+                            </div>
+                          )}
+                        </div>
 
-                      <div className='text-xs text-muted-foreground mt-2'>
-                        Created:{' '}
-                        {new Date(chain.createdAt).toLocaleDateString()} • ID:{' '}
-                        {chain.id}
+                        <div className="text-[13px] text-muted-foreground mt-1">
+                          Created:{" "}
+                          {new Date(chain.createdAt).toLocaleDateString()} • ID:{" "}
+                          {chain.id}
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  {/* Right section - Action buttons */}
-                  <div className='flex items-center space-x-2 flex-shrink-0 ml-4'>
-                    <TooltipProvider>
-                      {/* Enable/Disable Chain */}
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant='ghost'
-                            size='sm'
-                            onClick={() => onToggleChain(chain?.id)}
-                            className={
-                              chain.enabled
-                                ? 'text-green-600 hover:text-green-700'
-                                : 'text-muted-foreground hover:text-foreground'
-                            }
-                          >
-                            {chain.enabled ? (
-                              <Play className='w-4 h-4' />
-                            ) : (
-                              <Pause className='w-4 h-4' />
-                            )}
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          {chain.enabled ? 'Execute Chain' : 'Executing'}
-                        </TooltipContent>
-                      </Tooltip>
-
-                      {/* Edit Chain */}
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant='ghost'
-                            size='sm'
-                            onClick={() => onEditChain(chain)}
-                            className='text-muted-foreground hover:text-foreground'
-                          >
-                            <Edit className='w-4 h-4' />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Edit Chain</TooltipContent>
-                      </Tooltip>
-
-                      {/* Copy Chain */}
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant='ghost'
-                            size='sm'
-                            className='text-muted-foreground hover:text-foreground'
-                            onClick={() => onCloneChain(chain.id)}
-                          >
-                            <Copy className='w-4 h-4' />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Copy Chain</TooltipContent>
-                      </Tooltip>
-
-                      {/* Delete Chain with confirmation */}
-                      <AlertDialog>
+                    {/* Right section - Action buttons */}
+                    <div className="flex items-center space-x-2 flex-shrink-0 ml-4">
+                      <TooltipProvider>
+                        {/* Enable/Disable Chain */}
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <AlertDialogTrigger asChild>
-                              <Button
-                                variant='ghost'
-                                size='sm'
-                                className='text-red-600 hover:text-red-700'
-                              >
-                                <Trash2 className='w-4 h-4' />
-                              </Button>
-                            </AlertDialogTrigger>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => onToggleChain(chain?.id)}
+                              className={
+                                chain.enabled
+                                  ? "text-green-600 hover:text-green-700"
+                                  : "text-muted-foreground hover:text-foreground"
+                              }
+                            >
+                              {chain.enabled ? (
+                                <Play className="w-4 h-4" />
+                              ) : (
+                                <Pause className="w-4 h-4" />
+                              )}
+                            </Button>
                           </TooltipTrigger>
-                          <TooltipContent>Delete Chain</TooltipContent>
+                          <TooltipContent>
+                            {chain.enabled ? "Execute Chain" : "Executing"}
+                          </TooltipContent>
                         </Tooltip>
 
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>
-                              Delete this chain?
-                            </AlertDialogTitle>
-                            <AlertDialogDescription>
-                              This will permanently delete “{chain.name}”. This
-                              action cannot be undone.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <Button onClick={() => onDeleteChain(chain.id)}>
-                              Delete
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setPreviewChain(chain);
+                                setPreviewOpen(true);
+                              }}
+                              className="text-muted-foreground hover:text-foreground"
+                            >
+                              <Eye className="w-4 h-4" />
                             </Button>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </TooltipProvider>
+                          </TooltipTrigger>
+                          <TooltipContent>Preview Chain</TooltipContent>
+                        </Tooltip>
+
+                        {/* Edit Chain */}
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => onEditChain(chain)}
+                              className="text-muted-foreground hover:text-foreground"
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Edit Chain</TooltipContent>
+                        </Tooltip>
+
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-muted-foreground hover:text-foreground"
+                                >
+                                  <EllipsisVertical className="w-4 h-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+
+                              <DropdownMenuContent
+                                align="end"
+                                className="bg-white border shadow-lg"
+                              >
+                                <DropdownMenuItem
+                                  onClick={() => onCloneChain(chain.id)}
+                                >
+                                  <Copy className="w-4 h-4 mr-2" /> Clone
+                                </DropdownMenuItem>
+                                <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="text-red-600 hover:text-red-700"
+                                    >
+                                      <Trash2 className="w-4 h-4" /> Delete
+                                    </Button>
+                                  </AlertDialogTrigger>
+
+                                  <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>
+                                        Delete this chain?
+                                      </AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                        This will permanently delete “
+                                        {chain.name}”. This action cannot be
+                                        undone.
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel>
+                                        Cancel
+                                      </AlertDialogCancel>
+                                      <Button
+                                        onClick={() => onDeleteChain(chain.id)}
+                                      >
+                                        Delete
+                                      </Button>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TooltipTrigger>
+                          <TooltipContent>More</TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                </CardContent>
+              </Card>
+            ))}
           </div>
 
           {/* NEW: pagination footer */}
@@ -477,17 +626,23 @@ export function RequestChainsList({
         </>
       )}
 
+      <RequestChainPreviewDialog
+        open={previewOpen}
+        onClose={() => setPreviewOpen(false)}
+        chain={previewChain}
+      />
+
       {!loading && filteredAndSortedChains.length === 0 && (
-        <div className='text-center py-12'>
-          <Workflow className='w-16 h-16 text-muted-foreground mx-auto mb-4' />
-          <h3 className='text-lg font-medium mb-2'>No request chains found</h3>
-          <p className='text-muted-foreground mb-6 max-w-md mx-auto'>
-            {searchTerm || statusFilter !== 'all'
-              ? 'Try adjusting your search or filter criteria.'
-              : 'Create your first request chain to automate your API workflows.'}
+        <div className="text-center py-12">
+          <Workflow className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+          <h3 className="text-lg font-medium mb-2">No request chains found</h3>
+          <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+            {searchTerm || statusFilter !== "all"
+              ? "Try adjusting your search or filter criteria."
+              : "Create your first request chain to automate your API workflows."}
           </p>
-          <Button onClick={onCreateChain} className='gap-2'>
-            <Plus className='w-4 h-4' />
+          <Button onClick={onCreateChain} className="gap-2">
+            <Plus className="w-4 h-4" />
             Create Request Chain
           </Button>
         </div>

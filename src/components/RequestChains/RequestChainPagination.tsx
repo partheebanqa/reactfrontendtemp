@@ -39,7 +39,7 @@ export const RequestChainPagination = ({
             return (
               <Button
                 key={pageNumber}
-                variant={currentPage === pageNumber ? 'default' : 'outline'}
+                variant={currentPage === pageNumber ? 'active' : 'outline'}
                 size='sm'
                 className='w-8 h-8 p-0'
                 onClick={() => setCurrentPage(pageNumber)}
