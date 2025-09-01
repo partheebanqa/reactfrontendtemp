@@ -20,6 +20,7 @@ import {
   Eye,
   Info,
   EllipsisVertical,
+  RefreshCw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -69,6 +70,8 @@ interface RequestChainsListProps {
   onDeleteChain: (chainId: string) => void;
   onCloneChain: (chainId: string) => void;
   onToggleChain: (chainId: string) => void;
+  onRefresh: () => void;
+  refreshing?: boolean;
 }
 
 // Loading skeleton component
@@ -110,6 +113,7 @@ export function RequestChainsList({
   onDeleteChain,
   onCloneChain,
   onToggleChain,
+  onRefresh,
 }: RequestChainsListProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<
@@ -139,6 +143,8 @@ export function RequestChainsList({
   //     setEnvironmentFilter(activeEnvironment.name);
   //   }
   // }, [activeEnvironment?.name]);
+
+  const [refreshing, setRefreshing] = useState(false);
 
   const filteredAndSortedChains = useMemo(() => {
     const filtered = chains.filter((chain) => {
@@ -217,9 +223,13 @@ export function RequestChainsList({
     }
 
     if (chain.successRate >= 90) {
-      return <Link2 className="w-4 h-4 text-green-500" />;
+      return (
+        <Link2 className="bg-[#f9e3fc] p-2 rounded" color="#660275" size={40} />
+      );
     } else if (chain.successRate >= 70) {
-      return <Link2 className="w-4 h-4 text-yellow-500" />;
+      return (
+        <Link2 className="bg-[#f9e3fc] p-2 rounded" color="#660275" size={40} />
+      );
     } else {
       return (
         <Link2 className="bg-[#f9e3fc] p-2 rounded" color="#660275" size={40} />
@@ -235,6 +245,17 @@ export function RequestChainsList({
         buttonTitle="Create Request Chain"
         onClickQuickGuide={() => console.log("Exporting...")}
         onClickCreateNew={onCreateChain}
+        quickGuideTitle="How to Use Reports"
+      quickGuideContent={
+        <div>
+          <p className="mb-2">Here’s how to get started:</p>
+          <ul className="list-disc pl-5 space-y-1 text-sm">
+            <li>Step 1: Click <b>New Report</b> to create.</li>
+            <li>Step 2: Fill in details like name and filters.</li>
+            <li>Step 3: Save and view analytics.</li>
+          </ul>
+        </div>
+      }
       />
 
       {/* Filters and Search */}
@@ -307,6 +328,18 @@ export function RequestChainsList({
               <SelectItem value="success-desc">Highest Success Rate</SelectItem>
             </SelectContent>
           </Select>
+          <Button
+            variant="default"
+            className="hover-scale"
+            onClick={onRefresh}
+            disabled={refreshing}
+          >
+            <RefreshCw
+              className={`mr-2 ${refreshing ? "animate-spin" : ""}`}
+              size={16}
+            />
+            {refreshing ? "Refreshing..." : "Refresh"}
+          </Button>
         </div>
       </div>
 
@@ -412,9 +445,9 @@ export function RequestChainsList({
                           </span>
                           <span>-</span>
                           <span className="font-[500] text-[#64748b] text-[13px]">
-                            {chain.chainRequests.length > 5
+                            {chain.chainRequests.length > 3
                               ? chain.chainRequests
-                                  .slice(0, 5)
+                                  .slice(0, 3)
                                   .map((r) => r.name)
                                   .join(" → ") + " → ..."
                               : chain.chainRequests
@@ -422,45 +455,8 @@ export function RequestChainsList({
                                   .join(" → ")}
                           </span>
                         </div>
-
-                        {/* <div className='flex items-center space-x-6 mt-3'>
-                        <div className='text-center'>
-                          <p className='text-sm font-medium'>
-                            {chain.chainRequests.length}
-                          </p>
-                          <p className='text-xs text-muted-foreground'>
-                            Requests
-                          </p>
-                        </div>
-                        <div className='text-center'>
-                          <p className='text-sm font-medium'>
-                            {chain.successRate}%
-                          </p>
-                          <p className='text-xs text-muted-foreground'>
-                            Success
-                          </p>
-                        </div>
-                        <div className='text-center'>
-                          <p className='text-sm font-medium'>
-                            {chain.lastExecuted
-                              ? new Date(
-                                  chain.lastExecuted
-                                ).toLocaleDateString()
-                              : 'Never'}
-                          </p>
-                          <p className='text-xs text-muted-foreground'>
-                            Last Execution
-                          </p>
-                        </div>
-                      </div> */}
-
                         <div className="flex items-center space-x-6">
-                          {/* <div className="text-center">
-                            <span>Environment: </span>
-                            <span>
-                              {chain.environment?.name || "No Environment"}
-                            </span>
-                          </div> */}
+                        
                           {chain?.schedule?.enabled && (
                             <div className="flex items-center space-x-2 mt-2">
                               <Badge

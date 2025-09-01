@@ -20,6 +20,7 @@ import type {
   ExecutionRequestChainPayload,
 } from '@/shared/types/requestChain.model';
 import { useExecuteRequestChain } from '@/shared/hooks/requestChain';
+import { Button } from '../ui/button';
 
 interface Variable {
   id?: string;
@@ -682,33 +683,25 @@ export function RequestExecutor({
             <>
               {/* Save/Update Button */}
               {onPreExecute && (
-                <button
-                  onClick={chainId ? handleUpdateChain : handleSaveChain}
-                  disabled={!chainName?.trim()}
-                  className='flex items-center justify-center space-x-2 px-4 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors w-full sm:w-auto'
-                >
-                  <Save className='w-4 h-4' />
-                  <span className='hidden sm:inline'>
-                    {chainId ? 'Update Chain' : 'Save Chain'}
-                  </span>
-                  <span className='sm:hidden'>
-                    {chainId ? 'Update' : 'Save'}
-                  </span>
-                </button>
+               
+                  <Button  variant="outline" className="hover-scale"  onClick={chainId ? handleUpdateChain : handleSaveChain}
+                  disabled={!chainName?.trim()}>
+             <Save className='w-4 h-4' />
+                                  {chainId ? 'Update' : 'Save'}
+            </Button>
               )}
 
               {/* Execute Button */}
-              <button
-                onClick={handleExecuteChain}
+              <Button                onClick={handleExecuteChain}
                 disabled={
                   processedRequests.filter((r) => r.enabled).length === 0 ||
                   (!savedChainId && !chainId)
                 }
-                className='flex items-center justify-center space-x-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors w-full sm:w-auto'
+              className="hover-scale bg-[#136fb0] text-white"
               >
                 <Play className='w-4 h-4' />
-                <span>Execute</span>
-              </button>
+                Execute
+              </Button>
             </>
           )}
         </div>

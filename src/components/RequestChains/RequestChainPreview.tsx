@@ -91,38 +91,43 @@ export function RequestChainPreviewDialog({ open, onClose, chain }: PreviewProps
             </div>
 
             {/* Request sequence */}
-            <div>
-              <p className="text-sm font-medium mb-3">Request Sequence</p>
-              <div className="space-y-3">
-                {chain.chainRequests?.map((req, idx) => {
-                  const method = req?.method;
-                  const url = req?.url ?? "";
-                  return (
-                    <div key={req.id ?? idx} className="flex items-start gap-3">
-                      {/* Index pill */}
-                      <div className="h-6 w-6 flex items-center justify-center rounded-full bg-slate-100 text-slate-700 text-xs font-semibold mt-0.5">
-                        {idx + 1}
-                      </div>
+           <div>
+  <p className="text-sm font-medium mb-3">Request Sequence</p>
+  <div className="space-y-3 max-h-64 overflow-auto pr-2">
+    {chain.chainRequests?.map((req, idx) => {
+      const method = req?.method;
+      const url = req?.url ?? "";
+      return (
+        <div key={req.id ?? idx} className="flex items-start gap-3">
+          {/* Index pill */}
+          <div className="h-6 w-6 flex items-center justify-center rounded-full bg-slate-100 text-slate-700 text-xs font-semibold mt-0.5">
+            {idx + 1}
+          </div>
 
-                      {/* Row content */}
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline" className={methodBadge(method)}>
-                            {method?.toUpperCase() || "REQ"}
-                          </Badge>
-                          <p className="font-medium truncate">{req.name || "Untitled step"}</p>
-                        </div>
-                        <p className="text-xs text-muted-foreground truncate">{url}</p>
-                      </div>
-                    </div>
-                  );
-                })}
-
-                {(!chain.chainRequests || chain.chainRequests.length === 0) && (
-                  <p className="text-xs text-muted-foreground">No steps in this chain.</p>
-                )}
-              </div>
+          {/* Row content */}
+          <div className="flex-1">
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className={methodBadge(method)}>
+                {method?.toUpperCase() || "REQ"}
+              </Badge>
+              <p className="font-medium truncate">
+                {req.name || "Untitled step"}
+              </p>
             </div>
+            <p className="text-xs text-muted-foreground truncate">{url}</p>
+          </div>
+        </div>
+      );
+    })}
+
+    {(!chain.chainRequests || chain.chainRequests.length === 0) && (
+      <p className="text-xs text-muted-foreground">
+        No steps in this chain.
+      </p>
+    )}
+  </div>
+</div>
+
           </div>
         )}
       </DialogContent>

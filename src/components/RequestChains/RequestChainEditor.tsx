@@ -17,6 +17,8 @@ import {
   CheckCircle,
   XCircle,
   Info,
+  Layers,
+  Link2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -69,6 +71,7 @@ import {
   getExecutionLogForRequest,
 } from '@/lib/request-utils';
 import { ResponseExplorer } from './ResponseExplorer';
+import BreadCum from '../BreadCum/Breadcum';
 
 interface RequestChainEditorProps {
   chain?: RequestChain;
@@ -900,7 +903,7 @@ export function RequestChainEditor({
   return (
     <div className='h-full flex flex-col'>
       {/* Header */}
-      <div className='flex-shrink-0 border-b bg-background px-6 py-4'>
+      {/* <div className='flex-shrink-0 border-b bg-background px-6 py-4'>
         <div className='flex items-center justify-between'>
           <div className='flex items-center space-x-4'>
             <Button variant='ghost' size='sm' onClick={onBack}>
@@ -916,9 +919,22 @@ export function RequestChainEditor({
             </div>
           </div>
         </div>
-      </div>
+      </div> */}
 
-      <div className='flex-1 overflow-auto'>
+      <BreadCum
+              title=  {chain ? 'Edit Request Chain' : 'Create Request Chain'}
+              subtitle={ 'Configure your API automation workflow'}
+              buttonTitle=" Create Test suite"
+               showCreateButton={false}
+               showQuickGuide={false}
+              onClickQuickGuide={() => console.log("Exporting...")}
+              icon={Link2}
+              iconBgClass="bg-[#f9e3fc]"
+              iconColor="#660275"
+              iconSize={36}
+            />
+
+      <div className='flex-1 border border-gray-200 rounded-lg bg-background mt-3'>
         <div className='p-6 space-y-6'>
           {/* 1. Basic Information Box */}
           <Card>
