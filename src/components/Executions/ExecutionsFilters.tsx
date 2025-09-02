@@ -22,6 +22,7 @@ import {
   Filter,
   Save,
   Calendar,
+  RefreshCw,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
@@ -120,9 +121,12 @@ export const ExecutionsFilters = ({
   }, [environments]);
  
   return (
-    <div className='mb-6 space-y-4'>
+    <div className='mb-2 space-y-4 mt-2 bg-card p-4 rounded-lg border border-border'>
       {/* Quick Filters */}
-      <div className='flex flex-wrap gap-2'>
+     
+
+      {/* Search & Filters */}
+       <div className='flex flex-wrap gap-2 '>
         <Button
           variant={activeQuickFilter === 'last24hours' ? 'default' : 'outline'}
           size='sm'
@@ -169,9 +173,9 @@ export const ExecutionsFilters = ({
           Clear all
         </Button>
       </div>
+      <div className=' flex flex-col lg:flex-row gap-4'>
 
-      {/* Search & Filters */}
-      <div className='bg-card p-4 rounded-lg border border-border flex flex-col lg:flex-row gap-4'>
+        
         {/* Search */}
         <div className='flex-1 max-w-md relative'>
           <Input
@@ -430,6 +434,20 @@ export const ExecutionsFilters = ({
               </SelectContent>
             </Select>
           )}
+
+          <Button
+                      variant="default"
+                      className="hover-scale"
+                      // onClick={onRefresh}
+                      // disabled={refreshing}
+                    >
+                      <RefreshCw
+                        className={`mr-2`}
+                        size={16}
+                      />
+                      {/* {refreshing ? "Refreshing..." : "Refresh"} */}
+                      Refresh
+                    </Button>
         </div>
       </div>
     </div>

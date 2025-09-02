@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/useToast";
-import { Plus, Search, Filter, Play } from "lucide-react";
+import { Plus, Search, Filter, Play, RefreshCw, Layers } from "lucide-react";
 import TestSuiteCard from "./TestSuiteCard";
 import {
   getAllTestSuites,
@@ -59,6 +59,8 @@ const TestSuites: React.FC = () => {
     data: apiData,
     isLoading,
     error,
+    isFetching, // optional: for button spinner
+    refetch,
   } = useQuery({
     queryKey: ["/api/test-suites", currentWorkspace?.id],
     enabled: !!currentWorkspace?.id,
@@ -231,6 +233,21 @@ const TestSuites: React.FC = () => {
         buttonTitle=" Create Test suite"
         onClickQuickGuide={() => console.log("Exporting...")}
         onClickCreateNew={handleCreateSuite}
+        icon={Layers}
+        iconBgClass="bg-green-100"
+        iconColor="#0f766e"
+        iconSize={36}
+        quickGuideTitle="How to Use Reports"
+      quickGuideContent={
+        <div>
+          <p className="mb-2">Here’s how to get started:</p>
+          <ul className="list-disc pl-5 space-y-1 text-sm">
+            <li>Step 1: Click <b>New Report</b> to create.</li>
+            <li>Step 2: Fill in details like name and filters.</li>
+            <li>Step 3: Save and view analytics.</li>
+          </ul>
+        </div>
+      }
       />
 
       <div className="flex flex-col justify-between lg:flex-row gap-4">
@@ -270,10 +287,10 @@ const TestSuites: React.FC = () => {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="All statuses">All status</SelectItem>
-            <SelectItem value="Not Run">Not Run</SelectItem>
-            <SelectItem value="Running">Running</SelectItem>
-            <SelectItem value="Passed">Passed</SelectItem>
-            <SelectItem value="Failed">Failed</SelectItem>
+            <SelectItem value="generated">Generated</SelectItem>
+            <SelectItem value="generating">Generating</SelectItem>
+            {/* <SelectItem value="Passed">Passed</SelectItem>
+            <SelectItem value="Failed">Failed</SelectItem> */}
           </SelectContent>
         </Select>
 
@@ -295,6 +312,15 @@ const TestSuites: React.FC = () => {
             <SelectItem value="created-asc">Oldest First</SelectItem>
           </SelectContent>
         </Select>
+
+        <Button
+          variant="default"
+          className="hover-scale"
+          onClick={() => refetch}
+        >
+          <RefreshCw className="mr-2" size={16} />
+          Refresh
+        </Button>
       </div>
 
       <div className="">
@@ -313,6 +339,8 @@ const TestSuites: React.FC = () => {
                   onDelete={handleDeleteSuite}
                   onExecute={handleExecuteSuite}
                   onClone={handleClonseSuite}
+                  onRefresh={() => refetch()}
+                  refreshing={isFetching}
                 />
               ))}
             </div>

@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Download, Save } from 'lucide-react';
+import { ArrowLeft, Download, Layers, Save } from 'lucide-react';
 import { ManageRequests } from '@/components/TestSuit/ManageRequests';
 import { ImportModal } from '@/components/TestSuit/ImportModal';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -29,6 +29,7 @@ import {
 } from '@/models/collection.model';
 import { useWorkspace } from '@/hooks/useWorkspace';
 import { useDataManagement } from '@/hooks/useDataManagement';
+import BreadCum from '../BreadCum/Breadcum';
 
 interface Request {
   id: string;
@@ -291,8 +292,21 @@ const EditTestSuiteContent: React.FC = () => {
   );
 
   return (
-    <div className='border border-gray-200 rounded-lg min-h-screen bg-background'>
-      <div className='border-b px-6 py-4'>
+    <>
+     <BreadCum
+        title= {isCreateMode ? "Create Test Suite" : "Edit Test Suite"}
+        subtitle={!isCreateMode ? `Test Suite ID: ${id}` : 'Manage your API automation workflows'}
+        buttonTitle=" Create Test suite"
+         showCreateButton={false}
+         showQuickGuide={false}
+        onClickQuickGuide={() => console.log("Exporting...")}
+        icon={Layers}
+        iconBgClass="bg-green-100"
+        iconColor="#0f766e"
+        iconSize={36}
+      />
+    <div className='border border-gray-200 rounded-lg min-h-screen bg-background mt-3'>
+      {/* <div className='border-b px-6 py-4'>
         <div className='flex items-center justify-between'>
           <div className='flex items-center space-x-4'>
             <div>
@@ -311,7 +325,7 @@ const EditTestSuiteContent: React.FC = () => {
               </div>
             </div>
           </div>
-          {/* <div className='flex items-center space-x-2'>
+          <div className='flex items-center space-x-2'>
             <Button variant='outline' onClick={handleBack}>
               Cancel
             </Button>
@@ -329,9 +343,9 @@ const EditTestSuiteContent: React.FC = () => {
                 ? 'Create Suite'
                 : 'Save Changes'}
             </Button>
-          </div> */}
+          </div>
         </div>
-      </div>
+      </div> */}
 
       <div className='p-6 space-y-6'>
         <Card>
@@ -545,6 +559,7 @@ const EditTestSuiteContent: React.FC = () => {
         />
       </div>
     </div>
+    </>
   );
 };
 

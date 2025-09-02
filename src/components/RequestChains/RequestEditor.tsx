@@ -690,7 +690,7 @@ export function RequestEditor({
           <Button
             onClick={handleExecute}
             disabled={isExecuting}
-            className='gap-2 bg-primary text-primary-foreground hover:bg-primary/90'
+            className='hover-scale bg-[#136fb0] text-white'
           >
             <Play className='w-4 h-4' />
             {isExecuting ? 'Running...' : 'Run'}
@@ -702,7 +702,7 @@ export function RequestEditor({
             <span className='text-gray-600 dark:text-gray-400 font-medium'>
               Final URL Preview:
             </span>
-            <span className='text-blue-600 dark:text-blue-400 font-mono break-all'>
+            <span className='text-[#136fb0] dark:text-blue-400 font-mono break-all'>
               {previewUrl}
             </span>
           </div>
@@ -719,7 +719,7 @@ export function RequestEditor({
                   onClick={() => setActiveTab(tab.id as typeof activeTab)}
                   className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors flex items-center space-x-2 ${
                     activeTab === tab.id
-                      ? 'border-blue-500 text-blue-600'
+                      ? 'border-blue-500 text-[#136fb0]'
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                   }`}
                 >
@@ -749,8 +749,8 @@ export function RequestEditor({
                   onClick={addParam}
                   className='flex items-center space-x-2 px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition-colors'
                 >
-                  <Plus className='w-4 h-4' />
-                  <span>Add Parameter</span>
+                  <Plus className='w-4 h-4' color='#136fb0' />
+                  <span className='text-[#136fb0]'>Add Parameter</span>
                 </button>
               </div>
 
