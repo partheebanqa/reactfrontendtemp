@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/useToast";
-import { Plus, Search, Filter, Play, RefreshCw, Layers } from "lucide-react";
+import { Plus, Search, Filter, Play, RefreshCw, Layers, Loader2 } from "lucide-react";
 import TestSuiteCard from "./TestSuiteCard";
 import {
   getAllTestSuites,
@@ -238,16 +238,18 @@ const TestSuites: React.FC = () => {
         iconColor="#0f766e"
         iconSize={36}
         quickGuideTitle="How to Use Reports"
-      quickGuideContent={
-        <div>
-          <p className="mb-2">Here’s how to get started:</p>
-          <ul className="list-disc pl-5 space-y-1 text-sm">
-            <li>Step 1: Click <b>New Report</b> to create.</li>
-            <li>Step 2: Fill in details like name and filters.</li>
-            <li>Step 3: Save and view analytics.</li>
-          </ul>
-        </div>
-      }
+        quickGuideContent={
+          <div>
+            <p className="mb-2">Here’s how to get started:</p>
+            <ul className="list-disc pl-5 space-y-1 text-sm">
+              <li>
+                Step 1: Click <b>New Report</b> to create.
+              </li>
+              <li>Step 2: Fill in details like name and filters.</li>
+              <li>Step 3: Save and view analytics.</li>
+            </ul>
+          </div>
+        }
       />
 
       <div className="flex flex-col justify-between lg:flex-row gap-4">
@@ -316,45 +318,55 @@ const TestSuites: React.FC = () => {
         <Button
           variant="default"
           className="hover-scale"
-          onClick={() => refetch}
+          onClick={() => refetch()}
+          disabled={isFetching} 
         >
-          <RefreshCw className="mr-2" size={16} />
-          Refresh
+          <RefreshCw
+            className={`mr-2 ${isFetching ? "animate-spin" : ""}`}
+            size={16}
+          />
+          {isFetching ? "Refreshing..." : "Refresh"}
         </Button>
       </div>
 
       <div className="">
-        {paginatedSuites.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-gray-500">No test suites found</p>
-          </div>
-        ) : (
-          <>
-            <div className="">
-              {paginatedSuites.map((suite) => (
-                <TestSuiteCard
-                  key={suite.id}
-                  suite={suite}
-                  onEdit={handleEditSuite}
-                  onDelete={handleDeleteSuite}
-                  onExecute={handleExecuteSuite}
-                  onClone={handleClonseSuite}
-                  onRefresh={() => refetch()}
-                  refreshing={isFetching}
-                />
-              ))}
-            </div>
-
-            {/* Pagination footer */}
-            <TestSuitePagination
-              totalItems={totalItems}
-              itemsPerPage={itemsPerPage}
-              currentPage={currentPage}
-              setCurrentPage={setCurrentPage}
-            />
-          </>
-        )}
+  {isFetching ? (
+    <div className="flex justify-center items-center py-12">
+      <Loader2 className="w-6 h-6 animate-spin text-gray-500" />
+      <span className="ml-2 text-gray-500">Loading test suites...</span>
+    </div>
+  ) : paginatedSuites.length === 0 ? (
+    <div className="text-center py-12">
+      <p className="text-gray-500">No test suites found</p>
+    </div>
+  ) : (
+    <>
+      <div className="">
+        {paginatedSuites.map((suite) => (
+          <TestSuiteCard
+            key={suite.id}
+            suite={suite}
+            onEdit={handleEditSuite}
+            onDelete={handleDeleteSuite}
+            onExecute={handleExecuteSuite}
+            onClone={handleClonseSuite}
+            onRefresh={() => refetch()}
+            refreshing={isFetching}
+          />
+        ))}
       </div>
+
+      {/* Pagination footer */}
+      <TestSuitePagination
+        totalItems={totalItems}
+        itemsPerPage={itemsPerPage}
+        currentPage={currentPage}
+        setCurrentPage={setCurrentPage}
+      />
+    </>
+  )}
+</div>
+
     </div>
   );
 };

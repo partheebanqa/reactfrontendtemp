@@ -4,6 +4,7 @@ import {
   Code
 } from "lucide-react";
 import { Link } from "wouter";
+import LogoFull from "../../assests/images/OptraLogo-removebg-preview.png";
 
 interface LandingLayoutProps {
   children: React.ReactNode;
@@ -16,12 +17,15 @@ const LandingLayout: React.FC<LandingLayoutProps> = ({ children }) => {
         {/* Header */}
         <header className="container mx-auto px-4 py-6">
           <nav className="flex items-center justify-between">
-            <Link to="/" className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                <Code className="w-4 h-4 text-primary-foreground" />
-              </div>
-              <span className="text-xl font-bold">Optraflow</span>
-            </Link>
+             <Link to="/" className="flex items-center space-x-2">
+                <img
+                  src={LogoFull}
+                  alt="Optraflow"
+                  className=""
+                  style={{ width: "100%", height: "60px" }}
+                />
+             
+              </Link>
 
             <div className="flex items-center space-x-4">
               <Button variant="ghost" asChild>
@@ -44,12 +48,16 @@ const LandingLayout: React.FC<LandingLayoutProps> = ({ children }) => {
           <div className="container mx-auto px-4">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
               <div>
-                <div className="flex items-center space-x-3 mb-4">
-                  <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                    <Code className="w-4 h-4 text-primary-foreground" />
-                  </div>
-                  <span className="text-xl font-bold">Optraflow</span>
-                </div>
+                  <Link to="/" className="flex items-center space-x-2">
+                <img
+                  src={LogoFull}
+                  alt="Optraflow"
+                  className=""
+                  style={{ width: "50%", height: "60px" }}
+                />
+             
+              </Link>
+
                 <p className="text-gray-400">
                   The no-code API testing platform for modern teams.
                 </p>

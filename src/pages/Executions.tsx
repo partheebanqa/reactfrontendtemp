@@ -82,6 +82,8 @@ const Executions = () => {
     data: executionData,
     isLoading,
     error,
+     refetch,
+  isFetching,
   } = useQuery({
     queryKey: ["executions", currentPage, itemsPerPage, workspaceId],
     queryFn: () =>
@@ -320,6 +322,7 @@ const Executions = () => {
       <BreadCum
         title="Executions"
         subtitle="Get execution results of test suite and request chain"
+        showCreateButton={false}
         buttonTitle="Run Execution"
         onClickCreateNew={() => console.log("Create execution")}
         icon={ChartColumn}
@@ -354,6 +357,8 @@ const Executions = () => {
         setDurationRange={setDurationRange}
         clearAllFilters={clearAllFilters}
         handleDeleteEnvironment={handleDeleteEnvironment}
+         onRefresh={refetch}          
+  refreshing={isFetching} 
       />
 
       <div className="bg-card rounded-lg shadow-sm border border-border">

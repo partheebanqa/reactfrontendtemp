@@ -121,7 +121,8 @@ useEffect(() => {
   }, [isMobile]);
 
   return (
-    <div className="flex h-full bg-background relative">
+    
+    <div className="flex h-full bg-white relative border border-gray-200 rounded-lg mt-2 p-1">
       {/* Sidebar with conditional rendering for mobile */}
       {showSidebar && (
         <div className={`${isMobile ? 'absolute z-10 h-full shadow-lg' : ''}`}>
@@ -133,7 +134,7 @@ useEffect(() => {
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Mobile Sidebar Toggle */}
         {isMobile && (
-          <div className="flex justify-between items-center p-2 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex justify-between items-center p-2 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
             <button
               onClick={toggleSidebar}
               className="p-2 rounded-md bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300"
@@ -186,8 +187,8 @@ useEffect(() => {
                 flex justify-center items-center
                 ${isBottomLayout ? "cursor-row-resize" : "cursor-col-resize"}
                 ${isBottomLayout
-                  ? "h-[6px] w-full bg-gray-200 dark:bg-gray-700 hover:bg-blue-300 dark:hover:bg-blue-800 transition-colors"
-                  : "w-[6px] h-full bg-gray-200 dark:bg-gray-700 hover:bg-blue-300 dark:hover:bg-blue-800 transition-colors"
+                  ? "h-[6px] w-full bg-[#136fb0] dark:bg-gray-700 hover:bg-blue-300 dark:hover:bg-blue-800 transition-colors"
+                  : "w-[6px] h-full bg-[#136fb0] dark:bg-gray-700 hover:bg-blue-300 dark:hover:bg-blue-800 transition-colors"
                 }
                 ${isMobile ? "touch-manipulation" : ""}
               `}
@@ -204,9 +205,9 @@ useEffect(() => {
               }}
             >
               {isBottomLayout ? (
-                <GripHorizontal className="h-3 w-3 text-gray-500" />
+                <GripHorizontal className="h-3 w-3 text-white" />
               ) : (
-                <GripVertical className="h-3 w-3 text-gray-500" />
+                <GripVertical className="h-3 w-3 text-white" />
               )}
             </div>
           )}

@@ -80,6 +80,8 @@ interface ExecutionsFiltersProps {
   setDurationRange: (range: { min: number; max: number }) => void;
   clearAllFilters: () => void;
   handleDeleteEnvironment: (environmentId: string) => void;
+    onRefresh: () => void;
+  refreshing: boolean;
  
 }
 
@@ -109,6 +111,8 @@ export const ExecutionsFilters = ({
   setDurationRange,
   clearAllFilters,
   handleDeleteEnvironment,
+  onRefresh,
+  refreshing
  
 
 }: ExecutionsFiltersProps) => {
@@ -435,19 +439,19 @@ export const ExecutionsFilters = ({
             </Select>
           )}
 
-          <Button
-                      variant="default"
-                      className="hover-scale"
-                      // onClick={onRefresh}
-                      // disabled={refreshing}
-                    >
-                      <RefreshCw
-                        className={`mr-2`}
-                        size={16}
-                      />
-                      {/* {refreshing ? "Refreshing..." : "Refresh"} */}
-                      Refresh
-                    </Button>
+         <Button
+  variant="default"
+  className="hover-scale"
+  onClick={onRefresh}
+  disabled={refreshing}
+>
+  <RefreshCw
+    className={`mr-2 ${refreshing ? "animate-spin" : ""}`} // 👈 spinner effect
+    size={16}
+  />
+  {refreshing ? "Refreshing..." : "Refresh"}
+</Button>
+
         </div>
       </div>
     </div>
