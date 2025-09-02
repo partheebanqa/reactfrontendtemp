@@ -39,6 +39,7 @@ import TestSuiteReport from '@/pages/TestSuiteReport';
 import { ExecutionDetailsDialog } from '@/components/Executions/ExecutionDetailsDialog';
 import ExecutionReportPage from '@/components/Executions/ExecutionReportPage';
 import FAQ from '@/pages/FAQ';
+import ResetPassword from '@/pages/ResetPassword';
 
 export default function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -58,6 +59,7 @@ export default function Router() {
           <Route path='/signin' component={SignIn} />
           <Route path='/signup' component={SignUp} />
           <Route path='/forgot-password' component={ForgotPassword} />
+          <Route path='/reset-password' component={ResetPassword} />
         </>
       ) : (
         <AppLayout>
@@ -81,7 +83,10 @@ export default function Router() {
           <Route path='/cicd-configuration' component={CICDConfiguration} />
           <Route path='/executions' component={Executions} />
           <Route path='/executions-reports' component={ExecutionReportsPage} />
-          <Route path="/executions/report/:type/:entityId" component={ExecutionReportPage} />
+          <Route
+            path='/executions/report/:type/:entityId'
+            component={ExecutionReportPage}
+          />
           <Route path='/request-chain-reports' component={RequestChainReport} />
           <Route path='/test-suite-reports' component={TestSuiteReport} />
           <Route path='/faq' component={FAQ} />
