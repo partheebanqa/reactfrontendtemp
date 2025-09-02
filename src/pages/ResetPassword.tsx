@@ -76,24 +76,6 @@ const ResetPassword: React.FC = () => {
     }
   }, [token, setLocation, toast]);
 
-  // Mock API request function (replace with your actual API call)
-  const apiRequest = async (method: string, url: string, data: any) => {
-    // This is a mock - replace with your actual API implementation
-    const response = await fetch(url, {
-      method,
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(data),
-    });
-
-    if (!response.ok) {
-      throw new Error('API request failed');
-    }
-
-    return response.json();
-  };
-
   // Verify token validity
   const {
     data: tokenVerification,

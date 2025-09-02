@@ -36,7 +36,7 @@ import {
 } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/Tabs';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import type {
   RequestChain,
@@ -311,13 +311,6 @@ export function RequestChainEditor({
         setCurrentRequestIndex(i);
 
         try {
-          toast({
-            title: `Executing Request ${i + 1}`,
-            description: `Running: ${
-              request.name || request.method + ' ' + request.url
-            }`,
-          });
-
           const log = await executeSingleRequest(request, currentVariables, i);
           allLogs.push(log);
 
@@ -359,15 +352,6 @@ export function RequestChainEditor({
             updateExtractedVariables(allExtractedVars);
           }
 
-          toast({
-            title: `Request ${i + 1} Completed`,
-            description: `Status: ${log.response?.status || 'Error'} - ${
-              log.status
-            }`,
-            variant: log.status === 'success' ? 'default' : 'destructive',
-          });
-
-          // Add a small delay between requests
           if (i < formData.chainRequests.length - 1) {
             await new Promise((resolve) => setTimeout(resolve, 500));
           }
@@ -375,7 +359,6 @@ export function RequestChainEditor({
           const errorLog = error as ExecutionLog;
           allLogs.push(errorLog);
 
-          // Update executionLogs immediately after each request completes (even for errors)
           setExecutionLogs((prev) => [...prev, errorLog]);
 
           toast({
@@ -695,10 +678,6 @@ export function RequestChainEditor({
           ? await saveRequestChain(chainData)
           : await updateRequestChain(chainData, chainData.id);
 
-      if (savedChain?.id) {
-        onToggleChain(savedChain?.id);
-      }
-
       setFormData((prev) => ({ ...prev, id: savedChain.id }));
 
       toast({
@@ -749,10 +728,10 @@ export function RequestChainEditor({
 
   const handleImportRequests = async (importedRequests: ExtendedRequest[]) => {
     try {
-      toast({
-        title: 'Importing Requests',
-        description: `Importing ${importedRequests.length} requests...`,
-      });
+      // toast({
+      //   title: 'Importing Requests',
+      //   description: `Importing ${importedRequests.length} requests...`,
+      // });
 
       const transformedRequests: APIRequest[] = importedRequests.map((req) => {
         // Handle body data
