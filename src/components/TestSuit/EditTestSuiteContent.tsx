@@ -101,7 +101,7 @@ const EditTestSuiteContent: React.FC = () => {
       toast({
         title: 'Test suite created',
         description:
-          'Test suite created. Test cases are in progress—please wait a few minutes',
+          'Test suite created. Test cases are in progress—please wait for few minutes',
       });
       queryClient.invalidateQueries({
         queryKey: ['/api/test-suites', currentWorkspace?.id],

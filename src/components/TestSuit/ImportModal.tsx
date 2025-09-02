@@ -359,7 +359,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
             </TabsTrigger>
             {isRequestChainsRoute && (
               <TabsTrigger value='extranal'>
-                Import from new External
+                Import new data (Collection)
               </TabsTrigger>
             )}
           </TabsList>

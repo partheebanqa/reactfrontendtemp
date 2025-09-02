@@ -22,6 +22,7 @@ import HelpLink from '@/components/HelpModal/HelpLink';
 import { executeRequest } from '@/services/executeRequest.service';
 import { updateRequest } from '@/services/collection.service';
 import { useMutation } from '@tanstack/react-query';
+import { TooltipProvider } from '@/components/ui/tooltip';
 
 const RequestEditor: React.FC = () => {
   const { isLoading, clearError, setLoading, setError, setResponseData } =
@@ -340,7 +341,7 @@ const RequestEditor: React.FC = () => {
                     token: authData.oauth1.token,
                     tokenSecret: authData.oauth1.tokenSecret,
                     signatureMethod: authData.oauth1.signatureMethod,
-                    version: authData.oauth1.version,
+                    version: '1.0',
                     realm: authData.oauth1.realm,
                     nonce: authData.oauth1.nonce,
                     timestamp: authData.oauth1.timestamp,
@@ -490,13 +491,14 @@ const RequestEditor: React.FC = () => {
       }
 
       const requestData = {
-        collectionId: activeRequest.collectionId,
+        // collectionId removed per backend contract
+        workspaceId: currentWorkspace.id, // REQUIRED by backend
         description: '',
         name: activeRequest.name || 'New Request',
         order: (requestCount || 0) + 1,
         method: method,
         url: url,
-        bodyType: bodyType == 'json' ? 'raw' : bodyType,
+        bodyType: bodyType === 'json' ? 'raw' : bodyType,
         bodyFormData:
           bodyType === 'form-data'
             ? formFields
@@ -511,7 +513,7 @@ const RequestEditor: React.FC = () => {
                   }
                   return acc;
                 }, {})
-            : null,
+            : [], // use empty array when not used (no null)
         bodyRawContent:
           bodyType === 'raw' || bodyType === 'json'
             ? bodyContent
@@ -524,7 +526,7 @@ const RequestEditor: React.FC = () => {
                     return acc;
                   }, {} as Record<string, string>)
               ).toString()
-            : null,
+            : '', // use empty string when not used (no null)
         authorizationType: authType,
         authorization: {
           token: authType === 'bearer' ? authData.token : '',
@@ -579,12 +581,6 @@ const RequestEditor: React.FC = () => {
         duration: 3000,
         type: 'success',
       });
-
-      // setShowSaveModal(false);
-      // setNewCollectionName('');
-      // setIsCreatingCollection(false);
-      // showSuccess('Request updated successfully!');
-      // handleCreateRequest();
     } catch (error) {
       console.error('Error updating request:', error);
       showError('Save Failed', 'An error occurred while saving the request.');
@@ -694,7 +690,7 @@ const RequestEditor: React.FC = () => {
                   token: authData.oauth1.token,
                   tokenSecret: authData.oauth1.tokenSecret,
                   signatureMethod: authData.oauth1.signatureMethod,
-                  version: authData.oauth1.version,
+                  version: '1.0',
                   realm: authData.oauth1.realm,
                   nonce: authData.oauth1.nonce,
                   timestamp: authData.oauth1.timestamp,
@@ -900,901 +896,905 @@ const RequestEditor: React.FC = () => {
   }
 
   return (
-    <div className='flex-1 flex flex-col bg-white dark:bg-gray-900 overflow-hidden'>
-      {/* Request Name Header */}
-      <div className='border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex-shrink-0'>
-        <div className='flex items-center justify-between'>
-          <div className='flex items-center space-x-3'>
-            <EditableText
-              value={activeRequest.name || ''}
-              onSave={handleSaveName}
-              placeholder='Request Name'
-              fontSize='lg'
-              fontWeight='semibold'
-            />
-          </div>
-          <HelpLink />
-        </div>
-      </div>
-
-      {/* Request URL Bar */}
-      <div className='border-b border-gray-200 dark:border-gray-700 p-4 flex-shrink-0'>
-        <div className='flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-2'>
-          {/* Replace the old method selector with the one built into HighlightedUrlInput */}
-          {/* <HighlightedUrlInput 
-            url={url} 
-            setUrl={setUrl} 
-            method={method}
-            setMethod={(newMethod) => setMethod(newMethod as RequestMethod)}
-          /> */}
-          <select
-            value={method}
-            onChange={(e) => setMethod(e.target.value as RequestMethod)}
-            className={`w-full sm:w-auto border rounded-md px-3 py-2 text-sm font-medium hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all duration-150 ${getMethodColor(
-              method
-            )}`}
-            style={{
-              appearance: 'auto',
-            }} /* Ensures dropdown styling is maintained */
-          >
-            {methods.map((m) => (
-              <option
-                key={m}
-                value={m}
-                className='bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-200' /* Normal styling for options */
-              >
-                {m}
-              </option>
-            ))}
-          </select>
-
-          <input
-            type='text'
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            placeholder='Enter request URL'
-            className='flex-1 min-w-0 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 dark:bg-gray-800 dark:text-white'
-          />
-
-          <div className='flex space-x-2'>
-            <button
-              onClick={handleSendRequest}
-              disabled={isLoading}
-              className='bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-4 sm:px-6 py-2 rounded-md flex items-center space-x-2 transition-colors whitespace-nowrap'
-              aria-label='Send request'
-              title='Send request'
-            >
-              <Play className='h-4 w-4' />
-              <span className='hidden sm:inline'>
-                {isLoading ? 'Sending...' : 'Send'}
-              </span>
-            </button>
-
-            <TooltipContainer text='Save request'>
-              {!activeRequest.id ? (
-                <button
-                  onClick={handleSaveRequest}
-                  className='border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 px-3 py-2 rounded-md'
-                  aria-label='Save request'
-                >
-                  <Save className='h-4 w-4' />
-                </button>
-              ) : (
-                <button
-                  onClick={handleUpdateRequest}
-                  className='border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 px-3 py-2 rounded-md'
-                  aria-label='Save request'
-                >
-                  <Save className='h-4 w-4' />
-                </button>
-              )}
-            </TooltipContainer>
-
-            {/* <button
-              className="border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 px-3 py-2 rounded-md"
-              aria-label="More options"
-            >
-              <MoreVertical className="h-4 w-4" />
-            </button> */}
-          </div>
-        </div>
-
-        {previewUrl && (
-          <div className='mt-2 mb-1'>
-            <div className='bg-gray-50 dark:bg-gray-800 rounded px-3 py-2 flex gap-2  items-center'>
-              <p className='text-sm text-gray-600 dark:text-gray-400'>
-                <span className='font-medium'>Final URL Preview:</span>
-              </p>
-              <p className='text-sm text-blue-600 dark:text-blue-400 font-mono break-all'>
-                {previewUrl}
-              </p>
+    <TooltipProvider>
+      <div className='flex-1 flex flex-col bg-white dark:bg-gray-900 overflow-hidden'>
+        {/* Request Name Header */}
+        <div className='border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex-shrink-0'>
+          <div className='flex items-center justify-between'>
+            <div className='flex items-center space-x-3'>
+              <EditableText
+                value={activeRequest.name || ''}
+                onSave={handleSaveName}
+                placeholder='Request Name'
+                fontSize='lg'
+                fontWeight='semibold'
+              />
             </div>
+            <HelpLink />
           </div>
-        )}
-      </div>
+        </div>
 
-      {/* Request Tabs */}
-      <div className='border-b border-gray-200 dark:border-gray-700 flex-shrink-0'>
-        <nav className='flex overflow-x-auto px-4'>
-          {[
-            {
-              id: 'params',
-              label: 'Params',
-              count: params.filter((p) => p.enabled).length,
-            },
-            {
-              id: 'headers',
-              label: 'Headers',
-              count: headers.filter((h) => h.enabled).length,
-            },
-            { id: 'body', label: 'Body' },
-            { id: 'auth', label: 'Authorization' },
-            { id: 'scripts', label: 'Scripts' },
-            { id: 'settings', label: 'Settings' },
-            { id: 'schemas', label: 'Schemas' },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
-              className={`
-                py-4 px-2 sm:px-4 border-b-2 font-medium text-sm transition-colors whitespace-nowrap
-                ${
-                  activeTab === tab.id
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }
-              `}
+        {/* Request URL Bar */}
+        <div className='border-b border-gray-200 dark:border-gray-700 p-4 flex-shrink-0'>
+          <div className='flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-2'>
+            {/* Replace the old method selector with the one built into HighlightedUrlInput */}
+            {/* <HighlightedUrlInput 
+              url={url} 
+              setUrl={setUrl} 
+              method={method}
+              setMethod={(newMethod) => setMethod(newMethod as RequestMethod)}
+            /> */}
+            <select
+              value={method}
+              onChange={(e) => setMethod(e.target.value as RequestMethod)}
+              className={`w-full sm:w-auto border rounded-md px-3 py-2 text-sm font-medium hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all duration-150 ${getMethodColor(
+                method
+              )}`}
+              style={{
+                appearance: 'auto',
+              }} /* Ensures dropdown styling is maintained */
             >
-              {tab.label}
-              {tab.count !== undefined && tab.count > 0 && (
-                <span className='ml-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-full px-2 py-0.5 text-xs'>
-                  {tab.count}
-                </span>
-              )}
-            </button>
-          ))}
-        </nav>
-      </div>
-
-      {/* Tab Content - This div now has overflow-auto to enable scrolling */}
-      <div className='flex-1 overflow-auto p-4'>
-        {activeTab === 'params' && (
-          <KeyValueEditor
-            items={params}
-            onAdd={addParam}
-            onUpdate={updateParam}
-            onRemove={removeParam}
-            title='Query Parameters'
-            addButtonLabel='Add Parameter'
-            emptyMessage='No query parameters added yet.'
-          />
-        )}
-
-        {activeTab === 'headers' && (
-          <KeyValueEditor
-            items={headers}
-            onAdd={addHeader}
-            onUpdate={updateHeader}
-            onRemove={removeHeader}
-            title='Headers'
-            addButtonLabel='Add Header'
-            emptyMessage='No headers added yet.'
-          />
-        )}
-
-        {activeTab === 'body' && (
-          <div className='space-y-4'>
-            <div className='flex items-center justify-between'>
-              <h3 className='text-base sm:text-lg font-medium text-gray-900 dark:text-white'>
-                Request Body
-              </h3>
-              <select
-                value={bodyType}
-                onChange={(e) => setBodyType(e.target.value as any)}
-                className='border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-800 text-sm font-medium hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all duration-150'
-              >
-                <option value='none'>None</option>
-                <option value='json'>JSON</option>
-                <option value='form-data'>Form Data</option>
-                <option value='x-www-form-urlencoded'>
-                  x-www-form-urlencoded
+              {methods.map((m) => (
+                <option
+                  key={m}
+                  value={m}
+                  className='bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-200' /* Normal styling for options */
+                >
+                  {m}
                 </option>
-                <option value='raw'>Raw</option>
-                <option value='binary'>Binary</option>
-              </select>
-            </div>
+              ))}
+            </select>
 
-            {bodyType === 'none' && (
-              <div className='text-gray-500 dark:text-gray-400 text-center p-8'>
-                This request does not have a body
-              </div>
-            )}
+            <input
+              type='text'
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              placeholder='Enter request URL'
+              className='flex-1 min-w-0 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 dark:bg-gray-800 dark:text-white'
+            />
 
-            {bodyType === 'json' && (
-              <textarea
-                value={bodyContent}
-                onChange={(e) => setBodyContent(e.target.value)}
-                placeholder='Enter JSON body'
-                rows={8}
-                className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 font-mono text-sm dark:bg-gray-800 dark:text-white'
-              />
-            )}
-
-            {bodyType === 'form-data' && (
-              <>
-                <div className='mb-2 text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 p-3 rounded-md border border-gray-200 dark:border-gray-700'>
-                  <p>
-                    Form fields support both text values and file uploads. Click
-                    the "File" button next to any field to upload a file.
-                  </p>
-                </div>
-                <KeyValueEditorWithFileUpload
-                  items={formFields}
-                  onAdd={addFormField}
-                  onUpdate={updateFormField}
-                  onRemove={removeFormField}
-                  title='Form fields'
-                  addButtonLabel='Add Field'
-                  emptyMessage='No form fields added yet.'
-                />
-              </>
-            )}
-
-            {bodyType === 'x-www-form-urlencoded' && (
-              <KeyValueEditor
-                items={urlEncodedFields}
-                onAdd={addUrlEncodedField}
-                onUpdate={updateUrlEncodedField}
-                onRemove={removeUrlEncodedField}
-                title='URL encoded fields'
-                addButtonLabel='Add Field'
-                emptyMessage='No URL encoded fields added yet.'
-              />
-            )}
-
-            {bodyType === 'raw' && (
-              <textarea
-                value={bodyContent}
-                onChange={(e) => setBodyContent(e.target.value)}
-                placeholder='Enter raw request body'
-                rows={8}
-                className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 font-mono text-sm dark:bg-gray-800 dark:text-white'
-              />
-            )}
-
-            {bodyType === 'binary' && (
-              <div className='text-center p-8 border border-dashed border-gray-300 dark:border-gray-700 rounded-md'>
-                <p className='text-gray-500 dark:text-gray-400 mb-4'>
-                  Select a file to upload
-                </p>
-                <button className='px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md'>
-                  Choose File
-                </button>
-              </div>
-            )}
-          </div>
-        )}
-
-        {activeTab === 'auth' && (
-          <div className='space-y-4'>
-            <div className='flex items-center justify-between'>
-              <h3 className='text-base sm:text-lg font-medium text-gray-900 dark:text-white'>
-                Authorization
-              </h3>
-              <select
-                value={authType}
-                onChange={(e) => setAuthType(e.target.value as any)}
-                className='border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-800 text-sm font-medium hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all duration-150'
+            <div className='flex space-x-2'>
+              <button
+                onClick={handleSendRequest}
+                disabled={isLoading}
+                className='bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-4 sm:px-6 py-2 rounded-md flex items-center space-x-2 transition-colors whitespace-nowrap'
+                aria-label='Send request'
+                title='Send request'
               >
-                <option value='none'>No Auth</option>
-                <option value='basic'>Basic Auth</option>
-                <option value='bearer'>Bearer Token</option>
-                <option value='apiKey'>API Key</option>
-                <option value='oauth1'>OAuth 1.0</option>
-                <option value='oauth2'>OAuth 2.0</option>
-              </select>
+                <Play className='h-4 w-4' />
+                <span className='hidden sm:inline'>
+                  {isLoading ? 'Sending...' : 'Send'}
+                </span>
+              </button>
+
+              <TooltipContainer text='Save request'>
+                {!activeRequest.id ? (
+                  <button
+                    onClick={handleSaveRequest}
+                    className='border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 px-3 py-2 rounded-md'
+                    aria-label='Save request'
+                  >
+                    <Save className='h-4 w-4' />
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleUpdateRequest}
+                    className='border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 px-3 py-2 rounded-md'
+                    aria-label='Save request'
+                  >
+                    <Save className='h-4 w-4' />
+                  </button>
+                )}
+              </TooltipContainer>
+
+              {/* <button
+                className="border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 px-3 py-2 rounded-md"
+                aria-label="More options"
+              >
+                <MoreVertical className="h-4 w-4" />
+              </button> */}
             </div>
+          </div>
 
-            {authType === 'none' && (
-              <div className='text-gray-500 dark:text-gray-400 text-center p-8 border border-dashed border-gray-300 dark:border-gray-700 rounded-md'>
-                No authorization is set for this request
-              </div>
-            )}
-
-            {authType === 'basic' && (
-              <div className='space-y-4'>
-                <div>
-                  <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
-                    Username
-                  </label>
-                  <input
-                    type='text'
-                    value={authData.username}
-                    onChange={(e) =>
-                      setAuthData({ ...authData, username: e.target.value })
-                    }
-                    placeholder='Enter username'
-                    className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 bg-white dark:bg-gray-800 text-sm'
-                  />
-                </div>
-                <div>
-                  <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
-                    Password
-                  </label>
-                  <input
-                    type='password'
-                    value={authData.password}
-                    onChange={(e) =>
-                      setAuthData({ ...authData, password: e.target.value })
-                    }
-                    placeholder='Enter password'
-                    className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 bg-white dark:bg-gray-800 text-sm'
-                  />
-                </div>
-              </div>
-            )}
-
-            {authType === 'bearer' && (
-              <div>
-                <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
-                  Token
-                </label>
-                <input
-                  type='text'
-                  value={authData.token}
-                  onChange={(e) =>
-                    setAuthData({ ...authData, token: e.target.value })
-                  }
-                  placeholder='Enter token'
-                  className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 bg-white dark:bg-gray-800 text-sm'
-                />
-                <p className='mt-1 text-xs text-gray-500 dark:text-gray-400'>
-                  The token will be sent as "Bearer {token}" in the
-                  Authorization header
+          {previewUrl && (
+            <div className='mt-2 mb-1'>
+              <div className='bg-gray-50 dark:bg-gray-800 rounded px-3 py-2 flex gap-2  items-center'>
+                <p className='text-sm text-gray-600 dark:text-gray-400'>
+                  <span className='font-medium'>Final URL Preview:</span>
+                </p>
+                <p className='text-sm text-blue-600 dark:text-blue-400 font-mono break-all'>
+                  {previewUrl}
                 </p>
               </div>
-            )}
+            </div>
+          )}
+        </div>
 
-            {authType === 'apiKey' && (
-              <div className='space-y-4'>
-                <div>
-                  <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
-                    Key
-                  </label>
-                  <input
-                    type='text'
-                    value={authData.key}
-                    onChange={(e) =>
-                      setAuthData({ ...authData, key: e.target.value })
-                    }
-                    placeholder='Enter API key name'
-                    className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 bg-white dark:bg-gray-800 text-sm'
-                  />
+        {/* Request Tabs */}
+        <div className='border-b border-gray-200 dark:border-gray-700 flex-shrink-0'>
+          <nav className='flex overflow-x-auto px-4'>
+            {[
+              {
+                id: 'params',
+                label: 'Params',
+                count: params.filter((p) => p.enabled).length,
+              },
+              {
+                id: 'headers',
+                label: 'Headers',
+                count: headers.filter((h) => h.enabled).length,
+              },
+              { id: 'body', label: 'Body' },
+              { id: 'auth', label: 'Authorization' },
+              { id: 'scripts', label: 'Scripts' },
+              { id: 'settings', label: 'Settings' },
+              { id: 'schemas', label: 'Schemas' },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                className={`
+                  py-4 px-2 sm:px-4 border-b-2 font-medium text-sm transition-colors whitespace-nowrap
+                  ${
+                    activeTab === tab.id
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }
+                `}
+              >
+                {tab.label}
+                {tab.count !== undefined && tab.count > 0 && (
+                  <span className='ml-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-full px-2 py-0.5 text-xs'>
+                    {tab.count}
+                  </span>
+                )}
+              </button>
+            ))}
+          </nav>
+        </div>
+
+        {/* Tab Content - This div now has overflow-auto to enable scrolling */}
+        <div className='flex-1 overflow-auto p-4'>
+          {activeTab === 'params' && (
+            <KeyValueEditor
+              items={params}
+              onAdd={addParam}
+              onUpdate={updateParam}
+              onRemove={removeParam}
+              title='Query Parameters'
+              addButtonLabel='Add Parameter'
+              emptyMessage='No query parameters added yet.'
+            />
+          )}
+
+          {activeTab === 'headers' && (
+            <KeyValueEditor
+              items={headers}
+              onAdd={addHeader}
+              onUpdate={updateHeader}
+              onRemove={removeHeader}
+              title='Headers'
+              addButtonLabel='Add Header'
+              emptyMessage='No headers added yet.'
+            />
+          )}
+
+          {activeTab === 'body' && (
+            <div className='space-y-4'>
+              <div className='flex items-center justify-between'>
+                <h3 className='text-base sm:text-lg font-medium text-gray-900 dark:text-white'>
+                  Request Body
+                </h3>
+                <select
+                  value={bodyType}
+                  onChange={(e) => setBodyType(e.target.value as any)}
+                  className='border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-800 text-sm font-medium hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all duration-150'
+                >
+                  <option value='none'>None</option>
+                  <option value='json'>JSON</option>
+                  <option value='form-data'>Form Data</option>
+                  <option value='x-www-form-urlencoded'>
+                    x-www-form-urlencoded
+                  </option>
+                  <option value='raw'>Raw</option>
+                  <option value='binary'>Binary</option>
+                </select>
+              </div>
+
+              {bodyType === 'none' && (
+                <div className='text-gray-500 dark:text-gray-400 text-center p-8'>
+                  This request does not have a body
                 </div>
-                <div>
-                  <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
-                    Value
-                  </label>
-                  <input
-                    type='text'
-                    value={authData.value}
-                    onChange={(e) =>
-                      setAuthData({ ...authData, value: e.target.value })
-                    }
-                    placeholder='Enter API key value'
-                    className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 bg-white dark:bg-gray-800 text-sm'
-                  />
-                </div>
-                <div>
-                  <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
-                    Add to
-                  </label>
-                  <div className='flex space-x-4'>
-                    <label className='inline-flex items-center'>
-                      <input
-                        type='radio'
-                        checked={authData.addTo === 'header'}
-                        onChange={() =>
-                          setAuthData({ ...authData, addTo: 'header' })
-                        }
-                        className='h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300'
-                      />
-                      <span className='ml-2 text-sm text-gray-700 dark:text-gray-300'>
-                        Header
-                      </span>
-                    </label>
-                    <label className='inline-flex items-center'>
-                      <input
-                        type='radio'
-                        checked={authData.addTo === 'query'}
-                        onChange={() =>
-                          setAuthData({ ...authData, addTo: 'query' })
-                        }
-                        className='h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300'
-                      />
-                      <span className='ml-2 text-sm text-gray-700 dark:text-gray-300'>
-                        Query Parameter
-                      </span>
-                    </label>
+              )}
+
+              {bodyType === 'json' && (
+                <textarea
+                  value={bodyContent}
+                  onChange={(e) => setBodyContent(e.target.value)}
+                  placeholder='Enter JSON body'
+                  rows={8}
+                  className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 font-mono text-sm dark:bg-gray-800 dark:text-white'
+                />
+              )}
+
+              {bodyType === 'form-data' && (
+                <>
+                  <div className='mb-2 text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 p-3 rounded-md border border-gray-200 dark:border-gray-700'>
+                    <p>
+                      Form fields support both text values and file uploads.
+                      Click the "File" button next to any field to upload a
+                      file.
+                    </p>
                   </div>
-                </div>
-              </div>
-            )}
+                  <KeyValueEditorWithFileUpload
+                    items={formFields}
+                    onAdd={addFormField}
+                    onUpdate={updateFormField}
+                    onRemove={removeFormField}
+                    title='Form fields'
+                    addButtonLabel='Add Field'
+                    emptyMessage='No form fields added yet.'
+                  />
+                </>
+              )}
 
-            {authType === 'oauth1' && (
-              <div className='space-y-4'>
-                <div>
-                  <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
-                    Consumer Key
-                  </label>
-                  <input
-                    type='text'
-                    value={authData.oauth1.consumerKey}
-                    onChange={(e) =>
-                      setAuthData({
-                        ...authData,
-                        oauth1: {
-                          ...authData.oauth1,
-                          consumerKey: e.target.value,
-                        },
-                      })
-                    }
-                    placeholder='Enter consumer key'
-                    className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 bg-white dark:bg-gray-800 text-sm'
-                  />
-                </div>
-                <div>
-                  <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
-                    Consumer Secret
-                  </label>
-                  <input
-                    type='password'
-                    value={authData.oauth1.consumerSecret}
-                    onChange={(e) =>
-                      setAuthData({
-                        ...authData,
-                        oauth1: {
-                          ...authData.oauth1,
-                          consumerSecret: e.target.value,
-                        },
-                      })
-                    }
-                    placeholder='Enter consumer secret'
-                    className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 bg-white dark:bg-gray-800 text-sm'
-                  />
-                </div>
-                <div>
-                  <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
-                    Access Token
-                  </label>
-                  <input
-                    type='text'
-                    value={authData.oauth1.token}
-                    onChange={(e) =>
-                      setAuthData({
-                        ...authData,
-                        oauth1: { ...authData.oauth1, token: e.target.value },
-                      })
-                    }
-                    placeholder='Enter access token'
-                    className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 bg-white dark:bg-gray-800 text-sm'
-                  />
-                </div>
-                <div>
-                  <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
-                    Token Secret
-                  </label>
-                  <input
-                    type='password'
-                    value={authData.oauth1.tokenSecret}
-                    onChange={(e) =>
-                      setAuthData({
-                        ...authData,
-                        oauth1: {
-                          ...authData.oauth1,
-                          tokenSecret: e.target.value,
-                        },
-                      })
-                    }
-                    placeholder='Enter token secret'
-                    className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 bg-white dark:bg-gray-800 text-sm'
-                  />
-                </div>
-                <div>
-                  <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
-                    Signature Method
-                  </label>
-                  <select
-                    value={authData.oauth1.signatureMethod}
-                    onChange={(e) =>
-                      setAuthData({
-                        ...authData,
-                        oauth1: {
-                          ...authData.oauth1,
-                          signatureMethod: e.target.value,
-                        },
-                      })
-                    }
-                    className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-800 text-sm font-medium hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all duration-150'
-                  >
-                    <option value='HMAC-SHA1'>HMAC-SHA1</option>
-                    <option value='HMAC-SHA256'>HMAC-SHA256</option>
-                    <option value='PLAINTEXT'>PLAINTEXT</option>
-                    <option value='RSA-SHA1'>RSA-SHA1</option>
-                  </select>
-                </div>
-                <div>
-                  <p className='mt-1 text-xs text-gray-500 dark:text-gray-400'>
-                    OAuth 1.0 parameters will be automatically generated and
-                    added to the Authorization header.
+              {bodyType === 'x-www-form-urlencoded' && (
+                <KeyValueEditor
+                  items={urlEncodedFields}
+                  onAdd={addUrlEncodedField}
+                  onUpdate={updateUrlEncodedField}
+                  onRemove={removeUrlEncodedField}
+                  title='URL encoded fields'
+                  addButtonLabel='Add Field'
+                  emptyMessage='No URL encoded fields added yet.'
+                />
+              )}
+
+              {bodyType === 'raw' && (
+                <textarea
+                  value={bodyContent}
+                  onChange={(e) => setBodyContent(e.target.value)}
+                  placeholder='Enter raw request body'
+                  rows={8}
+                  className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 font-mono text-sm dark:bg-gray-800 dark:text-white'
+                />
+              )}
+
+              {bodyType === 'binary' && (
+                <div className='text-center p-8 border border-dashed border-gray-300 dark:border-gray-700 rounded-md'>
+                  <p className='text-gray-500 dark:text-gray-400 mb-4'>
+                    Select a file to upload
                   </p>
+                  <button className='px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md'>
+                    Choose File
+                  </button>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
+          )}
 
-            {authType === 'oauth2' && (
-              <div className='space-y-4'>
-                <div>
-                  <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
-                    Grant Type
-                  </label>
-                  <select
-                    value={authData.oauth2.grantType}
-                    onChange={(e) =>
-                      setAuthData({
-                        ...authData,
-                        oauth2: {
-                          ...authData.oauth2,
-                          grantType: e.target.value as any,
-                        },
-                      })
-                    }
-                    className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-800 text-sm font-medium hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all duration-150'
-                  >
-                    <option value='authorization_code'>
-                      Authorization Code
-                    </option>
-                    <option value='client_credentials'>
-                      Client Credentials
-                    </option>
-                    <option value='password'>Password</option>
-                    <option value='refresh_token'>Refresh Token</option>
-                  </select>
+          {activeTab === 'auth' && (
+            <div className='space-y-4'>
+              <div className='flex items-center justify-between'>
+                <h3 className='text-base sm:text-lg font-medium text-gray-900 dark:text-white'>
+                  Authorization
+                </h3>
+                <select
+                  value={authType}
+                  onChange={(e) => setAuthType(e.target.value as any)}
+                  className='border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-800 text-sm font-medium hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all duration-150'
+                >
+                  <option value='none'>No Auth</option>
+                  <option value='basic'>Basic Auth</option>
+                  <option value='bearer'>Bearer Token</option>
+                  <option value='apiKey'>API Key</option>
+                  <option value='oauth1'>OAuth 1.0</option>
+                  <option value='oauth2'>OAuth 2.0</option>
+                </select>
+              </div>
+
+              {authType === 'none' && (
+                <div className='text-gray-500 dark:text-gray-400 text-center p-8 border border-dashed border-gray-300 dark:border-gray-700 rounded-md'>
+                  No authorization is set for this request
                 </div>
-                <div>
-                  <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
-                    Access Token
-                  </label>
-                  <input
-                    type='text'
-                    value={authData.oauth2.accessToken}
-                    onChange={(e) =>
-                      setAuthData({
-                        ...authData,
-                        oauth2: {
-                          ...authData.oauth2,
-                          accessToken: e.target.value,
-                        },
-                      })
-                    }
-                    placeholder='Enter access token'
-                    className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 bg-white dark:bg-gray-800 text-sm'
-                  />
-                </div>
-                <div>
-                  <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
-                    Client ID
-                  </label>
-                  <input
-                    type='text'
-                    value={authData.oauth2.clientId}
-                    onChange={(e) =>
-                      setAuthData({
-                        ...authData,
-                        oauth2: {
-                          ...authData.oauth2,
-                          clientId: e.target.value,
-                        },
-                      })
-                    }
-                    placeholder='Enter client ID'
-                    className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 bg-white dark:bg-gray-800 text-sm'
-                  />
-                </div>
-                <div>
-                  <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
-                    Client Secret
-                  </label>
-                  <input
-                    type='password'
-                    value={authData.oauth2.clientSecret}
-                    onChange={(e) =>
-                      setAuthData({
-                        ...authData,
-                        oauth2: {
-                          ...authData.oauth2,
-                          clientSecret: e.target.value,
-                        },
-                      })
-                    }
-                    placeholder='Enter client secret'
-                    className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 bg-white dark:bg-gray-800 text-sm'
-                  />
-                </div>
-                {authData.oauth2.grantType === 'authorization_code' && (
+              )}
+
+              {authType === 'basic' && (
+                <div className='space-y-4'>
                   <div>
                     <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
-                      Redirect URI
+                      Username
                     </label>
                     <input
                       type='text'
-                      value={authData.oauth2.redirectUri}
+                      value={authData.username}
+                      onChange={(e) =>
+                        setAuthData({ ...authData, username: e.target.value })
+                      }
+                      placeholder='Enter username'
+                      className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 bg-white dark:bg-gray-800 text-sm'
+                    />
+                  </div>
+                  <div>
+                    <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
+                      Password
+                    </label>
+                    <input
+                      type='password'
+                      value={authData.password}
+                      onChange={(e) =>
+                        setAuthData({ ...authData, password: e.target.value })
+                      }
+                      placeholder='Enter password'
+                      className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 bg-white dark:bg-gray-800 text-sm'
+                    />
+                  </div>
+                </div>
+              )}
+
+              {authType === 'bearer' && (
+                <div>
+                  <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
+                    Token
+                  </label>
+                  <input
+                    type='text'
+                    value={authData.token}
+                    onChange={(e) =>
+                      setAuthData({ ...authData, token: e.target.value })
+                    }
+                    placeholder='Enter token'
+                    className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 bg-white dark:bg-gray-800 text-sm'
+                  />
+                  <p className='mt-1 text-xs text-gray-500 dark:text-gray-400'>
+                    The token will be sent as "Bearer {token}" in the
+                    Authorization header
+                  </p>
+                </div>
+              )}
+
+              {authType === 'apiKey' && (
+                <div className='space-y-4'>
+                  <div>
+                    <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
+                      Key
+                    </label>
+                    <input
+                      type='text'
+                      value={authData.key}
+                      onChange={(e) =>
+                        setAuthData({ ...authData, key: e.target.value })
+                      }
+                      placeholder='Enter API key name'
+                      className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 bg-white dark:bg-gray-800 text-sm'
+                    />
+                  </div>
+                  <div>
+                    <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
+                      Value
+                    </label>
+                    <input
+                      type='text'
+                      value={authData.value}
+                      onChange={(e) =>
+                        setAuthData({ ...authData, value: e.target.value })
+                      }
+                      placeholder='Enter API key value'
+                      className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 bg-white dark:bg-gray-800 text-sm'
+                    />
+                  </div>
+                  <div>
+                    <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
+                      Add to
+                    </label>
+                    <div className='flex space-x-4'>
+                      <label className='inline-flex items-center'>
+                        <input
+                          type='radio'
+                          checked={authData.addTo === 'header'}
+                          onChange={() =>
+                            setAuthData({ ...authData, addTo: 'header' })
+                          }
+                          className='h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300'
+                        />
+                        <span className='ml-2 text-sm text-gray-700 dark:text-gray-300'>
+                          Header
+                        </span>
+                      </label>
+                      <label className='inline-flex items-center'>
+                        <input
+                          type='radio'
+                          checked={authData.addTo === 'query'}
+                          onChange={() =>
+                            setAuthData({ ...authData, addTo: 'query' })
+                          }
+                          className='h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300'
+                        />
+                        <span className='ml-2 text-sm text-gray-700 dark:text-gray-300'>
+                          Query Parameter
+                        </span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {authType === 'oauth1' && (
+                <div className='space-y-4'>
+                  <div>
+                    <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
+                      Consumer Key
+                    </label>
+                    <input
+                      type='text'
+                      value={authData.oauth1.consumerKey}
+                      onChange={(e) =>
+                        setAuthData({
+                          ...authData,
+                          oauth1: {
+                            ...authData.oauth1,
+                            consumerKey: e.target.value,
+                          },
+                        })
+                      }
+                      placeholder='Enter consumer key'
+                      className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 bg-white dark:bg-gray-800 text-sm'
+                    />
+                  </div>
+                  <div>
+                    <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
+                      Consumer Secret
+                    </label>
+                    <input
+                      type='password'
+                      value={authData.oauth1.consumerSecret}
+                      onChange={(e) =>
+                        setAuthData({
+                          ...authData,
+                          oauth1: {
+                            ...authData.oauth1,
+                            consumerSecret: e.target.value,
+                          },
+                        })
+                      }
+                      placeholder='Enter consumer secret'
+                      className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 bg-white dark:bg-gray-800 text-sm'
+                    />
+                  </div>
+                  <div>
+                    <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
+                      Access Token
+                    </label>
+                    <input
+                      type='text'
+                      value={authData.oauth1.token}
+                      onChange={(e) =>
+                        setAuthData({
+                          ...authData,
+                          oauth1: { ...authData.oauth1, token: e.target.value },
+                        })
+                      }
+                      placeholder='Enter access token'
+                      className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 bg-white dark:bg-gray-800 text-sm'
+                    />
+                  </div>
+                  <div>
+                    <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
+                      Token Secret
+                    </label>
+                    <input
+                      type='password'
+                      value={authData.oauth1.tokenSecret}
+                      onChange={(e) =>
+                        setAuthData({
+                          ...authData,
+                          oauth1: {
+                            ...authData.oauth1,
+                            tokenSecret: e.target.value,
+                          },
+                        })
+                      }
+                      placeholder='Enter token secret'
+                      className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 bg-white dark:bg-gray-800 text-sm'
+                    />
+                  </div>
+                  <div>
+                    <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
+                      Signature Method
+                    </label>
+                    <select
+                      value={authData.oauth1.signatureMethod}
+                      onChange={(e) =>
+                        setAuthData({
+                          ...authData,
+                          oauth1: {
+                            ...authData.oauth1,
+                            signatureMethod: e.target.value,
+                          },
+                        })
+                      }
+                      className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-800 text-sm font-medium hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all duration-150'
+                    >
+                      <option value='HMAC-SHA1'>HMAC-SHA1</option>
+                      <option value='HMAC-SHA256'>HMAC-SHA256</option>
+                      <option value='PLAINTEXT'>PLAINTEXT</option>
+                      <option value='RSA-SHA1'>RSA-SHA1</option>
+                    </select>
+                  </div>
+                  <div>
+                    <p className='mt-1 text-xs text-gray-500 dark:text-gray-400'>
+                      OAuth 1.0 parameters will be automatically generated and
+                      added to the Authorization header.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {authType === 'oauth2' && (
+                <div className='space-y-4'>
+                  <div>
+                    <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
+                      Grant Type
+                    </label>
+                    <select
+                      value={authData.oauth2.grantType}
                       onChange={(e) =>
                         setAuthData({
                           ...authData,
                           oauth2: {
                             ...authData.oauth2,
-                            redirectUri: e.target.value,
+                            grantType: e.target.value as any,
                           },
                         })
                       }
-                      placeholder='Enter redirect URI'
+                      className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-800 text-sm font-medium hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all duration-150'
+                    >
+                      <option value='authorization_code'>
+                        Authorization Code
+                      </option>
+                      <option value='client_credentials'>
+                        Client Credentials
+                      </option>
+                      <option value='password'>Password</option>
+                      <option value='refresh_token'>Refresh Token</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
+                      Access Token
+                    </label>
+                    <input
+                      type='text'
+                      value={authData.oauth2.accessToken}
+                      onChange={(e) =>
+                        setAuthData({
+                          ...authData,
+                          oauth2: {
+                            ...authData.oauth2,
+                            accessToken: e.target.value,
+                          },
+                        })
+                      }
+                      placeholder='Enter access token'
                       className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 bg-white dark:bg-gray-800 text-sm'
                     />
                   </div>
-                )}
-                <div>
-                  <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
-                    Scope
-                  </label>
-                  <input
-                    type='text'
-                    value={authData.oauth2.scope}
-                    onChange={(e) =>
-                      setAuthData({
-                        ...authData,
-                        oauth2: { ...authData.oauth2, scope: e.target.value },
-                      })
-                    }
-                    placeholder='Enter scope (space-separated)'
-                    className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 bg-white dark:bg-gray-800 text-sm'
-                  />
+                  <div>
+                    <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
+                      Client ID
+                    </label>
+                    <input
+                      type='text'
+                      value={authData.oauth2.clientId}
+                      onChange={(e) =>
+                        setAuthData({
+                          ...authData,
+                          oauth2: {
+                            ...authData.oauth2,
+                            clientId: e.target.value,
+                          },
+                        })
+                      }
+                      placeholder='Enter client ID'
+                      className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 bg-white dark:bg-gray-800 text-sm'
+                    />
+                  </div>
+                  <div>
+                    <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
+                      Client Secret
+                    </label>
+                    <input
+                      type='password'
+                      value={authData.oauth2.clientSecret}
+                      onChange={(e) =>
+                        setAuthData({
+                          ...authData,
+                          oauth2: {
+                            ...authData.oauth2,
+                            clientSecret: e.target.value,
+                          },
+                        })
+                      }
+                      placeholder='Enter client secret'
+                      className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 bg-white dark:bg-gray-800 text-sm'
+                    />
+                  </div>
+                  {authData.oauth2.grantType === 'authorization_code' && (
+                    <div>
+                      <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
+                        Redirect URI
+                      </label>
+                      <input
+                        type='text'
+                        value={authData.oauth2.redirectUri}
+                        onChange={(e) =>
+                          setAuthData({
+                            ...authData,
+                            oauth2: {
+                              ...authData.oauth2,
+                              redirectUri: e.target.value,
+                            },
+                          })
+                        }
+                        placeholder='Enter redirect URI'
+                        className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 bg-white dark:bg-gray-800 text-sm'
+                      />
+                    </div>
+                  )}
+                  <div>
+                    <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
+                      Scope
+                    </label>
+                    <input
+                      type='text'
+                      value={authData.oauth2.scope}
+                      onChange={(e) =>
+                        setAuthData({
+                          ...authData,
+                          oauth2: { ...authData.oauth2, scope: e.target.value },
+                        })
+                      }
+                      placeholder='Enter scope (space-separated)'
+                      className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 bg-white dark:bg-gray-800 text-sm'
+                    />
+                  </div>
+                  <div>
+                    <p className='mt-1 text-xs text-gray-500 dark:text-gray-400'>
+                      OAuth 2.0 access token will be sent as a Bearer token in
+                      the Authorization header.
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <p className='mt-1 text-xs text-gray-500 dark:text-gray-400'>
-                    OAuth 2.0 access token will be sent as a Bearer token in the
-                    Authorization header.
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {activeTab === 'scripts' && (
-          <div className='space-y-6'>
-            <div className='space-y-2'>
-              <h3 className='text-base sm:text-lg font-medium text-gray-900 dark:text-white'>
-                Pre-request Script
-              </h3>
-              <p className='text-sm text-gray-500 dark:text-gray-400'>
-                This script will be executed before the request is sent
-              </p>
-              <textarea
-                value={preRequestScript}
-                onChange={(e) => setPreRequestScript(e.target.value)}
-                placeholder='// Write pre-request JavaScript code here'
-                rows={6}
-                className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 font-mono text-sm dark:bg-gray-800 dark:text-white'
-              />
+              )}
             </div>
+          )}
 
-            <div className='space-y-2'>
-              <h3 className='text-base sm:text-lg font-medium text-gray-900 dark:text-white'>
-                Tests
-              </h3>
-              <p className='text-sm text-gray-500 dark:text-gray-400'>
-                This script will be executed after the response is received
-              </p>
-              <textarea
-                value={testScript}
-                onChange={(e) => setTestScript(e.target.value)}
-                placeholder="// Write test JavaScript code here
+          {activeTab === 'scripts' && (
+            <div className='space-y-6'>
+              <div className='space-y-2'>
+                <h3 className='text-base sm:text-lg font-medium text-gray-900 dark:text-white'>
+                  Pre-request Script
+                </h3>
+                <p className='text-sm text-gray-500 dark:text-gray-400'>
+                  This script will be executed before the request is sent
+                </p>
+                <textarea
+                  value={preRequestScript}
+                  onChange={(e) => setPreRequestScript(e.target.value)}
+                  placeholder='// Write pre-request JavaScript code here'
+                  rows={6}
+                  className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 font-mono text-sm dark:bg-gray-800 dark:text-white'
+                />
+              </div>
+
+              <div className='space-y-2'>
+                <h3 className='text-base sm:text-lg font-medium text-gray-900 dark:text-white'>
+                  Tests
+                </h3>
+                <p className='text-sm text-gray-500 dark:text-gray-400'>
+                  This script will be executed after the response is received
+                </p>
+                <textarea
+                  value={testScript}
+                  onChange={(e) => setTestScript(e.target.value)}
+                  placeholder="// Write test JavaScript code here
 // Example: 
 // pm.test('Status code is 200', function() {
 //   pm.response.to.have.status(200);
 // });"
-                rows={8}
-                className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 font-mono text-sm dark:bg-gray-800 dark:text-white'
-              />
-            </div>
-
-            <div className='bg-blue-50 dark:bg-blue-900 p-3 rounded-md'>
-              <h4 className='text-sm font-medium text-blue-800 dark:text-blue-200'>
-                Tip
-              </h4>
-              <p className='text-xs text-blue-700 dark:text-blue-300 mt-1'>
-                You can access request and response data using the{' '}
-                <code className='bg-blue-100 dark:bg-blue-800 px-1 rounded'>
-                  pm
-                </code>{' '}
-                object. Use{' '}
-                <code className='bg-blue-100 dark:bg-blue-800 px-1 rounded'>
-                  pm.request
-                </code>{' '}
-                for request data and
-                <code className='bg-blue-100 dark:bg-blue-800 px-1 rounded'>
-                  pm.response
-                </code>{' '}
-                for response data.
-              </p>
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'settings' && (
-          <div className='space-y-5'>
-            <h3 className='text-base sm:text-lg font-medium text-gray-900 dark:text-white'>
-              Request Settings
-            </h3>
-
-            <div className='space-y-4'>
-              <ToggleSwitch
-                id='followRedirects'
-                checked={settings.followRedirects}
-                onChange={(checked) =>
-                  setSettings({ ...settings, followRedirects: checked })
-                }
-                label='Follow Redirects'
-                description='Automatically follow HTTP redirects'
-              />
-
-              <div>
-                <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
-                  Request Timeout (ms)
-                </label>
-                <input
-                  type='number'
-                  min='0'
-                  value={settings.timeout}
-                  onChange={(e) =>
-                    setSettings({
-                      ...settings,
-                      timeout: Number.parseInt(e.target.value),
-                    })
-                  }
-                  className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 bg-white dark:bg-gray-800 text-sm'
+                  rows={8}
+                  className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 font-mono text-sm dark:bg-gray-800 dark:text-white'
                 />
-                <p className='text-xs text-gray-500 dark:text-gray-400 mt-1'>
-                  Time in milliseconds to wait for a response before timing out
-                </p>
               </div>
 
-              <ToggleSwitch
-                id='sslVerification'
-                checked={settings.sslVerification}
-                onChange={(checked) =>
-                  setSettings({ ...settings, sslVerification: checked })
-                }
-                label='SSL Certificate Verification'
-                description='Verify SSL certificates when making HTTPS requests'
-              />
+              <div className='bg-blue-50 dark:bg-blue-900 p-3 rounded-md'>
+                <h4 className='text-sm font-medium text-blue-800 dark:text-blue-200'>
+                  Tip
+                </h4>
+                <p className='text-xs text-blue-700 dark:text-blue-300 mt-1'>
+                  You can access request and response data using the{' '}
+                  <code className='bg-blue-100 dark:bg-blue-800 px-1 rounded'>
+                    pm
+                  </code>{' '}
+                  object. Use{' '}
+                  <code className='bg-blue-100 dark:bg-blue-800 px-1 rounded'>
+                    pm.request
+                  </code>{' '}
+                  for request data and
+                  <code className='bg-blue-100 dark:bg-blue-800 px-1 rounded'>
+                    pm.response
+                  </code>{' '}
+                  for response data.
+                </p>
+              </div>
             </div>
+          )}
 
-            <div className='mt-6 p-4 bg-yellow-50 dark:bg-yellow-900 rounded-md'>
-              <h4 className='text-sm font-medium text-yellow-800 dark:text-yellow-200'>
-                Request Settings Info
-              </h4>
-              <p className='text-xs text-yellow-700 dark:text-yellow-300 mt-1'>
-                These settings only apply to this specific request. Global
-                settings can be configured in the application settings.
-              </p>
+          {activeTab === 'settings' && (
+            <div className='space-y-5'>
+              <h3 className='text-base sm:text-lg font-medium text-gray-900 dark:text-white'>
+                Request Settings
+              </h3>
+
+              <div className='space-y-4'>
+                <ToggleSwitch
+                  id='followRedirects'
+                  checked={settings.followRedirects}
+                  onChange={(checked) =>
+                    setSettings({ ...settings, followRedirects: checked })
+                  }
+                  label='Follow Redirects'
+                  description='Automatically follow HTTP redirects'
+                />
+
+                <div>
+                  <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
+                    Request Timeout (ms)
+                  </label>
+                  <input
+                    type='number'
+                    min='0'
+                    value={settings.timeout}
+                    onChange={(e) =>
+                      setSettings({
+                        ...settings,
+                        timeout: Number.parseInt(e.target.value),
+                      })
+                    }
+                    className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 bg-white dark:bg-gray-800 text-sm'
+                  />
+                  <p className='text-xs text-gray-500 dark:text-gray-400 mt-1'>
+                    Time in milliseconds to wait for a response before timing
+                    out
+                  </p>
+                </div>
+
+                <ToggleSwitch
+                  id='sslVerification'
+                  checked={settings.sslVerification}
+                  onChange={(checked) =>
+                    setSettings({ ...settings, sslVerification: checked })
+                  }
+                  label='SSL Certificate Verification'
+                  description='Verify SSL certificates when making HTTPS requests'
+                />
+              </div>
+
+              <div className='mt-6 p-4 bg-yellow-50 dark:bg-yellow-900 rounded-md'>
+                <h4 className='text-sm font-medium text-yellow-800 dark:text-yellow-200'>
+                  Request Settings Info
+                </h4>
+                <p className='text-xs text-yellow-700 dark:text-yellow-300 mt-1'>
+                  These settings only apply to this specific request. Global
+                  settings can be configured in the application settings.
+                </p>
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {activeTab === 'schemas' && (
-          <div>
-            <SchemaPage />
-          </div>
-        )}
-      </div>
-
-      {/* Save Modal */}
-      <Modal
-        isOpen={showSaveModal}
-        onClose={handleCancelSave}
-        title='Save Request'
-        footer={
-          <div className='flex justify-end space-x-3'>
-            <button
-              onClick={handleCancelSave}
-              className='px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md'
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleConfirmSave}
-              disabled={
-                !activeCollection &&
-                (!isCreatingCollection || !newCollectionName.trim())
-              }
-              className='px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-md'
-            >
-              Save
-            </button>
-          </div>
-        }
-      >
-        <div>
-          <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
-            Save to Collection
-          </label>
-
-          {!isCreatingCollection ? (
-            <div className='space-y-2'>
-              <select
-                onChange={(e) => {
-                  setActiveCollection(
-                    collections.find((c) => c.id === e.target.value) || null
-                  );
-                }}
-                className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150'
-              >
-                <option value=''>Select a collection</option>
-                {collections.map((collection) => (
-                  <option key={collection.id} value={collection.id}>
-                    {collection.name}
-                  </option>
-                ))}
-              </select>
-
-              <button
-                onClick={() => setIsCreatingCollection(true)}
-                className='w-full flex items-center justify-center space-x-2 text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 py-2 border border-dashed border-gray-300 dark:border-gray-600 rounded-md'
-              >
-                <FolderPlus className='h-4 w-4' />
-                <span>Create New Collection</span>
-              </button>
-            </div>
-          ) : (
-            <div className='space-y-2'>
-              <input
-                type='text'
-                value={newCollectionName}
-                onChange={(e) => setNewCollectionName(e.target.value)}
-                placeholder='Enter collection name'
-                className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150'
-                autoFocus
-              />
-
-              <button
-                onClick={() => {
-                  setIsCreatingCollection(false);
-                  setNewCollectionName('');
-                }}
-                className='text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
-              >
-                ← Back to existing collections
-              </button>
+          {activeTab === 'schemas' && (
+            <div>
+              <SchemaPage />
             </div>
           )}
         </div>
 
-        {!url.trim() && (
-          <div className='mt-2 text-red-600 text-sm'>
-            URL is required to save a request.
-          </div>
-        )}
+        {/* Save Modal */}
+        <Modal
+          isOpen={showSaveModal}
+          onClose={handleCancelSave}
+          title='Save Request'
+          footer={
+            <div className='flex justify-end space-x-3'>
+              <button
+                onClick={handleCancelSave}
+                className='px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md'
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmSave}
+                disabled={
+                  !activeCollection &&
+                  (!isCreatingCollection || !newCollectionName.trim())
+                }
+                className='px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-md'
+              >
+                Save
+              </button>
+            </div>
+          }
+        >
+          <div>
+            <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
+              Save to Collection
+            </label>
 
-        {!activeCollection &&
-          (!isCreatingCollection || !newCollectionName.trim()) && (
+            {!isCreatingCollection ? (
+              <div className='space-y-2'>
+                <select
+                  onChange={(e) => {
+                    setActiveCollection(
+                      collections.find((c) => c.id === e.target.value) || null
+                    );
+                  }}
+                  className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150'
+                >
+                  <option value=''>Select a collection</option>
+                  {collections.map((collection) => (
+                    <option key={collection.id} value={collection.id}>
+                      {collection.name}
+                    </option>
+                  ))}
+                </select>
+
+                <button
+                  onClick={() => setIsCreatingCollection(true)}
+                  className='w-full flex items-center justify-center space-x-2 text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 py-2 border border-dashed border-gray-300 dark:border-gray-600 rounded-md'
+                >
+                  <FolderPlus className='h-4 w-4' />
+                  <span>Create New Collection</span>
+                </button>
+              </div>
+            ) : (
+              <div className='space-y-2'>
+                <input
+                  type='text'
+                  value={newCollectionName}
+                  onChange={(e) => setNewCollectionName(e.target.value)}
+                  placeholder='Enter collection name'
+                  className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150'
+                  autoFocus
+                />
+
+                <button
+                  onClick={() => {
+                    setIsCreatingCollection(false);
+                    setNewCollectionName('');
+                  }}
+                  className='text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                >
+                  ← Back to existing collections
+                </button>
+              </div>
+            )}
+          </div>
+
+          {!url.trim() && (
             <div className='mt-2 text-red-600 text-sm'>
-              Please select or create a collection.
+              URL is required to save a request.
             </div>
           )}
-      </Modal>
-    </div>
+
+          {!activeCollection &&
+            (!isCreatingCollection || !newCollectionName.trim()) && (
+              <div className='mt-2 text-red-600 text-sm'>
+                Please select or create a collection.
+              </div>
+            )}
+        </Modal>
+      </div>
+    </TooltipProvider>
   );
 };
 
