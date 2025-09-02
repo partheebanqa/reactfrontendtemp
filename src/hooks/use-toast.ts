@@ -13,7 +13,6 @@ type ToasterToast = ToastProps & {
 
 type Toast = Omit<ToasterToast, 'id'>;
 
-// Legacy function for backward compatibility
 function toast({ ...props }: Toast) {
   let actionData = undefined;
   if (props.action) {
