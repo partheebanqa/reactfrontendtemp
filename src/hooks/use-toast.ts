@@ -2,7 +2,6 @@ import * as React from 'react';
 import type { ToastActionElement, ToastProps } from '@/components/ui/toast';
 import { useToastStore, toastActions, ToastType } from '@/store/toastStore';
 
-// Legacy support types
 type ToasterToast = ToastProps & {
   id: string;
   title?: React.ReactNode;
