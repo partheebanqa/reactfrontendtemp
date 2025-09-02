@@ -300,7 +300,7 @@ const RequestEditor: React.FC = () => {
           url: newUrl,
           params: params,
           headers: headers,
-          body: requestFormData || bodyContent,
+          bodyRawContent: requestFormData || bodyContent,
           bodyType: bodyType,
           formData:
             bodyType === 'form-data'
