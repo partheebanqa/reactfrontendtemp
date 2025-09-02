@@ -308,7 +308,6 @@ const RequestEditor: React.FC = () => {
               ? formFields
                   .filter((f) => f.enabled)
                   .reduce((acc, field) => {
-                    // For file fields, store a reference to the file object
                     if (field.type === 'file' && field.value instanceof File) {
                       acc[field.key] = field.value;
                     } else {
@@ -899,7 +898,6 @@ const RequestEditor: React.FC = () => {
   return (
     <TooltipProvider>
       <div className='flex-1 flex flex-col bg-white dark:bg-gray-900 overflow-hidden'>
-     
         <div className='border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex-shrink-0'>
           <div className='flex items-center justify-between'>
             <div className='flex items-center space-x-3'>
