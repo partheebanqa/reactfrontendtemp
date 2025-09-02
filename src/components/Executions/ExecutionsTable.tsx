@@ -58,7 +58,7 @@ export const ExecutionsTable = ({
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>Test Suite</TableHead>
+          <TableHead>Execution ID</TableHead>
           <TableHead>Type</TableHead>
           <TableHead>Environment</TableHead>
           <TableHead>Status</TableHead>
@@ -81,11 +81,11 @@ export const ExecutionsTable = ({
               <TableCell>
                 <div>
                   {execution.testSuite ? (
-                    <p className='font-medium text-primary hover:text-primary/80 cursor-pointer'>
+                    <p className='font-medium text-[#136fb0] hover:text-primary/80 cursor-pointer'>
                       {execution.testSuite.name}
                     </p>
                   ) : (
-                    <p className='font-medium text-primary hover:text-primary/80 cursor-pointer'>
+                    <p className='font-medium text-[#136fb0] hover:text-primary/80 cursor-pointer'>
                       {execution.requestChain?.name || 'Request Chain'}
                     </p>
                   )}
@@ -130,7 +130,7 @@ export const ExecutionsTable = ({
                 <Badge
                   variant={
                     execution.status === 'success'
-                      ? 'default'
+                      ? 'active'
                       : execution.status === 'failed'
                       ? 'destructive'
                       : 'secondary'

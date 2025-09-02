@@ -23,6 +23,7 @@ import { executeRequest } from '@/services/executeRequest.service';
 import { updateRequest } from '@/services/collection.service';
 import { useMutation } from '@tanstack/react-query';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { Button } from '@/components/ui/button';
 
 const RequestEditor: React.FC = () => {
   const { isLoading, clearError, setLoading, setError, setResponseData } =
@@ -898,7 +899,7 @@ const RequestEditor: React.FC = () => {
   return (
     <TooltipProvider>
       <div className='flex-1 flex flex-col bg-white dark:bg-gray-900 overflow-hidden'>
-        {/* Request Name Header */}
+     
         <div className='border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex-shrink-0'>
           <div className='flex items-center justify-between'>
             <div className='flex items-center space-x-3'>
@@ -910,7 +911,7 @@ const RequestEditor: React.FC = () => {
                 fontWeight='semibold'
               />
             </div>
-            <HelpLink />
+            {/* <HelpLink /> */}
           </div>
         </div>
 
@@ -954,10 +955,11 @@ const RequestEditor: React.FC = () => {
             />
 
             <div className='flex space-x-2'>
-              <button
+              <Button
+                variant='active'
                 onClick={handleSendRequest}
                 disabled={isLoading}
-                className='bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-4 sm:px-6 py-2 rounded-md flex items-center space-x-2 transition-colors whitespace-nowrap'
+                className='disabled:bg-blue-400 text-white px-4 sm:px-6 py-2 rounded-md flex items-center space-x-2 transition-colors whitespace-nowrap'
                 aria-label='Send request'
                 title='Send request'
               >
@@ -965,7 +967,7 @@ const RequestEditor: React.FC = () => {
                 <span className='hidden sm:inline'>
                   {isLoading ? 'Sending...' : 'Send'}
                 </span>
-              </button>
+              </Button>
 
               <TooltipContainer text='Save request'>
                 {!activeRequest.id ? (
