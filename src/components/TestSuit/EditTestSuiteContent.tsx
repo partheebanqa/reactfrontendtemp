@@ -72,7 +72,7 @@ const EditTestSuiteContent: React.FC = () => {
     isLoading: isLoadingTestSuite,
     isError,
     error,
-    refetch: refetchRequests,       
+    refetch: refetchRequests,
   } = useQuery({
     queryKey: ['testSuite', id],
     queryFn: () => getTestSuites(id!),
@@ -102,7 +102,7 @@ const EditTestSuiteContent: React.FC = () => {
       toast({
         title: 'Test suite created',
         description:
-          'Test suite created. Test cases are in progress—please wait a few minutes',
+          'Test suite created. Test cases are in progress—please wait for few minutes',
       });
       queryClient.invalidateQueries({
         queryKey: ['/api/test-suites', currentWorkspace?.id],
@@ -394,10 +394,16 @@ const EditTestSuiteContent: React.FC = () => {
                   {environments.map((env) => (
                     <SelectItem key={env.id} value={env.id}>
                       <div className='flex flex-col text-left'>
-                        <span className='font-medium text-sm'>{env.name}</span>
+                        <span className='font-medium text-sm'>
+                          {env.name} -{' '}
+                          <span className='text-xs text-muted-foreground break-all'>
+                            {env.baseUrl}
+                          </span>
+                        </span>
+                        {/* 
                         <span className='text-xs text-muted-foreground break-all'>
                           {env.baseUrl}
-                        </span>
+                        </span> */}
                       </div>
                     </SelectItem>
                   ))}
@@ -416,8 +422,8 @@ const EditTestSuiteContent: React.FC = () => {
                   Import Requests & Configure Test Cases
                 </h3>
                 <p className='text-sm text-muted-foreground mt-1'>
-                  Import API requesNo requests imported yetts from collections and configure test cases
-                  for each request
+                  Import API requesNo requests imported yetts from collections
+                  and configure test cases for each request
                 </p>
               </div>
               <Button
@@ -437,17 +443,12 @@ const EditTestSuiteContent: React.FC = () => {
                   <div className='w-16 h-16 mb-6 rounded-full bg-muted flex items-center justify-center'>
                     <Download className='w-8 h-8 text-muted-foreground' />
                   </div>
-                  <h3 className='text-lg font-medium mb-2'>
-                    
-                  </h3>
+                  <h3 className='text-lg font-medium mb-2'></h3>
                   <p className='text-muted-foreground text-center mb-6 max-w-md'>
                     Start by importing API requests from your collections. You
                     can then configure specific test cases for each request.
                   </p>
-                  <Button
-                    onClick={() => setIsImportModalOpen(true)}
-                   
-                  >
+                  <Button onClick={() => setIsImportModalOpen(true)}>
                     <Download className='w-4 h-4 mr-2' />
                     Import Your First Request
                   </Button>
@@ -461,33 +462,35 @@ const EditTestSuiteContent: React.FC = () => {
                   </div>
                 </div> */}
 
-       <div className="px-6 py-4 bg-gray-50 mt-5 border-gray-200 flex justify-between items-center">
-            <div className="text-sm text-gray-600">
-              <div className="space-y-1">
-                <div>Imported requests: 0 </div>
-                <div className="font-medium">Total test cases: 0</div>
-              </div>
-            </div>
-            <div className="flex space-x-3">
-            <Button variant='outline' onClick={handleBack}>
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSaveChanges}
-              disabled={
-                isSaving || !testSuiteName.trim() || requests.length === 0
-              }
-            >
-               {isSaving
-                ? isCreateMode
-                  ? 'Creating Test Suite...'
-                  : 'Saving...'
-                : isCreateMode
-                ? 'Create Test Suite'
-                : 'Save Changes'}
-            </Button>
-            </div>
-          </div>
+                <div className='px-6 py-4 bg-gray-50 mt-5 border-gray-200 flex justify-between items-center'>
+                  <div className='text-sm text-gray-600'>
+                    <div className='space-y-1'>
+                      <div>Imported requests: 0 </div>
+                      <div className='font-medium'>Total test cases: 0</div>
+                    </div>
+                  </div>
+                  <div className='flex space-x-3'>
+                    <Button variant='outline' onClick={handleBack}>
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={handleSaveChanges}
+                      disabled={
+                        isSaving ||
+                        !testSuiteName.trim() ||
+                        requests.length === 0
+                      }
+                    >
+                      {isSaving
+                        ? isCreateMode
+                          ? 'Creating Test Suite...'
+                          : 'Saving...'
+                        : isCreateMode
+                        ? 'Create Test Suite'
+                        : 'Save Changes'}
+                    </Button>
+                  </div>
+                </div>
               </>
             ) : (
               <>
@@ -512,33 +515,37 @@ const EditTestSuiteContent: React.FC = () => {
                   </div>
                 </div> */}
 
-<div className="px-6 py-4 bg-gray-50 mt-5 border-gray-200 flex justify-between items-center">
-            <div className="text-sm text-gray-600">
-              <div className="space-y-1">
-                <div>Imported requests: {requests.length} </div>
-                <div className="font-medium">Total test cases: {totalTestCases}</div>
-              </div>
-            </div>
-            <div className="flex space-x-3">
-            <Button variant='outline' onClick={handleBack}>
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSaveChanges}
-              disabled={
-                isSaving || !testSuiteName.trim() || requests.length === 0
-              }
-            >
-              {isSaving
-                ? isCreateMode
-                  ? 'Creating Test Suite...'
-                  : 'Saving...'
-                : isCreateMode
-                ? 'Create Test Suite'
-                : 'Save Changes'}
-            </Button>
-            </div>
-          </div>
+                <div className='px-6 py-4 bg-gray-50 mt-5 border-gray-200 flex justify-between items-center'>
+                  <div className='text-sm text-gray-600'>
+                    <div className='space-y-1'>
+                      <div>Imported requests: {requests.length} </div>
+                      <div className='font-medium'>
+                        Total test cases: {totalTestCases}
+                      </div>
+                    </div>
+                  </div>
+                  <div className='flex space-x-3'>
+                    <Button variant='outline' onClick={handleBack}>
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={handleSaveChanges}
+                      disabled={
+                        isSaving ||
+                        !testSuiteName.trim() ||
+                        requests.length === 0
+                      }
+                    >
+                      {isSaving
+                        ? isCreateMode
+                          ? 'Creating Test Suite...'
+                          : 'Saving...'
+                        : isCreateMode
+                        ? 'Create Test Suite'
+                        : 'Save Changes'}
+                    </Button>
+                  </div>
+                </div>
               </>
             )}
           </CardContent>

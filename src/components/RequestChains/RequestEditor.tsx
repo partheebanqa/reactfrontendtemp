@@ -1,6 +1,6 @@
 // RequestEditor.tsx
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -111,6 +111,7 @@ export function RequestEditor({
     Record<string, any>
   >({});
   const { activeEnvironment } = useDataManagement();
+
   const [previewUrl, setPreviewUrl] = useState('');
   const [previousExtractions, setPreviousExtractions] = useState<
     DataExtraction[]
@@ -126,6 +127,8 @@ export function RequestEditor({
     setExtractedVariables(newVars);
     localStorage.setItem('extractedVariables', JSON.stringify(newVars));
   };
+
+  const hasManuallyEditedNameRef = useRef(false);
 
   useEffect(() => {
     const extractedVars = getExtractVariablesByEnvironment(
@@ -669,28 +672,42 @@ export function RequestEditor({
           </Select>
           <Input
             value={request.url}
-            onChange={(e) => onUpdate({ url: e.target.value })}
+            onChange={(e) => {
+              const value = e.target.value;
+              const shouldSyncName =
+                !hasManuallyEditedNameRef.current &&
+                (!request.name ||
+                  request.name === 'New Request' ||
+                  request.name === request.url);
+
+              onUpdate(
+                shouldSyncName ? { url: value, name: value } : { url: value }
+              );
+            }}
             placeholder='Enter request URL'
             className='flex-1'
           />
           <Button
             onClick={handleExecute}
             disabled={isExecuting}
-            className="hover-scale bg-[#136fb0] text-white"
+            className='hover-scale bg-[#136fb0] text-white'
           >
             <Play className='w-4 h-4' />
             {isExecuting ? 'Running...' : 'Run'}
           </Button>
         </div>
         {/* Final URL Preview */}
-        <div className='flex items-center space-x-2 mt-2 text-sm'>
-          <span className='text-gray-600 dark:text-gray-400 font-medium'>
-            Final URL Preview:
-          </span>
-          <span className='text-[#136fb0] dark:text-blue-400 font-mono break-all'>
-            {previewUrl}
-          </span>
-        </div>
+        {activeEnvironment && activeEnvironment.name !== 'No Environment' && (
+          <div className='flex items-center space-x-2 mt-2 text-sm'>
+            <span className='text-gray-600 dark:text-gray-400 font-medium'>
+              Final URL Preview:
+            </span>
+            <span className='text-[#136fb0] dark:text-blue-400 font-mono break-all'>
+              {previewUrl}
+            </span>
+          </div>
+        )}
+
         {/* Tabs */}
         <div className='border-b border-gray-200'>
           <nav className='flex space-x-8 px-6'>
@@ -736,63 +753,53 @@ export function RequestEditor({
                   <span className='text-[#136fb0]'>Add Parameter</span>
                 </button>
               </div>
-              {request?.params?.length > 0 ? (
-                <div className='space-y-2'>
-                  {request.params.map((param, index) => (
-                    <div key={index} className='flex items-center space-x-2'>
-                      <input
-                        type='text'
-                        value={param.key}
-                        onChange={(e) =>
-                          updateParam(index, { key: e.target.value })
-                        }
-                        className='flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm'
-                        placeholder='Key'
-                      />
-                      <input
-                        type='text'
-                        value={param.value}
-                        onChange={(e) =>
-                          updateParam(index, { value: e.target.value })
-                        }
-                        className='flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm'
-                        placeholder='Value (use {{variableName}} for variables)'
-                      />
-                      <button
-                        onClick={() =>
-                          updateParam(index, { enabled: !param.enabled })
-                        }
-                        className={`p-2 rounded-lg transition-colors ${
-                          param.enabled
-                            ? 'text-green-600 hover:bg-green-50'
-                            : 'text-gray-400 hover:bg-gray-50'
-                        }`}
-                      >
-                        {/* {param.enabled ? (
-                          <Eye className='w-4 h-4' />
-                        ) : (
-                          <EyeOff className='w-4 h-4' />
-                        )} */}
-                      </button>
-                      <button
-                        onClick={() => removeParam(index)}
-                        className='p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors'
-                      >
-                        <Trash2 className='w-4 h-4' />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className='text-center py-8 text-gray-500'>
-                  <FileText className='w-12 h-12 text-gray-300 mx-auto mb-3' />
-                  <p>
-                    No parameters added. Click "Add Parameter" to get started.
-                  </p>
-                </div>
-              )}
+
+              {/* Parameters List (no empty state) */}
+              <div className='space-y-2'>
+                {request?.params?.map((param, index) => (
+                  <div key={index} className='flex items-center space-x-2'>
+                    <input
+                      type='text'
+                      value={param.key}
+                      onChange={(e) =>
+                        updateParam(index, { key: e.target.value })
+                      }
+                      className='flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm'
+                      placeholder='Key'
+                    />
+                    <input
+                      type='text'
+                      value={param.value}
+                      onChange={(e) =>
+                        updateParam(index, { value: e.target.value })
+                      }
+                      className='flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm'
+                      placeholder='Value (use {{variableName}} for variables)'
+                    />
+                    <button
+                      onClick={() =>
+                        updateParam(index, { enabled: !param.enabled })
+                      }
+                      className={`p-2 rounded-lg transition-colors ${
+                        param.enabled
+                          ? 'text-green-600 hover:bg-green-50'
+                          : 'text-gray-400 hover:bg-gray-50'
+                      }`}
+                    >
+                      {/* toggle visibility icon here */}
+                    </button>
+                    <button
+                      onClick={() => removeParam(index)}
+                      className='p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors'
+                    >
+                      <Trash2 className='w-4 h-4' />
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
+
           {activeTab === 'headers' && (
             <div className='space-y-4'>
               <div className='flex items-center justify-between'>
@@ -805,61 +812,53 @@ export function RequestEditor({
                   <span>Add Header</span>
                 </button>
               </div>
-              {request.headers.length > 0 ? (
-                <div className='space-y-2'>
-                  {request.headers.map((header, index) => (
-                    <div key={index} className='flex items-center space-x-2'>
-                      <input
-                        type='text'
-                        value={header.key}
-                        onChange={(e) =>
-                          updateHeader(index, { key: e.target.value })
-                        }
-                        className='flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm'
-                        placeholder='Header name'
-                      />
-                      <input
-                        type='text'
-                        value={header.value}
-                        onChange={(e) =>
-                          updateHeader(index, { value: e.target.value })
-                        }
-                        className='flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm'
-                        placeholder='Header value (use {{variableName}} for variables)'
-                      />
-                      <button
-                        onClick={() =>
-                          updateHeader(index, { enabled: !header.enabled })
-                        }
-                        className={`p-2 rounded-lg transition-colors ${
-                          header.enabled
-                            ? 'text-green-600 hover:bg-green-50'
-                            : 'text-gray-400 hover:bg-gray-50'
-                        }`}
-                      >
-                        {/* {header.enabled ? (
-                          <Eye className='w-4 h-4' />
-                        ) : (
-                          <EyeOff className='w-4 h-4' />
-                        )} */}
-                      </button>
-                      <button
-                        onClick={() => removeHeader(index)}
-                        className='p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors'
-                      >
-                        <Trash2 className='w-4 h-4' />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className='text-center py-8 text-gray-500'>
-                  <Code className='w-12 h-12 text-gray-300 mx-auto mb-3' />
-                  <p>No headers added. Click "Add Header" to get started.</p>
-                </div>
-              )}
+
+              {/* Headers List (no empty state) */}
+              <div className='space-y-2'>
+                {request?.headers?.map((header, index) => (
+                  <div key={index} className='flex items-center space-x-2'>
+                    <input
+                      type='text'
+                      value={header.key}
+                      onChange={(e) =>
+                        updateHeader(index, { key: e.target.value })
+                      }
+                      className='flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm'
+                      placeholder='Key'
+                    />
+                    <input
+                      type='text'
+                      value={header.value}
+                      onChange={(e) =>
+                        updateHeader(index, { value: e.target.value })
+                      }
+                      className='flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm'
+                      placeholder='Value (use {{variableName}} for variables)'
+                    />
+                    <button
+                      onClick={() =>
+                        updateHeader(index, { enabled: !header.enabled })
+                      }
+                      className={`p-2 rounded-lg transition-colors ${
+                        header.enabled
+                          ? 'text-green-600 hover:bg-green-50'
+                          : 'text-gray-400 hover:bg-gray-50'
+                      }`}
+                    >
+                      {/* toggle visibility icon */}
+                    </button>
+                    <button
+                      onClick={() => removeHeader(index)}
+                      className='p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors'
+                    >
+                      <Trash2 className='w-4 h-4' />
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
+
           {activeTab === 'body' && (
             <div className='space-y-4'>
               <h3 className='text-lg font-medium text-gray-900'>
@@ -1705,7 +1704,10 @@ export function RequestEditor({
               <Label>Request Name</Label>
               <Input
                 value={request.name}
-                onChange={(e) => onUpdate({ name: e.target.value })}
+                onChange={(e) => {
+                  hasManuallyEditedNameRef.current = true;
+                  onUpdate({ name: e.target.value });
+                }}
                 placeholder='Enter request name'
               />
             </div>
@@ -1736,7 +1738,18 @@ export function RequestEditor({
             <Label>URL</Label>
             <Input
               value={request.url}
-              onChange={(e) => onUpdate({ url: e.target.value })}
+              onChange={(e) => {
+                const value = e.target.value;
+                const shouldSyncName =
+                  !hasManuallyEditedNameRef.current &&
+                  (!request.name ||
+                    request.name === 'New Request' ||
+                    request.name === request.url);
+
+                onUpdate(
+                  shouldSyncName ? { url: value, name: value } : { url: value }
+                );
+              }}
               placeholder='https://api.example.com/endpoint'
             />
           </div>

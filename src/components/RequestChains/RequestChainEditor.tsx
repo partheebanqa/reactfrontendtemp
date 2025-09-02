@@ -19,6 +19,9 @@ import {
   Info,
   Layers,
   Link2,
+  Pencil,
+  X,
+  Check,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -33,7 +36,7 @@ import {
 } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/Tabs';
 import { useToast } from '@/hooks/use-toast';
 import type {
   RequestChain,
@@ -485,6 +488,8 @@ export function RequestChainEditor({
   };
 
   const [copiedStates, setCopiedStates] = useState<Record<string, boolean>>({});
+  const [editingNameId, setEditingNameId] = useState<string | null>(null);
+  const [tempName, setTempName] = useState<string>('');
 
   const handleCopyForRequest = async (requestId: string, value: string) => {
     try {
@@ -855,6 +860,14 @@ export function RequestChainEditor({
 
   const currentRequestChainId = requestChainId || chain?.id || '';
 
+  function commitRequestName(index: number, nameValue: string) {
+    const finalName = nameValue.trim();
+    const updated = (formData.chainRequests || []).map((r, i) =>
+      i === index ? { ...r, name: finalName || r.url || r.name } : r
+    );
+    setFormData({ ...formData, chainRequests: updated });
+  }
+
   if (editingRequestId) {
     const request = formData.chainRequests?.find(
       (r) => r.id === editingRequestId
@@ -922,17 +935,17 @@ export function RequestChainEditor({
       </div> */}
 
       <BreadCum
-              title=  {chain ? 'Edit Request Chain' : 'Create Request Chain'}
-              subtitle={ 'Configure your API automation workflow'}
-              buttonTitle=" Create Test suite"
-               showCreateButton={false}
-               showQuickGuide={false}
-              onClickQuickGuide={() => console.log("Exporting...")}
-              icon={Link2}
-              iconBgClass="bg-[#f9e3fc]"
-              iconColor="#660275"
-              iconSize={36}
-            />
+        title={chain ? 'Edit Request Chain' : 'Create Request Chain'}
+        subtitle={'Configure your API automation workflow'}
+        buttonTitle=' Create Test suite'
+        showCreateButton={false}
+        showQuickGuide={false}
+        onClickQuickGuide={() => console.log('Exporting...')}
+        icon={Link2}
+        iconBgClass='bg-[#f9e3fc]'
+        iconColor='#660275'
+        iconSize={36}
+      />
 
       <div className='flex-1 border border-gray-200 rounded-lg bg-background mt-3'>
         <div className='p-6 space-y-6'>
@@ -944,7 +957,9 @@ export function RequestChainEditor({
             <CardContent className='space-y-4'>
               <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
                 <div className='space-y-2'>
-                  <Label htmlFor='chainName'>Chain Name *</Label>
+                  <Label htmlFor='chainName'>
+                    Chain Name <span className='text-destructive'>*</span>
+                  </Label>
                   <Input
                     id='chainName'
                     value={formData.name}
@@ -1003,11 +1018,14 @@ export function RequestChainEditor({
                       <SelectItem key={env.id} value={env.id}>
                         <div className='flex flex-col text-left'>
                           <span className='font-medium text-sm'>
-                            {env.name}
+                            {env.name} -{' '}
+                            <span className='text-xs text-muted-foreground break-all'>
+                              {env.baseUrl}
+                            </span>
                           </span>
-                          <span className='text-xs text-muted-foreground break-all'>
+                          {/* <span className='text-xs text-muted-foreground break-all'>
                             {env.baseUrl}
-                          </span>
+                          </span> */}
                         </div>
                       </SelectItem>
                     ))}
@@ -1059,21 +1077,32 @@ export function RequestChainEditor({
                       <div className='flex items-center justify-between mb-4'>
                         <h3 className='text-lg font-medium'>Request Chain</h3>
                         <div className='flex items-center gap-2'>
-                          <Button
-                            variant='outline'
-                            onClick={handleRunAll}
-                            disabled={
-                              isExecuting || !formData.chainRequests?.length
-                            }
-                            className='gap-2 bg-transparent'
-                          >
-                            {isExecuting ? (
-                              <Loader2 className='w-4 h-4 animate-spin' />
-                            ) : (
-                              <PlayCircle className='w-4 h-4' />
-                            )}
-                            {isExecuting ? 'Running...' : 'Run All'}
-                          </Button>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant='outline'
+                                  onClick={handleRunAll}
+                                  disabled={
+                                    isExecuting ||
+                                    !formData.chainRequests?.length
+                                  }
+                                  className='gap-2 bg-transparent'
+                                >
+                                  {isExecuting ? (
+                                    <Loader2 className='w-4 h-4 animate-spin' />
+                                  ) : (
+                                    <PlayCircle className='w-4 h-4' />
+                                  )}
+                                  {isExecuting ? 'Running...' : 'Run All'}
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Run all requests before execution</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+
                           <Button
                             variant='outline'
                             onClick={() => setIsImportModalOpen(true)}
@@ -1110,19 +1139,28 @@ export function RequestChainEditor({
                                 <CardContent className='p-4'>
                                   <div className='flex items-center'>
                                     <div className='flex items-center space-x-3'>
-                                      <div
-                                        className='cursor-move'
-                                        draggable
-                                        onDragStart={() =>
-                                          handleDragStart(index)
-                                        }
-                                        onDragEnter={() =>
-                                          handleDragEnter(index)
-                                        }
-                                        onDragEnd={handleDragEnd}
-                                      >
-                                        <GripVertical className='w-5 h-5 text-muted-foreground' />
-                                      </div>
+                                      <TooltipProvider>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <div
+                                              className='cursor-move'
+                                              draggable
+                                              onDragStart={() =>
+                                                handleDragStart(index)
+                                              }
+                                              onDragEnter={() =>
+                                                handleDragEnter(index)
+                                              }
+                                              onDragEnd={handleDragEnd}
+                                            >
+                                              <GripVertical className='w-5 h-5 text-muted-foreground' />
+                                            </div>
+                                          </TooltipTrigger>
+                                          <TooltipContent>
+                                            <p>Drag to change the order</p>
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      </TooltipProvider>
                                       <div
                                         className={`w-8 h-8 ${
                                           currentRequestIndex === index
@@ -1146,11 +1184,75 @@ export function RequestChainEditor({
                                         {request.method}
                                       </Badge>
                                       <div className='flex-1'>
-                                        <p className='font-medium'>
-                                          {request.name}
-                                        </p>
+                                        {editingNameId === request.id ? (
+                                          <div className='flex items-center gap-2'>
+                                            <Input
+                                              value={tempName}
+                                              onChange={(e) =>
+                                                setTempName(e.target.value)
+                                              }
+                                              className='h-8 max-w-[280px]'
+                                              placeholder='Request name'
+                                              autoFocus
+                                            />
+                                            <Button
+                                              variant='ghost'
+                                              size='icon'
+                                              aria-label='Save name'
+                                              onClick={() => {
+                                                commitRequestName(
+                                                  index,
+                                                  tempName
+                                                );
+                                                setEditingNameId(null);
+                                                setTempName('');
+                                              }}
+                                              className='text-green-600 hover:text-green-700'
+                                              title='Save'
+                                            >
+                                              <Check className='w-4 h-4' />
+                                            </Button>
+                                            <Button
+                                              variant='ghost'
+                                              size='icon'
+                                              aria-label='Cancel'
+                                              onClick={() => {
+                                                setEditingNameId(null);
+                                                setTempName('');
+                                              }}
+                                              className='text-red-600 hover:text-red-700'
+                                              title='Cancel'
+                                            >
+                                              <X className='w-4 h-4' />
+                                            </Button>
+                                          </div>
+                                        ) : (
+                                          <div className='flex items-center gap-2'>
+                                            <p className='font-medium'>
+                                              {request.name ||
+                                                request.url ||
+                                                'New Request'}
+                                            </p>
+                                            <Button
+                                              variant='ghost'
+                                              size='icon'
+                                              aria-label='Edit name'
+                                              onClick={() => {
+                                                setEditingNameId(request.id);
+                                                setTempName(
+                                                  request.name ||
+                                                    request.url ||
+                                                    ''
+                                                );
+                                              }}
+                                              title='Edit name'
+                                            >
+                                              <Pencil className='w-4 h-4' />
+                                            </Button>
+                                          </div>
+                                        )}
                                         <p className='text-sm text-muted-foreground'>
-                                          {request.url || 'No URL specified'}
+                                          {/* {request.url || 'No URL specified'} */}
                                         </p>
                                       </div>
                                       <div className='flex items-center space-x-2'>
