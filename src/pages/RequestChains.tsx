@@ -218,7 +218,6 @@ const Index = () => {
           chain={editingChain}
           onBack={handleBackToList}
           onSave={handleSaveChain}
-          onToggleChain={handlePlayChain}
         />
       </>
     );

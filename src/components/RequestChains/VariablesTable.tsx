@@ -64,9 +64,6 @@ export function VariablesTable({
   const [statusFilter, setStatusFilter] = useState<
     'all' | 'success' | 'failed' | 'pending'
   >('all');
-  console.log('requests:', requests);
-  console.log('executionLogs:', executionLogs);
-  console.log('extractedVariables:', extractedVariables);
 
   const [requestFilter, setRequestFilter] = useState<string>('all');
   const [sourceFilter, setSourceFilter] = useState<

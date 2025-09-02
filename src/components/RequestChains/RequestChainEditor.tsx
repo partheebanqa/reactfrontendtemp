@@ -81,7 +81,6 @@ interface RequestChainEditorProps {
   onBack: () => void;
   onSave: (chain: RequestChain) => void;
   requestChainId?: string;
-  onToggleChain: (chainId: string) => void;
 }
 
 export function RequestChainEditor({
@@ -89,7 +88,6 @@ export function RequestChainEditor({
   onBack,
   onSave,
   requestChainId,
-  onToggleChain,
 }: RequestChainEditorProps) {
   const { toast } = useToast();
   const dragItem = useRef<number | null>(null);
@@ -894,25 +892,6 @@ export function RequestChainEditor({
 
   return (
     <div className='h-full flex flex-col'>
-      {/* Header */}
-      {/* <div className='flex-shrink-0 border-b bg-background px-6 py-4'>
-        <div className='flex items-center justify-between'>
-          <div className='flex items-center space-x-4'>
-            <Button variant='ghost' size='sm' onClick={onBack}>
-              <ArrowLeft className='w-4 h-4' />
-            </Button>
-            <div>
-              <h1 className='text-xl font-semibold'>
-                {chain ? 'Edit Request Chain' : 'Create Request Chain'}
-              </h1>
-              <p className='text-sm text-muted-foreground'>
-                Configure your API automation workflow
-              </p>
-            </div>
-          </div>
-        </div>
-      </div> */}
-
       <BreadCum
         title={chain ? 'Edit Request Chain' : 'Create Request Chain'}
         subtitle={'Configure your API automation workflow'}

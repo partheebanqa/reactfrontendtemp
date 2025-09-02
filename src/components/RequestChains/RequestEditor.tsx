@@ -1,6 +1,7 @@
-// RequestEditor.tsx
 'use client';
 import { useEffect, useState, useRef } from 'react';
+import React from 'react';
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -143,6 +144,40 @@ export function RequestEditor({
     setPreviewUrl(getPreviewUrl(mergedVariables));
   }, [storeVariables, activeEnvironment, request.url]);
 
+  React.useEffect(() => {
+    try {
+      const raw = localStorage.getItem('lastExecutionByRequest');
+      if (!raw) return;
+      const map: Record<string, any> = JSON.parse(raw);
+      const saved = map?.[request.id];
+      if (saved?.response || saved?.error) {
+        setExecutionResult(saved);
+        setShowResponse(true);
+        // also hydrate extracted variables preview for this request
+        if (
+          saved.extractedVariables &&
+          typeof saved.extractedVariables === 'object'
+        ) {
+          setExtractedVariables((prev) => ({
+            ...prev,
+            ...saved.extractedVariables,
+          }));
+          // keep global cache consistent
+          localStorage.setItem(
+            'extractedVariables',
+            JSON.stringify({
+              ...JSON.parse(localStorage.getItem('extractedVariables') || '{}'),
+              ...saved.extractedVariables,
+            })
+          );
+        }
+      }
+    } catch (e) {
+      console.error('Failed to restore lastExecutionByRequest:', e);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [request.id]);
+
   const getPreviewUrl = (variables: Variable[]) => {
     const replacedUrl = request.url.replace(/{{(.*?)}}/g, (_, varName) => {
       const found = variables.find((v) => v.name === varName);
@@ -230,6 +265,14 @@ export function RequestEditor({
         extractedVariables: extractedData,
       };
       setExecutionResult(log);
+      try {
+        const raw = localStorage.getItem('lastExecutionByRequest');
+        const map = raw ? JSON.parse(raw) : {};
+        map[request.id] = log;
+        localStorage.setItem('lastExecutionByRequest', JSON.stringify(map));
+      } catch (e) {
+        console.error('Failed to persist lastExecutionByRequest:', e);
+      }
       toast({
         title: 'Execution Complete',
         description: `Request completed with status ${result.statusCode}`,
@@ -254,6 +297,14 @@ export function RequestEditor({
         error: error instanceof Error ? error.message : 'Unknown error',
       };
       setExecutionResult(errorLog);
+      try {
+        const raw = localStorage.getItem('lastExecutionByRequest');
+        const map = raw ? JSON.parse(raw) : {};
+        map[request.id] = errorLog;
+        localStorage.setItem('lastExecutionByRequest', JSON.stringify(map));
+      } catch (e) {
+        console.error('Failed to persist lastExecutionByRequest (error):', e);
+      }
       toast({
         title: 'Execution Failed',
         description: error instanceof Error ? error.message : 'Unknown error',
@@ -441,7 +492,25 @@ export function RequestEditor({
       );
       setExtractedVariables((prev) => {
         const merged = { ...prev, ...extracted };
-        updateExtractedVariables(merged); // persist latest merged variables
+        updateExtractedVariables(merged);
+        try {
+          const raw = localStorage.getItem('lastExecutionByRequest');
+          const map = raw ? JSON.parse(raw) : {};
+          const existing = map[request.id] || {};
+          map[request.id] = {
+            ...existing,
+            extractedVariables: {
+              ...(existing.extractedVariables || {}),
+              ...extracted,
+            },
+          };
+          localStorage.setItem('lastExecutionByRequest', JSON.stringify(map));
+        } catch (e) {
+          console.error(
+            'Failed to persist variables into lastExecutionByRequest:',
+            e
+          );
+        }
         return merged;
       });
     }
