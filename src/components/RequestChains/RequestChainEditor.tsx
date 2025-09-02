@@ -1061,21 +1061,32 @@ export function RequestChainEditor({
                       <div className='flex items-center justify-between mb-4'>
                         <h3 className='text-lg font-medium'>Request Chain</h3>
                         <div className='flex items-center gap-2'>
-                          <Button
-                            variant='outline'
-                            onClick={handleRunAll}
-                            disabled={
-                              isExecuting || !formData.chainRequests?.length
-                            }
-                            className='gap-2 bg-transparent'
-                          >
-                            {isExecuting ? (
-                              <Loader2 className='w-4 h-4 animate-spin' />
-                            ) : (
-                              <PlayCircle className='w-4 h-4' />
-                            )}
-                            {isExecuting ? 'Running...' : 'Run All'}
-                          </Button>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant='outline'
+                                  onClick={handleRunAll}
+                                  disabled={
+                                    isExecuting ||
+                                    !formData.chainRequests?.length
+                                  }
+                                  className='gap-2 bg-transparent'
+                                >
+                                  {isExecuting ? (
+                                    <Loader2 className='w-4 h-4 animate-spin' />
+                                  ) : (
+                                    <PlayCircle className='w-4 h-4' />
+                                  )}
+                                  {isExecuting ? 'Running...' : 'Run All'}
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Run all requests before execution</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+
                           <Button
                             variant='outline'
                             onClick={() => setIsImportModalOpen(true)}
@@ -1112,19 +1123,28 @@ export function RequestChainEditor({
                                 <CardContent className='p-4'>
                                   <div className='flex items-center'>
                                     <div className='flex items-center space-x-3'>
-                                      <div
-                                        className='cursor-move'
-                                        draggable
-                                        onDragStart={() =>
-                                          handleDragStart(index)
-                                        }
-                                        onDragEnter={() =>
-                                          handleDragEnter(index)
-                                        }
-                                        onDragEnd={handleDragEnd}
-                                      >
-                                        <GripVertical className='w-5 h-5 text-muted-foreground' />
-                                      </div>
+                                      <TooltipProvider>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <div
+                                              className='cursor-move'
+                                              draggable
+                                              onDragStart={() =>
+                                                handleDragStart(index)
+                                              }
+                                              onDragEnter={() =>
+                                                handleDragEnter(index)
+                                              }
+                                              onDragEnd={handleDragEnd}
+                                            >
+                                              <GripVertical className='w-5 h-5 text-muted-foreground' />
+                                            </div>
+                                          </TooltipTrigger>
+                                          <TooltipContent>
+                                            <p>Drag to change the order</p>
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      </TooltipProvider>
                                       <div
                                         className={`w-8 h-8 ${
                                           currentRequestIndex === index

@@ -560,16 +560,16 @@ export function RequestExecutor({
         ).length;
         const totalCount = logs.length;
 
-        toast({
-          title: 'Execution Complete',
-          description: `Completed ${successCount}/${totalCount} requests successfully`,
-          variant: successCount === totalCount ? 'default' : 'destructive',
-        });
+        // toast({
+        //   title: 'Execution Complete',
+        //   description: `Completed ${successCount}/${totalCount} requests successfully`,
+        //   variant: successCount === totalCount ? 'default' : 'destructive',
+        // });
       } else {
-        toast({
-          title: 'Execution Started',
-          description: `Request chain execution started successfully.`,
-        });
+        // toast({
+        //   title: 'Execution Started',
+        //   description: `Request chain execution started successfully.`,
+        // });
       }
     } catch (error: any) {
       toast({

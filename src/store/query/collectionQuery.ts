@@ -86,11 +86,22 @@ export const useRenameCollectionMutation = () => {
 export const useSetFavouriteCollectionMutation = () => {
   return useMutation({
     mutationFn: setFavouriteCollection,
-    onSuccess: (data, variables) => {
+    onSuccess: async (data, variables) => {
       collectionActions.setFavouriteCollection(
         variables.collectionId,
         variables.IsImportant
       );
+
+      await queryClient.invalidateQueries({
+        queryKey: ['/collections'],
+        exact: false,
+      });
+
+      return data;
+    },
+    onError: (error) => {
+      console.error('Error setting favourite collection:', error);
+      throw error;
     },
   });
 };
@@ -98,8 +109,19 @@ export const useSetFavouriteCollectionMutation = () => {
 export const useUnsetFavouriteCollectionMutation = () => {
   return useMutation({
     mutationFn: unsetFavouriteCollection,
-    onSuccess: (data, id) => {
+    onSuccess: async (data, id) => {
       collectionActions.setUnFavouriteCollection(id);
+
+      await queryClient.invalidateQueries({
+        queryKey: ['/collections'],
+        exact: false,
+      });
+
+      return data;
+    },
+    onError: (error) => {
+      console.error('Error unsetting favourite collection:', error);
+      throw error;
     },
   });
 };

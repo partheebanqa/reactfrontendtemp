@@ -85,7 +85,7 @@ export function VariablesTable({
     const results: VariableExtractionResult[] = [];
 
     requests.forEach((request, requestIndex) => {
-      request.extractVariables.forEach((extraction) => {
+      (request.extractVariables ?? []).forEach((extraction) => {
         // Handle different field structures
         const variableName = extraction.variableName || extraction.name;
         const extractionSource = extraction.source || 'response_body';
