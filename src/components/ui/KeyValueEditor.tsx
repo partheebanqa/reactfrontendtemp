@@ -1,6 +1,7 @@
 import { Trash2 } from 'lucide-react';
 import React from 'react';
 import TooltipContainer from './tooltip-container';
+import { Button } from './button';
 
 export interface KeyValuePair {
   key: string;
@@ -33,13 +34,13 @@ const KeyValueEditor: React.FC<KeyValueEditorProps> = ({
         <h3 className='text-base sm:text-lg font-medium text-gray-900 dark:text-white'>
           {title}
         </h3>
-        <button
+        <Button
           onClick={onAdd}
-          className='bg-blue-600 hover:bg-blue-700 text-white px-3 sm:px-4 py-2 rounded-md text-sm'
+          className='bg-[#136fb0] text-white px-3 sm:px-4 py-2 rounded-md text-sm'
         >
           <span className='hidden sm:inline'>{addButtonLabel}</span>
           <span className='sm:hidden'>Add</span>
-        </button>
+        </Button>
       </div>
 
       {items.length > 0 ? (

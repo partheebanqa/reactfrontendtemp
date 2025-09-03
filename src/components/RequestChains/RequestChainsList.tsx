@@ -114,6 +114,8 @@ export function RequestChainsList({
   onCloneChain,
   onToggleChain,
   onRefresh,
+  refreshing
+  
 }: RequestChainsListProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<
@@ -144,7 +146,7 @@ export function RequestChainsList({
   //   }
   // }, [activeEnvironment?.name]);
 
-  const [refreshing, setRefreshing] = useState(false);
+
 
   const filteredAndSortedChains = useMemo(() => {
     const filtered = chains.filter((chain) => {

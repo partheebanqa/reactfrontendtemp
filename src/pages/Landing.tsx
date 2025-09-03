@@ -25,7 +25,7 @@ const Landing: React.FC = () => {
           No-Code API Testing Platform
         </Badge>
 
-        <h1 className="text-5xl font-bold mb-6 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+        <h1 className="text-5xl text-[#136fb0] font-bold mb-6 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
           Test APIs Without Writing Code
         </h1>
 
@@ -67,7 +67,7 @@ const Landing: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           <Card>
             <CardHeader>
-              <Code className="w-10 h-10 text-primary mb-2" />
+              <Code className="w-10 h-10 text-[#136fb0] mb-2" />
               <CardTitle>Visual Request Builder</CardTitle>
               <CardDescription>
                 Build API requests with our intuitive drag-and-drop interface
@@ -77,7 +77,7 @@ const Landing: React.FC = () => {
 
           <Card>
             <CardHeader>
-              <Zap className="w-10 h-10 text-primary mb-2" />
+              <Zap className="w-10 h-10 text-[#136fb0] mb-2" />
               <CardTitle>Automated Testing</CardTitle>
               <CardDescription>
                 Schedule tests to run automatically and get instant notifications
@@ -87,7 +87,7 @@ const Landing: React.FC = () => {
 
           <Card>
             <CardHeader>
-              <BarChart3 className="w-10 h-10 text-primary mb-2" />
+              <BarChart3 className="w-10 h-10 text-[#136fb0] mb-2" />
               <CardTitle>Advanced Analytics</CardTitle>
               <CardDescription>
                 Monitor performance and track success rates with detailed reports
@@ -97,7 +97,7 @@ const Landing: React.FC = () => {
 
           <Card>
             <CardHeader>
-              <Users className="w-10 h-10 text-primary mb-2" />
+              <Users className="w-10 h-10 text-[#136fb0] mb-2" />
               <CardTitle>Team Collaboration</CardTitle>
               <CardDescription>
                 Work together with role-based access and shared workspaces
@@ -107,7 +107,7 @@ const Landing: React.FC = () => {
 
           <Card>
             <CardHeader>
-              <Infinity className="w-10 h-10 text-primary mb-2" />
+              <Infinity className="w-10 h-10 text-[#136fb0] mb-2" />
               <CardTitle>CI/CD Integration</CardTitle>
               <CardDescription>
                 Integrate with Jenkins, GitHub Actions, and GitLab pipelines
@@ -117,7 +117,7 @@ const Landing: React.FC = () => {
 
           <Card>
             <CardHeader>
-              <Shield className="w-10 h-10 text-primary mb-2" />
+              <Shield className="w-10 h-10 text-[#136fb0] mb-2" />
               <CardTitle>Enterprise Security</CardTitle>
               <CardDescription>
                 SOC 2 compliant with advanced security controls and audit logs

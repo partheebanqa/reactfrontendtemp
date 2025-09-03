@@ -517,7 +517,7 @@ const Sidebar: React.FC = () => {
       w-full h-full md:w-64 overflow-auto
     `}
     >
-      <div className='p-3 sm:p-4'>
+      <div className='p-1 sm:p-1'>
         <div className='flex items-center justify-between mb-4'>
           <h2 className='text-base sm:text-lg font-semibold text-gray-900 dark:text-white'>
             Collections
@@ -551,7 +551,7 @@ const Sidebar: React.FC = () => {
           </div>
         </div>
 
-        <div className='space-y-1'>
+        <div className=''>
           {collections.length > 0 ? (
             collections.map((collection) => {
               return (
@@ -601,7 +601,7 @@ const Sidebar: React.FC = () => {
                             onClick={() => handleFavoriteCollection(collection)}
                           >
                             <Star
-                              className={`h-4 w-4 mr-2 ${
+                              className={`h-4 w-4  ${
                                 collection.isImportant
                                   ? 'fill-yellow-400 text-yellow-500'
                                   : ''

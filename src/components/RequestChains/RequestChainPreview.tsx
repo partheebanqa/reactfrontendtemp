@@ -114,7 +114,10 @@ export function RequestChainPreviewDialog({ open, onClose, chain }: PreviewProps
                 {req.name || "Untitled step"}
               </p>
             </div>
-            <p className="text-xs text-muted-foreground truncate">{url}</p>
+            <p className="text-xs text-muted-foreground truncate max-w-[550px]">
+  {url}
+</p>
+
           </div>
         </div>
       );
