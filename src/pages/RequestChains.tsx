@@ -34,17 +34,16 @@ const Index = () => {
   const { mutateAsync: playChain } = useExecuteRequestChain();
 
   // Query for all request chains (existing)
- const {
-  data: chains = [],
-  isLoading: loading,
-  isFetching,           // optional: for button spinner
-  refetch,              // 👈 we’ll pass this down
-} = useQuery({
-  queryKey: ['requestChains', currentWorkspace?.id || ''],
-  queryFn: () => getRequestChains(currentWorkspace?.id || ''),
-  enabled: !!currentWorkspace?.id,
-});
-
+  const {
+    data: chains = [],
+    isLoading: loading,
+    isFetching, // optional: for button spinner
+    refetch, // 👈 we’ll pass this down
+  } = useQuery({
+    queryKey: ['requestChains', currentWorkspace?.id || ''],
+    queryFn: () => getRequestChains(currentWorkspace?.id || ''),
+    enabled: !!currentWorkspace?.id,
+  });
 
   // NEW: Query for individual request chain when editing
   const {
@@ -219,24 +218,23 @@ const Index = () => {
           chain={editingChain}
           onBack={handleBackToList}
           onSave={handleSaveChain}
-          onToggleChain={handlePlayChain}
         />
       </>
     );
   }
 
   return (
-      <RequestChainsList
-        chains={chains}
-        loading={loading}
-        onCreateChain={handleCreateChain}
-        onEditChain={handleEditChain}
-        onDeleteChain={handleDeleteChain}
-        onCloneChain={handleCloneChain}
-        onToggleChain={handlePlayChain}
-          onRefresh={() => refetch()}      // 👈 send refresh from here
-  refreshing={isFetching}   
-      />
+    <RequestChainsList
+      chains={chains}
+      loading={loading}
+      onCreateChain={handleCreateChain}
+      onEditChain={handleEditChain}
+      onDeleteChain={handleDeleteChain}
+      onCloneChain={handleCloneChain}
+      onToggleChain={handlePlayChain}
+      onRefresh={() => refetch()} // 👈 send refresh from here
+      refreshing={isFetching}
+    />
   );
 };
 

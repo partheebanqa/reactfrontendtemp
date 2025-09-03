@@ -1,32 +1,62 @@
 import { toast } from '@/hooks/use-toast';
-import { APIRequest, ExecutionLog } from '@/shared/types/requestChain.model';
+import type {
+  APIRequest,
+  ExecutionLog,
+} from '@/shared/types/requestChain.model';
 
 export const getExtractVariablesByEnvironment = (environmentId?: string) => {
-  if (!environmentId) return [];
+  const readFallbackExtractedVariables = () => {
+    try {
+      const raw = localStorage.getItem('extractedVariables');
+      if (!raw) return [];
+      const obj = JSON.parse(raw) as Record<string, any>;
+      if (!obj || typeof obj !== 'object') return [];
+      return Object.entries(obj).map(([name, value]) => ({
+        name,
+        initialValue: value ?? '',
+        type: 'string',
+        value: value ?? '',
+      }));
+    } catch (e) {
+      console.error('Error reading fallback extractedVariables:', e);
+      return [];
+    }
+  };
+
+  if (
+    !environmentId ||
+    environmentId === 'no-environment' ||
+    environmentId === 'No Environment'
+  ) {
+    return readFallbackExtractedVariables();
+  }
 
   try {
     const rawLogs = localStorage.getItem('extractionLogs');
-    if (!rawLogs) return [];
+    if (!rawLogs) return readFallbackExtractedVariables();
 
     const parsedLogs = JSON.parse(rawLogs);
-    if (!Array.isArray(parsedLogs)) return [];
+    if (!Array.isArray(parsedLogs)) return readFallbackExtractedVariables();
 
-    return parsedLogs
-      .filter((log) => log.environmentId === environmentId)
-      .flatMap(
-        (log) =>
-          log.chainRequests?.flatMap((req: any) =>
-            (req.extractVariables || []).map((v: any) => ({
-              name: v.variableName,
-              initialValue: v.value || '',
-              type: 'string',
-              value: v.value || '',
-            }))
-          ) || []
-      );
+    const envVars =
+      parsedLogs
+        .filter((log: any) => log.environmentId === environmentId)
+        .flatMap(
+          (log: any) =>
+            log.chainRequests?.flatMap((req: any) =>
+              (req.extractVariables || []).map((v: any) => ({
+                name: v.variableName || v.name,
+                initialValue: v.value || '',
+                type: 'string',
+                value: v.value || '',
+              }))
+            ) || []
+        ) || [];
+
+    return envVars.length > 0 ? envVars : readFallbackExtractedVariables();
   } catch (err) {
     console.error('Error reading extractionLogs from localStorage:', err);
-    return [];
+    return readFallbackExtractedVariables();
   }
 };
 
@@ -61,14 +91,11 @@ export const extractDataFromResponse = (
             : response.body;
         value = getValueByPath(jsonData, extraction.path);
       } else if (extraction.source === 'response_header') {
-        // FIXED: Handle case-insensitive header lookup
         const headers = response.headers || {};
         const headerKey = extraction.path.toLowerCase();
 
-        // First try direct lowercase lookup
         value = headers[headerKey];
 
-        // If not found, search through all headers case-insensitively
         if (value === undefined) {
           const foundKey = Object.keys(headers).find(
             (key) => key.toLowerCase() === headerKey
@@ -135,7 +162,6 @@ export const transformRequestForSave = (request: APIRequest): APIRequest => {
     transformedRequest.bodyRawContent = request.body;
   }
 
-  // Transform authToken to authorization object structure
   if (request.authorizationType === 'bearer' && request.authToken) {
     transformedRequest.authorization = {
       token: request.authToken,
@@ -143,7 +169,6 @@ export const transformRequestForSave = (request: APIRequest): APIRequest => {
     delete transformedRequest.authToken;
   }
 
-  // Handle Basic Auth
   if (
     request.authorizationType === 'basic' &&
     request.authUsername &&

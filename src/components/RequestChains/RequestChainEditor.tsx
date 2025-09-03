@@ -36,7 +36,7 @@ import {
 } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/Tabs';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import type {
   RequestChain,
@@ -81,7 +81,6 @@ interface RequestChainEditorProps {
   onBack: () => void;
   onSave: (chain: RequestChain) => void;
   requestChainId?: string;
-  onToggleChain: (chainId: string) => void;
 }
 
 export function RequestChainEditor({
@@ -89,7 +88,6 @@ export function RequestChainEditor({
   onBack,
   onSave,
   requestChainId,
-  onToggleChain,
 }: RequestChainEditorProps) {
   const { toast } = useToast();
   const dragItem = useRef<number | null>(null);
@@ -311,13 +309,6 @@ export function RequestChainEditor({
         setCurrentRequestIndex(i);
 
         try {
-          toast({
-            title: `Executing Request ${i + 1}`,
-            description: `Running: ${
-              request.name || request.method + ' ' + request.url
-            }`,
-          });
-
           const log = await executeSingleRequest(request, currentVariables, i);
           allLogs.push(log);
 
@@ -359,15 +350,6 @@ export function RequestChainEditor({
             updateExtractedVariables(allExtractedVars);
           }
 
-          toast({
-            title: `Request ${i + 1} Completed`,
-            description: `Status: ${log.response?.status || 'Error'} - ${
-              log.status
-            }`,
-            variant: log.status === 'success' ? 'default' : 'destructive',
-          });
-
-          // Add a small delay between requests
           if (i < formData.chainRequests.length - 1) {
             await new Promise((resolve) => setTimeout(resolve, 500));
           }
@@ -375,7 +357,6 @@ export function RequestChainEditor({
           const errorLog = error as ExecutionLog;
           allLogs.push(errorLog);
 
-          // Update executionLogs immediately after each request completes (even for errors)
           setExecutionLogs((prev) => [...prev, errorLog]);
 
           toast({
@@ -695,10 +676,6 @@ export function RequestChainEditor({
           ? await saveRequestChain(chainData)
           : await updateRequestChain(chainData, chainData.id);
 
-      if (savedChain?.id) {
-        onToggleChain(savedChain?.id);
-      }
-
       setFormData((prev) => ({ ...prev, id: savedChain.id }));
 
       toast({
@@ -749,10 +726,10 @@ export function RequestChainEditor({
 
   const handleImportRequests = async (importedRequests: ExtendedRequest[]) => {
     try {
-      toast({
-        title: 'Importing Requests',
-        description: `Importing ${importedRequests.length} requests...`,
-      });
+      // toast({
+      //   title: 'Importing Requests',
+      //   description: `Importing ${importedRequests.length} requests...`,
+      // });
 
       const transformedRequests: APIRequest[] = importedRequests.map((req) => {
         // Handle body data
@@ -915,25 +892,6 @@ export function RequestChainEditor({
 
   return (
     <div className='h-full flex flex-col'>
-      {/* Header */}
-      {/* <div className='flex-shrink-0 border-b bg-background px-6 py-4'>
-        <div className='flex items-center justify-between'>
-          <div className='flex items-center space-x-4'>
-            <Button variant='ghost' size='sm' onClick={onBack}>
-              <ArrowLeft className='w-4 h-4' />
-            </Button>
-            <div>
-              <h1 className='text-xl font-semibold'>
-                {chain ? 'Edit Request Chain' : 'Create Request Chain'}
-              </h1>
-              <p className='text-sm text-muted-foreground'>
-                Configure your API automation workflow
-              </p>
-            </div>
-          </div>
-        </div>
-      </div> */}
-
       <BreadCum
         title={chain ? 'Edit Request Chain' : 'Create Request Chain'}
         subtitle={'Configure your API automation workflow'}

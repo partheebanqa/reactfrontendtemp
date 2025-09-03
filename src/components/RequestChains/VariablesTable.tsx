@@ -64,9 +64,6 @@ export function VariablesTable({
   const [statusFilter, setStatusFilter] = useState<
     'all' | 'success' | 'failed' | 'pending'
   >('all');
-  console.log('requests:', requests);
-  console.log('executionLogs:', executionLogs);
-  console.log('extractedVariables:', extractedVariables);
 
   const [requestFilter, setRequestFilter] = useState<string>('all');
   const [sourceFilter, setSourceFilter] = useState<
@@ -232,11 +229,12 @@ export function VariablesTable({
 
   const handleCopy = async (value: string) => {
     try {
-      await navigator.clipboard.writeText(value);
+      const wrappedValue = `{{${value}}}`; // wrap inside {{ }}
+      await navigator.clipboard.writeText(wrappedValue);
       setCopied(true);
       toast({
         title: 'Copied to Clipboard',
-        description: 'The value has been copied successfully.',
+        description: `Variable has been copied successfully.`,
       });
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
@@ -503,9 +501,9 @@ export function VariablesTable({
                           ))}
                       </button>
                     </th>
-                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
+                    {/* <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
                       Actions
-                    </th>
+                    </th> */}
                   </tr>
                 </thead>
                 <tbody className='bg-background divide-y divide-border'>
@@ -624,7 +622,7 @@ export function VariablesTable({
                             </span>
                           </div>
                         </td>
-                        <td className='px-6 py-4 whitespace-nowrap'>
+                        {/* <td className='px-6 py-4 whitespace-nowrap'>
                           <div className='flex items-center space-x-2'>
                             {result.extractedValue !== undefined &&
                               result.extractedValue !== null && (
@@ -642,7 +640,7 @@ export function VariablesTable({
                               <RefreshCw className='w-4 h-4 text-yellow-500 animate-spin' />
                             )}
                           </div>
-                        </td>
+                        </td> */}
                       </tr>
 
                       {/* Expanded Row */}

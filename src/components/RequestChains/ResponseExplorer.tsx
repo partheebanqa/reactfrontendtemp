@@ -266,7 +266,6 @@ export function ResponseExplorer({
     const isAlreadyExtracted = existingExtractions.some(
       (e) => e.path === node.path
     );
-    console.log('isAlreadyExtracted:', isAlreadyExtracted);
 
     return (
       <div

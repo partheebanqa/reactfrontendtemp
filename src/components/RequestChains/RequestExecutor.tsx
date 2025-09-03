@@ -425,11 +425,7 @@ export function RequestExecutor({
       };
 
       const result = await playChain(payload);
-
-      // console.log('result from playChain:', result.message);
-
       if (result) {
-        console.log('toast is coming');
         toast({
           title: 'Execution progress',
           description: result.message,
@@ -688,31 +684,39 @@ export function RequestExecutor({
             </button>
           ) : (
             <>
-              {/* Save / Update / Execute Buttons */}
               {onPreExecute && (
                 <Button
-                  variant='outline'
-                  className='hover-scale'
                   onClick={chainId ? handleUpdateChain : handleSaveChain}
-                  disabled={!chainName?.trim()}
+                  disabled={!chainName?.trim() || (!!savedChainId && !chainId)}
+                  className={`hover-scale ${
+                    !chainName?.trim() || (!!savedChainId && !chainId)
+                      ? 'bg-gray-300 text-gray-600 cursor-not-allowed hover:bg-gray-300'
+                      : 'bg-[#136fb0] text-white hover:bg-[#136fb0]'
+                  } disabled:opacity-70`}
                 >
                   <Save className='w-4 h-4' />
                   {chainId ? 'Update' : 'Save'}
                 </Button>
               )}
 
-              {/* Execute Button */}
-              <Button
-                onClick={handleExecuteChain}
-                disabled={
-                  processedRequests.filter((r) => r.enabled).length === 0 ||
-                  (!savedChainId && !chainId)
-                }
-                className='hover-scale bg-[#136fb0] text-white'
-              >
-                <Play className='w-4 h-4' />
-                Execute
-              </Button>
+              {!chainId && (
+                <Button
+                  onClick={handleExecuteChain}
+                  disabled={
+                    processedRequests.filter((r) => r.enabled).length === 0 ||
+                    (!savedChainId && !chainId)
+                  }
+                  className={`hover-scale ${
+                    processedRequests.filter((r) => r.enabled).length === 0 ||
+                    (!savedChainId && !chainId)
+                      ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                      : 'bg-[#136fb0] text-white'
+                  }`}
+                >
+                  <Play className='w-4 h-4' />
+                  Execute
+                </Button>
+              )}
             </>
           )}
         </div>
