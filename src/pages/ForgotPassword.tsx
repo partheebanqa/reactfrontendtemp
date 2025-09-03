@@ -26,7 +26,6 @@ export default function ForgotPassword() {
     if (!email) return;
     mutate(email, {
       onSuccess: () => {
-        // Always show success to avoid user enumeration
         setIsSubmitted(true);
       },
     });
