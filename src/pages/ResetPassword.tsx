@@ -124,8 +124,8 @@ const ResetPassword: React.FC = () => {
   const validatePasswords = () => {
     const errors: string[] = [];
 
-    if (passwords.newPassword.length < 6) {
-      errors.push('Password must be at least 6 characters long');
+    if (passwords.newPassword.length < 8) {
+      errors.push('Password must be at least 8 characters long');
     }
 
     if (!/(?=.*[a-z])(?=.*[A-Z])/.test(passwords.newPassword)) {

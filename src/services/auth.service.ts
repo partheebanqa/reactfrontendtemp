@@ -7,13 +7,13 @@ import {
   API_FORGOT_PASSWORD,
   API_RESET_PASSWORD,
   API_PROFILE,
-} from "@/config/apiRoutes";
-import { apiRequest } from "@/lib/queryClient";
-import { ILoginResponse, SingUpForm, User } from "@/shared/types/auth";
+} from '@/config/apiRoutes';
+import { apiRequest } from '@/lib/queryClient';
+import { ILoginResponse, SingUpForm, User } from '@/shared/types/auth';
 
 export const refreshUserData = async () => {
   try {
-    const res = await apiRequest("GET", API_GET_USER);
+    const res = await apiRequest('GET', API_GET_USER);
     if (!res.ok) {
       throw new Error(`${res.status}: ${res.statusText}`);
     }
@@ -28,7 +28,7 @@ export const loginApi = async (credentials: {
   password: string;
 }) => {
   try {
-    const response = await apiRequest("POST", API_LOGIN, {
+    const response = await apiRequest('POST', API_LOGIN, {
       body: JSON.stringify(credentials),
     });
     const data = await response.json();
@@ -40,7 +40,7 @@ export const loginApi = async (credentials: {
 
 export const logoutApi = async () => {
   try {
-    const response = await apiRequest("POST", API_LOGOUT);
+    const response = await apiRequest('POST', API_LOGOUT);
     if (!response.ok) {
       throw new Error(`Logout failed with status: ${response.status}`);
     }
@@ -52,20 +52,20 @@ export const logoutApi = async () => {
 
 export const registerApi = async (userData: SingUpForm) => {
   try {
-    const response = await apiRequest("POST", API_REGISTER, {
+    const response = await apiRequest('POST', API_REGISTER, {
       body: JSON.stringify(userData),
     });
 
     if (!response.ok) {
-      throw new Error("Registration failed");
+      throw new Error('Registration failed');
     }
 
     return response.json();
   } catch (error) {
-    console.error("Registration error:", error);
+    console.error('Registration error:', error);
     throw error instanceof Error
       ? error
-      : new Error("An unexpected error occurred during registration");
+      : new Error('An unexpected error occurred during registration');
   }
 };
 
@@ -73,45 +73,50 @@ export const changePasswordApi = async (passwordData: {
   oldPassword: string;
   newPassword: string;
 }) => {
-  const response = await apiRequest("POST", API_PASSWORD_CHANGE, {
+  const response = await apiRequest('POST', API_PASSWORD_CHANGE, {
     body: JSON.stringify(passwordData),
   });
   if (!response.ok) {
-    throw new Error("Failed to change password");
+    throw new Error('Failed to change password');
   }
   return response.json();
 };
 
-// NEW: Forgot Password (send reset link)
 export const forgotPasswordApi = async (email: string) => {
-  const response = await apiRequest("POST", API_FORGOT_PASSWORD, {
+  const response = await apiRequest('POST', API_FORGOT_PASSWORD, {
     body: JSON.stringify({ email }),
   });
-  // Do not disclose existence of email; backend should return 200 in all cases
   if (!response.ok) {
-    throw new Error("Failed to send reset email");
+    throw new Error('Failed to send reset email');
   }
   return response.json();
 };
 
-// NEW: Reset Password (use token from email)
 export const resetPasswordApi = async (data: {
   token: string;
   newPassword: string;
 }) => {
-  const response = await apiRequest("POST", API_RESET_PASSWORD, {
-    body: JSON.stringify(data),
+  const response = await fetch(API_RESET_PASSWORD, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${data.token}`,
+    },
+    body: JSON.stringify({
+      // token: data.token,
+      newPassword: data.newPassword,
+    }),
   });
+
+  console.log('response:', response);
+
   if (!response.ok) {
-    throw new Error("Failed to reset password");
+    throw new Error('Failed to reset password');
   }
+
   return response.json();
 };
 
-/**
- * Update the authenticated user's profile.
- * Adjust the payload shape to match backend DTO.
- */
 export const updateProfileApi = async (
   profileData: Partial<User> & {
     bio?: string | null;
@@ -123,12 +128,12 @@ export const updateProfileApi = async (
     avatarUrl?: string | null;
   }
 ): Promise<{ user: User; message?: string }> => {
-  const response = await apiRequest("PUT", API_PROFILE, {
-    body: JSON.stringify(profileData), // apiRequest should set headers for JSON unless it's FormData
+  const response = await apiRequest('PUT', API_PROFILE, {
+    body: JSON.stringify(profileData),
   });
 
   if (!response.ok) {
-    let msg = "Failed to update profile";
+    let msg = 'Failed to update profile';
     try {
       const err = await response.json();
       msg = err?.error || err?.message || msg;
