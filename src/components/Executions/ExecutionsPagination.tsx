@@ -1,6 +1,5 @@
-// ExecutionsPagination.tsx
-import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Button } from '@/components/ui/button';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 export const ExecutionsPagination = ({
   totalItems,
@@ -13,31 +12,34 @@ export const ExecutionsPagination = ({
   const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
 
   return (
-    <div className="flex items-center justify-between px-6 py-4 border-t">
-      <div className="text-sm text-slate-500">
+    <div className='flex items-center justify-between px-6 py-4 border-t'>
+      <div className='text-sm text-slate-500'>
         Showing {startIndex + 1} to {endIndex} of {totalItems} executions
       </div>
-      <div className="flex items-center space-x-2">
+      <div className='flex items-center space-x-2'>
         <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setCurrentPage((prev: number) => Math.max(1, prev - 1))}
+          variant='outline'
+          size='sm'
+          onClick={() =>
+            setCurrentPage((prev: number) => Math.max(1, prev - 1))
+          }
           disabled={currentPage === 1}
         >
           <ChevronLeft size={16} />
           Previous
         </Button>
-        <div className="flex items-center space-x-1">
+        <div className='flex items-center space-x-1'>
           {[...Array(Math.min(5, totalPages))].map((_, index) => {
-            const pageNumber = Math.max(1, Math.min(totalPages - 4, currentPage - 2)) + index;
+            const pageNumber =
+              Math.max(1, Math.min(totalPages - 4, currentPage - 2)) + index;
             if (pageNumber > totalPages) return null;
 
             return (
               <Button
                 key={pageNumber}
-                variant={currentPage === pageNumber ? "default" : "outline"}
-                size="sm"
-                className="w-8 h-8 p-0"
+                variant={currentPage === pageNumber ? 'default' : 'outline'}
+                size='sm'
+                className='w-8 h-8 p-0'
                 onClick={() => setCurrentPage(pageNumber)}
               >
                 {pageNumber}
@@ -46,11 +48,11 @@ export const ExecutionsPagination = ({
           })}
           {totalPages > 5 && currentPage < totalPages - 2 && (
             <>
-              <span className="text-slate-400">...</span>
+              <span className='text-slate-400'>...</span>
               <Button
-                variant="outline"
-                size="sm"
-                className="w-8 h-8 p-0"
+                variant='outline'
+                size='sm'
+                className='w-8 h-8 p-0'
                 onClick={() => setCurrentPage(totalPages)}
               >
                 {totalPages}
@@ -59,9 +61,11 @@ export const ExecutionsPagination = ({
           )}
         </div>
         <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setCurrentPage((prev: number) => Math.min(totalPages, prev + 1))}
+          variant='outline'
+          size='sm'
+          onClick={() =>
+            setCurrentPage((prev: number) => Math.min(totalPages, prev + 1))
+          }
           disabled={currentPage === totalPages}
         >
           Next

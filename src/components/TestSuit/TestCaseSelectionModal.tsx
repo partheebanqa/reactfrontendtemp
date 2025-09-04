@@ -29,8 +29,8 @@ import {
   getTestCasesByRequestId,
   saveTestCasesForRequest,
 } from '@/services/testcase.service';
-import { useToast } from '@/hooks/useToast';
-import { ApiTestCase } from '@/models/testcase.model';
+import { useToast } from '@/hooks/use-toast';
+import { ApiTestCase } from '@/shared/types/testcase.model';
 
 type TestCase = {
   id: string;
@@ -63,10 +63,10 @@ type TestCaseSelectionModalProps = {
 // Helper function to map category numbers to category names
 const getCategoryName = (categoryNumber: number): string => {
   const categoryMap: { [key: number]: string } = {
-    0: 'Performance',
+    0: 'General',
     1: 'Functional',
-    2: 'Security',
-    3: 'Integration',
+    2: 'Performance',
+    3: 'Security',
     4: 'Regression',
   };
   return categoryMap[categoryNumber] || 'Other';
@@ -97,8 +97,9 @@ const generateTags = (testCase: ApiTestCase): string[] => {
 // Transform API response to UI format
 const transformTestCases = (
   apiTestCases: ApiTestCase[]
-): TestCaseCategory[] => {
+): { categories: TestCaseCategory[]; selectedIds: string[] } => {
   const categoriesMap: { [key: string]: TestCase[] } = {};
+  const selectedIds: string[] = [];
 
   apiTestCases.forEach((apiTestCase) => {
     const categoryName = getCategoryName(apiTestCase.category);
@@ -114,13 +115,20 @@ const transformTestCases = (
       categoriesMap[categoryName] = [];
     }
     categoriesMap[categoryName].push(testCase);
+
+    // Track selected
+    if (apiTestCase.isSelected) {
+      selectedIds.push(apiTestCase.id);
+    }
   });
 
-  return Object.entries(categoriesMap).map(([category, tests]) => ({
+  const categories = Object.entries(categoriesMap).map(([category, tests]) => ({
     category,
     count: tests.length,
     tests,
   }));
+
+  return { categories, selectedIds };
 };
 
 export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
@@ -140,6 +148,8 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
     TestCaseCategory[]
   >([]);
 
+  console.log(testCaseCategories, 'testCaseCategories');
+
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -148,9 +158,9 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
     isLoading,
     error,
   } = useQuery({
-    queryKey: ['testCases', request?.id],
-    queryFn: () => getTestCasesByRequestId(request!.id),
-    enabled: !!request?.id && isOpen,
+    queryKey: ['testCases', request?.id, testSuiteId],
+    queryFn: () => getTestCasesByRequestId(request!.id, testSuiteId),
+    enabled: !!request?.id && !!testSuiteId && isOpen,
   });
 
   const saveTestCasesMutation = useMutation({
@@ -196,15 +206,19 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
     }
   }, [isOpen, request?.selectedTestCases]);
 
+  console.log('testCasesData:', testCasesData);
+
   // Transform and set test cases when data changes
   useEffect(() => {
     if (testCasesData?.testCases) {
-      const transformedCategories = transformTestCases(testCasesData.testCases);
-      setTestCaseCategories(transformedCategories);
+      const { categories, selectedIds } = transformTestCases(
+        testCasesData.testCases
+      );
+      setTestCaseCategories(categories);
+      setSelectedTestCases(selectedIds);
 
-      // Expand the first category if it exists
-      if (transformedCategories.length > 0) {
-        setExpandedCategories([transformedCategories[0].category]);
+      if (categories.length > 0) {
+        setExpandedCategories([categories[0].category]);
       }
     }
   }, [testCasesData]);
@@ -326,6 +340,19 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
   if (!request) return null;
   const { name } = request;
 
+  const getCategoryIcon = (category: string) => {
+    switch (category) {
+      case 'Functional':
+        return '🔧';
+      case 'Performance':
+        return '⚡';
+      case 'Security':
+        return '🛡️';
+      default:
+        return '📋';
+    }
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className='max-w-6xl max-h-[85vh] overflow-hidden flex flex-col p-0'>
@@ -379,7 +406,7 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
             <div className='p-4'>
               <div className='flex items-center justify-between mb-4'>
                 <h3 className='font-medium'>
-                  Available Tests ({totalAvailableTests})
+                  Available testcases ({totalAvailableTests})
                 </h3>
                 <span className='text-sm text-muted-foreground'>
                   {selectedTestCases.length} selected
@@ -442,6 +469,10 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
                             ) : (
                               <ChevronRight className='h-4 w-4' />
                             )}
+
+                            <span className='mr-2'>
+                              {getCategoryIcon(category.category)}
+                            </span>
                             <span className='font-medium'>
                               {category.category}
                             </span>
@@ -534,7 +565,7 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
           <div className='flex-1 bg-muted/20 overflow-y-auto'>
             <div className='p-4'>
               <h3 className='font-medium mb-4'>
-                Selected Tests ({selectedTestCases.length})
+                Selected testcases ({selectedTestCases.length})
               </h3>
 
               {selectedTestCases.length === 0 ? (
@@ -554,15 +585,29 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
                       >
                         <div className='flex items-start justify-between'>
                           <div className='flex-1 min-w-0'>
-                            <h4 className='font-medium text-sm'>
-                              {testInfo.name}
-                            </h4>
-                            <p className='text-xs text-muted-foreground mt-1'>
+                            <div className='flex items-center'>
+                              <span className='mr-2'>
+                                {getCategoryIcon(testInfo.category)}
+                              </span>
+                              <h5 className='text-sm font-medium text-gray-900'>
+                                {testInfo.name}
+                              </h5>
+                            </div>
+                            <p className='text-xs text-gray-500 mt-1'>
                               {testInfo.description}
                             </p>
-                            <Badge variant='outline' className='mt-2 text-xs'>
-                              {testInfo.category}
-                            </Badge>
+                            <span
+                              className={`inline-block mt-2 px-2 py-0.5 rounded-full text-xs font-medium ${
+                                testInfo.category === 'Functional'
+                                  ? 'bg-blue-100 text-blue-800'
+                                  : testInfo.category === 'Performance'
+                                  ? 'bg-purple-100 text-purple-800'
+                                  : 'bg-orange-100 text-orange-800'
+                              }`}
+                            >
+                              {testInfo.category.charAt(0).toUpperCase() +
+                                testInfo.category.slice(1)}
+                            </span>
                           </div>
                           <Button
                             variant='ghost'

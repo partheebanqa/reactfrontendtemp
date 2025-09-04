@@ -1,5 +1,4 @@
 'use client';
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
@@ -7,8 +6,15 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Download } from 'lucide-react';
+import { ArrowLeft, Download, Layers, Save } from 'lucide-react';
 import { ManageRequests } from '@/components/TestSuit/ManageRequests';
 import { ImportModal } from '@/components/TestSuit/ImportModal';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -22,6 +28,8 @@ import {
   ExtendedRequest,
 } from '@/models/collection.model';
 import { useWorkspace } from '@/hooks/useWorkspace';
+import { useDataManagement } from '@/hooks/useDataManagement';
+import BreadCum from '../BreadCum/Breadcum';
 
 interface Request {
   id: string;
@@ -47,13 +55,14 @@ const EditTestSuiteContent: React.FC = () => {
   const id = (params as any).id;
   const isCreateMode = location.includes('/create');
 
-  console.log('Current location:', location);
-  console.log('Is create mode:', isCreateMode);
-  console.log('Params:', params);
-  console.log('ID:', id);
+  const { environments, activeEnvironment, setActiveEnvironment } =
+    useDataManagement();
+
+  // console.log('environmentsuseDataManagement:', environments);
 
   const [testSuiteName, setTestSuiteName] = useState('');
   const [description, setDescription] = useState('');
+  const [selectedEnvironment, setSelectedEnvironment] = useState<string>('');
   const [requests, setRequests] = useState<Request[]>([]);
   const [originalRequestIds, setOriginalRequestIds] = useState<string[]>([]);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
@@ -61,29 +70,45 @@ const EditTestSuiteContent: React.FC = () => {
   const {
     data: testSuite,
     isLoading: isLoadingTestSuite,
-    error,
     isError,
+    error,
+    refetch: refetchRequests,
   } = useQuery({
     queryKey: ['testSuite', id],
     queryFn: () => getTestSuites(id!),
     enabled: !!id && !isCreateMode,
   });
 
+  console.log('testSuite:', testSuite);
+
+  useEffect(() => {
+    if (activeEnvironment) {
+      setSelectedEnvironment(activeEnvironment.id);
+    }
+  }, [activeEnvironment]);
+
+  const handleEnvironmentChange = (environmentId: string) => {
+    setSelectedEnvironment(environmentId);
+    const selectedEnv = environments.find((env) => env.id === environmentId);
+    if (selectedEnv) {
+      setActiveEnvironment(selectedEnv);
+    }
+  };
+
   const createMutation = useMutation({
     mutationFn: (data: CreateTestSuitePayload) =>
       createTestSuite({ ...data, workspaceId: currentWorkspace!.id }),
-
     onSuccess: (data) => {
       toast({
         title: 'Test suite created',
-        description: 'Your test suite has been created successfully.',
+        description:
+          'Test suite created. Test cases are in progress—please wait for few minutes',
       });
       queryClient.invalidateQueries({
         queryKey: ['/api/test-suites', currentWorkspace?.id],
       });
       setLocation('/test-suites');
     },
-
     onError: (error: any) => {
       toast({
         title: 'Failed to create test suite',
@@ -98,12 +123,14 @@ const EditTestSuiteContent: React.FC = () => {
       id: string;
       name: string;
       description: string;
+      environmentId: string;
       addRequestIds?: string[];
       removeRequestIds?: string[];
     }) =>
       updateTestSuite(data.id, {
         name: data.name,
         description: data.description,
+        environmentId: data.environmentId,
         addRequestIds: data.addRequestIds,
         removeRequestIds: data.removeRequestIds,
       }),
@@ -114,6 +141,8 @@ const EditTestSuiteContent: React.FC = () => {
       });
       queryClient.invalidateQueries({ queryKey: ['testSuites'] });
       queryClient.invalidateQueries({ queryKey: ['testSuite', id] });
+      // ✅ Redirect after successful update
+      setLocation('/test-suites');
     },
     onError: (error: any) => {
       toast({
@@ -128,7 +157,6 @@ const EditTestSuiteContent: React.FC = () => {
     if (testSuite && !isCreateMode) {
       setTestSuiteName(testSuite.name || '');
       setDescription(testSuite.description || '');
-
       // Transform and set existing requests
       if (Array.isArray(testSuite.requests) && testSuite.requests.length > 0) {
         const transformedRequests: Request[] = testSuite.requests.map(
@@ -176,7 +204,6 @@ const EditTestSuiteContent: React.FC = () => {
         total: 0,
       },
     }));
-
     setRequests((prev) => [...prev, ...transformedRequests]);
     setIsImportModalOpen(false);
     toast({
@@ -207,17 +234,14 @@ const EditTestSuiteContent: React.FC = () => {
 
   const calculateRequestChanges = () => {
     const currentRequestIds = requests.map((req) => req.id);
-
     // Find added requests (present in current but not in original)
     const addRequestIds = currentRequestIds.filter(
       (id) => !originalRequestIds.includes(id)
     );
-
     // Find removed requests (present in original but not in current)
     const removeRequestIds = originalRequestIds.filter(
       (id) => !currentRequestIds.includes(id)
     );
-
     return { addRequestIds, removeRequestIds };
   };
 
@@ -230,20 +254,20 @@ const EditTestSuiteContent: React.FC = () => {
       });
       return;
     }
-
     if (isCreateMode) {
       createMutation.mutate({
         name: testSuiteName,
         description: description,
+        environmentId: selectedEnvironment,
         requestIds: requests.map((request) => request.id), // Pass request IDs
       });
     } else {
       const { addRequestIds, removeRequestIds } = calculateRequestChanges();
-
       updateMutation.mutate({
         id: id!,
         name: testSuiteName,
         description: description,
+        environmentId: selectedEnvironment,
         addRequestIds: addRequestIds.length > 0 ? addRequestIds : undefined,
         removeRequestIds:
           removeRequestIds.length > 0 ? removeRequestIds : undefined,
@@ -261,20 +285,30 @@ const EditTestSuiteContent: React.FC = () => {
   // Get imported request IDs to pass to ImportModal
   const importedRequestIds = requests.map((request) => request.id);
 
+  // Calculate total test cases
+  const totalTestCases = requests.reduce(
+    (total, req) => total + (req.selectedTestCases?.length || 0),
+    0
+  );
+
   return (
-    <div className='min-h-screen bg-background'>
-      <div className='bg-card border-b px-6 py-4'>
+    <>
+     <BreadCum
+        title= {isCreateMode ? "Create Test Suite" : "Edit Test Suite"}
+        subtitle={!isCreateMode ? `Test Suite ID: ${id}` : 'Manage your API automation workflows'}
+        buttonTitle=" Create Test suite"
+         showCreateButton={false}
+         showQuickGuide={false}
+        onClickQuickGuide={() => console.log("Exporting...")}
+        icon={Layers}
+        iconBgClass="bg-green-100"
+        iconColor="#0f766e"
+        iconSize={36}
+      />
+    <div className='border border-gray-200 rounded-lg min-h-screen bg-background mt-3'>
+      {/* <div className='border-b px-6 py-4'>
         <div className='flex items-center justify-between'>
           <div className='flex items-center space-x-4'>
-            <Button
-              variant='ghost'
-              size='sm'
-              onClick={handleBack}
-              className='text-muted-foreground hover:text-foreground'
-            >
-              <ArrowLeft className='w-4 h-4 mr-2' />
-              Back
-            </Button>
             <div>
               <h1 className='text-2xl font-semibold'>
                 {isCreateMode ? 'Create Test Suite' : 'Edit Test Suite'}
@@ -288,11 +322,6 @@ const EditTestSuiteContent: React.FC = () => {
                     <Badge variant='secondary'>CI/CD Integration</Badge>
                   </>
                 )}
-                {isCreateMode && (
-                  <span className='text-sm text-muted-foreground'>
-                    New Test Suite
-                  </span>
-                )}
               </div>
             </div>
           </div>
@@ -300,7 +329,12 @@ const EditTestSuiteContent: React.FC = () => {
             <Button variant='outline' onClick={handleBack}>
               Cancel
             </Button>
-            <Button onClick={handleSaveChanges} disabled={isSaving}>
+            <Button
+              onClick={handleSaveChanges}
+              disabled={
+                isSaving || !testSuiteName.trim() || requests.length === 0
+              }
+            >
               {isSaving
                 ? isCreateMode
                   ? 'Creating...'
@@ -311,12 +345,14 @@ const EditTestSuiteContent: React.FC = () => {
             </Button>
           </div>
         </div>
-      </div>
+      </div> */}
 
       <div className='p-6 space-y-6'>
         <Card>
           <CardHeader>
-            <CardTitle>Basic Information</CardTitle>
+            <CardTitle className='text-lg font-medium'>
+              Basic Information
+            </CardTitle>
           </CardHeader>
           <CardContent className='space-y-4'>
             <div>
@@ -331,7 +367,7 @@ const EditTestSuiteContent: React.FC = () => {
             </div>
             <div>
               <label className='block text-sm font-medium mb-2'>
-                Description
+                Description (optional)
               </label>
               <Textarea
                 value={description}
@@ -340,41 +376,180 @@ const EditTestSuiteContent: React.FC = () => {
                 rows={3}
               />
             </div>
+            <div className='space-y-2'>
+              <label
+                htmlFor='environment-select'
+                className='block text-sm font-medium'
+              >
+                Environment <span className='text-destructive'>*</span>
+              </label>
+              <Select
+                value={selectedEnvironment}
+                onValueChange={handleEnvironmentChange}
+              >
+                <SelectTrigger id='environment-select'>
+                  <SelectValue placeholder='Select environment' />
+                </SelectTrigger>
+                <SelectContent>
+                  {environments.map((env) => (
+                    <SelectItem key={env.id} value={env.id}>
+                      <div className='flex flex-col text-left'>
+                        <span className='font-medium text-sm'>
+                          {env.name} -{' '}
+                          <span className='text-xs text-muted-foreground break-all'>
+                            {env.baseUrl}
+                          </span>
+                        </span>
+                        {/* 
+                        <span className='text-xs text-muted-foreground break-all'>
+                          {env.baseUrl}
+                        </span> */}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </CardContent>
         </Card>
 
-        {requests.length === 0 ? (
-          <Card className='border-2 border-dashed border-border'>
-            <CardContent className='flex flex-col items-center justify-center py-16 px-6'>
-              <div className='w-16 h-16 mb-6 rounded-full bg-muted flex items-center justify-center'>
-                <Download className='w-8 h-8 text-muted-foreground' />
+        {/* Import Requests Section */}
+        <Card>
+          <CardHeader>
+            <div className='flex items-center justify-between'>
+              <div>
+                <h3 className='text-lg font-medium'>
+                  Import Requests & Configure Test Cases
+                </h3>
+                <p className='text-sm text-muted-foreground mt-1'>
+                  Import API requesNo requests imported yetts from collections
+                  and configure test cases for each request
+                </p>
               </div>
-              <h3 className='text-xl font-semibold mb-2'>
-                No requests added yet
-              </h3>
-              <p className='text-muted-foreground text-center mb-6 max-w-md'>
-                Import API requests from your collections to start configuring
-                test cases for this test suite.
-              </p>
               <Button
                 variant='outline'
-                size='lg'
                 onClick={() => setIsImportModalOpen(true)}
+                className='shrink-0'
               >
                 <Download className='w-4 h-4 mr-2' />
                 Import Requests
               </Button>
-            </CardContent>
-          </Card>
-        ) : (
-          <ManageRequests
-            requests={requests}
-            testSuiteId={id || ''}
-            onImport={() => setIsImportModalOpen(true)}
-            onDeleteRequest={handleDeleteRequest}
-            onUpdateTestCases={handleUpdateTestCases}
-          />
-        )}
+            </div>
+          </CardHeader>
+          <CardContent>
+            {requests.length === 0 ? (
+              <>
+                <div className='bg-gray-50 p-8 rounded-lg border border-dashed flex flex-col items-center justify-center py-12 px-6'>
+                  <div className='w-16 h-16 mb-6 rounded-full bg-muted flex items-center justify-center'>
+                    <Download className='w-8 h-8 text-muted-foreground' />
+                  </div>
+                  <h3 className='text-lg font-medium mb-2'></h3>
+                  <p className='text-muted-foreground text-center mb-6 max-w-md'>
+                    Start by importing API requests from your collections. You
+                    can then configure specific test cases for each request.
+                  </p>
+                  <Button onClick={() => setIsImportModalOpen(true)}>
+                    <Download className='w-4 h-4 mr-2' />
+                    Import Your First Request
+                  </Button>
+                </div>
+
+                {/* Bottom stats */}
+                {/* <div className='border-t pt-4 mt-6'>
+                  <div className='flex justify-between text-sm text-muted-foreground'>
+                    <span>Imported requests: 0</span>
+                    <span>Total test cases: 0</span>
+                  </div>
+                </div> */}
+
+                <div className='px-6 py-4 bg-gray-50 mt-5 border-gray-200 flex justify-between items-center'>
+                  <div className='text-sm text-gray-600'>
+                    <div className='space-y-1'>
+                      <div>Imported requests: 0 </div>
+                      <div className='font-medium'>Total test cases: 0</div>
+                    </div>
+                  </div>
+                  <div className='flex space-x-3'>
+                    <Button variant='outline' onClick={handleBack}>
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={handleSaveChanges}
+                      disabled={
+                        isSaving ||
+                        !testSuiteName.trim() ||
+                        requests.length === 0
+                      }
+                    >
+                      {isSaving
+                        ? isCreateMode
+                          ? 'Creating Test Suite...'
+                          : 'Saving...'
+                        : isCreateMode
+                        ? 'Create Test Suite'
+                        : 'Save Changes'}
+                    </Button>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                {/* Show requests when they exist */}
+                <ManageRequests
+                  requests={requests}
+                  testSuiteId={id || ''}
+                  onImport={() => setIsImportModalOpen(true)}
+                  onDeleteRequest={handleDeleteRequest}
+                  onUpdateTestCases={handleUpdateTestCases}
+                  onRefreshRequests={async () => {
+                    await refetchRequests();
+                  }}
+                  requestStats={testSuite?.stats?.requestStats ?? []}
+                />
+
+                {/* Bottom stats for when requests exist */}
+                {/* <div className='border-t pt-4 mt-6'>
+                  <div className='flex justify-between text-sm text-muted-foreground'>
+                    <span>Imported requests: {requests.length}</span>
+                    <span>Total test cases: {totalTestCases}</span>
+                  </div>
+                </div> */}
+
+                <div className='px-6 py-4 bg-gray-50 mt-5 border-gray-200 flex justify-between items-center'>
+                  <div className='text-sm text-gray-600'>
+                    <div className='space-y-1'>
+                      <div>Imported requests: {requests.length} </div>
+                      <div className='font-medium'>
+                        Total test cases: {totalTestCases}
+                      </div>
+                    </div>
+                  </div>
+                  <div className='flex space-x-3'>
+                    <Button variant='outline' onClick={handleBack}>
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={handleSaveChanges}
+                      disabled={
+                        isSaving ||
+                        !testSuiteName.trim() ||
+                        requests.length === 0
+                      }
+                    >
+                      {isSaving
+                        ? isCreateMode
+                          ? 'Creating Test Suite...'
+                          : 'Saving...'
+                        : isCreateMode
+                        ? 'Create Test Suite'
+                        : 'Save Changes'}
+                    </Button>
+                  </div>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
 
         <ImportModal
           isOpen={isImportModalOpen}
@@ -384,6 +559,7 @@ const EditTestSuiteContent: React.FC = () => {
         />
       </div>
     </div>
+    </>
   );
 };
 

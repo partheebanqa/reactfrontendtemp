@@ -1,78 +1,69 @@
-import { Store, useStore } from '@tanstack/react-store';
+import { create } from 'zustand';
 
-// Define toast types
-export type ToastType = 'default' | 'success' | 'error' | 'info' | 'warning';
+export type ToastType =
+  | 'default'
+  | 'success'
+  | 'error'
+  | 'warning'
+  | 'info'
+  | 'destructive';
 
-// Define the shape of a toast
-export interface Toast {
-  id: string;
-  title: string;
-  description?: string;
-  type: ToastType;
-  duration?: number; // Duration in milliseconds
-  action?: {
-    label: string;
-    onClick: () => void;
-  };
+export interface ToastAction {
+  label: string;
+  onClick: () => void;
 }
 
-// Define the shape of our toast state
-interface ToastState {
+export interface Toast {
+  id: string;
+  title?: string;
+  description?: string;
+  type: ToastType;
+  duration?: number;
+  action?: ToastAction;
+}
+
+interface ToastStore {
   toasts: Toast[];
 }
 
-// Initial state for toast
-export const initialToastState: ToastState = {
+export const useToastStore = create<ToastStore>(() => ({
   toasts: [],
-};
+}));
 
-// Create the store
-export const toastStore = new Store<ToastState>(initialToastState);
+let toastCount = 0;
+const generateId = () => `toast-${++toastCount}`;
 
-// Generate unique ID for toasts
-const generateId = (): string => {
-  return Math.random().toString(36).substring(2, 9);
-};
-
-// Define actions to update the store
 export const toastActions = {
-  // Add a new toast
-  addToast: (toast: Omit<Toast, 'id'>) => {
+  addToast: (toast: Omit<Toast, 'id'>): string => {
     const id = generateId();
+    const newToast = { ...toast, id };
 
-    toastStore.setState((state) => ({
-      ...state,
-      toasts: [...state.toasts, { ...toast, id }],
+    useToastStore.setState((state) => ({
+      toasts: [newToast, ...state.toasts].slice(0, 5), // Limit to 5 toasts
     }));
 
-    // Auto-remove toast after duration
-    if (toast.duration !== Infinity) {
+    // Auto remove after duration
+    const duration = toast.duration ?? 5000;
+    if (duration > 0) {
       setTimeout(() => {
         toastActions.removeToast(id);
-      }, toast.duration || 5000); // Default duration: 5 seconds
+      }, duration);
     }
 
     return id;
   },
 
-  // Remove a toast by ID
   removeToast: (id: string) => {
-    toastStore.setState((state) => ({
-      ...state,
+    useToastStore.setState((state) => ({
       toasts: state.toasts.filter((toast) => toast.id !== id),
     }));
   },
 
-  // Clear all toasts
   clearToasts: () => {
-    toastStore.setState((state) => ({
-      ...state,
-      toasts: [],
-    }));
+    useToastStore.setState({ toasts: [] });
   },
 
-  // Helper methods for common toast types
-  success: (title: string, description?: string, duration?: number) => {
+  success: (title: string, description?: string, duration?: number): string => {
     return toastActions.addToast({
       title,
       description,
@@ -81,7 +72,7 @@ export const toastActions = {
     });
   },
 
-  error: (title: string, description?: string, duration?: number) => {
+  error: (title: string, description?: string, duration?: number): string => {
     return toastActions.addToast({
       title,
       description,
@@ -90,16 +81,7 @@ export const toastActions = {
     });
   },
 
-  info: (title: string, description?: string, duration?: number) => {
-    return toastActions.addToast({
-      title,
-      description,
-      type: 'info',
-      duration,
-    });
-  },
-
-  warning: (title: string, description?: string, duration?: number) => {
+  warning: (title: string, description?: string, duration?: number): string => {
     return toastActions.addToast({
       title,
       description,
@@ -107,9 +89,13 @@ export const toastActions = {
       duration,
     });
   },
-};
 
-// Hook to use the toast store
-export const useToastStore = () => {
-  return useStore(toastStore);
+  info: (title: string, description?: string, duration?: number): string => {
+    return toastActions.addToast({
+      title,
+      description,
+      type: 'info',
+      duration,
+    });
+  },
 };

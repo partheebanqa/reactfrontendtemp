@@ -6,6 +6,13 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Globe, Edit, Trash2, Copy } from 'lucide-react';
 import { useToast } from '@/hooks/useToast';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import { useDataManagement } from '@/hooks/useDataManagement';
 
 type Props = {
   environment: Environment;
@@ -19,6 +26,7 @@ const EnvironmentCard: React.FC<Props> = ({
   onDelete,
 }) => {
   const { toast } = useToast();
+  const { variables } = useDataManagement();
   const handleCopy = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
     toast({
@@ -37,7 +45,7 @@ const EnvironmentCard: React.FC<Props> = ({
             <div className='flex-1'>
               <div className='flex items-center space-x-3 mb-2'>
                 <h3 className='text-lg font-semibold'>{environment.name}</h3>
-                {environment.isDefault && (
+                {environment?.isDefault && (
                   <Badge className='bg-green-100 text-green-700'>Default</Badge>
                 )}
               </div>
@@ -46,45 +54,57 @@ const EnvironmentCard: React.FC<Props> = ({
                 {environment.description}
               </p>
 
-              <div className='space-y-2'>
-                <div className='flex items-center space-x-2'>
-                  <span className='text-sm font-medium'>Base URL:</span>
-                  <code className='bg-gray-100 px-2 py-1 rounded text-sm'>
-                    {environment.baseUrl}
-                  </code>
-                  <Button
-                    variant='ghost'
-                    size='sm'
-                    onClick={() => handleCopy(environment.baseUrl, 'Base URL')}
-                  >
-                    <Copy className='w-3 h-3' />
-                  </Button>
+              {environment?.name != 'No Environment' && (
+                <div className='space-y-2'>
+                  <div className='flex items-center space-x-2'>
+                    <span className='text-sm font-medium'>Base URL:</span>
+                    <code className='bg-gray-100 px-2 py-1 rounded text-sm'>
+                      {environment.baseUrl}
+                    </code>
+                    <Button
+                      variant='ghost'
+                      size='sm'
+                      onClick={() =>
+                        handleCopy(environment.baseUrl, 'Base URL')
+                      }
+                    >
+                      <Copy className='w-3 h-3' />
+                    </Button>
+                  </div>
                 </div>
-
-                <div className='text-sm text-muted-foreground'>
-                  {Object.keys(environment.variables).length} variables •
-                  Created {new Date(environment.createdAt).toLocaleDateString()}
-                </div>
-              </div>
+              )}
             </div>
           </div>
 
-          <div className='flex items-center space-x-2'>
-            <Button
-              size='sm'
-              variant='outline'
-              onClick={() => onEdit(environment)}
-            >
-              <Edit className='w-4 h-4' />
-            </Button>
-            <Button
-              size='sm'
-              variant='ghost'
-              onClick={() => onDelete(environment.id)}
-            >
-              <Trash2 className='w-4 h-4' />
-            </Button>
-          </div>
+          {/* <div className='flex items-center space-x-2'>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    size='sm'
+                    variant='outline'
+                    onClick={() => onEdit(environment)}
+                  >
+                    <Edit className='w-4 h-4' />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Edit Environment</TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    size='sm'
+                    variant='ghost'
+                    onClick={() => onDelete(environment.id)}
+                  >
+                    <Trash2 className='w-4 h-4' />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Delete Environment</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div> */}
         </div>
       </CardContent>
     </Card>

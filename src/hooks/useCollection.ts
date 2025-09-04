@@ -1,19 +1,23 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState } from 'react';
 import {
   useAddCollectionMutation,
   useAddRequestMutation,
   useCollectionQuery,
   useCollectionRequestsQuery,
+  useDeleteCollectionMutation,
   useDeleteRequestMutation,
   useDuplicateRequestMutation,
   useImpotPostmanCollectionMutation,
   useRenameCollectionMutation,
   useRenameRequestMutation,
   useSetFavouriteCollectionMutation,
-} from "@/store/query/collectionQuery";
-import { collectionActions, useCollectionStore } from "@/store/collectionStore";
-import { useAuth } from "./useAuth";
-import { useWorkspace } from "./useWorkspace";
+  useUnsetFavouriteCollectionMutation,
+} from '@/store/query/collectionQuery';
+import { collectionActions, useCollectionStore } from '@/store/collectionStore';
+import { useAuth } from './useAuth';
+import { useWorkspace } from './useWorkspace';
+import { Collection, CollectionRequest } from '@/shared/types/collection';
+import { useRequest } from './useRequest';
 
 /**
  * Hook for managing API requests
@@ -33,6 +37,7 @@ export function useCollection() {
     isCreatingCollection,
     expandedCollections,
   } = useCollectionStore();
+  const { setResponseData } = useRequest();
 
   // Setup queries and mutations
   const { refetch, isLoading: isRefetching } = useCollectionQuery(
@@ -47,7 +52,8 @@ export function useCollection() {
   const deleteRequest = collectionActions.deleteRequest;
   const addRequestToCollection = collectionActions.addRequestToCollection;
 
-  const toggleExpandedCollection = (collectionId: string) => {
+  const toggleExpandedCollection = async (collectionId: string) => {
+    if (!collectionId) return;
     collectionActions.toggleExpandedCollection(collectionId);
     const targetCollection = collections?.find(
       (col) => col.id === collectionId
@@ -78,19 +84,60 @@ export function useCollection() {
     });
   };
 
+  const handleCreateRequest = async (collection?: Collection) => {
+    const newRequest: CollectionRequest = {
+      name: 'New Request',
+      method: 'GET',
+      url: '',
+      bodyType: 'json',
+      bodyFormData: null,
+      authorizationType: 'none',
+      authorization: {},
+      variables: {},
+      headers: [],
+      params: [],
+      order: 0, // This will be updated when adding to collection
+    };
+    setResponseData(null);
+    if (collection) {
+      // Ensure collection is expanded when adding a new request
+      if (!expandedCollections.has(collection.id)) {
+        toggleExpandedCollection(collection.id);
+      }
+      newRequest.collectionId = collection.id;
+      newRequest.order = (collection.requests?.length || 0) + 1;
+      setCollection(
+        collections.map((col) =>
+          col.id === collection.id
+            ? {
+                ...col,
+                requests: [...(col.requests || []), newRequest],
+              }
+            : col
+        )
+      );
+      setActiveCollection(
+        collections.find((col) => col.id === collection.id) || null
+      );
+    }
+    setActiveRequest(newRequest);
+  };
+
   useEffect(() => {
     if (collections.length === 0) {
       setShouldFetchCollections(true);
     } else {
       setShouldFetchCollections(false);
     }
-  }, [isAuthenticated, collections]);
+  }, [isAuthenticated, collections.length]);
 
   const addCollectionMutation = useAddCollectionMutation();
   const renameCollectionMutation = useRenameCollectionMutation();
   const setFavouriteCollectionMutation = useSetFavouriteCollectionMutation();
+  const unsetFavouriteCollectionMutation =
+    useUnsetFavouriteCollectionMutation();
   const fetchCollectionRequests = useCollectionRequestsQuery();
-  const deleteCollectionMutation = useDeleteRequestMutation();
+  const deleteCollectionMutation = useDeleteCollectionMutation();
   const importCollectionMutation = useImpotPostmanCollectionMutation();
   const addRequestMutation = useAddRequestMutation();
   const renameRequestMutation = useRenameRequestMutation();
@@ -107,6 +154,7 @@ export function useCollection() {
     isCreatingCollection,
     expandedCollections,
 
+    handleCreateRequest,
     setActiveCollection,
     setActiveRequest,
     setResponseLayout,
@@ -125,6 +173,8 @@ export function useCollection() {
     renameRequestMutation,
     duplicateRequestMutation,
     setFavouriteCollectionMutation,
+    unsetFavouriteCollectionMutation,
     deleteCollectionMutation,
+    deleteRequestMutation,
   };
 }

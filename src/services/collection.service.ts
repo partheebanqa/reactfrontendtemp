@@ -2,6 +2,7 @@ import {
   API_COLLECTION_IMPORT,
   API_COLLECTION_REQUESTS,
   API_COLLECTIONS,
+  API_UPLOAD_REQUEST_SCHEMA,
 } from '@/config/apiRoutes';
 import { apiRequest } from '@/lib/queryClient';
 import {
@@ -57,10 +58,10 @@ export const setFavouriteCollection = async ({
   try {
     const response = await apiRequest(
       'PUT',
-      `${API_COLLECTIONS}/${collectionId}/favourite`,
-      {
-        body: JSON.stringify({ IsImportant }),
-      }
+      `${API_COLLECTIONS}/${collectionId}/mark-important`
+      // {
+      //   body: JSON.stringify({ IsImportant }),
+      // }
     );
     if (!response.ok) {
       throw new Error('Failed to update collection');
@@ -70,6 +71,14 @@ export const setFavouriteCollection = async ({
     console.error('Error updating collection:', error);
     throw error;
   }
+};
+
+export const unsetFavouriteCollection = async (collectionId: string) => {
+  const response = await apiRequest(
+    'PUT',
+    `${API_COLLECTIONS}/${collectionId}/mark-not-important`
+  );
+  return response;
 };
 
 export const deleteCollection = async (collectionId: string) => {
@@ -112,13 +121,9 @@ export const renameCollection = async ({
   name: string;
 }) => {
   try {
-    const response = await apiRequest(
-      'PUT',
-      `${API_COLLECTIONS}/${id}/rename`,
-      {
-        body: JSON.stringify({ name: name }),
-      }
-    );
+    const response = await apiRequest('PUT', `${API_COLLECTIONS}/${id}`, {
+      body: JSON.stringify({ name: name }),
+    });
     if (!response.ok) {
       throw new Error('Failed to rename collection');
     }
@@ -147,20 +152,53 @@ export const importCollectionFile = async (
   importCollection: ImportCollection
 ) => {
   try {
-    // const formData = new FormData();
+    // If input method is file, use FormData to properly handle file uploads
+    if (importCollection.inputMethod === 'file' && importCollection.file) {
+      const formData = new FormData();
 
-    // // Add metadata fields
-    // formData.append("name", importCollection.name);
-    // formData.append("workspaceId", importCollection.workspaceId);
-    // formData.append("inputMethod", importCollection.inputMethod);
-    // formData.append("specificationType", importCollection.specificationType);
-    // formData.append("url", importCollection.url);
-    // formData.append("raw", importCollection.raw);
+      // Add all fields to the form data
+      formData.append('name', importCollection.name || '');
+      formData.append('workspaceId', importCollection.workspaceId);
+      formData.append('inputMethod', importCollection.inputMethod);
+      formData.append('specificationType', importCollection.specificationType);
+      formData.append('file', importCollection.file);
 
+      // For completeness, include these if provided
+      if (importCollection.url) formData.append('url', importCollection.url);
+
+      const response = await apiRequest('POST', API_COLLECTION_IMPORT, {
+        body: formData,
+        headers: {
+          // Let the browser set the correct content-type with boundary
+          // "content-type": "multipart/form-data; boundary=X-INSOMNIA-BOUNDARY",
+        },
+      });
+
+      return response;
+    } else {
+      // For raw or URL imports, use JSON payload
+      const response = await apiRequest('POST', API_COLLECTION_IMPORT, {
+        body: JSON.stringify(importCollection),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      return response;
+    }
+  } catch (error: any) {
+    throw error;
+  }
+};
+
+export const useImpotCollectionJsonMutation = async (
+  importCollection: ImportCollection
+) => {
+  try {
     const response = await apiRequest('POST', API_COLLECTION_IMPORT, {
       body: JSON.stringify(importCollection),
       // headers: {
-      //   "content-type": "multipart/form-data; boundary=X-INSOMNIA-BOUNDARY",
+      //   "content-type": "application/json",
       // },
     });
 
@@ -235,9 +273,35 @@ export const renameRequest = async ({
   try {
     const response = await apiRequest(
       'PUT',
-      `${API_COLLECTION_REQUESTS}/${requestId}/rename`,
+      `${API_COLLECTION_REQUESTS}/${requestId}`,
       {
         body: newName ? JSON.stringify({ name: newName }) : undefined,
+      }
+    );
+    if (!response.ok) {
+      throw new Error('Failed to duplicate request');
+    }
+    const data = await response.json();
+    return formatRequest(data);
+  } catch (error: any) {
+    console.error('Error duplicating request:', error);
+    throw error;
+  }
+};
+
+export const updateRequest = async ({
+  requestId,
+  requestData,
+}: {
+  requestId: string;
+  requestData: any;
+}) => {
+  try {
+    const response = await apiRequest(
+      'PUT',
+      `${API_COLLECTION_REQUESTS}/${requestId}`,
+      {
+        body: JSON.stringify(requestData),
       }
     );
     if (!response.ok) {

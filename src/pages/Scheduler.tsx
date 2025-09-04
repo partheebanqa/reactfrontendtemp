@@ -14,6 +14,7 @@ import SchedulesTable from '@/components/Scheduler/SchedulesTable';
 import CreateScheduleForm from '@/components/Scheduler/CreateScheduleForm';
 import EditScheduleForm from '@/components/Scheduler/EditScheduleForm';
 import { useSchedules, useTestSuites, useRequestChains } from '@/hooks/use-api';
+import HelpLink from '@/components/HelpModal/HelpLink';
 
 export default function Scheduler() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -87,26 +88,26 @@ export default function Scheduler() {
   // Filter schedules based on search and filters
   const filteredSchedules = Array.isArray(schedules)
     ? schedules.filter((schedule: any) => {
-        const matchesSearch =
-          schedule.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          schedule.testSuite?.name
-            ?.toLowerCase()
-            .includes(searchQuery.toLowerCase());
+      const matchesSearch =
+        schedule.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        schedule.testSuite?.name
+          ?.toLowerCase()
+          .includes(searchQuery.toLowerCase());
 
-        const matchesType =
-          typeFilter === 'all' ||
-          (typeFilter === 'test-suite' && schedule.testSuite) ||
-          (typeFilter === 'request-chain' && !schedule.testSuite);
+      const matchesType =
+        typeFilter === 'all' ||
+        (typeFilter === 'test-suite' && schedule.testSuite) ||
+        (typeFilter === 'request-chain' && !schedule.testSuite);
 
-        const matchesExecutionMode =
-          executionModeFilter === 'all' ||
-          (executionModeFilter === 'one-time' &&
-            schedule.scheduleType === 'one-time') ||
-          (executionModeFilter === 'recurring' &&
-            schedule.scheduleType === 'recurring');
+      const matchesExecutionMode =
+        executionModeFilter === 'all' ||
+        (executionModeFilter === 'one-time' &&
+          schedule.scheduleType === 'one-time') ||
+        (executionModeFilter === 'recurring' &&
+          schedule.scheduleType === 'recurring');
 
-        return matchesSearch && matchesType && matchesExecutionMode;
-      })
+      return matchesSearch && matchesType && matchesExecutionMode;
+    })
     : [];
 
   // Pagination logic
@@ -134,27 +135,13 @@ export default function Scheduler() {
               Configure automated test execution schedules
             </p>
           </div>
-          <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className='bg-gray-900 hover:bg-gray-800 text-white'>
-                <Plus className='mr-2 h-4 w-4' />
-                New Schedule
-              </Button>
-            </DialogTrigger>
-            <DialogContent className='max-w-2xl max-h-[90vh] overflow-y-auto'>
-              <DialogHeader>
-                <DialogTitle className='text-xl font-semibold'>
-                  Create New Schedule
-                </DialogTitle>
-              </DialogHeader>
-              <CreateScheduleForm
-                testSuites={testSuites}
-                requestChains={requestChains}
-                onSubmit={handleCreateSchedule}
-                onCancel={() => setCreateDialogOpen(false)}
-              />
-            </DialogContent>
-          </Dialog>
+          <div className='flex items-center gap-2'>
+            <Button onClick={handleCreateSchedule} className='gap-2'>
+              <Plus className='w-4 h-4' />
+              Create Schedule
+            </Button>
+            <HelpLink />
+          </div>
         </div>
       </header>
 

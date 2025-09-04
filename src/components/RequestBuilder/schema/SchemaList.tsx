@@ -7,8 +7,8 @@ interface SchemaListProps {
   compareMode: boolean;
   selectedSchemas: string[];
   onSchemaSelect: (schemaId: string) => void;
-  onViewSchema: (schema: { id: string; name: string; content: any }) => void;
-  onDownloadSchema: (schema: { name: string; content: any }) => void;
+  onViewSchema: (schema: { id: string; name: string; schema: any }) => void;
+  onDownloadSchema: (schema: { name: string; schema: any }) => void;
 }
 
 const SchemaList: React.FC<SchemaListProps> = ({

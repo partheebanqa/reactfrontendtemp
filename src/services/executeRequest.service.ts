@@ -1,0 +1,100 @@
+import { apiRequest } from '@/lib/queryClient';
+import { API_EXECUTOR } from '@/config/apiRoutes';
+import {
+  APIRequest,
+  Variable,
+  ExecutionLog,
+  ExecuteRequestPayload,
+  ExecutionResponse,
+  ExecutionRequestChainPayload,
+} from '@/shared/types/requestChain.model';
+
+export const executeRequest = async (
+  payload: ExecuteRequestPayload
+): Promise<ExecutionResponse> => {
+  try {
+    const response = await apiRequest('POST', `${API_EXECUTOR}/request`, {
+      body: JSON.stringify(payload),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to execute request: ${response.statusText}`);
+    }
+
+    return await response.json();
+  } catch (error: any) {
+    throw new Error(error.message || 'Failed to execute request');
+  }
+};
+
+export const buildRequestPayload = (
+  request: APIRequest,
+  variables: Variable[],
+  workspaceId: string = '01415fe5-b282-4295-a386-267ece622c7b'
+): ExecuteRequestPayload => {
+  const replaceVariables = (text: string | undefined): string => {
+    if (!text) return '';
+    let result = text;
+    variables.forEach((variable) => {
+      const regex = new RegExp(`{{${variable.name}}}`, 'g');
+      result = result.replace(regex, variable.initialValue ?? '');
+    });
+    return result;
+  };
+
+  return {
+    request: {
+      workspaceId,
+      name: request.name,
+      order: request.order || 0,
+      method: request.method,
+      url: replaceVariables(request.url),
+      bodyType: request.bodyType,
+      bodyFormData: request.bodyFormData ?? null,
+      bodyRawContent: replaceVariables(request.body),
+      authorizationType: request.authorizationType,
+      authorization:
+        request.authorizationType === 'bearer'
+          ? { token: replaceVariables(request.authToken) }
+          : undefined,
+      headers: (request.headers || [])
+        .filter((h) => h.enabled)
+        .map((h) => ({
+          key: h.key,
+          value: replaceVariables(h.value),
+          enabled: true,
+        })),
+      params: (request.params || [])
+        .filter((p) => p.enabled)
+        .map((p) => ({
+          key: p.key,
+          value: replaceVariables(p.value),
+          enabled: true,
+        })),
+    },
+  };
+};
+
+export const executeRequestChain = async (
+  payload: ExecutionRequestChainPayload
+): Promise<ExecutionResponse> => {
+  try {
+    const response = await apiRequest('POST', `${API_EXECUTOR}/request-chain`, {
+      body: JSON.stringify(payload),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to execute request: ${response.statusText}`);
+    }
+
+    return await response.json();
+  } catch (error: any) {
+    throw new Error(error.message || 'Failed to execute request');
+  }
+};

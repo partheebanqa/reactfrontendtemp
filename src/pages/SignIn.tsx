@@ -151,7 +151,7 @@ export default function SignIn() {
                     placeholder="Enter your email"
                     value={formData.email}
                     onChange={(e) =>
-                      setFormData({ ...formData, email: e.target.value })
+                      setFormData({ ...formData, email: e.target.value.trim() })
                     }
                   />
                 </div>
@@ -169,7 +169,7 @@ export default function SignIn() {
                     placeholder="Enter your password"
                     value={formData.password}
                     onChange={(e) =>
-                      setFormData({ ...formData, password: e.target.value })
+                      setFormData({ ...formData, password: e.target.value.trim() })
                     }
                   />
                   <button
@@ -205,7 +205,7 @@ export default function SignIn() {
               </Button>
             </form>
 
-            <div className="relative">
+            {/* <div className="relative">
               <div className="absolute inset-0 flex items-center">
                 <Separator className="w-full" />
               </div>
@@ -214,9 +214,9 @@ export default function SignIn() {
                   Or try demo accounts
                 </span>
               </div>
-            </div>
+            </div> */}
 
-            <div className="grid grid-cols-1 gap-3">
+            {/* <div className="grid grid-cols-1 gap-3">
               <Button
                 variant="outline"
                 className="w-full"
@@ -253,7 +253,7 @@ export default function SignIn() {
                   </span>
                 </span>
               </Button>
-            </div>
+            </div> */}
 
             <div className="text-center">
               <span className="text-sm text-gray-600 dark:text-gray-400">

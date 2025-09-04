@@ -1,7 +1,7 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
-import { useWorkspace } from "@/hooks/useWorkspace";
-import { useToast } from "@/hooks/useToast";
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { apiRequest } from '@/lib/queryClient';
+import { useWorkspace } from '@/hooks/useWorkspace';
+import { useToast } from '@/hooks/useToast';
 
 export interface SubscriptionPlan {
   id: string;
@@ -22,35 +22,52 @@ function useTrialManagement() {
 
   // Get subscription plans
   const { data: subscriptionPlans = [], isLoading: isLoadingPlans } = useQuery({
-    queryKey: ["/api/subscription-plans"],
+    queryKey: ['/api/subscription-plans'],
     select: (data) => data as SubscriptionPlan[],
   });
 
   // Start trial mutation
   const startTrialMutation = useMutation({
-    mutationFn: async ({ planId, durationDays = 15 }: { planId: string; durationDays?: number }) => {
-      console.log("Starting trial with planId:", planId, "for durationDays:", durationDays);
-      
-      if (!currentWorkspace) throw new Error("No workspace selected");
-      
-      return await apiRequest("POST", `/api/workspaces/${currentWorkspace.id}/start-trial`, {
+    mutationFn: async ({
+      planId,
+      durationDays = 15,
+    }: {
+      planId: string;
+      durationDays?: number;
+    }) => {
+      console.log(
+        'Starting trial with planId:',
         planId,
-        durationDays,
-      });
+        'for durationDays:',
+        durationDays
+      );
+
+      if (!currentWorkspace) throw new Error('No workspace selected');
+
+      return await apiRequest(
+        'POST',
+        `/api/workspaces/${currentWorkspace.id}/start-trial`,
+        {
+          planId,
+          durationDays,
+        }
+      );
     },
     onSuccess: () => {
       refreshWorkspaces();
-      queryClient.invalidateQueries({ queryKey: ["/api/workspaces"] });
+      queryClient.invalidateQueries({ queryKey: ['/api/workspaces'] });
       toast({
-        title: "Trial Started!",
-        description: "Your 15-day trial has been activated with full Pro features.",
+        title: 'Trial Started!',
+        description:
+          'Your 15-day trial has been activated with full Pro features.',
       });
     },
     onError: (error: Error) => {
       toast({
-        title: "Trial Start Failed",
-        description: error.message || "Failed to start trial. Please try again.",
-        variant: "destructive",
+        title: 'Trial Start Failed',
+        description:
+          error.message || 'Failed to start trial. Please try again.',
+        variant: 'destructive',
       });
     },
   });
@@ -58,46 +75,58 @@ function useTrialManagement() {
   // Convert trial mutation
   const convertTrialMutation = useMutation({
     mutationFn: async (newPlan: string) => {
-      if (!currentWorkspace) throw new Error("No workspace selected");
-      
-      return await apiRequest("POST", `/api/workspaces/${currentWorkspace.id}/convert-trial`, {
-        newPlan,
-      });
+      if (!currentWorkspace) throw new Error('No workspace selected');
+
+      return await apiRequest(
+        'POST',
+        `/api/workspaces/${currentWorkspace.id}/convert-trial`,
+        {
+          newPlan,
+        }
+      );
     },
     onSuccess: () => {
       refreshWorkspaces();
-      queryClient.invalidateQueries({ queryKey: ["/api/workspaces"] });
+      queryClient.invalidateQueries({ queryKey: ['/api/workspaces'] });
       toast({
-        title: "Trial Converted!",
-        description: "Your trial has been successfully converted to a paid subscription.",
+        title: 'Trial Converted!',
+        description:
+          'Your trial has been successfully converted to a paid subscription.',
       });
     },
     onError: (error: Error) => {
       toast({
-        title: "Conversion Failed",
-        description: error.message || "Failed to convert trial. Please try again.",
-        variant: "destructive",
+        title: 'Conversion Failed',
+        description:
+          error.message || 'Failed to convert trial. Please try again.',
+        variant: 'destructive',
       });
     },
   });
 
   // Helper functions
   const canStartTrial = () => {
-    return currentWorkspace && 
-           currentWorkspace.subscriptionPlan === "free" && 
-           !currentWorkspace.isTrialActive;
+    return (
+      currentWorkspace &&
+      currentWorkspace.subscriptionPlan === 'free' &&
+      !currentWorkspace.isTrialActive
+    );
   };
 
   const isTrialActive = () => {
-    return currentWorkspace?.isTrialActive && 
-           currentWorkspace?.trialEndDate &&
-           new Date() < new Date(currentWorkspace.trialEndDate);
+    return (
+      currentWorkspace?.isTrialActive &&
+      currentWorkspace?.trialEndDate &&
+      new Date() < new Date(currentWorkspace.trialEndDate)
+    );
   };
 
   const isTrialExpired = () => {
-    return currentWorkspace?.isTrialActive && 
-           currentWorkspace?.trialEndDate &&
-           new Date() > new Date(currentWorkspace.trialEndDate);
+    return (
+      currentWorkspace?.isTrialActive &&
+      currentWorkspace?.trialEndDate &&
+      new Date() > new Date(currentWorkspace.trialEndDate)
+    );
   };
 
   const getTrialDaysLeft = () => {

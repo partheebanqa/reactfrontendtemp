@@ -3,70 +3,116 @@ export interface RequestChain {
   workspaceId: string;
   name: string;
   description?: string;
-  requests: APIRequest[];
+  environmentId?: string;
+  chainRequests: APIRequest[];
   variables: Variable[];
-  schedule: Schedule;
+  schedule?: Schedule;
   enabled: boolean;
   createdAt: string;
   updatedAt: string;
   lastExecuted?: string;
   executionCount: number;
   successRate: number;
+  environment?: {
+    id: string;
+    name: string;
+  };
 }
 
 export interface APIRequest {
   id: string;
   name: string;
-  method: string;
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'HEAD' | 'OPTIONS';
   url: string;
+  order?: number;
   headers: Header[];
   params: Parameter[];
-  bodyType: 'none' | 'json' | 'form' | 'raw';
   body?: string;
+  bodyRawContent?: string;
+  bodyType:
+    | 'none'
+    | 'json'
+    | 'form-data'
+    | 'x-www-form-urlencoded'
+    | 'raw'
+    | 'binary';
+
+  authConfig?: {
+    token?: string;
+    username?: string;
+    password?: string;
+    key?: string;
+    value?: string;
+    addTo?: 'header' | 'query';
+  };
+  bodyFormData?: Record<string, string | File>;
+  queryParams?: Record<string, string>;
+  variables?: Variable[];
+  rawBodyType?: 'text' | 'json' | 'xml' | 'html';
+  authorizationType: 'none' | 'bearer' | 'basic' | 'apikey' | 'oauth2';
+  authToken?: string; // Bearer token or reference to AuthToken ID
+  authorization?: {
+    token: string;
+  };
+  authUsername?: string; // Basic auth username
+  authPassword?: string; // Basic auth password
+  authApiKey?: string; // API key name
+  authApiValue?: string; // API key value
+  authApiLocation?: 'header' | 'query'; // Where to add API key
   timeout: number;
   retries: number;
-  errorHandling: 'stop' | 'continue';
-  dataExtractions: DataExtraction[];
-  testScripts: TestScript[];
+  errorHandling?: string;
+  extractVariables: DataExtraction[];
+  testScripts?: TestScript[];
   enabled: boolean;
-  authType: 'none' | 'bearer' | 'basic' | 'apikey';
-  authConfig?: AuthConfig;
+  description?: string;
 }
 
 export interface Variable {
-  id: string;
+  initialValue?: string;
+  id?: string;
   name: string;
-  value: string;
-  type: 'string' | 'number' | 'boolean' | 'json';
+  value?: string;
+  type: string;
+  source?: 'extracted' | string;
+  extractionPath?: string;
 }
 
 export interface Header {
-  id: string;
+  id?: string;
   key: string;
   value: string;
   enabled: boolean;
 }
 
 export interface Parameter {
-  id: string;
+  id?: string;
   key: string;
   value: string;
   enabled: boolean;
 }
 
 export interface DataExtraction {
-  id: string;
+  variableName: string;
   name: string;
-  type: 'jsonPath' | 'regex' | 'header';
-  expression: string;
-  variable: string;
+  source:
+    | 'response_body'
+    | 'response_header'
+    | 'response_cookie'
+    | 'request_header';
+  path: string;
+  value: string;
+  transform?: string;
 }
 
 export interface TestScript {
   id: string;
-  name: string;
-  script: string;
+  type: 'status' | 'responseTime' | 'jsonContent';
   enabled: boolean;
+  operator: string; // 'equal', 'notEqual', 'greaterThan', 'lessThan', 'contain', 'exist', etc.
+  expectedValue: string;
+  jsonPath?: string; // For JSON content tests
+  description?: string;
 }
 
 export interface AuthConfig {
@@ -85,4 +131,119 @@ export interface Schedule {
   timezone: string;
   interval?: number;
   cron?: string;
+}
+
+export interface ExecutionLog {
+  id: string;
+  chainId: string;
+  requestId: string;
+  status: 'pending' | 'success' | 'error' | 'timeout';
+  startTime: string;
+  endTime?: string;
+  duration?: number;
+  request: {
+    method: string;
+    url: string;
+    headers: Record<string, string>;
+    body?: string;
+  };
+  response?: {
+    status: number;
+    headers: Record<string, string>;
+    body: string;
+    size: number;
+    cookies?: Record<string, string>;
+  };
+  error?: string;
+  extractedVariables?: Record<string, any>;
+}
+
+export interface KeyValuePair {
+  id?: string;
+  key: string;
+  value: string;
+  enabled: boolean;
+  description?: string;
+}
+
+export interface RequestDetailResponse {
+  id: string;
+  name: string;
+  method: string;
+  url?: string;
+  endpoint?: string;
+  headers?: any;
+  params?: any;
+  queryParams?: any;
+  body?: string;
+  rawBody?: string;
+  bodyType?: string;
+  bodyFormData?: any;
+  auth?: any;
+  authConfig?: any;
+  authorizationType?: string;
+  timeout?: number;
+  retries?: number;
+  errorHandling?: string;
+  enabled?: boolean;
+}
+
+export interface ExtractedVariable {
+  name: string;
+  path: string;
+  value: string;
+  status: 'success' | 'failed' | string;
+}
+
+export interface ExecutionItem {
+  id: string;
+  executionId: string;
+  chainRequestId: string;
+  requestChainId: string;
+  status: number;
+  data: string | object; // will parse to JSON in hook
+  extractedVariables: ExtractedVariable[]; // parsed from string
+}
+
+export interface ExecutionResponse {
+  page: number;
+  pageSize: number;
+  count: number;
+  items: ExecutionItem[];
+  message?: string;
+}
+
+export interface ExecuteRequestPayload {
+  request: {
+    workspaceId: string;
+    name: string;
+    order: number;
+    method: string;
+    url: string;
+    bodyType?: string;
+    bodyFormData?: any;
+    bodyRawContent?: string;
+    authorizationType?: string;
+    authorization?: { token: string };
+    headers: Array<{ key: string; value: string; enabled: boolean }>;
+    params: Array<{ key: string; value: string; enabled: boolean }>;
+  };
+}
+
+export interface ExecutionResponse {
+  data: {
+    responses: Array<{
+      statusCode: number;
+      headers: Record<string, string>;
+      body: any;
+      metrics: {
+        responseTime: number;
+        bytesReceived: number;
+      };
+    }>;
+  };
+}
+
+export interface ExecutionRequestChainPayload {
+  requestChainId: string;
 }

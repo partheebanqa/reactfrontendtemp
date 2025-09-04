@@ -19,6 +19,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   const { hasFeatureAccess, hasRoleAccess, subscriptionPlan } = useFeatureGate();
   const { logFeatureAccess } = useAuditLog();
 
+
   const hasAccess = hasFeatureAccess(feature) && (roles.length === 0 || hasRoleAccess(roles));
 
   React.useEffect(() => {

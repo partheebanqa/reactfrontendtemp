@@ -4,6 +4,14 @@ export default {
   darkMode: ["class"],
   content: ["./index.html", "./src/**/*.{js,jsx,ts,tsx}"],
   theme: {
+    screens: {
+      'xs': '480px',
+      'sm': '640px',
+      'md': '768px',
+      'lg': '1024px',
+      'xl': '1280px',
+      '2xl': '1536px',
+    },
     extend: {
       borderRadius: {
         lg: "var(--radius)",
@@ -41,6 +49,10 @@ export default {
           DEFAULT: "var(--destructive)",
           foreground: "var(--destructive-foreground)",
         },
+        success: {
+					DEFAULT: 'rgb(var(--success))',
+					foreground: 'rgb(var(--success-foreground))'
+				},
         border: "var(--border)",
         input: "var(--input)",
         ring: "var(--ring)",

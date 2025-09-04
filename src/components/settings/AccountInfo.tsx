@@ -1,68 +1,152 @@
-import React from 'react';
-import { useForm } from 'react-hook-form';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { User, Camera, Save } from 'lucide-react';
+import { User, Camera, Save, UserIcon } from 'lucide-react';
 import { useToast } from '@/hooks/useToast';
+import { useAuth } from '@/hooks/useAuth';
 
 const accountInfoSchema = z.object({
   firstName: z.string().min(1, 'First name is required'),
   lastName: z.string().min(1, 'Last name is required'),
   email: z.string().email('Invalid email address'),
-  bio: z.string().max(500, 'Bio must be less than 500 characters').optional(),
-  company: z.string().optional(),
-  companyWebsite: z.string().optional(),
-  sector: z.string().optional(),
-  jobTitle: z.string().optional(),
-  phone: z.string().optional(),
+  bio: z.string().max(500, 'Bio must be less than 500 characters').optional().or(z.literal('')),
+  company: z.string().optional().or(z.literal('')),
+  companyWebsite: z.string().url('Invalid URL').optional().or(z.literal('')),
+  sector: z.string().optional().or(z.literal('')),
+  jobTitle: z.string().optional().or(z.literal('')),
+  phone: z.string().optional().or(z.literal('')),
+  // Avatar represented as either existing URL or a File for upload
+  avatar: z
+    .union([z.instanceof(File), z.string().url().optional(), z.literal('').optional()])
+    .optional(),
 });
 
 type AccountInfoFormData = z.infer<typeof accountInfoSchema>;
 
+
+
 export function AccountInfo() {
   const { toast } = useToast();
+  const { user, updateProfileMutation } = useAuth();
+
+  // Local avatar preview
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+
+  // Derive initials fallback
+  const initials = useMemo(() => {
+    const fn = user?.firstName || '';
+    const ln = user?.lastName || '';
+    return `${fn.charAt(0) || ''}${ln.charAt(0) || ''}`.toUpperCase() || 'U';
+  }, [user?.firstName, user?.lastName]);
 
   const form = useForm<AccountInfoFormData>({
     resolver: zodResolver(accountInfoSchema),
     defaultValues: {
-      firstName: 'John',
-      lastName: 'Doe',
-      email: 'demo@example.com',
-      bio: 'API testing enthusiast with 5+ years of experience in software development.',
-      company: 'Tech Solutions Inc.',
-      companyWebsite: 'https://techsolutions.com',
-      sector: 'Technology',
-      jobTitle: 'Senior Developer',
-      phone: '+1 (555) 123-4567',
+      firstName: user?.firstName || '',
+      lastName: user?.lastName || '',
+      email: user?.email || '',
+      bio: (user as any)?.bio || '',
+      company: (user as any)?.company || '',
+      companyWebsite: (user as any)?.companyWebsite || '',
+      sector: (user as any)?.sector || '',
+      jobTitle: (user as any)?.jobTitle || '',
+      phone: (user as any)?.phone || '',
+      avatar: (user as any)?.avatarUrl || '',
     },
+    mode: 'onChange',
   });
 
-  const onSubmit = (data: AccountInfoFormData) => {
-    console.log('Account info saved:', data);
-    toast({
-      title: 'Account updated',
-      description: 'Your account information has been successfully updated.',
+  // When user changes (first load/refetch), reset defaults
+  useEffect(() => {
+    form.reset({
+      firstName: user?.firstName || '',
+      lastName: user?.lastName || '',
+      email: user?.email || '',
+      bio: (user as any)?.bio || '',
+      company: (user as any)?.company || '',
+      companyWebsite: (user as any)?.companyWebsite || '',
+      sector: (user as any)?.sector || '',
+      jobTitle: (user as any)?.jobTitle || '',
+      phone: (user as any)?.phone || '',
+      avatar: (user as any)?.avatarUrl || '',
     });
+    setAvatarPreview((user as any)?.avatarUrl || null);
+  }, [user, form]);
+
+  // Handle avatar file selection
+  const onAvatarChange = (file?: File | null) => {
+    if (file) {
+      const url = URL.createObjectURL(file);
+      setAvatarPreview(url);
+    }
   };
 
-  const handleAvatarUpload = () => {
-    toast({
-      title: 'Feature coming soon',
-      description: 'Avatar upload functionality will be available soon.',
-    });
+  const onSubmit = async (data: AccountInfoFormData) => {
+    try {
+      // If avatar is a File, send via FormData to an upload endpoint or include in profile update as needed
+      // For now, demonstrate a two-step: upload avatar -> get URL -> update profile
+      let avatarUrl: string | undefined = undefined;
+
+      if (data.avatar instanceof File) {
+        // Example stub: replace with actual uploader call
+        // const formData = new FormData();
+        // formData.append('file', data.avatar);
+        // const uploadRes = await apiRequest('POST', API_UPLOAD_AVATAR, { body: formData });
+        // avatarUrl = (await uploadRes.json()).url;
+        // Demo fallback: pretend upload returns existing preview URL after delay
+        avatarUrl = avatarPreview || undefined;
+      } else if (typeof data.avatar === 'string') {
+        avatarUrl = data.avatar || undefined;
+      }
+
+      // Build payload for profile update
+      const payload = {
+        firstName: data.firstName,
+        lastName: data.lastName,
+        email: data.email,
+        bio: data.bio || null,
+        company: data.company || null,
+        companyWebsite: data.companyWebsite || null,
+        sector: data.sector || null,
+        jobTitle: data.jobTitle || null,
+        phone: data.phone || null,
+        avatarUrl: avatarUrl || null,
+      };
+
+      await updateProfileMutation.mutateAsync(payload);
+
+      toast({
+        title: 'Account updated',
+        description: 'Your account information has been successfully updated.',
+      });
+    } catch (err: any) {
+      toast({
+        title: 'Update failed',
+        description: err?.message || 'Unable to update profile right now.',
+        variant: 'destructive',
+      });
+    }
   };
 
   return (
-    <Card>
+ <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <User className="h-5 w-5" />
+          <UserIcon className="h-5 w-5" />
           Account Information
         </CardTitle>
       </CardHeader>
@@ -71,22 +155,41 @@ export function AccountInfo() {
           {/* Avatar Section */}
           <div className="flex flex-col items-center gap-4 sm:w-48">
             <Avatar className="h-24 w-24">
-              <AvatarImage src="/api/placeholder/150/150" alt="Profile" />
-              <AvatarFallback className="text-lg">JD</AvatarFallback>
+              <AvatarImage src={avatarPreview || (user as any)?.avatarUrl || ''} alt="Profile" />
+              <AvatarFallback className="text-lg">{initials}</AvatarFallback>
             </Avatar>
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={handleAvatarUpload}
-              className="text-xs"
-            >
-              <Camera className="h-3 w-3 mr-2" />
-              Change Photo
-            </Button>
-            <div className="text-center text-xs text-gray-500">
-              <p>JPG, PNG or GIF</p>
-              <p>Max size: 2MB</p>
-            </div>
+            <Controller
+              control={form.control}
+              name="avatar"
+              render={({ field: { onChange, value, ref } }) => (
+                <div className="flex flex-col items-center gap-2 w-full">
+                  <label className="w-full" htmlFor="avatar-input">
+                    <input
+                      id="avatar-input"
+                      ref={ref}
+                      type="file"
+                      accept="image/png,image/jpeg,image/jpg,image/gif"
+                      className="hidden"
+                 onChange={(e) => {
+    const file = e.target.files?.[0] || null; 
+    onChange(file ?? value ?? ''); 
+    onAvatarChange(file); 
+  }}
+                    />
+                    <Button asChild variant="outline" size="sm" className="text-xs w-full">
+                      <span>
+                        <Camera className="h-3 w-3 mr-2" />
+                        Change Photo
+                      </span>
+                    </Button>
+                  </label>
+                  <div className="text-center text-xs text-gray-500">
+                    <p>JPG, PNG or GIF</p>
+                    <p>Max size: 2MB</p>
+                  </div>
+                </div>
+              )}
+            />
           </div>
 
           {/* Form Section */}
@@ -123,7 +226,6 @@ export function AccountInfo() {
                   />
                 </div>
 
-                
                 <FormField
                   control={form.control}
                   name="email"
@@ -137,7 +239,6 @@ export function AccountInfo() {
                     </FormItem>
                   )}
                 />
-                
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <FormField
@@ -177,12 +278,13 @@ export function AccountInfo() {
                       <FormItem>
                         <FormLabel>Company Website (Optional)</FormLabel>
                         <FormControl>
-                          <Input placeholder="https://example.com" {...field} type="url"/>
+                          <Input placeholder="https://example.com" type="url" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
+
                   <FormField
                     control={form.control}
                     name="sector"
@@ -219,11 +321,11 @@ export function AccountInfo() {
                     <FormItem>
                       <FormLabel>Bio (Optional)</FormLabel>
                       <FormControl>
-                        <Textarea 
+                        <Textarea
                           placeholder="Tell us about yourself..."
                           rows={3}
                           className="resize-none"
-                          {...field} 
+                          {...field}
                         />
                       </FormControl>
                       <FormMessage />
@@ -232,9 +334,9 @@ export function AccountInfo() {
                 />
 
                 <div className="flex justify-end pt-4 border-t">
-                  <Button type="submit">
+                  <Button type="submit" disabled={updateProfileMutation.isPending}>
                     <Save className="h-4 w-4 mr-2" />
-                    Save Changes
+                    {updateProfileMutation.isPending ? 'Saving...' : 'Save Changes'}
                   </Button>
                 </div>
               </form>

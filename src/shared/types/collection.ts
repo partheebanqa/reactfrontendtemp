@@ -196,11 +196,11 @@ export interface ImportResult {
 }
 
 export interface ImportCollection {
-  name: string;
+  name?: string;
   workspaceId: string;
   inputMethod: string;
   specificationType: string;
-  raw: string;
+  raw?: string;
   url?: string;
   file?: File;
 }

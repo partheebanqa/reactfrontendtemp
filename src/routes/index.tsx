@@ -26,15 +26,23 @@ import SwaggerParser from '@/pages/SwaggerParser';
 import JsonParser from '@/pages/JsonParser';
 import EditTestSuite from '@/pages/EditTestSuite';
 import Pricing from '@/pages/Pricing';
-import Terms from '@/pages/Terms';
-import Privacy from '@/pages/Privacy';
 import Plan from '@/components/Plan/Plan';
 import CICDConfiguration from '@/pages/CICDConfiguration';
 import AccountSettingsPage from '@/pages/AccountSettingsPage';
+import ExecutionsNew from '@/pages/ExecutionsNew';
+import TermsPage from '@/pages/TermsPage';
+import PrivacyPage from '@/pages/PrivacyPolicy';
+import ContactPage from '@/pages/ContactPage';
+import ExecutionReportsPage from '@/pages/ExecutionReportsPage';
+import RequestChainReport from '@/pages/RequestChainReport';
+import TestSuiteReport from '@/pages/TestSuiteReport';
+import { ExecutionDetailsDialog } from '@/components/Executions/ExecutionDetailsDialog';
+import ExecutionReportPage from '@/components/Executions/ExecutionReportPage';
+import FAQ from '@/pages/FAQ';
+import ResetPassword from '@/pages/ResetPassword';
 
 export default function Router() {
   const { isAuthenticated, isLoading } = useAuth();
-
   if (isLoading) {
     return (
       <div className='min-h-screen flex items-center justify-center'>
@@ -51,10 +59,11 @@ export default function Router() {
           <Route path='/signin' component={SignIn} />
           <Route path='/signup' component={SignUp} />
           <Route path='/forgot-password' component={ForgotPassword} />
+          <Route path='/reset-password' component={ResetPassword} />
         </>
       ) : (
         <AppLayout>
-          <Route path='/' component={Dashboard} />
+          <Route path='/' children={<Redirect to='/dashboard' />} />
           <Route path='/dashboard' component={Dashboard} />
           <Route path='/json-parser' component={JsonParser} />
           <Route path='/swagger-parser' component={SwaggerParser} />
@@ -65,24 +74,28 @@ export default function Router() {
           <Route path='/test-suites/create' component={EditTestSuite} />
           <Route path='/scheduler' component={Scheduler} />
           <Route path='/cicd' component={CiCdIntegration} />
-          <Route path='/executions' component={Executions} />
           <Route path='/data-management' component={DataManagement} />
           <Route path='/reports' component={Reports} />
           <Route path='/settings' component={Settings} />
           <Route path='/profile' component={Profile} />
           <Route path='/notifications' component={Notifications} />
-          <Route path='/pricing' component={Pricing} />
-          <Route path='/plan-billing' component={Plan} />
-          <Route path='/terms' component={Terms} />
-          <Route path='/privacy' component={Privacy} />
           <Route path='/settings/account' component={AccountSettingsPage} />
-          {/* <Route path='/settings/profile' component={AccountProfile} />
-          <Route path='/settings/security' component={AccountSecurity} />
-          <Route path='/settings/preferences' component={AccountPreferences} />
-          <Route path='/settings/billing' component={AccountBilling} /> */}
           <Route path='/cicd-configuration' component={CICDConfiguration} />
+          <Route path='/executions' component={Executions} />
+          <Route path='/executions-reports' component={ExecutionReportsPage} />
+          <Route
+            path='/executions/report/:type/:entityId'
+            component={ExecutionReportPage}
+          />
+          <Route path='/request-chain-reports' component={RequestChainReport} />
+          <Route path='/test-suite-reports' component={TestSuiteReport} />
+          <Route path='/faq' component={FAQ} />
         </AppLayout>
       )}
+      <Route path='/pricing' component={Pricing} />
+      <Route path='/terms' component={TermsPage} />
+      <Route path='/privacy' component={PrivacyPage} />
+      <Route path='/contact-us' component={ContactPage} />
       <Route path='*' component={NotFound} />
     </Switch>
   );

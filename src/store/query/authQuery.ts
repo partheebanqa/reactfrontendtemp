@@ -1,22 +1,25 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { apiRequest } from '@/lib/queryClient';
+import { apiRequest, queryClient } from '@/lib/queryClient';
 import {
   getEncryptedCookie,
   setEncryptedCookie,
   removeCookie,
 } from '@/lib/cookieUtils';
 import { USER_COOKIE_NAME } from '@/lib/constants';
-import { API_GET_USER, API_LOGIN } from '@/config/apiRoutes';
 import { authActions } from '../authStore';
 import { User, ILoginResponse } from '@/shared/types/auth';
-import { queryClient } from '@/lib/queryClient';
 import {
+  changePasswordApi,
   loginApi,
   logoutApi,
   refreshUserData,
   registerApi,
+  forgotPasswordApi,
+  resetPasswordApi,
+  updateProfileApi
 } from '@/services/auth.service';
-import { da } from '@faker-js/faker';
+import { DeactivationFormData } from '@/components/settings/AccountDeactivation';
+import { clearAllClientStorage } from '@/utils/logoutCacheClear';
 
 // Query to fetch current user data
 export const useUserQuery = () => {
@@ -27,12 +30,9 @@ export const useUserQuery = () => {
       try {
         authActions.setIsLoading(true);
         const data = await refreshUserData();
-        if (data?.user) {
-          authActions.setUser(data.user);
-        }
-
-        if (data?.token) {
-          authActions.setToken(data.token);
+        const filteredUser = filterUserData(data || {});
+        if (filteredUser) {
+          authActions.setUser(filteredUser);
         }
         authActions.setIsLoading(false);
         return data;
@@ -70,7 +70,6 @@ export const useLoginMutation = () => {
         error instanceof Error
           ? error.message
           : 'An unexpected error occurred during login';
-
       console.error('Login error:', errorMessage);
       throw new Error(errorMessage);
     },
@@ -82,22 +81,17 @@ export const useLogoutMutation = () => {
   return useMutation({
     mutationFn: logoutApi,
     onSuccess: async () => {
-      // Clear cookie
       removeCookie(USER_COOKIE_NAME);
-
-      // Clear auth store
       authActions.clearAuth();
-
-      // Clear queries
+      clearAllClientStorage();
       await queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
       queryClient.clear();
     },
-    onError: async (error: any) => {
-      console.error('Logout error:', error);
-
-      // Even on error, clean up local state
+    onError: async () => {
+      // Ensure full client-side logout even if server logout fails
       removeCookie(USER_COOKIE_NAME);
       authActions.clearAuth();
+      clearAllClientStorage();
       await queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
     },
   });
@@ -117,8 +111,7 @@ export const useRegisterMutation = () => {
         error instanceof Error
           ? error.message
           : 'An unexpected error occurred during registration';
-
-      console.error('Registration erroraa:', errorMessage);
+      console.error('Registration error:', errorMessage);
       throw new Error(errorMessage);
     },
   });
@@ -127,25 +120,93 @@ export const useRegisterMutation = () => {
 // Update profile mutation
 export const useUpdateProfileMutation = () => {
   return useMutation({
+    // Prefer centralized service (handles errors consistently)
     mutationFn: async (profileData: Partial<User>) => {
-      const response = await apiRequest('PUT', '/api/auth/profile', {
-        body: profileData,
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to update profile');
-      }
-
-      return response.json();
+      // If sending JSON, service will JSON.stringify or apiRequest adds headers
+      // If sending FormData (e.g., avatar), pass FormData directly and adapt service
+      return updateProfileApi(profileData);
     },
     onSuccess: async (data) => {
-      if (data?.user) {
-        // Update user in store
-        authActions.setUser(data.user);
-
-        // Update in queries
-        await queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
+      // Many backends return { user, message }
+      const updatedUser = (data as any)?.user ?? (data as any);
+      if (updatedUser) {
+        // Update store immediately for optimistic UX
+        authActions.setUser(updatedUser);
       }
+
+      // Invalidate the canonical user query key to refetch fresh data
+      // This should match the key used in useUserQuery
+      await queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
     },
   });
+};
+
+export const useChangePasswordMutation = () => {
+  return useMutation({
+    mutationFn: changePasswordApi,
+    onSuccess: () => {
+      console.log('Password changed successfully');
+      authActions.clearAuth();
+      removeCookie(USER_COOKIE_NAME);
+    },
+  });
+};
+
+// NEW: Forgot password mutation
+export const useForgotPasswordMutation = () => {
+  return useMutation({
+    mutationFn: forgotPasswordApi,
+    onError: (error: any) => {
+      const msg = error instanceof Error ? error.message : 'Unexpected error';
+      console.error('Forgot password error:', msg);
+      throw new Error(msg);
+    },
+  });
+};
+
+// NEW: Reset password mutation
+export const useResetPasswordMutation = () => {
+  return useMutation({
+    mutationFn: resetPasswordApi,
+    onSuccess: () => {
+      console.log('Password reset successful');
+    },
+    onError: (error: any) => {
+      const msg = error instanceof Error ? error.message : 'Unexpected error';
+      console.error('Reset password error:', msg);
+      throw new Error(msg);
+    },
+  });
+};
+
+export const useDeactiveAccountMutation = () => {
+  return useMutation({
+    mutationFn: async (data: DeactivationFormData) => {
+      const response = await apiRequest('POST', '/api/auth/deactivate', data);
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to deactivate account');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      // UI side-effects can be handled by caller if needed
+      window.location.href = '/';
+    },
+  });
+};
+
+const filterUserData = (user: any) => {
+  if (!user) return null;
+  return {
+    id: user.Id,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    email: user.email,
+    role: user.role,
+    createdAt: user.createdAt,
+    updatedAt: user.updatedAt,
+    deletedAt: user.deletedAt,
+    organization: user.organization || null,
+  } as User;
 };

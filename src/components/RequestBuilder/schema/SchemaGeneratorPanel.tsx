@@ -17,14 +17,14 @@ const SchemaGeneratorPanel: React.FC<SchemaGeneratorPanelProps> = ({ response, o
     
     const generatedSchema = generateJsonSchema(response);
     
-    addSchema({
-      id: Math.random().toString(36).substr(2, 9),
-      name: schemaName,
-      content: generatedSchema,
-      isPrimary: makePrimary,
-      type: 'generated',
-      createdAt: new Date().toISOString()
-    });
+    // addSchema({
+    //   id: Math.random().toString(36).substr(2, 9),
+    //   name: schemaName,
+    //   schema: generatedSchema,
+    //   isPrimary: makePrimary,
+    //   type: 'generated',
+    //   createdAt: new Date().toISOString()
+    // });
     
     onClose();
   };

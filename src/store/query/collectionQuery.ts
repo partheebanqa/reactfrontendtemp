@@ -3,6 +3,7 @@ import { collectionActions, collectionStore } from '../collectionStore';
 import {
   addCollection,
   addRequest,
+  deleteCollection,
   deleteRequest,
   duplicateRequest,
   fetchCollectionList,
@@ -11,6 +12,7 @@ import {
   renameCollection,
   renameRequest,
   setFavouriteCollection,
+  unsetFavouriteCollection,
 } from '@/services/collection.service';
 import { workspaceStore } from '../workspaceStore';
 import {
@@ -84,11 +86,42 @@ export const useRenameCollectionMutation = () => {
 export const useSetFavouriteCollectionMutation = () => {
   return useMutation({
     mutationFn: setFavouriteCollection,
-    onSuccess: (data, variables) => {
+    onSuccess: async (data, variables) => {
       collectionActions.setFavouriteCollection(
         variables.collectionId,
         variables.IsImportant
       );
+
+      await queryClient.invalidateQueries({
+        queryKey: ['/collections'],
+        exact: false,
+      });
+
+      return data;
+    },
+    onError: (error) => {
+      console.error('Error setting favourite collection:', error);
+      throw error;
+    },
+  });
+};
+
+export const useUnsetFavouriteCollectionMutation = () => {
+  return useMutation({
+    mutationFn: unsetFavouriteCollection,
+    onSuccess: async (data, id) => {
+      collectionActions.setUnFavouriteCollection(id);
+
+      await queryClient.invalidateQueries({
+        queryKey: ['/collections'],
+        exact: false,
+      });
+
+      return data;
+    },
+    onError: (error) => {
+      console.error('Error unsetting favourite collection:', error);
+      throw error;
     },
   });
 };
@@ -127,14 +160,38 @@ export const useCollectionRequestsQuery = () => {
         }
       );
       collectionActions.setCollections(updatedCollection);
+      return requests;
     },
   });
 };
 
 export const useImpotPostmanCollectionMutation = () => {
+  const collectionQuery = useCollectionQuery();
   return useMutation({
     mutationFn: importCollectionFile,
-    onSuccess: async (response) => {},
+    onSuccess: async (response) => {
+      collectionQuery.refetch();
+      return response;
+    },
+    onError: (error) => {
+      console.error('Error importing collection:', error);
+      throw error;
+    },
+  });
+};
+
+export const useImpotCollectionJsonMutation = () => {
+  const collectionQuery = useCollectionQuery();
+  return useMutation({
+    // mutationFn: importCollectionJson,
+    onSuccess: async (response) => {
+      collectionQuery.refetch();
+      return response;
+    },
+    onError: (error) => {
+      console.error('Error importing collection:', error);
+      throw error;
+    },
   });
 };
 
@@ -144,6 +201,11 @@ export const useAddRequestMutation = () => {
     mutationFn: addRequest,
     onSuccess: async (data, variables) => {
       fetchCollectionRequests.mutateAsync(variables.collectionId);
+      return data;
+    },
+    onError: (error) => {
+      console.error('Error adding request:', error);
+      throw error;
     },
   });
 };
@@ -156,6 +218,23 @@ export const useRenameRequestMutation = () => {
         variables?.newName || '',
         variables.requestId
       );
+    },
+    onError: (error) => {
+      throw error;
+    },
+  });
+};
+
+export const useDeleteCollectionMutation = () => {
+  return useMutation({
+    mutationFn: deleteCollection,
+    onSuccess: (data, variables) => {
+      console.log('🚀 ~ useDeleteCollectionMutation ~ variables:', variables);
+      collectionActions.deleteCollection(variables);
+    },
+    onError: (error) => {
+      console.error('Error deleting collection:', error);
+      throw error;
     },
   });
 };

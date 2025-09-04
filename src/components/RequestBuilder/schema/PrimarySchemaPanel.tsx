@@ -32,7 +32,7 @@ const PrimarySchemaPanel: React.FC = () => {
       </div>
 
       <div className="max-h-[calc(100vh-300px)] overflow-auto rounded border border-gray-100 p-2">
-        <JsonTreeViewer json={primarySchema.content} />
+        <JsonTreeViewer json={primarySchema.schema} />
       </div>
 
       {responseData && hasValidationResults && (

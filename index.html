@@ -2,13 +2,162 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
-      <!-- CSP and Security Headers -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https: http:; img-src 'self' data: https:;" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1"
+    />
+    <!-- CSP and Security Headers -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https: http:; img-src 'self' data: https:;"
+    />
     <meta http-equiv="X-Frame-Options" content="DENY" />
     <meta http-equiv="X-Content-Type-Options" content="nosniff" />
-    <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin" />
-    
+    <meta
+      http-equiv="Referrer-Policy"
+      content="strict-origin-when-cross-origin"
+    />
+    <!-- Favicon links for better cross-browser support -->
+    <link rel="icon" type="image/x-icon" href="/FavIcon.svg" />
+    <meta
+      name="description"
+      content="Optraflow is a powerful API testing and workflow automation platform that helps developers and teams test APIs without limits. Build, test, and automate your API workflows with our comprehensive testing suite."
+    />
+    <meta
+      name="keywords"
+      content="API testing, workflow automation, API automation, REST API testing, API monitoring, developer tools, testing platform, API management, continuous testing, DevOps tools"
+    />
+    <meta name="author" content="Optraflow Technologies Pvt. Ltd." />
+    <meta name="robots" content="index, follow" />
+    <!-- Removed duplicate viewport -->
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://optraflow.com" />
+    <!-- Open Graph Meta Tags (Facebook, LinkedIn, etc.) -->
+    <meta property="og:type" content="website" />
+    <meta
+      property="og:title"
+      content="Optraflow - Advanced API Testing &amp; Workflow Automation Platform"
+    />
+    <meta
+      property="og:description"
+      content="Test APIs without limits. Optraflow provides comprehensive API testing, monitoring, and workflow automation tools for modern development teams."
+    />
+    <meta property="og:url" content="https://optraflow.com" />
+    <meta property="og:site_name" content="Optraflow" />
+    <meta property="og:image" content="https://optraflow.com/og-image.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="Optraflow API Testing Platform Dashboard"
+    />
+    <meta property="og:locale" content="en_US" />
+
+    <!-- Twitter Card Meta Tags -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@optraflow" />
+    <meta name="twitter:creator" content="@optraflow" />
+    <meta
+      name="twitter:title"
+      content="Optraflow - Advanced API Testing &amp; Workflow Automation Platform"
+    />
+    <meta
+      name="twitter:description"
+      content="Test APIs without limits. Comprehensive API testing, monitoring, and workflow automation for development teams."
+    />
+    <meta
+      name="twitter:image"
+      content="https://optraflow.com/twitter-card.jpg"
+    />
+    <meta name="twitter:image:alt" content="Optraflow API Testing Platform" />
+
+    <!-- LinkedIn Specific -->
+    <meta
+      property="og:image:secure_url"
+      content="https://optraflow.com/og-image.jpg"
+    />
+
+    <!-- Additional SEO Meta Tags -->
+    <meta name="application-name" content="Optraflow" />
+    <meta name="theme-color" content="#2563eb" />
+    <meta name="msapplication-TileColor" content="#2563eb" />
+    <meta name="msapplication-config" content="/browserconfig.xml" />
+    <title>
+      Optraflow - Test APIs Without Limits | Advanced API Testing Platform
+    </title>
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "Optraflow",
+        "description": "Advanced API testing and workflow automation platform for developers and teams",
+        "url": "https://optraflow.com",
+        "applicationCategory": "DeveloperApplication",
+        "operatingSystem": "Web Browser",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD",
+          "description": "Free tier available"
+        },
+        "creator": {
+          "@type": "Organization",
+          "name": "Optraflow Technologies Pvt. Ltd.",
+          "url": "https://optraflow.com"
+        },
+        "featureList": [
+          "API Testing",
+          "Workflow Automation",
+          "API Monitoring",
+          "Request Chaining",
+          "Data Management",
+          "Reporting & Analytics"
+        ]
+      }
+    </script>
+
+    <!-- Favicon and Icons -->
+    <!-- <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" /> -->
+    <link rel="manifest" href="/site.webmanifest" />
+
+    <!-- Preconnect for Performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap" rel="stylesheet">
+
+    <!-- Additional Meta for AI Platforms -->
+    <meta
+      name="category"
+      content="Technology, Software, API Testing, Developer Tools"
+    />
+    <meta name="coverage" content="Worldwide" />
+    <meta name="distribution" content="Global" />
+    <meta name="rating" content="General" />
+    <meta name="revisit-after" content="7 days" />
+
+    <!-- Geo Tags -->
+    <meta name="geo.region" content="IN" />
+    <meta name="geo.country" content="India" />
+    <meta name="ICBM" content="28.6139, 77.2090" />
+
+    <!-- Business Information -->
+    <meta name="contact" content="support@optraflow.com" />
+    <meta name="copyright" content="© 2025 Optraflow Technologies Pvt. Ltd." />
+    <!-- <script
+      type="module"
+      crossorigin=""
+      src="/assets/index-CuZrfjOF.js"
+    ></script> -->
+    <!-- <link rel="stylesheet" crossorigin="" href="/assets/index-DA1wlSCX.css" /> -->
+    <!-- Removed duplicate canonical -->
+    <!-- Removed duplicate description and keywords with data-rh -->
+    <!-- Removed duplicate Open Graph and Twitter meta tags with data-rh -->
   </head>
   <body>
     <div id="root"></div>

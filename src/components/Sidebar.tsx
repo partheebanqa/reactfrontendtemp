@@ -1,10 +1,9 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'wouter';
 import { useAuth } from '@/hooks/useAuth';
 import { useWorkspace } from '@/hooks/useWorkspace';
 import { useFeatureGate } from '@/hooks/useFeatureGate';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import {
   Code,
@@ -16,65 +15,96 @@ import {
   Play,
   Database,
   FileText,
-  Settings,
-  Bell,
+  Wrench,
   Infinity,
-  User,
-  Clock,
-  Crown,
-  Receipt,
   Zap,
   ChevronDown,
   ChevronRight,
-  Wrench,
   ChevronsLeft,
   ChevronsRight,
+  HelpCircle,
+  X,
+  Crown,
+  LayoutDashboard,
+  Settings,
+  Link2,
+  Layers,
+  CalendarClock,
+  ChartColumn,
   Workflow,
 } from 'lucide-react';
+
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from './ui/tooltip';
+import { HelpModal } from './HelpModal/HelpModal';
+import { useIsMobile } from '@/hooks/use-mobile';
+import TooltipContainer from './ui/tooltip-container';
+import Logo from '../assests/images/FavIcon.jpg';
+import LogoFull from '../assests/images/OptraLogo.png';
 
-const menuItems = [
+// -------------------------------
+// Menu config
+// -------------------------------
+
+type FeatureKey =
+  | 'dashboard'
+  | 'request_builder'
+  | 'request_chains'
+  | 'test_suites'
+  | 'scheduler'
+  | 'reports'
+  | 'executions'
+  | 'cicd_configuration'
+  | 'cicd_integrations'
+  | 'swagger_parser'
+  | 'json_parser'
+  | 'settings'
+  | 'notifications'
+  | 'faqs';
+
+type MenuItem = {
+  label: string;
+  path?: string; // optional if upcoming
+  icon: React.ComponentType<any>;
+  feature: FeatureKey;
+  upcoming?: boolean; // 🚀 new flag
+};
+
+const menuItems: MenuItem[] = [
   {
     label: 'Dashboard',
-    path: '/dashboard',
-    icon: BarChart3,
+    icon: LayoutDashboard,
     feature: 'dashboard',
+    upcoming: true, // 🚀 mark as upcoming
   },
   {
     label: 'Request Builder',
     path: '/request-builder',
-    icon: Hammer,
+    icon: Settings,
     feature: 'request_builder',
   },
   {
     label: 'Request Chains',
     path: '/request-chains',
-    icon: LinkIcon,
+    icon: Link2,
     feature: 'request_chains',
   },
   {
     label: 'Test Suites',
     path: '/test-suites',
-    icon: FlaskConical,
+    icon: Layers,
     feature: 'test_suites',
   },
   {
     label: 'Scheduler',
     path: '/scheduler',
-    icon: Calendar,
+    icon: CalendarClock,
     feature: 'scheduler',
   },
-  // {
-  //   label: 'Executions',
-  //   path: '/executions',
-  //   icon: Play,
-  //   feature: 'executions',
-  // },
   {
     label: 'Data Management',
     path: '/data-management',
@@ -83,19 +113,26 @@ const menuItems = [
   },
   {
     label: 'Reports',
-    path: '/reports',
     icon: FileText,
     feature: 'reports',
+    upcoming: true, // 🚀 mark as upcoming
   },
   {
-    label: 'Plan & Billing',
-    path: '/plan-billing',
-    icon: Receipt,
-    feature: 'plan_billing',
-  },
+    label: 'Executions',
+    path: '/executions',
+    icon: ChartColumn,
+    feature: 'executions',
+  }, // PRO-gated
+  { label: 'FAQ', path: '/faq', icon: HelpCircle, feature: 'faqs' },
+  {
+    label: 'CI/CD Integration',
+    path: '/cicd-configuration',
+    icon: Workflow,
+    feature: 'cicd_integrations',
+  }, // PRO-gated
 ];
 
-const utilsItems = [
+const utilsItems: MenuItem[] = [
   {
     label: 'Swagger Parser',
     path: '/swagger-parser',
@@ -110,158 +147,73 @@ const utilsItems = [
   },
 ];
 
-const proFeatures = [
-  {
-    label: 'Executions',
-    path: '/executions',
-    icon: Play,
-    feature: 'executions',
-  },
-  // {
-  //   label: "Data Management",
-  //   path: "/data-management",
-  //   icon: Database,
-  //   feature: "data_management",
-  // },
-];
+// Only these features are PRO-gated
+const PRO_FEATURES = new Set<FeatureKey>(['executions', 'cicd_integrations']);
 
-const enterpriseFeatures = [
-  {
-    label: 'CI/CD Configuration',
-    path: '/cicd-configuration',
-    icon: Workflow,
-    feature: 'cicd_configuration',
-  },
-  {
-    label: 'CI/CD Integration',
-    path: '/cicd',
-    icon: Infinity,
-    feature: 'cicd_integrations',
-  },
-];
-
-const generalItems = [
-  {
-    label: 'Settings',
-    path: '/settings',
-    icon: Settings,
-    feature: 'settings',
-  },
-  {
-    label: 'Notifications',
-    path: '/notifications',
-    icon: Bell,
-    feature: 'notifications',
-  },
-  {
-    label: 'Profile',
-    path: '/profile',
-    icon: User,
-    feature: 'profile',
-  },
-];
+// -------------------------------
+// Component
+// -------------------------------
 
 const Sidebar: React.FC = () => {
   const [location] = useLocation();
-  const { user, logoutMutation } = useAuth();
+  const { user } = useAuth();
   const { currentWorkspace } = useWorkspace();
   const { hasFeatureAccess, subscriptionPlan } = useFeatureGate();
+
   const [utilsExpanded, setUtilsExpanded] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
+  const [showHelpModal, setShowHelpModal] = useState(false);
 
-  const NavItem: React.FC<{
-    item: (typeof menuItems)[0];
-    isActive: boolean;
-    featureType?: 'free' | 'pro' | 'enterprise';
-  }> = ({ item, isActive, featureType }) => {
-    const hasAccess = hasFeatureAccess(item.feature);
+  // -------------------------------
+  // Nav Item
+  // -------------------------------
+  const NavItem: React.FC<{ item: MenuItem; isActive: boolean }> = ({
+    item,
+    isActive,
+  }) => {
+    const isPro = PRO_FEATURES.has(item.feature);
+    const locked = isPro ? !hasFeatureAccess(item.feature) : false;
+
     const Icon = item.icon;
+    const isMobile = useIsMobile();
 
-    if (collapsed) {
-      return (
-        <Link href={item.path}>
-          <div className='relative group'>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant={isActive ? 'secondary' : 'ghost'}
-                  className={`w-full p-3 flex justify-center ${
-                    !hasAccess ? 'opacity-50 cursor-not-allowed' : ''
-                  }`}
-                  disabled={!hasAccess}
-                >
-                  <Icon className='w-5 h-5' />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side='right'>{item.label}</TooltipContent>
-            </Tooltip>
-            <div className='absolute left-full ml-2 hidden  bg-white shadow-md rounded p-2 z-50 whitespace-nowrap'>
-              {item.label}
-              {!hasAccess && featureType === 'pro' && (
-                <Badge
-                  variant='outline'
-                  className='ml-2 text-xs bg-blue-50 text-blue-700 border-blue-200'
-                >
-                  PRO
-                </Badge>
-              )}
-              {!hasAccess && featureType === 'enterprise' && (
-                <Badge
-                  variant='outline'
-                  className='ml-2 text-xs bg-purple-50 text-purple-700 border-purple-200'
-                >
-                  ENT
-                </Badge>
-              )}
-            </div>
-          </div>
-        </Link>
-      );
+    useEffect(() => {
+      if (isMobile) setCollapsed(true);
+    }, [isMobile]);
+
+    const Content = (
+      <Button
+        variant={isActive ? 'active' : 'ghost'}
+        className={`w-full ${
+          collapsed ? 'p-3 justify-center' : 'justify-start'
+        } relative 
+        ${
+          locked || item.upcoming ? 'opacity-50 cursor-not-allowed' : ''
+        } text-[15px]`}
+        disabled={locked || item.upcoming}
+      >
+        <Icon className='w-10 h-10' />
+        {!collapsed && (
+          <span className='flex-1 text-left'>
+            {item.label} {item.upcoming && '(Upcoming)'}
+          </span>
+        )}
+        {!collapsed && locked && isPro && (
+          <Crown className='w-4 h-4 text-yellow-500 ml-2' />
+        )}
+      </Button>
+    );
+
+    // If upcoming or locked → no link
+    if (item.upcoming || locked) {
+      return <div className='w-full'>{Content}</div>;
     }
 
-    return (
-      <Link href={item.path}>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant={isActive ? 'secondary' : 'ghost'}
-              className={`w-full justify-start relative ${
-                !hasAccess ? 'opacity-50 cursor-not-allowed' : ''
-              }`}
-              disabled={!hasAccess}
-            >
-              <Icon className='w-4 h-4 mr-3' />
-              <span className='flex-1 text-left'>{item.label}</span>
-              {!hasAccess && featureType === 'pro' && (
-                <Badge
-                  variant='outline'
-                  className='ml-2 text-xs bg-blue-50 text-blue-700 border-blue-200'
-                >
-                  PRO
-                </Badge>
-              )}
-              {!hasAccess && featureType === 'enterprise' && (
-                <Badge
-                  variant='outline'
-                  className='ml-2 text-xs bg-purple-50 text-purple-700 border-purple-200'
-                >
-                  ENT
-                </Badge>
-              )}
-              {!hasAccess && !featureType && (
-                <Crown className='w-3 h-3 ml-auto text-yellow-500' />
-              )}
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>{item.label}</TooltipContent>
-        </Tooltip>
-      </Link>
-    );
+    return <Link href={item.path!}>{Content}</Link>;
   };
 
   const CategoryHeader: React.FC<{ title: string }> = ({ title }) => {
     if (collapsed) return null;
-
     return (
       <p className='px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2'>
         {title}
@@ -270,75 +222,185 @@ const Sidebar: React.FC = () => {
   };
 
   return (
-    <aside
-      className={`${
-        collapsed ? 'w-16' : 'w-64'
-      } bg-white shadow-lg flex flex-col border-r transition-all duration-300`}
-    >
-      <TooltipProvider>
-        {/* Logo Section */}
+    <>
+      {/* Desktop Sidebar */}
+      <aside
+        className={`hidden md:flex ${
+          collapsed ? 'w-16' : 'w-64'
+        } bg-white flex-col border-r transition-all duration-300 h-full`}
+      >
         <div
           className={`${
-            collapsed ? 'p-3' : 'p-6'
-          } border-b flex justify-between items-center relative`}
+            collapsed ? 'p-3' : 'p-2'
+          } border-b flex justify-around items-center relative`}
         >
           {collapsed ? (
-            <div className='w-8 h-8 bg-primary rounded-lg flex items-center justify-center mx-auto'>
-              <Code className='w-4 h-4 text-primary-foreground' />
+            <div className='w-8 h-8 flex items-center justify-center mx-auto'>
+              <img
+                src={Logo}
+                alt='Optraflow logo'
+                className='w-8 h-8 rounded'
+              />
             </div>
           ) : (
             <div className='flex items-center space-x-3'>
-              <div className='w-8 h-8 bg-primary rounded-lg flex items-center justify-center'>
-                <Code className='w-4 h-4 text-primary-foreground' />
-              </div>
-              <div>
-                <h1 className='text-xl font-bold'>Optraflow</h1>
-                <Badge variant='secondary' className='text-xs'>
-                  {subscriptionPlan === 'free'
-                    ? 'Free'
-                    : subscriptionPlan === 'pro'
-                    ? 'Pro'
-                    : 'Enterprise'}
-                </Badge>
-              </div>
+              <Link to='/' className='flex items-center space-x-2'>
+                <img
+                  src={LogoFull}
+                  alt='Optraflow'
+                  style={{ width: '100%', height: '50px' }}
+                />
+              </Link>
             </div>
           )}
+
           <Button
             variant='ghost'
             size='sm'
             onClick={() => setCollapsed(!collapsed)}
             className={`p-1 ${
               collapsed
-                ? 'absolute left-[50px] top-1/2 transform -translate-y-1/2 bg-[#2094f3] rounded-full h-auto hover:bg-[#1e7bbf]'
+                ? 'absolute left-[50px] top-1/2 transform -translate-y-1/2 bg-[#136fb0] rounded-full h-auto hover:bg-[#1e7bbf]'
                 : ''
             }`}
           >
             {collapsed ? (
-              <ChevronsRight size={10} />
+              <ChevronsRight size={10} color='white' />
             ) : (
               <ChevronsLeft size={16} />
             )}
           </Button>
         </div>
 
-        {/* Navigation */}
+        {/* Content */}
+        <div className='flex-1 flex flex-col'>
+          <nav
+            className={`flex-1 ${
+              collapsed ? 'px-2' : 'px-4'
+            } py-2 space-y-2 overflow-y-auto`}
+          >
+            <div className='space-y-1'>
+              {menuItems.map((item) => (
+                <NavItem
+                  key={item.label}
+                  item={item}
+                  isActive={location === item.path}
+                />
+              ))}
+
+              {/* Utilities */}
+              {!collapsed ? (
+                <div className='w-full'>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant='ghost'
+                        className='w-full justify-start relative group'
+                        onClick={() => setUtilsExpanded(!utilsExpanded)}
+                      >
+                        <Wrench className='w-4 h-4 mr-3' />
+                        <span className='flex-1 text-left text-md'>
+                          Utilities
+                        </span>
+                        {utilsExpanded ? (
+                          <ChevronDown className='w-4 h-4' />
+                        ) : (
+                          <ChevronRight className='w-4 h-4' />
+                        )}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Utilities</TooltipContent>
+                  </Tooltip>
+
+                  {utilsExpanded && (
+                    <div className='pl-3 space-y-1 mt-1'>
+                      {utilsItems.map((item) => (
+                        <NavItem
+                          key={item.path}
+                          item={item}
+                          isActive={location === item.path}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                utilsItems.map((item) => (
+                  <NavItem
+                    key={item.path}
+                    item={item}
+                    isActive={location === item.path}
+                  />
+                ))
+              )}
+            </div>
+          </nav>
+
+          {/* Help bottom */}
+          <div className={`${collapsed ? 'p-2' : 'p-4'} border-t`}>
+            {collapsed ? (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant='outline'
+                      size='icon'
+                      className='w-full h-10'
+                      onClick={() => setShowHelpModal(true)}
+                    >
+                      <HelpCircle className='h-5 w-5' />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side='right'>Help & Support</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            ) : (
+              <Button
+                variant='outline'
+                className='w-full justify-start'
+                onClick={() => setShowHelpModal(true)}
+              >
+                <HelpCircle className='mr-2 h-4 w-4' />
+                Help & Support
+              </Button>
+            )}
+          </div>
+        </div>
+
+        <HelpModal
+          isOpen={showHelpModal}
+          onClose={() => setShowHelpModal(false)}
+        />
+      </aside>
+
+      {/* Mobile Sidebar */}
+      <div className='block md:hidden'>
+        <div className='flex items-center justify-between h-16 px-4 border-b border-primary-600'>
+          <div className='flex items-center space-x-2'>
+            <span className='text-lg font-semibold'>Optraflow</span>
+          </div>
+          <button
+            onClick={() => setCollapsed(!collapsed)}
+            className='lg:hidden'
+          >
+            <X className='h-6 w-6' />
+          </button>
+        </div>
+
         <nav
           className={`flex-1 ${
             collapsed ? 'px-2' : 'px-4'
           } py-6 space-y-2 overflow-y-auto`}
         >
-          {/* Core Features */}
           <div className='space-y-1'>
             {menuItems.map((item) => (
               <NavItem
-                key={item.path}
+                key={item.label}
                 item={item}
                 isActive={location === item.path}
-                featureType='free'
               />
             ))}
 
-            {/* Utils Dropdown */}
             {!collapsed ? (
               <div className='w-full'>
                 <Tooltip>
@@ -349,7 +411,9 @@ const Sidebar: React.FC = () => {
                       onClick={() => setUtilsExpanded(!utilsExpanded)}
                     >
                       <Wrench className='w-4 h-4 mr-3' />
-                      <span className='flex-1 text-left'>Utilities</span>
+                      <span className='flex-1 text-left text-md'>
+                        Utilities
+                      </span>
                       {utilsExpanded ? (
                         <ChevronDown className='w-4 h-4' />
                       ) : (
@@ -367,7 +431,6 @@ const Sidebar: React.FC = () => {
                         key={item.path}
                         item={item}
                         isActive={location === item.path}
-                        featureType='free'
                       />
                     ))}
                   </div>
@@ -379,104 +442,13 @@ const Sidebar: React.FC = () => {
                   key={item.path}
                   item={item}
                   isActive={location === item.path}
-                  featureType='free'
                 />
               ))
             )}
           </div>
-
-          {/* Pro Features */}
-          {/* <div className='pt-4 border-t'>
-          <CategoryHeader title='Pro Features' />
-          <div className='space-y-1'>
-            {proFeatures.map((item) => (
-              <NavItem
-                key={item.path}
-                item={item}
-                isActive={location === item.path}
-                featureType='pro'
-              />
-            ))}
-          </div>
-        </div> */}
-
-          {/* Enterprise Features */}
-          {/* <div className='pt-4 border-t'>
-            <CategoryHeader title='Enterprise' />
-            <div className='space-y-1'>
-              {enterpriseFeatures.map((item) => (
-                <NavItem
-                  key={item.path}
-                  item={item}
-                  isActive={location === item.path}
-                  featureType='enterprise'
-                />
-              ))}
-            </div>
-          </div> */}
-
-          {/* General Items */}
-          <div className='pt-4 border-t'>
-            <div className='space-y-1'>
-              {generalItems.map((item) => (
-                <NavItem
-                  key={item.path}
-                  item={item}
-                  isActive={location === item.path}
-                />
-              ))}
-            </div>
-          </div>
         </nav>
-
-        {/* User Profile */}
-        <div className={`${collapsed ? 'p-2' : 'p-4'} border-t`}>
-          {collapsed ? (
-            <div className='flex justify-center'>
-              <Avatar className='w-10 h-10'>
-                <AvatarImage
-                  src={user?.avatar || user?.imageUrl}
-                  alt={user?.firstName}
-                />
-                <AvatarFallback>
-                  {user?.firstName?.[0]}
-                  {user?.lastName?.[0]}
-                </AvatarFallback>
-              </Avatar>
-            </div>
-          ) : (
-            <div className='flex items-center space-x-3'>
-              <Avatar className='w-10 h-10'>
-                <AvatarImage
-                  src={user?.avatar || user?.imageUrl}
-                  alt={user?.firstName}
-                />
-                <AvatarFallback>
-                  {user?.firstName?.[0]}
-                  {user?.lastName?.[0]}
-                </AvatarFallback>
-              </Avatar>
-              <div className='flex-1 min-w-0'>
-                <p className='text-sm font-medium truncate'>
-                  {user?.firstName} {user?.lastName}
-                </p>
-                <p className='text-xs text-muted-foreground truncate'>
-                  {currentWorkspace?.name}
-                </p>
-              </div>
-              <Button
-                variant='ghost'
-                size='sm'
-                onClick={() => logoutMutation.mutate()}
-                title='Logout'
-              >
-                <Settings className='w-4 h-4' />
-              </Button>
-            </div>
-          )}
-        </div>
-      </TooltipProvider>
-    </aside>
+      </div>
+    </>
   );
 };
 

@@ -1,367 +1,402 @@
-import React, { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Badge } from '@/components/ui/badge';
-import ProtectedRoute from '@/components/ProtectedRoute';
-import { useToast } from '@/hooks/useToast';
-import { useWorkspace } from '@/hooks/useWorkspace';
-import { apiRequest } from '@/lib/queryClient';
+import { useState, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { CheckCircle, XCircle, Clock, Play, AlertCircle, ChartColumn } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
+import { executionService } from "@/services/executionService.service";
+import { ExecutionsHeader } from "@/components/Executions/ExecutionsHeader";
+import { ExecutionsFilters } from "@/components/Executions/ExecutionsFilters";
+import { ExecutionsTable } from "@/components/Executions/ExecutionsTable";
+import { ExecutionsPagination } from "@/components/Executions/ExecutionsPagination";
+import { ExecutionDetailsDialog } from "@/components/Executions/ExecutionDetailsDialog";
+import { MappedExecution, SavedFilter } from "@/shared/types/execution";
+import { useWorkspace } from "@/hooks/useWorkspace";
+import BreadCum from "@/components/BreadCum/Breadcum";
 
-import { CheckCircle, AlertCircle, Clock } from 'lucide-react';
+const Executions = () => {
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
 
-import { ExecutionsHeader } from '@/components/Executions/ExecutionsHeader';
-import { ExecutionsFilters } from '@/components/Executions/ExecutionsFilters';
-import { ExecutionDetailsDialog } from '@/components/Executions/ExecutionDetailsDialog';
-import { ExecutionsTable } from '@/components/Executions/ExecutionsTable';
-import { ExecutionsPagination } from '@/components/Executions/ExecutionsPagination';
-
-interface Execution {
-  id: string;
-  type: 'endpoint' | 'suite' | 'chain' | 'scheduled';
-  targetId: string;
-  targetName: string;
-  status: 'running' | 'passed' | 'failed' | 'error';
-  startedAt: string;
-  completedAt?: string;
-  duration?: number;
-  results: {
-    totalRequests?: number;
-    successfulRequests?: number;
-    failedRequests?: number;
-    averageResponseTime?: number;
-  };
-  error?: string;
-  executedBy: string;
-}
-
-interface SavedFilter {
-  id: string;
-  name: string;
-  filters: any;
-}
-interface Project {
-  id: string;
-  name: string;
-}
-
-interface WorkspaceResponse {
-  projects: Project[];
-}
-
-interface ExecutionResponse {
-  executions: Execution[];
-}
-
-const Executions: React.FC = () => {
-  const { toast } = useToast();
-  const { currentWorkspace } = useWorkspace();
-  const queryClient = useQueryClient();
-
-  // All required states for ExecutionsFilters
-  const [searchQuery, setSearchQuery] = useState('');
-  const [environmentFilter, setEnvironmentFilter] = useState('all');
-  const [typeFilter, setTypeFilter] = useState('all');
-  const [showAdvancedSearch, setShowAdvancedSearch] = useState(false);
-  const [savedFilters, setSavedFilters] = useState<SavedFilter[]>([]);
-  const [activeQuickFilter, setActiveQuickFilter] = useState<string | null>(
-    null
-  );
+  // Filter states
+  const [searchQuery, setSearchQuery] = useState("");
+  const [environmentFilter, setEnvironmentFilter] = useState("all");
+  const [typeFilter, setTypeFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [triggerFilter, setTriggerFilter] = useState("all");
+  const [executionIdFilter, setExecutionIdFilter] = useState("");
   const [dateRange, setDateRange] = useState<{
     from: Date | undefined;
     to: Date | undefined;
-  }>({ from: undefined, to: undefined });
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [triggerFilter, setTriggerFilter] = useState('all');
-  const [executionIdFilter, setExecutionIdFilter] = useState('');
-  const [durationRange, setDurationRange] = useState({ min: 0, max: 10000 });
+  }>({
+    from: undefined,
+    to: undefined,
+  });
+  const [durationRange, setDurationRange] = useState({ min: 0, max: 100000 });
 
-  const [selectedExecution, setSelectedExecution] = useState<Execution | null>(
+  // UI states
+  const [showAdvancedSearch, setShowAdvancedSearch] = useState(false);
+  const [selectedExecution, setSelectedExecution] =
+    useState<MappedExecution | null>(null);
+  const [activeQuickFilter, setActiveQuickFilter] = useState<string | null>(
     null
   );
-  const [showExecutionDetails, setShowExecutionDetails] = useState(false);
 
-  const [currentPage, setCurrentPage] = useState<number>(1);
-  const itemsPerPage = 10;
-
-  const { data: projectData } = useQuery({
-    queryKey: ['/api/workspaces', currentWorkspace?.id],
-    enabled: !!currentWorkspace?.id,
-  });
-
-  const { data: executions = [], isLoading } = useQuery({
-    queryKey: ['/api/projects', projectData?.projects?.[0]?.id, 'executions'],
-    enabled: !!projectData?.projects?.[0]?.id,
-    select: (data) => data?.executions || [],
-    refetchInterval: 5000,
-  });
-
-  const stopExecutionMutation = useMutation({
-    mutationFn: async (executionId: string) => {
-      return await apiRequest('PATCH', `/api/executions/${executionId}`, {
-        status: 'error',
-        completedAt: new Date().toISOString(),
-        error: 'Execution stopped by user',
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: [
-          '/api/projects',
-          projectData?.projects?.[0]?.id,
-          'executions',
-        ],
-      });
-      toast({
-        title: 'Execution stopped',
-        description: 'The execution has been stopped successfully',
-      });
-    },
-  });
-
-  const retryExecutionMutation = useMutation({
-    mutationFn: async (execution: Execution) => {
-      return await apiRequest('POST', '/api/executions', {
-        type: execution.type,
-        targetId: execution.targetId,
-        projectId: projectData?.projects?.[0]?.id,
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: [
-          '/api/projects',
-          projectData?.projects?.[0]?.id,
-          'executions',
-        ],
-      });
-      toast({
-        title: 'Execution restarted',
-        description: 'A new execution has been started',
-      });
-    },
-  });
-
-  // Mock executions
-  const mockExecutions: Execution[] = [
+  // Saved filters (mock data for now)
+  const [savedFilters] = useState<SavedFilter[]>([
     {
-      id: '1',
-      type: 'endpoint',
-      targetId: 'endpoint-1',
-      targetName: 'User Authentication API',
-      status: 'passed',
-      startedAt: '2024-01-20T14:25:00Z',
-      completedAt: '2024-01-20T14:25:02Z',
-      duration: 2150,
-      results: {
-        totalRequests: 1,
-        successfulRequests: 1,
-        failedRequests: 0,
-        averageResponseTime: 245,
+      id: "1",
+      name: "Failed Tests Only",
+      filters: {
+        searchQuery: "",
+        statusFilter: "failed",
+        environmentFilter: "all",
+        typeFilter: "all",
+        triggerFilter: "all",
+        dateRange: { from: undefined, to: undefined },
+        executionIdFilter: "",
+        durationRange: { min: 0, max: 100000 },
       },
-      executedBy: 'John Developer',
+    },
+  ]);
+
+  // Mock schedules data
+  const schedules = [
+    {
+      id: "schedule-ece6e34e-1984-4220-9c5a-99305d591d33",
+      environment: "production",
     },
     {
-      id: '2',
-      type: 'suite',
-      targetId: 'suite-1',
-      targetName: 'Payment Processing Tests',
-      status: 'failed',
-      startedAt: '2024-01-20T14:20:00Z',
-      completedAt: '2024-01-20T14:21:30Z',
-      duration: 90000,
-      results: {
-        totalRequests: 8,
-        successfulRequests: 6,
-        failedRequests: 2,
-        averageResponseTime: 1250,
-      },
-      error: 'Payment API timeout error',
-      executedBy: 'Jane Tester',
-    },
-    {
-      id: '3',
-      type: 'chain',
-      targetId: 'chain-1',
-      targetName: 'User Registration Flow',
-      status: 'running',
-      startedAt: '2024-01-20T14:30:00Z',
-      duration: undefined,
-      results: {
-        totalRequests: 3,
-        successfulRequests: 2,
-        failedRequests: 0,
-      },
-      executedBy: 'System',
-    },
-    {
-      id: '4',
-      type: 'scheduled',
-      targetId: 'schedule-1',
-      targetName: 'Daily Health Check',
-      status: 'passed',
-      startedAt: '2024-01-20T09:00:00Z',
-      completedAt: '2024-01-20T09:00:15Z',
-      duration: 15000,
-      results: {
-        totalRequests: 5,
-        successfulRequests: 5,
-        failedRequests: 0,
-        averageResponseTime: 180,
-      },
-      executedBy: 'Scheduler',
+      id: "schedule-05083f96-f872-44a2-a22f-220476f29ff0",
+      environment: "staging",
     },
   ];
 
-  const allExecutions = [...executions, ...mockExecutions];
+  // Fetch execution data
 
-  const filteredExecutions = allExecutions.filter((execution) => {
-    const matchesSearch = execution.targetName
-      .toLowerCase()
-      .includes(searchQuery.toLowerCase());
-    const matchesStatus =
-      statusFilter === 'all' || execution.status === statusFilter;
-    const matchesType = typeFilter === 'all' || execution.type === typeFilter;
-    return matchesSearch && matchesStatus && matchesType;
+  const { currentWorkspace } = useWorkspace();
+  const workspaceId = currentWorkspace?.id;
+
+  // console.log("workspaceId", workspaceId);
+
+  const {
+    data: executionData,
+    isLoading,
+    error,
+     refetch,
+  isFetching,
+  } = useQuery({
+    queryKey: ["executions", currentPage, itemsPerPage, workspaceId],
+    queryFn: () =>
+      executionService
+        .getExecutionHistory({
+          page: currentPage,
+          limit: itemsPerPage,
+          workspaceId: workspaceId!, // safe since we only enable when it's truthy
+        })
+        .then(executionService.mapData),
+    enabled: !!workspaceId, // 👈 only run when workspaceId is available
   });
 
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedExecutions = filteredExecutions.slice(startIndex, endIndex);
-  const totalPages = Math.ceil(filteredExecutions.length / itemsPerPage);
+  // Filter executions based on current filters
+  const filteredExecutions = useMemo(() => {
+    if (!executionData?.executions) return [];
+
+    const q = searchQuery.trim().toLowerCase();
+    const idFilter = executionIdFilter.trim().toLowerCase();
+
+    return executionData.executions.filter((execution) => {
+      // Search filter
+      if (
+        q &&
+        !(execution.testSuite?.name ?? "").toLowerCase().includes(q) &&
+        !(execution.requestChain?.name ?? "").toLowerCase().includes(q) &&
+        (execution.id ?? "").toLowerCase().indexOf(q) === -1
+      ) {
+        return false;
+      }
+
+      // Environment filter
+      if (
+        environmentFilter !== "all" &&
+        (execution.environment ?? "").toLowerCase() !==
+          environmentFilter.toLowerCase()
+      ) {
+        return false;
+      }
+
+      // Type filter
+      if (typeFilter !== "all") {
+        if (typeFilter === "test_suite" && !execution.testSuite) return false;
+        if (typeFilter === "request_chain" && !execution.requestChain)
+          return false;
+      }
+
+      // Status filter
+      if (statusFilter !== "all" && execution.status !== statusFilter) {
+        return false;
+      }
+
+      // Trigger filter
+      if (triggerFilter !== "all") {
+        const isScheduled = execution.scheduleId != null;
+        if (triggerFilter === "scheduled" && !isScheduled) return false;
+        if (triggerFilter === "manual" && isScheduled) return false;
+      }
+
+      // Execution ID filter
+      if (idFilter && !(execution.id ?? "").toLowerCase().includes(idFilter)) {
+        return false;
+      }
+
+      // Date range filter
+      if (dateRange.from || dateRange.to) {
+        const executionDate = new Date(execution.startTime);
+        if (dateRange.from && executionDate < dateRange.from) return false;
+        if (dateRange.to && executionDate > dateRange.to) return false;
+      }
+
+      // Duration range filter
+      if (
+        execution.duration < durationRange.min ||
+        execution.duration > durationRange.max
+      ) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [
+    executionData?.executions,
+    searchQuery,
+    environmentFilter,
+    typeFilter,
+    statusFilter,
+    triggerFilter,
+    executionIdFilter,
+    dateRange,
+    durationRange,
+  ]);
+
+  // Helper functions
+  const getStatusColor = (status: string) => {
+    switch (status.toLowerCase()) {
+      case "success":
+        return "bg-green-100 text-green-800";
+      case "failed":
+        return "bg-red-100 text-red-800";
+      case "running":
+        return "bg-blue-100 text-blue-800";
+      case "pending":
+        return "bg-yellow-100 text-yellow-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  };
 
   const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'running':
-        return <Clock className='w-4 h-4 text-blue-500 animate-spin' />;
-      case 'passed':
-        return <CheckCircle className='w-4 h-4 text-green-500' />;
-      case 'failed':
-      case 'error':
-        return <AlertCircle className='w-4 h-4 text-red-500' />;
+    switch (status.toLowerCase()) {
+      case "success":
+        return <CheckCircle size={12} />;
+      case "failed":
+        return <XCircle size={12} />;
+      case "running":
+        return <Play size={12} />;
+      case "pending":
+        return <Clock size={12} />;
       default:
-        return <Clock className='w-4 h-4 text-gray-400' />;
+        return <AlertCircle size={12} />;
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'running':
-        return <Badge className='bg-blue-100 text-blue-700'>Running</Badge>;
-      case 'passed':
-        return <Badge className='bg-green-100 text-green-700'>Passed</Badge>;
-      case 'failed':
-        return <Badge variant='destructive'>Failed</Badge>;
-      case 'error':
-        return <Badge variant='destructive'>Error</Badge>;
-      default:
-        return <Badge variant='secondary'>Unknown</Badge>;
-    }
-  };
-
-  const formatDuration = (milliseconds?: number) => {
-    if (!milliseconds) return 'N/A';
-    const seconds = Math.floor(milliseconds / 1000);
+  const formatDuration = (duration: number) => {
+    if (duration === 0) return "N/A";
+    const seconds = Math.floor(duration / 1000);
     const minutes = Math.floor(seconds / 60);
     const hours = Math.floor(minutes / 60);
-    if (hours > 0) {
-      return `${hours}h ${minutes % 60}m ${seconds % 60}s`;
-    } else if (minutes > 0) {
-      return `${minutes}m ${seconds % 60}s`;
-    } else {
-      return `${seconds}s`;
-    }
+
+    if (hours > 0) return `${hours}h ${minutes % 60}m ${seconds % 60}s`;
+    if (minutes > 0) return `${minutes}m ${seconds % 60}s`;
+    return `${seconds}s`;
   };
 
-  const openExecutionDetails = (execution: Execution) => {
+  const copyToClipboard = (text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    toast({
+      title: "Copied to clipboard",
+      description: `${label} copied successfully`,
+    });
+  };
+
+  const openExecutionDetails = (execution: MappedExecution) => {
     setSelectedExecution(execution);
-    setShowExecutionDetails(true);
   };
 
-  // dummy implementations for required handlers
-  const saveCurrentFilter = () => {
-    const filterName = prompt('Enter a name for the filter:');
-    if (filterName) {
-      setSavedFilters([
-        ...savedFilters,
-        { id: Date.now().toString(), name: filterName, filters: {} },
-      ]);
+  const applyQuickFilter = (filterType: string) => {
+    const now = new Date();
+    setActiveQuickFilter(filterType);
+
+    switch (filterType) {
+      case "last24hours":
+        setDateRange({
+          from: new Date(now.getTime() - 24 * 60 * 60 * 1000),
+          to: now,
+        });
+        break;
+      case "lastWeek":
+        setDateRange({
+          from: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000),
+          to: now,
+        });
+        break;
+      case "failed":
+        setStatusFilter("failed");
+        break;
+      case "success":
+        setStatusFilter("success");
+        break;
+      case "clear":
+        clearAllFilters();
+        break;
     }
-  };
-
-  const applySavedFilter = (filter: SavedFilter) => {
-    console.log('Applying filter', filter);
-  };
-
-  const applyQuickFilter = (type: string) => {
-    console.log('Applying quick filter', type);
   };
 
   const clearAllFilters = () => {
-    setSearchQuery('');
-    setEnvironmentFilter('all');
-    setTypeFilter('all');
+    setSearchQuery("");
+    setEnvironmentFilter("all");
+    setTypeFilter("all");
+    setStatusFilter("all");
+    setTriggerFilter("all");
+    setExecutionIdFilter("");
     setDateRange({ from: undefined, to: undefined });
-    setStatusFilter('all');
-    setTriggerFilter('all');
-    setExecutionIdFilter('');
-    setDurationRange({ min: 0, max: 10000 });
+    setDurationRange({ min: 0, max: 100000 });
+    setActiveQuickFilter(null);
+  };
+
+  const saveCurrentFilter = () => {
+    toast({
+      title: "Filter saved",
+      description: "Current filter configuration has been saved",
+    });
+  };
+
+  const applySavedFilter = (filter: SavedFilter) => {
+    setSearchQuery(filter.filters.searchQuery);
+    setStatusFilter(filter.filters.statusFilter);
+    setEnvironmentFilter(filter.filters.environmentFilter);
+    setTypeFilter(filter.filters.typeFilter);
+    setTriggerFilter(filter.filters.triggerFilter);
+    setDateRange(filter.filters.dateRange);
+    setExecutionIdFilter(filter.filters.executionIdFilter);
+    setDurationRange(filter.filters.durationRange);
+
+    toast({
+      title: "Filter applied",
+      description: `Applied saved filter: ${filter.name}`,
+    });
+  };
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-destructive mb-2">
+            Error Loading Executions
+          </h2>
+          <p className="text-muted-foreground">Please try again later</p>
+        </div>
+      </div>
+    );
+  }
+
+  const handleDeleteEnvironment = async () => {
+    if (!currentWorkspace) return;
+    try {
+    } catch (error) {
+      console.error("Error deleting environment:", error);
+    }
   };
 
   return (
-    <ProtectedRoute feature='executions'>
-      <ExecutionsHeader />
+    <>
+      {/* <ExecutionsHeader /> */}
+      <BreadCum
+        title="Executions"
+        subtitle="Get execution results of test suite and request chain"
+        showCreateButton={false}
+        buttonTitle="Run Execution"
+        onClickCreateNew={() => console.log("Create execution")}
+        icon={ChartColumn}
+        iconBgClass="bg-blue-100"
+        iconColor="#136fb0"
+        iconSize={40}
+      />
 
-      <div className='p-6'>
-        <ExecutionsFilters
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          environmentFilter={environmentFilter}
-          setEnvironmentFilter={setEnvironmentFilter}
-          typeFilter={typeFilter}
-          setTypeFilter={setTypeFilter}
-          showAdvancedSearch={showAdvancedSearch}
-          setShowAdvancedSearch={setShowAdvancedSearch}
-          savedFilters={savedFilters}
-          saveCurrentFilter={saveCurrentFilter}
-          applySavedFilter={applySavedFilter}
-          applyQuickFilter={applyQuickFilter}
-          activeQuickFilter={activeQuickFilter}
-          dateRange={dateRange}
-          setDateRange={setDateRange}
-          statusFilter={statusFilter}
-          setStatusFilter={setStatusFilter}
-          triggerFilter={triggerFilter}
-          setTriggerFilter={setTriggerFilter}
-          executionIdFilter={executionIdFilter}
-          setExecutionIdFilter={setExecutionIdFilter}
-          durationRange={durationRange}
-          setDurationRange={setDurationRange}
-          clearAllFilters={clearAllFilters}
-        />
+      <ExecutionsFilters
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        environmentFilter={environmentFilter}
+        setEnvironmentFilter={setEnvironmentFilter}
+        typeFilter={typeFilter}
+        setTypeFilter={setTypeFilter}
+        showAdvancedSearch={showAdvancedSearch}
+        setShowAdvancedSearch={setShowAdvancedSearch}
+        savedFilters={savedFilters}
+        saveCurrentFilter={saveCurrentFilter}
+        applySavedFilter={applySavedFilter}
+        applyQuickFilter={applyQuickFilter}
+        activeQuickFilter={activeQuickFilter}
+        dateRange={dateRange}
+        setDateRange={setDateRange}
+        statusFilter={statusFilter}
+        setStatusFilter={setStatusFilter}
+        triggerFilter={triggerFilter}
+        setTriggerFilter={setTriggerFilter}
+        executionIdFilter={executionIdFilter}
+        setExecutionIdFilter={setExecutionIdFilter}
+        durationRange={durationRange}
+        setDurationRange={setDurationRange}
+        clearAllFilters={clearAllFilters}
+        handleDeleteEnvironment={handleDeleteEnvironment}
+         onRefresh={refetch}          
+  refreshing={isFetching} 
+      />
 
-        <ExecutionsTable
-          executions={paginatedExecutions}
-          getStatusIcon={getStatusIcon}
-          getStatusBadge={getStatusBadge}
-          formatDuration={formatDuration}
-          openExecutionDetails={openExecutionDetails}
-          stopExecutionMutation={stopExecutionMutation}
-          retryExecutionMutation={retryExecutionMutation}
-        />
+      <div className="bg-card rounded-lg shadow-sm border border-border">
+        {isLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+              <p className="text-muted-foreground">Loading executions...</p>
+            </div>
+          </div>
+        ) : (
+          <>
+            <ExecutionsTable
+              executions={filteredExecutions}
+              schedules={schedules}
+              openExecutionDetails={openExecutionDetails}
+              copyToClipboard={copyToClipboard}
+              formatDuration={formatDuration}
+              getStatusColor={getStatusColor}
+              getStatusIcon={getStatusIcon}
+            />
 
-        <ExecutionsPagination
-          totalItems={filteredExecutions.length}
-          itemsPerPage={itemsPerPage}
-          currentPage={currentPage}
-          setCurrentPage={setCurrentPage}
-        />
-
-        <ExecutionDetailsDialog
-          open={showExecutionDetails}
-          onClose={() => setShowExecutionDetails(false)}
-          execution={selectedExecution}
-        />
+            <ExecutionsPagination
+              totalItems={executionData?.total || 0}
+              itemsPerPage={itemsPerPage}
+              currentPage={currentPage}
+              setCurrentPage={setCurrentPage}
+            />
+          </>
+        )}
       </div>
-    </ProtectedRoute>
+
+      <ExecutionDetailsDialog
+        open={!!selectedExecution}
+        onClose={() => setSelectedExecution(null)}
+        execution={selectedExecution}
+      />
+    </>
   );
 };
 

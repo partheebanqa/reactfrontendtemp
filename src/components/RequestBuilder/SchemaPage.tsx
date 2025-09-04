@@ -13,7 +13,7 @@ const SchemaPage: React.FC = () => {
   const [viewSchema, setViewSchema] = useState<{
     id: string;
     name: string;
-    content: any;
+    schema: any;
   } | null>(null);
 
   const toggleCompareMode = () => {
@@ -34,13 +34,13 @@ const SchemaPage: React.FC = () => {
   const handleViewSchema = (schema: {
     id: string;
     name: string;
-    content: any;
+    schema: any;
   }) => {
     setViewSchema(schema);
   };
 
-  const handleDownloadSchema = (schema: { name: string; content: any }) => {
-    const blob = new Blob([JSON.stringify(schema.content, null, 2)], {
+  const handleDownloadSchema = (schema: { name: string; schema: any }) => {
+    const blob = new Blob([JSON.stringify(schema.schema, null, 2)], {
       type: "application/json",
     });
     const url = URL.createObjectURL(blob);
@@ -143,7 +143,7 @@ const SchemaPage: React.FC = () => {
               </button>
             </div>
             <div className="p-4 overflow-auto max-h-[calc(90vh-8rem)]">
-              <JsonTreeViewer json={viewSchema.content} />
+              <JsonTreeViewer json={viewSchema.schema} />
             </div>
             <div className="p-4 border-t border-gray-200 flex justify-end">
               <button

@@ -93,7 +93,7 @@ export const routeConfig: RouteConfig[] = [
   {
     path: '/executions',
     name: 'Executions',
-    component: 'ExecutionsPage',
+    component: 'ExecutionsNew',
     icon: 'Play',
     requiresAuth: true,
     meta: {
@@ -140,6 +140,16 @@ export const routeConfig: RouteConfig[] = [
         'performance',
         'statistics',
       ],
+    },
+  },
+  {
+    path: '/executions/:id/report',
+    name: 'Execution Report',
+    component: 'ExecutionReportPage',
+    requiresAuth: true,
+    meta: {
+      title: 'Execution Report - APIFlow',
+      description: 'Detailed execution report',
     },
   },
   {

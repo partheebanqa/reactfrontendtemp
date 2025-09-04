@@ -13,6 +13,12 @@ import {
   Globe,
 } from 'lucide-react';
 import { Variable, Environment } from '@/shared/types/datamanagement';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 interface VariableListProps {
   variables: Variable[];
@@ -72,19 +78,13 @@ const VariableCard: React.FC<VariableListProps> = ({
                 <div className='flex-1'>
                   <div className='flex items-center space-x-3 mb-1'>
                     <h4 className='font-semibold flex items-center gap-2'>
-                      {variable.key}
+                      {variable.name}
                       {/* Copy Variable Name Button */}
                       <Button
                         variant='ghost'
                         size='sm'
-                        // onClick={() => copyToClipboard(variable.key, "Variable name")}/
-                        onClick={() =>
-                          handleCopy(
-                            variable.type === 'secret'
-                              ? '••••••••'
-                              : variable.value
-                          )
-                        }
+                      
+                        onClick={() => handleCopy(variable.name)}
                         title='Copy variable name'
                         className='p-1 h-auto'
                       >
@@ -95,8 +95,8 @@ const VariableCard: React.FC<VariableListProps> = ({
                       {variable.isGlobal
                         ? 'Global'
                         : environments.find(
-                            (e) => e.id === variable.environmentId
-                          )?.name || 'Environment'}
+                          (e) => e.id === variable.environmentId
+                        )?.name || 'Environment'}
                     </Badge>
                     <Badge
                       variant='secondary'
@@ -116,15 +116,14 @@ const VariableCard: React.FC<VariableListProps> = ({
                   </div>
                   <div className='flex items-center space-x-2 mb-2'>
                     <code
-                      className={`px-2 py-1 rounded text-sm ${
-                        variable.type === 'dynamic'
+                      className={`px-2 py-1 rounded text-sm ${variable.type === 'dynamic'
                           ? 'bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300'
                           : variable.type === 'static'
-                          ? 'bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-300'
-                          : 'bg-purple-50 dark:bg-purple-950 text-purple-700 dark:text-purple-300'
-                      }`}
+                            ? 'bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-300'
+                            : 'bg-purple-50 dark:bg-purple-950 text-purple-700 dark:text-purple-300'
+                        }`}
                     >
-                      {variable.isSecret ? '••••••••' : variable.value}
+                      {variable.isSecret ? '••••••••' : variable.initialValue}
                     </code>
                     <Button
                       variant='ghost'
@@ -133,7 +132,7 @@ const VariableCard: React.FC<VariableListProps> = ({
                         handleCopy(
                           variable.type === 'secret'
                             ? '••••••••'
-                            : variable.value
+                            : variable.initialValue
                         )
                       }
                     >
@@ -148,20 +147,33 @@ const VariableCard: React.FC<VariableListProps> = ({
                 </div>
               </div>
               <div className='flex items-center space-x-2'>
-                <Button
-                  variant='outline'
-                  size='sm'
-                  onClick={() => onEdit(variable)}
-                >
-                  <Edit className='w-4 h-4' />
-                </Button>
-                <Button
-                  variant='ghost'
-                  size='sm'
-                  onClick={() => onDelete(variable.id, variable.key)}
-                >
-                  <Trash2 className='w-4 h-4' />
-                </Button>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant='outline'
+                        size='sm'
+                        onClick={() => onEdit(variable)}
+                      >
+                        <Edit className='w-4 h-4' />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Edit Variable</TooltipContent>
+                  </Tooltip>
+
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant='ghost'
+                        size='sm'
+                        onClick={() => onDelete(variable.id, variable.key)}
+                      >
+                        <Trash2 className='w-4 h-4' />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Delete Variable</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </div>
             </div>
           </CardContent>

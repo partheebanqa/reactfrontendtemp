@@ -3,7 +3,7 @@ import {
   TestSuite,
 } from '@/shared/types/TestSuite.model';
 import { apiRequest } from '@/lib/queryClient';
-import { API_TEST_SUITES } from '@/config/apiRoutes';
+import { API_EXECUTOR, API_TEST_SUITES } from '@/config/apiRoutes';
 
 export const getAllTestSuites = async (
   workspaceId: string
@@ -68,6 +68,7 @@ export const updateTestSuite = async (
     description: string;
     addRequestIds?: string[];
     removeRequestIds?: string[];
+    environmentId: string;
   }
 ) => {
   try {
@@ -94,7 +95,7 @@ export const executeTestSuite = async ({
   testSuiteId: string;
 }): Promise<void> => {
   try {
-    const response = await apiRequest('POST', '/executor/test-suite', {
+    const response = await apiRequest('POST', `${API_EXECUTOR}/test-suite`, {
       body: JSON.stringify({ testSuiteId }),
       headers: {
         'Content-Type': 'application/json',
@@ -108,5 +109,20 @@ export const executeTestSuite = async ({
     return await response.json();
   } catch (error) {
     throw new Error((error as Error).message || 'Failed to execute test suite');
+  }
+};
+
+export const duplicateTestSuite = async (id: string): Promise<TestSuite> => {
+  try {
+    const response = await apiRequest(
+      'POST',
+      `${API_TEST_SUITES}/${id}/duplicate`
+    );
+    if (!response.ok) {
+      throw new Error('Failed to duplicate test suite');
+    }
+    return await response.json();
+  } catch (error: any) {
+    throw new Error(error.message || 'Failed to duplicate test suite');
   }
 };
