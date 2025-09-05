@@ -48,10 +48,65 @@ export interface TestSuite {
   stats?: TestSuiteStats;
 }
 
-
 export interface CreateTestSuitePayload {
   name: string;
   description?: string;
   requestIds: string[];
   environmentId?: string;
+}
+
+export interface RequestParam {
+  key: string;
+  value: string;
+  enabled: boolean;
+}
+
+export interface RequestHeader {
+  key: string;
+  value: string;
+  enabled: boolean;
+}
+
+export interface RequestAuth {
+  type: string;
+  [key: string]: any;
+}
+
+export interface Request {
+  id: string;
+  name: string;
+  description: string;
+  method: string;
+  url: string;
+  endpoint: string;
+  order: number;
+  bodyType: 'none' | 'raw' | 'form-data' | 'x-www-form-urlencoded';
+  bodyFormData?: Array<{
+    key: string;
+    value: string;
+    enabled: boolean;
+    type: 'text' | 'file';
+  }> | null;
+  bodyRawContent: string;
+  authorizationType: 'none' | 'bearer' | 'basic' | 'api-key';
+  authorization: RequestAuth;
+  headers: RequestHeader[];
+  params: RequestParam[];
+  testCases: {
+    functional: number;
+    total: number;
+  };
+  selectedTestCases?: string[];
+}
+
+export interface RequestStat {
+  requestId: string;
+  startTime?: string;
+  endTime?: string;
+  status?: 'pending' | 'running' | 'completed' | 'failed' | undefined;
+  lastGeneratedAt?: string;
+  meta?: {
+    totalTests?: number;
+    selectedTests?: number;
+  };
 }

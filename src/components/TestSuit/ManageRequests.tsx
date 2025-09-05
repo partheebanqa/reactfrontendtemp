@@ -1,19 +1,18 @@
-import React, { useMemo, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Download, Trash2, Settings } from "lucide-react";
-import { TestCaseSelectionModal } from "./TestCaseSelectionModal";
+import React, { useMemo, useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Download, Trash2, Settings, Play, RefreshCcw } from 'lucide-react';
+import { RequestTestDialog } from './RequestTestDialog';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { RefreshCcw } from "lucide-react";
-import { useDataManagement } from "@/hooks/useDataManagement";
+} from '@/components/ui/tooltip';
 import {
   AlertDialog,
+  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -21,59 +20,36 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "../ui/alert-dialog";
-
-interface Request {
-  id: string;
-  method: string;
-  name: string;
-  endpoint: string;
-  description: string;
-  testCases: {
-    functional: number;
-    total: number;
-  };
-  selectedTestCases?: string[];
-}
-
-interface RequestStat {
-  requestId: string;
-  startTime?: string;
-  endTime?: string;
-  status?: string;
-  lastGeneratedAt?: string;
-  meta?: {
-    totalTests?: number;
-    selectedTests?: number;
-  };
-}
-
-
+} from '@/components/ui/alert-dialog';
+import { Request, RequestStat } from '@/shared/types/TestSuite.model';
 
 interface ManageRequestsProps {
   requests: Request[];
-  testSuiteId: string;
+  testSuiteId?: string;
   onImport: () => void;
   onDeleteRequest: (requestId: string) => void;
-  onUpdateTestCases: (requestId: string, testCaseIds: string[]) => void;
+  onUpdateTestCases?: (requestId: string, testCaseIds: string[]) => void;
   onRefreshRequests?: () => Promise<void> | void;
-  requestStats?: RequestStat[]; 
+  requestStats?: RequestStat[];
+  variables?: Array<{ name: string; initialValue: string }>;
+  environments?: any[];
+  activeEnvironment?: any;
 }
 
 const getMethodBadgeColor = (method: string) => {
   switch (method.toUpperCase()) {
-    case "GET":
-      return "bg-green-100 text-green-800 hover:bg-green-200";
-    case "POST":
-      return "bg-blue-100 text-blue-800 hover:bg-blue-200";
-    case "PUT":
-      return "bg-yellow-100 text-yellow-800 hover:bg-yellow-200";
-    case "DELETE":
-      return "bg-red-100 text-red-800 hover:bg-red-200";
-    case "PATCH":
-      return "bg-purple-100 text-purple-800 hover:bg-purple-200";
+    case 'GET':
+      return 'bg-green-100 text-green-800 hover:bg-green-200 dark:bg-green-900 dark:text-green-100';
+    case 'POST':
+      return 'bg-blue-100 text-blue-800 hover:bg-blue-200 dark:bg-blue-900 dark:text-blue-100';
+    case 'PUT':
+      return 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200 dark:bg-yellow-900 dark:text-yellow-100';
+    case 'DELETE':
+      return 'bg-red-100 text-red-800 hover:bg-red-200 dark:bg-red-900 dark:text-red-100';
+    case 'PATCH':
+      return 'bg-purple-100 text-purple-800 hover:bg-purple-200 dark:bg-purple-900 dark:text-purple-100';
     default:
-      return "bg-gray-100 text-gray-800 hover:bg-gray-200";
+      return 'bg-gray-100 text-gray-800 hover:bg-gray-200 dark:bg-gray-900 dark:text-gray-100';
   }
 };
 
@@ -85,97 +61,65 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
   onUpdateTestCases,
   onRefreshRequests,
   requestStats = [],
+  variables = [],
+  environments = [],
+  activeEnvironment,
 }) => {
-  const { variables, environments, activeEnvironment } = useDataManagement();
-
   const [selectedRequest, setSelectedRequest] = useState<Request | null>(null);
-  const [isTestCaseModalOpen, setIsTestCaseModalOpen] = useState(false);
-
-
-  // console.log(requests, "selectedRequest")
+  const [isTestDialogOpen, setIsTestDialogOpen] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   const statMap = useMemo(() => {
     const m = new Map<string, RequestStat>();
-    requestStats.forEach(s => m.set(s.requestId, s));
+    requestStats.forEach((s) => m.set(s.requestId, s));
     return m;
   }, [requestStats]);
 
   const substituteVariables = (text: string): string => {
     let result = text;
     variables.forEach((variable) => {
-      const regex = new RegExp(`{{${variable.name}}}`, "g");
+      const regex = new RegExp(`{{${variable.name}}}`, 'g');
       result = result.replace(regex, variable.initialValue);
     });
     return result;
   };
 
   const buildFinalUrl = (url: string): string => {
-    if (!url) return "";
+    if (!url) return '';
     let finalUrl = url;
 
     // Apply variable substitution
     finalUrl = substituteVariables(finalUrl);
 
-    const baseUrVar =
-      variables.find((v) => v.name === "baseUrl")?.initialValue || "";
+    const baseUrlVar =
+      variables.find((v) => v.name === 'baseUrl')?.initialValue || '';
 
-    if (baseUrVar) {
+    if (baseUrlVar) {
       try {
         const originalUrl = new URL(finalUrl);
         const pathAndQuery =
           originalUrl.pathname + originalUrl.search + originalUrl.hash;
 
         // Combine activeEnvironment base URL with the path from original URL
-        const baseUrl = baseUrVar.replace(/\/$/, "");
+        const baseUrl = baseUrlVar.replace(/\/$/, '');
         finalUrl = `${baseUrl}${pathAndQuery}`;
       } catch (error) {
         if (
-          !finalUrl.startsWith("http://") &&
-          !finalUrl.startsWith("https://")
+          !finalUrl.startsWith('http://') &&
+          !finalUrl.startsWith('https://')
         ) {
-          finalUrl = finalUrl.startsWith("/") ? finalUrl : `/${finalUrl}`;
-          finalUrl = `${baseUrVar.replace(/\/$/, "")}${finalUrl}`;
+          finalUrl = finalUrl.startsWith('/') ? finalUrl : `/${finalUrl}`;
+          finalUrl = `${baseUrlVar.replace(/\/$/, '')}${finalUrl}`;
         }
       }
     }
     return finalUrl;
   };
 
-  const handleConfigureTestCases = (request: Request) => {
+  const handleTestRequest = (request: Request) => {
     setSelectedRequest(request);
-    setIsTestCaseModalOpen(true);
+    setIsTestDialogOpen(true);
   };
-
-  const handleTestCaseSelection = (testCaseIds: string[]) => {
-    if (selectedRequest) {
-      onUpdateTestCases(selectedRequest.id, testCaseIds);
-    }
-    setIsTestCaseModalOpen(false);
-    setSelectedRequest(null);
-  };
-
-
-  const getCategoryColor = (category: string) => {
-    switch (category) {
-      case 'Functional': return 'bg-blue-100 text-blue-800';
-      case 'Performance': return 'bg-purple-100 text-purple-800';
-      case 'Security': return 'bg-orange-100 text-orange-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const getCategoryIcon = (category: string) => {
-    switch (category) {
-      case 'Functional': return '🔧';
-      case 'Performance': return '⚡';
-      case 'Security': return '🛡️';
-      default: return '📋';
-    }
-  };
-
-  // console.log(requests, "requests");
-
-  const [refreshing, setRefreshing] = useState(false);
 
   const handleRefresh = async () => {
     if (!onRefreshRequests) return;
@@ -187,23 +131,53 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
     }
   };
 
+  const getCategoryColor = (category: string) => {
+    switch (category) {
+      case 'Functional':
+        return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100';
+      case 'Performance':
+        return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-100';
+      case 'Security':
+        return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-100';
+      default:
+        return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-100';
+    }
+  };
+
+  const getCategoryIcon = (category: string) => {
+    switch (category) {
+      case 'Functional':
+        return '🔧';
+      case 'Performance':
+        return '⚡';
+      case 'Security':
+        return '🛡️';
+      default:
+        return '📋';
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
+        <div className='flex items-center justify-between'>
           <CardTitle>Requests ({requests.length})</CardTitle>
 
-          <div className="flex items-center space-x-2">
-          <Button
-              variant="outline"
-              onClick={handleRefresh}
-              disabled={refreshing}
-            >
-              <RefreshCcw className={`w-4 h-4 mr-2 ${refreshing ? "animate-spin" : ""}`} />
-              {refreshing ? "Refreshing..." : "Refresh"}
-            </Button>
-            <Button variant="outline" onClick={onImport}>
-              <Download className="w-4 h-4 mr-2" />
+          <div className='flex items-center space-x-2'>
+            {onRefreshRequests && (
+              <Button
+                variant='outline'
+                onClick={handleRefresh}
+                disabled={refreshing}
+              >
+                <RefreshCcw
+                  className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`}
+                />
+                {refreshing ? 'Refreshing...' : 'Refresh'}
+              </Button>
+            )}
+            <Button variant='outline' onClick={onImport}>
+              <Download className='w-4 h-4 mr-2' />
               Import More Requests
             </Button>
           </div>
@@ -211,97 +185,108 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
       </CardHeader>
 
       <CardContent>
-        <div className="space-y-3">
+        <div className='space-y-3'>
           {requests.map((request) => {
-            const finalUrl = buildFinalUrl(request.endpoint);
+            const finalUrl = buildFinalUrl(request.endpoint || request.url);
             const stat = statMap.get(request.id);
             const totalTests = stat?.meta?.totalTests ?? 0;
             const selectedCountFromServer = stat?.meta?.selectedTests ?? 0;
-            const selectedCount = (request.selectedTestCases?.length ?? 0) || selectedCountFromServer;
+            const selectedCount =
+              (request.selectedTestCases?.length ?? 0) ||
+              selectedCountFromServer;
 
             return (
               <div
                 key={request.id}
-                className="p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                className='p-4 border rounded-lg hover:bg-muted/50 transition-colors'
               >
-                <div className="flex items-start justify-between">
-                  <div className="flex items-start space-x-3 flex-1">
+                <div className='flex items-start justify-between'>
+                  <div className='flex items-start space-x-3 flex-1'>
                     <Badge className={getMethodBadgeColor(request.method)}>
                       {request.method}
                     </Badge>
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-medium text-base">{request.name}</h4>
-                      <p className="text-sm text-muted-foreground mt-1">
+                    <div className='flex-1 min-w-0'>
+                      <h4 className='font-medium text-base'>{request.name}</h4>
+                      <p className='text-sm text-muted-foreground mt-1 break-all'>
                         {finalUrl}
                       </p>
-                      {/* {request.description && (
-                        <p className='text-sm text-muted-foreground mt-1'>
-                          {request.description}
-                        </p>
-                      )} */}
+                      {request.description &&
+                        request.description !==
+                          `${request.method} ${request.url}` && (
+                          <p className='text-sm text-muted-foreground mt-1'>
+                            {request.description}
+                          </p>
+                        )}
                     </div>
                   </div>
-                  <div className="flex items-center space-x-2">
+                  <div className='flex items-center space-x-2'>
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleConfigureTestCases(request)}
-                            className="text-muted-foreground hover:text-primary hover:bg-primary/10"
-                          >
-                            {testSuiteId && <Settings className="w-4 h-4" />}
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Select testcases</TooltipContent>
-                      </Tooltip>
-
-                      {/* <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
                             variant='ghost'
                             size='sm'
-                            onClick={() => onDeleteRequest(request.id)}
-                            className='text-muted-foreground hover:text-destructive hover:bg-destructive/10'
+                            onClick={() => handleTestRequest(request)}
+                            className='text-muted-foreground hover:text-primary hover:bg-primary/10'
                           >
-                            <Trash2 className='w-4 h-4' />
+                            <Play className='w-4 h-4' />
                           </Button>
                         </TooltipTrigger>
-                        <TooltipContent>Delete API</TooltipContent>
-                      </Tooltip> */}
+                        <TooltipContent>Test Request</TooltipContent>
+                      </Tooltip>
+
+                      {testSuiteId && onUpdateTestCases && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant='ghost'
+                              size='sm'
+                              onClick={() => {
+                                /* Handle test case selection */
+                              }}
+                              className='text-muted-foreground hover:text-primary hover:bg-primary/10'
+                            >
+                              <Settings className='w-4 h-4' />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Select testcases</TooltipContent>
+                        </Tooltip>
+                      )}
 
                       <AlertDialog>
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <AlertDialogTrigger asChild>
                               <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-red-600 hover:text-red-700"
+                                variant='ghost'
+                                size='sm'
+                                className='text-red-600 hover:text-red-700 hover:bg-red-100 dark:hover:bg-red-900'
                               >
-                                <Trash2 className="w-4 h-4" />
+                                <Trash2 className='w-4 h-4' />
                               </Button>
                             </AlertDialogTrigger>
                           </TooltipTrigger>
-                          <TooltipContent>Delete API</TooltipContent>
+                          <TooltipContent>Delete Request</TooltipContent>
                         </Tooltip>
 
                         <AlertDialogContent>
                           <AlertDialogHeader>
                             <AlertDialogTitle>
-                              Delete this suite?
+                              Delete this request?
                             </AlertDialogTitle>
                             <AlertDialogDescription>
-                              This will permanently delete “{request.name}”.
-                              This action cannot be undo.
+                              This will permanently delete "{request.name}".
+                              This action cannot be undone.
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
                             <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <Button onClick={() => onDeleteRequest(request.id)}>
+                            <AlertDialogAction
+                              onClick={() => onDeleteRequest(request.id)}
+                              className='bg-red-600 hover:bg-red-700'
+                            >
                               Delete
-                            </Button>
+                            </AlertDialogAction>
                           </AlertDialogFooter>
                         </AlertDialogContent>
                       </AlertDialog>
@@ -309,38 +294,38 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
                   </div>
                 </div>
                 {testSuiteId && (
-                  <div className="mt-4">
-                    <h5 className="text-sm font-medium mb-2">Test Cases</h5>
-                   
-                      {/* {(request.selectedTestCases?.length || 0) > 0 && (
-                         <div className="flex items-center justify-between text-xs">
-                         <div className="flex items-center">
-                           <span className="mr-1">{getCategoryIcon('Functional')}</span>
-                           <span className="capitalize text-gray-600">{'Functional'}</span>
-                         </div>
-                         <span className={`px-2 py-0.5 rounded-full font-medium ${getCategoryColor('Functional')}`}>
-                         {request.selectedTestCases?.length || 0}
-                         </span>
-                       </div>
-                      )} */}
+                  <div className='mt-4'>
+                    <h5 className='text-sm font-medium mb-2'>Test Cases</h5>
 
-{selectedCount > 0 && (
-                      <div className="flex items-center justify-between text-xs">
-                        <div className="flex items-center">
-                          <span className="mr-1">{getCategoryIcon('Functional')}</span>
-                          <span className="capitalize text-gray-600">{'Functional'}</span>
+                    {selectedCount > 0 && (
+                      <div className='flex items-center justify-between text-xs'>
+                        <div className='flex items-center'>
+                          <span className='mr-1'>
+                            {getCategoryIcon('Functional')}
+                          </span>
+                          <span className='capitalize text-gray-600 dark:text-gray-300'>
+                            {'Functional'}
+                          </span>
                         </div>
-                        <span className={`px-2 py-0.5 rounded-full font-medium ${getCategoryColor('Functional')}`}>
+                        <span
+                          className={`px-2 py-0.5 rounded-full font-medium ${getCategoryColor(
+                            'Functional'
+                          )}`}
+                        >
                           {selectedCount}
                         </span>
                       </div>
                     )}
-                      <div className="pt-1 border-t border-gray-200 mt-2">
-                    <div className="flex items-center justify-between text-xs font-medium">
-                    <span className="text-gray-700">Total:</span>
-                    <span className="text-gray-900">   {totalTests ? <>  {totalTests}</> : null} test cases</span>
-                  </div>
-                  </div>
+                    <div className='pt-1 border-t border-gray-200 dark:border-gray-700 mt-2'>
+                      <div className='flex items-center justify-between text-xs font-medium'>
+                        <span className='text-gray-700 dark:text-gray-300'>
+                          Total:
+                        </span>
+                        <span className='text-gray-900 dark:text-gray-100'>
+                          {totalTests ? <> {totalTests}</> : null} test cases
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
@@ -350,18 +335,13 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
       </CardContent>
 
       {selectedRequest && (
-        <TestCaseSelectionModal
-          isOpen={isTestCaseModalOpen}
+        <RequestTestDialog
+          isOpen={isTestDialogOpen}
           onClose={() => {
-            setIsTestCaseModalOpen(false);
+            setIsTestDialogOpen(false);
             setSelectedRequest(null);
           }}
-          onSelect={handleTestCaseSelection}
-          request={{
-            ...selectedRequest,
-            selectedTestCases: selectedRequest.selectedTestCases || [],
-          }}
-          testSuiteId={testSuiteId}
+          request={selectedRequest}
         />
       )}
     </Card>
