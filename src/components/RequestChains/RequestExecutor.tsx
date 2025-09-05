@@ -21,6 +21,7 @@ import type {
 } from '@/shared/types/requestChain.model';
 import { useExecuteRequestChain } from '@/shared/hooks/requestChain';
 import { Button } from '../ui/button';
+import { useLocation } from 'wouter';
 
 interface Variable {
   id?: string;
@@ -70,6 +71,7 @@ export function RequestExecutor({
   request,
   onResponse,
 }: RequestExecutorProps) {
+  const [location, setLocation] = useLocation();
   const [isExecuting, setIsExecuting] = useState(false);
   const [currentRequestIndex, setCurrentRequestIndex] = useState(-1);
   const [savedChainId, setSavedChainId] = useState<string | undefined>(
@@ -343,6 +345,7 @@ export function RequestExecutor({
         description: 'Request chain updated successfully.',
         variant: 'default',
       });
+      setLocation('/request-chains');
     } catch (err: any) {
       toast({
         title: 'Update Failed',
@@ -430,6 +433,9 @@ export function RequestExecutor({
           title: 'Execution progress',
           description: result.message,
         });
+        setTimeout(() => {
+          setLocation('/request-chains');
+        }, 2500);
       }
 
       if (result?.data?.responses) {
