@@ -40,9 +40,22 @@ export const buildRequestPayload = (
     let result = text;
     variables.forEach((variable) => {
       const regex = new RegExp(`{{${variable.name}}}`, 'g');
-      result = result.replace(regex, variable.initialValue ?? '');
+      result = result.replace(
+        regex,
+        variable.initialValue ?? variable.value ?? ''
+      );
     });
     return result;
+  };
+
+  // Get the token from either authToken field or authorization.token field
+  const getAuthToken = (): string => {
+    if (request.authorizationType === 'bearer') {
+      // Check authorization.token first, then fallback to authToken
+      const token = request.authorization?.token || request.authToken || '';
+      return replaceVariables(token);
+    }
+    return '';
   };
 
   return {
@@ -58,7 +71,18 @@ export const buildRequestPayload = (
       authorizationType: request.authorizationType,
       authorization:
         request.authorizationType === 'bearer'
-          ? { token: replaceVariables(request.authToken) }
+          ? { token: getAuthToken() }
+          : request.authorizationType === 'basic'
+          ? {
+              username: replaceVariables(request.authUsername || ''),
+              password: replaceVariables(request.authPassword || ''),
+            }
+          : request.authorizationType === 'apikey'
+          ? {
+              key: replaceVariables(request.authApiKey || ''),
+              value: replaceVariables(request.authApiValue || ''),
+              addTo: request.authApiLocation || 'header',
+            }
           : undefined,
       headers: (request.headers || [])
         .filter((h) => h.enabled)

@@ -157,6 +157,7 @@ export function RequestChainEditor({
   const [isSaving, setIsSaving] = useState(false);
 
   const replaceVariables = (text: string, vars: Variable[]): string => {
+    if (!text) return text;
     let result = text;
     vars.forEach((variable) => {
       const regex = new RegExp(`{{${variable.name}}}`, 'g');
@@ -165,6 +166,34 @@ export function RequestChainEditor({
     return result;
   };
 
+  // Enhanced function to process entire request with variable substitution
+  const processRequestWithVariables = (
+    request: APIRequest,
+    variables: Variable[]
+  ): APIRequest => {
+    return {
+      ...request,
+      url: replaceVariables(request.url, variables),
+      body: replaceVariables(request.body || '', variables),
+      headers:
+        request.headers?.map((header) => ({
+          ...header,
+          key: replaceVariables(header.key, variables),
+          value: replaceVariables(header.value, variables),
+        })) || [],
+      params:
+        request.params?.map((param) => ({
+          ...param,
+          key: replaceVariables(param.key, variables),
+          value: replaceVariables(param.value, variables),
+        })) || [],
+      authToken: replaceVariables(request.authToken || '', variables),
+      authUsername: replaceVariables(request.authUsername || '', variables),
+      authPassword: replaceVariables(request.authPassword || '', variables),
+      authApiKey: replaceVariables(request.authApiKey || '', variables),
+      authApiValue: replaceVariables(request.authApiValue || '', variables),
+    };
+  };
   const getPreviewUrl = (request: APIRequest, variables: Variable[]) => {
     const replacedUrl = replaceVariables(request.url, variables);
     const baseUrl = environmentBaseUrl?.trim();
@@ -202,7 +231,13 @@ export function RequestChainEditor({
       ...extractedVars,
     ];
     const startTime = Date.now();
-    const payload = buildRequestPayload(request, mergedVariables);
+
+    // Process the request with variable substitution
+    const processedRequest = processRequestWithVariables(
+      request,
+      mergedVariables
+    );
+    const payload = buildRequestPayload(processedRequest, mergedVariables);
     const previewUrl = getPreviewUrl(request, mergedVariables);
     payload.request.url = previewUrl;
 
@@ -233,12 +268,12 @@ export function RequestChainEditor({
         endTime: new Date(endTime).toISOString(),
         duration: result.metrics.responseTime,
         request: {
-          method: request.method,
+          method: processedRequest.method,
           url: previewUrl,
           headers: Object.fromEntries(
-            request.headers.map((h) => [h.key, h.value])
+            processedRequest.headers.map((h) => [h.key, h.value])
           ),
-          body: request.body ?? '',
+          body: processedRequest.body ?? '',
         },
         response: {
           status: result.statusCode,
@@ -261,10 +296,10 @@ export function RequestChainEditor({
         endTime: new Date(endTime).toISOString(),
         duration: endTime - startTime,
         request: {
-          method: request.method,
+          method: processedRequest.method,
           url: previewUrl,
           headers: {}, // fallback in error case
-          body: request.body,
+          body: processedRequest.body,
         },
         error: error instanceof Error ? error.message : 'Unknown error',
       };
@@ -417,9 +452,42 @@ export function RequestChainEditor({
     const request = formData.chainRequests.find((r) => r.id === requestId);
     if (!request) return;
 
+    // Ensure proper variable naming
+    const variableName = extraction.variableName || extraction.name;
+
+    if (!variableName) {
+      toast({
+        title: 'Error',
+        description: 'Variable name is required',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Check for duplicates
+    const isDuplicate = (request.extractVariables || []).some(
+      (existing) => (existing.variableName || existing.name) === variableName
+    );
+
+    if (isDuplicate) {
+      toast({
+        title: 'Error',
+        description: `Variable "${variableName}" already exists`,
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Normalize extraction
+    const normalizedExtraction = {
+      ...extraction,
+      variableName,
+      name: variableName,
+    };
+
     const updatedExtractions = [
       ...(request.extractVariables || []),
-      extraction,
+      normalizedExtraction,
     ];
     const updatedRequests = formData.chainRequests.map((r) =>
       r.id === requestId ? { ...r, extractVariables: updatedExtractions } : r
@@ -438,6 +506,12 @@ export function RequestChainEditor({
         ...prev,
         [requestId]: { ...prev[requestId], ...extracted },
       }));
+
+      // Update global extracted variables
+      setExtractedVariables((prevGlobal) => ({
+        ...prevGlobal,
+        ...extracted,
+      }));
     }
   };
 
@@ -449,7 +523,7 @@ export function RequestChainEditor({
     if (!request) return;
 
     const updatedExtractions = (request.extractVariables || []).filter(
-      (e) => e.variableName !== variableName
+      (e) => (e.variableName || e.name) !== variableName
     );
     const updatedRequests = formData.chainRequests.map((r) =>
       r.id === requestId ? { ...r, extractVariables: updatedExtractions } : r
@@ -463,6 +537,13 @@ export function RequestChainEditor({
       if (updated[requestId]) {
         delete updated[requestId][variableName];
       }
+      return updated;
+    });
+
+    // Remove from global extracted variables
+    setExtractedVariables((prev) => {
+      const updated = { ...prev };
+      delete updated[variableName];
       return updated;
     });
   };

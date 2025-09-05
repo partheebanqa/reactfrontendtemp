@@ -55,17 +55,17 @@ export function ResponseExplorer({
 
   // Auto-extract variables in edit mode from existingExtractions
   const getAutoExtractedVariables = () => {
-    if (!chainId || !existingExtractions || existingExtractions.length === 0) {
+    if (!existingExtractions || existingExtractions.length === 0) {
       return extractedVariables || {};
     }
 
     const autoExtracted: Record<string, any> = { ...extractedVariables };
 
     existingExtractions.forEach((extraction) => {
-      if (!extraction.path || (!extraction.variableName && !extraction.name))
-        return;
-
       const variableName = extraction.variableName || extraction.name;
+      if (!extraction.path || !variableName) {
+        return;
+      }
 
       // Skip if already extracted
       if (autoExtracted[variableName] !== undefined) return;
@@ -86,24 +86,17 @@ export function ResponseExplorer({
             try {
               sourceData = JSON.parse(response.body);
             } catch {
-              sourceData = response.body;
+              console.warn(
+                'Failed to parse response body for variable extraction'
+              );
+              return;
             }
             break;
         }
 
         // Extract value using path
         if (sourceData && extraction.path) {
-          let value = sourceData;
-          const pathParts = extraction.path.split('.');
-
-          for (const part of pathParts) {
-            if (value && typeof value === 'object' && part in value) {
-              value = value[part];
-            } else {
-              value = undefined;
-              break;
-            }
-          }
+          const value = getValueByPath(sourceData, extraction.path);
 
           if (value !== undefined) {
             autoExtracted[variableName] = value;
@@ -131,6 +124,28 @@ export function ResponseExplorer({
     suggestedName: string;
   } | null>(null);
   const [variableName, setVariableName] = useState<string>('');
+
+  // Helper function to get value by path
+  const getValueByPath = (obj: any, path: string): any => {
+    if (!obj || !path) return undefined;
+
+    return path.split('.').reduce((current, key) => {
+      if (current && typeof current === 'object') {
+        if (key.includes('[') && key.includes(']')) {
+          const arrayKey = key.substring(0, key.indexOf('['));
+          const index = Number.parseInt(
+            key.substring(key.indexOf('[') + 1, key.indexOf(']'))
+          );
+          if (current[arrayKey] && Array.isArray(current[arrayKey])) {
+            return current[arrayKey][index];
+          }
+          return undefined;
+        }
+        return current[key];
+      }
+      return undefined;
+    }, obj);
+  };
 
   // Sanitize variable name: remove special characters, convert spaces to underscores
   const sanitizeVariableName = (name: string): string => {

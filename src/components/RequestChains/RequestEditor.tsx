@@ -29,7 +29,7 @@ import {
   GitBranch,
   ChevronDown,
   ChevronRight,
-  TriangleAlert,
+  AlertTriangle as TriangleAlert,
   Play,
   Copy,
   AlertTriangle,
@@ -124,6 +124,9 @@ export function RequestEditor({
   const headers = request.headers || [];
   const { toast } = useToast();
 
+  // State for processed request data with variable substitution
+  const [processedRequest, setProcessedRequest] = useState<APIRequest>(request);
+
   const updateExtractedVariables = (newVars: Record<string, any>) => {
     setExtractedVariables(newVars);
     localStorage.setItem('extractedVariables', JSON.stringify(newVars));
@@ -150,10 +153,17 @@ export function RequestEditor({
       if (!raw) return;
       const map: Record<string, any> = JSON.parse(raw);
       const saved = map?.[request.id];
-      if (saved?.response || saved?.error) {
+
+      // Only restore if we have a valid execution result and it's recent (within last hour)
+      const isRecent =
+        saved?.endTime &&
+        Date.now() - new Date(saved.endTime).getTime() < 3600000; // 1 hour
+
+      if ((saved?.response || saved?.error) && isRecent) {
         setExecutionResult(saved);
         setShowResponse(true);
-        // also hydrate extracted variables preview for this request
+
+        // Hydrate extracted variables preview for this request
         if (
           saved.extractedVariables &&
           typeof saved.extractedVariables === 'object'
@@ -162,7 +172,8 @@ export function RequestEditor({
             ...prev,
             ...saved.extractedVariables,
           }));
-          // keep global cache consistent
+
+          // Keep global cache consistent
           localStorage.setItem(
             'extractedVariables',
             JSON.stringify({
@@ -171,12 +182,99 @@ export function RequestEditor({
             })
           );
         }
+      } else if (saved && !isRecent) {
+        // Clear old execution data
+        delete map[request.id];
+        localStorage.setItem('lastExecutionByRequest', JSON.stringify(map));
       }
     } catch (e) {
       console.error('Failed to restore lastExecutionByRequest:', e);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [request.id]);
+
+  // Helper function to replace variables in text
+  const replaceVariables = (text: string, variables: Variable[]): string => {
+    if (!text) return text;
+    let result = text;
+    variables.forEach((variable) => {
+      const regex = new RegExp(`{{${variable.name}}}`, 'g');
+      result = result.replace(regex, variable.value ?? '');
+    });
+    return result;
+  };
+
+  // Enhanced function to process entire request with variable substitution (Fixed)
+  const processRequestWithVariables = (
+    request: APIRequest,
+    variables: Variable[]
+  ): APIRequest => {
+    return {
+      ...request,
+      url: replaceVariables(request.url, variables),
+      body: replaceVariables(request.body || '', variables),
+      headers:
+        request.headers?.map((header) => ({
+          ...header,
+          key: replaceVariables(header.key, variables),
+          value: replaceVariables(header.value, variables),
+        })) || [],
+      params:
+        request.params?.map((param) => ({
+          ...param,
+          key: replaceVariables(param.key, variables),
+          value: replaceVariables(param.value, variables),
+        })) || [],
+      authToken: replaceVariables(request.authToken || '', variables),
+      authUsername: replaceVariables(request.authUsername || '', variables),
+      authPassword: replaceVariables(request.authPassword || '', variables),
+      authApiKey: replaceVariables(request.authApiKey || '', variables),
+      authApiValue: replaceVariables(request.authApiValue || '', variables),
+      // Fixed: Added authorization object processing
+      authorization: request.authorization
+        ? {
+            ...request.authorization,
+            token: replaceVariables(
+              request.authorization.token || '',
+              variables
+            ),
+            username: replaceVariables(
+              request.authorization.username || '',
+              variables
+            ),
+            password: replaceVariables(
+              request.authorization.password || '',
+              variables
+            ),
+            key: replaceVariables(request.authorization.key || '', variables),
+            value: replaceVariables(
+              request.authorization.value || '',
+              variables
+            ),
+          }
+        : request.authorization,
+    };
+  };
+
+  // Update processed request whenever variables or request changes
+  React.useEffect(() => {
+    const extractedVars = getExtractVariablesByEnvironment(
+      activeEnvironment?.id
+    );
+    const mergedVariables = [
+      ...storeVariables.filter(
+        (sv) => !extractedVars.some((ev) => ev.name === sv.name)
+      ),
+      ...extractedVars,
+    ];
+
+    // Process all parts of the request with variable substitution
+    const processed = processRequestWithVariables(request, mergedVariables);
+
+    console.log('processed:', processed);
+
+    setProcessedRequest(processed);
+    setPreviewUrl(getPreviewUrl(mergedVariables));
+  }, [storeVariables, activeEnvironment, request]);
 
   const getPreviewUrl = (variables: Variable[]) => {
     const replacedUrl = request.url.replace(/{{(.*?)}}/g, (_, varName) => {
@@ -324,9 +422,9 @@ export function RequestEditor({
       description: '',
     };
     if (type === 'params') {
-      onUpdate({ params: [...params, newPair] });
+      onUpdate({ params: [...(request.params || []), newPair] });
     } else {
-      onUpdate({ headers: [...headers, newPair] });
+      onUpdate({ headers: [...(request.headers || []), newPair] });
     }
   };
 
@@ -337,20 +435,24 @@ export function RequestEditor({
   ) => {
     if (type === 'params') {
       onUpdate({
-        params: params.map((p) => (p.id === id ? { ...p, ...updates } : p)),
+        params: (request.params || []).map((p) =>
+          p.id === id ? { ...p, ...updates } : p
+        ),
       });
     } else {
       onUpdate({
-        headers: headers.map((h) => (h.id === id ? { ...h, ...updates } : h)),
+        headers: (request.headers || []).map((h) =>
+          h.id === id ? { ...h, ...updates } : h
+        ),
       });
     }
   };
 
   const removeKeyValuePair = (type: 'params' | 'headers', id: string) => {
     if (type === 'params') {
-      onUpdate({ params: params.filter((p) => p.id !== id) });
+      onUpdate({ params: (request.params || []).filter((p) => p.id !== id) });
     } else {
-      onUpdate({ headers: headers.filter((h) => h.id !== id) });
+      onUpdate({ headers: (request.headers || []).filter((h) => h.id !== id) });
     }
   };
 
@@ -379,7 +481,10 @@ export function RequestEditor({
 
   const addParam = () => {
     onUpdate({
-      params: [...request.params, { key: '', value: '', enabled: true }],
+      params: [
+        ...(request.params || []),
+        { key: '', value: '', enabled: true },
+      ],
     });
   };
 
@@ -387,7 +492,7 @@ export function RequestEditor({
     index: number,
     updates: Partial<{ key: string; value: string; enabled: boolean }>
   ) => {
-    const updatedParams = request.params.map((param, i) =>
+    const updatedParams = (request.params || []).map((param, i) =>
       i === index ? { ...param, ...updates } : param
     );
     onUpdate({ params: updatedParams });
@@ -395,7 +500,7 @@ export function RequestEditor({
 
   const removeParam = (index: number) => {
     onUpdate({
-      params: request.params.filter((_, i) => i !== index),
+      params: (request.params || []).filter((_, i) => i !== index),
     });
   };
 
@@ -403,6 +508,40 @@ export function RequestEditor({
     const normalizeString = (value?: string) => (value || '').trim();
     const normalizeBool = (value?: boolean) => !!value;
     const currentExtractions = request.extractVariables || [];
+
+    // Ensure proper variable naming
+    const variableName = extraction.variableName || extraction.name;
+
+    if (!variableName) {
+      toast({
+        title: 'Error',
+        description: 'Variable name is required',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Check for duplicates
+    const isDuplicate = currentExtractions.some(
+      (existing) => (existing.variableName || existing.name) === variableName
+    );
+
+    if (isDuplicate) {
+      toast({
+        title: 'Error',
+        description: `Variable "${variableName}" already exists`,
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Normalize extraction
+    const normalizedExtraction = {
+      ...extraction,
+      variableName,
+      name: variableName,
+    };
+
     const existingChains = JSON.parse(
       localStorage.getItem('extractionLogs') || '[]'
     );
@@ -416,10 +555,10 @@ export function RequestEditor({
     }
     const nextOrder = maxOrder + 1;
     const extractionWithOrder = {
-      ...extraction,
+      ...normalizedExtraction,
       order: nextOrder,
     };
-    const updatedExtractions = [...currentExtractions, extraction];
+    const updatedExtractions = [...currentExtractions, normalizedExtraction];
     // Create the update payload with requestChainId
     const updatePayload: Partial<APIRequest> & { requestChainId?: string } = {
       extractVariables: updatedExtractions,
@@ -517,8 +656,8 @@ export function RequestEditor({
   };
 
   const handleRemoveExtraction = (variableName: string) => {
-    const updatedExtractions = request.extractVariables.filter(
-      (e) => e.variableName !== variableName
+    const updatedExtractions = (request.extractVariables || []).filter(
+      (e) => (e.variableName || e.name) !== variableName
     );
     onUpdate({ extractVariables: updatedExtractions });
     const newExtracted = { ...extractedVariables };
@@ -544,7 +683,10 @@ export function RequestEditor({
 
   const addHeader = () => {
     onUpdate({
-      headers: [...request.headers, { key: '', value: '', enabled: true }],
+      headers: [
+        ...(request.headers || []),
+        { key: '', value: '', enabled: true },
+      ],
     });
   };
 
@@ -552,7 +694,7 @@ export function RequestEditor({
     index: number,
     updates: Partial<{ key: string; value: string; enabled: boolean }>
   ) => {
-    const updatedHeaders = request.headers.map((header, i) =>
+    const updatedHeaders = (request.headers || []).map((header, i) =>
       i === index ? { ...header, ...updates } : header
     );
     onUpdate({ headers: updatedHeaders });
@@ -560,7 +702,7 @@ export function RequestEditor({
 
   const removeHeader = (index: number) => {
     onUpdate({
-      headers: request.headers.filter((_, i) => i !== index),
+      headers: (request.headers || []).filter((_, i) => i !== index),
     });
   };
 
@@ -825,7 +967,7 @@ export function RequestEditor({
 
               {/* Parameters List (no empty state) */}
               <div className='space-y-2'>
-                {request?.params?.map((param, index) => (
+                {(request?.params || []).map((param, index) => (
                   <div key={index} className='flex items-center space-x-2'>
                     <input
                       type='text'
@@ -884,7 +1026,7 @@ export function RequestEditor({
 
               {/* Headers List (no empty state) */}
               <div className='space-y-2'>
-                {request?.headers?.map((header, index) => (
+                {(request?.headers || []).map((header, index) => (
                   <div key={index} className='flex items-center space-x-2'>
                     <input
                       type='text'
@@ -904,6 +1046,13 @@ export function RequestEditor({
                       className='flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm'
                       placeholder='Value (use {{variableName}} for variables)'
                     />
+                    {/* Show processed value if different */}
+                    {processedRequest.headers?.[index]?.value !==
+                      header.value && (
+                      <div className='flex-1 px-2 py-1 bg-blue-50 border border-blue-200 rounded text-xs font-mono'>
+                        → {processedRequest.headers[index]?.value}
+                      </div>
+                    )}
                     <button
                       onClick={() =>
                         updateHeader(index, { enabled: !header.enabled })
@@ -1024,6 +1173,18 @@ export function RequestEditor({
                     className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm'
                     placeholder='Enter request body... Use {{variableName}} for variables'
                   />
+                  {/* Show processed value if different */}
+                  {processedRequest.body !== request.body &&
+                    processedRequest.body && (
+                      <div className='mt-2 p-2 bg-blue-50 border border-blue-200 rounded'>
+                        <div className='text-xs font-medium text-blue-900 mb-1'>
+                          Processed Body:
+                        </div>
+                        <pre className='text-xs font-mono text-blue-800 max-h-32 overflow-y-auto'>
+                          {processedRequest.body}
+                        </pre>
+                      </div>
+                    )}
                 </div>
               )}
               {request.bodyType !== 'none' && request.bodyType !== 'raw' && (
@@ -1072,17 +1233,28 @@ export function RequestEditor({
                         request.authorization?.token || request.authToken || ''
                       }
                       onChange={(e) => {
+                        const tokenValue = e.target.value;
                         onUpdate({
-                          authToken: e.target.value,
+                          authToken: tokenValue,
                           authorization: {
                             ...request.authorization,
-                            token: e.target.value,
+                            token: tokenValue,
                           },
                         });
                       }}
                       className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
                       placeholder='Enter bearer token or use {{tokenVariable}}'
                     />
+                    {/* Show processed value if different */}
+                    {(processedRequest.authorization?.token ||
+                      processedRequest.authToken) !==
+                      (request.authorization?.token || request.authToken) && (
+                      <div className='mt-1 px-2 py-1 bg-blue-50 border border-blue-200 rounded text-xs font-mono'>
+                        Processed:{' '}
+                        {processedRequest.authorization?.token ||
+                          processedRequest.authToken}
+                      </div>
+                    )}
                   </div>
                 )}
                 {request.authorizationType === 'basic' && (
@@ -1100,6 +1272,13 @@ export function RequestEditor({
                         className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
                         placeholder='Username'
                       />
+                      {/* Show processed value if different */}
+                      {processedRequest.authUsername !==
+                        request.authUsername && (
+                        <div className='mt-1 px-2 py-1 bg-blue-50 border border-blue-200 rounded text-xs font-mono'>
+                          Processed: {processedRequest.authUsername}
+                        </div>
+                      )}
                     </div>
                     <div>
                       <label className='block text-sm font-medium text-gray-700 mb-2'>
@@ -1114,6 +1293,13 @@ export function RequestEditor({
                         className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
                         placeholder='Password'
                       />
+                      {/* Show processed value if different */}
+                      {processedRequest.authPassword !==
+                        request.authPassword && (
+                        <div className='mt-1 px-2 py-1 bg-blue-50 border border-blue-200 rounded text-xs font-mono'>
+                          Processed: {processedRequest.authPassword}
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
@@ -1133,6 +1319,12 @@ export function RequestEditor({
                           className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
                           placeholder='API Key name'
                         />
+                        {/* Show processed value if different */}
+                        {processedRequest.authApiKey !== request.authApiKey && (
+                          <div className='mt-1 px-2 py-1 bg-blue-50 border border-blue-200 rounded text-xs font-mono'>
+                            Processed: {processedRequest.authApiKey}
+                          </div>
+                        )}
                       </div>
                       <div>
                         <label className='block text-sm font-medium text-gray-700 mb-2'>
@@ -1147,6 +1339,13 @@ export function RequestEditor({
                           className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
                           placeholder='API Key value'
                         />
+                        {/* Show processed value if different */}
+                        {processedRequest.authApiValue !==
+                          request.authApiValue && (
+                          <div className='mt-1 px-2 py-1 bg-blue-50 border border-blue-200 rounded text-xs font-mono'>
+                            Processed: {processedRequest.authApiValue}
+                          </div>
+                        )}
                       </div>
                     </div>
                     <div>
@@ -1834,6 +2033,47 @@ export function RequestEditor({
         </CardContent>
       </Card>
       {/* Main Tabs */}
+      {/* Show processed values for debugging */}
+      {(processedRequest.authToken !== request.authToken ||
+        processedRequest.authorization?.token !==
+          request.authorization?.token ||
+        processedRequest.body !== request.body ||
+        JSON.stringify(processedRequest.headers) !==
+          JSON.stringify(request.headers)) && (
+        <div className='mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg'>
+          <h4 className='text-sm font-medium text-blue-900 mb-2'>
+            Variable Substitution Preview:
+          </h4>
+          <div className='space-y-2 text-xs'>
+            {(processedRequest.authToken !== request.authToken ||
+              processedRequest.authorization?.token !==
+                request.authorization?.token) && (
+              <div>
+                <span className='font-medium'>Auth Token:</span>
+                <div className='font-mono bg-white p-1 rounded border'>
+                  <span className='text-gray-500'>
+                    {request.authorization?.token || request.authToken}
+                  </span>{' '}
+                  →
+                  <span className='text-blue-600 ml-1'>
+                    {processedRequest.authorization?.token ||
+                      processedRequest.authToken}
+                  </span>
+                </div>
+              </div>
+            )}
+            {processedRequest.body !== request.body &&
+              processedRequest.body && (
+                <div>
+                  <span className='font-medium'>Body:</span>
+                  <div className='font-mono bg-white p-1 rounded border max-h-20 overflow-y-auto'>
+                    <pre className='text-blue-600'>{processedRequest.body}</pre>
+                  </div>
+                </div>
+              )}
+          </div>
+        </div>
+      )}
       <Tabs defaultValue='params' className='w-full'>
         <TabsList className='grid w-full grid-cols-7'>
           <TabsTrigger value='params' className='gap-2'>
