@@ -1,20 +1,20 @@
-import { useState } from "react";
-import { useLocation } from "wouter";
+import { useState } from 'react';
+import { useLocation } from 'wouter';
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Separator } from "@/components/ui/separator";
-import { Eye, EyeOff, Lock, Mail } from "lucide-react";
-import { useAuth } from "@/hooks/useAuth";
-import { useToast } from "@/hooks/useToast";
+} from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Separator } from '@/components/ui/separator';
+import { Eye, EyeOff, Lock, Mail } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/useToast';
 
 export default function SignIn() {
   const [, setLocation] = useLocation();
@@ -22,20 +22,20 @@ export default function SignIn() {
   const { loginMutation, isAuthenticated, user, isLoading } = useAuth();
   const { error: errorToast } = useToast();
   const [formData, setFormData] = useState({
-    email: "",
-    password: "",
+    email: '',
+    password: '',
   });
 
   // Redirect if user is already authenticated
   if (isAuthenticated && !isLoading) {
-    setLocation("/dashboard");
+    setLocation('/request-builder');
     return null;
   }
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-lg">Loading...</div>
+      <div className='min-h-screen flex items-center justify-center'>
+        <div className='text-lg'>Loading...</div>
       </div>
     );
   }
@@ -45,30 +45,33 @@ export default function SignIn() {
 
     try {
       const loginMutationResult = await loginMutation.mutateAsync(formData);
-      console.log("🚀 ~ handleSubmit ~ loginMutationResult:", loginMutationResult)
+      console.log(
+        '🚀 ~ handleSubmit ~ loginMutationResult:',
+        loginMutationResult
+      );
       if (loginMutationResult && loginMutationResult.token) {
-        setLocation("/dashboard");
+        setLocation('/request-builder');
       } else {
-        errorToast("Login failed: No authentication token received");
+        errorToast('Login failed: No authentication token received');
       }
     } catch (error) {
       if (error instanceof Error) {
         errorToast(error.message);
       } else {
-        errorToast("An unexpected error occurred during login");
+        errorToast('An unexpected error occurred during login');
       }
     }
   };
 
   const handleDemoLogin = (
-    userType: "admin" | "developer" | "qa" | "enterprise" | "pro"
+    userType: 'admin' | 'developer' | 'qa' | 'enterprise' | 'pro'
   ) => {
     const demoCredentials = {
-      admin: { email: "admin@optraflow.dev", password: "admin123" },
-      developer: { email: "dev@optraflow.dev", password: "dev123" },
-      qa: { email: "qa@optraflow.dev", password: "qa123" },
-      enterprise: { email: "enterprise@optraflow.dev", password: "ent123" },
-      pro: { email: "pro@optraflow.dev", password: "pro123" },
+      admin: { email: 'admin@optraflow.dev', password: 'admin123' },
+      developer: { email: 'dev@optraflow.dev', password: 'dev123' },
+      qa: { email: 'qa@optraflow.dev', password: 'qa123' },
+      enterprise: { email: 'enterprise@optraflow.dev', password: 'ent123' },
+      pro: { email: 'pro@optraflow.dev', password: 'pro123' },
     };
 
     const credentials = demoCredentials[userType];
@@ -104,18 +107,18 @@ export default function SignIn() {
       //   }
       // }, 1000); // Give the regular login 1 second to complete or fail
     } catch (error) {
-      console.error("Demo login error:", error);
+      console.error('Demo login error:', error);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div className="text-center">
-          <h2 className="mt-6 text-3xl font-bold text-gray-900 dark:text-white">
+    <div className='min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8'>
+      <div className='max-w-md w-full space-y-8'>
+        <div className='text-center'>
+          <h2 className='mt-6 text-3xl font-bold text-gray-900 dark:text-white'>
             Sign in to Optraflow
           </h2>
-          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+          <p className='mt-2 text-sm text-gray-600 dark:text-gray-400'>
             Access your API testing workspace
           </p>
         </div>
@@ -127,28 +130,28 @@ export default function SignIn() {
               Enter your credentials to access your account
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
+          <CardContent className='space-y-6'>
             {loginMutation.isError && (
-              <Alert variant="destructive">
+              <Alert variant='destructive'>
                 <AlertDescription>
                   {loginMutation.error instanceof Error
                     ? loginMutation.error.message
-                    : "Invalid email or password. Please try again."}
+                    : 'Invalid email or password. Please try again.'}
                 </AlertDescription>
               </Alert>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className='space-y-4'>
               <div>
-                <Label htmlFor="email">Email address</Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                <Label htmlFor='email'>Email address</Label>
+                <div className='relative'>
+                  <Mail className='absolute left-3 top-3 h-4 w-4 text-gray-400' />
                   <Input
-                    id="email"
-                    type="email"
+                    id='email'
+                    type='email'
                     required
-                    className="pl-10"
-                    placeholder="Enter your email"
+                    className='pl-10'
+                    placeholder='Enter your email'
                     value={formData.email}
                     onChange={(e) =>
                       setFormData({ ...formData, email: e.target.value.trim() })
@@ -158,50 +161,53 @@ export default function SignIn() {
               </div>
 
               <div>
-                <Label htmlFor="password">Password</Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                <Label htmlFor='password'>Password</Label>
+                <div className='relative'>
+                  <Lock className='absolute left-3 top-3 h-4 w-4 text-gray-400' />
                   <Input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
+                    id='password'
+                    type={showPassword ? 'text' : 'password'}
                     required
-                    className="pl-10 pr-10"
-                    placeholder="Enter your password"
+                    className='pl-10 pr-10'
+                    placeholder='Enter your password'
                     value={formData.password}
                     onChange={(e) =>
-                      setFormData({ ...formData, password: e.target.value.trim() })
+                      setFormData({
+                        ...formData,
+                        password: e.target.value.trim(),
+                      })
                     }
                   />
                   <button
-                    type="button"
-                    className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
+                    type='button'
+                    className='absolute right-3 top-3 text-gray-400 hover:text-gray-600'
                     onClick={() => setShowPassword(!showPassword)}
                   >
                     {showPassword ? (
-                      <EyeOff className="h-4 w-4" />
+                      <EyeOff className='h-4 w-4' />
                     ) : (
-                      <Eye className="h-4 w-4" />
+                      <Eye className='h-4 w-4' />
                     )}
                   </button>
                 </div>
               </div>
 
-              <div className="flex items-center justify-between">
+              <div className='flex items-center justify-between'>
                 <button
-                  type="button"
-                  className="text-sm text-blue-600 hover:text-blue-500"
-                  onClick={() => setLocation("/forgot-password")}
+                  type='button'
+                  className='text-sm text-blue-600 hover:text-blue-500'
+                  onClick={() => setLocation('/forgot-password')}
                 >
                   Forgot your password?
                 </button>
               </div>
 
               <Button
-                type="submit"
-                className="w-full"
+                type='submit'
+                className='w-full'
                 disabled={loginMutation.isPending}
               >
-                {loginMutation.isPending ? "Signing in..." : "Sign in"}
+                {loginMutation.isPending ? 'Signing in...' : 'Sign in'}
               </Button>
             </form>
 
@@ -255,12 +261,12 @@ export default function SignIn() {
               </Button>
             </div> */}
 
-            <div className="text-center">
-              <span className="text-sm text-gray-600 dark:text-gray-400">
-                Don't have an account?{" "}
+            <div className='text-center'>
+              <span className='text-sm text-gray-600 dark:text-gray-400'>
+                Don't have an account?{' '}
                 <button
-                  className="text-blue-600 hover:text-blue-500 font-medium"
-                  onClick={() => setLocation("/signup")}
+                  className='text-blue-600 hover:text-blue-500 font-medium'
+                  onClick={() => setLocation('/signup')}
                 >
                   Sign up
                 </button>
