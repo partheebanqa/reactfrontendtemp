@@ -104,6 +104,7 @@ const menuItems: MenuItem[] = [
     path: '/scheduler',
     icon: CalendarClock,
     feature: 'scheduler',
+    upcoming: true, // 🚀 mark as upcoming
   },
   {
     label: 'Data Management',
