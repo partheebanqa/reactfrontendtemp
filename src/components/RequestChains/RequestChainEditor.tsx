@@ -17,7 +17,6 @@ import {
   CheckCircle,
   XCircle,
   Info,
-  Layers,
   Link2,
   Pencil,
   X,
@@ -981,9 +980,6 @@ export function RequestChainEditor({
                               {env.baseUrl}
                             </span>
                           </span>
-                          {/* <span className='text-xs text-muted-foreground break-all'>
-                            {env.baseUrl}
-                          </span> */}
                         </div>
                       </SelectItem>
                     ))}
@@ -993,7 +989,7 @@ export function RequestChainEditor({
             </CardContent>
           </Card>
 
-          {/* 2. Requests and Extracted Variables Boxs */}
+          {/* 2. Requests and Extracted Variables Box */}
           <Card>
             <CardHeader>
               <CardTitle>Requests and Extracted Variables</CardTitle>
@@ -1094,6 +1090,7 @@ export function RequestChainEditor({
                                     : ''
                                 }`}
                               >
+                                {/* ... existing card content ... */}
                                 <CardContent className='p-4'>
                                   <div className='flex items-center'>
                                     <div className='flex items-center space-x-3'>
@@ -1434,7 +1431,6 @@ export function RequestChainEditor({
                                                     executionLog.requestId
                                                   ] || false
                                                 }
-                                                // chainId={chain?.id ?? ''}
                                               />
                                             </div>
                                           )}
