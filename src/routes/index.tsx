@@ -40,6 +40,8 @@ import { ExecutionDetailsDialog } from '@/components/Executions/ExecutionDetails
 import ExecutionReportPage from '@/components/Executions/ExecutionReportPage';
 import FAQ from '@/pages/FAQ';
 import ResetPassword from '@/pages/ResetPassword';
+import RequestChainCreate from '@/pages/RequestChainCreate';
+import RequestChainEdit from '@/pages/RequestChainEdit';
 
 export default function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -69,6 +71,8 @@ export default function Router() {
           <Route path='/swagger-parser' component={SwaggerParser} />
           <Route path='/request-builder' component={RequestBuilderPage} />
           <Route path='/request-chains' component={RequestChains} />
+          <Route path='/request-chains/create' component={RequestChainCreate} />
+          <Route path='/request-chains/:id/edit' component={RequestChainEdit} />
           <Route path='/test-suites' component={TestSuites} />
           <Route path='/test-suites/:id/edit' component={EditTestSuite} />
           <Route path='/test-suites/create' component={EditTestSuite} />

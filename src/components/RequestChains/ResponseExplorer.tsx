@@ -10,6 +10,7 @@ import {
   Cookie,
   CheckCircle,
   Trash2,
+  Info,
 } from 'lucide-react';
 import type { DataExtraction } from '@/shared/types/requestChain.model';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
@@ -55,17 +56,17 @@ export function ResponseExplorer({
 
   // Auto-extract variables in edit mode from existingExtractions
   const getAutoExtractedVariables = () => {
-    if (!chainId || !existingExtractions || existingExtractions.length === 0) {
+    if (!existingExtractions || existingExtractions.length === 0) {
       return extractedVariables || {};
     }
 
     const autoExtracted: Record<string, any> = { ...extractedVariables };
 
     existingExtractions.forEach((extraction) => {
-      if (!extraction.path || (!extraction.variableName && !extraction.name))
-        return;
-
       const variableName = extraction.variableName || extraction.name;
+      if (!extraction.path || !variableName) {
+        return;
+      }
 
       // Skip if already extracted
       if (autoExtracted[variableName] !== undefined) return;
@@ -86,24 +87,17 @@ export function ResponseExplorer({
             try {
               sourceData = JSON.parse(response.body);
             } catch {
-              sourceData = response.body;
+              console.warn(
+                'Failed to parse response body for variable extraction'
+              );
+              return;
             }
             break;
         }
 
         // Extract value using path
         if (sourceData && extraction.path) {
-          let value = sourceData;
-          const pathParts = extraction.path.split('.');
-
-          for (const part of pathParts) {
-            if (value && typeof value === 'object' && part in value) {
-              value = value[part];
-            } else {
-              value = undefined;
-              break;
-            }
-          }
+          const value = getValueByPath(sourceData, extraction.path);
 
           if (value !== undefined) {
             autoExtracted[variableName] = value;
@@ -131,6 +125,28 @@ export function ResponseExplorer({
     suggestedName: string;
   } | null>(null);
   const [variableName, setVariableName] = useState<string>('');
+
+  // Helper function to get value by path
+  const getValueByPath = (obj: any, path: string): any => {
+    if (!obj || !path) return undefined;
+
+    return path.split('.').reduce((current, key) => {
+      if (current && typeof current === 'object') {
+        if (key.includes('[') && key.includes(']')) {
+          const arrayKey = key.substring(0, key.indexOf('['));
+          const index = Number.parseInt(
+            key.substring(key.indexOf('[') + 1, key.indexOf(']'))
+          );
+          if (current[arrayKey] && Array.isArray(current[arrayKey])) {
+            return current[arrayKey][index];
+          }
+          return undefined;
+        }
+        return current[key];
+      }
+      return undefined;
+    }, obj);
+  };
 
   // Sanitize variable name: remove special characters, convert spaces to underscores
   const sanitizeVariableName = (name: string): string => {
@@ -554,7 +570,7 @@ export function ResponseExplorer({
     <div className='space-y-6'>
       {/* Response Explorer */}
       <div className='bg-white border border-gray-200 rounded-lg'>
-        <div className='border-b border-gray-200'>
+        <div className='border-b border-gray-200 flex items-center justify-between'>
           <nav className='flex space-x-8 px-6'>
             {[
               { id: 'body', label: 'Response Body', icon: Code },
@@ -578,14 +594,22 @@ export function ResponseExplorer({
               );
             })}
           </nav>
+
+          {/* Info icon with tooltip */}
+          <div className='relative group pr-4'>
+            <Info className='w-5 h-5 text-gray-400 cursor-pointer' />
+            <div className='absolute right-0 mt-2 w-56 p-2 text-xs text-gray-700 bg-white border border-gray-200 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity'>
+              Click on the element to extract variables.
+            </div>
+          </div>
         </div>
+
         <div className='p-6 max-h-96 overflow-auto'>
           {activeTab === 'body' && renderJsonTree()}
           {activeTab === 'headers' && renderHeadersTab()}
           {activeTab === 'cookies' && renderCookiesTab()}
         </div>
       </div>
-
       {/* Extracted Variables Preview */}
       {finalExtractedVariables &&
         typeof finalExtractedVariables === 'object' &&

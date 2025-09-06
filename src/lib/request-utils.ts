@@ -61,6 +61,8 @@ export const getExtractVariablesByEnvironment = (environmentId?: string) => {
 };
 
 export const getValueByPath = (obj: any, path: string): any => {
+  if (!obj || !path) return undefined;
+
   return path.split('.').reduce((current, key) => {
     if (current && typeof current === 'object') {
       if (key.includes('[') && key.includes(']')) {
@@ -68,7 +70,10 @@ export const getValueByPath = (obj: any, path: string): any => {
         const index = Number.parseInt(
           key.substring(key.indexOf('[') + 1, key.indexOf(']'))
         );
-        return current[arrayKey] && current[arrayKey][index];
+        if (current[arrayKey] && Array.isArray(current[arrayKey])) {
+          return current[arrayKey][index];
+        }
+        return undefined;
       }
       return current[key];
     }
@@ -81,14 +86,35 @@ export const extractDataFromResponse = (
   extractions: APIRequest['extractVariables']
 ): Record<string, any> => {
   const extracted: Record<string, any> = {};
+
+  if (!extractions || !Array.isArray(extractions)) {
+    return extracted;
+  }
+
   extractions.forEach((extraction) => {
     try {
       let value;
+      const variableName = extraction.variableName || extraction.name;
+
+      if (!variableName || !extraction.path) {
+        console.warn(
+          'Skipping extraction: missing variable name or path',
+          extraction
+        );
+        return;
+      }
+
       if (extraction.source === 'response_body') {
-        const jsonData =
-          typeof response.body === 'string'
-            ? JSON.parse(response.body)
-            : response.body;
+        let jsonData;
+        try {
+          jsonData =
+            typeof response.body === 'string'
+              ? JSON.parse(response.body)
+              : response.body;
+        } catch (parseError) {
+          console.error('Failed to parse response body as JSON:', parseError);
+          return;
+        }
         value = getValueByPath(jsonData, extraction.path);
       } else if (extraction.source === 'response_header') {
         const headers = response.headers || {};
@@ -118,15 +144,16 @@ export const extractDataFromResponse = (
             value = transformFunction(value);
           } catch (transformError) {
             console.error(
-              `Transform error for ${extraction.variableName}:`,
+              `Transform error for ${variableName}:`,
               transformError
             );
           }
         }
-        extracted[extraction.variableName] = value;
+        extracted[variableName] = value;
       }
     } catch (error) {
-      console.error(`Failed to extract ${extraction.variableName}:`, error);
+      const variableName = extraction.variableName || extraction.name;
+      console.error(`Failed to extract ${variableName}:`, error);
     }
   });
   return extracted;
@@ -199,4 +226,80 @@ export const transformRequestForSave = (request: APIRequest): APIRequest => {
   }
 
   return transformedRequest;
+};
+
+// Helper function to replace variables in any text
+export const replaceVariablesInText = (
+  text: string,
+  variables: any[]
+): string => {
+  if (!text) return text;
+  let result = text;
+  variables.forEach((variable) => {
+    const varName = variable.name || variable.variableName;
+    const varValue = variable.value || variable.initialValue || '';
+    if (varName) {
+      const regex = new RegExp(`{{${varName}}}`, 'g');
+      result = result.replace(regex, varValue);
+    }
+  });
+  return result;
+};
+
+// Process entire request with variable substitution
+export const processRequestWithVariables = (
+  request: any,
+  variables: any[]
+): any => {
+  if (!request || !variables) return request;
+
+  return {
+    ...request,
+    url: replaceVariablesInText(request.url, variables),
+    body: replaceVariablesInText(request.body || '', variables),
+    bodyRawContent: replaceVariablesInText(
+      request.bodyRawContent || '',
+      variables
+    ),
+    headers: (request.headers || []).map((header: any) => ({
+      ...header,
+      key: replaceVariablesInText(header.key, variables),
+      value: replaceVariablesInText(header.value, variables),
+    })),
+    params: (request.params || []).map((param: any) => ({
+      ...param,
+      key: replaceVariablesInText(param.key, variables),
+      value: replaceVariablesInText(param.value, variables),
+    })),
+    authToken: replaceVariablesInText(request.authToken || '', variables),
+    authUsername: replaceVariablesInText(request.authUsername || '', variables),
+    authPassword: replaceVariablesInText(request.authPassword || '', variables),
+    authApiKey: replaceVariablesInText(request.authApiKey || '', variables),
+    authApiValue: replaceVariablesInText(request.authApiValue || '', variables),
+    authorization: request.authorization
+      ? {
+          ...request.authorization,
+          token: replaceVariablesInText(
+            request.authorization.token || '',
+            variables
+          ),
+          username: replaceVariablesInText(
+            request.authorization.username || '',
+            variables
+          ),
+          password: replaceVariablesInText(
+            request.authorization.password || '',
+            variables
+          ),
+          key: replaceVariablesInText(
+            request.authorization.key || '',
+            variables
+          ),
+          value: replaceVariablesInText(
+            request.authorization.value || '',
+            variables
+          ),
+        }
+      : request.authorization,
+  };
 };

@@ -36,12 +36,28 @@ interface Request {
   method: string;
   name: string;
   endpoint: string;
+  url: string;
   description: string;
+  bodyType?: string;
+  bodyRawContent?: string;
+  bodyFormData?: any;
+  authorizationType?: string;
+  authorization?: any;
+  headers?: any[];
+  params?: any[];
+  order?: number;
   testCases: {
     functional: number;
     total: number;
   };
   selectedTestCases?: string[];
+}
+
+interface ExtractedVariable {
+  name: string;
+  path: string;
+  source: string;
+  type: string;
 }
 
 const EditTestSuiteContent: React.FC = () => {
@@ -58,14 +74,18 @@ const EditTestSuiteContent: React.FC = () => {
   const { environments, activeEnvironment, setActiveEnvironment } =
     useDataManagement();
 
-  // console.log('environmentsuseDataManagement:', environments);
-
   const [testSuiteName, setTestSuiteName] = useState('');
   const [description, setDescription] = useState('');
   const [selectedEnvironment, setSelectedEnvironment] = useState<string>('');
   const [requests, setRequests] = useState<Request[]>([]);
   const [originalRequestIds, setOriginalRequestIds] = useState<string[]>([]);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+
+  // Add state for extracted variables and preRequestId
+  const [preRequestId, setPreRequestId] = useState<string | null>(null);
+  const [extractedVariables, setExtractedVariables] = useState<
+    ExtractedVariable[]
+  >([]);
 
   const {
     data: testSuite,
@@ -78,8 +98,6 @@ const EditTestSuiteContent: React.FC = () => {
     queryFn: () => getTestSuites(id!),
     enabled: !!id && !isCreateMode,
   });
-
-  console.log('testSuite:', testSuite);
 
   useEffect(() => {
     if (activeEnvironment) {
@@ -126,6 +144,8 @@ const EditTestSuiteContent: React.FC = () => {
       environmentId: string;
       addRequestIds?: string[];
       removeRequestIds?: string[];
+      preRequestId?: string;
+      extractedVariables?: ExtractedVariable[];
     }) =>
       updateTestSuite(data.id, {
         name: data.name,
@@ -133,6 +153,8 @@ const EditTestSuiteContent: React.FC = () => {
         environmentId: data.environmentId,
         addRequestIds: data.addRequestIds,
         removeRequestIds: data.removeRequestIds,
+        preRequestId: data.preRequestId,
+        extractedVariables: data.extractedVariables,
       }),
     onSuccess: () => {
       toast({
@@ -161,11 +183,8 @@ const EditTestSuiteContent: React.FC = () => {
       if (Array.isArray(testSuite.requests) && testSuite.requests.length > 0) {
         const transformedRequests: Request[] = testSuite.requests.map(
           (req: any) => ({
-            id: req.id,
-            method: req.method,
-            name: req.name,
+            ...req,
             endpoint: req.url,
-            description: req.description || `${req.method} ${req.url}`,
             testCases: {
               functional: 0,
               total: 0,
@@ -175,6 +194,14 @@ const EditTestSuiteContent: React.FC = () => {
         setRequests(transformedRequests);
         // Store original request IDs for tracking changes
         setOriginalRequestIds(transformedRequests.map((req) => req.id));
+      }
+
+      // Set existing preRequestId and extractedVariables if they exist
+      if (testSuite.preRequestId) {
+        setPreRequestId(testSuite.preRequestId);
+      }
+      if (testSuite.extractedVariables) {
+        setExtractedVariables(testSuite.extractedVariables);
       }
     }
   }, [testSuite, isCreateMode]);
@@ -190,12 +217,9 @@ const EditTestSuiteContent: React.FC = () => {
   }, [isError, error, toast, isCreateMode]);
 
   const handleImportRequests = (selectedRequests: ExtendedRequest[]) => {
-    // Transform ExtendedRequest to Request format
     const transformedRequests: Request[] = selectedRequests.map((extReq) => ({
-      id: extReq.id,
-      method: extReq.method,
-      name: extReq.name,
-      endpoint: extReq.endpoint || extReq.url || '', // Handle undefined endpoint
+      ...extReq,
+      endpoint: extReq.endpoint || extReq.url || '',
       description:
         extReq.description ||
         `${extReq.method} ${extReq.endpoint || extReq.url}`,
@@ -204,8 +228,11 @@ const EditTestSuiteContent: React.FC = () => {
         total: 0,
       },
     }));
+
+    // Add the transformed requests to the existing requests
     setRequests((prev) => [...prev, ...transformedRequests]);
     setIsImportModalOpen(false);
+
     toast({
       title: 'Requests imported',
       description: `${selectedRequests.length} request(s) imported successfully`,
@@ -232,6 +259,23 @@ const EditTestSuiteContent: React.FC = () => {
     });
   };
 
+  // Handler for saving extracted variables from ManageRequests
+  const handleSaveExtractedVariables = (
+    requestId: string,
+    variables: ExtractedVariable[]
+  ) => {
+    console.log('requestId:', requestId);
+    console.log('extractedVariables:', variables);
+
+    setPreRequestId(requestId);
+    setExtractedVariables(variables);
+
+    toast({
+      title: 'Variables extracted',
+      description: `${variables.length} variable(s) extracted and will be saved with the test suite`,
+    });
+  };
+
   const calculateRequestChanges = () => {
     const currentRequestIds = requests.map((req) => req.id);
     // Find added requests (present in current but not in original)
@@ -254,12 +298,16 @@ const EditTestSuiteContent: React.FC = () => {
       });
       return;
     }
+
     if (isCreateMode) {
       createMutation.mutate({
         name: testSuiteName,
         description: description,
         environmentId: selectedEnvironment,
-        requestIds: requests.map((request) => request.id), // Pass request IDs
+        requestIds: requests.map((request) => request.id),
+        preRequestId: preRequestId || undefined,
+        extractedVariables:
+          extractedVariables.length > 0 ? extractedVariables : undefined,
       });
     } else {
       const { addRequestIds, removeRequestIds } = calculateRequestChanges();
@@ -271,6 +319,9 @@ const EditTestSuiteContent: React.FC = () => {
         addRequestIds: addRequestIds.length > 0 ? addRequestIds : undefined,
         removeRequestIds:
           removeRequestIds.length > 0 ? removeRequestIds : undefined,
+        preRequestId: preRequestId || undefined,
+        extractedVariables:
+          extractedVariables.length > 0 ? extractedVariables : undefined,
       });
     }
   };
@@ -293,272 +344,223 @@ const EditTestSuiteContent: React.FC = () => {
 
   return (
     <>
-     <BreadCum
-        title= {isCreateMode ? "Create Test Suite" : "Edit Test Suite"}
-        subtitle={!isCreateMode ? `Test Suite ID: ${id}` : 'Manage your API automation workflows'}
-        buttonTitle=" Create Test suite"
-         showCreateButton={false}
-         showQuickGuide={false}
-        onClickQuickGuide={() => console.log("Exporting...")}
+      <BreadCum
+        title={isCreateMode ? 'Create Test Suite' : 'Edit Test Suite'}
+        subtitle={
+          !isCreateMode
+            ? `Test Suite ID: ${id}`
+            : 'Manage your API automation workflows'
+        }
+        buttonTitle=' Create Test suite'
+        showCreateButton={false}
+        showQuickGuide={false}
+        onClickQuickGuide={() => console.log('Exporting...')}
         icon={Layers}
-        iconBgClass="bg-green-100"
-        iconColor="#0f766e"
+        iconBgClass='bg-green-100'
+        iconColor='#0f766e'
         iconSize={36}
       />
-    <div className='border border-gray-200 rounded-lg min-h-screen bg-background mt-3'>
-      {/* <div className='border-b px-6 py-4'>
-        <div className='flex items-center justify-between'>
-          <div className='flex items-center space-x-4'>
-            <div>
-              <h1 className='text-2xl font-semibold'>
-                {isCreateMode ? 'Create Test Suite' : 'Edit Test Suite'}
-              </h1>
-              <div className='flex items-center space-x-4 mt-1'>
-                {!isCreateMode && (
-                  <>
-                    <span className='text-sm text-muted-foreground'>
-                      Test Suite ID: {id}
-                    </span>
-                    <Badge variant='secondary'>CI/CD Integration</Badge>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
-          <div className='flex items-center space-x-2'>
-            <Button variant='outline' onClick={handleBack}>
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSaveChanges}
-              disabled={
-                isSaving || !testSuiteName.trim() || requests.length === 0
-              }
-            >
-              {isSaving
-                ? isCreateMode
-                  ? 'Creating...'
-                  : 'Saving...'
-                : isCreateMode
-                ? 'Create Suite'
-                : 'Save Changes'}
-            </Button>
-          </div>
-        </div>
-      </div> */}
-
-      <div className='p-6 space-y-6'>
-        <Card>
-          <CardHeader>
-            <CardTitle className='text-lg font-medium'>
-              Basic Information
-            </CardTitle>
-          </CardHeader>
-          <CardContent className='space-y-4'>
-            <div>
-              <label className='block text-sm font-medium mb-2'>
-                Test Suite Name <span className='text-destructive'>*</span>
-              </label>
-              <Input
-                value={testSuiteName}
-                onChange={(e) => setTestSuiteName(e.target.value)}
-                placeholder='Enter test suite name'
-              />
-            </div>
-            <div>
-              <label className='block text-sm font-medium mb-2'>
-                Description (optional)
-              </label>
-              <Textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder='Enter test suite description'
-                rows={3}
-              />
-            </div>
-            <div className='space-y-2'>
-              <label
-                htmlFor='environment-select'
-                className='block text-sm font-medium'
-              >
-                Environment <span className='text-destructive'>*</span>
-              </label>
-              <Select
-                value={selectedEnvironment}
-                onValueChange={handleEnvironmentChange}
-              >
-                <SelectTrigger id='environment-select'>
-                  <SelectValue placeholder='Select environment' />
-                </SelectTrigger>
-                <SelectContent>
-                  {environments.map((env) => (
-                    <SelectItem key={env.id} value={env.id}>
-                      <div className='flex flex-col text-left'>
-                        <span className='font-medium text-sm'>
-                          {env.name} -{' '}
-                          <span className='text-xs text-muted-foreground break-all'>
-                            {env.baseUrl}
-                          </span>
-                        </span>
-                        {/* 
-                        <span className='text-xs text-muted-foreground break-all'>
-                          {env.baseUrl}
-                        </span> */}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Import Requests Section */}
-        <Card>
-          <CardHeader>
-            <div className='flex items-center justify-between'>
+      <div className='border border-gray-200 rounded-lg min-h-screen bg-background mt-3'>
+        <div className='p-6 space-y-6'>
+          <Card>
+            <CardHeader>
+              <CardTitle className='text-lg font-medium'>
+                Basic Information
+              </CardTitle>
+            </CardHeader>
+            <CardContent className='space-y-4'>
               <div>
-                <h3 className='text-lg font-medium'>
-                  Import Requests & Configure Test Cases
-                </h3>
-                <p className='text-sm text-muted-foreground mt-1'>
-                  Import API requesNo requests imported yetts from collections
-                  and configure test cases for each request
-                </p>
-              </div>
-              <Button
-                variant='outline'
-                onClick={() => setIsImportModalOpen(true)}
-                className='shrink-0'
-              >
-                <Download className='w-4 h-4 mr-2' />
-                Import Requests
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {requests.length === 0 ? (
-              <>
-                <div className='bg-gray-50 p-8 rounded-lg border border-dashed flex flex-col items-center justify-center py-12 px-6'>
-                  <div className='w-16 h-16 mb-6 rounded-full bg-muted flex items-center justify-center'>
-                    <Download className='w-8 h-8 text-muted-foreground' />
-                  </div>
-                  <h3 className='text-lg font-medium mb-2'></h3>
-                  <p className='text-muted-foreground text-center mb-6 max-w-md'>
-                    Start by importing API requests from your collections. You
-                    can then configure specific test cases for each request.
-                  </p>
-                  <Button onClick={() => setIsImportModalOpen(true)}>
-                    <Download className='w-4 h-4 mr-2' />
-                    Import Your First Request
-                  </Button>
-                </div>
-
-                {/* Bottom stats */}
-                {/* <div className='border-t pt-4 mt-6'>
-                  <div className='flex justify-between text-sm text-muted-foreground'>
-                    <span>Imported requests: 0</span>
-                    <span>Total test cases: 0</span>
-                  </div>
-                </div> */}
-
-                <div className='px-6 py-4 bg-gray-50 mt-5 border-gray-200 flex justify-between items-center'>
-                  <div className='text-sm text-gray-600'>
-                    <div className='space-y-1'>
-                      <div>Imported requests: 0 </div>
-                      <div className='font-medium'>Total test cases: 0</div>
-                    </div>
-                  </div>
-                  <div className='flex space-x-3'>
-                    <Button variant='outline' onClick={handleBack}>
-                      Cancel
-                    </Button>
-                    <Button
-                      onClick={handleSaveChanges}
-                      disabled={
-                        isSaving ||
-                        !testSuiteName.trim() ||
-                        requests.length === 0
-                      }
-                    >
-                      {isSaving
-                        ? isCreateMode
-                          ? 'Creating Test Suite...'
-                          : 'Saving...'
-                        : isCreateMode
-                        ? 'Create Test Suite'
-                        : 'Save Changes'}
-                    </Button>
-                  </div>
-                </div>
-              </>
-            ) : (
-              <>
-                {/* Show requests when they exist */}
-                <ManageRequests
-                  requests={requests}
-                  testSuiteId={id || ''}
-                  onImport={() => setIsImportModalOpen(true)}
-                  onDeleteRequest={handleDeleteRequest}
-                  onUpdateTestCases={handleUpdateTestCases}
-                  onRefreshRequests={async () => {
-                    await refetchRequests();
-                  }}
-                  requestStats={testSuite?.stats?.requestStats ?? []}
+                <label className='block text-sm font-medium mb-2'>
+                  Test Suite Name <span className='text-destructive'>*</span>
+                </label>
+                <Input
+                  value={testSuiteName}
+                  onChange={(e) => setTestSuiteName(e.target.value)}
+                  placeholder='Enter test suite name'
                 />
+              </div>
+              <div>
+                <label className='block text-sm font-medium mb-2'>
+                  Description (optional)
+                </label>
+                <Textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder='Enter test suite description'
+                  rows={3}
+                />
+              </div>
+              <div className='space-y-2'>
+                <label
+                  htmlFor='environment-select'
+                  className='block text-sm font-medium'
+                >
+                  Environment <span className='text-destructive'>*</span>
+                </label>
+                <Select
+                  value={selectedEnvironment}
+                  onValueChange={handleEnvironmentChange}
+                >
+                  <SelectTrigger id='environment-select'>
+                    <SelectValue placeholder='Select environment' />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {environments.map((env) => (
+                      <SelectItem key={env.id} value={env.id}>
+                        <div className='flex flex-col text-left'>
+                          <span className='font-medium text-sm'>
+                            {env.name} -{' '}
+                            <span className='text-xs text-muted-foreground break-all'>
+                              {env.baseUrl}
+                            </span>
+                          </span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardContent>
+          </Card>
 
-                {/* Bottom stats for when requests exist */}
-                {/* <div className='border-t pt-4 mt-6'>
-                  <div className='flex justify-between text-sm text-muted-foreground'>
-                    <span>Imported requests: {requests.length}</span>
-                    <span>Total test cases: {totalTestCases}</span>
+          {/* Import Requests Section */}
+          <Card>
+            <CardHeader>
+              <div className='flex items-center justify-between'>
+                <div>
+                  <h3 className='text-lg font-medium'>
+                    Import Requests & Configure Test Cases
+                  </h3>
+                  <p className='text-sm text-muted-foreground mt-1'>
+                    Import API requests from collections and configure test
+                    cases for each request
+                  </p>
+                </div>
+                <Button
+                  variant='outline'
+                  onClick={() => setIsImportModalOpen(true)}
+                  className='shrink-0'
+                >
+                  <Download className='w-4 h-4 mr-2' />
+                  Import Requests
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {requests.length === 0 ? (
+                <>
+                  <div className='bg-gray-50 p-8 rounded-lg border border-dashed flex flex-col items-center justify-center py-12 px-6'>
+                    <div className='w-16 h-16 mb-6 rounded-full bg-muted flex items-center justify-center'>
+                      <Download className='w-8 h-8 text-muted-foreground' />
+                    </div>
+                    <h3 className='text-lg font-medium mb-2'></h3>
+                    <p className='text-muted-foreground text-center mb-6 max-w-md'>
+                      Start by importing API requests from your collections. You
+                      can then configure specific test cases for each request.
+                    </p>
+                    <Button onClick={() => setIsImportModalOpen(true)}>
+                      <Download className='w-4 h-4 mr-2' />
+                      Import Your First Request
+                    </Button>
                   </div>
-                </div> */}
 
-                <div className='px-6 py-4 bg-gray-50 mt-5 border-gray-200 flex justify-between items-center'>
-                  <div className='text-sm text-gray-600'>
-                    <div className='space-y-1'>
-                      <div>Imported requests: {requests.length} </div>
-                      <div className='font-medium'>
-                        Total test cases: {totalTestCases}
+                  <div className='px-6 py-4 bg-gray-50 mt-5 border-gray-200 flex justify-between items-center'>
+                    <div className='text-sm text-gray-600'>
+                      <div className='space-y-1'>
+                        <div>Imported requests: 0 </div>
+                        <div className='font-medium'>Total test cases: 0</div>
                       </div>
                     </div>
+                    <div className='flex space-x-3'>
+                      <Button variant='outline' onClick={handleBack}>
+                        Cancel
+                      </Button>
+                      <Button
+                        onClick={handleSaveChanges}
+                        disabled={
+                          isSaving ||
+                          !testSuiteName.trim() ||
+                          requests.length === 0
+                        }
+                      >
+                        {isSaving
+                          ? isCreateMode
+                            ? 'Creating Test Suite...'
+                            : 'Saving...'
+                          : isCreateMode
+                          ? 'Create Test Suite'
+                          : 'Save Changes'}
+                      </Button>
+                    </div>
                   </div>
-                  <div className='flex space-x-3'>
-                    <Button variant='outline' onClick={handleBack}>
-                      Cancel
-                    </Button>
-                    <Button
-                      onClick={handleSaveChanges}
-                      disabled={
-                        isSaving ||
-                        !testSuiteName.trim() ||
-                        requests.length === 0
-                      }
-                    >
-                      {isSaving
-                        ? isCreateMode
-                          ? 'Creating Test Suite...'
-                          : 'Saving...'
-                        : isCreateMode
-                        ? 'Create Test Suite'
-                        : 'Save Changes'}
-                    </Button>
-                  </div>
-                </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
+                </>
+              ) : (
+                <>
+                  {/* Show requests when they exist */}
+                  <ManageRequests
+                    requests={requests}
+                    testSuiteId={id || ''}
+                    onImport={() => setIsImportModalOpen(true)}
+                    onDeleteRequest={handleDeleteRequest}
+                    onUpdateTestCases={handleUpdateTestCases}
+                    onRefreshRequests={async () => {
+                      await refetchRequests();
+                    }}
+                    onSaveExtractedVariables={handleSaveExtractedVariables}
+                    requestStats={testSuite?.stats?.requestStats ?? []}
+                    preRequestId={preRequestId}
+                    extractedVariables={extractedVariables}
+                  />
 
-        <ImportModal
-          isOpen={isImportModalOpen}
-          onClose={() => setIsImportModalOpen(false)}
-          onImport={handleImportRequests}
-          importedRequestIds={importedRequestIds}
-        />
+                  <div className='px-6 py-4 bg-gray-50 mt-5 border-gray-200 flex justify-between items-center'>
+                    <div className='text-sm text-gray-600'>
+                      <div className='space-y-1'>
+                        <div>Imported requests: {requests.length} </div>
+                        <div className='font-medium'>
+                          Total test cases: {totalTestCases}
+                        </div>
+                        {extractedVariables.length > 0 && (
+                          <div className='text-green-600'>
+                            Extracted variables: {extractedVariables.length}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className='flex space-x-3'>
+                      <Button variant='outline' onClick={handleBack}>
+                        Cancel
+                      </Button>
+                      <Button
+                        onClick={handleSaveChanges}
+                        disabled={
+                          isSaving ||
+                          !testSuiteName.trim() ||
+                          requests.length === 0
+                        }
+                      >
+                        {isSaving
+                          ? isCreateMode
+                            ? 'Creating Test Suite...'
+                            : 'Saving...'
+                          : isCreateMode
+                          ? 'Create Test Suite'
+                          : 'Save Changes'}
+                      </Button>
+                    </div>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          <ImportModal
+            isOpen={isImportModalOpen}
+            onClose={() => setIsImportModalOpen(false)}
+            onImport={handleImportRequests}
+            importedRequestIds={importedRequestIds}
+          />
+        </div>
       </div>
-    </div>
     </>
   );
 };
