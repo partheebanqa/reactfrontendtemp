@@ -24,6 +24,16 @@ import { updateRequest } from '@/services/collection.service';
 import { useMutation } from '@tanstack/react-query';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
+import { generateAssertions } from '@/utils/assertionGenerator';
+
+interface FormattedResponse {
+  status: number;
+  statusText: string;
+  headers: Record<string, string>;
+  data: any;
+  responseTime: number;
+  size: number;
+}
 
 const RequestEditor: React.FC = () => {
   const { isLoading, clearError, setLoading, setError, setResponseData } =
@@ -265,8 +275,43 @@ const RequestEditor: React.FC = () => {
     setResponseData(null);
   }, [activeRequest]);
 
+  const formatBackendResponse = (result: any): FormattedResponse => {
+    const importantHeaders = [
+      'cache-control',
+      'content-type',
+      'expires',
+      'pragma',
+    ];
+    const filteredHeaders: Record<string, string> = {};
+
+    if (result.headers) {
+      Object.entries(result.headers).forEach(([key, value]) => {
+        if (importantHeaders.includes(key.toLowerCase())) {
+          filteredHeaders[key.toLowerCase()] = value as string;
+        }
+      });
+    }
+
+    let parsedBody: any = result.body;
+    if (typeof result.body === 'string') {
+      try {
+        parsedBody = JSON.parse(result.body);
+      } catch {
+        parsedBody = result.body;
+      }
+    }
+
+    return {
+      status: result.statusCode,
+      statusText: '',
+      headers: filteredHeaders,
+      data: parsedBody,
+      responseTime: result.metrics?.responseTime ?? 0,
+      size: result.metrics?.bytesReceived ?? 0,
+    };
+  };
+
   const handleSendRequest = async () => {
-    console.log('activeRequest:', activeRequest);
     if (!activeRequest) return;
     clearError();
     setLoading(true);
@@ -363,14 +408,15 @@ const RequestEditor: React.FC = () => {
           },
         },
       };
-      console.log('requestData123:', requestData);
 
       // const response = await makeRequest(requestData);
       const backendData = await executeRequest(requestData);
+      console.log('backendDataInRequestBuilder:', backendData);
 
       const result = backendData?.data?.responses?.[0];
 
       if (result) {
+        // 🔹 Existing normalizedResponse flow
         let parsedBody: any = result.body;
         if (typeof result.body === 'string') {
           try {
@@ -390,6 +436,12 @@ const RequestEditor: React.FC = () => {
         };
 
         setResponseData(normalizedResponse as any);
+
+        // 🔹 NEW formattedResponse flow (separate purpose)
+        const formattedResponse = formatBackendResponse(result);
+        // console.log('formattedResponse:', formattedResponse);
+        const generatedAssertions = generateAssertions(formattedResponse);
+        console.log('generatedAssertions:', generatedAssertions);
       }
     } catch (error: any) {
       setError({
