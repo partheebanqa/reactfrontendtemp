@@ -53,6 +53,13 @@ interface Request {
   selectedTestCases?: string[];
 }
 
+interface ExtractedVariable {
+  name: string;
+  path: string;
+  source: string;
+  type: string;
+}
+
 const EditTestSuiteContent: React.FC = () => {
   const params = useParams();
   const [location, setLocation] = useLocation();
@@ -73,6 +80,12 @@ const EditTestSuiteContent: React.FC = () => {
   const [requests, setRequests] = useState<Request[]>([]);
   const [originalRequestIds, setOriginalRequestIds] = useState<string[]>([]);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+
+  // Add state for extracted variables and preRequestId
+  const [preRequestId, setPreRequestId] = useState<string | null>(null);
+  const [extractedVariables, setExtractedVariables] = useState<
+    ExtractedVariable[]
+  >([]);
 
   const {
     data: testSuite,
@@ -131,6 +144,8 @@ const EditTestSuiteContent: React.FC = () => {
       environmentId: string;
       addRequestIds?: string[];
       removeRequestIds?: string[];
+      preRequestId?: string;
+      extractedVariables?: ExtractedVariable[];
     }) =>
       updateTestSuite(data.id, {
         name: data.name,
@@ -138,6 +153,8 @@ const EditTestSuiteContent: React.FC = () => {
         environmentId: data.environmentId,
         addRequestIds: data.addRequestIds,
         removeRequestIds: data.removeRequestIds,
+        preRequestId: data.preRequestId,
+        extractedVariables: data.extractedVariables,
       }),
     onSuccess: () => {
       toast({
@@ -177,6 +194,14 @@ const EditTestSuiteContent: React.FC = () => {
         setRequests(transformedRequests);
         // Store original request IDs for tracking changes
         setOriginalRequestIds(transformedRequests.map((req) => req.id));
+      }
+
+      // Set existing preRequestId and extractedVariables if they exist
+      if (testSuite.preRequestId) {
+        setPreRequestId(testSuite.preRequestId);
+      }
+      if (testSuite.extractedVariables) {
+        setExtractedVariables(testSuite.extractedVariables);
       }
     }
   }, [testSuite, isCreateMode]);
@@ -234,6 +259,23 @@ const EditTestSuiteContent: React.FC = () => {
     });
   };
 
+  // Handler for saving extracted variables from ManageRequests
+  const handleSaveExtractedVariables = (
+    requestId: string,
+    variables: ExtractedVariable[]
+  ) => {
+    console.log('requestId:', requestId);
+    console.log('extractedVariables:', variables);
+
+    setPreRequestId(requestId);
+    setExtractedVariables(variables);
+
+    toast({
+      title: 'Variables extracted',
+      description: `${variables.length} variable(s) extracted and will be saved with the test suite`,
+    });
+  };
+
   const calculateRequestChanges = () => {
     const currentRequestIds = requests.map((req) => req.id);
     // Find added requests (present in current but not in original)
@@ -256,12 +298,16 @@ const EditTestSuiteContent: React.FC = () => {
       });
       return;
     }
+
     if (isCreateMode) {
       createMutation.mutate({
         name: testSuiteName,
         description: description,
         environmentId: selectedEnvironment,
-        requestIds: requests.map((request) => request.id), // Pass request IDs
+        requestIds: requests.map((request) => request.id),
+        preRequestId: preRequestId || undefined,
+        extractedVariables:
+          extractedVariables.length > 0 ? extractedVariables : undefined,
       });
     } else {
       const { addRequestIds, removeRequestIds } = calculateRequestChanges();
@@ -273,6 +319,9 @@ const EditTestSuiteContent: React.FC = () => {
         addRequestIds: addRequestIds.length > 0 ? addRequestIds : undefined,
         removeRequestIds:
           removeRequestIds.length > 0 ? removeRequestIds : undefined,
+        preRequestId: preRequestId || undefined,
+        extractedVariables:
+          extractedVariables.length > 0 ? extractedVariables : undefined,
       });
     }
   };
@@ -457,6 +506,7 @@ const EditTestSuiteContent: React.FC = () => {
                     onRefreshRequests={async () => {
                       await refetchRequests();
                     }}
+                    onSaveExtractedVariables={handleSaveExtractedVariables}
                     requestStats={testSuite?.stats?.requestStats ?? []}
                   />
 
@@ -467,6 +517,11 @@ const EditTestSuiteContent: React.FC = () => {
                         <div className='font-medium'>
                           Total test cases: {totalTestCases}
                         </div>
+                        {extractedVariables.length > 0 && (
+                          <div className='text-green-600'>
+                            Extracted variables: {extractedVariables.length}
+                          </div>
+                        )}
                       </div>
                     </div>
                     <div className='flex space-x-3'>

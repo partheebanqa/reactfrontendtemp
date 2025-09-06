@@ -21,7 +21,22 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Request, RequestStat } from '@/shared/types/TestSuite.model';
+import { Request } from '@/shared/types/TestSuite.model';
+
+interface RequestStat {
+  requestId: string;
+  meta?: {
+    totalTests?: number;
+    selectedTests?: number;
+  };
+}
+
+interface ExtractedVariable {
+  name: string;
+  path: string;
+  source: string;
+  type: string;
+}
 
 interface ManageRequestsProps {
   requests: Request[];
@@ -30,6 +45,10 @@ interface ManageRequestsProps {
   onDeleteRequest: (requestId: string) => void;
   onUpdateTestCases?: (requestId: string, testCaseIds: string[]) => void;
   onRefreshRequests?: () => Promise<void> | void;
+  onSaveExtractedVariables?: (
+    requestId: string,
+    extractedData: ExtractedVariable[]
+  ) => void;
   requestStats?: RequestStat[];
   variables?: Array<{ name: string; initialValue: string }>;
   environments?: any[];
@@ -60,6 +79,7 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
   onDeleteRequest,
   onUpdateTestCases,
   onRefreshRequests,
+  onSaveExtractedVariables,
   requestStats = [],
   variables = [],
   environments = [],
@@ -131,6 +151,19 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
     }
   };
 
+  const handleSaveExtractedVariables = (
+    requestId: string,
+    extractedVariables: ExtractedVariable[]
+  ) => {
+    console.log('requestId:', requestId);
+    console.log('extractedVariables:', extractedVariables);
+
+    // Pass the data to parent component instead of storing locally
+    if (onSaveExtractedVariables) {
+      onSaveExtractedVariables(requestId, extractedVariables);
+    }
+  };
+
   const getCategoryColor = (category: string) => {
     switch (category) {
       case 'Functional':
@@ -187,13 +220,11 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
       <CardContent>
         <div className='space-y-3'>
           {requests.map((request) => {
-            const finalUrl = buildFinalUrl(request.endpoint || request.url);
+            const finalUrl = buildFinalUrl(request.url);
             const stat = statMap.get(request.id);
             const totalTests = stat?.meta?.totalTests ?? 0;
             const selectedCountFromServer = stat?.meta?.selectedTests ?? 0;
-            const selectedCount =
-              (request.selectedTestCases?.length ?? 0) ||
-              selectedCountFromServer;
+            const selectedCount = selectedCountFromServer;
 
             return (
               <div
@@ -210,13 +241,6 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
                       <p className='text-sm text-muted-foreground mt-1 break-all'>
                         {finalUrl}
                       </p>
-                      {request.description &&
-                        request.description !==
-                          `${request.method} ${request.url}` && (
-                          <p className='text-sm text-muted-foreground mt-1'>
-                            {request.description}
-                          </p>
-                        )}
                     </div>
                   </div>
                   <div className='flex items-center space-x-2'>
@@ -342,6 +366,7 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
             setSelectedRequest(null);
           }}
           request={selectedRequest}
+          onSaveExtractedVariables={handleSaveExtractedVariables}
         />
       )}
     </Card>
