@@ -53,6 +53,8 @@ interface ManageRequestsProps {
   variables?: Array<{ name: string; initialValue: string }>;
   environments?: any[];
   activeEnvironment?: any;
+  preRequestId?: string | null;
+  extractedVariables?: ExtractedVariable[];
 }
 
 const getMethodBadgeColor = (method: string) => {
@@ -84,10 +86,14 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
   variables = [],
   environments = [],
   activeEnvironment,
+  preRequestId,
+  extractedVariables = [],
 }) => {
   const [selectedRequest, setSelectedRequest] = useState<Request | null>(null);
   const [isTestDialogOpen, setIsTestDialogOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [pendingRequest, setPendingRequest] = useState<Request | null>(null);
+  const [showOverwriteDialog, setShowOverwriteDialog] = useState(false);
 
   const statMap = useMemo(() => {
     const m = new Map<string, RequestStat>();
@@ -137,8 +143,32 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
   };
 
   const handleTestRequest = (request: Request) => {
-    setSelectedRequest(request);
-    setIsTestDialogOpen(true);
+    // Check if there's already a preRequestId and it's different from current request
+    if (
+      preRequestId &&
+      preRequestId !== request.id &&
+      extractedVariables.length > 0
+    ) {
+      setPendingRequest(request);
+      setShowOverwriteDialog(true);
+    } else {
+      setSelectedRequest(request);
+      setIsTestDialogOpen(true);
+    }
+  };
+
+  const handleConfirmOverwrite = () => {
+    if (pendingRequest) {
+      setSelectedRequest(pendingRequest);
+      setIsTestDialogOpen(true);
+      setPendingRequest(null);
+    }
+    setShowOverwriteDialog(false);
+  };
+
+  const handleCancelOverwrite = () => {
+    setPendingRequest(null);
+    setShowOverwriteDialog(false);
   };
 
   const handleRefresh = async () => {
@@ -237,7 +267,19 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
                       {request.method}
                     </Badge>
                     <div className='flex-1 min-w-0'>
-                      <h4 className='font-medium text-base'>{request.name}</h4>
+                      <div className='flex items-center gap-2'>
+                        <h4 className='font-medium text-base'>
+                          {request.name}
+                        </h4>
+                        {preRequestId === request.id && (
+                          <Badge
+                            variant='secondary'
+                            className='text-xs bg-green-100 text-green-800'
+                          >
+                            Pre-request
+                          </Badge>
+                        )}
+                      </div>
                       <p className='text-sm text-muted-foreground mt-1 break-all'>
                         {finalUrl}
                       </p>
@@ -369,6 +411,43 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
           onSaveExtractedVariables={handleSaveExtractedVariables}
         />
       )}
+
+      {/* Overwrite Confirmation Dialog */}
+      <AlertDialog
+        open={showOverwriteDialog}
+        onOpenChange={setShowOverwriteDialog}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Overwrite Pre-request Variables?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              You already have extracted variables from another request. Testing
+              this request will allow you to extract new variables that will
+              overwrite the existing ones. Do you want to continue?
+              <div className='mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-sm'>
+                <strong>Current pre-request:</strong>{' '}
+                {requests.find((r) => r.id === preRequestId)?.name}
+                <br />
+                <strong>Extracted variables:</strong>{' '}
+                {extractedVariables.length}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleCancelOverwrite}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmOverwrite}
+              className='bg-yellow-600 hover:bg-yellow-700'
+            >
+              Yes, Overwrite
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 };

@@ -218,7 +218,10 @@ export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
               <span className='text-xs text-green-500'>Extracted</span>
             </div>
           ) : (
-            <Download className='w-3 h-3 text-blue-500 hover:text-blue-700' />
+            <button className='flex items-center gap-1 bg-blue-900 text-white px-2 py-1 rounded hover:bg-blue-800 text-xs transition'>
+              {/* <Check className="w-3 h-3 text-green-500" /> */}
+              Extract
+            </button>
           )}
         </button>
       </div>
@@ -246,7 +249,10 @@ export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
               <span className='text-xs text-green-500'>Extracted</span>
             </div>
           ) : (
-            <Download className='w-3 h-3 text-blue-500 hover:text-blue-700' />
+            <button className='flex items-center gap-1 bg-blue-900 text-white px-2 py-1 rounded hover:bg-blue-800 text-xs transition'>
+              {/* <Check className="w-3 h-3 text-green-500" /> */}
+              Extract
+            </button>
           )}
         </button>
       </div>
@@ -271,7 +277,6 @@ export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
       // Not JSON, treat as plain text
     }
 
-    // For plain text, split by lines and allow extracting each line
     const lines = text.split('\n');
     return (
       <div className='text-sm font-mono'>
@@ -295,7 +300,9 @@ export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
                     <span className='text-xs text-green-500'>Extracted</span>
                   </div>
                 ) : (
-                  <Download className='w-3 h-3 text-blue-500 hover:text-blue-700' />
+                  <button className='flex items-center gap-1 bg-blue-900 text-white px-2 py-1 rounded hover:bg-blue-800 text-xs transition'>
+                    Extract
+                  </button>
                 )}
               </button>
             )}
@@ -372,7 +379,7 @@ export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className='max-w-4xl max-h-[85vh] w-[90vw] overflow-hidden flex flex-col'>
+      <DialogContent className='max-w-4xl max-h-[90vh] w-[90vw] overflow-hidden flex flex-col'>
         <DialogHeader>
           <DialogTitle className='flex items-center gap-2'>
             <Badge variant='outline'>{method}</Badge>
@@ -380,7 +387,7 @@ export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
           </DialogTitle>
         </DialogHeader>
 
-        <div className='flex-1 flex flex-col min-h-0'>
+        <div className='flex-1 flex flex-col min-h-0 overflow-hidden'>
           <div className='flex gap-2 mb-3 items-center'>
             <Select
               value={method}
@@ -409,7 +416,7 @@ export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
             </Button>
           </div>
 
-          <div className='flex-1 flex flex-col min-h-0'>
+          <div className='flex-1 flex flex-col min-h-0 overflow-hidden'>
             <Tabs
               defaultValue='params'
               className='flex-1 flex flex-col min-h-0'
@@ -612,10 +619,13 @@ export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
                 </TabsContent>
               </div>
             </Tabs>
+          </div>
 
+          {/* Scrollable bottom section for Response and Extracted Fields */}
+          <div className='flex-shrink-0 overflow-y-auto max-h-96 border-t'>
             {/* Response Section */}
             {(response || Object.keys(responseHeaders).length > 0) && (
-              <div className='mt-3 border-t pt-3 flex-shrink-0'>
+              <div className='pt-3'>
                 <Label className='text-sm font-medium mb-2 block'>
                   Response
                 </Label>
@@ -714,10 +724,9 @@ export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
               </div>
             )}
 
-            {/* Show extracted fields */}
             {extractedFields.length > 0 && (
-              <div className='mt-3 border-t pt-3 max-h-32 overflow-y-auto flex-shrink-0'>
-                <div className='flex justify-between items-center'>
+              <div className='mt-3 border-t pt-3'>
+                <div className='flex justify-between items-center sticky top-0 bg-white pb-2'>
                   <Label className='text-sm font-medium'>
                     Extracted Fields ({extractedFields.length})
                   </Label>

@@ -1589,6 +1589,7 @@ export function RequestEditor({
               <h3 className='text-lg font-medium text-gray-900'>
                 Request Settings
               </h3>
+
               <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
                 <div>
                   <label className='block text-sm font-medium text-gray-700 mb-2'>
@@ -1607,24 +1608,22 @@ export function RequestEditor({
                     max='60000'
                   />
                 </div>
-                <div>
+
+                {/* Retries (disabled + upcoming) */}
+                <div className='opacity-60'>
                   <label className='block text-sm font-medium text-gray-700 mb-2'>
                     Retries
                   </label>
                   <input
                     type='number'
                     value={request.retries}
-                    onChange={(e) =>
-                      onUpdate({
-                        retries: Number.parseInt(e.target.value) || 0,
-                      })
-                    }
-                    className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-                    min='0'
-                    max='5'
+                    disabled
+                    className='w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed'
                   />
+                  <p className='text-xs text-gray-500 italic mt-1'>Upcoming</p>
                 </div>
               </div>
+
               <div className='p-4 border border-orange-200 bg-orange-50 rounded-lg'>
                 <div className='flex items-center space-x-2 mb-3'>
                   <AlertTriangle className='w-5 h-5 text-orange-600' />
@@ -1653,12 +1652,16 @@ export function RequestEditor({
                       Stop chain on failure
                     </span>
                   </label>
-                  <label className='flex items-center space-x-2'>
+                  <label className='flex items-center space-x-2 opacity-60'>
                     <input
                       type='radio'
                       name='errorHandling'
                       value='continue'
-                      checked={request.errorHandling === 'continue'}
+                      disabled
+                      checked={
+                        request.errorHandling === 'continue' ||
+                        !request.errorHandling
+                      }
                       onChange={(e) =>
                         onUpdate({
                           errorHandling: e.target.value as
@@ -1671,26 +1674,27 @@ export function RequestEditor({
                     />
                     <span className='text-sm text-orange-800'>
                       Continue to next step
+                      <span className='text-xs italic text-gray-500'>
+                        (Upcoming)
+                      </span>
                     </span>
                   </label>
-                  <label className='flex items-center space-x-2'>
+
+                  {/* Retry disabled + upcoming */}
+                  <label className='flex items-center space-x-2 opacity-60'>
                     <input
                       type='radio'
                       name='errorHandling'
                       value='retry'
                       checked={request.errorHandling === 'retry'}
-                      onChange={(e) =>
-                        onUpdate({
-                          errorHandling: e.target.value as
-                            | 'stop'
-                            | 'continue'
-                            | 'retry',
-                        })
-                      }
+                      disabled
                       className='text-orange-600'
                     />
                     <span className='text-sm text-orange-800'>
-                      Retry with backoff
+                      Retry with backoff{' '}
+                      <span className='text-xs italic text-gray-500'>
+                        (Upcoming)
+                      </span>
                     </span>
                   </label>
                 </div>
@@ -2258,19 +2262,20 @@ export function RequestEditor({
                   placeholder='5000'
                 />
               </div>
-              <div className='space-y-2'>
+
+              {/* Retries disabled + upcoming */}
+              <div className='space-y-2 opacity-60'>
                 <Label htmlFor='retries'>Retries</Label>
                 <Input
                   id='retries'
                   type='number'
                   value={request.retries}
-                  onChange={(e) =>
-                    onUpdate({ retries: Number.parseInt(e.target.value) })
-                  }
-                  placeholder='0'
+                  disabled
                 />
+                <p className='text-xs text-gray-500 italic'>Upcoming</p>
               </div>
             </div>
+
             <div className='space-y-4 p-4 border border-orange-200 bg-orange-50 rounded-lg'>
               <div className='flex items-center gap-2 text-orange-600'>
                 <TriangleAlert className='w-4 h-4' />
@@ -2279,7 +2284,7 @@ export function RequestEditor({
                 </Label>
               </div>
               <RadioGroup
-                value={request.errorHandling}
+                value={request.errorHandling || 'continue'}
                 onValueChange={(value) =>
                   onUpdate({ errorHandling: value as any })
                 }
@@ -2291,20 +2296,31 @@ export function RequestEditor({
                     Stop chain on failure
                   </Label>
                 </div>
-                <div className='flex items-center space-x-2'>
-                  <RadioGroupItem value='continue' id='continue' />
+
+                {/* Continue disabled + upcoming */}
+                <div className='flex items-center space-x-2 opacity-60'>
+                  <RadioGroupItem value='continue' id='continue' disabled />
                   <Label htmlFor='continue' className='text-orange-700'>
-                    Continue to next step
+                    Continue to next step{' '}
+                    <span className='text-xs italic text-gray-500'>
+                      (Upcoming)
+                    </span>
                   </Label>
                 </div>
-                <div className='flex items-center space-x-2'>
-                  <RadioGroupItem value='retry' id='retry' />
+
+                {/* Retry disabled + upcoming */}
+                <div className='flex items-center space-x-2 opacity-60'>
+                  <RadioGroupItem value='retry' id='retry' disabled />
                   <Label htmlFor='retry' className='text-orange-700'>
-                    Retry with backoff
+                    Retry with backoff{' '}
+                    <span className='text-xs italic text-gray-500'>
+                      (Upcoming)
+                    </span>
                   </Label>
                 </div>
               </RadioGroup>
             </div>
+
             <div className='flex items-center space-x-2'>
               <Switch
                 checked={request.enabled}

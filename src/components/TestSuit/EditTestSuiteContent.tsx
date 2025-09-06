@@ -508,6 +508,8 @@ const EditTestSuiteContent: React.FC = () => {
                     }}
                     onSaveExtractedVariables={handleSaveExtractedVariables}
                     requestStats={testSuite?.stats?.requestStats ?? []}
+                    preRequestId={preRequestId}
+                    extractedVariables={extractedVariables}
                   />
 
                   <div className='px-6 py-4 bg-gray-50 mt-5 border-gray-200 flex justify-between items-center'>

@@ -10,6 +10,7 @@ import {
   Cookie,
   CheckCircle,
   Trash2,
+  Info,
 } from 'lucide-react';
 import type { DataExtraction } from '@/shared/types/requestChain.model';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
@@ -569,7 +570,7 @@ export function ResponseExplorer({
     <div className='space-y-6'>
       {/* Response Explorer */}
       <div className='bg-white border border-gray-200 rounded-lg'>
-        <div className='border-b border-gray-200'>
+        <div className='border-b border-gray-200 flex items-center justify-between'>
           <nav className='flex space-x-8 px-6'>
             {[
               { id: 'body', label: 'Response Body', icon: Code },
@@ -593,14 +594,22 @@ export function ResponseExplorer({
               );
             })}
           </nav>
+
+          {/* Info icon with tooltip */}
+          <div className='relative group pr-4'>
+            <Info className='w-5 h-5 text-gray-400 cursor-pointer' />
+            <div className='absolute right-0 mt-2 w-56 p-2 text-xs text-gray-700 bg-white border border-gray-200 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity'>
+              Click on the element to extract variables.
+            </div>
+          </div>
         </div>
+
         <div className='p-6 max-h-96 overflow-auto'>
           {activeTab === 'body' && renderJsonTree()}
           {activeTab === 'headers' && renderHeadersTab()}
           {activeTab === 'cookies' && renderCookiesTab()}
         </div>
       </div>
-
       {/* Extracted Variables Preview */}
       {finalExtractedVariables &&
         typeof finalExtractedVariables === 'object' &&
