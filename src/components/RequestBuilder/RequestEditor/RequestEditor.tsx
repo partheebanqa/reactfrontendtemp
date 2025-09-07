@@ -645,7 +645,7 @@ const RequestEditor: React.FC = () => {
                     return acc;
                   }, {} as Record<string, string>)
               ).toString()
-            : '', // use empty string when not used (no null)
+            : '',
         authorizationType: authType,
         authorization: {
           token: authType === 'bearer' ? authData.token : '',
