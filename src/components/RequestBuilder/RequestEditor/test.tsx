@@ -869,6 +869,7 @@ const RequestEditor: React.FC = () => {
     if (!url) return '';
     let finalUrl = url;
 
+    // Apply variable substitution
     finalUrl = substituteVariables(finalUrl);
 
     const baseUrVar =
@@ -1759,11 +1760,10 @@ const RequestEditor: React.FC = () => {
               <div className='flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between'>
                 <div>
                   <h3 className='text-base sm:text-lg font-medium text-gray-900 dark:text-white'>
-                    Manage Assertions
+                    Test Assertions
                   </h3>
                   <p className='text-sm text-gray-500 dark:text-gray-400 mt-1'>
-                    Send a request and click "Generate Assertions" to
-                    automatically create and manage test assertions.
+                    Generate and manage test assertions based on response data
                   </p>
                 </div>
                 <button
@@ -1775,60 +1775,18 @@ const RequestEditor: React.FC = () => {
                 </button>
               </div>
 
-              {assertions &&
-              assertions.length > 0 &&
-              assertions.some((a) => a.enabled) ? (
-                <div className='bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700'>
-                  <div className='space-y-3'>
-                    {/* Total count */}
-                    <div className='flex justify-between items-center pb-2 border-b border-gray-200 dark:border-gray-600'>
-                      <span className='text-sm font-medium text-gray-700 dark:text-gray-300'>
-                        Total assertions selected
-                      </span>
-                      <span className='text-sm font-semibold text-gray-900 dark:text-white'>
-                        {assertions.filter((a) => a.enabled).length}
-                      </span>
-                    </div>
-
-                    {/* Category breakdown */}
-                    {Object.entries(getSelectedAssertionsByCategory()).map(
-                      ([category, count]) => (
-                        <div
-                          key={category}
-                          className='flex justify-between items-center'
-                        >
-                          <span className='text-sm text-gray-600 dark:text-gray-400 capitalize'>
-                            {getCategoryDisplayName(category)}
-                          </span>
-                          <span className='text-sm font-medium text-gray-800 dark:text-gray-200'>
-                            {count}
-                          </span>
-                        </div>
-                      )
-                    )}
-                  </div>
+              <div className='flex flex-col items-center justify-center h-48 text-center border border-dashed border-gray-300 dark:border-gray-700 rounded-lg'>
+                <div className='text-gray-400 mb-4'>
+                  <CheckSquare className='h-12 w-12 mx-auto' />
                 </div>
-              ) : assertions && assertions.length > 0 ? (
-                <div className='text-center p-6 border border-dashed border-gray-300 dark:border-gray-700 rounded-lg'>
-                  <p className='text-gray-500 dark:text-gray-400'>
-                    You have {assertions.length} assertions available. Click
-                    "Generate Assertions" to select which ones to include.
-                  </p>
-                </div>
-              ) : (
-                <div className='flex flex-col items-center justify-center h-48 text-center border border-dashed border-gray-300 dark:border-gray-700 rounded-lg'>
-                  <div className='text-gray-400 mb-4'>
-                    <CheckSquare className='h-12 w-12 mx-auto' />
-                  </div>
-                  <h4 className='text-lg font-medium text-gray-900 dark:text-white mb-2'>
-                    No Assertions Available
-                  </h4>
-                  <p className='text-gray-500 dark:text-gray-400 max-w-md'>
-                    Send a request first to generate test assertions based on
-                    the response.
-                  </p>
-                </div>
-              )}
+                <h4 className='text-lg font-medium text-gray-900 dark:text-white mb-2'>
+                  Manage Assertions
+                </h4>
+                <p className='text-gray-500 dark:text-gray-400 max-w-md mb-4'>
+                  Send a request and click "Generate Assertions" to
+                  automatically create and manage test assertions.
+                </p>
+              </div>
             </div>
           )}
 

@@ -1,88 +1,95 @@
-import { useState } from "react";
-import { useLocation } from "wouter";
+import { useState } from 'react';
+import { useLocation } from 'wouter';
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Eye, EyeOff, Lock, Mail, User, Building } from "lucide-react";
-import { useAuth } from "@/hooks/useAuth";
-import { useToast } from "@/hooks/useToast";
+} from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Eye, EyeOff, Lock, Mail, User, Building } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/useToast';
 
 export default function SignUp() {
   const [, setLocation] = useLocation();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
-    workspaceName: "",
+    firstName: '',
+    lastName: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+    workspaceName: '',
     agreedToTerms: false,
   });
-  const { error: errorToast } = useToast();
+  const { toast, error: errorToast } = useToast();
   const { registerMutation } = useAuth();
 
   const getOS = () => {
     const userAgent = window.navigator.userAgent;
     const platform = window.navigator.platform;
-    let os = "Unknown OS";
+    let os = 'Unknown OS';
 
-    if (platform.includes("Win")) {
-      os = "Windows";
-    } else if (platform.includes("Mac")) {
-      os = "macOS";
-    } else if (platform.includes("Linux")) {
-      os = "Linux";
+    if (platform.includes('Win')) {
+      os = 'Windows';
+    } else if (platform.includes('Mac')) {
+      os = 'macOS';
+    } else if (platform.includes('Linux')) {
+      os = 'Linux';
     } else if (/iPhone|iPad|iPod/.test(userAgent)) {
-      os = "iOS";
+      os = 'iOS';
     } else if (/Android/.test(userAgent)) {
-      os = "Android";
+      os = 'Android';
     }
     return os;
-  }
+  };
 
   const getBrowser = () => {
     const userAgent = navigator.userAgent;
-    let browserName = "Unknown Browser";
-    let browserVersion = "Unknown Version";
+    let browserName = 'Unknown Browser';
+    let browserVersion = 'Unknown Version';
 
-    if (userAgent.includes("Chrome") && !userAgent.includes("Edg") && !userAgent.includes("Brave")) {
-      browserName = "Google Chrome";
-      browserVersion = userAgent.match(/Chrome\/([0-9.]+)/)?.[1] || browserVersion;
-    } else if (userAgent.includes("Firefox")) {
-      browserName = "Firefox";
-      browserVersion = userAgent.match(/Firefox\/([0-9.]+)/)?.[1] || browserVersion;
-    } else if (userAgent.includes("Safari") && !userAgent.includes("Chrome")) {
-      browserName = "Safari";
-      browserVersion = userAgent.match(/Version\/([0-9.]+)/)?.[1] || browserVersion;
-    } else if (userAgent.includes("Edg")) {
-      browserName = "Microsoft Edge";
+    if (
+      userAgent.includes('Chrome') &&
+      !userAgent.includes('Edg') &&
+      !userAgent.includes('Brave')
+    ) {
+      browserName = 'Google Chrome';
+      browserVersion =
+        userAgent.match(/Chrome\/([0-9.]+)/)?.[1] || browserVersion;
+    } else if (userAgent.includes('Firefox')) {
+      browserName = 'Firefox';
+      browserVersion =
+        userAgent.match(/Firefox\/([0-9.]+)/)?.[1] || browserVersion;
+    } else if (userAgent.includes('Safari') && !userAgent.includes('Chrome')) {
+      browserName = 'Safari';
+      browserVersion =
+        userAgent.match(/Version\/([0-9.]+)/)?.[1] || browserVersion;
+    } else if (userAgent.includes('Edg')) {
+      browserName = 'Microsoft Edge';
       browserVersion = userAgent.match(/Edg\/([0-9.]+)/)?.[1] || browserVersion;
-    } else if (userAgent.includes("Brave")) {
-      browserName = "Brave";
-      browserVersion = userAgent.match(/BraveChrome\/([0-9.]+)/)?.[1] || browserVersion;
+    } else if (userAgent.includes('Brave')) {
+      browserName = 'Brave';
+      browserVersion =
+        userAgent.match(/BraveChrome\/([0-9.]+)/)?.[1] || browserVersion;
     }
     return { name: browserName, version: browserVersion };
-  }
+  };
 
   const getTimezone = () => {
     return Intl.DateTimeFormat().resolvedOptions().timeZone;
-  }
-
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     try {
       if (formData.password !== formData.confirmPassword) {
         return;
@@ -102,13 +109,21 @@ export default function SignUp() {
         timezone,
       };
       const response = await registerMutation.mutateAsync(form);
+      console.log('response000:', response);
       if (response.message) {
-        setLocation("/signin");
+        toast({
+          title: 'Registration Successful',
+          description: response.message,
+          variant: 'success',
+        });
+        setTimeout(() => {
+          setLocation('/signin');
+        }, 2000);
       }
     } catch (error) {
-      console.error("Error in handleSubmit:", error);
+      console.error('Error in handleSubmit:', error);
       errorToast(
-        error instanceof Error ? error.message : "An unexpected error occurred"
+        error instanceof Error ? error.message : 'An unexpected error occurred'
       );
     }
   };
@@ -125,13 +140,13 @@ export default function SignUp() {
     formData.agreedToTerms;
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div className="text-center">
-          <h2 className="mt-6 text-3xl font-bold text-gray-900 dark:text-white">
+    <div className='min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8'>
+      <div className='max-w-md w-full space-y-8'>
+        <div className='text-center'>
+          <h2 className='mt-6 text-3xl font-bold text-gray-900 dark:text-white'>
             Create your account
           </h2>
-          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+          <p className='mt-2 text-sm text-gray-600 dark:text-gray-400'>
             Start testing your APIs with Optraflow
           </p>
         </div>
@@ -143,60 +158,66 @@ export default function SignUp() {
               Create your account and workspace to get started
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
+          <CardContent className='space-y-6'>
             {registerMutation.isError && (
-              <Alert variant="destructive">
+              <Alert variant='destructive'>
                 <AlertDescription>
                   Failed to create account. Please try again.
                 </AlertDescription>
               </Alert>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+            <form onSubmit={handleSubmit} className='space-y-4'>
+              <div className='grid grid-cols-2 gap-4'>
                 <div>
-                  <Label htmlFor="firstName">First name</Label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                  <Label htmlFor='firstName'>First name</Label>
+                  <div className='relative'>
+                    <User className='absolute left-3 top-3 h-4 w-4 text-gray-400' />
                     <Input
-                      id="firstName"
-                      type="text"
+                      id='firstName'
+                      type='text'
                       required
-                      className="pl-10"
-                      placeholder="John"
+                      className='pl-10'
+                      placeholder='John'
                       value={formData.firstName}
                       onChange={(e) =>
-                        setFormData({ ...formData, firstName: e.target.value.trim() })
+                        setFormData({
+                          ...formData,
+                          firstName: e.target.value.trim(),
+                        })
                       }
                     />
                   </div>
                 </div>
 
                 <div>
-                  <Label htmlFor="lastName">Last name</Label>
+                  <Label htmlFor='lastName'>Last name</Label>
                   <Input
-                    id="lastName"
-                    type="text"
+                    id='lastName'
+                    type='text'
                     required
-                    placeholder="Doe"
+                    placeholder='Doe'
                     value={formData.lastName}
                     onChange={(e) =>
-                      setFormData({ ...formData, lastName: e.target.value.trim() })
+                      setFormData({
+                        ...formData,
+                        lastName: e.target.value.trim(),
+                      })
                     }
                   />
                 </div>
               </div>
 
               <div>
-                <Label htmlFor="email">Email address</Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                <Label htmlFor='email'>Email address</Label>
+                <div className='relative'>
+                  <Mail className='absolute left-3 top-3 h-4 w-4 text-gray-400' />
                   <Input
-                    id="email"
-                    type="email"
+                    id='email'
+                    type='email'
                     required
-                    className="pl-10"
-                    placeholder="john@company.com"
+                    className='pl-10'
+                    placeholder='john@company.com'
                     value={formData.email}
                     onChange={(e) =>
                       setFormData({ ...formData, email: e.target.value.trim() })
@@ -206,15 +227,15 @@ export default function SignUp() {
               </div>
 
               <div>
-                <Label htmlFor="workspaceName">Organization</Label>
-                <div className="relative">
-                  <Building className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                <Label htmlFor='workspaceName'>Organization</Label>
+                <div className='relative'>
+                  <Building className='absolute left-3 top-3 h-4 w-4 text-gray-400' />
                   <Input
-                    id="workspaceName"
-                    type="text"
+                    id='workspaceName'
+                    type='text'
                     required
-                    className="pl-10"
-                    placeholder="My Organization Name"
+                    className='pl-10'
+                    placeholder='My Organization Name'
                     value={formData.workspaceName}
                     onChange={(e) =>
                       setFormData({
@@ -227,44 +248,47 @@ export default function SignUp() {
               </div>
 
               <div>
-                <Label htmlFor="password">Password</Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                <Label htmlFor='password'>Password</Label>
+                <div className='relative'>
+                  <Lock className='absolute left-3 top-3 h-4 w-4 text-gray-400' />
                   <Input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
+                    id='password'
+                    type={showPassword ? 'text' : 'password'}
                     required
-                    className="pl-10 pr-10"
-                    placeholder="Create a password"
+                    className='pl-10 pr-10'
+                    placeholder='Create a password'
                     value={formData.password}
                     onChange={(e) =>
-                      setFormData({ ...formData, password: e.target.value.trim() })
+                      setFormData({
+                        ...formData,
+                        password: e.target.value.trim(),
+                      })
                     }
                   />
                   <button
-                    type="button"
-                    className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
+                    type='button'
+                    className='absolute right-3 top-3 text-gray-400 hover:text-gray-600'
                     onClick={() => setShowPassword(!showPassword)}
                   >
                     {showPassword ? (
-                      <EyeOff className="h-4 w-4" />
+                      <EyeOff className='h-4 w-4' />
                     ) : (
-                      <Eye className="h-4 w-4" />
+                      <Eye className='h-4 w-4' />
                     )}
                   </button>
                 </div>
               </div>
 
               <div>
-                <Label htmlFor="confirmPassword">Confirm password</Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                <Label htmlFor='confirmPassword'>Confirm password</Label>
+                <div className='relative'>
+                  <Lock className='absolute left-3 top-3 h-4 w-4 text-gray-400' />
                   <Input
-                    id="confirmPassword"
-                    type={showConfirmPassword ? "text" : "password"}
+                    id='confirmPassword'
+                    type={showConfirmPassword ? 'text' : 'password'}
                     required
-                    className="pl-10 pr-10"
-                    placeholder="Confirm your password"
+                    className='pl-10 pr-10'
+                    placeholder='Confirm your password'
                     value={formData.confirmPassword}
                     onChange={(e) =>
                       setFormData({
@@ -274,27 +298,27 @@ export default function SignUp() {
                     }
                   />
                   <button
-                    type="button"
-                    className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
+                    type='button'
+                    className='absolute right-3 top-3 text-gray-400 hover:text-gray-600'
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                   >
                     {showConfirmPassword ? (
-                      <EyeOff className="h-4 w-4" />
+                      <EyeOff className='h-4 w-4' />
                     ) : (
-                      <Eye className="h-4 w-4" />
+                      <Eye className='h-4 w-4' />
                     )}
                   </button>
                 </div>
                 {formData.confirmPassword && !passwordsMatch && (
-                  <p className="text-sm text-red-600 mt-1">
+                  <p className='text-sm text-red-600 mt-1'>
                     Passwords do not match
                   </p>
                 )}
               </div>
 
-              <div className="flex items-center space-x-2">
+              <div className='flex items-center space-x-2'>
                 <Checkbox
-                  id="terms"
+                  id='terms'
                   checked={formData.agreedToTerms}
                   onCheckedChange={(checked) =>
                     setFormData({
@@ -303,20 +327,20 @@ export default function SignUp() {
                     })
                   }
                 />
-                <Label htmlFor="terms" className="text-sm">
-                  I agree to the{" "}
+                <Label htmlFor='terms' className='text-sm'>
+                  I agree to the{' '}
                   <button
-                    type="button"
-                    className="text-blue-600 hover:text-blue-500"
-                    onClick={() => setLocation("/terms")}
+                    type='button'
+                    className='text-blue-600 hover:text-blue-500'
+                    onClick={() => setLocation('/terms')}
                   >
                     Terms of Service
-                  </button>{" "}
-                  and{" "}
+                  </button>{' '}
+                  and{' '}
                   <button
-                    type="button"
-                    className="text-blue-600 hover:text-blue-500"
-                    onClick={() => setLocation("/privacy")}
+                    type='button'
+                    className='text-blue-600 hover:text-blue-500'
+                    onClick={() => setLocation('/privacy')}
                   >
                     Privacy Policy
                   </button>
@@ -324,22 +348,22 @@ export default function SignUp() {
               </div>
 
               <Button
-                type="submit"
-                className="w-full"
+                type='submit'
+                className='w-full'
                 disabled={registerMutation.isPending || !isFormValid}
               >
                 {registerMutation.isPending
-                  ? "Creating account..."
-                  : "Create account"}
+                  ? 'Creating account...'
+                  : 'Create account'}
               </Button>
             </form>
 
-            <div className="text-center">
-              <span className="text-sm text-gray-600 dark:text-gray-400">
-                Already have an account?{" "}
+            <div className='text-center'>
+              <span className='text-sm text-gray-600 dark:text-gray-400'>
+                Already have an account?{' '}
                 <button
-                  className="text-blue-600 hover:text-blue-500 font-medium"
-                  onClick={() => setLocation("/signin")}
+                  className='text-blue-600 hover:text-blue-500 font-medium'
+                  onClick={() => setLocation('/signin')}
                 >
                   Sign in
                 </button>
