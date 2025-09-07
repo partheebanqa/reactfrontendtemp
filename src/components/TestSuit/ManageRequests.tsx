@@ -99,7 +99,6 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
   const [selectedRequest, setSelectedRequest] = useState<Request | null>(null);
   const [isTestCaseModalOpen, setIsTestCaseModalOpen] = useState(false);
 
-  console.log('selectedRequest123:', selectedRequest);
   const [isTestDialogOpen, setIsTestDialogOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [pendingRequest, setPendingRequest] = useState<Request | null>(null);
