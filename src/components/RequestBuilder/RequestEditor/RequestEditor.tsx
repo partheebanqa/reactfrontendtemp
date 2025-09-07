@@ -869,7 +869,6 @@ const RequestEditor: React.FC = () => {
     if (!url) return '';
     let finalUrl = url;
 
-    // Apply variable substitution
     finalUrl = substituteVariables(finalUrl);
 
     const baseUrVar =
