@@ -18,17 +18,7 @@ const DataManagement: React.FC = () => {
   const { environments } = useDataManagement();
 
   return (
-    <div className='p-6 space-y-6'>
-      <div className='flex items-center justify-between'>
-        <div>
-          <h1 className='text-3xl font-bold'>Data Management</h1>
-          <p className='text-muted-foreground mt-1'>
-            Manage environments, variables, and test datasets
-          </p>
-        </div>
-        <HelpLink />
-      </div>
-
+    <div className='space-y-4 mt-4'>
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className='grid w-full grid-cols-2'>
           <TabsTrigger value='environments'>Environments</TabsTrigger>
