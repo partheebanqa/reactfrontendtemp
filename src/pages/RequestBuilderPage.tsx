@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import RequestBuilder from "@/components/RequestBuilder";
-import { ChartColumn } from "lucide-react";
+import { ChartColumn, Settings } from "lucide-react";
 import BreadCum from "@/components/BreadCum/Breadcum";
 
 interface Header {
@@ -17,24 +17,22 @@ interface TestAssertion {
 
 const RequestBuilderPage: React.FC = () => {
   return (
-
     <>
-    <BreadCum
+      <BreadCum
         title="Request Builder"
         subtitle="Get execution results of test suite and request chain"
         showCreateButton={false}
         buttonTitle="Run Execution"
         onClickCreateNew={() => console.log("Create execution")}
-        icon={ChartColumn}
+        icon={Settings}
         iconBgClass="bg-blue-100"
         iconColor="#136fb0"
         iconSize={40}
       />
-       
-      <RequestBuilder />
      
-      </>
-    
+        <RequestBuilder />
+
+    </>
   );
 };
 

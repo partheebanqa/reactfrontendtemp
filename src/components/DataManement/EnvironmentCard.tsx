@@ -4,7 +4,7 @@ import { Environment } from '@/shared/types/datamanagement';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Globe, Edit, Trash2, Copy } from 'lucide-react';
+import { Globe, Edit, Trash2, Copy, Database } from 'lucide-react';
 import { useToast } from '@/hooks/useToast';
 import {
   Tooltip,
@@ -41,10 +41,11 @@ const EnvironmentCard: React.FC<Props> = ({
       <CardContent className='p-6'>
         <div className='flex items-center justify-between'>
           <div className='flex items-center space-x-4 flex-1'>
-            <Globe className='w-8 h-8 text-primary mt-1' />
+           <Database className="bg-[#fff4e6] p-2 rounded" color="#f97316" size={40} />
+
             <div className='flex-1'>
               <div className='flex items-center space-x-3 mb-2'>
-                <h3 className='text-lg font-semibold'>{environment.name}</h3>
+                <h3 className="font-semibold text-lg">{environment.name}</h3>
                 {environment?.isDefault && (
                   <Badge className='bg-green-100 text-green-700'>Default</Badge>
                 )}
