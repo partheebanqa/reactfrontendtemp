@@ -50,7 +50,7 @@ export const ExecutionsTable = ({
     const executionId = encodeURIComponent(execution?.id ?? '');
 
     setLocation(
-      `/executions/report/${type}/${entityId}?env=${env}&started=${started}&executionId=${executionId}`
+      `/executions/report/${type}/${entityId}?executionId=${executionId}`
     );
   };
 
