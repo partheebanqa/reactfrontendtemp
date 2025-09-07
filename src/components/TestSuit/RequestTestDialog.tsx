@@ -65,12 +65,12 @@ export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
   const [showToken, setShowToken] = useState(false);
   const [method, setMethod] = useState(request.method);
   const [headers, setHeaders] = useState<RequestHeader[]>(
-    request.headers.length > 0
+    request?.headers?.length && request.headers.length > 0
       ? request.headers
       : [{ key: '', value: '', enabled: true }]
   );
   const [params, setParams] = useState<RequestParam[]>(
-    request.params.length > 0
+    request?.params?.length
       ? request.params
       : [{ key: '', value: '', enabled: true }]
   );

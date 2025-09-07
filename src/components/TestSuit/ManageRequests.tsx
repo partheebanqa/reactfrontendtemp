@@ -22,12 +22,19 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { Request } from '@/shared/types/TestSuite.model';
+import { TestCaseSelectionModal } from './TestCaseSelectionModal';
+
+interface CategoryCount {
+  category: string;
+  count: number;
+}
 
 interface RequestStat {
   requestId: string;
   meta?: {
     totalTests?: number;
     selectedTests?: number;
+    selectedByCategory?: CategoryCount[];
   };
 }
 
@@ -90,6 +97,9 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
   extractedVariables = [],
 }) => {
   const [selectedRequest, setSelectedRequest] = useState<Request | null>(null);
+  const [isTestCaseModalOpen, setIsTestCaseModalOpen] = useState(false);
+
+  console.log('selectedRequest123:', selectedRequest);
   const [isTestDialogOpen, setIsTestDialogOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [pendingRequest, setPendingRequest] = useState<Request | null>(null);
@@ -157,6 +167,19 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
     }
   };
 
+  const handleConfigureTestCases = (request: Request) => {
+    setSelectedRequest(request);
+    setIsTestCaseModalOpen(true);
+  };
+
+  const handleTestCaseSelection = (testCaseIds: string[]) => {
+    if (selectedRequest && onUpdateTestCases) {
+      onUpdateTestCases(selectedRequest.id, testCaseIds);
+    }
+    setIsTestCaseModalOpen(false);
+    setSelectedRequest(null);
+  };
+
   const handleConfirmOverwrite = () => {
     if (pendingRequest) {
       setSelectedRequest(pendingRequest);
@@ -202,6 +225,10 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
         return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-100';
       case 'Security':
         return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-100';
+      case 'General':
+        return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-100';
+      case 'Regression':
+        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100';
       default:
         return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-100';
     }
@@ -215,6 +242,10 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
         return '⚡';
       case 'Security':
         return '🛡️';
+      case 'General':
+        return '📋';
+      case 'Regression':
+        return '🔄';
       default:
         return '📋';
     }
@@ -253,8 +284,8 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
             const finalUrl = buildFinalUrl(request.url);
             const stat = statMap.get(request.id);
             const totalTests = stat?.meta?.totalTests ?? 0;
-            const selectedCountFromServer = stat?.meta?.selectedTests ?? 0;
-            const selectedCount = selectedCountFromServer;
+            const selectedTests = stat?.meta?.selectedTests ?? 0;
+            const selectedByCategory = stat?.meta?.selectedByCategory ?? [];
 
             return (
               <div
@@ -307,12 +338,10 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
                             <Button
                               variant='ghost'
                               size='sm'
-                              onClick={() => {
-                                /* Handle test case selection */
-                              }}
+                              onClick={() => handleConfigureTestCases(request)}
                               className='text-muted-foreground hover:text-primary hover:bg-primary/10'
                             >
-                              <Settings className='w-4 h-4' />
+                              {testSuiteId && <Settings className='w-4 h-4' />}
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>Select testcases</TooltipContent>
@@ -363,32 +392,42 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
                   <div className='mt-4'>
                     <h5 className='text-sm font-medium mb-2'>Test Cases</h5>
 
-                    {selectedCount > 0 && (
-                      <div className='flex items-center justify-between text-xs'>
-                        <div className='flex items-center'>
-                          <span className='mr-1'>
-                            {getCategoryIcon('Functional')}
-                          </span>
-                          <span className='capitalize text-gray-600 dark:text-gray-300'>
-                            {'Functional'}
-                          </span>
-                        </div>
-                        <span
-                          className={`px-2 py-0.5 rounded-full font-medium ${getCategoryColor(
-                            'Functional'
-                          )}`}
-                        >
-                          {selectedCount}
-                        </span>
+                    {/* Show selected test cases by category */}
+                    {selectedByCategory.length > 0 && (
+                      <div className='space-y-2 mb-3'>
+                        {selectedByCategory.map((categoryData) => (
+                          <div
+                            key={categoryData.category}
+                            className='flex items-center justify-between text-xs'
+                          >
+                            <div className='flex items-center'>
+                              <span className='mr-1'>
+                                {getCategoryIcon(categoryData.category)}
+                              </span>
+                              <span className='capitalize text-gray-600 dark:text-gray-300'>
+                                {categoryData.category}
+                              </span>
+                            </div>
+                            <span
+                              className={`px-2 py-0.5 rounded-full font-medium ${getCategoryColor(
+                                categoryData.category
+                              )}`}
+                            >
+                              {categoryData.count}
+                            </span>
+                          </div>
+                        ))}
                       </div>
                     )}
-                    <div className='pt-1 border-t border-gray-200 dark:border-gray-700 mt-2'>
+
+                    {/* Show total test cases */}
+                    <div className='pt-1 border-t border-gray-200 dark:border-gray-700'>
                       <div className='flex items-center justify-between text-xs font-medium'>
                         <span className='text-gray-700 dark:text-gray-300'>
                           Total:
                         </span>
                         <span className='text-gray-900 dark:text-gray-100'>
-                          {totalTests ? <> {totalTests}</> : null} test cases
+                          {totalTests ? <>{totalTests}</> : null} test cases
                         </span>
                       </div>
                     </div>
@@ -409,6 +448,22 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
           }}
           request={selectedRequest}
           onSaveExtractedVariables={handleSaveExtractedVariables}
+        />
+      )}
+
+      {selectedRequest && testSuiteId && (
+        <TestCaseSelectionModal
+          isOpen={isTestCaseModalOpen}
+          onClose={() => {
+            setIsTestCaseModalOpen(false);
+            setSelectedRequest(null);
+          }}
+          onSelect={handleTestCaseSelection}
+          request={{
+            ...selectedRequest,
+            selectedTestCases: selectedRequest.selectedTestCases || [],
+          }}
+          testSuiteId={testSuiteId} // always string here
         />
       )}
 
