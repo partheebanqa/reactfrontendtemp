@@ -632,7 +632,7 @@ const RequestEditor: React.FC = () => {
                   }
                   return acc;
                 }, {})
-            : [], // use empty array when not used (no null)
+            : [],
         bodyRawContent:
           bodyType === 'raw' || bodyType === 'json'
             ? bodyContent
