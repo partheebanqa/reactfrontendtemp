@@ -1,4 +1,3 @@
-// RequestChainEditor.tsx
 'use client';
 import { useState, useRef, useEffect } from 'react';
 import {
@@ -111,7 +110,7 @@ export function RequestChainEditor({
       (req: any) => ({
         ...req,
         body: req.body || req.bodyRawContent || '',
-        bodyType: req.bodyType || (req.bodyRawContent ? 'raw' : 'none'), // Set bodyType based on content
+        bodyType: req.bodyType || (req.bodyRawContent ? 'raw' : 'none'),
       })
     ),
     variables: chain?.variables || [],

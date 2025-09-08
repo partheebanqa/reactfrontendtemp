@@ -266,16 +266,20 @@ export const duplicateRequest = async ({
 export const renameRequest = async ({
   requestId,
   newName,
+  workspaceId,
 }: {
   requestId: string;
   newName?: string;
+  workspaceId: string;
 }) => {
   try {
     const response = await apiRequest(
       'PUT',
       `${API_COLLECTION_REQUESTS}/${requestId}`,
       {
-        body: newName ? JSON.stringify({ name: newName }) : undefined,
+        body: newName
+          ? JSON.stringify({ name: newName, workspaceId })
+          : undefined,
       }
     );
     if (!response.ok) {
