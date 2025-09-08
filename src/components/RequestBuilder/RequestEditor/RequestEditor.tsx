@@ -498,6 +498,7 @@ const RequestEditor: React.FC = () => {
         await renameRequestMutation.mutateAsync({
           requestId: activeRequest.id,
           newName: newName.trim(),
+          workspaceId: currentWorkspace?.id,
         });
         toast({
           title: 'Request renamed successfully!',
