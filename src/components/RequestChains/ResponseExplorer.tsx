@@ -54,7 +54,6 @@ export function ResponseExplorer({
     'body'
   );
 
-  // Helper function to get value by path
   const getValueByPath = (obj: any, path: string): any => {
     if (!obj || !path) return undefined;
 
@@ -76,7 +75,6 @@ export function ResponseExplorer({
     }, obj);
   };
 
-  // Auto-extract variables in edit mode from existingExtractions
   const getAutoExtractedVariables = () => {
     if (!existingExtractions || existingExtractions.length === 0) {
       return extractedVariables || {};
@@ -138,7 +136,6 @@ export function ResponseExplorer({
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(
     new Set(['root'])
   );
-  const [selectedPath, setSelectedPath] = useState<string>('');
   const [extractionModal, setExtractionModal] = useState<{
     isOpen: boolean;
     source: 'response_body' | 'response_header' | 'response_cookie';
@@ -148,16 +145,14 @@ export function ResponseExplorer({
   } | null>(null);
   const [variableName, setVariableName] = useState<string>('');
 
-  // Sanitize variable name: remove special characters, convert spaces to underscores
   const sanitizeVariableName = (name: string): string => {
     return name
-      .replace(/\s+/g, '_') // Convert spaces to underscores
-      .replace(/[^a-zA-Z0-9_]/g, '') // Remove special characters, keep only alphanumeric and underscores
-      .replace(/^_+|_+$/g, '') // Remove leading/trailing underscores
-      .replace(/_+/g, '_'); // Replace multiple underscores with single underscore
+      .replace(/\s+/g, '_')
+      .replace(/[^a-zA-Z0-9_]/g, '')
+      .replace(/^_+|_+$/g, '')
+      .replace(/_+/g, '_');
   };
 
-  // Parse JSON response into explorable nodes
   const parseJsonToNodes = (
     obj: any,
     parentPath = '',
@@ -251,15 +246,13 @@ export function ResponseExplorer({
     });
   };
 
-  // Allow spaces in input, do not sanitize while typing
   const handleVariableNameChange = (value: string) => {
     setVariableName(value);
   };
 
-  // On save: sanitize + add E_ prefix
   const confirmExtraction = (inputVariableName: string, transform?: string) => {
     if (extractionModal && inputVariableName) {
-      const sanitized = sanitizeVariableName(inputVariableName); // clean + convert spaces
+      const sanitized = sanitizeVariableName(inputVariableName);
       const finalVariableName = `E_${sanitized}`;
       const extraction: DataExtraction = {
         variableName: finalVariableName,
@@ -363,17 +356,13 @@ export function ResponseExplorer({
     try {
       let jsonData;
       let cleanBody = response.body;
-      // Try to clean the response body
       if (typeof cleanBody === 'string') {
         cleanBody = cleanBody.trim();
-        // Remove any potential BOM or invisible characters
         cleanBody = cleanBody.replace(/^\uFEFF/, '');
       }
       try {
         jsonData = JSON.parse(cleanBody);
       } catch (firstError) {
-        // If direct parsing fails, try to extract JSON from the response
-        // Sometimes responses have extra text before/after JSON
         const jsonMatch =
           cleanBody.match(/\{.*\}/s) || cleanBody.match(/\[.*\]/s);
         if (jsonMatch) {
@@ -568,7 +557,6 @@ export function ResponseExplorer({
 
   return (
     <div className='space-y-6'>
-      {/* Response Explorer */}
       <div className='bg-white border border-gray-200 rounded-lg'>
         <div className='border-b border-gray-200 flex items-center justify-between'>
           <nav className='flex space-x-8 px-6'>
@@ -595,7 +583,6 @@ export function ResponseExplorer({
             })}
           </nav>
 
-          {/* Info icon with tooltip */}
           <div className='relative group pr-4'>
             <Info className='w-5 h-5 text-gray-400 cursor-pointer' />
             <div className='absolute right-0 mt-2 w-56 p-2 text-xs text-gray-700 bg-white border border-gray-200 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity'>
@@ -610,7 +597,6 @@ export function ResponseExplorer({
           {activeTab === 'cookies' && renderCookiesTab()}
         </div>
       </div>
-      {/* Extracted Variables Preview */}
       {finalExtractedVariables &&
         typeof finalExtractedVariables === 'object' &&
         Object.keys(finalExtractedVariables).length > 0 && (
@@ -699,7 +685,6 @@ export function ResponseExplorer({
           </div>
         )}
 
-      {/* Extraction Modal */}
       {extractionModal && (
         <div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50'>
           <div className='bg-white rounded-xl shadow-2xl w-full max-w-md'>
@@ -727,7 +712,6 @@ export function ResponseExplorer({
                   Only letters, numbers, and underscores allowed.
                 </p>
               </div>
-              {/* Source Row */}
               <div className='flex items-center space-x-2 w-full'>
                 <label className='text-sm font-medium text-gray-700 w-16'>
                   Source
@@ -741,7 +725,6 @@ export function ResponseExplorer({
                   className='flex-1 px-3 py-1.5 border border-gray-300 rounded-lg bg-gray-50 text-sm overflow-x-auto whitespace-nowrap'
                 />
               </div>
-              {/* Path Row */}
               <div className='flex items-center space-x-2 w-full'>
                 <label className='text-sm font-medium text-gray-700 w-16'>
                   Path
