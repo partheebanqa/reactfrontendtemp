@@ -54,6 +54,28 @@ export function ResponseExplorer({
     'body'
   );
 
+  // Helper function to get value by path
+  const getValueByPath = (obj: any, path: string): any => {
+    if (!obj || !path) return undefined;
+
+    return path.split('.').reduce((current, key) => {
+      if (current && typeof current === 'object') {
+        if (key.includes('[') && key.includes(']')) {
+          const arrayKey = key.substring(0, key.indexOf('['));
+          const index = Number.parseInt(
+            key.substring(key.indexOf('[') + 1, key.indexOf(']'))
+          );
+          if (current[arrayKey] && Array.isArray(current[arrayKey])) {
+            return current[arrayKey][index];
+          }
+          return undefined;
+        }
+        return current[key];
+      }
+      return undefined;
+    }, obj);
+  };
+
   // Auto-extract variables in edit mode from existingExtractions
   const getAutoExtractedVariables = () => {
     if (!existingExtractions || existingExtractions.length === 0) {
@@ -125,28 +147,6 @@ export function ResponseExplorer({
     suggestedName: string;
   } | null>(null);
   const [variableName, setVariableName] = useState<string>('');
-
-  // Helper function to get value by path
-  const getValueByPath = (obj: any, path: string): any => {
-    if (!obj || !path) return undefined;
-
-    return path.split('.').reduce((current, key) => {
-      if (current && typeof current === 'object') {
-        if (key.includes('[') && key.includes(']')) {
-          const arrayKey = key.substring(0, key.indexOf('['));
-          const index = Number.parseInt(
-            key.substring(key.indexOf('[') + 1, key.indexOf(']'))
-          );
-          if (current[arrayKey] && Array.isArray(current[arrayKey])) {
-            return current[arrayKey][index];
-          }
-          return undefined;
-        }
-        return current[key];
-      }
-      return undefined;
-    }, obj);
-  };
 
   // Sanitize variable name: remove special characters, convert spaces to underscores
   const sanitizeVariableName = (name: string): string => {
