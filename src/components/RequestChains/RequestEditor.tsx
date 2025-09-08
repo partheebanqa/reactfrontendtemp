@@ -72,6 +72,8 @@ interface RequestEditorProps {
   environmentBaseUrl?: string;
   requestChainId?: string;
   chainId?: string;
+  hideResponseExplorer?: boolean;
+  onRequestExecution?: (executionLog: ExecutionLog) => void;
 }
 
 interface KeyValuePair {
@@ -93,6 +95,8 @@ export function RequestEditor({
   environmentBaseUrl,
   requestChainId,
   chainId,
+  hideResponseExplorer = false,
+  onRequestExecution,
 }: RequestEditorProps) {
   const [isJsonOpen, setIsJsonOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<
@@ -102,9 +106,6 @@ export function RequestEditor({
   const [executionResult, setExecutionResult] = useState<ExecutionLog | null>(
     null
   );
-  // console.log('executionResult:', executionResult);
-  // console.log('requestChainId:', requestChainId);
-  // console.log('chainId:', chainId);
 
   const { variables: storeVariables } = useDataManagementStore();
   const [showResponse, setShowResponse] = useState(false);
@@ -147,7 +148,10 @@ export function RequestEditor({
     setPreviewUrl(getPreviewUrl(mergedVariables));
   }, [storeVariables, activeEnvironment, request.url]);
 
+  // Only restore execution result if not hiding response explorer
   React.useEffect(() => {
+    if (hideResponseExplorer) return;
+
     try {
       const raw = localStorage.getItem('lastExecutionByRequest');
       if (!raw) return;
@@ -190,7 +194,7 @@ export function RequestEditor({
     } catch (e) {
       console.error('Failed to restore lastExecutionByRequest:', e);
     }
-  }, [request.id]);
+  }, [request.id, hideResponseExplorer]);
 
   // Helper function to replace variables in text
   const replaceVariables = (text: string, variables: Variable[]): string => {
@@ -269,9 +273,6 @@ export function RequestEditor({
 
     // Process all parts of the request with variable substitution
     const processed = processRequestWithVariables(request, mergedVariables);
-
-    console.log('processed:', processed);
-
     setProcessedRequest(processed);
     setPreviewUrl(getPreviewUrl(mergedVariables));
   }, [storeVariables, activeEnvironment, request]);
@@ -362,7 +363,17 @@ export function RequestEditor({
         },
         extractedVariables: extractedData,
       };
-      setExecutionResult(log);
+
+      // Only set local execution result if not hiding response explorer
+      if (!hideResponseExplorer) {
+        setExecutionResult(log);
+      }
+
+      // Notify parent component about execution
+      if (onRequestExecution) {
+        onRequestExecution(log);
+      }
+
       try {
         const raw = localStorage.getItem('lastExecutionByRequest');
         const map = raw ? JSON.parse(raw) : {};
@@ -394,7 +405,17 @@ export function RequestEditor({
         },
         error: error instanceof Error ? error.message : 'Unknown error',
       };
-      setExecutionResult(errorLog);
+
+      // Only set local execution result if not hiding response explorer
+      if (!hideResponseExplorer) {
+        setExecutionResult(errorLog);
+      }
+
+      // Notify parent component about execution error
+      if (onRequestExecution) {
+        onRequestExecution(errorLog);
+      }
+
       try {
         const raw = localStorage.getItem('lastExecutionByRequest');
         const map = raw ? JSON.parse(raw) : {};
@@ -1702,8 +1723,9 @@ export function RequestEditor({
             </div>
           )}
         </div>
-        {/* Response Section */}
-        {executionResult && (
+
+        {/* Response Section - Only show if not hidden by parent */}
+        {!hideResponseExplorer && executionResult && (
           <div className='border-t border-gray-200'>
             <div className='flex items-center justify-between p-4 bg-gray-50 border-b border-gray-200'>
               <div className='flex items-center space-x-4'>
@@ -1938,24 +1960,26 @@ export function RequestEditor({
             )}
           </div>
         )}
-        {/* Variable Extraction Section */}
-        {executionResult && executionResult.response && (
-          <div className='border-t border-gray-200 p-6'>
-            <h3 className='text-lg font-medium text-gray-900 mb-4'>
-              Extract Variables from Response
-            </h3>
-            <ResponseExplorer
-              response={executionResult.response}
-              onExtractVariable={handleExtractVariable}
-              extractedVariables={extractedVariables}
-              existingExtractions={request.extractVariables}
-              onRemoveExtraction={handleRemoveExtraction}
-              handleCopy={handleCopy}
-              copied={copied}
-              chainId={chainId || requestChainId || ''}
-            />
-          </div>
-        )}
+        {/* Variable Extraction Section - Only show if not hidden by parent */}
+        {!hideResponseExplorer &&
+          executionResult &&
+          executionResult.response && (
+            <div className='border-t border-gray-200 p-6'>
+              <h3 className='text-lg font-medium text-gray-900 mb-4'>
+                Extract Variables from Response
+              </h3>
+              <ResponseExplorer
+                response={executionResult.response}
+                onExtractVariable={handleExtractVariable}
+                extractedVariables={extractedVariables}
+                existingExtractions={request.extractVariables}
+                onRemoveExtraction={handleRemoveExtraction}
+                handleCopy={handleCopy}
+                copied={copied}
+                chainId={chainId || requestChainId || ''}
+              />
+            </div>
+          )}
       </div>
     );
   }

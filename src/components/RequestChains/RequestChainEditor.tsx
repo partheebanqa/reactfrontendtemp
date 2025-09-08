@@ -207,6 +207,7 @@ export function RequestChainEditor({
     }
   };
 
+  // Updated to prevent duplicate execution logs
   const executeSingleRequest = async (
     request: APIRequest,
     variables: Variable[],
@@ -284,6 +285,17 @@ export function RequestChainEditor({
         },
         extractedVariables: extractedData,
       };
+
+      // Store in localStorage for individual request editor to access
+      try {
+        const raw = localStorage.getItem('lastExecutionByRequest');
+        const map = raw ? JSON.parse(raw) : {};
+        map[request.id] = log;
+        localStorage.setItem('lastExecutionByRequest', JSON.stringify(map));
+      } catch (e) {
+        console.error('Failed to persist lastExecutionByRequest:', e);
+      }
+
       return log;
     } catch (error) {
       const endTime = Date.now();
@@ -303,6 +315,17 @@ export function RequestChainEditor({
         },
         error: error instanceof Error ? error.message : 'Unknown error',
       };
+
+      // Store error in localStorage as well
+      try {
+        const raw = localStorage.getItem('lastExecutionByRequest');
+        const map = raw ? JSON.parse(raw) : {};
+        map[request.id] = errorLog;
+        localStorage.setItem('lastExecutionByRequest', JSON.stringify(map));
+      } catch (e) {
+        console.error('Failed to persist lastExecutionByRequest (error):', e);
+      }
+
       throw errorLog;
     }
   };
@@ -343,11 +366,26 @@ export function RequestChainEditor({
         setCurrentRequestIndex(i);
 
         try {
-          const log = await executeSingleRequest(request, currentVariables, i);
-          allLogs.push(log);
+          // Check if execution log already exists to prevent duplicates
+          const existingLog = allLogs.find(
+            (log) => log.requestId === request.id
+          );
+          let log: ExecutionLog;
+
+          if (existingLog) {
+            log = existingLog;
+          } else {
+            log = await executeSingleRequest(request, currentVariables, i);
+            allLogs.push(log);
+          }
 
           // Update executionLogs immediately after each request completes
-          setExecutionLogs((prev) => [...prev, log]);
+          setExecutionLogs((prev) => {
+            const filtered = prev.filter(
+              (existingLog) => existingLog.requestId !== log.requestId
+            );
+            return [...filtered, log];
+          });
 
           if (log.extractedVariables) {
             variablesByRequest[log.requestId] = { ...log.extractedVariables };
@@ -389,9 +427,22 @@ export function RequestChainEditor({
           }
         } catch (error) {
           const errorLog = error as ExecutionLog;
-          allLogs.push(errorLog);
+          const existingErrorIndex = allLogs.findIndex(
+            (log) => log.requestId === errorLog.requestId
+          );
 
-          setExecutionLogs((prev) => [...prev, errorLog]);
+          if (existingErrorIndex >= 0) {
+            allLogs[existingErrorIndex] = errorLog;
+          } else {
+            allLogs.push(errorLog);
+          }
+
+          setExecutionLogs((prev) => {
+            const filtered = prev.filter(
+              (existingLog) => existingLog.requestId !== errorLog.requestId
+            );
+            return [...filtered, errorLog];
+          });
 
           toast({
             title: `Request ${i + 1} Failed`,
@@ -442,6 +493,31 @@ export function RequestChainEditor({
     } finally {
       setIsExecuting(false);
       setCurrentRequestIndex(-1);
+    }
+  };
+
+  // Function to handle individual request execution from RequestEditor
+  const handleRequestExecution = (
+    requestId: string,
+    executionLog: ExecutionLog
+  ) => {
+    // Update the executionLogs to include this individual execution
+    setExecutionLogs((prev) => {
+      const filtered = prev.filter((log) => log.requestId !== requestId);
+      return [...filtered, executionLog];
+    });
+
+    // Update extracted variables if any
+    if (executionLog.extractedVariables) {
+      setExtractedVariablesByRequest((prev) => ({
+        ...prev,
+        [requestId]: { ...executionLog.extractedVariables },
+      }));
+
+      setExtractedVariables((prevGlobal) => ({
+        ...prevGlobal,
+        ...executionLog.extractedVariables,
+      }));
     }
   };
 
@@ -963,6 +1039,10 @@ export function RequestChainEditor({
               environmentBaseUrl={environmentBaseUrl}
               requestChainId={currentRequestChainId}
               chainId={chain?.id}
+              hideResponseExplorer={false}
+              onRequestExecution={(executionLog) =>
+                handleRequestExecution(editingRequestId, executionLog)
+              }
             />
           </div>
         </div>
@@ -1396,9 +1476,16 @@ export function RequestChainEditor({
                                         chainEnabled={formData.enabled}
                                         environmentBaseUrl={environmentBaseUrl}
                                         chainId={chain?.id || ''}
+                                        hideResponseExplorer={true}
+                                        onRequestExecution={(executionLog) =>
+                                          handleRequestExecution(
+                                            request.id,
+                                            executionLog
+                                          )
+                                        }
                                       />
 
-                                      {/* Response Section */}
+                                      {/* Response Section - Only show here, not in RequestEditor */}
                                       {executionLog && (
                                         <div className='border-t border-gray-200 pt-4'>
                                           <div className='flex items-center justify-between p-4 bg-gray-50 border-b border-gray-200 rounded-t-lg'>
