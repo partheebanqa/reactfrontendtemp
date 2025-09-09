@@ -152,6 +152,7 @@ export interface CollectionFolder {
 }
 
 export interface CollectionRequest {
+  assertions: boolean;
   id?: string;
   collectionId?: string;
   description?: string;

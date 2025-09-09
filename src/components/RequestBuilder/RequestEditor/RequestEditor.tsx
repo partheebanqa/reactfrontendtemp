@@ -81,6 +81,8 @@ const RequestEditor: React.FC = () => {
     fetchCollectionRequests,
   } = useCollection();
 
+  console.log('activeRequest000:', activeRequest);
+
   const { variables, environments, activeEnvironment } = useDataManagement();
   const { error: showError, success: showSuccess, toast } = useToast();
   const { currentWorkspace } = useWorkspace();
@@ -149,7 +151,7 @@ const RequestEditor: React.FC = () => {
   });
   const [settings, setSettings] = useState({
     followRedirects: true,
-    timeout: 30000, // 30 seconds
+    timeout: 30000,
     sslVerification: true,
   });
 
@@ -299,11 +301,49 @@ const RequestEditor: React.FC = () => {
           redirectUri: '',
         },
       });
+
+      // Load existing assertions from activeRequest if they exist
+      if (
+        activeRequest.assertions &&
+        Array.isArray(activeRequest.assertions) &&
+        activeRequest.assertions.length > 0
+      ) {
+        try {
+          const existingAssertions = activeRequest.assertions.map(
+            (assertion: any) => {
+              // Transform backend assertion format to frontend format
+              return {
+                id: assertion.id || `temp-${Math.random()}`,
+                category: assertion.category || 'general',
+                type: assertion.type || 'custom',
+                description: assertion.description || 'Custom assertion',
+                field: assertion.field,
+                operator: assertion.operator || 'equals',
+                expectedValue:
+                  assertion.expected_value || assertion.expectedValue, // Handle both formats
+                enabled:
+                  assertion.enabled !== undefined ? assertion.enabled : true, // Mark as selected
+                impact: assertion.impact,
+                group: assertion.group || 'custom',
+                priority: assertion.priority,
+              } as Assertion;
+            }
+          );
+
+          setAssertions(existingAssertions);
+          console.log('Loaded existing assertions:', existingAssertions);
+        } catch (error) {
+          console.error('Error loading existing assertions:', error);
+          setAssertions([]);
+        }
+      } else {
+        setAssertions([]); // Clear assertions if no saved assertions
+      }
     } else {
       handleCreateRequest();
+      setAssertions([]); // Clear assertions when no active request
     }
     setResponseData(null);
-    setAssertions([]); // Clear assertions when request changes
   }, [activeRequest]);
 
   const formatBackendResponse = (result: any): FormattedResponse => {
@@ -474,8 +514,18 @@ const RequestEditor: React.FC = () => {
         const generatedAssertions = generateAssertions(formattedResponse);
         console.log('generatedAssertions:', generatedAssertions);
 
-        // Store the generated assertions
-        setAssertions(generatedAssertions);
+        // Merge new generated assertions with existing ones
+        // Keep existing assertions that are already selected
+        const existingAssertions = assertions || [];
+        const existingIds = new Set(existingAssertions.map((a) => a.id));
+
+        // Add new generated assertions that don't already exist
+        const newAssertions = generatedAssertions.filter(
+          (newAssertion) => !existingIds.has(newAssertion.id)
+        );
+
+        const mergedAssertions = [...existingAssertions, ...newAssertions];
+        setAssertions(mergedAssertions);
       }
     } catch (error: any) {
       setError({
@@ -582,12 +632,21 @@ const RequestEditor: React.FC = () => {
       return;
     }
 
-    // Generate assertions if not already available
-    if (!assertions || assertions.length === 0) {
-      const formattedResponse = formatBackendResponse(responseData);
-      const generatedAssertions = generateAssertions(formattedResponse);
-      setAssertions(generatedAssertions);
-    }
+    // Generate assertions if not already available or if we want to refresh them
+    const formattedResponse = formatBackendResponse(responseData);
+    const generatedAssertions = generateAssertions(formattedResponse);
+
+    // Merge with existing assertions, keeping existing ones enabled
+    const existingAssertions = assertions || [];
+    const existingIds = new Set(existingAssertions.map((a) => a.id));
+
+    // Add new generated assertions that don't already exist
+    const newAssertions = generatedAssertions.filter(
+      (newAssertion) => !existingIds.has(newAssertion.id)
+    );
+
+    const mergedAssertions = [...existingAssertions, ...newAssertions];
+    setAssertions(mergedAssertions);
 
     setShowAssertionDialog(true);
   };
