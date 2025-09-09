@@ -237,12 +237,12 @@ export const collectionActions = {
     });
   },
 
-  renameRequest: (name: string, requestId: string) => {
+  renameRequest: (name: string, requestId: string, workspaceId: string) => {
     collectionStore.setState((state) => {
       const updatedCollections = state.collections.map((collection) => {
         const updatedRequests = collection.requests.map((request) => {
           if (request.id === requestId) {
-            return { ...request, name };
+            return { ...request, name, workspaceId };
           }
           return request;
         });

@@ -1,4 +1,3 @@
-// RequestChainEditor.tsx
 'use client';
 import { useState, useRef, useEffect } from 'react';
 import {
@@ -111,7 +110,7 @@ export function RequestChainEditor({
       (req: any) => ({
         ...req,
         body: req.body || req.bodyRawContent || '',
-        bodyType: req.bodyType || (req.bodyRawContent ? 'raw' : 'none'), // Set bodyType based on content
+        bodyType: req.bodyType || (req.bodyRawContent ? 'raw' : 'none'),
       })
     ),
     variables: chain?.variables || [],
@@ -166,7 +165,6 @@ export function RequestChainEditor({
     return result;
   };
 
-  // Enhanced function to process entire request with variable substitution
   const processRequestWithVariables = (
     request: APIRequest,
     variables: Variable[]
@@ -207,6 +205,110 @@ export function RequestChainEditor({
     }
   };
 
+  // Create a function to get all available variables for a request at runtime
+  const getAllVariablesForRequestAtRuntime = (
+    requestIndex: number,
+    currentExecutionExtractedVars: Record<string, any>
+  ): Variable[] => {
+    const environmentVars = getExtractVariablesByEnvironment(
+      activeEnvironment?.id
+    );
+
+    // Get extracted variables from all previous requests in CURRENT execution
+    const previouslyExtractedVars: Variable[] = [];
+    Object.entries(currentExecutionExtractedVars).forEach(([name, value]) => {
+      if (!previouslyExtractedVars.some((v) => v.name === name)) {
+        previouslyExtractedVars.push({
+          id: `extracted_${name}`,
+          name,
+          value: String(value),
+          initialValue: String(value),
+          type:
+            typeof value === 'number'
+              ? 'number'
+              : typeof value === 'boolean'
+              ? 'boolean'
+              : 'string',
+        });
+      }
+    });
+
+    return [
+      ...globalVariables,
+      ...(formData.variables || []),
+      ...environmentVars.filter(
+        (ev) =>
+          !previouslyExtractedVars.some((pv) => pv.name === ev.name) &&
+          !globalVariables.some((gv) => gv.name === ev.name) &&
+          !(formData.variables || []).some((fv) => fv.name === ev.name)
+      ),
+      ...previouslyExtractedVars,
+    ];
+  };
+
+  // Create a function to get all available variables for a request
+  const getAllVariablesForRequest = (requestIndex: number): Variable[] => {
+    const environmentVars = getExtractVariablesByEnvironment(
+      activeEnvironment?.id
+    );
+
+    // Get extracted variables from all previous requests
+    const previouslyExtractedVars: Variable[] = [];
+    for (let i = 0; i < requestIndex; i++) {
+      const reqId = formData.chainRequests?.[i]?.id;
+      if (reqId && extractedVariablesByRequest[reqId]) {
+        Object.entries(extractedVariablesByRequest[reqId]).forEach(
+          ([name, value]) => {
+            if (!previouslyExtractedVars.some((v) => v.name === name)) {
+              previouslyExtractedVars.push({
+                id: `extracted_${name}`,
+                name,
+                value: String(value),
+                initialValue: String(value),
+                type:
+                  typeof value === 'number'
+                    ? 'number'
+                    : typeof value === 'boolean'
+                    ? 'boolean'
+                    : 'string',
+              });
+            }
+          }
+        );
+      }
+    }
+
+    // Also include global extracted variables
+    const globalExtractedVars: Variable[] = Object.entries(
+      extractedVariables
+    ).map(([name, value]) => ({
+      id: `global_${name}`,
+      name,
+      value: String(value),
+      initialValue: String(value),
+      type:
+        typeof value === 'number'
+          ? 'number'
+          : typeof value === 'boolean'
+          ? 'boolean'
+          : 'string',
+    }));
+
+    return [
+      ...globalVariables,
+      ...(formData.variables || []),
+      ...environmentVars.filter(
+        (ev) =>
+          !previouslyExtractedVars.some((pv) => pv.name === ev.name) &&
+          !globalExtractedVars.some((gv) => gv.name === ev.name)
+      ),
+      ...previouslyExtractedVars,
+      ...globalExtractedVars.filter(
+        (gv) => !previouslyExtractedVars.some((pv) => pv.name === gv.name)
+      ),
+    ];
+  };
+
   const executeSingleRequest = async (
     request: APIRequest,
     variables: Variable[],
@@ -221,24 +323,11 @@ export function RequestChainEditor({
       params: request.params ?? [],
     };
 
-    const extractedVars = getExtractVariablesByEnvironment(
-      activeEnvironment?.id
-    );
-    const mergedVariables = [
-      ...variables.filter(
-        (sv) => !extractedVars.some((ev) => ev.name === sv.name)
-      ),
-      ...extractedVars,
-    ];
     const startTime = Date.now();
 
-    // Process the request with variable substitution
-    const processedRequest = processRequestWithVariables(
-      request,
-      mergedVariables
-    );
-    const payload = buildRequestPayload(processedRequest, mergedVariables);
-    const previewUrl = getPreviewUrl(request, mergedVariables);
+    const processedRequest = processRequestWithVariables(request, variables);
+    const payload = buildRequestPayload(processedRequest, variables);
+    const previewUrl = getPreviewUrl(request, variables);
     payload.request.url = previewUrl;
 
     try {
@@ -284,6 +373,16 @@ export function RequestChainEditor({
         },
         extractedVariables: extractedData,
       };
+
+      try {
+        const raw = localStorage.getItem('lastExecutionByRequest');
+        const map = raw ? JSON.parse(raw) : {};
+        map[request.id] = log;
+        localStorage.setItem('lastExecutionByRequest', JSON.stringify(map));
+      } catch (e) {
+        console.error('Failed to persist lastExecutionByRequest:', e);
+      }
+
       return log;
     } catch (error) {
       const endTime = Date.now();
@@ -298,11 +397,21 @@ export function RequestChainEditor({
         request: {
           method: processedRequest.method,
           url: previewUrl,
-          headers: {}, // fallback in error case
+          headers: {},
           body: processedRequest.body,
         },
         error: error instanceof Error ? error.message : 'Unknown error',
       };
+
+      try {
+        const raw = localStorage.getItem('lastExecutionByRequest');
+        const map = raw ? JSON.parse(raw) : {};
+        map[request.id] = errorLog;
+        localStorage.setItem('lastExecutionByRequest', JSON.stringify(map));
+      } catch (e) {
+        console.error('Failed to persist lastExecutionByRequest (error):', e);
+      }
+
       throw errorLog;
     }
   };
@@ -325,11 +434,20 @@ export function RequestChainEditor({
     setActiveTab('requests');
 
     const allLogs: ExecutionLog[] = [];
-    const currentVariables = [
+
+    // Get initial base variables (globals + chain variables + environment variables)
+    const baseVariables = [
       ...globalVariables,
       ...(formData.variables || []),
+      ...getExtractVariablesByEnvironment(activeEnvironment?.id).filter(
+        (ev) =>
+          !globalVariables.some((gv) => gv.name === ev.name) &&
+          !(formData.variables || []).some((fv) => fv.name === ev.name)
+      ),
     ];
-    const allExtractedVars: Record<string, any> = {};
+
+    // Track extracted variables throughout the execution
+    const allExtractedVarsInCurrentExecution: Record<string, any> = {};
     const variablesByRequest: Record<string, Record<string, any>> = {};
 
     try {
@@ -343,12 +461,37 @@ export function RequestChainEditor({
         setCurrentRequestIndex(i);
 
         try {
-          const log = await executeSingleRequest(request, currentVariables, i);
-          allLogs.push(log);
+          const existingLog = allLogs.find(
+            (log) => log.requestId === request.id
+          );
+          let log: ExecutionLog;
 
-          // Update executionLogs immediately after each request completes
-          setExecutionLogs((prev) => [...prev, log]);
+          if (existingLog) {
+            log = existingLog;
+          } else {
+            // Create the complete variable set for this request including all extracted vars so far
+            const currentAvailableVariables =
+              getAllVariablesForRequestAtRuntime(
+                i,
+                allExtractedVarsInCurrentExecution
+              );
 
+            log = await executeSingleRequest(
+              request,
+              currentAvailableVariables,
+              i
+            );
+            allLogs.push(log);
+          }
+
+          setExecutionLogs((prev) => {
+            const filtered = prev.filter(
+              (existingLog) => existingLog.requestId !== log.requestId
+            );
+            return [...filtered, log];
+          });
+
+          // Update extracted variables immediately after each request
           if (log.extractedVariables) {
             variablesByRequest[log.requestId] = { ...log.extractedVariables };
             setExtractedVariablesByRequest((prev) => ({
@@ -356,32 +499,12 @@ export function RequestChainEditor({
               [log.requestId]: { ...log.extractedVariables },
             }));
 
-            Object.assign(allExtractedVars, log.extractedVariables);
-            Object.entries(log.extractedVariables).forEach(([key, value]) => {
-              const existingVarIndex = currentVariables.findIndex(
-                (v) => v.name === key
-              );
-              const newVar: Variable = {
-                id:
-                  existingVarIndex >= 0
-                    ? currentVariables[existingVarIndex].id
-                    : Date.now().toString() + key,
-                name: key,
-                value: String(value),
-                type:
-                  typeof value === 'number'
-                    ? 'number'
-                    : typeof value === 'boolean'
-                    ? 'boolean'
-                    : 'string',
-              };
-              if (existingVarIndex >= 0) {
-                currentVariables[existingVarIndex] = newVar;
-              } else {
-                currentVariables.push(newVar);
-              }
-            });
-            updateExtractedVariables(allExtractedVars);
+            // Update the accumulated extracted variables for the current execution
+            Object.assign(
+              allExtractedVarsInCurrentExecution,
+              log.extractedVariables
+            );
+            updateExtractedVariables(allExtractedVarsInCurrentExecution);
           }
 
           if (i < formData.chainRequests.length - 1) {
@@ -389,9 +512,22 @@ export function RequestChainEditor({
           }
         } catch (error) {
           const errorLog = error as ExecutionLog;
-          allLogs.push(errorLog);
+          const existingErrorIndex = allLogs.findIndex(
+            (log) => log.requestId === errorLog.requestId
+          );
 
-          setExecutionLogs((prev) => [...prev, errorLog]);
+          if (existingErrorIndex >= 0) {
+            allLogs[existingErrorIndex] = errorLog;
+          } else {
+            allLogs.push(errorLog);
+          }
+
+          setExecutionLogs((prev) => {
+            const filtered = prev.filter(
+              (existingLog) => existingLog.requestId !== errorLog.requestId
+            );
+            return [...filtered, errorLog];
+          });
 
           toast({
             title: `Request ${i + 1} Failed`,
@@ -399,7 +535,6 @@ export function RequestChainEditor({
             variant: 'destructive',
           });
 
-          // Check error handling strategy
           if (request.errorHandling === 'stop') {
             toast({
               title: 'Execution Stopped',
@@ -418,9 +553,8 @@ export function RequestChainEditor({
         }
       }
 
-      // Update state with all results
       setExecutionLogs(allLogs);
-      setExtractedVariables(allExtractedVars);
+      setExtractedVariables(allExtractedVarsInCurrentExecution);
 
       const successCount = allLogs.filter(
         (log) => log.status === 'success'
@@ -445,6 +579,28 @@ export function RequestChainEditor({
     }
   };
 
+  const handleRequestExecution = (
+    requestId: string,
+    executionLog: ExecutionLog
+  ) => {
+    setExecutionLogs((prev) => {
+      const filtered = prev.filter((log) => log.requestId !== requestId);
+      return [...filtered, executionLog];
+    });
+
+    if (executionLog.extractedVariables) {
+      setExtractedVariablesByRequest((prev) => ({
+        ...prev,
+        [requestId]: { ...executionLog.extractedVariables },
+      }));
+
+      setExtractedVariables((prevGlobal) => ({
+        ...prevGlobal,
+        ...executionLog.extractedVariables,
+      }));
+    }
+  };
+
   const handleExtractVariableForRequest = (
     requestId: string,
     extraction: DataExtraction
@@ -452,7 +608,6 @@ export function RequestChainEditor({
     const request = formData.chainRequests.find((r) => r.id === requestId);
     if (!request) return;
 
-    // Ensure proper variable naming
     const variableName = extraction.variableName || extraction.name;
 
     if (!variableName) {
@@ -464,7 +619,6 @@ export function RequestChainEditor({
       return;
     }
 
-    // Check for duplicates
     const isDuplicate = (request.extractVariables || []).some(
       (existing) => (existing.variableName || existing.name) === variableName
     );
@@ -478,7 +632,6 @@ export function RequestChainEditor({
       return;
     }
 
-    // Normalize extraction
     const normalizedExtraction = {
       ...extraction,
       variableName,
@@ -495,7 +648,6 @@ export function RequestChainEditor({
 
     setFormData({ ...formData, chainRequests: updatedRequests });
 
-    // Update the extracted variables for this request
     const log = executionLogs.find((l) => l.requestId === requestId);
     if (log?.response) {
       const extracted = extractDataFromResponse(
@@ -507,7 +659,6 @@ export function RequestChainEditor({
         [requestId]: { ...prev[requestId], ...extracted },
       }));
 
-      // Update global extracted variables
       setExtractedVariables((prevGlobal) => ({
         ...prevGlobal,
         ...extracted,
@@ -531,7 +682,6 @@ export function RequestChainEditor({
 
     setFormData({ ...formData, chainRequests: updatedRequests });
 
-    // Remove from extracted variables for this request
     setExtractedVariablesByRequest((prev) => {
       const updated = { ...prev };
       if (updated[requestId]) {
@@ -540,7 +690,6 @@ export function RequestChainEditor({
       return updated;
     });
 
-    // Remove from global extracted variables
     setExtractedVariables((prev) => {
       const updated = { ...prev };
       delete updated[variableName];
@@ -573,7 +722,6 @@ export function RequestChainEditor({
     }
   };
 
-  // Drag handlers
   const handleDragStart = (index: number) => {
     dragItem.current = index;
   };
@@ -806,19 +954,12 @@ export function RequestChainEditor({
 
   const handleImportRequests = async (importedRequests: ExtendedRequest[]) => {
     try {
-      // toast({
-      //   title: 'Importing Requests',
-      //   description: `Importing ${importedRequests.length} requests...`,
-      // });
-
       const transformedRequests: APIRequest[] = importedRequests.map((req) => {
-        // Handle body data
         const hasBody = req.bodyRawContent && req.bodyRawContent.trim() !== '';
         const bodyType: APIRequest['bodyType'] = hasBody
           ? (req.bodyType as APIRequest['bodyType']) || 'raw'
           : 'none';
 
-        // Handle headers
         const headers = Array.isArray(req.headers)
           ? req.headers.map((header: any) => ({
               id: header.id || `temp_${Date.now()}_${Math.random()}`,
@@ -828,7 +969,6 @@ export function RequestChainEditor({
             }))
           : [];
 
-        // Handle authorization
         let authorizationType: APIRequest['authorizationType'] = 'none';
         let authToken = '';
         let authUsername = '';
@@ -852,7 +992,6 @@ export function RequestChainEditor({
           }
         }
 
-        // Handle query parameters
         const params = Array.isArray(req.params)
           ? req.params.map((param: any) => ({
               id: param.id || `temp_${Date.now()}_${Math.random()}`,
@@ -888,7 +1027,6 @@ export function RequestChainEditor({
       });
 
       const newExpandedRequests = new Set(expandedRequests);
-      // Don't add imported request IDs to expandedRequests, keeping them collapsed by default
 
       setFormData({
         ...formData,
@@ -898,7 +1036,6 @@ export function RequestChainEditor({
         ],
       });
 
-      // Keep expandedRequests unchanged so new requests remain collapsed
       setExpandedRequests(newExpandedRequests);
 
       toast({
@@ -931,6 +1068,10 @@ export function RequestChainEditor({
     );
 
     if (request) {
+      const requestIndex =
+        formData.chainRequests?.findIndex((r) => r.id === editingRequestId) ??
+        0;
+
       return (
         <div className='h-full flex flex-col'>
           <div className='flex-shrink-0 border-b bg-background px-6 py-4'>
@@ -963,6 +1104,12 @@ export function RequestChainEditor({
               environmentBaseUrl={environmentBaseUrl}
               requestChainId={currentRequestChainId}
               chainId={chain?.id}
+              hideResponseExplorer={false}
+              onRequestExecution={(executionLog) =>
+                handleRequestExecution(editingRequestId, executionLog)
+              }
+              extractedVariables={extractedVariables}
+              chainVariables={formData.variables || []}
             />
           </div>
         </div>
@@ -1396,9 +1543,20 @@ export function RequestChainEditor({
                                         chainEnabled={formData.enabled}
                                         environmentBaseUrl={environmentBaseUrl}
                                         chainId={chain?.id || ''}
+                                        hideResponseExplorer={true}
+                                        onRequestExecution={(executionLog) =>
+                                          handleRequestExecution(
+                                            request.id,
+                                            executionLog
+                                          )
+                                        }
+                                        extractedVariables={extractedVariables}
+                                        chainVariables={
+                                          formData.variables || []
+                                        }
                                       />
 
-                                      {/* Response Section */}
+                                      {/* Response Section - Only show here, not in RequestEditor */}
                                       {executionLog && (
                                         <div className='border-t border-gray-200 pt-4'>
                                           <div className='flex items-center justify-between p-4 bg-gray-50 border-b border-gray-200 rounded-t-lg'>

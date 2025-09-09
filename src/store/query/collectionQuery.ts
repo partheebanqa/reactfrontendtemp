@@ -216,7 +216,8 @@ export const useRenameRequestMutation = () => {
     onSuccess: (data, variables) => {
       collectionActions.renameRequest(
         variables?.newName || '',
-        variables.requestId
+        variables.requestId,
+        variables.workspaceId || ''
       );
     },
     onError: (error) => {

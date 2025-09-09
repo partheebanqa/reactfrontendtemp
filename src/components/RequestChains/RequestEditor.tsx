@@ -72,6 +72,11 @@ interface RequestEditorProps {
   environmentBaseUrl?: string;
   requestChainId?: string;
   chainId?: string;
+  hideResponseExplorer?: boolean;
+  onRequestExecution?: (executionLog: ExecutionLog) => void;
+  // Add new props for extracted variables
+  extractedVariables?: Record<string, any>;
+  chainVariables?: Variable[];
 }
 
 interface KeyValuePair {
@@ -93,6 +98,10 @@ export function RequestEditor({
   environmentBaseUrl,
   requestChainId,
   chainId,
+  hideResponseExplorer = false,
+  onRequestExecution,
+  extractedVariables: parentExtractedVariables = {},
+  chainVariables = [],
 }: RequestEditorProps) {
   const [isJsonOpen, setIsJsonOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<
@@ -102,15 +111,12 @@ export function RequestEditor({
   const [executionResult, setExecutionResult] = useState<ExecutionLog | null>(
     null
   );
-  // console.log('executionResult:', executionResult);
-  // console.log('requestChainId:', requestChainId);
-  // console.log('chainId:', chainId);
 
   const { variables: storeVariables } = useDataManagementStore();
   const [showResponse, setShowResponse] = useState(false);
   const [extractedVariables, setExtractedVariables] = useState<
     Record<string, any>
-  >({});
+  >(parentExtractedVariables);
   const { activeEnvironment } = useDataManagement();
 
   const [previewUrl, setPreviewUrl] = useState('');
@@ -124,7 +130,6 @@ export function RequestEditor({
   const headers = request.headers || [];
   const { toast } = useToast();
 
-  // State for processed request data with variable substitution
   const [processedRequest, setProcessedRequest] = useState<APIRequest>(request);
 
   const updateExtractedVariables = (newVars: Record<string, any>) => {
@@ -134,36 +139,79 @@ export function RequestEditor({
 
   const hasManuallyEditedNameRef = useRef(false);
 
+  // Update extracted variables when parent provides them
   useEffect(() => {
+    setExtractedVariables(parentExtractedVariables);
+  }, [parentExtractedVariables]);
+
+  // Enhanced variable merging logic
+  const getAllAvailableVariables = (): Variable[] => {
+    // Get extracted variables from localStorage for the environment
     const extractedVars = getExtractVariablesByEnvironment(
       activeEnvironment?.id
     );
-    const mergedVariables = [
-      ...storeVariables.filter(
-        (sv) => !extractedVars.some((ev) => ev.name === sv.name)
+
+    // Convert parent extracted variables to Variable format
+    const parentVars: Variable[] = Object.entries(parentExtractedVariables).map(
+      ([name, value]) => ({
+        id: `extracted_${name}`,
+        name,
+        value: String(value),
+        initialValue: String(value),
+        type:
+          typeof value === 'number'
+            ? 'number'
+            : typeof value === 'boolean'
+            ? 'boolean'
+            : 'string',
+      })
+    );
+
+    // Merge all variables, giving priority to parent extracted variables
+    const allVariables = [
+      ...storeVariables,
+      ...extractedVars.filter(
+        (ev) => !parentVars.some((pv) => pv.name === ev.name)
       ),
-      ...extractedVars,
+      ...parentVars,
+      ...chainVariables.filter(
+        (cv) =>
+          !parentVars.some((pv) => pv.name === cv.name) &&
+          !extractedVars.some((ev) => ev.name === cv.name)
+      ),
     ];
-    setPreviewUrl(getPreviewUrl(mergedVariables));
-  }, [storeVariables, activeEnvironment, request.url]);
+
+    return allVariables;
+  };
+
+  useEffect(() => {
+    const allVariables = getAllAvailableVariables();
+    setPreviewUrl(getPreviewUrl(allVariables));
+  }, [
+    storeVariables,
+    activeEnvironment,
+    request.url,
+    parentExtractedVariables,
+    chainVariables,
+  ]);
 
   React.useEffect(() => {
+    if (hideResponseExplorer) return;
+
     try {
       const raw = localStorage.getItem('lastExecutionByRequest');
       if (!raw) return;
       const map: Record<string, any> = JSON.parse(raw);
       const saved = map?.[request.id];
 
-      // Only restore if we have a valid execution result and it's recent (within last hour)
       const isRecent =
         saved?.endTime &&
-        Date.now() - new Date(saved.endTime).getTime() < 3600000; // 1 hour
+        Date.now() - new Date(saved.endTime).getTime() < 3600000;
 
       if ((saved?.response || saved?.error) && isRecent) {
         setExecutionResult(saved);
         setShowResponse(true);
 
-        // Hydrate extracted variables preview for this request
         if (
           saved.extractedVariables &&
           typeof saved.extractedVariables === 'object'
@@ -173,7 +221,6 @@ export function RequestEditor({
             ...saved.extractedVariables,
           }));
 
-          // Keep global cache consistent
           localStorage.setItem(
             'extractedVariables',
             JSON.stringify({
@@ -183,27 +230,27 @@ export function RequestEditor({
           );
         }
       } else if (saved && !isRecent) {
-        // Clear old execution data
         delete map[request.id];
         localStorage.setItem('lastExecutionByRequest', JSON.stringify(map));
       }
     } catch (e) {
       console.error('Failed to restore lastExecutionByRequest:', e);
     }
-  }, [request.id]);
+  }, [request.id, hideResponseExplorer]);
 
-  // Helper function to replace variables in text
   const replaceVariables = (text: string, variables: Variable[]): string => {
     if (!text) return text;
     let result = text;
     variables.forEach((variable) => {
       const regex = new RegExp(`{{${variable.name}}}`, 'g');
-      result = result.replace(regex, variable.value ?? '');
+      result = result.replace(
+        regex,
+        variable.value ?? variable.initialValue ?? ''
+      );
     });
     return result;
   };
 
-  // Enhanced function to process entire request with variable substitution (Fixed)
   const processRequestWithVariables = (
     request: APIRequest,
     variables: Variable[]
@@ -229,7 +276,6 @@ export function RequestEditor({
       authPassword: replaceVariables(request.authPassword || '', variables),
       authApiKey: replaceVariables(request.authApiKey || '', variables),
       authApiValue: replaceVariables(request.authApiValue || '', variables),
-      // Fixed: Added authorization object processing
       authorization: request.authorization
         ? {
             ...request.authorization,
@@ -255,32 +301,21 @@ export function RequestEditor({
     };
   };
 
-  // Update processed request whenever variables or request changes
   React.useEffect(() => {
-    const extractedVars = getExtractVariablesByEnvironment(
-      activeEnvironment?.id
-    );
-    const mergedVariables = [
-      ...storeVariables.filter(
-        (sv) => !extractedVars.some((ev) => ev.name === sv.name)
-      ),
-      ...extractedVars,
-    ];
-
-    // Process all parts of the request with variable substitution
-    const processed = processRequestWithVariables(request, mergedVariables);
-
-    console.log('processed:', processed);
-
+    const allVariables = getAllAvailableVariables();
+    const processed = processRequestWithVariables(request, allVariables);
     setProcessedRequest(processed);
-    setPreviewUrl(getPreviewUrl(mergedVariables));
-  }, [storeVariables, activeEnvironment, request]);
+    setPreviewUrl(getPreviewUrl(allVariables));
+  }, [
+    storeVariables,
+    activeEnvironment,
+    request,
+    parentExtractedVariables,
+    chainVariables,
+  ]);
 
   const getPreviewUrl = (variables: Variable[]) => {
-    const replacedUrl = request.url.replace(/{{(.*?)}}/g, (_, varName) => {
-      const found = variables.find((v) => v.name === varName);
-      return found?.initialValue ?? '';
-    });
+    const replacedUrl = replaceVariables(request.url, variables);
     const baseUrl = environmentBaseUrl?.trim();
     if (!baseUrl) return replacedUrl;
     try {
@@ -293,15 +328,7 @@ export function RequestEditor({
   };
 
   const handleExecute = async () => {
-    const extractedVars = getExtractVariablesByEnvironment(
-      activeEnvironment?.id
-    );
-    const mergedVariables = [
-      ...storeVariables.filter(
-        (sv) => !extractedVars.some((ev) => ev.name === sv.name)
-      ),
-      ...extractedVars,
-    ];
+    const allVariables = getAllAvailableVariables();
     const safeRequest = {
       ...request,
       extractVariables: request.extractVariables ?? [],
@@ -319,8 +346,8 @@ export function RequestEditor({
     setIsExecuting(true);
     try {
       const startTime = Date.now();
-      const payload = buildRequestPayload(safeRequest, mergedVariables);
-      const previewUrl = getPreviewUrl(mergedVariables);
+      const payload = buildRequestPayload(safeRequest, allVariables);
+      const previewUrl = getPreviewUrl(allVariables);
       payload.request.url = previewUrl;
       const backendData = await executeRequest(payload);
       const result = backendData?.data?.responses?.[0];
@@ -362,7 +389,15 @@ export function RequestEditor({
         },
         extractedVariables: extractedData,
       };
-      setExecutionResult(log);
+
+      if (!hideResponseExplorer) {
+        setExecutionResult(log);
+      }
+
+      if (onRequestExecution) {
+        onRequestExecution(log);
+      }
+
       try {
         const raw = localStorage.getItem('lastExecutionByRequest');
         const map = raw ? JSON.parse(raw) : {};
@@ -388,13 +423,21 @@ export function RequestEditor({
         duration: 0,
         request: {
           method: request.method,
-          url: getPreviewUrl(mergedVariables),
+          url: getPreviewUrl(getAllAvailableVariables()),
           headers: {},
           body: request.body,
         },
         error: error instanceof Error ? error.message : 'Unknown error',
       };
-      setExecutionResult(errorLog);
+
+      if (!hideResponseExplorer) {
+        setExecutionResult(errorLog);
+      }
+
+      if (onRequestExecution) {
+        onRequestExecution(errorLog);
+      }
+
       try {
         const raw = localStorage.getItem('lastExecutionByRequest');
         const map = raw ? JSON.parse(raw) : {};
@@ -509,7 +552,6 @@ export function RequestEditor({
     const normalizeBool = (value?: boolean) => !!value;
     const currentExtractions = request.extractVariables || [];
 
-    // Ensure proper variable naming
     const variableName = extraction.variableName || extraction.name;
 
     if (!variableName) {
@@ -521,7 +563,6 @@ export function RequestEditor({
       return;
     }
 
-    // Check for duplicates
     const isDuplicate = currentExtractions.some(
       (existing) => (existing.variableName || existing.name) === variableName
     );
@@ -535,7 +576,6 @@ export function RequestEditor({
       return;
     }
 
-    // Normalize extraction
     const normalizedExtraction = {
       ...extraction,
       variableName,
@@ -859,6 +899,20 @@ export function RequestEditor({
     </div>
   );
 
+  // Show variable substitution preview for debugging
+  const showVariablePreview = () => {
+    const allVariables = getAllAvailableVariables();
+    return (
+      processedRequest.authToken !== request.authToken ||
+      processedRequest.authorization?.token !== request.authorization?.token ||
+      processedRequest.body !== request.body ||
+      processedRequest.url !== request.url ||
+      JSON.stringify(processedRequest.headers) !==
+        JSON.stringify(request.headers) ||
+      JSON.stringify(processedRequest.params) !== JSON.stringify(request.params)
+    );
+  };
+
   if (compact) {
     return (
       <div className='space-y-4'>
@@ -916,6 +970,16 @@ export function RequestEditor({
             <span className='text-[#136fb0] dark:text-blue-400 font-mono break-all'>
               {previewUrl}
             </span>
+          </div>
+        )}
+
+        {/* Show available variables for debugging */}
+        {Object.keys(parentExtractedVariables).length > 0 && (
+          <div className='mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-sm'>
+            <strong>Available Variables:</strong>{' '}
+            {Object.keys(parentExtractedVariables)
+              .map((name) => `{{${name}}}`)
+              .join(', ')}
           </div>
         )}
 
@@ -987,6 +1051,13 @@ export function RequestEditor({
                       className='flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm'
                       placeholder='Value (use {{variableName}} for variables)'
                     />
+                    {/* Show processed value if different */}
+                    {processedRequest.params?.[index]?.value !== param.value &&
+                      processedRequest.params?.[index]?.value && (
+                        <div className='flex-1 px-2 py-1 bg-blue-50 border border-blue-200 rounded text-xs font-mono'>
+                          → {processedRequest.params[index]?.value}
+                        </div>
+                      )}
                     <button
                       onClick={() =>
                         updateParam(index, { enabled: !param.enabled })
@@ -1048,11 +1119,12 @@ export function RequestEditor({
                     />
                     {/* Show processed value if different */}
                     {processedRequest.headers?.[index]?.value !==
-                      header.value && (
-                      <div className='flex-1 px-2 py-1 bg-blue-50 border border-blue-200 rounded text-xs font-mono'>
-                        → {processedRequest.headers[index]?.value}
-                      </div>
-                    )}
+                      header.value &&
+                      processedRequest.headers?.[index]?.value && (
+                        <div className='flex-1 px-2 py-1 bg-blue-50 border border-blue-200 rounded text-xs font-mono'>
+                          → {processedRequest.headers[index]?.value}
+                        </div>
+                      )}
                     <button
                       onClick={() =>
                         updateHeader(index, { enabled: !header.enabled })
@@ -1273,12 +1345,12 @@ export function RequestEditor({
                         placeholder='Username'
                       />
                       {/* Show processed value if different */}
-                      {processedRequest.authUsername !==
-                        request.authUsername && (
-                        <div className='mt-1 px-2 py-1 bg-blue-50 border border-blue-200 rounded text-xs font-mono'>
-                          Processed: {processedRequest.authUsername}
-                        </div>
-                      )}
+                      {processedRequest.authUsername !== request.authUsername &&
+                        processedRequest.authUsername && (
+                          <div className='mt-1 px-2 py-1 bg-blue-50 border border-blue-200 rounded text-xs font-mono'>
+                            Processed: {processedRequest.authUsername}
+                          </div>
+                        )}
                     </div>
                     <div>
                       <label className='block text-sm font-medium text-gray-700 mb-2'>
@@ -1294,12 +1366,12 @@ export function RequestEditor({
                         placeholder='Password'
                       />
                       {/* Show processed value if different */}
-                      {processedRequest.authPassword !==
-                        request.authPassword && (
-                        <div className='mt-1 px-2 py-1 bg-blue-50 border border-blue-200 rounded text-xs font-mono'>
-                          Processed: {processedRequest.authPassword}
-                        </div>
-                      )}
+                      {processedRequest.authPassword !== request.authPassword &&
+                        processedRequest.authPassword && (
+                          <div className='mt-1 px-2 py-1 bg-blue-50 border border-blue-200 rounded text-xs font-mono'>
+                            Processed: {processedRequest.authPassword}
+                          </div>
+                        )}
                     </div>
                   </div>
                 )}
@@ -1320,11 +1392,12 @@ export function RequestEditor({
                           placeholder='API Key name'
                         />
                         {/* Show processed value if different */}
-                        {processedRequest.authApiKey !== request.authApiKey && (
-                          <div className='mt-1 px-2 py-1 bg-blue-50 border border-blue-200 rounded text-xs font-mono'>
-                            Processed: {processedRequest.authApiKey}
-                          </div>
-                        )}
+                        {processedRequest.authApiKey !== request.authApiKey &&
+                          processedRequest.authApiKey && (
+                            <div className='mt-1 px-2 py-1 bg-blue-50 border border-blue-200 rounded text-xs font-mono'>
+                              Processed: {processedRequest.authApiKey}
+                            </div>
+                          )}
                       </div>
                       <div>
                         <label className='block text-sm font-medium text-gray-700 mb-2'>
@@ -1341,11 +1414,12 @@ export function RequestEditor({
                         />
                         {/* Show processed value if different */}
                         {processedRequest.authApiValue !==
-                          request.authApiValue && (
-                          <div className='mt-1 px-2 py-1 bg-blue-50 border border-blue-200 rounded text-xs font-mono'>
-                            Processed: {processedRequest.authApiValue}
-                          </div>
-                        )}
+                          request.authApiValue &&
+                          processedRequest.authApiValue && (
+                            <div className='mt-1 px-2 py-1 bg-blue-50 border border-blue-200 rounded text-xs font-mono'>
+                              Processed: {processedRequest.authApiValue}
+                            </div>
+                          )}
                       </div>
                     </div>
                     <div>
@@ -1702,8 +1776,59 @@ export function RequestEditor({
             </div>
           )}
         </div>
-        {/* Response Section */}
-        {executionResult && (
+
+        {/* Show variable substitution preview for debugging */}
+        {showVariablePreview() && (
+          <div className='mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg'>
+            <h4 className='text-sm font-medium text-blue-900 mb-2'>
+              Variable Substitution Preview:
+            </h4>
+            <div className='space-y-2 text-xs'>
+              {(processedRequest.authToken !== request.authToken ||
+                processedRequest.authorization?.token !==
+                  request.authorization?.token) && (
+                <div>
+                  <span className='font-medium'>Auth Token:</span>
+                  <div className='font-mono bg-white p-1 rounded border'>
+                    <span className='text-gray-500'>
+                      {request.authorization?.token || request.authToken}
+                    </span>{' '}
+                    →
+                    <span className='text-blue-600 ml-1'>
+                      {processedRequest.authorization?.token ||
+                        processedRequest.authToken}
+                    </span>
+                  </div>
+                </div>
+              )}
+              {processedRequest.url !== request.url && (
+                <div>
+                  <span className='font-medium'>URL:</span>
+                  <div className='font-mono bg-white p-1 rounded border'>
+                    <span className='text-gray-500'>{request.url}</span> →
+                    <span className='text-blue-600 ml-1'>
+                      {processedRequest.url}
+                    </span>
+                  </div>
+                </div>
+              )}
+              {processedRequest.body !== request.body &&
+                processedRequest.body && (
+                  <div>
+                    <span className='font-medium'>Body:</span>
+                    <div className='font-mono bg-white p-1 rounded border max-h-20 overflow-y-auto'>
+                      <pre className='text-blue-600'>
+                        {processedRequest.body}
+                      </pre>
+                    </div>
+                  </div>
+                )}
+            </div>
+          </div>
+        )}
+
+        {/* Response Section - Only show if not hidden by parent */}
+        {!hideResponseExplorer && executionResult && (
           <div className='border-t border-gray-200'>
             <div className='flex items-center justify-between p-4 bg-gray-50 border-b border-gray-200'>
               <div className='flex items-center space-x-4'>
@@ -1938,24 +2063,26 @@ export function RequestEditor({
             )}
           </div>
         )}
-        {/* Variable Extraction Section */}
-        {executionResult && executionResult.response && (
-          <div className='border-t border-gray-200 p-6'>
-            <h3 className='text-lg font-medium text-gray-900 mb-4'>
-              Extract Variables from Response
-            </h3>
-            <ResponseExplorer
-              response={executionResult.response}
-              onExtractVariable={handleExtractVariable}
-              extractedVariables={extractedVariables}
-              existingExtractions={request.extractVariables}
-              onRemoveExtraction={handleRemoveExtraction}
-              handleCopy={handleCopy}
-              copied={copied}
-              chainId={chainId || requestChainId || ''}
-            />
-          </div>
-        )}
+        {/* Variable Extraction Section - Only show if not hidden by parent */}
+        {!hideResponseExplorer &&
+          executionResult &&
+          executionResult.response && (
+            <div className='border-t border-gray-200 p-6'>
+              <h3 className='text-lg font-medium text-gray-900 mb-4'>
+                Extract Variables from Response
+              </h3>
+              <ResponseExplorer
+                response={executionResult.response}
+                onExtractVariable={handleExtractVariable}
+                extractedVariables={extractedVariables}
+                existingExtractions={request.extractVariables}
+                onRemoveExtraction={handleRemoveExtraction}
+                handleCopy={handleCopy}
+                copied={copied}
+                chainId={chainId || requestChainId || ''}
+              />
+            </div>
+          )}
       </div>
     );
   }
@@ -2034,16 +2161,21 @@ export function RequestEditor({
               {previewUrl}
             </span>
           </div>
+
+          {/* Show available variables for debugging */}
+          {Object.keys(parentExtractedVariables).length > 0 && (
+            <div className='mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-sm'>
+              <strong>Available Variables:</strong>{' '}
+              {Object.keys(parentExtractedVariables)
+                .map((name) => `{{${name}}}`)
+                .join(', ')}
+            </div>
+          )}
         </CardContent>
       </Card>
       {/* Main Tabs */}
       {/* Show processed values for debugging */}
-      {(processedRequest.authToken !== request.authToken ||
-        processedRequest.authorization?.token !==
-          request.authorization?.token ||
-        processedRequest.body !== request.body ||
-        JSON.stringify(processedRequest.headers) !==
-          JSON.stringify(request.headers)) && (
+      {showVariablePreview() && (
         <div className='mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg'>
           <h4 className='text-sm font-medium text-blue-900 mb-2'>
             Variable Substitution Preview:
