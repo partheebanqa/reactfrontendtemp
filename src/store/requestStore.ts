@@ -23,7 +23,6 @@ export interface Assertion {
   type: string;
 }
 
-// Update the RequestState interface to include assertions
 interface ExtendedRequestState extends RequestState {
   assertions: Assertion[];
 }
