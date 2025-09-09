@@ -2311,7 +2311,7 @@ const RequestEditor: React.FC = () => {
                   {assertions?.length || 0} assertions selected
                 </span>
 
-                {/* Right side: buttons */}
+                {/* Right side: buttons*/}
                 <div className='flex space-x-3'>
                   <button
                     onClick={() => setShowAssertionDialog(false)}
