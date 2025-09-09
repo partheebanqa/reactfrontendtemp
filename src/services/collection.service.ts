@@ -337,6 +337,7 @@ export const formatRequest = (request: any) => {
     headers: request.Headers || request.headers || [],
     params: request.Params || request.params || [],
     variables: request.Variables || request.variables || {},
+    assertions: request.Assertions || request.assertions || [],
     createdBy: request.CreatedBy || request.createdBy,
     createdAt: request.CreatedAt || request.createdAt,
     updatedAt: request.UpdatedAt || request.updatedAt,
