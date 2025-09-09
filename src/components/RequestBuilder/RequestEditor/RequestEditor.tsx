@@ -93,6 +93,7 @@ const RequestEditor: React.FC = () => {
     | 'settings'
     | 'schemas'
   >('params');
+
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [showAssertionDialog, setShowAssertionDialog] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -531,6 +532,21 @@ const RequestEditor: React.FC = () => {
     }
   };
 
+  const getPriorityColor = (priority?: string) => {
+    switch (priority?.toLowerCase()) {
+      case 'critical':
+        return 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300';
+      case 'high':
+        return 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300';
+      case 'medium':
+        return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300';
+      case 'low':
+        return 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300';
+      default:
+        return 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300';
+    }
+  };
+
   const handleSaveRequest = () => {
     if (!activeRequest) return;
     if (!url.trim()) {
@@ -578,11 +594,6 @@ const RequestEditor: React.FC = () => {
 
   const handleSaveAssertions = () => {
     const selectedCount = assertions?.filter((a) => a.enabled).length || 0;
-    toast({
-      title: `${selectedCount} assertions saved successfully!`,
-      duration: 3000,
-      type: 'success',
-    });
     setShowAssertionDialog(false);
   };
 
@@ -605,14 +616,14 @@ const RequestEditor: React.FC = () => {
         requestCount = response.length;
       }
 
-      // Get selected assertions from the store
-      const selectedAssertions = assertions.filter(
-        (assertion) => assertion.enabled
-      );
-
+      const selectedAssertions = assertions
+        .filter((assertion) => assertion.enabled)
+        .map(({ expectedValue, ...rest }) => ({
+          ...rest,
+          expected_value: expectedValue,
+        }));
       const requestData = {
-        // collectionId removed per backend contract
-        workspaceId: currentWorkspace.id, // REQUIRED by backend
+        workspaceId: currentWorkspace.id,
         description: '',
         name: activeRequest.name || 'New Request',
         order: (requestCount || 0) + 1,
@@ -1060,6 +1071,12 @@ const RequestEditor: React.FC = () => {
     });
 
     return categoryCount;
+  };
+
+  // Get only selected assertions for detailed display
+  const getSelectedAssertions = (): Assertion[] => {
+    if (!assertions) return [];
+    return assertions.filter((a) => a.enabled);
   };
 
   if (!activeRequest) {
@@ -1776,37 +1793,109 @@ const RequestEditor: React.FC = () => {
                 </button>
               </div>
 
-              {assertions &&
-              assertions.length > 0 &&
-              assertions.some((a) => a.enabled) ? (
-                <div className='bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700'>
-                  <div className='space-y-3'>
-                    {/* Total count */}
-                    <div className='flex justify-between items-center pb-2 border-b border-gray-200 dark:border-gray-600'>
-                      <span className='text-sm font-medium text-gray-700 dark:text-gray-300'>
-                        Total assertions selected
-                      </span>
-                      <span className='text-sm font-semibold text-gray-900 dark:text-white'>
-                        {assertions.filter((a) => a.enabled).length}
-                      </span>
-                    </div>
+              {/* Show selected assertions with full details */}
+              {getSelectedAssertions().length > 0 ? (
+                <div className='space-y-4'>
+                  <div className='border-b border-gray-200 dark:border-gray-600 pb-3'>
+                    <h4 className='text-md font-semibold text-gray-900 dark:text-white'>
+                      Selected Assertions ({getSelectedAssertions().length})
+                    </h4>
+                    <p className='text-sm text-gray-500 dark:text-gray-400 mt-1'>
+                      These assertions will be included when the request is
+                      saved
+                    </p>
+                  </div>
 
-                    {/* Category breakdown */}
-                    {Object.entries(getSelectedAssertionsByCategory()).map(
-                      ([category, count]) => (
-                        <div
-                          key={category}
-                          className='flex justify-between items-center'
-                        >
-                          <span className='text-sm text-gray-600 dark:text-gray-400 capitalize'>
-                            {getCategoryDisplayName(category)}
-                          </span>
-                          <span className='text-sm font-medium text-gray-800 dark:text-gray-200'>
-                            {count}
-                          </span>
+                  <div className='space-y-3'>
+                    {getSelectedAssertions().map((assertion) => (
+                      <div
+                        key={assertion.id}
+                        className='border border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-900/20 rounded-lg p-4 hover:shadow-sm transition-all duration-200'
+                      >
+                        <div className='flex items-start space-x-3'>
+                          {/* Enabled indicator */}
+                          <div className='flex-shrink-0 mt-0.5'>
+                            <CheckSquare className='h-5 w-5 text-blue-600 dark:text-blue-400' />
+                          </div>
+
+                          {/* Content */}
+                          <div className='flex-1 min-w-0'>
+                            {/* Top row: Description + Category + Priority */}
+                            <div className='flex items-center justify-between gap-2 mb-2'>
+                              <p className='text-sm font-medium text-gray-900 dark:text-white'>
+                                {assertion.description}
+                              </p>
+
+                              <div className='flex items-center gap-2'>
+                                <span
+                                  className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getAssertionTypeColor(
+                                    assertion.category
+                                  )}`}
+                                >
+                                  {getCategoryDisplayName(assertion.category)}
+                                </span>
+
+                                {assertion?.priority && (
+                                  <span
+                                    className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(
+                                      assertion.priority
+                                    )}`}
+                                  >
+                                    {assertion.priority}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Operator and expected value */}
+                            {(assertion.operator ||
+                              assertion.expectedValue) && (
+                              <div className='flex items-center gap-3 mb-2 text-sm'>
+                                {assertion.operator && (
+                                  <span className='inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'>
+                                    {assertion.operator}
+                                  </span>
+                                )}
+                                {assertion?.expectedValue && (
+                                  <span className='font-mono text-gray-900 dark:text-white'>
+                                    Expected:{' '}
+                                    {typeof assertion.expectedValue === 'object'
+                                      ? JSON.stringify(assertion.expectedValue)
+                                      : String(assertion.expectedValue)}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Field, Group, and Type details */}
+                            <div className='flex flex-wrap items-center gap-2 mb-2'>
+                              {assertion?.field && (
+                                <div className='text-xs text-gray-500 dark:text-gray-400 font-mono bg-gray-100 dark:bg-gray-800 rounded px-2 py-1'>
+                                  Field: {assertion.field}
+                                </div>
+                              )}
+                              {assertion?.group && (
+                                <div className='text-xs text-gray-500 dark:text-gray-400 font-mono bg-gray-100 dark:bg-gray-800 rounded px-2 py-1'>
+                                  Group: {assertion.group}
+                                </div>
+                              )}
+                              {assertion.type && (
+                                <div className='text-xs text-gray-500 dark:text-gray-400 font-mono bg-gray-100 dark:bg-gray-800 rounded px-2 py-1'>
+                                  Type: {assertion.type}
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Impact */}
+                            {assertion?.impact && (
+                              <div className='text-xs text-gray-500 dark:text-gray-400 font-mono bg-gray-100 dark:bg-gray-800 rounded px-2 py-1 italic'>
+                                Impact: {assertion.impact}
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      )
-                    )}
+                      </div>
+                    ))}
                   </div>
                 </div>
               ) : assertions && assertions.length > 0 ? (
@@ -2004,7 +2093,7 @@ const RequestEditor: React.FC = () => {
         >
           <DialogContent className='max-w-4xl max-h-[80vh] overflow-hidden flex flex-col'>
             <DialogHeader>
-              <DialogTitle>Generate Test Assertions</DialogTitle>
+              <DialogTitle>Select Assertions to Include</DialogTitle>
             </DialogHeader>
 
             <div className='flex-1 overflow-y-auto space-y-4'>
@@ -2013,11 +2102,11 @@ const RequestEditor: React.FC = () => {
                   {/* Category Filter */}
                   <div className='flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between border-b border-gray-200 dark:border-gray-700 pb-4'>
                     <div>
-                      <h4 className='text-lg font-semibold text-gray-900 dark:text-white'>
+                      {/* <h4 className='text-lg font-semibold text-gray-900 dark:text-white'>
                         Select Assertions to Include
-                      </h4>
+                      </h4> */}
                       <p className='text-sm text-gray-500 dark:text-gray-400 mt-1'>
-                        Choose which assertions to include in your test suite
+                        Choose which assertions for request
                       </p>
                     </div>
                     <div className='flex items-center space-x-2'>
@@ -2068,50 +2157,90 @@ const RequestEditor: React.FC = () => {
 
                           {/* Content */}
                           <div className='flex-1 min-w-0'>
-                            <div className='flex items-start justify-between gap-2'>
-                              <div className='flex-1 min-w-0'>
-                                <p
-                                  className={`text-sm font-medium ${
-                                    assertion.enabled
-                                      ? 'text-gray-900 dark:text-white'
-                                      : 'text-gray-600 dark:text-gray-400'
-                                  }`}
+                            {/* Top row: Description + Category + Priority */}
+                            <div className='flex items-center justify-between gap-2'>
+                              <p
+                                className={`text-sm font-medium truncate ${
+                                  assertion.enabled
+                                    ? 'text-gray-900 dark:text-white'
+                                    : 'text-gray-600 dark:text-gray-400'
+                                }`}
+                                title={assertion.description} // tooltip on hover
+                              >
+                                {assertion.description}
+                              </p>
+
+                              <div className='flex items-center gap-2'>
+                                <span
+                                  className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getAssertionTypeColor(
+                                    assertion.category
+                                  )}`}
                                 >
-                                  {assertion.description}
-                                </p>
-                                <div className='mt-2 flex flex-wrap gap-2'>
+                                  {getCategoryDisplayName(assertion.category)}
+                                </span>
+
+                                {assertion?.priority && (
                                   <span
-                                    className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getAssertionTypeColor(
-                                      assertion.category
+                                    className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(
+                                      assertion.priority
                                     )}`}
                                   >
-                                    {getCategoryDisplayName(assertion.category)}
+                                    {assertion.priority}
                                   </span>
-                                  <span className='inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'>
-                                    {assertion.operator}
-                                  </span>
-                                </div>
+                                )}
                               </div>
-                              <div className='text-right'>
-                                <p className='text-xs text-gray-500 dark:text-gray-400'>
-                                  Expected
-                                </p>
-                                <p
-                                  className={`text-sm font-mono ${
+                            </div>
+
+                            {/* Operator badge */}
+                            <div className='mt-2 flex items-center gap-2 text-sm'>
+                              {assertion.operator && (
+                                <span className='inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'>
+                                  {assertion.operator}
+                                </span>
+                              )}
+                              {assertion?.expectedValue && (
+                                <span
+                                  className={`font-mono block truncate max-w-full ${
                                     assertion.enabled
                                       ? 'text-gray-900 dark:text-white'
                                       : 'text-gray-600 dark:text-gray-400'
                                   }`}
+                                  title={String(assertion.expectedValue)} // full value on hover
                                 >
+                                  Expected{' '}
                                   {typeof assertion.expectedValue === 'object'
                                     ? JSON.stringify(assertion.expectedValue)
                                     : String(assertion.expectedValue)}
-                                </p>
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Field + Group same row */}
+                            <div className='mt-2 flex flex-wrap items-center gap-2'>
+                              {assertion?.field && (
+                                <div className='text-xs text-gray-500 dark:text-gray-400 font-mono bg-gray-100 dark:bg-gray-800 rounded px-2 py-1'>
+                                  Field: {assertion.field}
+                                </div>
+                              )}
+                              {assertion?.group && (
+                                <div className='text-xs text-gray-500 dark:text-gray-400 font-mono bg-gray-100 dark:bg-gray-800 rounded px-2 py-1'>
+                                  Group: {assertion.group}
+                                </div>
+                              )}
+                              {assertion.type && (
+                                <div className='text-xs text-gray-500 dark:text-gray-400 font-mono bg-gray-100 dark:bg-gray-800 rounded px-2 py-1'>
+                                  Type: {assertion.type}
+                                </div>
+                              )}
+                            </div>
+                            {/* 
+                         
+                            {/* Impact */}
+                            {assertion?.impact && (
+                              <div className='mt-2 text-xs text-gray-500 dark:text-gray-400 font-mono bg-gray-100 dark:bg-gray-800 rounded px-2 py-1 italic'>
+                                Impact: {assertion?.impact}
                               </div>
-                            </div>
-                            <div className='mt-2 text-xs text-gray-500 dark:text-gray-400 font-mono bg-gray-100 dark:bg-gray-800 rounded px-2 py-1'>
-                              Type: {assertion.type}
-                            </div>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -2119,32 +2248,42 @@ const RequestEditor: React.FC = () => {
                   </div>
 
                   {/* Action Buttons */}
+                  {/* Action Buttons */}
                   <div className='border-t border-gray-200 dark:border-gray-700 pt-4'>
-                    <div className='flex space-x-2 justify-center'>
-                      <button
-                        onClick={() => {
-                          assertions.forEach((assertion) => {
-                            if (!assertion.enabled) {
-                              toggleAssertion(assertion.id);
-                            }
-                          });
-                        }}
-                        className='px-3 py-1 text-xs bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 rounded-md hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors'
-                      >
-                        Select All
-                      </button>
-                      <button
-                        onClick={() => {
-                          assertions.forEach((assertion) => {
-                            if (assertion.enabled) {
-                              toggleAssertion(assertion.id);
-                            }
-                          });
-                        }}
-                        className='px-3 py-1 text-xs bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors'
-                      >
-                        Clear All
-                      </button>
+                    <div className='flex items-center justify-between'>
+                      {/* Left side: count */}
+                      <span className='text-sm text-gray-600 dark:text-gray-400'>
+                        {assertions?.filter((a) => a.enabled).length || 0} of{' '}
+                        {assertions?.length || 0} assertions selected
+                      </span>
+
+                      {/* Right side: buttons */}
+                      <div className='flex space-x-2'>
+                        <button
+                          onClick={() => {
+                            assertions.forEach((assertion) => {
+                              if (!assertion.enabled) {
+                                toggleAssertion(assertion.id);
+                              }
+                            });
+                          }}
+                          className='px-3 py-1 text-xs bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 rounded-md hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors'
+                        >
+                          Select All
+                        </button>
+                        <button
+                          onClick={() => {
+                            assertions.forEach((assertion) => {
+                              if (assertion.enabled) {
+                                toggleAssertion(assertion.id);
+                              }
+                            });
+                          }}
+                          className='px-3 py-1 text-xs bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors'
+                        >
+                          Clear All
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </>
@@ -2164,24 +2303,29 @@ const RequestEditor: React.FC = () => {
               )}
             </div>
 
-            <DialogFooter className='flex justify-between items-center'>
-              <span className='text-sm text-gray-600 dark:text-gray-400'>
-                {assertions?.filter((a) => a.enabled).length || 0} of{' '}
-                {assertions?.length || 0} assertions selected
-              </span>
-              <div className='flex justify-end space-x-3'>
-                <button
-                  onClick={() => setShowAssertionDialog(false)}
-                  className='px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md'
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSaveAssertions}
-                  className='px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md'
-                >
-                  Save Assertions
-                </button>
+            <DialogFooter>
+              <div className='w-full flex items-center justify-between'>
+                {/* Left side: count */}
+                <span className='text-sm text-gray-600 dark:text-gray-400'>
+                  {assertions?.filter((a) => a.enabled).length || 0} of{' '}
+                  {assertions?.length || 0} assertions selected
+                </span>
+
+                {/* Right side: buttons */}
+                <div className='flex space-x-3'>
+                  <button
+                    onClick={() => setShowAssertionDialog(false)}
+                    className='px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md'
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSaveAssertions}
+                    className='px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md'
+                  >
+                    Save Assertions
+                  </button>
+                </div>
               </div>
             </DialogFooter>
           </DialogContent>
