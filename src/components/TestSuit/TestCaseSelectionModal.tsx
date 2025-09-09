@@ -33,11 +33,12 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { ApiTestCase } from "@/shared/types/testcase.model";
 import ReactJson from "react-json-view";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 type TestCase = {
-  id: string;
-  testSuiteId: string;
-  requestId: string;
+  id?: string;
+  testSuiteId?: string;
+  requestId?: string;
   name: string;
   description: string;
   testcase_id: string;
@@ -55,14 +56,13 @@ type TestCase = {
   headers: any;
   params: any[];
   expectedResponse: any;
-  createdAt: string;
-  createdBy: string;
-  updatedAt: string;
-  updatedBy: string;
-  deletedAt: string;
+  createdAt?: string;
+  createdBy?: string;
+  updatedAt?: string;
+  updatedBy?: string;
+  deletedAt?: string;
   tags: string[];
 };
-
 
 type TestCaseCategory = {
   category: string;
@@ -130,8 +130,6 @@ const transformTestCases = (
 
     const testCase: TestCase = {
       id: apiTestCase.id,
-      testSuiteId: apiTestCase.testSuiteId,
-      requestId: apiTestCase.requestId,
       name: apiTestCase.name,
       description: apiTestCase.description,
       testcase_id: apiTestCase.testcase_id,
@@ -149,12 +147,7 @@ const transformTestCases = (
       headers: apiTestCase.headers,
       params: apiTestCase.params,
       expectedResponse: apiTestCase.expectedResponse,
-      createdAt: apiTestCase.createdAt,
-      createdBy: apiTestCase.createdBy,
-      updatedAt: apiTestCase.updatedAt,
-      updatedBy: apiTestCase.updatedBy,
-      deletedAt: apiTestCase.deletedAt,
-      tags: generateTags(apiTestCase), // generateTags still applies
+      tags: generateTags(apiTestCase),
     };
 
     if (!categoriesMap[categoryName]) {
@@ -175,7 +168,6 @@ const transformTestCases = (
 
   return { categories, selectedIds };
 };
-
 
 export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
   isOpen,
@@ -198,6 +190,8 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  const [activeTab, setActiveTab] = useState("request");
 
   const {
     data: testCasesData,
@@ -570,23 +564,27 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
                                   <div className="flex items-start space-x-3">
                                     <Checkbox
                                       checked={selectedTestCases.includes(
-                                        test.id
+                                        test?.id
                                       )}
                                       onCheckedChange={(checked) =>
                                         handleTestCaseToggle(
-                                          test.id,
+                                          test?.id,
                                           checked as boolean
                                         )
                                       }
                                       style={{ accentColor: "#136fb0" }}
                                     />
-                                    <div style={{cursor:'pointer'}} className="flex-1 min-w-0" onClick={() =>
-                                            setExpandedTestId(
-                                              expandedTestId === test.id
-                                                ? null
-                                                : test.id
-                                            )
-                                          }>
+                                    <div
+                                      style={{ cursor: "pointer" }}
+                                      className="flex-1 min-w-0"
+                                      onClick={() =>
+                                        setExpandedTestId(
+                                          expandedTestId === test?.id
+                                            ? null
+                                            : test.id
+                                        )
+                                      }
+                                    >
                                       <div className="flex items-center justify-between space-x-2">
                                         <h4 className="font-medium text-sm">
                                           {test.name}
@@ -639,7 +637,7 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
                                         </p>
                                       )}
 
-                                      {test.tags?.length > 0 && (
+                                      {/* {test.tags?.length > 0 && (
                                         <div className="flex space-x-1">
                                           {test.tags.map((tag) => {
                                             const bgColorClass =
@@ -655,20 +653,53 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
                                             );
                                           })}
                                         </div>
-                                      )}
+                                      )} */}
 
-                                      {test && (
-                                        <div className="mt-4 p-3 bg-gray-100 rounded max-h-96 overflow-auto text-xs">
-                                          <ReactJson
-                                            src={test}
-                                            collapsed={1}
-                                            enableClipboard={false}
-                                            displayDataTypes={false}
-                                            name={false}
-                                            theme="pop"
-                                          />
-                                        </div>
-                                      )}
+                                      <div className="space-y-4 mt-4">
+                                        <Tabs
+                                          value={activeTab}
+                                          onValueChange={setActiveTab}
+                                        >
+                                          <TabsList className="grid w-full grid-cols-2 mt-4">
+                                            <TabsTrigger value="request">
+                                              Request
+                                            </TabsTrigger>
+                                            <TabsTrigger value="assertions">
+                                              Assertions
+                                            </TabsTrigger>
+                                          </TabsList>
+
+                                          <TabsContent value="request">
+                                            {test && (
+                                              <div className="mt-4 p-3 bg-gray-900 rounded max-h-96 overflow-auto text-xs text-white">
+                                                <ReactJson
+                                                  src={test}
+                                                  collapsed={1}
+                                                  enableClipboard={false}
+                                                  displayDataTypes={false}
+                                                  name={false}
+                                                  theme="monokai"
+                                                />
+                                              </div>
+                                            )}
+                                          </TabsContent>
+
+                                          <TabsContent value="assertions">
+                                            {test && (
+                                              <div className="mt-4 p-3 bg-gray-900 rounded max-h-96 overflow-auto text-xs text-white">
+                                                <ReactJson
+                                                  src={test}
+                                                  collapsed={1}
+                                                  enableClipboard={false}
+                                                  displayDataTypes={false}
+                                                  name={false}
+                                                  theme="monokai"
+                                                />
+                                              </div>
+                                            )}
+                                          </TabsContent>
+                                        </Tabs>
+                                      </div>
                                     </div>
                                   )}
                                 </div>
