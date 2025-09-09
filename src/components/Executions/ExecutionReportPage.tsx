@@ -90,9 +90,7 @@ const ExecutionReportPage: React.FC = () => {
         testCount: data.functionalTests?.total || 0,
         tests:
           data.functionalTests?.apis?.map((api: any) => ({
-            name: api.name,
-            method: api.method,
-            endpoint: api.url,
+            ...api,
             duration: `${api.duration}ms`,
             statusCode: 200,
             status:

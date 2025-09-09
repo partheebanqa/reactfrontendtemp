@@ -67,7 +67,7 @@ const Sidebar: React.FC = () => {
   const menuRef = useRef<HTMLDivElement>(null);
   const [requstIndex, setRequestIndex] = useState<number | null>(null);
 
-  console.log("collections in sidebar:", collections);
+  // console.log("collections in sidebar:", collections);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -516,6 +516,8 @@ const Sidebar: React.FC = () => {
   const filteredCollections = collections.filter((collection) =>
   collection.name.toLowerCase().includes(searchQuery.toLowerCase())
 );
+
+console.log(filteredCollections, "filteredCollections");
 
 
   return (

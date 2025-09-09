@@ -149,7 +149,7 @@ const utilsItems: MenuItem[] = [
 ];
 
 // Only these features are PRO-gated
-const PRO_FEATURES = new Set<FeatureKey>(['executions', 'cicd_integrations']);
+const PRO_FEATURES = new Set<FeatureKey>(['executions', 'cicd_integrationss']);
 
 // -------------------------------
 // Component

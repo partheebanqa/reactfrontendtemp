@@ -291,8 +291,6 @@ const TestSuites: React.FC = () => {
             <SelectItem value="All statuses">All status</SelectItem>
             <SelectItem value="generated">Generated</SelectItem>
             <SelectItem value="generating">Generating</SelectItem>
-            {/* <SelectItem value="Passed">Passed</SelectItem>
-            <SelectItem value="Failed">Failed</SelectItem> */}
           </SelectContent>
         </Select>
 

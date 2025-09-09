@@ -8,9 +8,11 @@ import {
   Code,
   AlertCircle,
   CheckCircle,
-  Calendar
+  Calendar,
+  Workflow
 } from 'lucide-react';
 import HelpLink from '@/components/HelpModal/HelpLink';
+import BreadCum from '@/components/BreadCum/Breadcum';
 
 export default function CICDConfiguration() {
   const [apiKey, setApiKey] = useState('api_test_12345abcdef67890ghijklmn');
@@ -36,17 +38,23 @@ export default function CICDConfiguration() {
   };
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 sm:p-6">
-      <div className='flex items-center justify-between mb-6'>
-        <div className="mb-8">
-          <h2 className="text-3xl font-bold text-gray-900">CI/CD Integration</h2>
-          <p className="text-gray-600 mt-2">Connect with your CI/CD pipeline for automated testing</p>
-        </div>
-        <HelpLink />
-      </div>
+    <>
+    <BreadCum
+              title="CI/CD Integration"
+              subtitle="Connect with your CI/CD pipeline for automated testing"
+              showCreateButton={false}
+              buttonTitle="Run Execution"
+              onClickCreateNew={() => console.log("Create execution")}
+              icon={Workflow}
+              iconBgClass="bg-orange-100"
+              iconColor="#f97316"
+              iconSize={40}
+            />
+    <div className="flex-1 overflow-y-auto mt-3">
+       
 
       {/* API Key Required Notice */}
-      <div className="bg-blue-50 border border-blue-200 rounded-xl p-6 mb-8">
+      <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">
         <div className="flex items-start space-x-3">
           <Key className="w-6 h-6 text-blue-600 mt-0.5" />
           <div>
@@ -57,7 +65,7 @@ export default function CICDConfiguration() {
       </div>
 
       {/* API Configuration */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mt-3">
         <div className="flex items-center space-x-3 mb-6">
           <Key className="w-6 h-6 text-gray-700" />
           <h3 className="text-lg font-semibold text-gray-900">API Configuration</h3>
@@ -140,7 +148,7 @@ export default function CICDConfiguration() {
       </div>
 
       {/* Example Usage */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mt-3">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center space-x-3">
             <Code className="w-6 h-6 text-gray-700" />
@@ -172,5 +180,6 @@ export default function CICDConfiguration() {
         </div>
       </div>
     </div>
+    </>
   );
 }
