@@ -12,6 +12,7 @@ interface TestItem {
   statusCode: number;
   status: "success" | "fail" | "warning";
   response?: string;
+  requestCurl:string;
 }
 
 interface TestCategory {
@@ -53,6 +54,8 @@ const [expandedTestId, setExpandedTestId] = useState<string | null>(null);
   const toggleTestDetails = (testId: string) => {
   setExpandedTestId(prevId => (prevId === testId ? null : testId));
 };
+
+console.log(categories, "catagories")
 
   return (
     <div className="rounded-lg border border-gray-200 space-y-3 mt-8 p-5 bg-white">
@@ -156,7 +159,7 @@ const [expandedTestId, setExpandedTestId] = useState<string | null>(null);
                           <TabsContent value="request">
                             <div className="mt-4 p-3 bg-gray-900 rounded max-h-96 overflow-auto text-xs text-white">
                               <ReactJson
-                                src={test}
+                               src={{ requestCurl: test.requestCurl }}
                                 collapsed={1}
                                 enableClipboard={false}
                                 displayDataTypes={false}
@@ -169,7 +172,7 @@ const [expandedTestId, setExpandedTestId] = useState<string | null>(null);
                           <TabsContent value="response">
                             <div className="mt-4 p-3 bg-gray-900 rounded max-h-96 overflow-auto text-xs text-white">
                               <ReactJson
-                                src={test || {}}
+                                  src={{ response: test.response }}
                                 collapsed={1}
                                 enableClipboard={false}
                                 displayDataTypes={false}
