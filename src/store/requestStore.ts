@@ -10,6 +10,10 @@ import { CollectionRequest } from '@/shared/types/collection';
 
 // Define the assertion type
 export interface Assertion {
+  priority: any;
+  field: ReactNode;
+  group: any;
+  impact: ReactNode;
   id: string;
   category: string;
   description: string;
