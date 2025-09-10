@@ -3,7 +3,7 @@ import { QueryClient, QueryFunction } from '@tanstack/react-query';
 import { getEncryptedCookie, removeCookie } from './cookieUtils';
 import { USER_COOKIE_NAME } from './constants';
 import { API_LOGIN } from '@/config/apiRoutes';
-import { i } from 'node_modules/vite/dist/node/types.d-aGj9QkWt';
+// import { i } from 'node_modules/vite/dist/node/types.d-aGj9QkWt';
 import { authActions, authStore } from '@/store/authStore';
 
 async function throwIfResNotOk(res: Response) {
