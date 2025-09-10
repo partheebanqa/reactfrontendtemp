@@ -44,10 +44,10 @@ export default function CICDConfiguration() {
   const handleCopyApiKey = () => {
     navigator.clipboard.writeText(apiKey);
     toast({
-        title: "Token copied successfully!",
-        duration: 3000,
-        type: "success",
-      });
+      title: "Token copied successfully!",
+      duration: 3000,
+      type: "success",
+    });
   };
 
   const handleCopyCode = () => {
@@ -69,7 +69,6 @@ export default function CICDConfiguration() {
       const response = await getWorkSpaceToken(workspaceId || "");
       setApiKey(response.Key);
       setTokenData(response);
-      getToken()
     } catch (err) {
       console.log(err, "err");
     }
@@ -79,12 +78,17 @@ export default function CICDConfiguration() {
     setIsLoading(true);
     try {
       const response = await createWorkSpaceToken(workspaceId || "");
-      setApiKey(response.keyinfo?.Key);
+      const newKey = response.keyinfo?.Key;
+      setApiKey(newKey);
+      setTokenData(response.keyinfo);
+
       toast({
         title: "Token generated successfully!",
         duration: 3000,
         type: "success",
       });
+
+      // No need to call getToken()
     } catch (err) {
       console.log(err, "err");
       toast({
@@ -244,7 +248,7 @@ export default function CICDConfiguration() {
                   </div>
                 </div>
               </div>
-            
+
               {!tokenData?.IsActive ? (
                 <div className="flex items-center text-red-600 text-sm">
                   <AlertCircle className="w-4 h-4 mr-1" />
