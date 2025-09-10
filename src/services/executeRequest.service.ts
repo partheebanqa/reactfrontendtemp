@@ -122,3 +122,28 @@ export const executeRequestChain = async (
     throw new Error(error.message || 'Failed to execute request');
   }
 };
+
+export const executeCollectionRequest = async (
+  requestId: string
+): Promise<ExecutionResponse> => {
+  try {
+    const response = await apiRequest(
+      'POST',
+      `${API_EXECUTOR}/collection-request`,
+      {
+        body: JSON.stringify({ requestId }), // ✅ wrap in object
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Failed to execute request: ${response.statusText}`);
+    }
+
+    return await response.json();
+  } catch (error: any) {
+    throw new Error(error.message || 'Failed to execute request');
+  }
+};

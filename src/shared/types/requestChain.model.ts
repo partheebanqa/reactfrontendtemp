@@ -232,6 +232,10 @@ export interface ExecuteRequestPayload {
 
 export interface ExecutionResponse {
   data: {
+    assertionLogs: never[];
+    metrics: {};
+    headers: {};
+    statusCode: number;
     responses: Array<{
       statusCode: number;
       headers: Record<string, string>;

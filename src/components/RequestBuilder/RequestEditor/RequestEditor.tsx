@@ -1,7 +1,7 @@
 'use client';
 
 import type React from 'react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Play,
   Save,
@@ -10,12 +10,13 @@ import {
   CheckSquare,
   Square,
   Zap,
+  Search,
 } from 'lucide-react';
 import { useRequest } from '@/hooks/useRequest';
 import { useCollection } from '@/hooks/useCollection';
 import { useWorkspace } from '@/hooks/useWorkspace';
 import type { Header, Param, RequestMethod } from '@/shared/types/request';
-import { type Assertion } from '@/store/requestStore';
+import type { Assertion } from '@/store/requestStore';
 import SchemaPage from '../SchemaPage';
 import { useToast } from '@/hooks/useToast';
 import TooltipContainer from '@/components/ui/tooltip-container';
@@ -34,8 +35,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { useDataManagement } from '@/hooks/useDataManagement';
-import HelpLink from '@/components/HelpModal/HelpLink';
-import { executeRequest } from '@/services/executeRequest.service';
+import { executeCollectionRequest } from '@/services/executeRequest.service';
 import { updateRequest } from '@/services/collection.service';
 import { useMutation } from '@tanstack/react-query';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -99,6 +99,7 @@ const RequestEditor: React.FC = () => {
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [showAssertionDialog, setShowAssertionDialog] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [searchTerm, setSearchTerm] = useState<string>('');
   const [newCollectionName, setNewCollectionName] = useState('');
   const [url, setUrl] = useState('');
   const [method, setMethod] = useState<RequestMethod>('GET');
@@ -154,6 +155,26 @@ const RequestEditor: React.FC = () => {
     timeout: 30000,
     sslVerification: true,
   });
+
+  const filteredAssertions = useCallback(() => {
+    let filtered = getFilteredAssertions();
+
+    if (searchTerm) {
+      const lowerSearchTerm = searchTerm.toLowerCase();
+      filtered = filtered.filter((assertion) => {
+        return (
+          assertion.description.toLowerCase().includes(lowerSearchTerm) ||
+          assertion.field?.toLowerCase().includes(lowerSearchTerm) ||
+          assertion.operator?.toLowerCase().includes(lowerSearchTerm) ||
+          String(assertion.expectedValue)
+            .toLowerCase()
+            .includes(lowerSearchTerm)
+        );
+      });
+    }
+
+    return filtered;
+  }, [searchTerm, assertions, selectedCategory]);
 
   const updateRequestMutation = useMutation({
     mutationFn: ({
@@ -387,6 +408,7 @@ const RequestEditor: React.FC = () => {
     clearError();
     setLoading(true);
     const newUrl = buildFinalUrl();
+
     try {
       // Create FormData object for file uploads if needed
       let requestFormData: FormData | undefined;
@@ -409,121 +431,49 @@ const RequestEditor: React.FC = () => {
         }
       }
 
-      const requestData = {
-        request: {
-          name: activeRequest.name || 'New Request',
-          workspaceId: currentWorkspace?.id || '',
-          method: method,
-          url: newUrl,
-          params: params,
-          headers: headers,
-          bodyRawContent: requestFormData || bodyContent,
-          bodyType: bodyType,
-          formData:
-            bodyType === 'form-data'
-              ? formFields
-                  .filter((f) => f.enabled)
-                  .reduce((acc, field) => {
-                    if (field.type === 'file' && field.value instanceof File) {
-                      acc[field.key] = field.value;
-                    } else {
-                      acc[field.key] = String(field.value);
-                    }
-                    return acc;
-                  }, {} as Record<string, string | File>)
-              : undefined,
-          urlEncodedData:
-            bodyType === 'x-www-form-urlencoded'
-              ? urlEncodedFields
-                  .filter((f) => f.enabled)
-                  .reduce((acc, field) => {
-                    acc[field.key] = field.value;
-                    return acc;
-                  }, {} as Record<string, string>)
-              : undefined,
-          authorizationType: authType,
-          authorization: {
-            token: authType === 'bearer' ? authData.token : '',
-            username: authType === 'basic' ? authData.username : '',
-            password: authType === 'basic' ? authData.password : '',
-            key: authType === 'apiKey' ? authData.key : '',
-            value: authType === 'apiKey' ? authData.value : '',
-            addTo: authType === 'apiKey' ? authData.addTo : 'header',
-            oauth1:
-              authType === 'oauth1'
-                ? {
-                    consumerKey: authData.oauth1.consumerKey,
-                    consumerSecret: authData.oauth1.consumerSecret,
-                    token: authData.oauth1.token,
-                    tokenSecret: authData.oauth1.tokenSecret,
-                    signatureMethod: authData.oauth1.signatureMethod,
-                    version: '1.0',
-                    realm: authData.oauth1.realm,
-                    nonce: authData.oauth1.nonce,
-                    timestamp: authData.oauth1.timestamp,
-                  }
-                : undefined,
-            oauth2:
-              authType === 'oauth2'
-                ? {
-                    clientId: authData.oauth2.clientId,
-                    clientSecret: authData.oauth2.clientSecret,
-                    accessToken: authData.oauth2.accessToken,
-                    tokenType: authData.oauth2.tokenType,
-                    refreshToken: authData.oauth2.refreshToken,
-                    scope: authData.oauth2.scope,
-                    grantType: authData.oauth2.grantType,
-                    redirectUri: authData.oauth2.redirectUri,
-                  }
-                : undefined,
-          },
-        },
-      };
+      // 🔹 Call backend
+      const backendData = await executeCollectionRequest(activeRequest?.id);
+      console.log('backendDataInRequestBuilder:', backendData?.data?.body);
 
-      // const response = await makeRequest(requestData);
-      const backendData = await executeRequest(requestData);
-      console.log('backendDataInRequestBuilder:', backendData);
+      const backendBody = backendData?.data?.body;
 
-      const result = backendData?.data?.responses?.[0];
-
-      if (result) {
-        // 🔹 Existing normalizedResponse flow
-        let parsedBody: any = result.body;
-        if (typeof result.body === 'string') {
+      if (backendBody) {
+        // Try to parse JSON if body is a string
+        let parsedBody: any = backendBody;
+        if (typeof backendBody === 'string') {
           try {
-            parsedBody = JSON.parse(result.body);
+            parsedBody = JSON.parse(backendBody);
           } catch {
-            parsedBody = result.body;
+            parsedBody = backendBody;
           }
         }
 
+        // Normalize response for UI
         const normalizedResponse = {
-          status: result.statusCode,
-          statusCode: result.statusCode,
-          headers: result.headers ?? {},
+          status: backendData?.data?.statusCode ?? 200,
+          statusCode: backendData?.data?.statusCode ?? 200,
+          headers: backendData?.data?.headers ?? {},
           body: parsedBody,
-          rawBody: result.body,
-          metrics: result.metrics ?? {},
+          rawBody: backendBody,
+          metrics: backendData?.data?.metrics ?? {},
+          assertionLogs: backendData?.data?.assertionLogs || [],
         };
+
+        console.log('normalizedResponse:', normalizedResponse);
 
         setResponseData(normalizedResponse as any);
 
-        // 🔹 NEW formattedResponse flow (separate purpose)
-        const formattedResponse = formatBackendResponse(result);
-        // console.log('formattedResponse:', formattedResponse);
+        // 🔹 Generate assertions from response body
+        const formattedResponse = formatBackendResponse(parsedBody);
         const generatedAssertions = generateAssertions(formattedResponse);
         console.log('generatedAssertions:', generatedAssertions);
 
-        // Merge new generated assertions with existing ones
-        // Keep existing assertions that are already selected
+        // Merge new assertions with existing ones
         const existingAssertions = assertions || [];
         const existingIds = new Set(existingAssertions.map((a) => a.id));
-
-        // Add new generated assertions that don't already exist
         const newAssertions = generatedAssertions.filter(
           (newAssertion) => !existingIds.has(newAssertion.id)
         );
-
         const mergedAssertions = [...existingAssertions, ...newAssertions];
         setAssertions(mergedAssertions);
       }
@@ -651,9 +601,123 @@ const RequestEditor: React.FC = () => {
     setShowAssertionDialog(true);
   };
 
-  const handleSaveAssertions = () => {
+  const handleSaveAssertions = async () => {
     const selectedCount = assertions?.filter((a) => a.enabled).length || 0;
     setShowAssertionDialog(false);
+
+    try {
+      if (!activeRequest || !currentWorkspace) return;
+
+      const selectedAssertions = assertions
+        .filter((assertion) => assertion.enabled)
+        .map(({ expectedValue, ...rest }) => ({
+          ...rest,
+          expected_value: expectedValue,
+        }));
+
+      const requestData = {
+        workspaceId: currentWorkspace.id,
+        description: '',
+        name: activeRequest.name || 'New Request',
+        order: activeRequest.order || 1,
+        method: method,
+        url: url,
+        bodyType: bodyType === 'json' ? 'raw' : bodyType,
+        bodyFormData:
+          bodyType === 'form-data'
+            ? formFields
+                .filter((f) => f.enabled)
+                .reduce((acc: Record<string, any>, field) => {
+                  if (field.key) {
+                    if (field.type === 'file' && field.value instanceof File) {
+                      acc[field.key] = field.value;
+                    } else {
+                      acc[field.key] = String(field.value);
+                    }
+                  }
+                  return acc;
+                }, {})
+            : [],
+        bodyRawContent:
+          bodyType === 'raw' || bodyType === 'json'
+            ? bodyContent
+            : bodyType === 'x-www-form-urlencoded'
+            ? new URLSearchParams(
+                urlEncodedFields
+                  .filter((f) => f.enabled)
+                  .reduce((acc, field) => {
+                    if (field.key) acc[field.key] = field.value;
+                    return acc;
+                  }, {} as Record<string, string>)
+              ).toString()
+            : '',
+        authorizationType: authType,
+        authorization: {
+          token: authType === 'bearer' ? authData.token : '',
+          username: authType === 'basic' ? authData.username : '',
+          password: authType === 'basic' ? authData.password : '',
+          key: authType === 'apiKey' ? authData.key : '',
+          value: authType === 'apiKey' ? authData.value : '',
+          addTo: authType === 'apiKey' ? authData.addTo : 'header',
+          oauth1:
+            authType === 'oauth1'
+              ? {
+                  consumerKey: authData.oauth1.consumerKey,
+                  consumerSecret: authData.oauth1.consumerSecret,
+                  token: authData.oauth1.token,
+                  tokenSecret: authData.oauth1.tokenSecret,
+                  signatureMethod: authData.oauth1.signatureMethod,
+                  version: '1.0',
+                  realm: authData.oauth1.realm,
+                  nonce: authData.oauth1.nonce,
+                  timestamp: authData.oauth1.timestamp,
+                }
+              : undefined,
+          oauth2:
+            authType === 'oauth2'
+              ? {
+                  clientId: authData.oauth2.clientId,
+                  clientSecret: authData.oauth2.clientSecret,
+                  accessToken: authData.oauth2.accessToken,
+                  tokenType: authData.oauth2.tokenType,
+                  refreshToken: authData.oauth2.refreshToken,
+                  scope: authData.oauth2.scope,
+                  grantType: authData.oauth2.grantType,
+                  redirectUri: authData.oauth2.redirectUri,
+                }
+              : undefined,
+        },
+        params: params,
+        headers: headers,
+        assertions: selectedAssertions,
+      };
+
+      if (!activeRequest.id) {
+        toast({
+          title: 'Error',
+          description: 'Cannot update a request without an id.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      await updateRequestMutation.mutateAsync({
+        requestId: activeRequest.id,
+        requestData,
+      });
+
+      toast({
+        title: 'Success',
+        description: 'Assertions saved successfully',
+      });
+    } catch (error) {
+      console.error('Error updating request:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to save assertions',
+        variant: 'destructive',
+      });
+    }
   };
 
   const handleUpdateRequest = async () => {
@@ -1723,26 +1787,6 @@ const RequestEditor: React.FC = () => {
                   </div>
                   <div>
                     <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
-                      Access Token
-                    </label>
-                    <input
-                      type='text'
-                      value={authData.oauth2.accessToken}
-                      onChange={(e) =>
-                        setAuthData({
-                          ...authData,
-                          oauth2: {
-                            ...authData.oauth2,
-                            accessToken: e.target.value,
-                          },
-                        })
-                      }
-                      placeholder='Enter access token'
-                      className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 bg-white dark:bg-gray-800 text-sm'
-                    />
-                  </div>
-                  <div>
-                    <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
                       Client ID
                     </label>
                     <input
@@ -1758,26 +1802,6 @@ const RequestEditor: React.FC = () => {
                         })
                       }
                       placeholder='Enter client ID'
-                      className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 bg-white dark:bg-gray-800 text-sm'
-                    />
-                  </div>
-                  <div>
-                    <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
-                      Client Secret
-                    </label>
-                    <input
-                      type='password'
-                      value={authData.oauth2.clientSecret}
-                      onChange={(e) =>
-                        setAuthData({
-                          ...authData,
-                          oauth2: {
-                            ...authData.oauth2,
-                            clientSecret: e.target.value,
-                          },
-                        })
-                      }
-                      placeholder='Enter client secret'
                       className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 bg-white dark:bg-gray-800 text-sm'
                     />
                   </div>
@@ -2151,201 +2175,199 @@ const RequestEditor: React.FC = () => {
           onOpenChange={setShowAssertionDialog}
         >
           <DialogContent className='max-w-4xl max-h-[80vh] overflow-hidden flex flex-col'>
-            <DialogHeader>
+            <DialogHeader className='flex-shrink-0'>
               <DialogTitle>Select Assertions to Include</DialogTitle>
             </DialogHeader>
 
-            <div className='flex-1 overflow-y-auto space-y-4'>
-              {assertions && assertions.length > 0 ? (
-                <>
-                  {/* Category Filter */}
-                  <div className='flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between border-b border-gray-200 dark:border-gray-700 pb-4'>
-                    <div>
-                      {/* <h4 className='text-lg font-semibold text-gray-900 dark:text-white'>
-                        Select Assertions to Include
-                      </h4> */}
-                      <p className='text-sm text-gray-500 dark:text-gray-400 mt-1'>
-                        Choose which assertions for request
-                      </p>
-                    </div>
-                    <div className='flex items-center space-x-2'>
-                      <Filter className='h-4 w-4 text-gray-500' />
-                      <select
-                        value={selectedCategory}
-                        onChange={(e) => setSelectedCategory(e.target.value)}
-                        className='border border-gray-300 dark:border-gray-600 rounded-md px-3 py-1.5 text-sm bg-white dark:bg-gray-800 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all duration-150'
-                      >
-                        <option value='all'>All Categories</option>
-                        {getCategories().map((category) => (
-                          <option key={category} value={category}>
-                            {getCategoryDisplayName(category)}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
+            <div className='flex-shrink-0 border-b border-gray-200 dark:border-gray-700 pb-4 space-y-4'>
+              {/* Category Filter and Search */}
+              <div className='flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between'>
+                <div className='flex items-center gap-3 flex-1'>
+                  <p className='text-sm text-gray-500 dark:text-gray-400'>
+                    Choose which assertions for request
+                  </p>
+                  <div className='relative flex-1 max-w-xs'>
+                    <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400' />
+                    <input
+                      type='text'
+                      placeholder='Search assertions...'
+                      value={searchTerm || ''}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className='w-full pl-10 pr-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all duration-150'
+                    />
                   </div>
+                </div>
+                <div className='flex items-center space-x-2'>
+                  <Filter className='h-4 w-4 text-gray-500' />
+                  <select
+                    value={selectedCategory}
+                    onChange={(e) => setSelectedCategory(e.target.value)}
+                    className='border border-gray-300 dark:border-gray-600 rounded-md px-3 py-1.5 text-sm bg-white dark:bg-gray-800 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all duration-150'
+                  >
+                    <option value='all'>All Categories</option>
+                    {getCategories().map((category) => (
+                      <option key={category} value={category}>
+                        {getCategoryDisplayName(category)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
 
-                  {/* Assertions List */}
-                  <div className='space-y-3'>
-                    {getFilteredAssertions().map((assertion) => (
-                      <div
-                        key={assertion.id}
-                        className={`border rounded-lg p-4 transition-all duration-200 ${
-                          assertion.enabled
-                            ? 'border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-900/20'
-                            : 'border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800/20'
-                        } hover:shadow-sm`}
-                      >
-                        <div className='flex items-start space-x-3'>
-                          {/* Checkbox */}
-                          <button
-                            onClick={() => toggleAssertion(assertion.id)}
-                            className='flex-shrink-0 mt-0.5 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors'
-                            title={
-                              assertion.enabled
-                                ? 'Unselect assertion'
-                                : 'Select assertion'
-                            }
-                          >
-                            {assertion.enabled ? (
-                              <CheckSquare className='h-5 w-5 text-blue-600 dark:text-blue-400' />
-                            ) : (
-                              <Square className='h-5 w-5 text-gray-400' />
+              <div className='flex items-center justify-between'>
+                <span className='text-sm text-gray-600 dark:text-gray-400'>
+                  {assertions?.filter((a) => a.enabled).length || 0} of{' '}
+                  {assertions?.length || 0} assertions selected
+                </span>
+                <div className='flex space-x-2'>
+                  <button
+                    onClick={() => {
+                      assertions.forEach((assertion) => {
+                        if (!assertion.enabled) {
+                          toggleAssertion(assertion.id);
+                        }
+                      });
+                    }}
+                    className='px-3 py-1 text-xs bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 rounded-md hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors'
+                  >
+                    Select All
+                  </button>
+                  <button
+                    onClick={() => {
+                      assertions.forEach((assertion) => {
+                        if (assertion.enabled) {
+                          toggleAssertion(assertion.id);
+                        }
+                      });
+                    }}
+                    className='px-3 py-1 text-xs bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors'
+                  >
+                    Clear All
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className='flex-1 overflow-y-auto'>
+              {assertions && assertions.length > 0 ? (
+                <div className='space-y-3 p-1'>
+                  {filteredAssertions().map((assertion) => (
+                    <div
+                      key={assertion.id}
+                      className={`border rounded-lg p-4 transition-all duration-200 ${
+                        assertion.enabled
+                          ? 'border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-900/20'
+                          : 'border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800/20'
+                      } hover:shadow-sm`}
+                    >
+                      <div className='flex items-start space-x-3'>
+                        {/* Checkbox */}
+                        <button
+                          onClick={() => toggleAssertion(assertion.id)}
+                          className='flex-shrink-0 mt-0.5 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors'
+                          title={
+                            assertion.enabled
+                              ? 'Unselect assertion'
+                              : 'Select assertion'
+                          }
+                        >
+                          {assertion.enabled ? (
+                            <CheckSquare className='h-5 w-5 text-blue-600 dark:text-blue-400' />
+                          ) : (
+                            <Square className='h-5 w-5 text-gray-400' />
+                          )}
+                        </button>
+
+                        {/* Content */}
+                        <div className='flex-1 min-w-0'>
+                          {/* Top row: Description + Category + Priority */}
+                          <div className='flex items-center justify-between gap-2'>
+                            <p
+                              className={`text-sm font-medium truncate ${
+                                assertion.enabled
+                                  ? 'text-gray-900 dark:text-white'
+                                  : 'text-gray-600 dark:text-gray-400'
+                              }`}
+                              title={assertion.description} // tooltip on hover
+                            >
+                              {assertion.description}
+                            </p>
+
+                            <div className='flex items-center gap-2'>
+                              <span
+                                className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getAssertionTypeColor(
+                                  assertion.category
+                                )}`}
+                              >
+                                {getCategoryDisplayName(assertion.category)}
+                              </span>
+
+                              {assertion?.priority && (
+                                <span
+                                  className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(
+                                    assertion.priority
+                                  )}`}
+                                >
+                                  {assertion.priority}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Operator badge */}
+                          <div className='mt-2 flex items-center gap-2 text-sm'>
+                            {assertion.operator && (
+                              <span className='inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'>
+                                {assertion.operator}
+                              </span>
                             )}
-                          </button>
-
-                          {/* Content */}
-                          <div className='flex-1 min-w-0'>
-                            {/* Top row: Description + Category + Priority */}
-                            <div className='flex items-center justify-between gap-2'>
-                              <p
-                                className={`text-sm font-medium truncate ${
+                            {assertion?.expectedValue && (
+                              <span
+                                className={`font-mono block truncate max-w-full ${
                                   assertion.enabled
                                     ? 'text-gray-900 dark:text-white'
                                     : 'text-gray-600 dark:text-gray-400'
                                 }`}
-                                title={assertion.description} // tooltip on hover
+                                title={String(assertion.expectedValue)} // full value on hover
                               >
-                                {assertion.description}
-                              </p>
+                                Expected{' '}
+                                {typeof assertion.expectedValue === 'object'
+                                  ? JSON.stringify(assertion.expectedValue)
+                                  : String(assertion.expectedValue)}
+                              </span>
+                            )}
+                          </div>
 
-                              <div className='flex items-center gap-2'>
-                                <span
-                                  className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getAssertionTypeColor(
-                                    assertion.category
-                                  )}`}
-                                >
-                                  {getCategoryDisplayName(assertion.category)}
-                                </span>
-
-                                {assertion?.priority && (
-                                  <span
-                                    className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(
-                                      assertion.priority
-                                    )}`}
-                                  >
-                                    {assertion.priority}
-                                  </span>
-                                )}
+                          {/* Field + Group same row */}
+                          <div className='mt-2 flex flex-wrap items-center gap-2'>
+                            {assertion?.field && (
+                              <div className='text-xs text-gray-500 dark:text-gray-400 font-mono bg-gray-100 dark:bg-gray-800 rounded px-2 py-1'>
+                                Field: {assertion.field}
                               </div>
-                            </div>
-
-                            {/* Operator badge */}
-                            <div className='mt-2 flex items-center gap-2 text-sm'>
-                              {assertion.operator && (
-                                <span className='inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'>
-                                  {assertion.operator}
-                                </span>
-                              )}
-                              {assertion?.expectedValue && (
-                                <span
-                                  className={`font-mono block truncate max-w-full ${
-                                    assertion.enabled
-                                      ? 'text-gray-900 dark:text-white'
-                                      : 'text-gray-600 dark:text-gray-400'
-                                  }`}
-                                  title={String(assertion.expectedValue)} // full value on hover
-                                >
-                                  Expected{' '}
-                                  {typeof assertion.expectedValue === 'object'
-                                    ? JSON.stringify(assertion.expectedValue)
-                                    : String(assertion.expectedValue)}
-                                </span>
-                              )}
-                            </div>
-
-                            {/* Field + Group same row */}
-                            <div className='mt-2 flex flex-wrap items-center gap-2'>
-                              {assertion?.field && (
-                                <div className='text-xs text-gray-500 dark:text-gray-400 font-mono bg-gray-100 dark:bg-gray-800 rounded px-2 py-1'>
-                                  Field: {assertion.field}
-                                </div>
-                              )}
-                              {assertion?.group && (
-                                <div className='text-xs text-gray-500 dark:text-gray-400 font-mono bg-gray-100 dark:bg-gray-800 rounded px-2 py-1'>
-                                  Group: {assertion.group}
-                                </div>
-                              )}
-                              {assertion.type && (
-                                <div className='text-xs text-gray-500 dark:text-gray-400 font-mono bg-gray-100 dark:bg-gray-800 rounded px-2 py-1'>
-                                  Type: {assertion.type}
-                                </div>
-                              )}
-                            </div>
-                            {/* 
-                         
-                            {/* Impact */}
-                            {assertion?.impact && (
-                              <div className='mt-2 text-xs text-gray-500 dark:text-gray-400 font-mono bg-gray-100 dark:bg-gray-800 rounded px-2 py-1 italic'>
-                                Impact: {assertion?.impact}
+                            )}
+                            {assertion?.group && (
+                              <div className='text-xs text-gray-500 dark:text-gray-400 font-mono bg-gray-100 dark:bg-gray-800 rounded px-2 py-1'>
+                                Group: {assertion.group}
+                              </div>
+                            )}
+                            {assertion.type && (
+                              <div className='text-xs text-gray-500 dark:text-gray-400 font-mono bg-gray-100 dark:bg-gray-800 rounded px-2 py-1'>
+                                Type: {assertion.type}
                               </div>
                             )}
                           </div>
+
+                          {/* Impact */}
+                          {assertion?.impact && (
+                            <div className='mt-2 text-xs text-gray-500 dark:text-gray-400 font-mono bg-gray-100 dark:bg-gray-800 rounded px-2 py-1 italic'>
+                              Impact: {assertion?.impact}
+                            </div>
+                          )}
                         </div>
                       </div>
-                    ))}
-                  </div>
-
-                  {/* Action Buttons */}
-                  {/* Action Buttons */}
-                  <div className='border-t border-gray-200 dark:border-gray-700 pt-4'>
-                    <div className='flex items-center justify-between'>
-                      {/* Left side: count */}
-                      <span className='text-sm text-gray-600 dark:text-gray-400'>
-                        {assertions?.filter((a) => a.enabled).length || 0} of{' '}
-                        {assertions?.length || 0} assertions selected
-                      </span>
-
-                      {/* Right side: buttons */}
-                      <div className='flex space-x-2'>
-                        <button
-                          onClick={() => {
-                            assertions.forEach((assertion) => {
-                              if (!assertion.enabled) {
-                                toggleAssertion(assertion.id);
-                              }
-                            });
-                          }}
-                          className='px-3 py-1 text-xs bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 rounded-md hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors'
-                        >
-                          Select All
-                        </button>
-                        <button
-                          onClick={() => {
-                            assertions.forEach((assertion) => {
-                              if (assertion.enabled) {
-                                toggleAssertion(assertion.id);
-                              }
-                            });
-                          }}
-                          className='px-3 py-1 text-xs bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors'
-                        >
-                          Clear All
-                        </button>
-                      </div>
                     </div>
-                  </div>
-                </>
+                  ))}
+                </div>
               ) : (
                 <div className='flex flex-col items-center justify-center h-48 text-center'>
                   <div className='text-gray-400 mb-4'>
@@ -2362,7 +2384,7 @@ const RequestEditor: React.FC = () => {
               )}
             </div>
 
-            <DialogFooter>
+            <DialogFooter className='flex-shrink-0'>
               <div className='w-full flex items-center justify-between'>
                 {/* Left side: count */}
                 <span className='text-sm text-gray-600 dark:text-gray-400'>
