@@ -2183,9 +2183,9 @@ const RequestEditor: React.FC = () => {
               {/* Category Filter and Search */}
               <div className='flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between'>
                 <div className='flex items-center gap-3 flex-1'>
-                  <p className='text-sm text-gray-500 dark:text-gray-400'>
+                  {/* <p className='text-sm text-gray-500 dark:text-gray-400'>
                     Choose which assertions for request
-                  </p>
+                  </p> */}
                   <div className='relative flex-1 max-w-xs'>
                     <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400' />
                     <input
@@ -2214,7 +2214,7 @@ const RequestEditor: React.FC = () => {
                 </div>
               </div>
 
-              <div className='flex items-center justify-between'>
+              {/* <div className='flex items-center justify-between'>
                 <span className='text-sm text-gray-600 dark:text-gray-400'>
                   {assertions?.filter((a) => a.enabled).length || 0} of{' '}
                   {assertions?.length || 0} assertions selected
@@ -2245,7 +2245,7 @@ const RequestEditor: React.FC = () => {
                     Clear All
                   </button>
                 </div>
-              </div>
+              </div> */}
             </div>
 
             <div className='flex-1 overflow-y-auto'>
