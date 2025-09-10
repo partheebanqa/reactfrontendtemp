@@ -1,7 +1,8 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ChevronDown, ChevronUp, CheckCircle, AlertCircle } from "lucide-react";
 import { useState } from "react";
-import ReactJson from "react-json-view";
+import JsonView from "react18-json-view";
+
 
 interface TestItem {
   id: string;
@@ -12,7 +13,7 @@ interface TestItem {
   statusCode: number;
   status: "success" | "fail" | "warning";
   response?: string;
-  requestCurl:string;
+  requestCurl: string;
 }
 
 interface TestCategory {
@@ -41,7 +42,7 @@ const DetailedTestResults = ({
   categories: TestCategory[];
 }) => {
   const [openSections, setOpenSections] = useState<string[]>([]);
-const [expandedTestId, setExpandedTestId] = useState<string | null>(null);
+  const [expandedTestId, setExpandedTestId] = useState<string | null>(null);
 
   const [activeTab, setActiveTab] = useState("request");
 
@@ -52,10 +53,10 @@ const [expandedTestId, setExpandedTestId] = useState<string | null>(null);
   };
 
   const toggleTestDetails = (testId: string) => {
-  setExpandedTestId(prevId => (prevId === testId ? null : testId));
-};
+    setExpandedTestId((prevId) => (prevId === testId ? null : testId));
+  };
 
-console.log(categories, "catagories")
+  console.log(categories, "catagories");
 
   return (
     <div className="rounded-lg border border-gray-200 space-y-3 mt-8 p-5 bg-white">
@@ -122,22 +123,25 @@ console.log(categories, "catagories")
                         </p>
 
                         <button
-  onClick={() => toggleTestDetails(test.id)}
-  className="flex items-center text-xs text-blue-500 space-x-1 mt-1"
->
-  {expandedTestId === test.id ? (
-    <>
-      <ChevronUp size={20} color="#136fb0" />
-      <span style={{ color: "#136fb0" }}>Hide Details</span>
-    </>
-  ) : (
-    <>
-      <ChevronDown size={20} color="#136fb0" />
-      <span style={{ color: "#136fb0" }}>Show Details</span>
-    </>
-  )}
-</button>
-
+                          onClick={() => toggleTestDetails(test.id)}
+                          className="flex items-center text-xs text-blue-500 space-x-1 mt-1"
+                        >
+                          {expandedTestId === test.id ? (
+                            <>
+                              <ChevronUp size={20} color="#136fb0" />
+                              <span style={{ color: "#136fb0" }}>
+                                Hide Details
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              <ChevronDown size={20} color="#136fb0" />
+                              <span style={{ color: "#136fb0" }}>
+                                Show Details
+                              </span>
+                            </>
+                          )}
+                        </button>
                       </div>
                     </div>
 
@@ -158,52 +162,56 @@ console.log(categories, "catagories")
 
                           <TabsContent value="request">
                             <div className="mt-4 p-3 bg-gray-900 rounded max-h-96 overflow-auto text-xs text-white">
-                              <ReactJson
-                               src={{ requestCurl: test.requestCurl }}
-                                collapsed={1}
-                                enableClipboard={false}
-                                displayDataTypes={false}
-                                name={false}
-                                theme="monokai"
+                              <JsonView
+                                dark
+                                enableClipboard
+                                onAdd={() => {}}
+                                onDelete={() => {}}
+                                onEdit={() => {}}
+                                 src={{ requestCurl: test.requestCurl }}
+                                theme="default"
                               />
                             </div>
                           </TabsContent>
 
                           <TabsContent value="response">
                             <div className="mt-4 p-3 bg-gray-900 rounded max-h-96 overflow-auto text-xs text-white">
-                              <ReactJson
+                              <JsonView
+                                dark
+                                enableClipboard
+                                onAdd={() => {}}
+                                onDelete={() => {}}
+                                onEdit={() => {}}
                                   src={{ response: test.response }}
-                                collapsed={1}
-                                enableClipboard={false}
-                                displayDataTypes={false}
-                                name={false}
-                                theme="monokai"
+                                theme="default"
                               />
                             </div>
                           </TabsContent>
 
                           <TabsContent value="assertions">
                             <div className="mt-4 p-3 bg-gray-900 rounded max-h-96 overflow-auto text-xs text-white">
-                              <ReactJson
-                                src={test}
-                                collapsed={1}
-                                enableClipboard={false}
-                                displayDataTypes={false}
-                                name={false}
-                                theme="monokai"
+                               <JsonView
+                                dark
+                                enableClipboard
+                                onAdd={() => {}}
+                                onDelete={() => {}}
+                                onEdit={() => {}}
+                                  src={test}
+                                theme="default"
                               />
                             </div>
                           </TabsContent>
 
                           <TabsContent value="result">
                             <div className="mt-4 p-3 bg-gray-900 rounded max-h-96 overflow-auto text-xs text-white">
-                              <ReactJson
-                                src={test}
-                                collapsed={1}
-                                enableClipboard={false}
-                                displayDataTypes={false}
-                                name={false}
-                                theme="monokai"
+                               <JsonView
+                                dark
+                                enableClipboard
+                                onAdd={() => {}}
+                                onDelete={() => {}}
+                                onEdit={() => {}}
+                                  src={test}
+                                theme="default"
                               />
                             </div>
                           </TabsContent>

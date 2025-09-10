@@ -32,7 +32,11 @@ import {
 } from "@/services/testcase.service";
 import { useToast } from "@/hooks/use-toast";
 import { ApiTestCase } from "@/shared/types/testcase.model";
-import ReactJson from "react-json-view";
+// import ReactJson from 'react18-json-view';
+
+import JsonView from "react18-json-view";
+import "react18-json-view/src/style.css";
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 type TestCase = {
@@ -273,8 +277,8 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
 
   const handleCategoryToggle = (category: TestCaseCategory) => {
     const testIds = category.tests.map((test) => test.id);
-    const allSelected = testIds.every((id: string) =>
-      selectedTestCases.includes(id)
+    const allSelected = testIds.every((id?: string) =>
+      selectedTestCases.includes(id || "")
     );
 
     if (allSelected) {
@@ -503,7 +507,7 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
                     );
                     const categoryTests = category.tests;
                     const selectedInCategory = categoryTests.filter((test) =>
-                      selectedTestCases.includes(test.id)
+                      selectedTestCases.includes(test?.id)
                     ).length;
 
                     return (
@@ -672,13 +676,31 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
                                           <TabsContent value="request">
                                             {test && (
                                               <div className="mt-4 p-3 bg-gray-900 rounded max-h-96 overflow-auto text-xs text-white">
-                                                <ReactJson
+                                                {/* <ReactJson 
                                                   src={test}
+                                                  collapsed={1}
+                                                  enableClipboard={false}
+                                                  // displayDataTypes={false}
+                                                  // name={false}
+                                                  theme="vscode"
+                                                /> */}
+
+                                                {/* <JsonView
+                                                  data={test}
                                                   collapsed={1}
                                                   enableClipboard={false}
                                                   displayDataTypes={false}
                                                   name={false}
                                                   theme="monokai"
+                                                /> */}
+                                                <JsonView
+                                                  dark
+                                                  enableClipboard
+                                                  onAdd={() => {}}
+                                                  onDelete={() => {}}
+                                                  onEdit={() => {}}
+                                                  src={test}
+                                                  theme="default"
                                                 />
                                               </div>
                                             )}
@@ -687,13 +709,22 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
                                           <TabsContent value="assertions">
                                             {test && (
                                               <div className="mt-4 p-3 bg-gray-900 rounded max-h-96 overflow-auto text-xs text-white">
-                                                <ReactJson
+                                                {/* <ReactJson
                                                   src={test}
                                                   collapsed={1}
                                                   enableClipboard={false}
-                                                  displayDataTypes={false}
-                                                  name={false}
-                                                  theme="monokai"
+                                                  // displayDataTypes={false}
+                                                  // name={false}
+                                                  theme="vscode"
+                                                /> */}
+                                                <JsonView
+                                                  dark
+                                                  enableClipboard
+                                                  onAdd={() => {}}
+                                                  onDelete={() => {}}
+                                                  onEdit={() => {}}
+                                                  src={test}
+                                                  theme="default"
                                                 />
                                               </div>
                                             )}
