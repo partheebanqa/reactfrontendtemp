@@ -116,8 +116,8 @@ export function RequestChainsList({
   >('all');
   const [sortBy, setSortBy] = useState<
     'name' | 'created' | 'executed' | 'success'
-  >('name');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  >('created');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   const [environmentFilter, setEnvironmentFilter] = useState<string>('all');
   const { environments, activeEnvironment } = useDataManagement();
@@ -323,6 +323,7 @@ export function RequestChainsList({
               <SelectItem value='success-desc'>Highest Success Rate</SelectItem>
             </SelectContent>
           </Select>
+
           <Button
             variant='default'
             className='hover-scale'
