@@ -1,10 +1,10 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import type React from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Select,
@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Download, Layers, Save } from 'lucide-react';
+import { Download, Info, Layers } from 'lucide-react';
 import { ManageRequests } from '@/components/TestSuit/ManageRequests';
 import { ImportModal } from '@/components/TestSuit/ImportModal';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -23,7 +23,7 @@ import {
   createTestSuite,
   updateTestSuite,
 } from '@/services/testSuites.service';
-import {
+import type {
   CreateTestSuitePayload,
   ExtendedRequest,
 } from '@/models/collection.model';
@@ -83,9 +83,9 @@ const EditTestSuiteContent: React.FC = () => {
 
   // Add state for extracted variables and preRequestId
   const [preRequestId, setPreRequestId] = useState<string | null>(null);
-  const [extractedVariables, setExtractedVariables] = useState<
-    ExtractedVariable[]
-  >([]);
+  const [extractVariables, setExtractVariables] = useState<ExtractedVariable[]>(
+    []
+  );
 
   const {
     data: testSuite,
@@ -118,9 +118,9 @@ const EditTestSuiteContent: React.FC = () => {
       createTestSuite({ ...data, workspaceId: currentWorkspace!.id }),
     onSuccess: (data) => {
       toast({
-        title: 'Test suite created',
+        title: 'Test cases are being generated.',
         description:
-          'Test suite created. Test cases are in progress—please wait for few minutes',
+          'You can check their status in the list view after a few minutes',
       });
       queryClient.invalidateQueries({
         queryKey: ['/api/test-suites', currentWorkspace?.id],
@@ -145,7 +145,7 @@ const EditTestSuiteContent: React.FC = () => {
       addRequestIds?: string[];
       removeRequestIds?: string[];
       preRequestId?: string;
-      extractedVariables?: ExtractedVariable[];
+      extractVariables?: ExtractedVariable[];
     }) =>
       updateTestSuite(data.id, {
         name: data.name,
@@ -154,7 +154,7 @@ const EditTestSuiteContent: React.FC = () => {
         addRequestIds: data.addRequestIds,
         removeRequestIds: data.removeRequestIds,
         preRequestId: data.preRequestId,
-        extractedVariables: data.extractedVariables,
+        extractVariables: data.extractVariables,
       }),
     onSuccess: () => {
       toast({
@@ -196,12 +196,19 @@ const EditTestSuiteContent: React.FC = () => {
         setOriginalRequestIds(transformedRequests.map((req) => req.id));
       }
 
-      // Set existing preRequestId and extractedVariables if they exist
-      if (testSuite.preRequestId) {
+      // Handle preRequestId from either preRequestDetails.id or direct preRequestId field
+      if (testSuite.preRequestDetails?.id) {
+        setPreRequestId(testSuite.preRequestDetails.id);
+      } else if (testSuite.preRequestId) {
         setPreRequestId(testSuite.preRequestId);
       }
-      if (testSuite.extractedVariables) {
-        setExtractedVariables(testSuite.extractedVariables);
+
+      // Set existing extractVariables if they exist
+      if (
+        testSuite.extractVariables &&
+        Array.isArray(testSuite.extractVariables)
+      ) {
+        setExtractVariables(testSuite.extractVariables);
       }
     }
   }, [testSuite, isCreateMode]);
@@ -259,16 +266,23 @@ const EditTestSuiteContent: React.FC = () => {
     });
   };
 
-  // Handler for saving extracted variables from ManageRequests
-  const handleSaveExtractedVariables = (
+  const handleSaveExtractVariables = (
     requestId: string,
     variables: ExtractedVariable[]
   ) => {
-    console.log('requestId:', requestId);
-    console.log('extractedVariables:', variables);
+    console.log('Saving extracted variables:', { requestId, variables });
+
+    // Check if we're changing from an existing preRequestId
+    if (
+      preRequestId &&
+      preRequestId !== requestId &&
+      extractVariables.length > 0
+    ) {
+      console.log('Overwriting existing variables from different request');
+    }
 
     setPreRequestId(requestId);
-    setExtractedVariables(variables);
+    setExtractVariables(variables);
 
     toast({
       title: 'Variables extracted',
@@ -306,8 +320,8 @@ const EditTestSuiteContent: React.FC = () => {
         environmentId: selectedEnvironment,
         requestIds: requests.map((request) => request.id),
         preRequestId: preRequestId || undefined,
-        extractedVariables:
-          extractedVariables.length > 0 ? extractedVariables : undefined,
+        extractVariables:
+          extractVariables.length > 0 ? extractVariables : undefined,
       });
     } else {
       const { addRequestIds, removeRequestIds } = calculateRequestChanges();
@@ -320,8 +334,8 @@ const EditTestSuiteContent: React.FC = () => {
         removeRequestIds:
           removeRequestIds.length > 0 ? removeRequestIds : undefined,
         preRequestId: preRequestId || undefined,
-        extractedVariables:
-          extractedVariables.length > 0 ? extractedVariables : undefined,
+        extractVariables:
+          extractVariables.length > 0 ? extractVariables : undefined,
       });
     }
   };
@@ -341,6 +355,10 @@ const EditTestSuiteContent: React.FC = () => {
     (total, req) => total + (req.selectedTestCases?.length || 0),
     0
   );
+
+  function setIsQuickGuideOpen(arg0: boolean): void {
+    throw new Error('Function not implemented.');
+  }
 
   return (
     <>
@@ -436,25 +454,38 @@ const EditTestSuiteContent: React.FC = () => {
                     cases for each request
                   </p>
                 </div>
-                <Button
-                  variant='outline'
-                  onClick={() => setIsImportModalOpen(true)}
-                  className='shrink-0'
-                >
-                  <Download className='w-4 h-4 mr-2' />
-                  Import Requests
-                </Button>
+
+                <div className='flex items-center gap-2'>
+                  <Button
+                    variant='outline'
+                    onClick={() => setIsImportModalOpen(true)}
+                    className='shrink-0'
+                  >
+                    <Download className='w-4 h-4 mr-2' />
+                    Import Requests
+                  </Button>
+
+                  {/* 🔹 Quick Guide button */}
+                  <Button
+                    variant='outline'
+                    onClick={() => setIsQuickGuideOpen(true)}
+                    className='shrink-0'
+                  >
+                    <Info className='w-4 h-4 mr-2' />
+                    Quick Guide
+                  </Button>
+                </div>
               </div>
             </CardHeader>
+
             <CardContent>
               {requests.length === 0 ? (
                 <>
-                  <div className='bg-gray-50 p-8 rounded-lg border border-dashed flex flex-col items-center justify-center py-12 px-6'>
+                  <div className='bg-gray-50 p-6 rounded-lg border border-dashed flex flex-col items-center justify-center text-center'>
                     <div className='w-16 h-16 mb-6 rounded-full bg-muted flex items-center justify-center'>
                       <Download className='w-8 h-8 text-muted-foreground' />
                     </div>
-                    <h3 className='text-lg font-medium mb-2'></h3>
-                    <p className='text-muted-foreground text-center mb-6 max-w-md'>
+                    <p className='text-muted-foreground mb-6 max-w-md'>
                       Start by importing API requests from your collections. You
                       can then configure specific test cases for each request.
                     </p>
@@ -464,12 +495,10 @@ const EditTestSuiteContent: React.FC = () => {
                     </Button>
                   </div>
 
-                  <div className='px-6 py-4 bg-gray-50 mt-5 border-gray-200 flex justify-between items-center'>
-                    <div className='text-sm text-gray-600'>
-                      <div className='space-y-1'>
-                        <div>Imported requests: 0 </div>
-                        <div className='font-medium'>Total test cases: 0</div>
-                      </div>
+                  <div className='px-6 py-4 bg-gray-50 mt-4 border-gray-200 flex justify-between items-center'>
+                    <div className='text-sm text-gray-600 space-y-1'>
+                      <div>Imported requests: 0</div>
+                      <div className='font-medium'>Total test cases: 0</div>
                     </div>
                     <div className='flex space-x-3'>
                       <Button variant='outline' onClick={handleBack}>
@@ -496,7 +525,6 @@ const EditTestSuiteContent: React.FC = () => {
                 </>
               ) : (
                 <>
-                  {/* Show requests when they exist */}
                   <ManageRequests
                     requests={requests}
                     testSuiteId={id || ''}
@@ -506,25 +534,23 @@ const EditTestSuiteContent: React.FC = () => {
                     onRefreshRequests={async () => {
                       await refetchRequests();
                     }}
-                    onSaveExtractedVariables={handleSaveExtractedVariables}
+                    onSaveExtractVariables={handleSaveExtractVariables}
                     requestStats={testSuite?.stats?.requestStats ?? []}
                     preRequestId={preRequestId}
-                    extractedVariables={extractedVariables}
+                    extractVariables={extractVariables}
                   />
 
-                  <div className='px-6 py-4 bg-gray-50 mt-5 border-gray-200 flex justify-between items-center'>
-                    <div className='text-sm text-gray-600'>
-                      <div className='space-y-1'>
-                        <div>Imported requests: {requests.length} </div>
-                        <div className='font-medium'>
-                          Total test cases: {totalTestCases}
-                        </div>
-                        {extractedVariables.length > 0 && (
-                          <div className='text-green-600'>
-                            Extracted variables: {extractedVariables.length}
-                          </div>
-                        )}
+                  <div className='px-6 py-4 bg-gray-50 mt-4 border-gray-200 flex justify-between items-center'>
+                    <div className='text-sm text-gray-600 space-y-1'>
+                      <div>Imported requests: {requests.length}</div>
+                      <div className='font-medium'>
+                        Total test cases: {totalTestCases}
                       </div>
+                      {extractVariables.length > 0 && (
+                        <div className='text-green-600'>
+                          Extracted variables: {extractVariables.length}
+                        </div>
+                      )}
                     </div>
                     <div className='flex space-x-3'>
                       <Button variant='outline' onClick={handleBack}>

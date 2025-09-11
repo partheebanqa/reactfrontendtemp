@@ -1,8 +1,18 @@
-import React, { useMemo, useState } from 'react';
+'use client';
+
+import type React from 'react';
+import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Download, Trash2, Settings, Play, RefreshCcw } from 'lucide-react';
+import {
+  Download,
+  Trash2,
+  Settings,
+  Play,
+  RefreshCcw,
+  FileKey,
+} from 'lucide-react';
 import { RequestTestDialog } from './RequestTestDialog';
 import {
   Tooltip,
@@ -21,7 +31,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Request } from '@/shared/types/TestSuite.model';
+import type { Request } from '@/shared/types/TestSuite.model';
 import { TestCaseSelectionModal } from './TestCaseSelectionModal';
 
 interface CategoryCount {
@@ -52,7 +62,7 @@ interface ManageRequestsProps {
   onDeleteRequest: (requestId: string) => void;
   onUpdateTestCases?: (requestId: string, testCaseIds: string[]) => void;
   onRefreshRequests?: () => Promise<void> | void;
-  onSaveExtractedVariables?: (
+  onSaveExtractVariables?: (
     requestId: string,
     extractedData: ExtractedVariable[]
   ) => void;
@@ -61,7 +71,7 @@ interface ManageRequestsProps {
   environments?: any[];
   activeEnvironment?: any;
   preRequestId?: string | null;
-  extractedVariables?: ExtractedVariable[];
+  extractVariables?: ExtractedVariable[];
 }
 
 const getMethodBadgeColor = (method: string) => {
@@ -88,13 +98,13 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
   onDeleteRequest,
   onUpdateTestCases,
   onRefreshRequests,
-  onSaveExtractedVariables,
+  onSaveExtractVariables,
   requestStats = [],
   variables = [],
   environments = [],
   activeEnvironment,
   preRequestId,
-  extractedVariables = [],
+  extractVariables = [],
 }) => {
   const [selectedRequest, setSelectedRequest] = useState<Request | null>(null);
   const [isTestCaseModalOpen, setIsTestCaseModalOpen] = useState(false);
@@ -152,15 +162,24 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
   };
 
   const handleTestRequest = (request: Request) => {
+    console.log('Testing request:', request.id);
+    console.log('Current preRequestId:', preRequestId);
+    console.log('Current extractVariables count:', extractVariables.length);
+
     // Check if there's already a preRequestId and it's different from current request
+    // AND there are existing extracted variables
     if (
       preRequestId &&
       preRequestId !== request.id &&
-      extractedVariables.length > 0
+      extractVariables.length > 0
     ) {
+      console.log(
+        'Showing overwrite dialog - different preRequestId with existing variables'
+      );
       setPendingRequest(request);
       setShowOverwriteDialog(true);
     } else {
+      console.log('Opening test dialog directly');
       setSelectedRequest(request);
       setIsTestDialogOpen(true);
     }
@@ -180,6 +199,7 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
   };
 
   const handleConfirmOverwrite = () => {
+    console.log('User confirmed overwrite');
     if (pendingRequest) {
       setSelectedRequest(pendingRequest);
       setIsTestDialogOpen(true);
@@ -189,6 +209,7 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
   };
 
   const handleCancelOverwrite = () => {
+    console.log('User cancelled overwrite');
     setPendingRequest(null);
     setShowOverwriteDialog(false);
   };
@@ -203,16 +224,16 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
     }
   };
 
-  const handleSaveExtractedVariables = (
+  const handleSaveExtractVariables = (
     requestId: string,
-    extractedVariables: ExtractedVariable[]
+    extractVariables: ExtractedVariable[]
   ) => {
     console.log('requestId:', requestId);
-    console.log('extractedVariables:', extractedVariables);
+    console.log('extractVariables:', extractVariables);
 
     // Pass the data to parent component instead of storing locally
-    if (onSaveExtractedVariables) {
-      onSaveExtractedVariables(requestId, extractedVariables);
+    if (onSaveExtractVariables) {
+      onSaveExtractVariables(requestId, extractVariables);
     }
   };
 
@@ -317,19 +338,21 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
                   </div>
                   <div className='flex items-center space-x-2'>
                     <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant='ghost'
-                            size='sm'
-                            onClick={() => handleTestRequest(request)}
-                            className='text-muted-foreground hover:text-primary hover:bg-primary/10'
-                          >
-                            <Play className='w-4 h-4' />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Test Request</TooltipContent>
-                      </Tooltip>
+                      {request.method === 'POST' && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant='ghost'
+                              size='sm'
+                              onClick={() => handleTestRequest(request)}
+                              className='text-muted-foreground hover:text-primary hover:bg-primary/10'
+                            >
+                              <FileKey className='w-4 h-4' />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Capture Auth</TooltipContent>
+                        </Tooltip>
+                      )}
 
                       {testSuiteId && onUpdateTestCases && (
                         <Tooltip>
@@ -338,12 +361,17 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
                               variant='ghost'
                               size='sm'
                               onClick={() => handleConfigureTestCases(request)}
-                              className='text-muted-foreground hover:text-primary hover:bg-primary/10'
+                              disabled={preRequestId === request.id}
+                              className='text-muted-foreground hover:text-primary hover:bg-primary/10 disabled:opacity-50 disabled:cursor-not-allowed'
                             >
                               {testSuiteId && <Settings className='w-4 h-4' />}
                             </Button>
                           </TooltipTrigger>
-                          <TooltipContent>Select testcases</TooltipContent>
+                          <TooltipContent>
+                            {preRequestId === request.id
+                              ? 'Test case selection disabled for pre-request'
+                              : 'Select testcases'}
+                          </TooltipContent>
                         </Tooltip>
                       )}
 
@@ -369,8 +397,9 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
                               Delete this request?
                             </AlertDialogTitle>
                             <AlertDialogDescription>
-                              This will permanently delete "{request.name}".
-                              This action cannot be undone.
+                              {preRequestId === request.id
+                                ? 'You are trying to delete the pre-request api. Check once before deleting.'
+                                : `This will permanently delete "${request.name}". This action cannot be undone.`}
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
@@ -446,7 +475,7 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
             setSelectedRequest(null);
           }}
           request={selectedRequest}
-          onSaveExtractedVariables={handleSaveExtractedVariables}
+          onSaveExtractVariables={handleSaveExtractVariables}
         />
       )}
 
@@ -466,26 +495,31 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
         />
       )}
 
-      {/* Overwrite Confirmation Dialog */}
       <AlertDialog
         open={showOverwriteDialog}
         onOpenChange={setShowOverwriteDialog}
       >
-        <AlertDialogContent>
+        <AlertDialogContent className='max-w-2xl w-full h-auto max-h-[80vh]'>
           <AlertDialogHeader>
-            <AlertDialogTitle>
-              Overwrite Pre-request Variables?
-            </AlertDialogTitle>
+            <AlertDialogTitle>Switch Authentication Source?</AlertDialogTitle>
             <AlertDialogDescription>
-              You already have extracted variables from another request. Testing
-              this request will allow you to extract new variables that will
-              overwrite the existing ones. Do you want to continue?
-              <div className='mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-sm'>
-                <strong>Current pre-request:</strong>{' '}
-                {requests.find((r) => r.id === preRequestId)?.name}
-                <br />
-                <strong>Extracted variables:</strong>{' '}
-                {extractedVariables.length}
+              You've already extracted authentication variables from another API
+              request. Switching to a new request will overwrite the existing
+              variables with fresh values from the selected API.
+              <div className='mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded text-sm'>
+                <div className='space-y-1'>
+                  <div>
+                    <strong>Current Pre-request Api:</strong>{' '}
+                    {requests.find((r) => r.id === preRequestId)?.name ||
+                      'Unknown'}
+                  </div>
+                  <div>
+                    <strong>Extracted variables:</strong>{' '}
+                    {extractVariables.length > 0
+                      ? extractVariables.map((v) => v.name).join(', ')
+                      : 'None'}
+                  </div>
+                </div>
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -493,12 +527,7 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
             <AlertDialogCancel onClick={handleCancelOverwrite}>
               Cancel
             </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleConfirmOverwrite}
-              className='bg-yellow-600 hover:bg-yellow-700'
-            >
-              Yes, Overwrite
-            </AlertDialogAction>
+            <Button onClick={handleConfirmOverwrite}>Yes, Switch Source</Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
