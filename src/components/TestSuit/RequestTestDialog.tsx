@@ -1,4 +1,7 @@
-import React, { useState } from 'react';
+'use client';
+
+import type React from 'react';
+import { useState } from 'react';
 
 import {
   Dialog,
@@ -19,16 +22,31 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Send, Plus, Trash2, Eye, EyeOff, Download, Check } from 'lucide-react';
 import {
+  Send,
+  Plus,
+  Trash2,
+  Eye,
+  EyeOff,
+  Check,
+  ChevronRight,
+  ChevronDown,
+  Info,
+} from 'lucide-react';
+import type {
   Request,
   RequestHeader,
   RequestParam,
 } from '@/shared/types/TestSuite.model';
 
 import { executeRequest } from '@/services/executeRequest.service';
-import { ExecuteRequestPayload } from '@/shared/types/requestChain.model';
+import type { ExecuteRequestPayload } from '@/shared/types/requestChain.model';
 import { useWorkspace } from '@/hooks/useWorkspace';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 interface ExtractedField {
   variableName: string;
@@ -48,9 +66,9 @@ interface RequestTestDialogProps {
   isOpen: boolean;
   onClose: () => void;
   request: Request;
-  onSaveExtractedVariables?: (
+  onSaveExtractVariables?: (
     requestId: string,
-    extractedVariables: ExtractedVariable[]
+    extractVariables: ExtractedVariable[]
   ) => void;
 }
 
@@ -58,7 +76,7 @@ export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
   isOpen,
   onClose,
   request,
-  onSaveExtractedVariables,
+  onSaveExtractVariables,
 }) => {
   const { currentWorkspace } = useWorkspace();
   const [url, setUrl] = useState(request.url);
@@ -90,6 +108,7 @@ export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
   const [bodyView, setBodyView] = useState<'json' | 'text'>('json');
   const [isLoading, setIsLoading] = useState(false);
   const [extractedFields, setExtractedFields] = useState<ExtractedField[]>([]);
+  const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set());
 
   const addHeader = () => {
     setHeaders([...headers, { key: '', value: '', enabled: true }]);
@@ -144,12 +163,26 @@ export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
     return finalUrl;
   };
 
+  const toggleExpanded = (path: string) => {
+    const newExpanded = new Set(expandedPaths);
+    if (newExpanded.has(path)) {
+      newExpanded.delete(path);
+    } else {
+      newExpanded.add(path);
+    }
+    setExpandedPaths(newExpanded);
+  };
+
   const extractField = (
     path: string,
     value: any,
     source: 'response_body' | 'response_header'
   ) => {
-    const variableName = `E_${path}`;
+    // Extract just the final property name from the path
+    const pathParts = path.split(/[\.\[\]]+/).filter(Boolean);
+    const finalProperty = pathParts[pathParts.length - 1];
+    const variableName = `E_${finalProperty}`;
+
     const newExtraction: ExtractedField = {
       variableName,
       value,
@@ -175,41 +208,173 @@ export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
     );
   };
 
-  const renderJsonField = (
-    key: string,
-    value: any,
-    path: string = '',
-    source: 'response_body' | 'response_header' = 'response_body'
-  ) => {
-    const currentPath = path ? `${path}.${key}` : key;
+  const isPrimitive = (value: any): boolean => {
+    return (
+      value === null ||
+      value === undefined ||
+      typeof value === 'string' ||
+      typeof value === 'number' ||
+      typeof value === 'boolean'
+    );
+  };
 
-    if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+  const getValueDisplay = (value: any): string => {
+    if (value === null) return 'null';
+    if (value === undefined) return 'undefined';
+    if (typeof value === 'string') return `"${value}"`;
+    if (typeof value === 'boolean') return value.toString();
+    if (typeof value === 'number') return value.toString();
+    if (Array.isArray(value)) return `Array[${value.length}]`;
+    if (typeof value === 'object') return 'Object';
+    return String(value);
+  };
+
+  const renderJsonField = (
+    key: string | number,
+    value: any,
+    path = '',
+    source: 'response_body' | 'response_header' = 'response_body',
+    depth = 0
+  ): React.ReactNode => {
+    const isArrayIndex = typeof key === 'number';
+    const currentPath = path
+      ? isArrayIndex
+        ? `${path}[${key}]`
+        : `${path}.${key}`
+      : String(key);
+
+    const isExpanded = expandedPaths.has(currentPath);
+    const indent = depth * 16;
+
+    // Handle arrays
+    if (Array.isArray(value)) {
       return (
-        <div key={currentPath} className='ml-4'>
-          <div className='text-blue-600 font-medium'>"{key}": &#123;</div>
-          {Object.entries(value).map(([subKey, subValue]) =>
-            renderJsonField(subKey, subValue, currentPath, source)
+        <div key={currentPath} style={{ marginLeft: `${indent}px` }}>
+          <div className='group relative hover:bg-gray-50 px-2 py-1 rounded'>
+            <div className='flex items-center gap-2'>
+              <button
+                onClick={() => toggleExpanded(currentPath)}
+                className='p-1 hover:bg-gray-200 rounded'
+              >
+                {isExpanded ? (
+                  <ChevronDown className='w-3 h-3' />
+                ) : (
+                  <ChevronRight className='w-3 h-3' />
+                )}
+              </button>
+              <span>
+                <span className='text-blue-600 font-medium'>
+                  {isArrayIndex ? `[${key}]` : `"${key}"`}
+                </span>
+                <span className='text-gray-600 ml-2'>
+                  Array[{value.length}]
+                </span>
+              </span>
+            </div>
+            <button
+              onClick={() => extractField(currentPath, value, source)}
+              className='absolute top-1/2 right-2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity'
+              title={`Extract ${key}`}
+            >
+              {isFieldExtracted(currentPath, source) ? (
+                <div className='flex items-center gap-1'>
+                  <Check className='w-3 h-3 text-green-500' />
+                  <span className='text-xs text-green-500'>Extracted</span>
+                </div>
+              ) : (
+                <div className='flex items-center gap-1 bg-blue-900 text-white px-2 py-1 rounded hover:bg-blue-800 text-xs transition'>
+                  Extract
+                </div>
+              )}
+            </button>
+          </div>
+
+          {isExpanded && (
+            <div className='border-l-2 border-gray-200 ml-4'>
+              {value.map((item: any, index: number) =>
+                renderJsonField(index, item, currentPath, source, depth + 1)
+              )}
+            </div>
           )}
-          <div className='text-blue-600 font-medium'>&#125;,</div>
         </div>
       );
     }
 
-    const displayValue =
-      typeof value === 'string' ? `"${value}"` : String(value);
+    // Handle objects
+    if (typeof value === 'object' && value !== null) {
+      const entries = Object.entries(value);
+      return (
+        <div key={currentPath} style={{ marginLeft: `${indent}px` }}>
+          <div className='group relative hover:bg-gray-50 px-2 py-1 rounded'>
+            <div className='flex items-center gap-2'>
+              <button
+                onClick={() => toggleExpanded(currentPath)}
+                className='p-1 hover:bg-gray-200 rounded'
+              >
+                {isExpanded ? (
+                  <ChevronDown className='w-3 h-3' />
+                ) : (
+                  <ChevronRight className='w-3 h-3' />
+                )}
+              </button>
+              <span>
+                <span className='text-blue-600 font-medium'>
+                  {isArrayIndex ? `[${key}]` : `"${key}"`}
+                </span>
+              </span>
+            </div>
+            <button
+              onClick={() => extractField(currentPath, value, source)}
+              className='absolute top-1/2 right-2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity'
+              title={`Extract ${key}`}
+            >
+              {isFieldExtracted(currentPath, source) ? (
+                <div className='flex items-center gap-1'>
+                  <Check className='w-3 h-3 text-green-500' />
+                  <span className='text-xs text-green-500'>Extracted</span>
+                </div>
+              ) : (
+                <div className='flex items-center gap-1 bg-blue-900 text-white px-2 py-1 rounded hover:bg-blue-800 text-xs transition'>
+                  Extract
+                </div>
+              )}
+            </button>
+          </div>
 
+          {isExpanded && (
+            <div className='border-l-2 border-gray-200 ml-4'>
+              {entries.map(([subKey, subValue]) =>
+                renderJsonField(
+                  subKey,
+                  subValue,
+                  currentPath,
+                  source,
+                  depth + 1
+                )
+              )}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // Handle primitive values
     return (
       <div
         key={currentPath}
-        className='ml-4 flex items-center justify-between group hover:bg-gray-50 px-2 py-1 rounded'
+        style={{ marginLeft: `${indent}px` }}
+        className='group relative hover:bg-gray-50 px-2 py-1 rounded'
       >
         <span>
-          <span className='text-blue-600 font-medium'>"{key}"</span>:
-          <span className='text-green-600 ml-2'>{displayValue}</span>,
+          <span className='text-blue-600 font-medium'>
+            {isArrayIndex ? `[${key}]` : `"${key}"`}
+          </span>
+          <span className='text-gray-600'>: </span>
+          <span className='text-green-600'>{getValueDisplay(value)}</span>
         </span>
         <button
           onClick={() => extractField(currentPath, value, source)}
-          className='opacity-0 group-hover:opacity-100 transition-opacity ml-2 p-1 hover:bg-gray-200 rounded'
+          className='absolute top-1/2 right-2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity'
           title={`Extract ${key}`}
         >
           {isFieldExtracted(currentPath, source) ? (
@@ -218,10 +383,9 @@ export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
               <span className='text-xs text-green-500'>Extracted</span>
             </div>
           ) : (
-            <button className='flex items-center gap-1 bg-blue-900 text-white px-2 py-1 rounded hover:bg-blue-800 text-xs transition'>
-              {/* <Check className="w-3 h-3 text-green-500" /> */}
+            <div className='flex items-center gap-1 bg-blue-900 text-white px-2 py-1 rounded hover:bg-blue-800 text-xs transition'>
               Extract
-            </button>
+            </div>
           )}
         </button>
       </div>
@@ -232,15 +396,15 @@ export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
     return (
       <div
         key={key}
-        className='flex items-center justify-between group hover:bg-gray-50 px-2 py-1 rounded'
+        className='group relative hover:bg-gray-50 px-2 py-1 rounded'
       >
-        <span className='flex-1 min-w-0'>
+        <span className='block pr-20'>
           <span className='text-blue-600 font-medium break-all'>{key}</span>:
           <span className='text-green-600 ml-2 break-all'>{value}</span>
         </span>
         <button
           onClick={() => extractField(key, value, 'response_header')}
-          className='opacity-0 group-hover:opacity-100 transition-opacity ml-2 p-1 hover:bg-gray-200 rounded flex-shrink-0'
+          className='absolute top-1/2 right-2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity'
           title={`Extract ${key}`}
         >
           {isFieldExtracted(key, 'response_header') ? (
@@ -250,7 +414,6 @@ export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
             </div>
           ) : (
             <button className='flex items-center gap-1 bg-blue-900 text-white px-2 py-1 rounded hover:bg-blue-800 text-xs transition'>
-              {/* <Check className="w-3 h-3 text-green-500" /> */}
               Extract
             </button>
           )}
@@ -265,11 +428,23 @@ export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
       if (typeof parsed === 'object') {
         return (
           <div className='text-sm'>
-            <div className='text-blue-600 font-medium'>&#123;</div>
-            {Object.entries(parsed).map(([key, value]) =>
-              renderJsonField(key, value, '', 'response_body')
+            {Array.isArray(parsed) ? (
+              <div>
+                <div className='text-blue-600 font-medium mb-2'>
+                  Array[{parsed.length}]
+                </div>
+                {parsed.map((item, index) =>
+                  renderJsonField(index, item, '', 'response_body', 0)
+                )}
+              </div>
+            ) : (
+              <div>
+                <div className='text-blue-600 font-medium mb-2'>Object</div>
+                {Object.entries(parsed).map(([key, value]) =>
+                  renderJsonField(key, value, '', 'response_body', 0)
+                )}
+              </div>
             )}
-            <div className='text-blue-600 font-medium'>&#125;</div>
           </div>
         );
       }
@@ -283,15 +458,15 @@ export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
         {lines.map((line, index) => (
           <div
             key={index}
-            className='flex items-center justify-between group hover:bg-gray-50 px-2 py-1 rounded'
+            className='group relative hover:bg-gray-50 px-2 py-1 rounded'
           >
-            <span className='flex-1'>{line}</span>
+            <span className='block pr-20'>{line}</span>
             {line.trim() && (
               <button
                 onClick={() =>
                   extractField(`line_${index}`, line.trim(), 'response_body')
                 }
-                className='opacity-0 group-hover:opacity-100 transition-opacity ml-2 p-1 hover:bg-gray-200 rounded'
+                className='absolute top-1/2 right-2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity'
                 title={`Extract line ${index + 1}`}
               >
                 {isFieldExtracted(`line_${index}`, 'response_body') ? (
@@ -316,8 +491,11 @@ export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
     setIsLoading(true);
     setResponse('');
     setResponseHeaders({});
+    setExpandedPaths(new Set()); // Reset expanded paths on new request
 
     try {
+      const finalBodyType = bodyType ?? 'raw';
+
       const requestPayload: ExecuteRequestPayload = {
         request: {
           workspaceId: currentWorkspace?.id || '1234',
@@ -325,15 +503,17 @@ export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
           order: 1,
           method,
           url: buildUrl(),
-          bodyType,
-          bodyFormData: bodyType === 'form-data' ? body : undefined,
-          bodyRawContent: bodyType === 'raw' ? body : undefined,
+          bodyType: finalBodyType,
+          bodyFormData: finalBodyType === 'form-data' ? body : undefined,
+          bodyRawContent: finalBodyType === 'raw' ? body : undefined,
           authorizationType: authType,
           authorization: authToken ? { token: authToken } : undefined,
           headers: headers.filter((h) => h.enabled && h.key),
           params: params.filter((p) => p.enabled && p.key),
         },
       };
+
+      console.log('requestPayload123:', requestPayload);
 
       const json = (await executeRequest(requestPayload)) as any;
 
@@ -362,16 +542,33 @@ export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
   };
 
   const handleSaveVariables = () => {
-    if (onSaveExtractedVariables && extractedFields.length > 0) {
+    if (onSaveExtractVariables && extractedFields.length > 0) {
       const formattedVariables: ExtractedVariable[] = extractedFields.map(
         (field) => ({
           name: field.variableName,
           path: field.path,
           source: field.source,
-          type: typeof field.value === 'string' ? 'string' : 'number',
+          type:
+            typeof field.value === 'string'
+              ? 'string'
+              : typeof field.value === 'number'
+              ? 'number'
+              : typeof field.value === 'boolean'
+              ? 'boolean'
+              : Array.isArray(field.value)
+              ? 'array'
+              : typeof field.value === 'object'
+              ? 'object'
+              : 'string',
         })
       );
-      onSaveExtractedVariables(request.id, formattedVariables);
+
+      console.log('Saving variables from RequestTestDialog:', {
+        requestId: request.id,
+        variables: formattedVariables,
+      });
+
+      onSaveExtractVariables(request.id, formattedVariables);
       setExtractedFields([]);
       onClose();
     }
@@ -381,10 +578,35 @@ export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className='max-w-4xl max-h-[90vh] w-[90vw] overflow-hidden flex flex-col'>
         <DialogHeader>
-          <DialogTitle className='flex items-center gap-2'>
-            <Badge variant='outline'>{method}</Badge>
-            {request.name}
-          </DialogTitle>
+          <div className='flex items-center gap-2'>
+            <DialogTitle className='flex items-center gap-2'>
+              <span>Add Authentication extraction</span>
+              <span className='text-sm text-gray-500'>: {request.name}</span>
+            </DialogTitle>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Info className='w-4 h-4 text-gray-500 cursor-pointer' />
+              </TooltipTrigger>
+              <TooltipContent
+                side='bottom'
+                align='start'
+                className='max-w-sm text-xs p-2 leading-relaxed text-gray-600'
+              >
+                <p>Step 1: Send the request with your login credentials.</p>
+                <p>
+                  Step 2: On a successful response, you'll get the option to
+                  extract the authorization token from the request body or
+                  header.
+                </p>
+                <p>Step 3: Save the extracted variables.</p>
+                <p>
+                  Note: This token will be used for other api's in the test
+                  suite to execute the functional testcases.
+                </p>
+              </TooltipContent>
+            </Tooltip>
+          </div>
         </DialogHeader>
 
         <div className='flex-1 flex flex-col min-h-0 overflow-hidden'>
@@ -676,20 +898,38 @@ export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
                           ) {
                             return (
                               <div className='text-sm'>
-                                <div className='text-blue-600 font-medium'>
-                                  &#123;
-                                </div>
-                                {Object.entries(response).map(([key, value]) =>
-                                  renderJsonField(
-                                    key,
-                                    value,
-                                    '',
-                                    'response_body'
-                                  )
+                                {Array.isArray(response) ? (
+                                  <div>
+                                    <div className='text-blue-600 font-medium mb-2'>
+                                      Array[{response.length}]
+                                    </div>
+                                    {response.map((item, index) =>
+                                      renderJsonField(
+                                        index,
+                                        item,
+                                        '',
+                                        'response_body',
+                                        0
+                                      )
+                                    )}
+                                  </div>
+                                ) : (
+                                  <div>
+                                    <div className='text-blue-600 font-medium mb-2'>
+                                      Object
+                                    </div>
+                                    {Object.entries(response).map(
+                                      ([key, value]) =>
+                                        renderJsonField(
+                                          key,
+                                          value,
+                                          '',
+                                          'response_body',
+                                          0
+                                        )
+                                    )}
+                                  </div>
                                 )}
-                                <div className='text-blue-600 font-medium'>
-                                  &#125;
-                                </div>
                               </div>
                             );
                           }
