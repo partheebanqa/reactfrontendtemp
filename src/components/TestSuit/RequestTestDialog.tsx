@@ -973,7 +973,7 @@ export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
                   <Button
                     size='sm'
                     onClick={handleSaveVariables}
-                    className='bg-green-600 hover:bg-green-700 text-white'
+                    // className='bg-green-600 hover:bg-green-700 text-white'
                   >
                     Save Variables
                   </Button>

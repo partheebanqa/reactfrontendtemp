@@ -154,9 +154,9 @@ export default function SignUp() {
         <Card>
           <CardHeader>
             <CardTitle>Sign up for Optraflow</CardTitle>
-            <CardDescription>
+            {/* <CardDescription>
               Create your account and workspace to get started
-            </CardDescription>
+            </CardDescription> */}
           </CardHeader>
           <CardContent className='space-y-6'>
             {registerMutation.isError && (
@@ -240,7 +240,7 @@ export default function SignUp() {
                     onChange={(e) =>
                       setFormData({
                         ...formData,
-                        workspaceName: e.target.value.trim(),
+                        workspaceName: e.target.value,
                       })
                     }
                   />

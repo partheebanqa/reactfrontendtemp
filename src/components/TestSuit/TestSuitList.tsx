@@ -131,6 +131,7 @@ const TestSuites: React.FC = () => {
       toast({
         title: 'Queued',
         description: 'Test suite has been added to the queue for execution.',
+        type: 'success',
       });
       queryClient.invalidateQueries({ queryKey: ['testSuites'] });
     },
@@ -168,16 +169,8 @@ const TestSuites: React.FC = () => {
     return ['all', ...Array.from(set).sort((a, b) => a.localeCompare(b))];
   }, [environments]);
 
-  // Optional: default to active environment on first load
-  // useEffect(() => {
-  //   if (environmentFilter === "all" && activeEnvironment?.name) {
-  //     setEnvironmentFilter(activeEnvironment.name);
-  //   }
-  // }, [activeEnvironment?.name]);
-
   const filteredSuites = (testSuitListData ?? []).filter((suite) => {
     const term = searchQuery.toLowerCase();
-
     const matchesSearch =
       suite.name.toLowerCase().includes(term) ||
       suite.description.toLowerCase().includes(term) ||
