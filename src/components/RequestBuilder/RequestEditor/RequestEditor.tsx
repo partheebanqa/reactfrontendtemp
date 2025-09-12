@@ -107,7 +107,7 @@ const RequestEditor: React.FC = () => {
   const [headers, setHeaders] = useState<Header[]>([]);
   const [bodyType, setBodyType] = useState<
     'none' | 'json' | 'form-data' | 'x-www-form-urlencoded' | 'raw' | 'binary'
-  >('json');
+  >('none');
   const [bodyContent, setBodyContent] = useState('');
   const [formFields, setFormFields] = useState<KeyValuePairWithFile[]>([]);
   const [urlEncodedFields, setUrlEncodedFields] = useState<Param[]>([]);
@@ -494,12 +494,14 @@ const RequestEditor: React.FC = () => {
 
   const handleSaveName = async (newName: string) => {
     try {
+      console.log('handlesave name is coming');
+
       if (!activeRequest) return;
       if (newName.trim() && activeRequest?.id) {
         await renameRequestMutation.mutateAsync({
           requestId: activeRequest.id,
           newName: newName.trim(),
-          workspaceId: currentWorkspace?.id,
+          workspaceId: currentWorkspace?.id || '',
         });
         toast({
           title: 'Request renamed successfully!',
@@ -507,22 +509,6 @@ const RequestEditor: React.FC = () => {
           type: 'success',
         });
       }
-      const active = { ...activeRequest, name: newName.trim() };
-      setActiveRequest(active);
-      setCollection(
-        collections.map((collection) => {
-          if (collection.id === activeRequest.collectionId) {
-            return {
-              ...collection,
-              requests: collection.requests.map((request) => {
-                return request.order === activeRequest.order ? active : request;
-              }),
-            };
-          } else {
-            return collection;
-          }
-        })
-      );
     } catch (error) {
       console.error('Error saving request name:', error);
       showError(
@@ -975,12 +961,32 @@ const RequestEditor: React.FC = () => {
         assertions: selectedAssertions,
         // variables: activeRequest.variables || {},
       };
-      await addRequestMutation.mutateAsync(requestData);
+
+      const savedRequestResponse = await addRequestMutation.mutateAsync(
+        requestData
+      );
+
       setShowSaveModal(false);
       setNewCollectionName('');
       setIsCreatingCollection(false);
       showSuccess('Request saved successfully!');
-      handleCreateRequest();
+
+      if (savedRequestResponse && savedRequestResponse.id) {
+        const updatedRequest = {
+          ...activeRequest,
+          id: savedRequestResponse.id,
+          collectionId: createdCollectionId || activeCollection?.id,
+          name: activeRequest.name || 'New Request',
+          method: method,
+          url: url,
+          bodyType: bodyType,
+          authorizationType: authType,
+          authorization: requestData.authorization,
+          params: params,
+          headers: headers,
+        };
+        setActiveRequest(updatedRequest);
+      }
     } catch (error) {
       console.error('Error saving request:', error);
       showError('Save Failed', 'An error occurred while saving the request.');
@@ -2092,6 +2098,7 @@ const RequestEditor: React.FC = () => {
             {!isCreatingCollection ? (
               <div className='space-y-2'>
                 <select
+                  value={activeCollection?.id || ''} // Set the value to show selected collection
                   onChange={(e) => {
                     setActiveCollection(
                       collections.find((c) => c.id === e.target.value) || null
