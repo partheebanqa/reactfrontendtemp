@@ -345,9 +345,180 @@ const ResponseViewer = ({ isBottomLayout }: ResponseViewerProps) => {
 
         {activeTab === 'test-results' && (
           <div className='p-4 overflow-auto h-full'>
-            <div className='text-gray-500 dark:text-gray-400'>
-              Test results will appear here...
-            </div>
+            {responseData.assertionLogs &&
+            responseData.assertionLogs.length > 0 ? (
+              <div className='space-y-6'>
+                {/* Summary Cards */}
+                <div className='grid grid-cols-1 sm:grid-cols-3 gap-4'>
+                  {(() => {
+                    const passedCount = responseData.assertionLogs.filter(
+                      (log) => log.status === 'passed'
+                    ).length;
+                    const failedCount = responseData.assertionLogs.filter(
+                      (log) => log.status === 'failed'
+                    ).length;
+                    const totalCount = responseData.assertionLogs.length;
+
+                    return (
+                      <>
+                        {/* Passed Assertions */}
+                        <div className='bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4'>
+                          <div className='flex items-center mb-2'>
+                            <CheckCircle className='h-5 w-5 text-green-600 mr-2' />
+                            <span className='text-2xl font-bold text-green-800 dark:text-green-300'>
+                              {passedCount}{' '}
+                              <span className='text-sm text-green-700 dark:text-green-400'>
+                                Assertions Passed
+                              </span>
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Failed Assertions */}
+                        <div className='bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4'>
+                          <div className='flex items-center mb-2'>
+                            <X className='h-5 w-5 text-red-600 mr-2' />
+                            <span className='text-2xl font-bold text-red-800 dark:text-red-300'>
+                              {failedCount}{' '}
+                              <span className='text-sm text-red-700 dark:text-red-400'>
+                                Assertions Failed
+                              </span>
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Total Assertions */}
+                        <div className='bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4'>
+                          <div className='flex items-center mb-2'>
+                            <Clock className='h-5 w-5 text-blue-600 mr-2' />
+                            <span className='text-2xl font-bold text-blue-800 dark:text-blue-300'>
+                              {totalCount}{' '}
+                              <span className='text-sm text-blue-700 dark:text-blue-400'>
+                                Total Assertions
+                              </span>
+                            </span>
+                          </div>
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
+
+                {/* Individual Assertion Results */}
+                <div className='space-y-3'>
+                  {responseData.assertionLogs.map((assertion, index) => (
+                    <div
+                      key={assertion.id}
+                      className={`border rounded-lg p-4 ${
+                        assertion.status === 'passed'
+                          ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
+                          : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
+                      }`}
+                    >
+                      <div className='flex items-start justify-between mb-3'>
+                        <div className='flex items-center space-x-2'>
+                          {assertion.status === 'passed' ? (
+                            <CheckCircle className='h-5 w-5 text-green-600 flex-shrink-0' />
+                          ) : (
+                            <X className='h-5 w-5 text-red-600 flex-shrink-0' />
+                          )}
+                        </div>
+
+                        {/* Description + Category/Group in one line */}
+                        <div className='flex flex-1 items-center justify-between ml-2'>
+                          <h4
+                            className={`font-medium ${
+                              assertion.status === 'passed'
+                                ? 'text-green-800 dark:text-green-300'
+                                : 'text-red-800 dark:text-red-300'
+                            }`}
+                          >
+                            {assertion.description ||
+                              `${assertion.type} assertion`}
+                          </h4>
+
+                          {assertion.category && (
+                            <div className='flex items-center space-x-2'>
+                              <span
+                                className={`px-2 py-1 rounded text-xs font-medium ${
+                                  assertion.category === 'status'
+                                    ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300'
+                                    : assertion.category === 'security'
+                                    ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300'
+                                    : 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300'
+                                }`}
+                              >
+                                {assertion.category}
+                              </span>
+                              {assertion.group && (
+                                <span className='px-2 py-1 rounded text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300'>
+                                  {assertion.group}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Assertion Details */}
+                      <div className='space-y-2 text-sm'>
+                        {assertion.expectedValue && (
+                          <div className='flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-4'>
+                            <span className='font-medium text-gray-700 dark:text-gray-300 min-w-[100px]'>
+                              Expected: {assertion.expectedValue}
+                            </span>
+                          </div>
+                        )}
+
+                        {/* <div className='flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-4'>
+                          <span className='font-medium text-gray-700 dark:text-gray-300 min-w-[100px]'>
+                            Actual value:
+                          </span>
+                          <span className='text-gray-600 dark:text-gray-400 font-mono bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded'>
+                            {assertion.responseStatus || 'N/A'}
+                          </span>
+                        </div> */}
+
+                        {assertion.errorMessage && (
+                          <div className='mt-3 p-3 bg-red-100 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded text-red-700 dark:text-red-300'>
+                            <span className='font-medium'>Error: </span>
+                            {assertion.errorMessage}
+                          </div>
+                        )}
+
+                        {/* Execution Details */}
+                        {/* <div className='grid grid-cols-1 sm:grid-cols-3 gap-4 mt-3 pt-3 border-t border-gray-200 dark:border-gray-700'>
+                          <div className='text-xs'>
+                            <span className='font-medium text-gray-500 dark:text-gray-400'>
+                              Response Time: {assertion.responseTime}ms
+                            </span>
+                          </div>
+                          <div className='text-xs'>
+                            <span className='font-medium text-gray-500 dark:text-gray-400'>
+                              Response Size: {assertion.responseSize} bytes
+                            </span>
+                          </div>
+                          <div className='text-xs'>
+                            <span className='font-medium text-gray-500 dark:text-gray-400'>
+                              Source: {assertion.source}
+                            </span>
+                          </div>
+                        </div> */}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className='text-center py-8'>
+                <div className='text-gray-500 dark:text-gray-400 mb-2'>
+                  No test results available
+                </div>
+                <div className='text-sm text-gray-400'>
+                  Run tests to see assertion results here
+                </div>
+              </div>
+            )}
           </div>
         )}
 

@@ -1867,13 +1867,10 @@ const RequestEditor: React.FC = () => {
                     automatically create and manage test assertions.
                   </p>
                 </div>
-                <button
-                  onClick={handleGenerateAssertions}
-                  className='inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2'
-                >
-                  <Zap className='h-4 w-4 mr-2' />
+                <Button onClick={handleGenerateAssertions}>
+                  <Zap className='h-3 w-3 mr-1' />
                   Generate Assertions
-                </button>
+                </Button>
               </div>
 
               {/* Show selected assertions with full details */}
@@ -1907,6 +1904,11 @@ const RequestEditor: React.FC = () => {
                             <div className='flex items-center justify-between gap-2 mb-2'>
                               <p className='text-sm font-medium text-gray-900 dark:text-white'>
                                 {assertion.description}
+                                {assertion.operator && (
+                                  <span className='inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'>
+                                    Operator: {assertion.operator}
+                                  </span>
+                                )}
                               </p>
 
                               <div className='flex items-center gap-2'>
@@ -1931,27 +1933,9 @@ const RequestEditor: React.FC = () => {
                             </div>
 
                             {/* Operator and expected value */}
-                            {(assertion.operator ||
-                              assertion.expectedValue) && (
-                              <div className='flex items-center gap-3 mb-2 text-sm'>
-                                {assertion.operator && (
-                                  <span className='inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'>
-                                    {assertion.operator}
-                                  </span>
-                                )}
-                                {assertion?.expectedValue && (
-                                  <span className='font-mono text-gray-900 dark:text-white'>
-                                    Expected:{' '}
-                                    {typeof assertion.expectedValue === 'object'
-                                      ? JSON.stringify(assertion.expectedValue)
-                                      : String(assertion.expectedValue)}
-                                  </span>
-                                )}
-                              </div>
-                            )}
 
                             {/* Field, Group, and Type details */}
-                            <div className='flex flex-wrap items-center gap-2 mb-2'>
+                            {/* <div className='flex flex-wrap items-center gap-2 mb-2'>
                               {assertion?.field && (
                                 <div className='text-xs text-gray-500 dark:text-gray-400 font-mono bg-gray-100 dark:bg-gray-800 rounded px-2 py-1'>
                                   Field: {assertion.field}
@@ -1967,7 +1951,7 @@ const RequestEditor: React.FC = () => {
                                   Type: {assertion.type}
                                 </div>
                               )}
-                            </div>
+                            </div> */}
 
                             {/* Impact */}
                             {assertion?.impact && (
@@ -2202,14 +2186,24 @@ const RequestEditor: React.FC = () => {
                   <select
                     value={selectedCategory}
                     onChange={(e) => setSelectedCategory(e.target.value)}
-                    className='border border-gray-300 dark:border-gray-600 rounded-md px-3 py-1.5 text-sm bg-white dark:bg-gray-800 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all duration-150'
+                    className='border border-gray-300 dark:border-gray-600 rounded-md px-3 py-1.5 text-sm 
+               bg-white dark:bg-gray-800 hover:border-blue-400 
+               focus:ring-2 focus:ring-blue-500 focus:border-blue-500 
+               focus:outline-none transition-all duration-150'
                   >
-                    <option value='all'>All Categories</option>
-                    {getCategories().map((category) => (
-                      <option key={category} value={category}>
-                        {getCategoryDisplayName(category)}
-                      </option>
-                    ))}
+                    <option value='all'>
+                      All Categories ({assertions?.length || 0})
+                    </option>
+                    {getCategories().map((category) => {
+                      const count = assertions.filter(
+                        (a) => a.category === category
+                      ).length;
+                      return (
+                        <option key={category} value={category}>
+                          {getCategoryDisplayName(category)} ({count})
+                        </option>
+                      );
+                    })}
                   </select>
                 </div>
               </div>
@@ -2291,6 +2285,10 @@ const RequestEditor: React.FC = () => {
                               title={assertion.description} // tooltip on hover
                             >
                               {assertion.description}
+
+                              <span className='inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'>
+                                Operator: {assertion.operator}
+                              </span>
                             </p>
 
                             <div className='flex items-center gap-2'>
@@ -2316,12 +2314,12 @@ const RequestEditor: React.FC = () => {
 
                           {/* Operator badge */}
                           <div className='mt-2 flex items-center gap-2 text-sm'>
-                            {assertion.operator && (
+                            {/* {assertion.operator && (
                               <span className='inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'>
                                 {assertion.operator}
                               </span>
-                            )}
-                            {assertion?.expectedValue && (
+                            )} */}
+                            {/* {assertion?.expectedValue && (
                               <span
                                 className={`font-mono block truncate max-w-full ${
                                   assertion.enabled
@@ -2335,11 +2333,11 @@ const RequestEditor: React.FC = () => {
                                   ? JSON.stringify(assertion.expectedValue)
                                   : String(assertion.expectedValue)}
                               </span>
-                            )}
+                            )} */}
                           </div>
 
                           {/* Field + Group same row */}
-                          <div className='mt-2 flex flex-wrap items-center gap-2'>
+                          {/* <div className='mt-2 flex flex-wrap items-center gap-2'>
                             {assertion?.field && (
                               <div className='text-xs text-gray-500 dark:text-gray-400 font-mono bg-gray-100 dark:bg-gray-800 rounded px-2 py-1'>
                                 Field: {assertion.field}
@@ -2355,7 +2353,7 @@ const RequestEditor: React.FC = () => {
                                 Type: {assertion.type}
                               </div>
                             )}
-                          </div>
+                          </div> */}
 
                           {/* Impact */}
                           {assertion?.impact && (

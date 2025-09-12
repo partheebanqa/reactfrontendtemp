@@ -491,7 +491,7 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
             ...selectedRequest,
             selectedTestCases: selectedRequest.selectedTestCases || [],
           }}
-          testSuiteId={testSuiteId} // always string here
+          testSuiteId={testSuiteId}
         />
       )}
 
