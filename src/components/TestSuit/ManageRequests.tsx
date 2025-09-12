@@ -506,7 +506,7 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
               You've already extracted authentication variables from another API
               request. Switching to a new request will overwrite the existing
               variables with fresh values from the selected API.
-              <div className='mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded text-sm'>
+              <div className='mt-3 p-3  border border--blue-200 rounded text-sm'>
                 <div className='space-y-1'>
                   <div>
                     <strong>Current Pre-request Api:</strong>{' '}
