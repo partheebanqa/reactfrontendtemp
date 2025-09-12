@@ -107,7 +107,7 @@ const RequestEditor: React.FC = () => {
   const [headers, setHeaders] = useState<Header[]>([]);
   const [bodyType, setBodyType] = useState<
     'none' | 'json' | 'form-data' | 'x-www-form-urlencoded' | 'raw' | 'binary'
-  >('json');
+  >('none');
   const [bodyContent, setBodyContent] = useState('');
   const [formFields, setFormFields] = useState<KeyValuePairWithFile[]>([]);
   const [urlEncodedFields, setUrlEncodedFields] = useState<Param[]>([]);
@@ -358,11 +358,11 @@ const RequestEditor: React.FC = () => {
           setAssertions([]);
         }
       } else {
-        setAssertions([]); // Clear assertions if no saved assertions
+        setAssertions([]);
       }
     } else {
       handleCreateRequest();
-      setAssertions([]); // Clear assertions when no active request
+      setAssertions([]);
     }
     setResponseData(null);
   }, [activeRequest]);
@@ -478,14 +478,10 @@ const RequestEditor: React.FC = () => {
         setAssertions(mergedAssertions);
       }
     } catch (error: any) {
-      setError({
-        title: 'Unexpected Error',
-        description: 'An unexpected error occurred while sending the request.',
-        suggestions: [
-          'Check your network connection',
-          'Try the request again',
-          'Contact support if the problem persists',
-        ],
+      toast({
+        title: 'Error',
+        description: 'please save a request before sending.',
+        type: 'error',
       });
     } finally {
       setLoading(false);
@@ -494,41 +490,29 @@ const RequestEditor: React.FC = () => {
 
   const handleSaveName = async (newName: string) => {
     try {
+      console.log('handlesave name is coming');
+
       if (!activeRequest) return;
       if (newName.trim() && activeRequest?.id) {
+        // First update the server
         await renameRequestMutation.mutateAsync({
           requestId: activeRequest.id,
           newName: newName.trim(),
-          workspaceId: currentWorkspace?.id,
+          workspaceId: currentWorkspace?.id || '',
         });
-        toast({
-          title: 'Request renamed successfully!',
-          duration: 3000,
-          type: 'success',
-        });
+
+        // The renameRequest action in the store will update both collections and activeRequest
+        // This prevents the race condition where activeRequest gets overwritten
+      } else if (newName.trim() && !activeRequest?.id) {
+        // For unsaved requests, just update the local state
+        const updatedRequest = {
+          ...activeRequest,
+          name: newName.trim(),
+        };
+        setActiveRequest(updatedRequest);
       }
-      const active = { ...activeRequest, name: newName.trim() };
-      setActiveRequest(active);
-      setCollection(
-        collections.map((collection) => {
-          if (collection.id === activeRequest.collectionId) {
-            return {
-              ...collection,
-              requests: collection.requests.map((request) => {
-                return request.order === activeRequest.order ? active : request;
-              }),
-            };
-          } else {
-            return collection;
-          }
-        })
-      );
     } catch (error) {
-      console.error('Error saving request name:', error);
-      showError(
-        'Rename Failed',
-        'An error occurred while renaming the request name.'
-      );
+      console.error('Error renaming request:', error);
     }
   };
 
@@ -558,19 +542,6 @@ const RequestEditor: React.FC = () => {
     }
 
     setShowSaveModal(true);
-    if (activeRequest.collectionId) {
-      const collection = collections.find(
-        (c) => c.id === activeRequest.collectionId
-      );
-      setActiveCollection(collection || null);
-    } else {
-      const workspaceCollections = collections.filter(
-        (collection) => collection.workspaceId === currentWorkspace?.id
-      );
-      if (workspaceCollections.length > 0) {
-        setActiveCollection(workspaceCollections[0]);
-      }
-    }
   };
 
   const handleGenerateAssertions = () => {
@@ -975,12 +946,32 @@ const RequestEditor: React.FC = () => {
         assertions: selectedAssertions,
         // variables: activeRequest.variables || {},
       };
-      await addRequestMutation.mutateAsync(requestData);
+
+      const savedRequestResponse = await addRequestMutation.mutateAsync(
+        requestData
+      );
+
       setShowSaveModal(false);
       setNewCollectionName('');
       setIsCreatingCollection(false);
       showSuccess('Request saved successfully!');
-      handleCreateRequest();
+
+      if (savedRequestResponse && savedRequestResponse.id) {
+        const updatedRequest = {
+          ...activeRequest,
+          id: savedRequestResponse.id,
+          collectionId: createdCollectionId || activeCollection?.id,
+          name: activeRequest.name || 'New Request',
+          method: method,
+          url: url,
+          bodyType: bodyType,
+          authorizationType: authType,
+          authorization: requestData.authorization,
+          params: params,
+          headers: headers,
+        };
+        setActiveRequest(updatedRequest);
+      }
     } catch (error) {
       console.error('Error saving request:', error);
       showError('Save Failed', 'An error occurred while saving the request.');
@@ -1867,13 +1858,10 @@ const RequestEditor: React.FC = () => {
                     automatically create and manage test assertions.
                   </p>
                 </div>
-                <button
-                  onClick={handleGenerateAssertions}
-                  className='inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2'
-                >
-                  <Zap className='h-4 w-4 mr-2' />
+                <Button onClick={handleGenerateAssertions}>
+                  <Zap className='h-3 w-3 mr-1' />
                   Generate Assertions
-                </button>
+                </Button>
               </div>
 
               {/* Show selected assertions with full details */}
@@ -1907,6 +1895,11 @@ const RequestEditor: React.FC = () => {
                             <div className='flex items-center justify-between gap-2 mb-2'>
                               <p className='text-sm font-medium text-gray-900 dark:text-white'>
                                 {assertion.description}
+                                {assertion.operator && (
+                                  <span className='inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'>
+                                    Operator: {assertion.operator}
+                                  </span>
+                                )}
                               </p>
 
                               <div className='flex items-center gap-2'>
@@ -1931,27 +1924,9 @@ const RequestEditor: React.FC = () => {
                             </div>
 
                             {/* Operator and expected value */}
-                            {(assertion.operator ||
-                              assertion.expectedValue) && (
-                              <div className='flex items-center gap-3 mb-2 text-sm'>
-                                {assertion.operator && (
-                                  <span className='inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'>
-                                    {assertion.operator}
-                                  </span>
-                                )}
-                                {assertion?.expectedValue && (
-                                  <span className='font-mono text-gray-900 dark:text-white'>
-                                    Expected:{' '}
-                                    {typeof assertion.expectedValue === 'object'
-                                      ? JSON.stringify(assertion.expectedValue)
-                                      : String(assertion.expectedValue)}
-                                  </span>
-                                )}
-                              </div>
-                            )}
 
                             {/* Field, Group, and Type details */}
-                            <div className='flex flex-wrap items-center gap-2 mb-2'>
+                            {/* <div className='flex flex-wrap items-center gap-2 mb-2'>
                               {assertion?.field && (
                                 <div className='text-xs text-gray-500 dark:text-gray-400 font-mono bg-gray-100 dark:bg-gray-800 rounded px-2 py-1'>
                                   Field: {assertion.field}
@@ -1967,7 +1942,7 @@ const RequestEditor: React.FC = () => {
                                   Type: {assertion.type}
                                 </div>
                               )}
-                            </div>
+                            </div> */}
 
                             {/* Impact */}
                             {assertion?.impact && (
@@ -2108,6 +2083,7 @@ const RequestEditor: React.FC = () => {
             {!isCreatingCollection ? (
               <div className='space-y-2'>
                 <select
+                  value={activeCollection?.id || ''} // Set the value to show selected collection
                   onChange={(e) => {
                     setActiveCollection(
                       collections.find((c) => c.id === e.target.value) || null
@@ -2202,14 +2178,24 @@ const RequestEditor: React.FC = () => {
                   <select
                     value={selectedCategory}
                     onChange={(e) => setSelectedCategory(e.target.value)}
-                    className='border border-gray-300 dark:border-gray-600 rounded-md px-3 py-1.5 text-sm bg-white dark:bg-gray-800 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all duration-150'
+                    className='border border-gray-300 dark:border-gray-600 rounded-md px-3 py-1.5 text-sm 
+               bg-white dark:bg-gray-800 hover:border-blue-400 
+               focus:ring-2 focus:ring-blue-500 focus:border-blue-500 
+               focus:outline-none transition-all duration-150'
                   >
-                    <option value='all'>All Categories</option>
-                    {getCategories().map((category) => (
-                      <option key={category} value={category}>
-                        {getCategoryDisplayName(category)}
-                      </option>
-                    ))}
+                    <option value='all'>
+                      All Categories ({assertions?.length || 0})
+                    </option>
+                    {getCategories().map((category) => {
+                      const count = assertions.filter(
+                        (a) => a.category === category
+                      ).length;
+                      return (
+                        <option key={category} value={category}>
+                          {getCategoryDisplayName(category)} ({count})
+                        </option>
+                      );
+                    })}
                   </select>
                 </div>
               </div>
@@ -2291,6 +2277,10 @@ const RequestEditor: React.FC = () => {
                               title={assertion.description} // tooltip on hover
                             >
                               {assertion.description}
+
+                              <span className='inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'>
+                                Operator: {assertion.operator}
+                              </span>
                             </p>
 
                             <div className='flex items-center gap-2'>
@@ -2316,12 +2306,12 @@ const RequestEditor: React.FC = () => {
 
                           {/* Operator badge */}
                           <div className='mt-2 flex items-center gap-2 text-sm'>
-                            {assertion.operator && (
+                            {/* {assertion.operator && (
                               <span className='inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'>
                                 {assertion.operator}
                               </span>
-                            )}
-                            {assertion?.expectedValue && (
+                            )} */}
+                            {/* {assertion?.expectedValue && (
                               <span
                                 className={`font-mono block truncate max-w-full ${
                                   assertion.enabled
@@ -2335,11 +2325,11 @@ const RequestEditor: React.FC = () => {
                                   ? JSON.stringify(assertion.expectedValue)
                                   : String(assertion.expectedValue)}
                               </span>
-                            )}
+                            )} */}
                           </div>
 
                           {/* Field + Group same row */}
-                          <div className='mt-2 flex flex-wrap items-center gap-2'>
+                          {/* <div className='mt-2 flex flex-wrap items-center gap-2'>
                             {assertion?.field && (
                               <div className='text-xs text-gray-500 dark:text-gray-400 font-mono bg-gray-100 dark:bg-gray-800 rounded px-2 py-1'>
                                 Field: {assertion.field}
@@ -2355,7 +2345,7 @@ const RequestEditor: React.FC = () => {
                                 Type: {assertion.type}
                               </div>
                             )}
-                          </div>
+                          </div> */}
 
                           {/* Impact */}
                           {assertion?.impact && (
