@@ -358,11 +358,11 @@ const RequestEditor: React.FC = () => {
           setAssertions([]);
         }
       } else {
-        setAssertions([]); // Clear assertions if no saved assertions
+        setAssertions([]);
       }
     } else {
       handleCreateRequest();
-      setAssertions([]); // Clear assertions when no active request
+      setAssertions([]);
     }
     setResponseData(null);
   }, [activeRequest]);
@@ -478,14 +478,10 @@ const RequestEditor: React.FC = () => {
         setAssertions(mergedAssertions);
       }
     } catch (error: any) {
-      setError({
-        title: 'Unexpected Error',
-        description: 'An unexpected error occurred while sending the request.',
-        suggestions: [
-          'Check your network connection',
-          'Try the request again',
-          'Contact support if the problem persists',
-        ],
+      toast({
+        title: 'Error',
+        description: 'please save a request before sending.',
+        type: 'error',
       });
     } finally {
       setLoading(false);
@@ -498,23 +494,25 @@ const RequestEditor: React.FC = () => {
 
       if (!activeRequest) return;
       if (newName.trim() && activeRequest?.id) {
+        // First update the server
         await renameRequestMutation.mutateAsync({
           requestId: activeRequest.id,
           newName: newName.trim(),
           workspaceId: currentWorkspace?.id || '',
         });
-        toast({
-          title: 'Request renamed successfully!',
-          duration: 3000,
-          type: 'success',
-        });
+
+        // The renameRequest action in the store will update both collections and activeRequest
+        // This prevents the race condition where activeRequest gets overwritten
+      } else if (newName.trim() && !activeRequest?.id) {
+        // For unsaved requests, just update the local state
+        const updatedRequest = {
+          ...activeRequest,
+          name: newName.trim(),
+        };
+        setActiveRequest(updatedRequest);
       }
     } catch (error) {
-      console.error('Error saving request name:', error);
-      showError(
-        'Rename Failed',
-        'An error occurred while renaming the request name.'
-      );
+      console.error('Error renaming request:', error);
     }
   };
 
@@ -544,19 +542,6 @@ const RequestEditor: React.FC = () => {
     }
 
     setShowSaveModal(true);
-    if (activeRequest.collectionId) {
-      const collection = collections.find(
-        (c) => c.id === activeRequest.collectionId
-      );
-      setActiveCollection(collection || null);
-    } else {
-      const workspaceCollections = collections.filter(
-        (collection) => collection.workspaceId === currentWorkspace?.id
-      );
-      if (workspaceCollections.length > 0) {
-        setActiveCollection(workspaceCollections[0]);
-      }
-    }
   };
 
   const handleGenerateAssertions = () => {

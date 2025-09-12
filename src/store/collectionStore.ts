@@ -1,11 +1,5 @@
 import { Store, useStore } from '@tanstack/react-store';
-import {
-  RequestData,
-  ResponseData,
-  KeyValuePair,
-} from '@/shared/types/request';
-import { Collection, CollectionRequest } from '@/shared/types/collection';
-import { rename } from 'fs';
+import type { Collection, CollectionRequest } from '@/shared/types/collection';
 
 // Define the shape of our request state
 interface CollectionState {
@@ -252,9 +246,15 @@ export const collectionActions = {
         };
       });
 
+      const updatedActiveRequest =
+        state.activeRequest?.id === requestId
+          ? { ...state.activeRequest, name, workspaceId }
+          : state.activeRequest;
+
       return {
         ...state,
         collections: updatedCollections,
+        activeRequest: updatedActiveRequest,
       };
     });
   },
@@ -264,5 +264,3 @@ export const collectionActions = {
 export const useCollectionStore = () => {
   return useStore(collectionStore);
 };
-
-// Define the shape of our collection state
