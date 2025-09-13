@@ -262,9 +262,9 @@ const TestSuiteCard: React.FC<TestSuiteCardProps> = ({
                   onClick={() => {
                     if (!suite.isExecutable) {
                       toast({
-                        title: 'Please select test cases',
+                        title: 'Oops!',
                         description:
-                          'You need to select at least one testcase before execution.',
+                          'You haven’t selected any test cases yet. Pick a few and let’s run them.',
                         type: 'error',
                       });
                       return;

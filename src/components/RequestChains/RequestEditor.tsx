@@ -1789,7 +1789,7 @@ export function RequestEditor({
                   request.authorization?.token) && (
                 <div>
                   <span className='font-medium'>Auth Token:</span>
-                  <div className='font-mono bg-white p-1 rounded border'>
+                  <div className='font-mono bg-white p-1 rounded border max-w-full overflow-hidden text-ellipsis whitespace-nowrap'>
                     <span className='text-gray-500'>
                       {request.authorization?.token || request.authToken}
                     </span>{' '}
