@@ -41,6 +41,7 @@ import { useMutation } from '@tanstack/react-query';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
 import { generateAssertions } from '@/utils/assertionGenerator';
+import EditableNumber from '@/components/ui/EditableNumber';
 
 interface FormattedResponse {
   status: number;
@@ -156,25 +157,252 @@ const RequestEditor: React.FC = () => {
     sslVerification: true,
   });
 
-  const filteredAssertions = useCallback(() => {
-    let filtered = getFilteredAssertions();
+  const [editedValues, setEditedValues] = useState<Record<string, string>>({});
 
-    if (searchTerm) {
-      const lowerSearchTerm = searchTerm.toLowerCase();
-      filtered = filtered.filter((assertion) => {
-        return (
-          assertion.description.toLowerCase().includes(lowerSearchTerm) ||
-          assertion.field?.toLowerCase().includes(lowerSearchTerm) ||
-          assertion.operator?.toLowerCase().includes(lowerSearchTerm) ||
-          String(assertion.expectedValue)
-            .toLowerCase()
-            .includes(lowerSearchTerm)
-        );
-      });
+  const parseTextWithEditableNumbers = (
+    text: string,
+    assertionId: string,
+    field: 'description' | 'impact'
+  ): React.ReactNode[] => {
+    const parts: React.ReactNode[] = [];
+    const numberRegex = /\b\d+\b/g;
+    let lastIndex = 0;
+    let match;
+
+    while ((match = numberRegex.exec(text)) !== null) {
+      // Add text before the number
+      if (match.index > lastIndex) {
+        parts.push(text.slice(lastIndex, match.index));
+      }
+
+      const numberValue = match[0];
+      const numberIndex = match.index;
+      const editKey = `${assertionId}-${field}-${numberIndex}`;
+
+      // Add the editable number
+      parts.push(
+        <EditableNumber
+          key={editKey}
+          value={numberValue}
+          onSave={(newValue) => {
+            setAssertions((prevAssertions) => {
+              if (!Array.isArray(prevAssertions)) return prevAssertions;
+
+              return prevAssertions.map((assertion) => {
+                if (assertion.id !== assertionId) return assertion;
+
+                const updatedAssertion = { ...assertion };
+
+                // Update the description/impact text
+                const regex = new RegExp(`\\b${numberValue}\\b`, 'g');
+                if (field === 'description') {
+                  updatedAssertion.description = assertion.description.replace(
+                    regex,
+                    newValue
+                  );
+                } else if (field === 'impact') {
+                  updatedAssertion.impact = assertion.impact.replace(
+                    regex,
+                    newValue
+                  );
+                }
+
+                // Update related numeric properties
+                const numericValue = Number.parseInt(newValue);
+                const originalValue = Number.parseInt(numberValue);
+
+                if (!isNaN(numericValue) && !isNaN(originalValue)) {
+                  // Update expectedValue if it matches
+                  if (assertion.expectedValue === originalValue) {
+                    updatedAssertion.expectedValue = numericValue;
+                  }
+
+                  // Update ID if it contains the original value
+                  if (assertion.id.includes(numberValue)) {
+                    updatedAssertion.id = assertion.id.replace(
+                      numberValue,
+                      newValue
+                    );
+                  }
+
+                  // Update other numeric properties that might match
+                  if (assertion.minValue === originalValue) {
+                    updatedAssertion.minValue = numericValue;
+                  }
+                  if (assertion.maxValue === originalValue) {
+                    updatedAssertion.maxValue = numericValue;
+                  }
+                }
+
+                console.log(
+                  '[v0] Updated assertion directly:',
+                  updatedAssertion
+                );
+                return updatedAssertion;
+              });
+            });
+          }}
+        />
+      );
+
+      lastIndex = numberRegex.lastIndex;
     }
 
-    return filtered;
-  }, [searchTerm, assertions, selectedCategory]);
+    // Add remaining text
+    if (lastIndex < text.length) {
+      parts.push(text.slice(lastIndex));
+    }
+
+    return parts;
+  };
+
+  const updateAssertions = useCallback(
+    (updater: (prev: Assertion[]) => Assertion[]) => {
+      console.log('[v0] updateAssertions called');
+      setAssertions((prev) => {
+        console.log('[v0] Previous assertions:', prev);
+        if (!prev || !Array.isArray(prev)) {
+          console.warn(
+            '[v0] Previous assertions is not an array, returning empty array:',
+            prev
+          );
+          return [];
+        }
+        const result = updater(prev);
+        console.log('[v0] Updated assertions:', result);
+        if (!Array.isArray(result)) {
+          console.error('[v0] Updater returned non-array:', result);
+          return prev; // Return previous state if update failed
+        }
+        return result;
+      });
+    },
+    []
+  );
+
+  const applyEditedValues = (assertion: Assertion): Assertion => {
+    const updatedAssertion = { ...assertion };
+    let updatedDescription = assertion.description;
+    let updatedImpact = assertion.impact;
+
+    console.log('[v0] Applying edited values for assertion:', assertion.id);
+    console.log('[v0] Current editedValues state:', editedValues);
+    console.log('[v0] Original assertion:', assertion);
+
+    // Apply any edited values for this assertion
+    Object.entries(editedValues).forEach(([editKey, newValue]) => {
+      console.log(
+        '[v0] Processing edit key:',
+        editKey,
+        'with value:',
+        newValue
+      );
+
+      if (editKey.startsWith(`${assertion.id}-description-`)) {
+        const originalValue = editKey.split('-').pop();
+        console.log(
+          '[v0] Found description edit - original:',
+          originalValue,
+          'new:',
+          newValue
+        );
+
+        if (originalValue) {
+          const regex = new RegExp(`\\b${originalValue}\\b`, 'g');
+          updatedDescription = updatedDescription.replace(regex, newValue);
+          console.log('[v0] Updated description:', updatedDescription);
+
+          // Update related assertion properties based on the assertion type
+          const numericValue = Number.parseInt(newValue);
+          if (!isNaN(numericValue)) {
+            console.log(
+              '[v0] Updating numeric properties - original expectedValue:',
+              assertion.expectedValue
+            );
+
+            // Update expectedValue if it matches the original value
+            if (assertion.expectedValue === Number.parseInt(originalValue)) {
+              updatedAssertion.expectedValue = numericValue;
+              console.log('[v0] Updated expectedValue to:', numericValue);
+            }
+
+            // Update ID if it contains the original value
+            if (assertion.id.includes(originalValue)) {
+              updatedAssertion.id = assertion.id.replace(
+                originalValue,
+                newValue
+              );
+              console.log('[v0] Updated ID to:', updatedAssertion.id);
+            }
+
+            // Update other numeric properties that might match
+            if (assertion.minValue === Number.parseInt(originalValue)) {
+              updatedAssertion.minValue = numericValue;
+            }
+            if (assertion.maxValue === Number.parseInt(originalValue)) {
+              updatedAssertion.maxValue = numericValue;
+            }
+          }
+        }
+      } else if (editKey.startsWith(`${assertion.id}-impact-`)) {
+        const originalValue = editKey.split('-').pop();
+        if (originalValue) {
+          const regex = new RegExp(`\\b${originalValue}\\b`, 'g');
+          updatedImpact = updatedImpact.replace(regex, newValue);
+        }
+      }
+    });
+
+    return {
+      ...updatedAssertion,
+      description: updatedDescription,
+      impact: updatedImpact,
+    };
+  };
+
+  const getFilteredAssertions = (): Assertion[] => {
+    console.log('[v0] getFilteredAssertions called, assertions:', assertions);
+    if (!assertions || !Array.isArray(assertions)) {
+      console.warn('[v0] Assertions is not an array:', assertions);
+      return [];
+    }
+    if (selectedCategory === 'all') return assertions;
+    return assertions.filter(
+      (assertion) => assertion.category === selectedCategory
+    );
+  };
+
+  const getSelectedAssertions = (): Assertion[] => {
+    console.log('[v0] getSelectedAssertions called, assertions:', assertions);
+    if (!assertions || !Array.isArray(assertions)) {
+      console.warn(
+        '[v0] Assertions is not an array in getSelectedAssertions:',
+        assertions
+      );
+      return [];
+    }
+    return assertions.filter((a) => a.enabled);
+  };
+
+  const getSelectedAssertionsByCategory = () => {
+    if (!assertions || !Array.isArray(assertions) || assertions.length === 0) {
+      console.warn(
+        '[v0] Assertions is not a valid array in getSelectedAssertionsByCategory:',
+        assertions
+      );
+      return {};
+    }
+
+    const selectedAssertions = assertions.filter((a) => a.enabled);
+    const categoryCount: Record<string, number> = {};
+
+    selectedAssertions.forEach((assertion) => {
+      categoryCount[assertion.category] =
+        (categoryCount[assertion.category] || 0) + 1;
+    });
+
+    return categoryCount;
+  };
 
   const updateRequestMutation = useMutation({
     mutationFn: ({
@@ -573,97 +801,26 @@ const RequestEditor: React.FC = () => {
   };
 
   const handleSaveAssertions = async () => {
-    const selectedCount = assertions?.filter((a) => a.enabled).length || 0;
-    setShowAssertionDialog(false);
-
     try {
-      if (!activeRequest || !currentWorkspace) return;
+      if (!assertions || !Array.isArray(assertions)) {
+        console.error('[v0] Assertions is not an array:', assertions);
+        return;
+      }
 
       const selectedAssertions = assertions
         .filter((assertion) => assertion.enabled)
-        .map(({ expectedValue, ...rest }) => ({
-          ...rest,
-          expected_value: expectedValue,
+        .map((assertion) => ({
+          ...assertion,
+          expected_value: assertion.expectedValue, // Transform for backend
         }));
 
+      console.log('[v0] Saving assertions directly:', selectedAssertions);
+
       const requestData = {
-        workspaceId: currentWorkspace.id,
-        description: '',
-        name: activeRequest.name || 'New Request',
-        order: activeRequest.order || 1,
-        method: method,
-        url: url,
-        bodyType: bodyType === 'json' ? 'raw' : bodyType,
-        bodyFormData:
-          bodyType === 'form-data'
-            ? formFields
-                .filter((f) => f.enabled)
-                .reduce((acc: Record<string, any>, field) => {
-                  if (field.key) {
-                    if (field.type === 'file' && field.value instanceof File) {
-                      acc[field.key] = field.value;
-                    } else {
-                      acc[field.key] = String(field.value);
-                    }
-                  }
-                  return acc;
-                }, {})
-            : [],
-        bodyRawContent:
-          bodyType === 'raw' || bodyType === 'json'
-            ? bodyContent
-            : bodyType === 'x-www-form-urlencoded'
-            ? new URLSearchParams(
-                urlEncodedFields
-                  .filter((f) => f.enabled)
-                  .reduce((acc, field) => {
-                    if (field.key) acc[field.key] = field.value;
-                    return acc;
-                  }, {} as Record<string, string>)
-              ).toString()
-            : '',
-        authorizationType: authType,
-        authorization: {
-          token: authType === 'bearer' ? authData.token : '',
-          username: authType === 'basic' ? authData.username : '',
-          password: authType === 'basic' ? authData.password : '',
-          key: authType === 'apiKey' ? authData.key : '',
-          value: authType === 'apiKey' ? authData.value : '',
-          addTo: authType === 'apiKey' ? authData.addTo : 'header',
-          oauth1:
-            authType === 'oauth1'
-              ? {
-                  consumerKey: authData.oauth1.consumerKey,
-                  consumerSecret: authData.oauth1.consumerSecret,
-                  token: authData.oauth1.token,
-                  tokenSecret: authData.oauth1.tokenSecret,
-                  signatureMethod: authData.oauth1.signatureMethod,
-                  version: '1.0',
-                  realm: authData.oauth1.realm,
-                  nonce: authData.oauth1.nonce,
-                  timestamp: authData.oauth1.timestamp,
-                }
-              : undefined,
-          oauth2:
-            authType === 'oauth2'
-              ? {
-                  clientId: authData.oauth2.clientId,
-                  clientSecret: authData.oauth2.clientSecret,
-                  accessToken: authData.oauth2.accessToken,
-                  tokenType: authData.oauth2.tokenType,
-                  refreshToken: authData.oauth2.refreshToken,
-                  scope: authData.oauth2.scope,
-                  grantType: authData.oauth2.grantType,
-                  redirectUri: authData.oauth2.redirectUri,
-                }
-              : undefined,
-        },
-        params: params,
-        headers: headers,
         assertions: selectedAssertions,
       };
 
-      if (!activeRequest.id) {
+      if (!activeRequest?.id) {
         toast({
           title: 'Error',
           description: 'Cannot update a request without an id.',
@@ -681,8 +838,9 @@ const RequestEditor: React.FC = () => {
         title: 'Success',
         description: 'Assertions saved successfully',
       });
+      setShowAssertionDialog(false);
     } catch (error) {
-      console.error('Error updating request:', error);
+      console.error('[v0] Error saving assertions:', error);
       toast({
         title: 'Error',
         description: 'Failed to save assertions',
@@ -712,10 +870,11 @@ const RequestEditor: React.FC = () => {
 
       const selectedAssertions = assertions
         .filter((assertion) => assertion.enabled)
-        .map(({ expectedValue, ...rest }) => ({
-          ...rest,
-          expected_value: expectedValue,
+        .map((assertion) => ({
+          ...assertion,
+          expected_value: assertion.expectedValue, // Transform for backend
         }));
+
       const requestData = {
         workspaceId: currentWorkspace.id,
         description: '',
@@ -861,9 +1020,9 @@ const RequestEditor: React.FC = () => {
       }
 
       // Get selected assertions from the store
-      const selectedAssertions = assertions.filter(
-        (assertion) => assertion.enabled
-      );
+      const selectedAssertions = assertions
+        .filter((assertion) => assertion.enabled)
+        .map((assertion) => assertion);
 
       const requestData = {
         collectionId: createdCollectionId
@@ -1140,15 +1299,6 @@ const RequestEditor: React.FC = () => {
     return categories.sort();
   };
 
-  // Filter assertions by category
-  const getFilteredAssertions = (): Assertion[] => {
-    if (!assertions) return [];
-    if (selectedCategory === 'all') return assertions;
-    return assertions.filter(
-      (assertion) => assertion.category === selectedCategory
-    );
-  };
-
   // Get category display name with proper capitalization
   const getCategoryDisplayName = (category: string): string => {
     return category.charAt(0).toUpperCase() + category.slice(1);
@@ -1170,27 +1320,6 @@ const RequestEditor: React.FC = () => {
       colors[category] ||
       'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
     );
-  };
-
-  // Get selected assertions count by category
-  const getSelectedAssertionsByCategory = () => {
-    if (!assertions || assertions.length === 0) return {};
-
-    const selectedAssertions = assertions.filter((a) => a.enabled);
-    const categoryCount: Record<string, number> = {};
-
-    selectedAssertions.forEach((assertion) => {
-      categoryCount[assertion.category] =
-        (categoryCount[assertion.category] || 0) + 1;
-    });
-
-    return categoryCount;
-  };
-
-  // Get only selected assertions for detailed display
-  const getSelectedAssertions = (): Assertion[] => {
-    if (!assertions) return [];
-    return assertions.filter((a) => a.enabled);
   };
 
   if (!activeRequest) {
@@ -1894,7 +2023,11 @@ const RequestEditor: React.FC = () => {
                             {/* Top row: Description + Category + Priority */}
                             <div className='flex items-center justify-between gap-2 mb-2'>
                               <p className='text-sm font-medium text-gray-900 dark:text-white'>
-                                {assertion.description}
+                                {parseTextWithEditableNumbers(
+                                  assertion.description,
+                                  assertion.id,
+                                  'description'
+                                )}
                                 {assertion.operator && (
                                   <span className='inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'>
                                     Operator: {assertion.operator}
@@ -1947,7 +2080,12 @@ const RequestEditor: React.FC = () => {
                             {/* Impact */}
                             {assertion?.impact && (
                               <div className='text-xs text-gray-500 dark:text-gray-400 font-mono bg-gray-100 dark:bg-gray-800 rounded px-2 py-1 italic'>
-                                Impact: {assertion.impact}
+                                Impact:{' '}
+                                {parseTextWithEditableNumbers(
+                                  assertion.impact,
+                                  assertion.id,
+                                  'impact'
+                                )}
                               </div>
                             )}
                           </div>
@@ -2187,9 +2325,11 @@ const RequestEditor: React.FC = () => {
                       All Categories ({assertions?.length || 0})
                     </option>
                     {getCategories().map((category) => {
-                      const count = assertions.filter(
-                        (a) => a.category === category
-                      ).length;
+                      const count =
+                        assertions && Array.isArray(assertions)
+                          ? assertions.filter((a) => a.category === category)
+                              .length
+                          : 0;
                       return (
                         <option key={category} value={category}>
                           {getCategoryDisplayName(category)} ({count})
@@ -2237,7 +2377,7 @@ const RequestEditor: React.FC = () => {
             <div className='flex-1 overflow-y-auto'>
               {assertions && assertions.length > 0 ? (
                 <div className='space-y-3 p-1'>
-                  {filteredAssertions().map((assertion) => (
+                  {getFilteredAssertions().map((assertion) => (
                     <div
                       key={assertion.id}
                       className={`border rounded-lg p-4 transition-all duration-200 ${
@@ -2276,7 +2416,11 @@ const RequestEditor: React.FC = () => {
                               }`}
                               title={assertion.description} // tooltip on hover
                             >
-                              {assertion.description}
+                              {parseTextWithEditableNumbers(
+                                assertion.description,
+                                assertion.id,
+                                'description'
+                              )}
 
                               <span className='inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'>
                                 Operator: {assertion.operator}
@@ -2350,7 +2494,12 @@ const RequestEditor: React.FC = () => {
                           {/* Impact */}
                           {assertion?.impact && (
                             <div className='mt-2 text-xs text-gray-500 dark:text-gray-400 font-mono bg-gray-100 dark:bg-gray-800 rounded px-2 py-1 italic'>
-                              Impact: {assertion?.impact}
+                              Impact:{' '}
+                              {parseTextWithEditableNumbers(
+                                assertion.impact,
+                                assertion.id,
+                                'impact'
+                              )}
                             </div>
                           )}
                         </div>
