@@ -371,51 +371,43 @@ export function RequestChainsList({
                             variant='outline'
                             className={`
     flex items-center gap-1
-    ${
-      chain.environment?.name?.toLowerCase().includes('prod')
-        ? 'bg-green-100 text-green-800 border-green-200'
-        : ''
-    }
-    ${
-      chain.environment?.name?.toLowerCase().includes('stage')
-        ? 'bg-yellow-100 text-yellow-800 border-yellow-200'
-        : ''
-    }
-    ${
-      chain.environment?.name?.toLowerCase().includes('dev')
-        ? 'bg-blue-100 text-blue-800 border-blue-200'
-        : ''
-    }
-    ${
-      !chain.environment?.name || chain.environment?.name === 'No Environment'
-        ? 'bg-gray-100 text-gray-700 border-gray-200'
-        : ''
-    }
+    ${chain.environment?.name?.toLowerCase().includes('prod')
+                                ? 'bg-green-100 text-green-800 border-green-200'
+                                : ''
+                              }
+    ${chain.environment?.name?.toLowerCase().includes('stage')
+                                ? 'bg-yellow-100 text-yellow-800 border-yellow-200'
+                                : ''
+                              }
+    ${chain.environment?.name?.toLowerCase().includes('dev')
+                                ? 'bg-blue-100 text-blue-800 border-blue-200'
+                                : ''
+                              }
+    ${!chain.environment?.name || chain.environment?.name === 'No Environment'
+                                ? 'bg-gray-100 text-gray-700 border-gray-200'
+                                : ''
+                              }
   `}
                           >
                             {/* Dot */}
                             <span
                               className={`h-2 w-2 rounded-full 
-      ${
-        chain.environment?.name?.toLowerCase().includes('prod')
-          ? 'bg-green-600'
-          : ''
-      }
-      ${
-        chain.environment?.name?.toLowerCase().includes('stage')
-          ? 'bg-yellow-600'
-          : ''
-      }
-      ${
-        chain.environment?.name?.toLowerCase().includes('dev')
-          ? 'bg-blue-600'
-          : ''
-      }
-      ${
-        !chain.environment?.name || chain.environment?.name === 'No Environment'
-          ? 'bg-gray-500'
-          : ''
-      }
+      ${chain.environment?.name?.toLowerCase().includes('prod')
+                                  ? 'bg-green-600'
+                                  : ''
+                                }
+      ${chain.environment?.name?.toLowerCase().includes('stage')
+                                  ? 'bg-yellow-600'
+                                  : ''
+                                }
+      ${chain.environment?.name?.toLowerCase().includes('dev')
+                                  ? 'bg-blue-600'
+                                  : ''
+                                }
+      ${!chain.environment?.name || chain.environment?.name === 'No Environment'
+                                  ? 'bg-gray-500'
+                                  : ''
+                                }
     `}
                             />
 
@@ -443,12 +435,12 @@ export function RequestChainsList({
                           <span className='font-[500] text-[#64748b] text-[13px]'>
                             {chain.chainRequests.length > 3
                               ? chain.chainRequests
-                                  .slice(0, 3)
-                                  .map((r) => r.name)
-                                  .join(' → ') + ' → ...'
+                                .slice(0, 3)
+                                .map((r) => r.name)
+                                .join(' → ') + ' → ...'
                               : chain.chainRequests
-                                  .map((r) => r.name)
-                                  .join(' → ')}
+                                .map((r) => r.name)
+                                .join(' → ')}
                           </span>
                         </div>
                         <div className='flex items-center space-x-6'>

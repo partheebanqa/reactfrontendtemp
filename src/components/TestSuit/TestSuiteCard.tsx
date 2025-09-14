@@ -14,6 +14,8 @@ import {
   Pause,
   Link2,
   Layers,
+  EllipsisVertical,
+  Delete,
 } from 'lucide-react';
 import { useToast } from '@/hooks/useToast';
 import { formatDate } from '@/utils/formatDate';
@@ -35,6 +37,7 @@ import {
 } from '../ui/alert-dialog';
 
 import { RequestChain } from '@/shared/types/requestChain.model';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
 
 interface TestSuite {
   requests: boolean;
@@ -158,52 +161,44 @@ const TestSuiteCard: React.FC<TestSuiteCardProps> = ({
               variant='outline'
               className={`
     flex items-center gap-1
-    ${
-      suite?.environment?.name?.toLowerCase().includes('prod')
-        ? 'bg-green-100 text-green-800 border-green-200'
-        : ''
-    }
-    ${
-      suite?.environment?.name?.toLowerCase().includes('stage')
-        ? 'bg-yellow-100 text-yellow-800 border-yellow-200'
-        : ''
-    }
-    ${
-      suite?.environment?.name?.toLowerCase().includes('dev')
-        ? 'bg-blue-100 text-blue-800 border-blue-200'
-        : ''
-    }
-    ${
-      !suite?.environment?.name || suite?.environment?.name === 'No Environment'
-        ? 'bg-gray-100 text-gray-700 border-gray-200'
-        : ''
-    }
+    ${suite?.environment?.name?.toLowerCase().includes('prod')
+                  ? 'bg-green-100 text-green-800 border-green-200'
+                  : ''
+                }
+    ${suite?.environment?.name?.toLowerCase().includes('stage')
+                  ? 'bg-yellow-100 text-yellow-800 border-yellow-200'
+                  : ''
+                }
+    ${suite?.environment?.name?.toLowerCase().includes('dev')
+                  ? 'bg-blue-100 text-blue-800 border-blue-200'
+                  : ''
+                }
+    ${!suite?.environment?.name || suite?.environment?.name === 'No Environment'
+                  ? 'bg-gray-100 text-gray-700 border-gray-200'
+                  : ''
+                }
   `}
             >
               {/* Dot */}
               <span
                 className={`h-2 w-2 rounded-full 
-      ${
-        suite?.environment?.name?.toLowerCase().includes('prod')
-          ? 'bg-green-600'
-          : ''
-      }
-      ${
-        suite?.environment?.name?.toLowerCase().includes('stage')
-          ? 'bg-yellow-600'
-          : ''
-      }
-      ${
-        suite?.environment?.name?.toLowerCase().includes('dev')
-          ? 'bg-blue-600'
-          : ''
-      }
-      ${
-        !suite?.environment?.name ||
-        suite?.environment?.name === 'No Environment'
-          ? 'bg-gray-500'
-          : ''
-      }
+      ${suite?.environment?.name?.toLowerCase().includes('prod')
+                    ? 'bg-green-600'
+                    : ''
+                  }
+      ${suite?.environment?.name?.toLowerCase().includes('stage')
+                    ? 'bg-yellow-600'
+                    : ''
+                  }
+      ${suite?.environment?.name?.toLowerCase().includes('dev')
+                    ? 'bg-blue-600'
+                    : ''
+                  }
+      ${!suite?.environment?.name ||
+                    suite?.environment?.name === 'No Environment'
+                    ? 'bg-gray-500'
+                    : ''
+                  }
     `}
               />
 
@@ -260,7 +255,7 @@ const TestSuiteCard: React.FC<TestSuiteCardProps> = ({
                   size='icon'
                   className='text-gray-600 hover:text-blue-600'
                   onClick={() => {
-                    if (!suite.isExecutable) {
+                    if (!suite?.isExecutable) {
                       toast({
                         title: 'Please select test cases',
                         description:
@@ -308,6 +303,72 @@ const TestSuiteCard: React.FC<TestSuiteCardProps> = ({
               <TooltipContent>Duplicate Suite</TooltipContent>
             </Tooltip>
 
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant='ghost'
+                      size='sm'
+                      className='text-muted-foreground hover:text-foreground'
+                    >
+                      <EllipsisVertical className='w-4 h-4' />
+                    </Button>
+                  </DropdownMenuTrigger>
+
+                  <DropdownMenuContent
+                    align='end'
+                    className="bg-white border shadow-lg flex flex-col p-1"
+                  >
+                    <Button
+                      variant='ghost'
+                      size='lg'
+                    >
+                      <Workflow className='w-4 h-4 mr-2' /> CI/CD
+                    </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+
+                        <Button
+
+                          variant='ghost'
+                          size='lg'
+                          className='text-red-600 hover:text-red-700'
+                        >
+                          <Trash2 className='w-4 h-2' /> Delete
+                        </Button>
+                      </AlertDialogTrigger>
+
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>
+                            Delete this chain?
+                          </AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This will permanently delete “
+                            {suite.name}”. This action cannot be
+                            undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>
+                            Cancel
+                          </AlertDialogCancel>
+                          <Button
+                            onClick={() => onDelete(suite.id)}
+                          >
+                            Delete
+                          </Button>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </TooltipTrigger>
+              <TooltipContent>More</TooltipContent>
+            </Tooltip>
+
+            {/* 
             <AlertDialog>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -337,11 +398,11 @@ const TestSuiteCard: React.FC<TestSuiteCardProps> = ({
                   <Button onClick={() => onDelete(suite.id)}>Delete</Button>
                 </AlertDialogFooter>
               </AlertDialogContent>
-            </AlertDialog>
+            </AlertDialog> */}
           </TooltipProvider>
         </div>
       </div>
-    </div>
+    </div >
   );
 };
 
