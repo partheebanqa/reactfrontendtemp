@@ -1,4 +1,7 @@
-import React, { useState, useRef, useEffect } from 'react';
+'use client';
+
+import type React from 'react';
+import { useState, useRef, useEffect } from 'react';
 
 interface EditableNumberProps {
   value: number | string;
@@ -16,6 +19,10 @@ const EditableNumber: React.FC<EditableNumberProps> = ({
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(String(value));
   const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setEditValue(String(value));
+  }, [value]);
 
   useEffect(() => {
     if (isEditing && inputRef.current) {
@@ -45,28 +52,35 @@ const EditableNumber: React.FC<EditableNumberProps> = ({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleSave();
-    } else if (e.key === 'Escape') {
+    if (e.key === 'Escape') {
       handleCancel();
     }
   };
 
-  const handleBlur = () => {
-    handleSave();
-  };
-
   if (isEditing) {
     return (
-      <input
-        ref={inputRef}
-        type='text'
-        value={editValue}
-        onChange={(e) => setEditValue(e.target.value)}
-        onKeyDown={handleKeyDown}
-        onBlur={handleBlur}
-        className={`inline-block min-w-16 px-2 py-1 text-sm border border-blue-500 rounded bg-white dark:bg-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500 ${className}`}
-      />
+      <div className='inline-flex items-center gap-1'>
+        <input
+          ref={inputRef}
+          type='text'
+          value={editValue}
+          onChange={(e) => setEditValue(e.target.value)}
+          onKeyDown={handleKeyDown}
+          className={`inline-block min-w-16 px-2 py-1 text-sm border border-blue-500 rounded bg-white dark:bg-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500 ${className}`}
+        />
+        <button
+          onClick={handleSave}
+          className='px-2 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600 transition-colors'
+        >
+          Save
+        </button>
+        <button
+          onClick={handleCancel}
+          className='px-2 py-1 text-xs bg-gray-500 text-white rounded hover:bg-gray-600 transition-colors'
+        >
+          Cancel
+        </button>
+      </div>
     );
   }
 

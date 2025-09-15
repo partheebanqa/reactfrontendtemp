@@ -1,4 +1,8 @@
-import { API_ENVIRONMENT, API_VARIABLES } from '@/config/apiRoutes';
+import {
+  API_ENVIRONMENT,
+  API_VARIABLES,
+  API_VARIABLES_NEW,
+} from '@/config/apiRoutes';
 import { apiRequest } from '@/lib/queryClient';
 import {
   Environment,
@@ -72,13 +76,19 @@ export const deleteEnvironment = async (environmentId: string) => {
 };
 
 export const createVariable = async (variable: any): Promise<any> => {
-  // Replace with your actual variable type
-  const response = await apiRequest('POST', API_VARIABLES, {
+  const url =
+    variable.type === 'static'
+      ? `${API_VARIABLES_NEW}/static`
+      : `${API_VARIABLES_NEW}/dynamic`;
+
+  const response = await apiRequest('POST', url, {
     body: JSON.stringify(variable),
   });
+
   if (!response.ok) {
     throw new Error('Failed to create variable');
   }
+
   return response.json();
 };
 
