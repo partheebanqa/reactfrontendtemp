@@ -51,26 +51,19 @@ const VariablesSection: React.FC = () => {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const { error: errorToast, success: successToast } = useToast();
 
-  const handleCreate = async () => {
+  const handleCreate = async (payload: any) => {
     try {
-      let finalName = newVariable.name;
+      let finalName = payload.name;
 
-      if (newVariable.type === 'static' && !newVariable.name.startsWith('S_')) {
-        finalName = `S_${newVariable.name}`;
-      } else if (
-        newVariable.type === 'dynamic' &&
-        !newVariable.name.startsWith('D_')
-      ) {
-        finalName = `D_${newVariable.name}`;
+      if (payload.type === 'static' && !payload.name.startsWith('S_')) {
+        finalName = `S_${payload.name}`;
+      } else {
+        finalName = `D_${payload.name}`;
       }
 
       await createVariableMutation.mutateAsync({
-        environmentId: newVariable.environmentId,
-        name: finalName,
-        description: newVariable.description,
-        type: newVariable.type,
-        initialValue: newVariable.initialValue,
-        currentValue: newVariable.currentValue,
+        ...payload,
+        name: finalName, // override name with prefixed version
       });
     } catch (error: any) {
       errorToast(
@@ -78,6 +71,7 @@ const VariablesSection: React.FC = () => {
       );
       return;
     }
+
     setNewVariable({
       id: '',
       environmentId: '',
