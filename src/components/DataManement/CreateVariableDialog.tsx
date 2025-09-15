@@ -79,9 +79,9 @@ const VariableCreateDialog: React.FC<VariableCreateDialogProps> = ({
     }
 
     // Validate environment
-    if (!newVariable.environmentId) {
-      newErrors.environmentId = 'Please select an environment';
-    }
+    // if (!newVariable.environmentId) {
+    //   newErrors.environmentId = 'Please select an environment';
+    // }
 
     // Validate type (should already be set by default, but just in case)
     if (!newVariable.type) {
@@ -101,7 +101,7 @@ const VariableCreateDialog: React.FC<VariableCreateDialogProps> = ({
   const handleSubmit = () => {
     if (validateForm()) {
       const payload: any = {
-        environmentId: newVariable.environmentId,
+        // environmentId: newVariable.environmentId,
         workspaceId: currentWorkspace?.id,
         name: newVariable.name,
         description: newVariable.description,
@@ -259,7 +259,7 @@ const VariableCreateDialog: React.FC<VariableCreateDialogProps> = ({
           </div>
 
           {/* Environment */}
-          <div className='space-y-1'>
+          {/* <div className='space-y-1'>
             <label className='text-sm font-medium'>Environment</label>
             <Select
               value={newVariable.environmentId}
@@ -289,7 +289,7 @@ const VariableCreateDialog: React.FC<VariableCreateDialogProps> = ({
                 {errors.environmentId}
               </p>
             )}
-          </div>
+          </div> */}
 
           {/* Type */}
           <div>

@@ -175,22 +175,67 @@ const EditTestSuiteContent: React.FC = () => {
     },
   });
 
+  // Enhanced request transformation to preserve all original properties
+  const transformRequestData = (req: any): Request => {
+    return {
+      id: req.id,
+      method: req.method || 'GET',
+      name: req.name || `${req.method} ${req.url}`,
+      endpoint: req.endpoint || req.url || '',
+      url: req.url || req.endpoint || '',
+      description:
+        req.description || `${req.method} ${req.url || req.endpoint}`,
+
+      // Preserve body-related properties with various possible field names
+      bodyType: req.bodyType || req.body_type || 'raw',
+      bodyRawContent:
+        req.bodyRawContent ||
+        req.body_raw_content ||
+        req.bodyContent ||
+        req.body ||
+        '',
+      bodyFormData:
+        req.bodyFormData || req.body_form_data || req.formData || null,
+
+      // Preserve auth-related properties
+      authorizationType:
+        req.authorizationType ||
+        req.authorization_type ||
+        req.authType ||
+        'none',
+      authorization: req.authorization || req.auth || null,
+
+      // Preserve headers and params
+      headers: Array.isArray(req.headers) ? req.headers : [],
+      params: Array.isArray(req.params)
+        ? req.params
+        : Array.isArray(req.parameters)
+        ? req.parameters
+        : [],
+
+      order: req.order || 0,
+      testCases: {
+        functional: req.testCases?.functional || 0,
+        total: req.testCases?.total || 0,
+      },
+      selectedTestCases: req.selectedTestCases || [],
+    };
+  };
+
   useEffect(() => {
     if (testSuite && !isCreateMode) {
       setTestSuiteName(testSuite.name || '');
       setDescription(testSuite.description || '');
-      // Transform and set existing requests
+
+      // Enhanced request mapping with better data preservation
       if (Array.isArray(testSuite.requests) && testSuite.requests.length > 0) {
-        const transformedRequests: Request[] = testSuite.requests.map(
-          (req: any) => ({
-            ...req,
-            endpoint: req.url,
-            testCases: {
-              functional: 0,
-              total: 0,
-            },
-          })
-        );
+        console.log('Original testSuite.requests:', testSuite.requests);
+
+        const transformedRequests: Request[] =
+          testSuite.requests.map(transformRequestData);
+
+        console.log('Transformed requests:', transformedRequests);
+
         setRequests(transformedRequests);
         // Store original request IDs for tracking changes
         setOriginalRequestIds(transformedRequests.map((req) => req.id));

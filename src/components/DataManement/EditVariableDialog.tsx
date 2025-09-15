@@ -34,8 +34,6 @@ const EditVariableDialog: React.FC<Props> = ({
   onSave,
   setOpen,
 }) => {
-  console.log('editingVariable:', editingVariable);
-
   const handleChange = (field: keyof Variable, value: any) => {
     if (editingVariable) {
       setEditingVariable({
