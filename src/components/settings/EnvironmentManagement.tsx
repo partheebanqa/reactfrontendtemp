@@ -42,11 +42,17 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { Settings, Plus, Globe, Lock, Edit, Trash2, Copy } from 'lucide-react';
+import { Settings, Plus, Globe, Lock, Edit, Trash2, Copy, Pencil } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useDataManagement } from '@/hooks/useDataManagement';
 import { Environment } from '@/shared/types/datamanagement';
 import { useWorkspace } from '@/hooks/useWorkspace';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 const environmentSchema = z.object({
   name: z.string().min(1, 'Environment name is required'),
@@ -130,9 +136,8 @@ export function EnvironmentManagement() {
         title: editingEnvironment
           ? 'Environment updated'
           : 'Environment created',
-        description: `Environment "${data.name}" has been ${
-          editingEnvironment ? 'updated' : 'created'
-        } successfully.`,
+        description: `Environment "${data.name}" has been ${editingEnvironment ? 'updated' : 'created'
+          } successfully.`,
       });
 
       setIsCreateDialogOpen(false);
@@ -422,11 +427,10 @@ export function EnvironmentManagement() {
                               ? 'default'
                               : 'secondary'
                           }
-                          className={`text-xs ${
-                            environment.id === activeEnvironment?.id
-                              ? 'bg-green-100 text-green-800'
-                              : 'bg-gray-100 text-gray-800'
-                          }`}
+                          className={`text-xs ${environment.id === activeEnvironment?.id
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-gray-100 text-gray-800'
+                            }`}
                         >
                           {environment.id === activeEnvironment?.id
                             ? 'Active'
@@ -502,7 +506,7 @@ export function EnvironmentManagement() {
                                 <AlertDialogCancel>Cancel</AlertDialogCancel>
                                 <Button
                                   onClick={() => handleDelete(environment)}
-                                  // className='bg-red-600 text-white hover:bg-red-700'
+                                // className='bg-red-600 text-white hover:bg-red-700'
                                 >
                                   Delete
                                 </Button>
@@ -528,33 +532,52 @@ export function EnvironmentManagement() {
                               : 'Inactive'}
                           </span>
                         </div>
-                        <Button
-                          variant='outline'
-                          size='sm'
-                          onClick={() => handleDuplicate(environment)}
-                        >
-                          <Copy className='h-4 w-4 mr-1' />
-                          Duplicate
-                        </Button>
-                        <Button
-                          variant='outline'
-                          size='sm'
-                          onClick={() => setEditingEnvironment(environment)}
-                        >
-                          <Edit className='h-4 w-4 mr-1' />
-                          Edit
-                        </Button>
-                        {!environment.isDefault && (
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
                               <Button
                                 variant='outline'
                                 size='sm'
-                                className='text-red-600 hover:text-red-700'
+                                onClick={() => handleDuplicate(environment)}
                               >
-                                <Trash2 className='h-4 w-4 mr-1' />
-                                Delete
+                                <Copy className='h-4 w-4' />
+
                               </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Copy</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant='outline'
+                                size='sm'
+                                onClick={() => setEditingEnvironment(environment)}
+                              >
+                                <Pencil className='h-4 w-4' />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Edit</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                        {!environment.isDefault && (
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant='outline'
+                                      size='sm'
+                                      className='text-red-600 hover:text-red-700'
+                                    >
+                                      <Trash2 className='h-4 w-4' />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Delete</TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
                             </AlertDialogTrigger>
                             <AlertDialogContent>
                               <AlertDialogHeader>
@@ -571,7 +594,7 @@ export function EnvironmentManagement() {
                                 <AlertDialogCancel>Cancel</AlertDialogCancel>
                                 <Button
                                   onClick={() => handleDelete(environment)}
-                                  // className='bg-red-600 text-white hover:bg-red-700'
+                                // className='bg-red-600 text-white hover:bg-red-700'
                                 >
                                   Delete
                                 </Button>

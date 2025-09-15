@@ -7,12 +7,18 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Building2, Users, Plus, Settings, Trash2, Crown, Edit, ExternalLink, LogOut } from 'lucide-react';
+import { Building2, Users, Plus, Settings, Trash2, Crown, Edit, ExternalLink, LogOut, Pencil } from 'lucide-react';
 import { useToast } from '@/hooks/useToast';
 import { useWorkspace } from '@/hooks/useWorkspace';
 import { useAuth } from '@/hooks/useAuth';
 import { Workspace as BaseWorkspace } from '@/shared/types/workspace';
 import WorkspaceModal from '../WorkspaceModal';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 interface Workspace extends BaseWorkspace {
   role: 'owner' | 'admin' | 'member';
@@ -126,7 +132,7 @@ export function WorkspaceManagement() {
     setModalMode('add');
     setIsModalOpen(true);
   };
-  
+
   // Function to edit a workspace
   const handleEditWorkspace = (workspace: Workspace) => {
     setSelectedWorkspace(workspace);
@@ -317,47 +323,71 @@ export function WorkspaceManagement() {
                     {/* Actions */}
                     <div className="flex items-center gap-2">
                       {/* {enrichedWorkspace.role === 'owner' || enrichedWorkspace.role === 'admin' ? ( */}
-                        <>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleWorkspaceSettings(enrichedWorkspace)}
-                          >
-                            <Settings className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
-                            <span className="hidden sm:inline">Settings</span>
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleEditWorkspace(enrichedWorkspace)}
-                          >
-                            <Edit className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
-                            <span className="hidden sm:inline">Edit</span>
-                          </Button>
-                          {/* {enrichedWorkspace.role === 'owner' && ( */}
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleDeleteWorkspace(enrichedWorkspace.id, enrichedWorkspace.name)}
-                              className="text-red-600 hover:text-red-700"
-                            >
-                              <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
-                              <span className="hidden sm:inline">Delete</span>
-                            </Button>
-                          {/* ) : null} */}
-                        </>
+                      <>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleWorkspaceSettings(enrichedWorkspace)}
+                              >
+                                <Settings className="h-3 w-3 sm:h-4 sm:w-4 " />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Settings</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleEditWorkspace(enrichedWorkspace)}
+                              >
+                                <Pencil className="h-3 w-3 sm:h-4 sm:w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Edit</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                        {/* {enrichedWorkspace.role === 'owner' && ( */}
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleDeleteWorkspace(enrichedWorkspace.id, enrichedWorkspace.name)}
+                                className="text-red-600 hover:text-red-700"
+                              >
+                                <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 " />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Delete</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                        {/* ) : null} */}
+                      </>
                       {/* ) : null} */}
 
                       {enrichedWorkspace.role !== 'owner' && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleLeaveWorkspace(enrichedWorkspace)}
-                          className="text-red-600 hover:text-red-700"
-                        >
-                          <LogOut className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
-                          <span className="hidden sm:inline">Leave</span>
-                        </Button>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleLeaveWorkspace(enrichedWorkspace)}
+                                className="text-red-600 hover:text-red-700"
+                              >
+                                <LogOut className="h-3 w-3 sm:h-4 sm:w-4 " />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Leave</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       )}
                     </div>
                   </div>
@@ -451,7 +481,7 @@ export function WorkspaceManagement() {
           </div>
         </CardContent>
       </Card>
-      
+
       {/* Create/Edit workspace modal */}
       <Button className="hidden" onClick={handleAddWorkspace}>Add Workspace</Button>
       <WorkspaceModal
