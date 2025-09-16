@@ -108,9 +108,9 @@ const EditTestSuiteContent: React.FC = () => {
   const handleEnvironmentChange = (environmentId: string) => {
     setSelectedEnvironment(environmentId);
     const selectedEnv = environments.find((env) => env.id === environmentId);
-    if (selectedEnv) {
-      setActiveEnvironment(selectedEnv);
-    }
+    // if (selectedEnv) {
+    //   setActiveEnvironment(selectedEnv);
+    // }
   };
 
   const createMutation = useMutation({
