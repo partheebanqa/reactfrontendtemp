@@ -31,6 +31,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { TestCaseSelectionModal } from './TestCaseSelectionModal';
 
 interface RequestHeader {
   key: string;
@@ -514,12 +515,19 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
       )}
 
       {selectedRequest && testSuiteId && (
-        <div>
-          {/* TestCaseSelectionModal component would go here - using placeholder div */}
-          <div style={{ display: isTestCaseModalOpen ? 'block' : 'none' }}>
-            {/* TestCaseSelectionModal placeholder */}
-          </div>
-        </div>
+        <TestCaseSelectionModal
+          isOpen={isTestCaseModalOpen}
+          onClose={() => {
+            setIsTestCaseModalOpen(false);
+            setSelectedRequest(null);
+          }}
+          onSelect={handleTestCaseSelection}
+          request={{
+            ...selectedRequest,
+            selectedTestCases: selectedRequest.selectedTestCases || [],
+          }}
+          testSuiteId={testSuiteId}
+        />
       )}
 
       <AlertDialog
