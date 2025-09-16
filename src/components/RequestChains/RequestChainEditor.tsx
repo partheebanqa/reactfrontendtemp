@@ -131,10 +131,10 @@ export function RequestChainEditor({
   const handleEnvironmentChange = (environmentId: string) => {
     setSelectedEnvironment(environmentId);
     const selectedEnv = environments.find((env) => env.id === environmentId);
-    if (selectedEnv) {
-      setActiveEnvironment(selectedEnv);
-      setEnvironmentBaseUrl(selectedEnv.baseUrl || '');
-    }
+    // if (selectedEnv) {
+    //   setActiveEnvironment(selectedEnv);
+    //   setEnvironmentBaseUrl(selectedEnv.baseUrl || '');
+    // }
   };
 
   const isSaveDisabled =
