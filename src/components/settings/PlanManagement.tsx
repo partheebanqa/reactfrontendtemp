@@ -8,12 +8,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { CreditCard, Crown, Zap, Star, Check, ArrowUp, Calendar, Users, Download, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/useToast';
 import { useQuery } from '@tanstack/react-query';
-import { getAllPlans } from '@/services/plans.service';
+import { getAllPlans, getPlanName } from '@/services/plans.service';
 import { useCurrentPlan } from '@/context/CurrentPlanContext';
 
 interface PlanFeature {
-  name: string;
-  included: boolean;
+  features: string[];
 }
 
 interface Plan {
@@ -59,6 +58,17 @@ export function PlanManagement() {
   });
 
   const { currentPlan, refreshCurrentPlan } = useCurrentPlan();
+
+
+  const featuresConst =
+    [
+      "CICD Access",
+      "Jira Connectivity",
+      "Teams Invite upto 50 members",
+      "Reports",
+      "API Performance Testing",
+      "Security Scan"
+    ]
 
   // console.log(currentPlan, "currentPlan");
 
@@ -115,78 +125,7 @@ export function PlanManagement() {
     }
   };
 
-  const plans: Plan[] = [
-    {
-      id: 'trial',
-      name: 'Trial',
-      price: 0,
-      period: 'month',
-      description: '15-day free trial',
-      features: [
-        { name: 'Up to 100 API tests', included: true },
-        { name: '1 workspace', included: true },
-        { name: 'Basic reporting', included: true },
-        { name: 'Email support', included: true },
-        { name: 'Advanced scheduling', included: false },
-        { name: 'Team collaboration', included: false },
-        { name: 'CI/CD integrations', included: false },
-        { name: 'Priority support', included: false },
-      ]
-    },
-    {
-      id: 'beginner',
-      name: 'Beginner',
-      price: 5,
-      period: 'month',
-      description: 'Perfect for individuals',
-      features: [
-        { name: 'Up to 500 API tests', included: true },
-        { name: '3 workspaces', included: true },
-        { name: 'Basic reporting', included: true },
-        { name: 'Email support', included: true },
-        { name: 'Advanced scheduling', included: false },
-        { name: 'Team collaboration', included: false },
-        { name: 'CI/CD integrations', included: false },
-        { name: 'Priority support', included: false },
-      ]
-    },
-    {
-      id: 'pro',
-      name: 'Pro',
-      price: 20,
-      period: 'month',
-      description: 'Great for growing teams',
-      popular: true,
-      current: true,
-      features: [
-        { name: 'Up to 5,000 API tests', included: true },
-        { name: '10 workspaces', included: true },
-        { name: 'Advanced reporting', included: true },
-        { name: 'Email & chat support', included: true },
-        { name: 'Advanced scheduling', included: true },
-        { name: 'Team collaboration (25 members)', included: true },
-        { name: 'CI/CD integrations', included: false },
-        { name: 'Priority support', included: false },
-      ]
-    },
-    {
-      id: 'enterprise',
-      name: 'Enterprise',
-      price: 50,
-      period: 'month',
-      description: 'For large organizations',
-      features: [
-        { name: 'Unlimited API tests', included: true },
-        { name: 'Unlimited workspaces', included: true },
-        { name: 'Custom reporting & analytics', included: true },
-        { name: 'Dedicated support manager', included: true },
-        { name: 'Advanced scheduling', included: true },
-        { name: 'Unlimited team members', included: true },
-        { name: 'Full CI/CD integrations', included: true },
-        { name: '24/7 priority support', included: true },
-      ]
-    }
-  ];
+
 
   const handleUpgrade = (planId: string) => {
     toast({
@@ -257,18 +196,53 @@ export function PlanManagement() {
   const getPlans = async () => {
     try {
       const response = await getAllPlans();
-      setPlansData(response);
+      if (Array.isArray(response)) {
+        setPlansData(response);
+      } else if (response.data && Array.isArray(response.data)) {
+        setPlansData(response.data);
+      } else {
+        console.error('Unexpected API response:', response);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const [features, setFeatures] = useState<PlanFeature[]>([]);
+
+  const getPlanFeatures = async (name: string) => {
+    try {
+      const response = await getPlanName(name);
+      setFeatures(response?.features || []);
     } catch (err) {
       console.log(err, "err");
     }
   };
 
   useEffect(() => {
-    getPlans();
+    if (currentPlan?.PlanName) {
+      getPlanFeatures(currentPlan.PlanName);
+    }
   }, [])
 
+  useEffect(() => {
+    getPlans();
+
+  }, [])
+
+
+  const currentSubscriptionNew =
+    Array.isArray(plansData)
+      ? plansData.find((plan) => plan.ID === currentPlan?.PlanID)
+      : undefined;
+
+  const subscription =
+    currentSubscriptionNew || { Price: 0, BillingCycle: 'month' };
+
+
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
       {/* Current Plan Status */}
       <Card>
         <CardHeader>
@@ -289,7 +263,7 @@ export function PlanManagement() {
                 </Badge>
               </div>
               <p className="text-xl sm:text-2xl font-bold text-blue-600">
-                ${currentSubscription.price}/{currentSubscription.period}
+                ${subscription?.Price || ""}/{subscription.BillingCycle || ""}
               </p>
               <p className="text-sm text-gray-600 dark:text-gray-400">
                 Next billing: {formatDate(currentPlan?.ExpiresAt || '')}
@@ -299,11 +273,11 @@ export function PlanManagement() {
             <div className="flex flex-col sm:flex-row gap-2">
               <Dialog open={showBillingHistory} onOpenChange={setShowBillingHistory}>
                 <DialogTrigger asChild>
-                  <Button variant="outline" className="text-sm">
+                  {/* <Button variant="outline" className="text-sm">
                     <Calendar className="h-4 w-4 mr-2" />
                     <span className="hidden sm:inline">Billing History</span>
                     <span className="sm:hidden">History</span>
-                  </Button>
+                  </Button> */}
                 </DialogTrigger>
                 <DialogContent className="max-w-4xl">
                   <DialogHeader>
@@ -356,10 +330,10 @@ export function PlanManagement() {
 
               <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
                 <DialogTrigger asChild>
-                  <Button variant="outline" className="text-sm">
+                  {/* <Button variant="outline" className="text-sm">
                     <span className="hidden sm:inline">Cancel Subscription</span>
                     <span className="sm:hidden">Cancel</span>
-                  </Button>
+                  </Button> */}
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
@@ -398,7 +372,7 @@ export function PlanManagement() {
           </div>
 
           {/* Usage Statistics */}
-          <div className="mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* <div className="mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="space-y-2">
               <div className="flex justify-between items-center">
                 <span className="text-sm font-medium">API Tests</span>
@@ -410,9 +384,9 @@ export function PlanManagement() {
                 value={getUsagePercentage(currentSubscription.usage.tests.used, currentSubscription.usage.tests.limit)}
                 className="h-2"
               />
-            </div>
+            </div> */}
 
-            <div className="space-y-2">
+          {/* <div className="space-y-2">
               <div className="flex justify-between items-center">
                 <span className="text-sm font-medium">Workspaces</span>
                 <span className={`text-sm ${getUsageColor(getUsagePercentage(currentSubscription.usage.workspaces.used, currentSubscription.usage.workspaces.limit))}`}>
@@ -423,34 +397,34 @@ export function PlanManagement() {
                 value={getUsagePercentage(currentSubscription.usage.workspaces.used, currentSubscription.usage.workspaces.limit)}
                 className="h-2"
               />
-            </div>
+            </div> */}
 
-            <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-medium">Team Members</span>
-                <span className={`text-sm ${getUsageColor(getUsagePercentage(currentSubscription.usage.teamMembers.used, currentSubscription.usage.teamMembers.limit))}`}>
-                  {currentSubscription.usage.teamMembers.used}/{currentSubscription.usage.teamMembers.limit}
-                </span>
-              </div>
-              <Progress
-                value={getUsagePercentage(currentSubscription.usage.teamMembers.used, currentSubscription.usage.teamMembers.limit)}
-                className="h-2"
-              />
+          {/* <div className="space-y-2">
+            <div className="flex justify-between items-center">
+              <span className="text-sm font-medium">Team Members</span>
+              <span className={`text-sm ${getUsageColor(getUsagePercentage(currentSubscription.usage.teamMembers.used, currentSubscription.usage.teamMembers.limit))}`}>
+                {currentSubscription.usage.teamMembers.used}/{currentSubscription.usage.teamMembers.limit}
+              </span>
             </div>
-
-            <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-medium">Executions</span>
-                <span className={`text-sm ${getUsageColor(getUsagePercentage(currentSubscription.usage.executions.used, currentSubscription.usage.executions.limit))}`}>
-                  {currentSubscription.usage.executions.used}/{currentSubscription.usage.executions.limit}
-                </span>
-              </div>
-              <Progress
-                value={getUsagePercentage(currentSubscription.usage.executions.used, currentSubscription.usage.executions.limit)}
-                className="h-2"
-              />
+            <Progress
+              value={getUsagePercentage(currentSubscription.usage.teamMembers.used, currentSubscription.usage.teamMembers.limit)}
+              className="h-2"
+            />
+          </div> */}
+          {/* 
+          <div className="space-y-2">
+            <div className="flex justify-between items-center">
+              <span className="text-sm font-medium">Executions</span>
+              <span className={`text-sm ${getUsageColor(getUsagePercentage(currentSubscription.usage.executions.used, currentSubscription.usage.executions.limit))}`}>
+                {currentSubscription.usage.executions.used}/{currentSubscription.usage.executions.limit}
+              </span>
             </div>
+            <Progress
+              value={getUsagePercentage(currentSubscription.usage.executions.used, currentSubscription.usage.executions.limit)}
+              className="h-2"
+            />
           </div>
+        </div> */}
         </CardContent>
       </Card>
 
@@ -464,7 +438,7 @@ export function PlanManagement() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-            {plansData.map((plan) => (
+            {Array.isArray(plansData) && plansData.map((plan) => (
               <div
                 key={plan.ID}
                 className={`relative border rounded-lg p-4 sm:p-6 hover:shadow-lg transition-shadow ${currentPlan?.PlanID === plan.ID
@@ -472,8 +446,6 @@ export function PlanManagement() {
                   : 'border-gray-200 bg-white'
                   }`}
               >
-
-
                 {currentPlan?.PlanID === plan.ID && (
                   <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
                     <Badge className="bg-green-600 text-white px-3 py-1">
@@ -489,21 +461,21 @@ export function PlanManagement() {
                   </h3>
                   <div className="text-2xl sm:text-3xl font-bold text-blue-600 mb-1">
                     ${plan.Price}
-                    <span className="text-xs sm:text-sm font-normal text-gray-600">/{plan.Name}</span>
+                    <span className="text-xs sm:text-sm font-normal text-gray-600">/{plan.BillingCycle}</span>
                   </div>
-                  <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">{plan.Description}</p>
+                  <p className="text-xs sm:text-[11px] text-gray-600 dark:text-gray-400">{plan.Description}</p>
                 </div>
 
                 <ul className="space-y-2 sm:space-y-3 mb-4 sm:mb-6">
-                  {/* {plan.features.map((feature, index) => (
-                    <li key={index} className="flex items-start gap-2 text-xs sm:text-sm">
-                      <Check className={`h-3 w-3 sm:h-4 sm:w-4 mt-0.5 flex-shrink-0 ${feature.included ? 'text-green-600' : 'text-gray-300'
-                        }`} />
-                      <span className={feature.included ? 'text-gray-900 dark:text-white' : 'text-gray-400'}>
-                        {feature.name}
-                      </span>
-                    </li>
-                  ))} */}
+                  <ul className="space-y-2 sm:space-y-3 mb-4 sm:mb-6">
+                    {featuresConst.map((feature, index) => (
+                      <li key={index} className="flex items-start gap-2 text-xs sm:text-sm">
+                        <Check className="h-3 w-3 sm:h-4 sm:w-4 mt-0.5 flex-shrink-0 text-green-600" />
+                        <span className="text-gray-900 dark:text-white">{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+
                 </ul>
 
                 <div className="mt-auto">
@@ -527,6 +499,7 @@ export function PlanManagement() {
                 </div>
               </div>
             ))}
+
           </div>
         </CardContent>
       </Card>
@@ -622,6 +595,6 @@ export function PlanManagement() {
           </div>
         </CardContent>
       </Card>
-    </div>
+    </div >
   );
 }

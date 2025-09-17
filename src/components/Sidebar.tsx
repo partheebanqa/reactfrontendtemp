@@ -69,7 +69,7 @@ const menuItems: MenuItem[] = [
   { label: 'Test Suites', path: '/test-suites', icon: Layers, feature: 'test_suites' },
   { label: 'Scheduler', path: '/scheduler', icon: CalendarClock, feature: 'scheduler' },
   { label: 'Data Management', path: '/data-management', icon: Database, feature: 'test_suites' },
-  { label: 'Reports', icon: FileText, feature: 'reports', },
+  { label: 'Reports', icon: FileText, feature: 'reports' },
   { label: 'Executions', path: '/executions', icon: ChartColumn, feature: 'executions' },
   { label: 'FAQ', path: '/faq', icon: HelpCircle, feature: 'faqs' },
   { label: 'CI/CD Integration', path: '/cicd-configuration', icon: Workflow, feature: 'cicd_integrations' },
@@ -94,14 +94,7 @@ const Sidebar: React.FC = () => {
   const [showHelpModal, setShowHelpModal] = useState(false);
 
   const isEnterprisePlan = currentPlan?.PlanName === 'Enterprise';
-
-  // console.log(currentPlan, "currentPlan---");
-
-  const filteredMenuItems = menuItems.filter((item) => {
-
-    return true;
-  });
-
+  const isTrialPlan = currentPlan?.IsTrial === true;
 
   const NavItem: React.FC<{ item: MenuItem; isActive: boolean }> = ({ item, isActive }) => {
     const isPro = PRO_FEATURES.has(item.feature);
@@ -115,9 +108,9 @@ const Sidebar: React.FC = () => {
     }, [isMobile]);
 
     const isEnterpriseOnlyFeature = item.feature === 'cicd_integrations' || item.feature === 'reports';
-    const isDisabled = isEnterpriseOnlyFeature && currentPlan?.PlanName !== 'Enterprise';
+    const isDisabled = !isTrialPlan && isEnterpriseOnlyFeature && !isEnterprisePlan;
 
-    const showEnterpriseBadge = currentPlan?.PlanName !== 'Enterprise' && isEnterpriseOnlyFeature;
+    const showEnterpriseBadge = !isTrialPlan && isEnterpriseOnlyFeature;
 
     const Content = (
       <Button
@@ -130,7 +123,12 @@ const Sidebar: React.FC = () => {
         <Icon className="w-10 h-10" />
         {!collapsed && (
           <span className="flex-1 text-left">
-            {item.label} <span className='text-[#ff0000] text-[11px]'> {showEnterpriseBadge && '(Enterprise)'}{' '}</span>
+            {item.label}{' '} <span className='text-[#ff0000] text-[11px]'>{showEnterpriseBadge && '(Enterprise)'}{' '}</span>
+            {/* {showEnterpriseBadge && (
+              <Badge variant="secondary" className="ml-2">
+                Enterprise
+              </Badge>
+            )} */}
           </span>
         )}
         {!collapsed && lockedByFeatureGate && isPro && (
@@ -139,13 +137,10 @@ const Sidebar: React.FC = () => {
       </Button>
     );
 
-    // Disable navigation if disabled
     if (item.upcoming || lockedByFeatureGate || isDisabled) return <div className="w-full">{Content}</div>;
 
     return <Link href={item.path!}>{Content}</Link>;
   };
-
-
 
   return (
     <>
@@ -240,7 +235,7 @@ const Sidebar: React.FC = () => {
 
         <nav className={`flex-1 ${collapsed ? 'px-2' : 'px-4'} py-6 space-y-2 overflow-y-auto`}>
           <div className='space-y-1'>
-            {filteredMenuItems.map((item) => (
+            {menuItems.map((item) => (
               <NavItem key={item.label} item={item} isActive={location === item.path} />
             ))}
 

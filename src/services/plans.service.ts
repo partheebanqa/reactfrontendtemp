@@ -16,3 +16,17 @@ export const getAllPlans = async () => {
   return response.json();
 };
 
+
+export const getPlanName = async (name:string) => {
+  const response = await apiRequest(
+    'GET',
+    `${ENV.API_BASE_URL}/plans/features/${name}`
+  );
+ 
+  if (!response.ok) {
+    throw new Error('Failed to fetch test suite report');
+  }
+  return response.json();
+};
+
+

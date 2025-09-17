@@ -146,7 +146,7 @@ export default function AccountSettings() {
         </p>
       </div>
 
-      <div className='flex flex-col lg:flex-row gap-6'>
+      <div className='flex flex-col lg:flex-row gap-3'>
         {/* Mobile Settings Navigation */}
         <div className='lg:hidden'>
           <Card>
@@ -237,7 +237,7 @@ export default function AccountSettings() {
 
         {/* Settings Content */}
         <div className='flex-1 min-w-0'>
-          <div className='space-y-6'>
+          <div className=''>
             {settingsSections.map((section) => {
               const Component = section.component;
               return (
