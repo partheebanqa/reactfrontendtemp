@@ -43,7 +43,8 @@ export default function EnvironmentDropdown({
   setEnvironmentModalState,
   handleDeleteEnvironment,
 }: EnvironmentDropdownProps): ReactElement {
-  const { environments, activeEnvironment, setActiveEnvironment, variables } =useDataManagement();
+  const { environments, activeEnvironment, setActiveEnvironment, variables } =
+    useDataManagement();
 
   // console.log('Environments:', environments);
   // console.log('Active Environment:', activeEnvironment);
@@ -51,17 +52,17 @@ export default function EnvironmentDropdown({
   const [_, setLocation] = useLocation();
 
   const getEnvironmentColor = (environment: Environment) => {
-    const env = environment.name.toLowerCase();
-    if (env.includes('prod')) {
+    const env = environment?.name?.toLowerCase();
+    if (env?.includes('prod')) {
       return '#16a34a';
-    } else if (env.includes('dev')) {
+    } else if (env?.includes('dev')) {
       return '#2563eb';
-    } else if (env.includes('stage')) {
+    } else if (env?.includes('stage')) {
       return '#ca8a04';
-    } else if (env.includes('test')) {
+    } else if (env?.includes('test')) {
       return '#9333ea';
     } else {
-      return '#64748b';
+      return '#06090eff';
     }
   };
   return (
@@ -85,7 +86,7 @@ export default function EnvironmentDropdown({
                       }}
                     />
                     <span className='truncate text-xs sm:text-sm font-semibold'>
-                      {activeEnvironment.name}
+                      {activeEnvironment?.name}
                     </span>
                   </>
                 )}
@@ -128,13 +129,11 @@ export default function EnvironmentDropdown({
             ) : (
               <div className='space-y-1'>
                 {environments.map((environment) => {
-                  const isSelected = activeEnvironment?.id === environment.id;
+                  const isSelected = activeEnvironment?.id === environment?.id;
                   return (
                     <DropdownMenuItem
-                      key={environment.id}
-                     
-onClick={() => setActiveEnvironment(environment)}
-
+                      key={environment?.id}
+                      onClick={() => setActiveEnvironment(environment)}
                       className={`justify-between text-xs sm:text-sm py-2 rounded-md ${
                         isSelected
                           ? 'bg-gray-50 text-gray-800 border border-gray-200 shadow-sm'
@@ -149,7 +148,7 @@ onClick={() => setActiveEnvironment(environment)}
                           }}
                         />
                         <span className='font-medium truncate mr-2'>
-                          {environment.name}
+                          {environment?.name}
                         </span>
                       </div>
                     </DropdownMenuItem>

@@ -638,9 +638,8 @@ const RequestEditor: React.FC = () => {
     const newUrl = buildFinalUrl();
 
     try {
-      // Create FormData object for file uploads if needed
+      // 🔹 File uploads handling...
       let requestFormData: FormData | undefined;
-
       if (bodyType === 'form-data') {
         const fileFields = formFields.filter(
           (f) => f.enabled && f.type === 'file' && f.value instanceof File
@@ -660,13 +659,16 @@ const RequestEditor: React.FC = () => {
       }
 
       // 🔹 Call backend
-      const backendData = await executeCollectionRequest(activeRequest?.id);
+      if (!activeRequest?.id) {
+        throw new Error('please save a request before sending.');
+      }
+
+      const backendData = await executeCollectionRequest(activeRequest.id);
       console.log('backendDataInRequestBuilder:', backendData?.data?.body);
 
       const backendBody = backendData?.data?.body;
 
       if (backendBody) {
-        // Try to parse JSON if body is a string
         let parsedBody: any = backendBody;
         if (typeof backendBody === 'string') {
           try {
@@ -676,7 +678,6 @@ const RequestEditor: React.FC = () => {
           }
         }
 
-        // Normalize response for UI
         const normalizedResponse = {
           status: backendData?.data?.statusCode ?? 200,
           statusCode: backendData?.data?.statusCode ?? 200,
@@ -688,15 +689,12 @@ const RequestEditor: React.FC = () => {
         };
 
         console.log('normalizedResponse:', normalizedResponse);
-
         setResponseData(normalizedResponse as any);
 
-        // 🔹 Generate assertions from response body
+        // 🔹 Generate assertions
         const formattedResponse = formatBackendResponse(parsedBody);
         const generatedAssertions = generateAssertions(formattedResponse);
-        console.log('generatedAssertions:', generatedAssertions);
 
-        // Merge new assertions with existing ones
         const existingAssertions = assertions || [];
         const existingIds = new Set(existingAssertions.map((a) => a.id));
         const newAssertions = generatedAssertions.filter(
@@ -706,9 +704,18 @@ const RequestEditor: React.FC = () => {
         setAssertions(mergedAssertions);
       }
     } catch (error: any) {
+      console.log('error in sending request:', error);
+
+      // Show backend error if present
+      const backendErrorMessage =
+        error?.response?.data?.errorDetails ||
+        error?.response?.data?.error ||
+        error?.message ||
+        'An unknown error occurred.';
+
       toast({
         title: 'Error',
-        description: 'please save a request before sending.',
+        description: backendErrorMessage,
         type: 'error',
       });
     } finally {
