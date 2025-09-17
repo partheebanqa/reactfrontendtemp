@@ -196,10 +196,17 @@ export function PlanManagement() {
   const getPlans = async () => {
     try {
       const response = await getAllPlans();
-      if (Array.isArray(response)) {
-        setPlansData(response);
-      } else if (response.data && Array.isArray(response.data)) {
-        setPlansData(response.data);
+
+      let plansArray = Array.isArray(response) ? response : response.data;
+
+      if (Array.isArray(plansArray)) {
+        // Sort the plans explicitly by desired order
+        const sortedPlans = plansArray.sort((a, b) => {
+          const order = ['Free', 'Pro', 'Enterprise'];
+          return order.indexOf(a.Name) - order.indexOf(b.Name);
+        });
+
+        setPlansData(sortedPlans);
       } else {
         console.error('Unexpected API response:', response);
       }
@@ -207,6 +214,7 @@ export function PlanManagement() {
       console.error(err);
     }
   };
+
 
   const [features, setFeatures] = useState<PlanFeature[]>([]);
 
