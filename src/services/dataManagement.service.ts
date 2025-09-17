@@ -78,7 +78,7 @@ export const deleteEnvironment = async (environmentId: string) => {
 export const createVariable = async (variable: any): Promise<any> => {
   const url =
     variable.type === 'static'
-      ? `${API_VARIABLES_NEW}/static`
+      ? `${API_VARIABLES}`
       : `${API_VARIABLES_NEW}/dynamic`;
 
   const response = await apiRequest('POST', url, {
