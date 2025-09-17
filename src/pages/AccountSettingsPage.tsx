@@ -77,7 +77,7 @@ export default function AccountSettings() {
     },
     {
       id: 'plan',
-      label: 'Your Plan',
+      label: 'Subscription',
       icon: CreditCard,
       component: PlanManagement,
       upcoming: false,
@@ -167,10 +167,9 @@ export default function AccountSettings() {
                         }
                         disabled={section.upcoming}
                         className={`flex-shrink-0 flex flex-col items-center gap-1 p-3 rounded-lg text-xs font-medium transition-colors
-                          ${
-                            isActive
-                              ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400'
-                              : section.upcoming
+                          ${isActive
+                            ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400'
+                            : section.upcoming
                               ? 'opacity-50 cursor-not-allowed text-gray-400'
                               : 'text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-800'
                           }`}
@@ -212,10 +211,9 @@ export default function AccountSettings() {
                       }
                       disabled={section.upcoming}
                       className={`w-full flex items-center gap-3 px-4 py-3 text-left text-sm font-medium transition-colors
-                        ${
-                          isActive
-                            ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600 dark:bg-blue-900/20 dark:text-blue-400'
-                            : section.upcoming
+                        ${isActive
+                          ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600 dark:bg-blue-900/20 dark:text-blue-400'
+                          : section.upcoming
                             ? 'opacity-50 cursor-not-allowed text-gray-400'
                             : 'text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-800'
                         }`}
