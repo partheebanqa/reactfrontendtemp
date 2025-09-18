@@ -10,6 +10,7 @@ import FileUploader from './FileUploader'
 import SpecViewer from './SpecViewer'
 import * as yaml from 'js-yaml';
 import BreadCum from '../BreadCum/Breadcum'
+import { useToast } from '@/hooks/useToast'
 
 
 
@@ -59,60 +60,60 @@ const transformParameter = (param: any): any => {
 
   // Transform Swagger 2.0 parameter to OpenAPI 3.x
   let transformed = { ...param }
-  
+
   // Move type, format, enum, etc. into schema object
   if (param.type || param.format || param.enum || param.items) {
     transformed.schema = {}
-    
+
     if (param.type) {
       transformed.schema.type = param.type
       delete transformed.type
     }
-    
+
     if (param.format) {
       transformed.schema.format = param.format
       delete transformed.format
     }
-    
+
     if (param.enum) {
       transformed.schema.enum = param.enum
       delete transformed.enum
     }
-    
+
     if (param.items) {
       transformed.schema.items = transformReferences(param.items)
       delete transformed.items
     }
-    
+
     if (param.minimum !== undefined) {
       transformed.schema.minimum = param.minimum
       delete transformed.minimum
     }
-    
+
     if (param.maximum !== undefined) {
       transformed.schema.maximum = param.maximum
       delete transformed.maximum
     }
-    
+
     if (param.minLength !== undefined) {
       transformed.schema.minLength = param.minLength
       delete transformed.minLength
     }
-    
+
     if (param.maxLength !== undefined) {
       transformed.schema.maxLength = param.maxLength
       delete transformed.maxLength
     }
-    
+
     if (param.pattern) {
       transformed.schema.pattern = param.pattern
       delete transformed.pattern
     }
   }
-  
+
   // Transform any remaining references
   transformed = transformReferences(transformed)
-  
+
   return transformed
 }
 
@@ -127,7 +128,7 @@ const transformReferences = (obj: any): any => {
   }
 
   const transformed: any = {}
-  
+
   for (const [key, value] of Object.entries(obj)) {
     if (key === '$ref' && typeof value === 'string') {
       // Transform all types of Swagger 2.0 references to OpenAPI 3.x
@@ -148,7 +149,7 @@ const transformReferences = (obj: any): any => {
       transformed[key] = value
     }
   }
-  
+
   return transformed
 }
 
@@ -159,7 +160,7 @@ const transformResponse = (response: any): any => {
   }
 
   let transformed = { ...response }
-  
+
   // Transform schema to content for OpenAPI 3.x
   if (response.schema && !response.content) {
     transformed.content = {
@@ -169,10 +170,10 @@ const transformResponse = (response: any): any => {
     }
     delete transformed.schema
   }
-  
+
   // Transform any remaining references
   transformed = transformReferences(transformed)
-  
+
   return transformed
 }
 
@@ -181,9 +182,9 @@ const validateAndCleanComponents = (components: any): any => {
   if (!components || typeof components !== 'object') {
     return {}
   }
-  
+
   const cleanedComponents: any = {}
-  
+
   // Clean schemas
   if (components.schemas && typeof components.schemas === 'object') {
     cleanedComponents.schemas = {}
@@ -194,7 +195,7 @@ const validateAndCleanComponents = (components: any): any => {
       }
     })
   }
-  
+
   // Handle Swagger 2.0 definitions -> OpenAPI 3.x schemas
   if (components.definitions && typeof components.definitions === 'object') {
     if (!cleanedComponents.schemas) {
@@ -207,7 +208,7 @@ const validateAndCleanComponents = (components: any): any => {
       }
     })
   }
-  
+
   // Clean other component types and transform their references
   const componentTypes = ['responses', 'parameters', 'examples', 'requestBodies', 'headers', 'securitySchemes', 'links', 'callbacks']
   componentTypes.forEach(type => {
@@ -215,7 +216,7 @@ const validateAndCleanComponents = (components: any): any => {
       cleanedComponents[type] = transformReferences(components[type])
     }
   })
-  
+
   return cleanedComponents
 }
 
@@ -233,35 +234,37 @@ export default function OpenAPIExporter() {
     processSpec(spec)
   }
 
+  const { toast } = useToast();
+
   const processSpec = (spec: any) => {
     try {
       // Validate basic OpenAPI structure
       if (!spec.openapi && !spec.swagger) {
         throw new Error('Invalid OpenAPI/Swagger specification: missing version field')
       }
-      
+
       if (!spec.info) {
         throw new Error('Invalid OpenAPI/Swagger specification: missing info object')
       }
-      
+
       if (!spec.paths) {
         throw new Error('Invalid OpenAPI/Swagger specification: missing paths object')
       }
-      
+
       // Validate components structure if present
       if (spec.components) {
         if (typeof spec.components !== 'object') {
           throw new Error('Invalid OpenAPI specification: components must be an object')
         }
-        
+
         // Validate schemas structure
         if (spec.components.schemas && typeof spec.components.schemas !== 'object') {
           throw new Error('Invalid OpenAPI specification: components.schemas must be an object')
         }
       }
-      
+
       const endpoints: APIEndpoint[] = []
-      
+
       if (spec.paths) {
         Object.entries(spec.paths).forEach(([path, pathItem]: [string, any]) => {
           if (pathItem && typeof pathItem === 'object') {
@@ -290,7 +293,7 @@ export default function OpenAPIExporter() {
         endpoints,
         originalSpec: spec
       })
-      
+
       // Provide feedback about components
       const componentsInfo = []
       if (spec.components?.schemas) {
@@ -301,18 +304,31 @@ export default function OpenAPIExporter() {
         const responseCount = Object.keys(spec.components.responses).length
         componentsInfo.push(`${responseCount} response${responseCount !== 1 ? 's' : ''}`)
       }
-      
+
       const componentsText = componentsInfo.length > 0 ? ` with ${componentsInfo.join(', ')}` : ''
-    //   toast.success(`Successfully parsed ${endpoints.length} endpoints${componentsText}`)
+      toast({
+        title: 'Success',
+        description: `Successfully parsed ${endpoints.length} endpoints${componentsText}`,
+        variant: 'success',
+      });
     } catch (error) {
       console.error('Error processing spec:', error)
-    //   toast.error(`Failed to process OpenAPI spec: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      toast({
+        title: 'Failed',
+        description: `Failed to process OpenAPI spec: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        variant: 'error',
+      });
     }
   }
 
   const parseSpec = async () => {
     if (!specUrl.trim()) {
-    //   toast.error('Please enter a valid OpenAPI/Swagger URL')
+
+      toast({
+        title: 'Failed',
+        description: 'Please enter a valid OpenAPI/Swagger URL',
+        variant: 'error',
+      });
       return
     }
 
@@ -323,10 +339,10 @@ export default function OpenAPIExporter() {
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`)
       }
-      
+
       const contentType = response.headers.get('content-type') || ''
       let spec: any
-      
+
       if (contentType.includes('application/json') || specUrl.includes('.json')) {
         spec = await response.json()
       } else {
@@ -339,11 +355,16 @@ export default function OpenAPIExporter() {
           spec = JSON.parse(text)
         }
       }
-      
+
       processSpec(spec)
     } catch (error) {
       console.error('Error parsing spec:', error)
-    //   toast.error(`Failed to parse OpenAPI spec: ${error instanceof Error ? error.message : 'Unknown error'}`)
+
+      toast({
+        title: 'Failed',
+        description: `Failed to parse OpenAPI spec: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        variant: 'error',
+      });
     } finally {
       setLoading(false)
     }
@@ -352,26 +373,26 @@ export default function OpenAPIExporter() {
   const downloadEndpoint = (endpoint: APIEndpoint) => {
     // Create a complete spec with all necessary components
     const originalSpec = parsedSpec?.originalSpec
-    const cleanedComponents = validateAndCleanComponents(originalSpec?.components || originalSpec?.definitions ? { 
-      ...originalSpec.components, 
-      definitions: originalSpec.definitions 
+    const cleanedComponents = validateAndCleanComponents(originalSpec?.components || originalSpec?.definitions ? {
+      ...originalSpec.components,
+      definitions: originalSpec.definitions
     } : {})
-    
+
     // Transform parameters from Swagger 2.0 to OpenAPI 3.x format
     const transformedParameters = endpoint.parameters?.map(transformParameter)
-    
+
     // Transform responses from Swagger 2.0 to OpenAPI 3.x format
-    const transformedResponses = endpoint.responses ? 
+    const transformedResponses = endpoint.responses ?
       Object.fromEntries(
         Object.entries(endpoint.responses).map(([code, response]) => [
-          code, 
+          code,
           transformResponse(response)
         ])
       ) : undefined
-    
+
     // Transform the request body if it exists
     const transformedRequestBody = endpoint.requestBody ? transformReferences(endpoint.requestBody) : undefined
-    
+
     const endpointSpec = {
       openapi: '3.0.0', // Always use OpenAPI 3.0.0 for output
       info: parsedSpec?.info,
@@ -393,14 +414,14 @@ export default function OpenAPIExporter() {
       ...(Object.keys(cleanedComponents).length > 0 && { components: cleanedComponents })
     }
 
-    const content = exportFormat === 'json' 
+    const content = exportFormat === 'json'
       ? JSON.stringify(endpointSpec, null, 2)
       : yaml.dump(endpointSpec)
-    
-    const blob = new Blob([content], { 
-      type: exportFormat === 'json' ? 'application/json' : 'application/x-yaml' 
+
+    const blob = new Blob([content], {
+      type: exportFormat === 'json' ? 'application/json' : 'application/x-yaml'
     })
-    
+
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
@@ -409,21 +430,25 @@ export default function OpenAPIExporter() {
     a.click()
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
-    
-    // toast.success(`Downloaded ${endpoint.method.toUpperCase()} ${endpoint.path}`)
+
+    toast({
+      title: 'Downloaded',
+      description: `Downloaded ${endpoint.method.toUpperCase()} ${endpoint.path}`,
+      variant: 'success',
+    });
   }
 
   const downloadFullSpec = () => {
     if (!parsedSpec) return
 
-    const content = exportFormat === 'json' 
+    const content = exportFormat === 'json'
       ? JSON.stringify(parsedSpec.originalSpec, null, 2)
       : yaml.dump(parsedSpec.originalSpec)
-    
-    const blob = new Blob([content], { 
-      type: exportFormat === 'json' ? 'application/json' : 'application/x-yaml' 
+
+    const blob = new Blob([content], {
+      type: exportFormat === 'json' ? 'application/json' : 'application/x-yaml'
     })
-    
+
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
@@ -432,33 +457,37 @@ export default function OpenAPIExporter() {
     a.click()
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
-    
-    // toast.success('Downloaded complete OpenAPI specification')
+
+    toast({
+      title: 'Downloaded',
+      description: 'Downloaded complete OpenAPI specification',
+      variant: 'success',
+    });
   }
 
   const copyToClipboard = async (endpoint: APIEndpoint) => {
     // Create a complete spec with all necessary components
     const originalSpec = parsedSpec?.originalSpec
-    const cleanedComponents = validateAndCleanComponents(originalSpec?.components || originalSpec?.definitions ? { 
-      ...originalSpec.components, 
-      definitions: originalSpec.definitions 
+    const cleanedComponents = validateAndCleanComponents(originalSpec?.components || originalSpec?.definitions ? {
+      ...originalSpec.components,
+      definitions: originalSpec.definitions
     } : {})
-    
+
     // Transform parameters from Swagger 2.0 to OpenAPI 3.x format
     const transformedParameters = endpoint.parameters?.map(transformParameter)
-    
+
     // Transform responses from Swagger 2.0 to OpenAPI 3.x format
-    const transformedResponses = endpoint.responses ? 
+    const transformedResponses = endpoint.responses ?
       Object.fromEntries(
         Object.entries(endpoint.responses).map(([code, response]) => [
-          code, 
+          code,
           transformResponse(response)
         ])
       ) : undefined
-    
+
     // Transform the request body if it exists
     const transformedRequestBody = endpoint.requestBody ? transformReferences(endpoint.requestBody) : undefined
-    
+
     const endpointSpec = {
       openapi: '3.0.0', // Always use OpenAPI 3.0.0 for output
       info: parsedSpec?.info,
@@ -480,27 +509,35 @@ export default function OpenAPIExporter() {
       ...(Object.keys(cleanedComponents).length > 0 && { components: cleanedComponents })
     }
 
-    const content = exportFormat === 'json' 
+    const content = exportFormat === 'json'
       ? JSON.stringify(endpointSpec, null, 2)
       : yaml.dump(endpointSpec)
 
     try {
       await navigator.clipboard.writeText(content)
-    //   toast.success('Copied to clipboard!')
+      toast({
+        title: 'Copied',
+        description: 'Copied to clipboard!',
+        variant: 'success',
+      });
     } catch (error) {
-    //   toast.error('Failed to copy to clipboard')
+      toast({
+        title: 'Failed Copied',
+        description: 'Failed to copy to clipboard!',
+        variant: 'error',
+      });
     }
   }
 
   const filteredEndpoints = parsedSpec?.endpoints.filter(endpoint => {
-    const matchesSearch = !searchTerm || 
+    const matchesSearch = !searchTerm ||
       endpoint.path.toLowerCase().includes(searchTerm.toLowerCase()) ||
       endpoint.summary?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       endpoint.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       endpoint.tags?.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
-    
+
     const matchesMethod = selectedMethod === 'all' || endpoint.method === selectedMethod
-    
+
     return matchesSearch && matchesMethod
   }) || []
 
@@ -508,7 +545,7 @@ export default function OpenAPIExporter() {
 
   return (
     <div>
-         <BreadCum
+      <BreadCum
         title="OpenAPI Spec Exporter"
         subtitle="Parse OpenAPI/Swagger specifications and export individual endpoints for documentation or integration"
         showCreateButton={false}
@@ -520,8 +557,8 @@ export default function OpenAPIExporter() {
         iconSize={40}
       />
       <div className="max-w-7xl mx-auto ">
-       
-       
+
+
 
         {/* Input Section */}
         <Card className="border border-gray-200 bg-background rounded-lg mt-3">
@@ -535,7 +572,7 @@ export default function OpenAPIExporter() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Tabs value={inputMethod} onValueChange={(value: 'url' | 'upload') => setInputMethod(value)}>
+            <Tabs value={inputMethod} onValueChange={(value: string) => setInputMethod(value as 'url' | 'upload')}>
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="url" className="flex items-center gap-2">
                   <Globe className="h-4 w-4" />
@@ -546,7 +583,7 @@ export default function OpenAPIExporter() {
                   Upload File
                 </TabsTrigger>
               </TabsList>
-              
+
               <TabsContent value="url" className="space-y-4">
                 <div className="flex gap-3">
                   <Input
@@ -556,8 +593,8 @@ export default function OpenAPIExporter() {
                     className="flex-1"
                     onKeyPress={(e) => e.key === 'Enter' && parseSpec()}
                   />
-                  <Button 
-                    onClick={parseSpec} 
+                  <Button
+                    onClick={parseSpec}
                     disabled={loading}
                     className="bg-[#136fb0] hover:bg-bg-[#136fb0]"
                   >
@@ -569,16 +606,16 @@ export default function OpenAPIExporter() {
                   </Button>
                 </div>
               </TabsContent>
-              
+
               <TabsContent value="upload">
-                <FileUploader 
+                <FileUploader
                   onSpecParsed={handleSpecParsed}
                   loading={loading}
                   setLoading={setLoading}
                 />
               </TabsContent>
             </Tabs>
-            
+
             {parsedSpec && (
               <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 p-3 rounded-lg border border-green-200">
                 <CheckCircle2 className="h-4 w-4" />
@@ -643,7 +680,7 @@ export default function OpenAPIExporter() {
                       </SelectContent>
                     </Select>
                   </div>
-                  
+
                   <div className="flex items-center gap-3">
                     <Select value={exportFormat} onValueChange={(value: 'json' | 'yaml') => setExportFormat(value)}>
                       <SelectTrigger className="w-24">
@@ -654,7 +691,7 @@ export default function OpenAPIExporter() {
                         <SelectItem value="yaml">YAML</SelectItem>
                       </SelectContent>
                     </Select>
-                    <Button 
+                    <Button
                       onClick={downloadFullSpec}
                       variant="outline"
                       className="flex items-center gap-2"
@@ -676,7 +713,7 @@ export default function OpenAPIExporter() {
                       <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                       <h3 className="text-lg font-medium text-gray-900 mb-2">No endpoints found</h3>
                       <p className="text-gray-500">
-                        {searchTerm || selectedMethod !== 'all' 
+                        {searchTerm || selectedMethod !== 'all'
                           ? 'Try adjusting your search or filter criteria'
                           : 'The specification doesn\'t contain any API endpoints'
                         }
@@ -691,8 +728,8 @@ export default function OpenAPIExporter() {
                       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                         <div className="flex-1 space-y-3">
                           <div className="flex items-center gap-3 flex-wrap">
-                            <Badge 
-                              variant="outline" 
+                            <Badge
+                              variant="outline"
                               className={`font-mono text-xs px-2 py-1 ${methodColors[endpoint.method as keyof typeof methodColors] || 'bg-gray-100 text-gray-800'}`}
                             >
                               {endpoint.method.toUpperCase()}
@@ -701,17 +738,17 @@ export default function OpenAPIExporter() {
                               {endpoint.path}
                             </code>
                           </div>
-                          
+
                           {endpoint.summary && (
                             <h3 className="font-semibold text-gray-900">{endpoint.summary}</h3>
                           )}
-                          
+
                           {endpoint.description && (
                             <p className="text-sm text-gray-600 leading-relaxed">
                               {endpoint.description}
                             </p>
                           )}
-                          
+
                           {endpoint.tags && endpoint.tags.length > 0 && (
                             <div className="flex gap-1 flex-wrap">
                               {endpoint.tags.map((tag, tagIndex) => (
@@ -722,7 +759,7 @@ export default function OpenAPIExporter() {
                             </div>
                           )}
                         </div>
-                        
+
                         <div className="flex items-center gap-2">
                           <Button
                             variant="outline"
@@ -765,7 +802,7 @@ export default function OpenAPIExporter() {
             )}
           </>
         )}
-        
+
         {/* Spec Viewer Modal */}
         {selectedEndpoint && parsedSpec && (
           <SpecViewer

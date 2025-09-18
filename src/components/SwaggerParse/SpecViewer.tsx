@@ -1,12 +1,13 @@
 import { useState } from 'react'
+import yaml from 'js-yaml'
 
-import { 
-  Eye, 
-  Copy, 
-  Download, 
-  X, 
-  Code, 
-  FileText, 
+import {
+  Eye,
+  Copy,
+  Download,
+  X,
+  Code,
+  FileText,
   Settings,
   ChevronRight,
   ChevronDown
@@ -17,6 +18,7 @@ import { Button } from '../ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@radix-ui/react-tabs'
 import { ScrollArea } from '@radix-ui/react-scroll-area'
 import { Separator } from '@radix-ui/react-select'
+import { useToast } from '@/hooks/useToast'
 
 
 interface APIEndpoint {
@@ -59,58 +61,58 @@ const transformParameter = (param: any): any => {
   }
 
   let transformed = { ...param }
-  
+
   if (param.type || param.format || param.enum || param.items) {
     transformed.schema = {}
-    
+
     if (param.type) {
       transformed.schema.type = param.type
       delete transformed.type
     }
-    
+
     if (param.format) {
       transformed.schema.format = param.format
       delete transformed.format
     }
-    
+
     if (param.enum) {
       transformed.schema.enum = param.enum
       delete transformed.enum
     }
-    
+
     if (param.items) {
       transformed.schema.items = transformReferences(param.items)
       delete transformed.items
     }
-    
+
     if (param.minimum !== undefined) {
       transformed.schema.minimum = param.minimum
       delete transformed.minimum
     }
-    
+
     if (param.maximum !== undefined) {
       transformed.schema.maximum = param.maximum
       delete transformed.maximum
     }
-    
+
     if (param.minLength !== undefined) {
       transformed.schema.minLength = param.minLength
       delete transformed.minLength
     }
-    
+
     if (param.maxLength !== undefined) {
       transformed.schema.maxLength = param.maxLength
       delete transformed.maxLength
     }
-    
+
     if (param.pattern) {
       transformed.schema.pattern = param.pattern
       delete transformed.pattern
     }
   }
-  
+
   transformed = transformReferences(transformed)
-  
+
   return transformed
 }
 
@@ -124,7 +126,7 @@ const transformReferences = (obj: any): any => {
   }
 
   const transformed: any = {}
-  
+
   for (const [key, value] of Object.entries(obj)) {
     if (key === '$ref' && typeof value === 'string') {
       if (value.startsWith('#/definitions/')) {
@@ -142,7 +144,7 @@ const transformReferences = (obj: any): any => {
       transformed[key] = value
     }
   }
-  
+
   return transformed
 }
 
@@ -152,7 +154,7 @@ const transformResponse = (response: any): any => {
   }
 
   let transformed = { ...response }
-  
+
   if (response.schema && !response.content) {
     transformed.content = {
       'application/json': {
@@ -161,9 +163,9 @@ const transformResponse = (response: any): any => {
     }
     delete transformed.schema
   }
-  
+
   transformed = transformReferences(transformed)
-  
+
   return transformed
 }
 
@@ -171,9 +173,9 @@ const validateAndCleanComponents = (components: any): any => {
   if (!components || typeof components !== 'object') {
     return {}
   }
-  
+
   const cleanedComponents: any = {}
-  
+
   if (components.schemas && typeof components.schemas === 'object') {
     cleanedComponents.schemas = {}
     Object.entries(components.schemas).forEach(([key, schema]) => {
@@ -182,7 +184,7 @@ const validateAndCleanComponents = (components: any): any => {
       }
     })
   }
-  
+
   if (components.definitions && typeof components.definitions === 'object') {
     if (!cleanedComponents.schemas) {
       cleanedComponents.schemas = {}
@@ -193,20 +195,20 @@ const validateAndCleanComponents = (components: any): any => {
       }
     })
   }
-  
+
   const componentTypes = ['responses', 'parameters', 'examples', 'requestBodies', 'headers', 'securitySchemes', 'links', 'callbacks']
   componentTypes.forEach(type => {
     if (components[type] && typeof components[type] === 'object') {
       cleanedComponents[type] = transformReferences(components[type])
     }
   })
-  
+
   return cleanedComponents
 }
 
 function CollapsibleSection({ title, children, defaultOpen = false }: { title: string, children: React.ReactNode, defaultOpen?: boolean }) {
   const [isOpen, setIsOpen] = useState(defaultOpen)
-  
+
   return (
     <div className="border rounded-lg">
       <button
@@ -228,24 +230,26 @@ function CollapsibleSection({ title, children, defaultOpen = false }: { title: s
 export default function SpecViewer({ endpoint, parsedSpec, exportFormat, onClose }: SpecViewerProps) {
   const [activeTab, setActiveTab] = useState('overview')
 
+  const { toast } = useToast();
+
   // Generate the complete endpoint spec
   const originalSpec = parsedSpec?.originalSpec
-  const cleanedComponents = validateAndCleanComponents(originalSpec?.components || originalSpec?.definitions ? { 
-    ...originalSpec.components, 
-    definitions: originalSpec.definitions 
+  const cleanedComponents = validateAndCleanComponents(originalSpec?.components || originalSpec?.definitions ? {
+    ...originalSpec.components,
+    definitions: originalSpec.definitions
   } : {})
-  
+
   const transformedParameters = endpoint.parameters?.map(transformParameter)
-  const transformedResponses = endpoint.responses ? 
+  const transformedResponses = endpoint.responses ?
     Object.fromEntries(
       Object.entries(endpoint.responses).map(([code, response]) => [
-        code, 
+        code,
         transformResponse(response)
       ])
     ) : undefined
-  
+
   const transformedRequestBody = endpoint.requestBody ? transformReferences(endpoint.requestBody) : undefined
-  
+
   const endpointSpec = {
     openapi: '3.0.0',
     info: parsedSpec?.info,
@@ -266,24 +270,34 @@ export default function SpecViewer({ endpoint, parsedSpec, exportFormat, onClose
     ...(Object.keys(cleanedComponents).length > 0 && { components: cleanedComponents })
   }
 
-  const specContent = exportFormat === 'json' 
+  const specContent = exportFormat === 'json'
     ? JSON.stringify(endpointSpec, null, 2)
     : yaml.dump(endpointSpec)
 
   const copyToClipboard = async () => {
     try {
       await navigator.clipboard.writeText(specContent)
-    //   toast.success('Copied to clipboard!')
+
+      toast({
+        title: 'Copied',
+        description: 'Copied to clipboard!',
+        variant: 'success',
+      });
     } catch (error) {
-    //   toast.error('Failed to copy to clipboard')
+
+      toast({
+        title: 'Failed Copied',
+        description: 'Failed to copy to clipboard',
+        variant: 'error',
+      });
     }
   }
 
   const downloadSpec = () => {
-    const blob = new Blob([specContent], { 
-      type: exportFormat === 'json' ? 'application/json' : 'application/x-yaml' 
+    const blob = new Blob([specContent], {
+      type: exportFormat === 'json' ? 'application/json' : 'application/x-yaml'
     })
-    
+
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
@@ -292,8 +306,11 @@ export default function SpecViewer({ endpoint, parsedSpec, exportFormat, onClose
     a.click()
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
-    
-    // toast.success(`Downloaded ${endpoint.method.toUpperCase()} ${endpoint.path}`)
+    toast({
+      title: 'Copied',
+      description: `Downloaded ${endpoint.method.toUpperCase()} ${endpoint.path}`,
+      variant: 'success',
+    });
   }
 
   return (
@@ -306,8 +323,8 @@ export default function SpecViewer({ endpoint, parsedSpec, exportFormat, onClose
               API Specification Viewer
             </CardTitle>
             <CardDescription className="flex items-center gap-2">
-              <Badge 
-                variant="outline" 
+              <Badge
+                variant="outline"
                 className={`font-mono text-xs ${methodColors[endpoint.method as keyof typeof methodColors] || 'bg-gray-100 text-gray-800'}`}
               >
                 {endpoint.method.toUpperCase()}
@@ -331,7 +348,7 @@ export default function SpecViewer({ endpoint, parsedSpec, exportFormat, onClose
             </Button>
           </div>
         </CardHeader>
-        
+
         <CardContent className="p-0">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full">
             <div className="px-6">
@@ -350,7 +367,7 @@ export default function SpecViewer({ endpoint, parsedSpec, exportFormat, onClose
                 </TabsTrigger>
               </TabsList>
             </div>
-            
+
             <div className="px-6 pb-6">
               <TabsContent value="overview" className="mt-4 space-y-4">
                 <ScrollArea className="h-[60vh]">
@@ -362,8 +379,8 @@ export default function SpecViewer({ endpoint, parsedSpec, exportFormat, onClose
                         <div>
                           <label className="text-sm font-medium text-gray-700">Method</label>
                           <p className="mt-1">
-                            <Badge 
-                              variant="outline" 
+                            <Badge
+                              variant="outline"
                               className={`font-mono ${methodColors[endpoint.method as keyof typeof methodColors] || 'bg-gray-100 text-gray-800'}`}
                             >
                               {endpoint.method.toUpperCase()}
@@ -494,7 +511,7 @@ export default function SpecViewer({ endpoint, parsedSpec, exportFormat, onClose
                           {Object.entries(endpoint.responses).map(([code, response]: [string, any]) => (
                             <div key={code} className="border rounded-lg p-3 bg-gray-50">
                               <div className="flex items-center gap-2 mb-2">
-                                <Badge 
+                                <Badge
                                   variant={code.startsWith('2') ? 'default' : code.startsWith('4') ? 'destructive' : 'secondary'}
                                   className="text-xs"
                                 >

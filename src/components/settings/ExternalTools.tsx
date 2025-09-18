@@ -38,6 +38,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../ui/alert-dialog';
+import { useCurrentPlan } from '@/context/CurrentPlanContext';
 
 
 
@@ -397,6 +398,10 @@ export function ExternalTools() {
   };
 
 
+  const { currentPlan } = useCurrentPlan();
+
+
+
 
   return (
     <Card>
@@ -460,8 +465,25 @@ export function ExternalTools() {
                     <SelectContent>
                       <SelectItem value="slack">Slack</SelectItem>
                       <SelectItem value="teams">Microsoft Teams</SelectItem>
-                      <SelectItem value="jira">Jira</SelectItem>
-                      <SelectItem value="webhook">Custom Webhook</SelectItem>
+                      <SelectItem
+                        value="jira"
+                        disabled={
+                          currentPlan?.PlanName !== 'Enterprise' &&
+                          currentPlan?.IsTrial !== true
+                        }
+                      >
+                        Jira
+                      </SelectItem>
+
+                      <SelectItem
+                        value="webhook"
+                        disabled={
+                          currentPlan?.PlanName !== 'Enterprise' &&
+                          currentPlan?.IsTrial !== true
+                        }
+                      >
+                        Custom Webhook
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
