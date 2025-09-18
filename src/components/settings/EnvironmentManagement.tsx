@@ -42,7 +42,16 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { Settings, Plus, Globe, Lock, Edit, Trash2, Copy, Pencil } from 'lucide-react';
+import {
+  Settings,
+  Plus,
+  Globe,
+  Lock,
+  Edit,
+  Trash2,
+  Copy,
+  Pencil,
+} from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useDataManagement } from '@/hooks/useDataManagement';
 import { Environment } from '@/shared/types/datamanagement';
@@ -136,8 +145,9 @@ export function EnvironmentManagement() {
         title: editingEnvironment
           ? 'Environment updated'
           : 'Environment created',
-        description: `Environment "${data.name}" has been ${editingEnvironment ? 'updated' : 'created'
-          } successfully.`,
+        description: `Environment "${data.name}" has been ${
+          editingEnvironment ? 'updated' : 'created'
+        } successfully.`,
       });
 
       setIsCreateDialogOpen(false);
@@ -421,21 +431,6 @@ export function EnvironmentManagement() {
                             Default
                           </Badge>
                         )}
-                        <Badge
-                          variant={
-                            environment.id === activeEnvironment?.id
-                              ? 'default'
-                              : 'secondary'
-                          }
-                          className={`text-xs ${environment.id === activeEnvironment?.id
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-gray-100 text-gray-800'
-                            }`}
-                        >
-                          {environment.id === activeEnvironment?.id
-                            ? 'Active'
-                            : 'Inactive'}
-                        </Badge>
                       </div>
                       {environment.description && (
                         <p className='text-sm text-gray-600 mb-2 line-clamp-2'>
@@ -455,7 +450,7 @@ export function EnvironmentManagement() {
                     {/* Mobile: Action buttons */}
                     {environment.name != 'No Environment' && (
                       <div className='flex items-center gap-2 sm:hidden'>
-                        <div className='flex items-center gap-1'>
+                        {/* <div className='flex items-center gap-1'>
                           <Switch
                             checked={environment.id === activeEnvironment?.id}
                             onCheckedChange={() =>
@@ -463,7 +458,7 @@ export function EnvironmentManagement() {
                             }
                             className='data-[state=checked]:bg-green-600'
                           />
-                        </div>
+                        </div> */}
                         <Button
                           variant='outline'
                           size='sm'
@@ -506,7 +501,7 @@ export function EnvironmentManagement() {
                                 <AlertDialogCancel>Cancel</AlertDialogCancel>
                                 <Button
                                   onClick={() => handleDelete(environment)}
-                                // className='bg-red-600 text-white hover:bg-red-700'
+                                  // className='bg-red-600 text-white hover:bg-red-700'
                                 >
                                   Delete
                                 </Button>
@@ -518,7 +513,7 @@ export function EnvironmentManagement() {
                     )}
                     {environment.name != 'No Environment' && (
                       <div className='hidden sm:flex items-center gap-3'>
-                        <div className='flex items-center gap-2'>
+                        {/* <div className='flex items-center gap-2'>
                           <Switch
                             checked={environment.id === activeEnvironment?.id}
                             onCheckedChange={() =>
@@ -531,7 +526,7 @@ export function EnvironmentManagement() {
                               ? 'Active'
                               : 'Inactive'}
                           </span>
-                        </div>
+                        </div> */}
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
@@ -541,7 +536,6 @@ export function EnvironmentManagement() {
                                 onClick={() => handleDuplicate(environment)}
                               >
                                 <Copy className='h-4 w-4' />
-
                               </Button>
                             </TooltipTrigger>
                             <TooltipContent>Copy</TooltipContent>
@@ -553,7 +547,9 @@ export function EnvironmentManagement() {
                               <Button
                                 variant='outline'
                                 size='sm'
-                                onClick={() => setEditingEnvironment(environment)}
+                                onClick={() =>
+                                  setEditingEnvironment(environment)
+                                }
                               >
                                 <Pencil className='h-4 w-4' />
                               </Button>
@@ -594,7 +590,7 @@ export function EnvironmentManagement() {
                                 <AlertDialogCancel>Cancel</AlertDialogCancel>
                                 <Button
                                   onClick={() => handleDelete(environment)}
-                                // className='bg-red-600 text-white hover:bg-red-700'
+                                  // className='bg-red-600 text-white hover:bg-red-700'
                                 >
                                   Delete
                                 </Button>
