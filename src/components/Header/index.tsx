@@ -39,12 +39,10 @@ import { queryClient } from '@/lib/queryClient';
 import { removeCookie } from '@/lib/cookieUtils';
 import { logoutClientSide } from '@/lib/logoutClientSide';
 
-
 interface HeaderProps {
   isDrawerOpen?: boolean;
   toggleDrawer?: () => void;
 }
-
 
 export default function Header({ isDrawerOpen, toggleDrawer }: HeaderProps) {
   const { user, logoutMutation } = useAuth();
@@ -81,10 +79,11 @@ export default function Header({ isDrawerOpen, toggleDrawer }: HeaderProps) {
     await logoutClientSide();
   };
 
-  const hiddenPaths = ['/request-chains', '/test-suites/create'];
+  const hiddenPaths = ['/request-chains/create', '/test-suites/create'];
 
   const shouldHideEnvironment =
     hiddenPaths.includes(location) ||
+    /^\/request-chains\/[^/]+\/edit$/.test(location) ||
     /^\/test-suites\/[^/]+\/edit$/.test(location);
 
   const getInitials = (firstName?: string) => {
@@ -170,15 +169,18 @@ export default function Header({ isDrawerOpen, toggleDrawer }: HeaderProps) {
   return (
     <header className='border-b bg-white dark:bg-gray-900 px-2 sm:px-6 py-2 sm:py-4'>
       <div className='flex items-center justify-between gap-4 sm:gap-6  mx-auto'>
-
-      <div className='md:hidden flex items-center'>
+        <div className='md:hidden flex items-center'>
           <Button
-            size="icon"
-            variant="ghost"
+            size='icon'
+            variant='ghost'
             onClick={toggleDrawer}
-            className="mr-2 bg-primary text-white"
+            className='mr-2 bg-primary text-white'
           >
-            {isDrawerOpen ? <ChevronsLeft size={20} /> : <ChevronsRight size={20} />}
+            {isDrawerOpen ? (
+              <ChevronsLeft size={20} />
+            ) : (
+              <ChevronsRight size={20} />
+            )}
           </Button>
         </div>
 

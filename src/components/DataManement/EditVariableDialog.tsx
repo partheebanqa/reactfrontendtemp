@@ -71,7 +71,7 @@ const EditVariableDialog: React.FC<Props> = ({
 
             {/* Type */}
 
-            <div>
+            {/* <div>
               <label className='text-sm font-medium'>Variable Type</label>
               <Select
                 value={editingVariable.type}
@@ -89,7 +89,7 @@ const EditVariableDialog: React.FC<Props> = ({
                   <SelectItem value='dynamic'>Dynamic</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
+            </div> */}
 
             {/* Current Value */}
             <div className='space-y-1'>

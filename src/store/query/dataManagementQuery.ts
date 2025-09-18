@@ -52,15 +52,14 @@ export const usegetEnvironmentQuery = (enabled = true) => {
 
 export const usefetchVariablesQuery = (enabled = true) => {
   const environment = dataManagementStore.state.activeEnvironment;
-  const environmentId = environment?.id;
-
+  const workspaceId = workspaceStore.state.currentWorkspace?.id;
   return useQuery({
-    queryKey: ['variables', environmentId],
-    enabled: !!environmentId && enabled,
+    queryKey: ['variables', workspaceId],
+    enabled: !!workspaceId && enabled,
     queryFn: async () => {
-      if (!environmentId) throw new Error('Environment ID is missing');
+      if (!workspaceId) throw new Error('Environment ID is missing');
 
-      const response = await fetchVariables(environmentId);
+      const response = await fetchVariables(workspaceId);
 
       if (response.items.length > 0) {
         const filteredVariables = response.items.map(filterVariable);

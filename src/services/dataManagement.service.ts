@@ -26,11 +26,11 @@ export const fetchEnvironments = async (
 };
 
 export const fetchVariables = async (
-  environmentId: string
+  workspaceId: string
 ): Promise<FetchVariablesResponse> => {
   const response = await apiRequest(
     'GET',
-    `${API_VARIABLES}?e=${environmentId}&page=1&pageSize=10`
+    `${API_VARIABLES}?ws=${workspaceId}`
   );
   if (!response.ok) {
     throw new Error('Failed to fetch variables');
@@ -78,7 +78,7 @@ export const deleteEnvironment = async (environmentId: string) => {
 export const createVariable = async (variable: any): Promise<any> => {
   const url =
     variable.type === 'static'
-      ? `${API_VARIABLES_NEW}/static`
+      ? `${API_VARIABLES}`
       : `${API_VARIABLES_NEW}/dynamic`;
 
   const response = await apiRequest('POST', url, {
