@@ -304,7 +304,9 @@ export const ImportModal: React.FC<ImportModalProps> = ({
   };
 
   const [location] = useLocation();
-  const isRequestChainsRoute = location === '/request-chains';
+  const isRequestChainsRoute =
+    location === '/request-chains/create' ||
+    (location.startsWith('/request-chains/') && location.endsWith('/edit'));
 
   if (isLoading) {
     return (
