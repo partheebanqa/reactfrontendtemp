@@ -183,7 +183,7 @@ export const useImpotPostmanCollectionMutation = () => {
 export const useImpotCollectionJsonMutation = () => {
   const collectionQuery = useCollectionQuery();
   return useMutation({
-    // mutationFn: importCollectionJson,
+    mutationFn: importCollectionJson,
     onSuccess: async (response) => {
       collectionQuery.refetch();
       return response;

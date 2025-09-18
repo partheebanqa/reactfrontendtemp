@@ -30,9 +30,7 @@ const DataManagement: React.FC = () => {
         </TabsContent>
 
         <TabsContent value='variables'>
-          <VariablesSection
-           
-          />
+          <VariablesSection />
         </TabsContent>
       </Tabs>
     </div>

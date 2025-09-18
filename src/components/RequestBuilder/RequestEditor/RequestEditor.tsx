@@ -82,8 +82,6 @@ const RequestEditor: React.FC = () => {
     fetchCollectionRequests,
   } = useCollection();
 
-  console.log('activeRequest000:', activeRequest);
-
   const { variables, environments, activeEnvironment } = useDataManagement();
   const { error: showError, success: showSuccess, toast } = useToast();
   const { currentWorkspace } = useWorkspace();
@@ -234,10 +232,6 @@ const RequestEditor: React.FC = () => {
                   }
                 }
 
-                console.log(
-                  '[v0] Updated assertion directly:',
-                  updatedAssertion
-                );
                 return updatedAssertion;
               });
             });
@@ -258,9 +252,7 @@ const RequestEditor: React.FC = () => {
 
   const updateAssertions = useCallback(
     (updater: (prev: Assertion[]) => Assertion[]) => {
-      console.log('[v0] updateAssertions called');
       setAssertions((prev) => {
-        console.log('[v0] Previous assertions:', prev);
         if (!prev || !Array.isArray(prev)) {
           console.warn(
             '[v0] Previous assertions is not an array, returning empty array:',
@@ -269,7 +261,6 @@ const RequestEditor: React.FC = () => {
           return [];
         }
         const result = updater(prev);
-        console.log('[v0] Updated assertions:', result);
         if (!Array.isArray(result)) {
           console.error('[v0] Updater returned non-array:', result);
           return prev; // Return previous state if update failed
@@ -285,45 +276,21 @@ const RequestEditor: React.FC = () => {
     let updatedDescription = assertion.description;
     let updatedImpact = assertion.impact;
 
-    console.log('[v0] Applying edited values for assertion:', assertion.id);
-    console.log('[v0] Current editedValues state:', editedValues);
-    console.log('[v0] Original assertion:', assertion);
-
     // Apply any edited values for this assertion
     Object.entries(editedValues).forEach(([editKey, newValue]) => {
-      console.log(
-        '[v0] Processing edit key:',
-        editKey,
-        'with value:',
-        newValue
-      );
-
       if (editKey.startsWith(`${assertion.id}-description-`)) {
         const originalValue = editKey.split('-').pop();
-        console.log(
-          '[v0] Found description edit - original:',
-          originalValue,
-          'new:',
-          newValue
-        );
 
         if (originalValue) {
           const regex = new RegExp(`\\b${originalValue}\\b`, 'g');
           updatedDescription = updatedDescription.replace(regex, newValue);
-          console.log('[v0] Updated description:', updatedDescription);
 
           // Update related assertion properties based on the assertion type
           const numericValue = Number.parseInt(newValue);
           if (!isNaN(numericValue)) {
-            console.log(
-              '[v0] Updating numeric properties - original expectedValue:',
-              assertion.expectedValue
-            );
-
             // Update expectedValue if it matches the original value
             if (assertion.expectedValue === Number.parseInt(originalValue)) {
               updatedAssertion.expectedValue = numericValue;
-              console.log('[v0] Updated expectedValue to:', numericValue);
             }
 
             // Update ID if it contains the original value
@@ -332,7 +299,6 @@ const RequestEditor: React.FC = () => {
                 originalValue,
                 newValue
               );
-              console.log('[v0] Updated ID to:', updatedAssertion.id);
             }
 
             // Update other numeric properties that might match
@@ -361,7 +327,6 @@ const RequestEditor: React.FC = () => {
   };
 
   const getFilteredAssertions = (): Assertion[] => {
-    console.log('[v0] getFilteredAssertions called, assertions:', assertions);
     if (!assertions || !Array.isArray(assertions)) {
       console.warn('[v0] Assertions is not an array:', assertions);
       return [];
@@ -373,7 +338,6 @@ const RequestEditor: React.FC = () => {
   };
 
   const getSelectedAssertions = (): Assertion[] => {
-    console.log('[v0] getSelectedAssertions called, assertions:', assertions);
     if (!assertions || !Array.isArray(assertions)) {
       console.warn(
         '[v0] Assertions is not an array in getSelectedAssertions:',
@@ -579,7 +543,6 @@ const RequestEditor: React.FC = () => {
           );
 
           setAssertions(existingAssertions);
-          console.log('Loaded existing assertions:', existingAssertions);
         } catch (error) {
           console.error('Error loading existing assertions:', error);
           setAssertions([]);
@@ -595,8 +558,6 @@ const RequestEditor: React.FC = () => {
   }, [activeRequest]);
 
   const formatBackendResponse = (result: any): FormattedResponse => {
-    console.log('formatBackendResponse:', result);
-
     const importantHeaders = [
       'cache-control',
       'content-type',
@@ -665,7 +626,6 @@ const RequestEditor: React.FC = () => {
       }
 
       const backendData = await executeCollectionRequest(activeRequest.id);
-      console.log('backendDataInRequestBuilder:', backendData?.data?.body);
 
       const backendBody = backendData?.data?.body;
 
@@ -689,7 +649,6 @@ const RequestEditor: React.FC = () => {
           assertionLogs: backendData?.data?.assertionLogs || [],
         };
 
-        console.log('normalizedResponse:', normalizedResponse);
         setResponseData(normalizedResponse as any);
 
         // 🔹 Generate assertions
@@ -705,8 +664,6 @@ const RequestEditor: React.FC = () => {
         setAssertions(mergedAssertions);
       }
     } catch (error: any) {
-      console.log('error in sending request:', error);
-
       // Show backend error if present
       const backendErrorMessage =
         error?.response?.data?.errorDetails ||
@@ -726,8 +683,6 @@ const RequestEditor: React.FC = () => {
 
   const handleSaveName = async (newName: string) => {
     try {
-      console.log('handlesave name is coming');
-
       if (!activeRequest) return;
       if (newName.trim() && activeRequest?.id) {
         // First update the server
@@ -828,17 +783,15 @@ const RequestEditor: React.FC = () => {
         .filter((assertion) => assertion.enabled)
         .map((assertion) => ({
           ...assertion,
-          requestId: activeRequest.id, // ✅ add requestId to each assertion
+          requestId: activeRequest.id,
           expectedValue:
             assertion.expectedValue !== undefined &&
             assertion.expectedValue !== null
               ? typeof assertion.expectedValue === 'string'
                 ? assertion.expectedValue
                 : JSON.stringify(assertion.expectedValue)
-              : '', // fallback to empty string
+              : '',
         }));
-
-      console.log('[v0] Saving assertions directly:', selectedAssertions);
 
       const requestData = {
         assertions: selectedAssertions,

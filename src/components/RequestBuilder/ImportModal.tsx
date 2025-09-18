@@ -51,7 +51,7 @@ const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose }) => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { currentWorkspace } = useWorkspace();
-  const { importCollectionMutation } = useCollection();
+  const { importCollectionMutation, refetch } = useCollection();
   const { success, error: showError } = useToast();
 
   if (!isOpen) return null;
@@ -144,7 +144,7 @@ const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose }) => {
   const handleImport = async () => {
     setImporting(true);
     setError(null);
-    let textToImport = importText;
+
     try {
       if (importType === 'swagger') {
         const fetchRes = await fetch(postmanUrl.trim());
@@ -158,21 +158,14 @@ const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose }) => {
           specificationType: specificationType,
           raw: JSON.stringify(json),
         });
-      }
-      if (importType === 'curl') {
-        // const { collectionName, specificationType } = checkJson(importText)
-        // const data = detectImportFormat(importText, importType)
-        // await importCollectionMutation.mutateAsync({
-        //   name: collectionName,
-        //   workspaceId: currentWorkspace?.id || '',
-        //   inputMethod: "raw",
-        //   specificationType: specificationType,
-        //   raw: JSON.stringify(importCurlCommand(importText)),
-        // });
+      } else if (importType === 'curl') {
+        // cURL import is not yet implemented
+        throw new Error('cURL import is not yet implemented');
       } else if (importType === 'file' && selectedFile) {
         const fileText = await selectedFile.text();
         const json = JSON.parse(fileText);
         const { collectionName, specificationType } = checkJson(json);
+
         await importCollectionMutation.mutateAsync({
           name: collectionName,
           workspaceId: currentWorkspace?.id || '',
@@ -181,14 +174,30 @@ const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose }) => {
           file: selectedFile,
         });
       }
+
+      // Show success message
+      success(
+        'Collection Imported',
+        'Your collection has been imported successfully'
+      );
+
+      // Close the modal first
+      handleOnClose();
+
+      // Refresh collections to show the newly imported collection
+      setTimeout(async () => {
+        try {
+          await refetch();
+        } catch (error) {
+          console.warn('Failed to refresh collections:', error);
+        }
+      }, 100);
     } catch (err) {
+      console.error('Import error:', err);
       showError(
         'Import Error',
         err instanceof Error ? err.message : 'Failed to import collection'
       );
-      setImporting(false);
-    } finally {
-      handleOnClose();
       setImporting(false);
     }
   };
