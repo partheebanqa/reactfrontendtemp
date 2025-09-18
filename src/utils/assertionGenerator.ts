@@ -343,6 +343,8 @@ const SECURITY_HEADERS = {
 };
 
 export const generateAssertions = (response: ApiResponse): Assertion[] => {
+  console.log('Generating assertions for response:', response);
+
   const assertions: Assertion[] = [];
 
   // Status code assertions

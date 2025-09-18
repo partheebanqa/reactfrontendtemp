@@ -596,6 +596,8 @@ const RequestEditor: React.FC = () => {
   }, [activeRequest]);
 
   const formatBackendResponse = (result: any): FormattedResponse => {
+    console.log('formatBackendResponse:', result);
+
     const importantHeaders = [
       'cache-control',
       'content-type',
@@ -692,7 +694,7 @@ const RequestEditor: React.FC = () => {
         setResponseData(normalizedResponse as any);
 
         // 🔹 Generate assertions
-        const formattedResponse = formatBackendResponse(parsedBody);
+        const formattedResponse = formatBackendResponse(normalizedResponse);
         const generatedAssertions = generateAssertions(formattedResponse);
 
         const existingAssertions = assertions || [];
