@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 
 import { Upload, File, X, CheckCircle2, AlertCircle } from 'lucide-react'
 import * as yaml from 'js-yaml'
+import { useToast } from '@/hooks/useToast'
 
 interface FileUploaderProps {
   onSpecParsed: (spec: any) => void
@@ -15,6 +16,8 @@ export default function FileUploader({ onSpecParsed, loading, setLoading }: File
   const [dragActive, setDragActive] = useState(false)
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const { toast } = useToast();
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault()
@@ -30,7 +33,7 @@ export default function FileUploader({ onSpecParsed, loading, setLoading }: File
     e.preventDefault()
     e.stopPropagation()
     setDragActive(false)
-    
+
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       handleFile(e.dataTransfer.files[0])
     }
@@ -46,15 +49,23 @@ export default function FileUploader({ onSpecParsed, loading, setLoading }: File
     // Validate file type
     const validExtensions = ['.json', '.yaml', '.yml']
     const fileExtension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'))
-    
+
     if (!validExtensions.includes(fileExtension)) {
-    //   toast.error('Please upload a JSON, YAML, or YML file')
+      toast({
+        title: '',
+        description: 'Please upload a JSON, YAML, or YML file',
+        variant: 'error',
+      });
       return
     }
 
     // Validate file size (max 10MB)
     if (file.size > 10 * 1024 * 1024) {
-    //   toast.error('File size must be less than 10MB')
+      toast({
+        title: 'File size ',
+        description: 'File size must be less than 10MB',
+        variant: 'error',
+      });
       return
     }
 
@@ -64,14 +75,14 @@ export default function FileUploader({ onSpecParsed, loading, setLoading }: File
 
   const parseUploadedFile = async (file: File) => {
     setLoading(true)
-    
+
     try {
       const text = await file.text()
       let spec: any
 
       // Determine file type and parse accordingly
       const fileExtension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'))
-      
+
       if (fileExtension === '.json') {
         try {
           spec = JSON.parse(text)
@@ -101,11 +112,11 @@ export default function FileUploader({ onSpecParsed, loading, setLoading }: File
       if (!spec.openapi && !spec.swagger) {
         throw new Error('Invalid OpenAPI/Swagger specification: missing version field')
       }
-      
+
       if (!spec.info) {
         throw new Error('Invalid OpenAPI/Swagger specification: missing info object')
       }
-      
+
       if (!spec.paths) {
         throw new Error('Invalid OpenAPI/Swagger specification: missing paths object')
       }
@@ -115,7 +126,7 @@ export default function FileUploader({ onSpecParsed, loading, setLoading }: File
         if (typeof spec.components !== 'object') {
           throw new Error('Invalid OpenAPI specification: components must be an object')
         }
-        
+
         // Validate schemas structure
         if (spec.components.schemas && typeof spec.components.schemas !== 'object') {
           throw new Error('Invalid OpenAPI specification: components.schemas must be an object')
@@ -123,10 +134,18 @@ export default function FileUploader({ onSpecParsed, loading, setLoading }: File
       }
 
       onSpecParsed(spec)
-    //   toast.success(`Successfully parsed OpenAPI specification from ${file.name}`)
+      toast({
+        title: 'Successfully ',
+        description: `Successfully parsed OpenAPI specification from ${file.name}`,
+        variant: 'success',
+      });
     } catch (error) {
       console.error('Error parsing uploaded file:', error)
-    //   toast.error(`Failed to parse file: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      toast({
+        title: 'Failed ',
+        description: `Failed to parse file: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        variant: 'error',
+      });
       setUploadedFile(null)
     } finally {
       setLoading(false)
@@ -158,11 +177,10 @@ export default function FileUploader({ onSpecParsed, loading, setLoading }: File
       <CardContent className="space-y-4">
         {!uploadedFile ? (
           <div
-            className={`relative border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-              dragActive 
-                ? 'border-blue-500 bg-blue-50' 
-                : 'border-gray-300 hover:border-gray-400'
-            }`}
+            className={`relative border-2 border-dashed rounded-lg p-8 text-center transition-colors ${dragActive
+              ? 'border-blue-500 bg-blue-50'
+              : 'border-gray-300 hover:border-gray-400'
+              }`}
             onDragEnter={handleDrag}
             onDragLeave={handleDrag}
             onDragOver={handleDrag}
@@ -176,12 +194,12 @@ export default function FileUploader({ onSpecParsed, loading, setLoading }: File
               className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
               disabled={loading}
             />
-            
+
             <div className="space-y-4">
               <div className="mx-auto w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center">
                 <Upload className="h-6 w-6 text-gray-400" />
               </div>
-              
+
               <div>
                 <p className="text-lg font-medium text-gray-900">
                   {dragActive ? 'Drop your file here' : 'Drag and drop your file here'}
@@ -198,7 +216,7 @@ export default function FileUploader({ onSpecParsed, loading, setLoading }: File
                   </button>
                 </p>
               </div>
-              
+
               <div className="text-xs text-gray-400">
                 Supports JSON, YAML, and YML files up to 10MB
               </div>
@@ -217,7 +235,7 @@ export default function FileUploader({ onSpecParsed, loading, setLoading }: File
                 </p>
               </div>
             </div>
-            
+
             <div className="flex items-center gap-2">
               {loading ? (
                 <div className="flex items-center gap-2 text-blue-600">
@@ -230,7 +248,7 @@ export default function FileUploader({ onSpecParsed, loading, setLoading }: File
                   <span className="text-sm">Parsed</span>
                 </div>
               )}
-              
+
               <Button
                 variant="ghost"
                 size="sm"
@@ -243,7 +261,7 @@ export default function FileUploader({ onSpecParsed, loading, setLoading }: File
             </div>
           </div>
         )}
-        
+
         <div className="text-xs text-gray-500 space-y-1">
           <p>• Supported formats: OpenAPI 3.x and Swagger 2.0</p>
           <p>• File types: .json, .yaml, .yml</p>
