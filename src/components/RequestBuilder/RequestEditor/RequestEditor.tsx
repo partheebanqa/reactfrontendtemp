@@ -11,6 +11,7 @@ import {
   Square,
   Zap,
   Search,
+  Plus,
 } from 'lucide-react';
 import { useRequest } from '@/hooks/useRequest';
 import { useCollection } from '@/hooks/useCollection';
@@ -79,6 +80,7 @@ const RequestEditor: React.FC = () => {
     setCollection,
     expandedCollections,
     handleCreateRequest,
+
     fetchCollectionRequests,
   } = useCollection();
 
@@ -417,12 +419,12 @@ const RequestEditor: React.FC = () => {
       setBodyType(
         allowedBodyTypes.includes(bodyTypeValue)
           ? (bodyTypeValue as
-              | 'none'
-              | 'json'
-              | 'form-data'
-              | 'x-www-form-urlencoded'
-              | 'raw'
-              | 'binary')
+            | 'none'
+            | 'json'
+            | 'form-data'
+            | 'x-www-form-urlencoded'
+            | 'raw'
+            | 'binary')
           : 'json'
       );
       setBodyContent(activeRequest.bodyRawContent || '');
@@ -786,7 +788,7 @@ const RequestEditor: React.FC = () => {
           requestId: activeRequest.id,
           expectedValue:
             assertion.expectedValue !== undefined &&
-            assertion.expectedValue !== null
+              assertion.expectedValue !== null
               ? typeof assertion.expectedValue === 'string'
                 ? assertion.expectedValue
                 : JSON.stringify(assertion.expectedValue)
@@ -844,7 +846,7 @@ const RequestEditor: React.FC = () => {
           requestId: activeRequest.id, // ✅ attach requestId
           expectedValue:
             assertion.expectedValue !== undefined &&
-            assertion.expectedValue !== null
+              assertion.expectedValue !== null
               ? typeof assertion.expectedValue === 'string'
                 ? assertion.expectedValue
                 : JSON.stringify(assertion.expectedValue)
@@ -862,23 +864,23 @@ const RequestEditor: React.FC = () => {
         bodyFormData:
           bodyType === 'form-data'
             ? formFields
-                .filter((f) => f.enabled)
-                .reduce((acc: Record<string, any>, field) => {
-                  if (field.key) {
-                    if (field.type === 'file' && field.value instanceof File) {
-                      acc[field.key] = field.value;
-                    } else {
-                      acc[field.key] = String(field.value);
-                    }
+              .filter((f) => f.enabled)
+              .reduce((acc: Record<string, any>, field) => {
+                if (field.key) {
+                  if (field.type === 'file' && field.value instanceof File) {
+                    acc[field.key] = field.value;
+                  } else {
+                    acc[field.key] = String(field.value);
                   }
-                  return acc;
-                }, {})
+                }
+                return acc;
+              }, {})
             : [],
         bodyRawContent:
           bodyType === 'raw' || bodyType === 'json'
             ? bodyContent
             : bodyType === 'x-www-form-urlencoded'
-            ? new URLSearchParams(
+              ? new URLSearchParams(
                 urlEncodedFields
                   .filter((f) => f.enabled)
                   .reduce((acc, field) => {
@@ -886,7 +888,7 @@ const RequestEditor: React.FC = () => {
                     return acc;
                   }, {} as Record<string, string>)
               ).toString()
-            : '',
+              : '',
         authorizationType: authType,
         authorization: {
           token: authType === 'bearer' ? authData.token : '',
@@ -898,29 +900,29 @@ const RequestEditor: React.FC = () => {
           oauth1:
             authType === 'oauth1'
               ? {
-                  consumerKey: authData.oauth1.consumerKey,
-                  consumerSecret: authData.oauth1.consumerSecret,
-                  token: authData.oauth1.token,
-                  tokenSecret: authData.oauth1.tokenSecret,
-                  signatureMethod: authData.oauth1.signatureMethod,
-                  version: '1.0',
-                  realm: authData.oauth1.realm,
-                  nonce: authData.oauth1.nonce,
-                  timestamp: authData.oauth1.timestamp,
-                }
+                consumerKey: authData.oauth1.consumerKey,
+                consumerSecret: authData.oauth1.consumerSecret,
+                token: authData.oauth1.token,
+                tokenSecret: authData.oauth1.tokenSecret,
+                signatureMethod: authData.oauth1.signatureMethod,
+                version: '1.0',
+                realm: authData.oauth1.realm,
+                nonce: authData.oauth1.nonce,
+                timestamp: authData.oauth1.timestamp,
+              }
               : undefined,
           oauth2:
             authType === 'oauth2'
               ? {
-                  clientId: authData.oauth2.clientId,
-                  clientSecret: authData.oauth2.clientSecret,
-                  accessToken: authData.oauth2.accessToken,
-                  tokenType: authData.oauth2.tokenType,
-                  refreshToken: authData.oauth2.refreshToken,
-                  scope: authData.oauth2.scope,
-                  grantType: authData.oauth2.grantType,
-                  redirectUri: authData.oauth2.redirectUri,
-                }
+                clientId: authData.oauth2.clientId,
+                clientSecret: authData.oauth2.clientSecret,
+                accessToken: authData.oauth2.accessToken,
+                tokenType: authData.oauth2.tokenType,
+                refreshToken: authData.oauth2.refreshToken,
+                scope: authData.oauth2.scope,
+                grantType: authData.oauth2.grantType,
+                redirectUri: authData.oauth2.redirectUri,
+              }
               : undefined,
         },
         params: params,
@@ -1013,23 +1015,23 @@ const RequestEditor: React.FC = () => {
         bodyFormData:
           bodyType === 'form-data'
             ? formFields
-                .filter((f) => f.enabled)
-                .reduce((acc: Record<string, any>, field) => {
-                  if (field.key) {
-                    if (field.type === 'file' && field.value instanceof File) {
-                      acc[field.key] = field.value;
-                    } else {
-                      acc[field.key] = String(field.value);
-                    }
+              .filter((f) => f.enabled)
+              .reduce((acc: Record<string, any>, field) => {
+                if (field.key) {
+                  if (field.type === 'file' && field.value instanceof File) {
+                    acc[field.key] = field.value;
+                  } else {
+                    acc[field.key] = String(field.value);
                   }
-                  return acc;
-                }, {})
+                }
+                return acc;
+              }, {})
             : null,
         bodyRawContent:
           bodyType === 'raw' || bodyType === 'json'
             ? bodyContent
             : bodyType === 'x-www-form-urlencoded'
-            ? new URLSearchParams(
+              ? new URLSearchParams(
                 urlEncodedFields
                   .filter((f) => f.enabled)
                   .reduce((acc, field) => {
@@ -1039,7 +1041,7 @@ const RequestEditor: React.FC = () => {
                     return acc;
                   }, {} as Record<string, string>)
               ).toString()
-            : null,
+              : null,
         authorizationType: authType,
         authorization: {
           token: authType === 'bearer' ? authData.token : '',
@@ -1051,29 +1053,29 @@ const RequestEditor: React.FC = () => {
           oauth1:
             authType === 'oauth1'
               ? {
-                  consumerKey: authData.oauth1.consumerKey,
-                  consumerSecret: authData.oauth1.consumerSecret,
-                  token: authData.oauth1.token,
-                  tokenSecret: authData.oauth1.tokenSecret,
-                  signatureMethod: authData.oauth1.signatureMethod,
-                  version: '1.0',
-                  realm: authData.oauth1.realm,
-                  nonce: authData.oauth1.nonce,
-                  timestamp: authData.oauth1.timestamp,
-                }
+                consumerKey: authData.oauth1.consumerKey,
+                consumerSecret: authData.oauth1.consumerSecret,
+                token: authData.oauth1.token,
+                tokenSecret: authData.oauth1.tokenSecret,
+                signatureMethod: authData.oauth1.signatureMethod,
+                version: '1.0',
+                realm: authData.oauth1.realm,
+                nonce: authData.oauth1.nonce,
+                timestamp: authData.oauth1.timestamp,
+              }
               : undefined,
           oauth2:
             authType === 'oauth2'
               ? {
-                  clientId: authData.oauth2.clientId,
-                  clientSecret: authData.oauth2.clientSecret,
-                  accessToken: authData.oauth2.accessToken,
-                  tokenType: authData.oauth2.tokenType,
-                  refreshToken: authData.oauth2.refreshToken,
-                  scope: authData.oauth2.scope,
-                  grantType: authData.oauth2.grantType,
-                  redirectUri: authData.oauth2.redirectUri,
-                }
+                clientId: authData.oauth2.clientId,
+                clientSecret: authData.oauth2.clientSecret,
+                accessToken: authData.oauth2.accessToken,
+                tokenType: authData.oauth2.tokenType,
+                refreshToken: authData.oauth2.refreshToken,
+                scope: authData.oauth2.scope,
+                grantType: authData.oauth2.grantType,
+                redirectUri: authData.oauth2.redirectUri,
+              }
               : undefined,
         },
         params: params,
@@ -1392,7 +1394,7 @@ const RequestEditor: React.FC = () => {
                     className='border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 px-3 py-2 rounded-md'
                     aria-label='Save request'
                   >
-                    <Save className='h-4 w-4' />
+                    <Save className='h-4 w-4 text-[#136fb0]' />
                   </button>
                 ) : (
                   <button
@@ -1400,11 +1402,22 @@ const RequestEditor: React.FC = () => {
                     className='border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 px-3 py-2 rounded-md'
                     aria-label='Save request'
                   >
-                    <Save className='h-4 w-4' />
+                    <Save className='h-4 w-4 text-[#136fb0]' />
                   </button>
                 )}
               </TooltipContainer>
-
+              <TooltipContainer text='New request'>
+                <button
+                  onClick={() => {
+                    handleCreateRequest();
+                    // setShowMenu(null);
+                  }}
+                  className='border border-gray-300 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800'
+                  title='Create new request'
+                >
+                  <Plus className='h-4 w-4 text-[#136fb0]' />
+                </button>
+              </TooltipContainer>
               {/* <button
                 className="border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 px-3 py-2 rounded-md"
                 aria-label="More options"
@@ -1457,10 +1470,9 @@ const RequestEditor: React.FC = () => {
                 onClick={() => setActiveTab(tab.id as any)}
                 className={`
                   py-4 px-2 sm:px-4 border-b-2 font-medium text-sm transition-colors whitespace-nowrap
-                  ${
-                    activeTab === tab.id
-                      ? 'border-blue-500 text-blue-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  ${activeTab === tab.id
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                   }
                 `}
               >
@@ -2304,7 +2316,7 @@ const RequestEditor: React.FC = () => {
                       const count =
                         assertions && Array.isArray(assertions)
                           ? assertions.filter((a) => a.category === category)
-                              .length
+                            .length
                           : 0;
                       return (
                         <option key={category} value={category}>
@@ -2356,11 +2368,10 @@ const RequestEditor: React.FC = () => {
                   {getFilteredAssertions().map((assertion) => (
                     <div
                       key={assertion.id}
-                      className={`border rounded-lg p-4 transition-all duration-200 ${
-                        assertion.enabled
-                          ? 'border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-900/20'
-                          : 'border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800/20'
-                      } hover:shadow-sm`}
+                      className={`border rounded-lg p-4 transition-all duration-200 ${assertion.enabled
+                        ? 'border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-900/20'
+                        : 'border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800/20'
+                        } hover:shadow-sm`}
                     >
                       <div className='flex items-start space-x-3'>
                         {/* Checkbox */}
@@ -2385,11 +2396,10 @@ const RequestEditor: React.FC = () => {
                           {/* Top row: Description + Category + Priority */}
                           <div className='flex items-center justify-between gap-2'>
                             <p
-                              className={`text-sm font-medium truncate ${
-                                assertion.enabled
-                                  ? 'text-gray-900 dark:text-white'
-                                  : 'text-gray-600 dark:text-gray-400'
-                              }`}
+                              className={`text-sm font-medium truncate ${assertion.enabled
+                                ? 'text-gray-900 dark:text-white'
+                                : 'text-gray-600 dark:text-gray-400'
+                                }`}
                               title={assertion.description} // tooltip on hover
                             >
                               {parseTextWithEditableNumbers(

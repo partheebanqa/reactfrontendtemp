@@ -18,12 +18,12 @@ interface ReportsHeaderProps {
   quickTitle?: string;
   onClickQuickGuide?: () => void;
   showQuickGuide?: boolean;
-  icon?: React.ElementType; 
-  iconBgClass?: string; 
-  iconColor?: string; 
+  icon?: React.ElementType;
+  iconBgClass?: string;
+  iconColor?: string;
   iconSize?: number;
-   quickGuideTitle?: string;
-  quickGuideContent?: React.ReactNode; 
+  quickGuideTitle?: string;
+  quickGuideContent?: React.ReactNode;
 }
 
 const BreadCum: React.FC<ReportsHeaderProps> = ({
@@ -35,15 +35,15 @@ const BreadCum: React.FC<ReportsHeaderProps> = ({
   quickTitle = 'Quick Guide',
   onClickQuickGuide,
   showQuickGuide = true,
-  icon: Icon = Link2, 
-  iconBgClass = 'bg-[#f9e3fc]', 
-  iconColor = '#660275', 
-  iconSize = 40, 
-    quickGuideTitle = 'Quick Guide',
+  icon: Icon = Link2,
+  iconBgClass = 'bg-[#f9e3fc]',
+  iconColor = '#660275',
+  iconSize = 40,
+  quickGuideTitle = 'Quick Guide',
   quickGuideContent = <p>This is a default guide. Add dynamic content per page.</p>,
 }) => {
 
-    const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(false);
 
   return (
     <header className="border border-gray-200 bg-background rounded-lg px-4 py-4 animate-fade-in">
@@ -65,7 +65,7 @@ const BreadCum: React.FC<ReportsHeaderProps> = ({
             </Button>
           )}
           {showQuickGuide && (
-           <>
+            <>
               <Button
                 variant="outline"
                 className="hover-scale"
@@ -80,17 +80,17 @@ const BreadCum: React.FC<ReportsHeaderProps> = ({
                 <DialogContent className="max-w-3xl">
                   <DialogHeader>
                     <DialogTitle>{quickGuideTitle}</DialogTitle>
-                    <DialogDescription>
+                    <DialogDescription className="max-h-[80vh] overflow-y-auto pr-2">
                       {quickGuideContent}
                     </DialogDescription>
                   </DialogHeader>
                 </DialogContent>
               </Dialog>
             </>
-            
+
           )}
 
-          
+
         </div>
       </div>
     </header>
