@@ -568,8 +568,7 @@ const RequestEditor: React.FC = () => {
                 description: assertion.description || 'Custom assertion',
                 field: assertion.field,
                 operator: assertion.operator || 'equals',
-                expectedValue:
-                  assertion.expected_value || assertion.expectedValue, // Handle both formats
+                expectedValue: assertion.expectedValue, // Handle both formats
                 enabled:
                   assertion.enabled !== undefined ? assertion.enabled : true, // Mark as selected
                 impact: assertion.impact,
@@ -816,19 +815,6 @@ const RequestEditor: React.FC = () => {
         return;
       }
 
-      const selectedAssertions = assertions
-        .filter((assertion) => assertion.enabled)
-        .map((assertion) => ({
-          ...assertion,
-          expected_value: assertion.expectedValue, // Transform for backend
-        }));
-
-      console.log('[v0] Saving assertions directly:', selectedAssertions);
-
-      const requestData = {
-        assertions: selectedAssertions,
-      };
-
       if (!activeRequest?.id) {
         toast({
           title: 'Error',
@@ -837,6 +823,27 @@ const RequestEditor: React.FC = () => {
         });
         return;
       }
+
+      const selectedAssertions = assertions
+        .filter((assertion) => assertion.enabled)
+        .map((assertion) => ({
+          ...assertion,
+          requestId: activeRequest.id, // ✅ add requestId to each assertion
+          expectedValue:
+            assertion.expectedValue !== undefined &&
+            assertion.expectedValue !== null
+              ? typeof assertion.expectedValue === 'string'
+                ? assertion.expectedValue
+                : JSON.stringify(assertion.expectedValue)
+              : '', // fallback to empty string
+        }));
+
+      console.log('[v0] Saving assertions directly:', selectedAssertions);
+
+      const requestData = {
+        assertions: selectedAssertions,
+        workspaceId: currentWorkspace?.id,
+      };
 
       await updateRequestMutation.mutateAsync({
         requestId: activeRequest.id,
@@ -881,7 +888,14 @@ const RequestEditor: React.FC = () => {
         .filter((assertion) => assertion.enabled)
         .map((assertion) => ({
           ...assertion,
-          expected_value: assertion.expectedValue, // Transform for backend
+          requestId: activeRequest.id, // ✅ attach requestId
+          expectedValue:
+            assertion.expectedValue !== undefined &&
+            assertion.expectedValue !== null
+              ? typeof assertion.expectedValue === 'string'
+                ? assertion.expectedValue
+                : JSON.stringify(assertion.expectedValue)
+              : '', // fallback to empty string
         }));
 
       const requestData = {
