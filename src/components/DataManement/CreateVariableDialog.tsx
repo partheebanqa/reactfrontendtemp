@@ -1,7 +1,7 @@
 'use client';
 
 import type React from 'react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -43,6 +43,7 @@ interface VariableCreateDialogProps {
   setNewVariable: React.Dispatch<React.SetStateAction<Variable>>;
   handleCreate: (payload: any) => void;
   environments: Environment[];
+  type: 'static' | 'dynamic';
 }
 
 const VariableCreateDialog: React.FC<VariableCreateDialogProps> = ({
@@ -52,6 +53,7 @@ const VariableCreateDialog: React.FC<VariableCreateDialogProps> = ({
   setNewVariable,
   handleCreate,
   environments,
+  type,
 }) => {
   const { currentWorkspace } = useWorkspace();
   const [errors, setErrors] = useState<{
@@ -60,6 +62,17 @@ const VariableCreateDialog: React.FC<VariableCreateDialogProps> = ({
     type?: string;
     initialValue?: string;
   }>({});
+
+  useEffect(() => {
+    if (open) {
+      setNewVariable((prev) => ({
+        ...prev,
+        type, // force from prop
+        initialValue: type === 'static' ? prev.initialValue : '',
+        generatorFunction: type === 'dynamic' ? prev.generatorFunction : '',
+      }));
+    }
+  }, [open, type, setNewVariable]);
 
   const validateForm = (): boolean => {
     const newErrors: {
@@ -258,82 +271,31 @@ const VariableCreateDialog: React.FC<VariableCreateDialogProps> = ({
             )}
           </div>
 
-          {/* Environment */}
-          {/* <div className='space-y-1'>
-            <label className='text-sm font-medium'>Environment</label>
-            <Select
-              value={newVariable.environmentId}
-              onValueChange={(value) => {
-                setNewVariable((prev) => ({ ...prev, environmentId: value }));
-                // Clear error when user selects
-                if (errors.environmentId) {
-                  setErrors((prev) => ({ ...prev, environmentId: undefined }));
-                }
-              }}
-            >
-              <SelectTrigger
-                className={errors.environmentId ? 'border-destructive' : ''}
-              >
-                <SelectValue placeholder='Select environment' />
-              </SelectTrigger>
-              <SelectContent>
-                {environments.map((env) => (
-                  <SelectItem key={env.id} value={env.id}>
-                    {env.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {errors.environmentId && (
-              <p className='text-xs text-destructive mt-1'>
-                {errors.environmentId}
-              </p>
-            )}
-          </div> */}
-
           {/* Type */}
-          <div>
+          {/* Type */}
+          <div className='space-y-1'>
             <label className='text-sm font-medium'>Variable Type</label>
-            <Select
-              value={newVariable.type}
-              onValueChange={(value: any) =>
-                setNewVariable((prev) => ({
-                  ...prev,
-                  type: value,
-                  initialValue: value === 'static' ? prev.initialValue : '',
-                  generatorFunction:
-                    value === 'dynamic' ? prev.generatorFunction : '',
-                }))
-              }
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value='static'>
-                  <div className='flex items-center gap-2'>
-                    <FileText className='w-4 h-4' />
-                    <div>
-                      <div className='font-medium'>Static Variable</div>
-                      <div className='text-xs text-muted-foreground'>
-                        Fixed value that doesn't change
-                      </div>
-                    </div>
-                  </div>
-                </SelectItem>
-                <SelectItem value='dynamic'>
-                  <div className='flex items-center gap-2'>
-                    <Zap className='w-4 h-4' />
-                    <div>
-                      <div className='font-medium'>Dynamic Variable</div>
-                      <div className='text-xs text-muted-foreground'>
-                        Generated at runtime
-                      </div>
-                    </div>
-                  </div>
-                </SelectItem>
-              </SelectContent>
-            </Select>
+            <div className='flex items-center gap-2 p-2 border rounded-md bg-muted/50'>
+              {type === 'static' ? (
+                <>
+                  <FileText className='w-4 h-4 text-muted-foreground' />
+                  <span className='text-sm font-medium'>Static Variable -</span>
+                  <span className='text-xs text-muted-foreground ml-2'>
+                    Fixed value that doesn't change
+                  </span>
+                </>
+              ) : (
+                <>
+                  <Zap className='w-4 h-4 text-muted-foreground' />
+                  <span className='text-sm font-medium'>
+                    Dynamic Variable -
+                  </span>
+                  <span className='text-xs text-muted-foreground ml-2'>
+                    Generated at runtime
+                  </span>
+                </>
+              )}
+            </div>
           </div>
 
           {/* Static Variable Value with Secret Toggle */}
@@ -818,7 +780,6 @@ const VariableCreateDialog: React.FC<VariableCreateDialogProps> = ({
               variant='outline'
               onClick={() => {
                 setOpen(false);
-                // Clear all errors when closing the dialog
                 setErrors({});
               }}
             >

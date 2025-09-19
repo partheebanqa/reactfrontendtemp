@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect } from 'react';
 import {
   dataManagementActions,
   useDataManagementStore,
@@ -9,6 +9,7 @@ import {
   useDeleteEnvironmentMutation,
   useDeleteVariableMutation,
   usefetchVariablesQuery,
+  usefetchDynamicVariablesQuery,
   usegetEnvironmentQuery,
   useUpdateEnvironmentMutation,
   useUpdateVariableMutation,
@@ -19,8 +20,16 @@ import { Environment } from '@/shared/types/datamanagement';
 const envKey = (wsId?: string | null) => `dm:activeEnv:${wsId ?? 'default'}`;
 
 export function useDataManagement() {
-  const { environments, activeEnvironment, isLoading, variables } =
-    useDataManagementStore();
+  const {
+    environments,
+    activeEnvironment,
+    isLoading,
+    variables,
+    dynamicVariables,
+  } = useDataManagementStore(); // ⬅️ also grab dynamicVariables
+
+  console.log('dynamicVariables in useDataManagement:', dynamicVariables);
+  console.log('variables in useDataManagement:', variables);
 
   const { currentWorkspace } = useWorkspace();
 
@@ -32,6 +41,8 @@ export function useDataManagement() {
 
   const { data: variablesData, isLoading: isVariablesLoading } =
     usefetchVariablesQuery(!!data?.id);
+  const { data: dynamicVariablesData, isLoading: isDynamicVariablesLoading } =
+    usefetchDynamicVariablesQuery(!!data?.id);
 
   const setEnvironments = dataManagementActions.setEnvironments;
   const _setActiveEnvironment = dataManagementActions.setActiveEnvironment;
@@ -94,13 +105,19 @@ export function useDataManagement() {
       } catch {}
       _setActiveEnvironment(null);
     }
-  }, [environments, activeEnvironment, currentWorkspace?.id, _setActiveEnvironment]);
+  }, [
+    environments,
+    activeEnvironment,
+    currentWorkspace?.id,
+    _setActiveEnvironment,
+  ]);
 
   return {
     environments,
     activeEnvironment,
     isLoading,
     variables,
+    dynamicVariables,
 
     // Use this setter in components instead of dataManagementActions.setActiveEnvironment
     setActiveEnvironment,
@@ -108,6 +125,7 @@ export function useDataManagement() {
     // Keep the others the same
     setEnvironments,
     setVariables: dataManagementActions.setVariables,
+    setDynamicVariables: dataManagementActions.setDynamicVariables,
 
     createEnvironmentMutation,
     createVariableMutation,

@@ -6,14 +6,14 @@ import {
 import { apiRequest } from '@/lib/queryClient';
 import {
   Environment,
-  fetchEnvironmentsResponse,
   FetchVariablesResponse,
   ResponseEnvironment,
 } from '@/shared/types/datamanagement';
+import { FetchEnvironmentsResponse } from '@/shared/types/datamanagement';
 
 export const fetchEnvironments = async (
   workspaceId: string
-): Promise<fetchEnvironmentsResponse> => {
+): Promise<FetchEnvironmentsResponse> => {
   const response = await apiRequest(
     'GET',
     `${API_ENVIRONMENT}?ws=${workspaceId}`
@@ -31,6 +31,19 @@ export const fetchVariables = async (
   const response = await apiRequest(
     'GET',
     `${API_VARIABLES}?ws=${workspaceId}`
+  );
+  if (!response.ok) {
+    throw new Error('Failed to fetch variables');
+  }
+  return response.json();
+};
+
+export const fetchDynamicVariables = async (
+  workspaceId: string
+): Promise<FetchVariablesResponse> => {
+  const response = await apiRequest(
+    'GET',
+    `${API_VARIABLES_NEW}/dynamic?ws=${workspaceId}`
   );
   if (!response.ok) {
     throw new Error('Failed to fetch variables');

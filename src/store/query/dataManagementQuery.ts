@@ -6,6 +6,7 @@ import {
   deleteVariable,
   fetchEnvironments,
   fetchVariables,
+  fetchDynamicVariables,
   updateEnvironment,
   updateVariable,
 } from '@/services/dataManagement.service';
@@ -19,7 +20,9 @@ import {
   Environment,
   ResponseEnvironment,
   ResponseVariable,
+  ResponseDynamicVariable,
   Variable,
+  DynamicVariable,
 } from '@/shared/types/datamanagement';
 
 export const usegetEnvironmentQuery = (enabled = true) => {
@@ -75,6 +78,54 @@ export const usefetchVariablesQuery = (enabled = true) => {
         };
 
         dataManagementActions.setActiveEnvironment(updatedEnvironment);
+      } else {
+        // Set empty array if no variables
+        dataManagementActions.setVariables([]);
+      }
+
+      return [];
+    },
+  });
+};
+
+export const usefetchDynamicVariablesQuery = (enabled = true) => {
+  const environment = dataManagementStore.state.activeEnvironment;
+  const workspaceId = workspaceStore.state.currentWorkspace?.id;
+
+  return useQuery({
+    queryKey: ['dynamicVariables', workspaceId],
+    enabled: !!workspaceId && enabled,
+    queryFn: async () => {
+      if (!workspaceId) throw new Error('Workspace ID is missing');
+
+      const response = await fetchDynamicVariables(workspaceId);
+
+      console.log('Dynamic variables response:', response);
+
+      if (response.variables?.length > 0) {
+        const mappedDynamicVariables =
+          response.variables.map(mapDynamicVariable);
+
+        console.log('Mapped dynamic variables:', mappedDynamicVariables);
+
+        dataManagementActions.setDynamicVariables(mappedDynamicVariables);
+
+        // Optional: handle baseUrl if your dynamic API includes such a variable
+        const baseUrlVar = mappedDynamicVariables.find(
+          (v) => v.name.toLowerCase() === 'baseurl'
+        );
+
+        if (environment && baseUrlVar) {
+          const updatedEnvironment = {
+            ...environment,
+            baseUrl: baseUrlVar.parameters?.url ?? '',
+          };
+
+          dataManagementActions.setActiveEnvironment(updatedEnvironment);
+        }
+      } else {
+        // Set empty array if no dynamic variables
+        dataManagementActions.setDynamicVariables([]);
       }
 
       return [];
@@ -187,6 +238,28 @@ const filterVariable = (variable: ResponseVariable): Variable => {
     type: variable.Type,
     initialValue: variable.InitialValue,
     currentValue: variable.CurrentValue,
+    createdAt: variable.CreatedAt,
+    updatedAt: variable.UpdatedAt,
+    deletedAt: variable.DeletedAt,
+    value: variable.CurrentValue || variable.InitialValue,
+    scope: 'environment' as const,
+    isGlobal: false,
+    isSecret: false,
+  };
+};
+
+const mapDynamicVariable = (
+  variable: ResponseDynamicVariable
+): DynamicVariable => {
+  return {
+    id: variable.Id,
+    workspaceId: variable.workspaceId,
+    name: variable.name,
+    generatorId: variable.generatorId,
+    generatorName: variable.generatorName,
+    parameters: variable.parameters,
+    type: variable.type,
+    category: variable.category,
     createdAt: variable.CreatedAt,
     updatedAt: variable.UpdatedAt,
     deletedAt: variable.DeletedAt,
