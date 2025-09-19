@@ -14,6 +14,8 @@ import { importCurlCommand } from '@/lib/importers/curlImporter';
 import { useWorkspace } from '@/hooks/useWorkspace';
 import { useCollection } from '@/hooks/useCollection';
 import { useToast } from '@/hooks/useToast';
+import { Input } from '../ui/input';
+import { Textarea } from '../ui/textarea';
 
 // Helper function to validate JSON
 const isValidJson = (text: string): boolean => {
@@ -258,33 +260,30 @@ const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose }) => {
           <div className='space-y-4'>
             <div className='flex rounded-lg bg-gray-100 p-1'>
               <button
-                className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
-                  importType === 'file'
-                    ? 'bg-white text-gray-800 shadow'
-                    : 'text-gray-600 hover:text-gray-800'
-                }`}
+                className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center justify-center gap-2 ${importType === 'file'
+                  ? 'bg-white text-gray-800 shadow'
+                  : 'text-gray-600 hover:text-gray-800'
+                  }`}
                 onClick={() => setImportType('file')}
               >
                 <FileText size={16} />
                 File Upload
               </button>
               <button
-                className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
-                  importType === 'swagger'
-                    ? 'bg-white text-gray-800 shadow'
-                    : 'text-gray-600 hover:text-gray-800'
-                }`}
+                className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center justify-center gap-2 ${importType === 'swagger'
+                  ? 'bg-white text-gray-800 shadow'
+                  : 'text-gray-600 hover:text-gray-800'
+                  }`}
                 onClick={() => setImportType('swagger')}
               >
                 <LinkIcon size={16} />
                 Swagger URL
               </button>
               <button
-                className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
-                  importType === 'curl'
-                    ? 'bg-white text-gray-800 shadow'
-                    : 'text-gray-600 hover:text-gray-800'
-                }`}
+                className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center justify-center gap-2 ${importType === 'curl'
+                  ? 'bg-white text-gray-800 shadow'
+                  : 'text-gray-600 hover:text-gray-800'
+                  }`}
                 onClick={() => setImportType('curl')}
               >
                 <Terminal size={16} />
@@ -294,7 +293,7 @@ const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose }) => {
 
             {importType === 'swagger' && (
               <div>
-                <input
+                <Input
                   type='url'
                   value={postmanUrl}
                   onChange={(e) => setPostmanUrl(e.target.value)}
@@ -302,8 +301,9 @@ const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose }) => {
                   placeholder='https://api.example.com/swagger.json'
                 />
                 <p className='mt-1 text-xs text-gray-500'>
-                  Enter a URL to a Swagger/OpenAPI specification or paste JSON
-                  in the box below
+                  Enter a URL to a Swagger/OpenAPI specification
+                  {/* or paste JSON
+                  in the box below */}
                 </p>
               </div>
             )}
@@ -311,7 +311,7 @@ const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose }) => {
             {importType === 'curl' && (
               <>
                 <div>
-                  <textarea
+                  <Textarea
                     value={importText}
                     onChange={(e) => {
                       setImportText(e.target.value);
@@ -329,11 +329,10 @@ const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose }) => {
                         setError(null);
                       }
                     }}
-                    className={`w-full h-64 px-3 py-2 text-sm font-mono border rounded-md ${
-                      error && importText.trim()
-                        ? 'border-red-300 focus:ring-red-500 focus:border-red-500'
-                        : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
-                    }`}
+                    className={`w-full h-64 px-3 py-2 text-sm font-mono border rounded-md ${error && importText.trim()
+                      ? 'border-red-300 focus:ring-red-500 focus:border-red-500'
+                      : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
+                      }`}
                     placeholder='Paste your cURL command here...'
                   />
 
@@ -395,7 +394,7 @@ const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose }) => {
                         className='cursor-pointer text-blue-600 font-medium hover:text-blue-700'
                       >
                         Upload a file
-                        <input
+                        <Input
                           id='file-upload'
                           ref={fileInputRef}
                           type='file'
@@ -449,7 +448,7 @@ const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose }) => {
             <button
               onClick={handleImport}
               disabled={isImportDisabled() || importing}
-              className='px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50'
+              className='px-4 py-2 bg-[#136fb0] text-white rounded-md hover:bg-blue-700 disabled:opacity-50'
             >
               {importing ? 'Importing...' : 'Import'}
             </button>

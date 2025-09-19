@@ -24,6 +24,8 @@ interface CurrentPlanContextType {
 const CurrentPlanContext = createContext<CurrentPlanContextType | undefined>(undefined);
 
 export const CurrentPlanProvider = ({ children }: { children: React.ReactNode }) => {
+
+
   const [currentPlan, setCurrentPlan] = useState<CurrentPlan | null>(null);
 
   const fetchCurrentPlan = async () => {
@@ -55,6 +57,7 @@ export const CurrentPlanProvider = ({ children }: { children: React.ReactNode })
     </CurrentPlanContext.Provider>
   );
 };
+
 
 export const useCurrentPlan = () => {
   const context = useContext(CurrentPlanContext);
