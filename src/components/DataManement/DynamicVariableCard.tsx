@@ -101,7 +101,7 @@ const DynamicVariableCard: React.FC<DynamicVariableCardProps> = ({
                   <div className='flex items-center space-x-3 mb-1'>
                     <h4 className='font-semibold flex items-center gap-2'>
                       {variable.name}
-                      {/* Copy Variable Name Button */}
+                      {/* Copy Variable Name Buttons */}
                       <Button
                         variant='ghost'
                         size='sm'
