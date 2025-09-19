@@ -60,6 +60,7 @@ export interface DataManagementState {
   activeEnvironment: Environment | null;
   isLoading: boolean;
   variables: Variable[];
+  dynamicVariables: DynamicVariable[];
   variablePage: number;
   variablePageSize: number;
 }
@@ -110,13 +111,40 @@ export interface Variable {
   updatedAt: string;
   deletedAt: string | null;
   scope: 'global' | 'project' | 'environment';
-  isGlobal: boolean,
-  isSecret: boolean,
-  generatorFunction?: string ,
+  isGlobal: boolean;
+  isSecret: boolean;
+  generatorFunction?: string;
   generatorConfig?: Record<string, any>;
 }
 
+/** Response format for dynamic variables from backend */
+export interface ResponseDynamicVariable {
+  Id: string;
+  workspaceId: string;
+  name: string;
+  generatorId: string;
+  generatorName: string;
+  parameters: Record<string, any>;
+  type: string;
+  category: string;
+  CreatedAt: string;
+  UpdatedAt: string;
+  DeletedAt: string | null;
+}
 
+export interface DynamicVariable {
+  id: string;
+  workspaceId: string;
+  name: string;
+  generatorId: string;
+  generatorName: string;
+  parameters: Record<string, any>; // or more specific type if you know the shape
+  type: string; // e.g. "number", "string"
+  category: string;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: string | null;
+}
 
 /** Response from API for paginated variable list */
 export interface FetchVariablesResponse {
@@ -124,4 +152,9 @@ export interface FetchVariablesResponse {
   items: ResponseVariable[];
   page: number;
   pageSize: number;
+}
+
+/** Response from API for dynamic variables */
+export interface FetchDynamicVariablesResponse {
+  variables: ResponseDynamicVariable[];
 }

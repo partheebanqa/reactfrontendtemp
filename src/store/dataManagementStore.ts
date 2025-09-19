@@ -7,6 +7,7 @@ export const initialDataManagementState: DataManagementState = {
   activeEnvironment: null,
   isLoading: false,
   variables: [],
+  dynamicVariables: [], // ⬅️ NEW
   variablePage: 1,
   variablePageSize: 10,
 };
@@ -35,9 +36,20 @@ export const dataManagementActions = {
   },
 
   setVariables: (variables: DataManagementState['variables']) => {
+    console.log('setVariables called with:', variables);
+
     dataManagementStore.setState((state) => ({
       ...state,
       variables,
+    }));
+  },
+
+  setDynamicVariables: (
+    dynamicVariables: DataManagementState['dynamicVariables']
+  ) => {
+    dataManagementStore.setState((state) => ({
+      ...state,
+      dynamicVariables,
     }));
   },
 };
