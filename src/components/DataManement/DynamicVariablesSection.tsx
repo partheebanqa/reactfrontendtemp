@@ -8,6 +8,7 @@ import {
 } from '@/components/ui/select';
 import DynamicVariableCard from './DynamicVariableCard';
 import VariableCreateDialog from './CreateVariableDialog';
+import EditDynamicVariableDialog from './EditDynamicVariableDialog';
 import { Search, Settings } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useDataManagement } from '@/hooks/useDataManagement';
@@ -52,10 +53,13 @@ const DynamicVariablesSection: React.FC = () => {
     environments,
     dynamicVariables,
     createVariableMutation,
-    deletedVariableMutation,
+    updateDynamicVariableMutation,
+    deletedDynamicVariableMutation,
   } = useDataManagement();
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const { error: showError, success: showSuccess, toast } = useToast();
   const [editingVariable, setEditingVariable] =
     useState<DynamicVariable | null>(null);
   const [newVariable, setNewVariable] = useState<Variable>({
@@ -98,8 +102,10 @@ const DynamicVariablesSection: React.FC = () => {
         ...payload,
         name: finalName,
       });
-
-      successToast('Dynamic variable created successfully');
+      toast({
+        title: 'Variable Created',
+        description: 'The variable has been created successfully.',
+      });
     } catch (error: any) {
       errorToast(
         error instanceof Error ? error.message : 'Failed to create variable'
@@ -127,16 +133,28 @@ const DynamicVariablesSection: React.FC = () => {
   };
 
   // UPDATE
-  const handleUpdate = (variable: DynamicVariable) => {
-    // TODO: Implement dynamic variable update logic
-    console.log('Update dynamic variable:', variable);
-    setEditingVariable(null);
+  const handleDynamicUpdate = async (id: string, payload: any) => {
+    try {
+      await updateDynamicVariableMutation.mutateAsync({
+        id,
+        ...payload,
+      });
+      successToast('Dynamic variable updated successfully');
+      setEditingVariable(null);
+      setIsEditOpen(false);
+    } catch (error) {
+      errorToast(
+        error instanceof Error
+          ? error.message
+          : 'Failed to update dynamic variable'
+      );
+    }
   };
 
   // DELETE
   const handleDelete = async (id: string, name: string) => {
     try {
-      await deletedVariableMutation.mutateAsync(id);
+      await deletedDynamicVariableMutation.mutateAsync(id);
       successToast(`Dynamic variable "${name}" deleted successfully`);
     } catch (error) {
       errorToast(
@@ -153,6 +171,12 @@ const DynamicVariablesSection: React.FC = () => {
     const formatted = `{{${text}}}`;
     navigator.clipboard.writeText(formatted);
     successToast('Variable copied to clipboard');
+  };
+
+  // Handle edit button click
+  const handleEditClick = (variable: DynamicVariable) => {
+    setEditingVariable(variable);
+    setIsEditOpen(true);
   };
 
   // Get unique values for filters
@@ -283,14 +307,20 @@ const DynamicVariablesSection: React.FC = () => {
       <div className='grid gap-4'>
         <DynamicVariableCard
           variables={paginatedVariables}
+          environments={environments}
           handleCopy={handleCopy}
-          onEdit={(v) => {
-            setEditingVariable(v);
-            // TODO: Open edit dialog
-          }}
+          onEdit={handleEditClick}
           onDelete={handleDelete}
         />
       </div>
+
+      {/* Edit Dialog */}
+      <EditDynamicVariableDialog
+        open={isEditOpen}
+        setOpen={setIsEditOpen}
+        variable={editingVariable}
+        handleDynamicUpdate={handleDynamicUpdate}
+      />
 
       {/* Pagination */}
       {filteredVariables.length > 0 && (

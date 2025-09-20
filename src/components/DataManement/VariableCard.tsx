@@ -19,6 +19,16 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import {
+  AlertDialog,
+  AlertDialogTrigger,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+} from '@/components/ui/alert-dialog';
 
 interface VariableListProps {
   variables: Variable[];
@@ -83,7 +93,6 @@ const VariableCard: React.FC<VariableListProps> = ({
                       <Button
                         variant='ghost'
                         size='sm'
-                      
                         onClick={() => handleCopy(variable.name)}
                         title='Copy variable name'
                         className='p-1 h-auto'
@@ -95,8 +104,8 @@ const VariableCard: React.FC<VariableListProps> = ({
                       {variable.isGlobal
                         ? 'Global'
                         : environments.find(
-                          (e) => e.id === variable.environmentId
-                        )?.name || 'Environment'}
+                            (e) => e.id === variable.environmentId
+                          )?.name || 'Environment'}
                     </Badge>
                     <Badge
                       variant='secondary'
@@ -116,14 +125,15 @@ const VariableCard: React.FC<VariableListProps> = ({
                   </div>
                   <div className='flex items-center space-x-2 mb-2'>
                     <code
-                      className={`px-2 py-1 rounded text-sm ${variable.type === 'dynamic'
+                      className={`px-2 py-1 rounded text-sm ${
+                        variable.type === 'dynamic'
                           ? 'bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300'
                           : variable.type === 'static'
-                            ? 'bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-300'
-                            : 'bg-purple-50 dark:bg-purple-950 text-purple-700 dark:text-purple-300'
-                        }`}
+                          ? 'bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-300'
+                          : 'bg-purple-50 dark:bg-purple-950 text-purple-700 dark:text-purple-300'
+                      }`}
                     >
-                      {variable.isSecret ? '••••••••' : variable.initialValue}
+                      {variable.isSecret ? '••••••••' : variable?.currentValue}
                     </code>
                     <Button
                       variant='ghost'
@@ -132,7 +142,7 @@ const VariableCard: React.FC<VariableListProps> = ({
                         handleCopy(
                           variable.type === 'secret'
                             ? '••••••••'
-                            : variable.initialValue
+                            : variable?.currentValue
                         )
                       }
                     >
@@ -161,18 +171,38 @@ const VariableCard: React.FC<VariableListProps> = ({
                     <TooltipContent>Edit Variable</TooltipContent>
                   </Tooltip>
 
-                  <Tooltip>
-                    <TooltipTrigger asChild>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
                       <Button
                         variant='ghost'
                         size='sm'
-                        onClick={() => onDelete(variable.id, variable.key)}
+                        className='text-red-600 hover:text-red-700'
                       >
                         <Trash2 className='w-4 h-4' />
                       </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Delete Variable</TooltipContent>
-                  </Tooltip>
+                    </AlertDialogTrigger>
+
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>
+                          Delete this variable?
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This will permanently delete “{variable.name}”. This
+                          action cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <Button
+                          variant='destructive'
+                          onClick={() => onDelete(variable.id, variable.name)}
+                        >
+                          Delete
+                        </Button>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </TooltipProvider>
               </div>
             </div>

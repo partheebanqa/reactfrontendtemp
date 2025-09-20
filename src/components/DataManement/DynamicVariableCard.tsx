@@ -12,13 +12,41 @@ import {
   Type,
   ToggleLeft,
 } from 'lucide-react';
-import { DynamicVariable, Environment } from '@/shared/types/datamanagement';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import {
+  AlertDialog,
+  AlertDialogTrigger,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+} from '@/components/ui/alert-dialog';
+
+interface DynamicVariable {
+  id: string;
+  workspaceId: string;
+  name: string;
+  generatorId: string;
+  generatorName: string;
+  parameters: Record<string, any>;
+  type: string;
+  category: string;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: string | null;
+}
+
+interface Environment {
+  id: string;
+  name: string;
+}
 
 interface DynamicVariableCardProps {
   variables: DynamicVariable[];
@@ -199,18 +227,38 @@ const DynamicVariableCard: React.FC<DynamicVariableCardProps> = ({
                     <TooltipContent>Edit Dynamic Variable</TooltipContent>
                   </Tooltip>
 
-                  <Tooltip>
-                    <TooltipTrigger asChild>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
                       <Button
                         variant='ghost'
                         size='sm'
-                        onClick={() => onDelete(variable.id, variable.name)}
+                        className='text-red-600 hover:text-red-700'
                       >
                         <Trash2 className='w-4 h-4' />
                       </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Delete Dynamic Variable</TooltipContent>
-                  </Tooltip>
+                    </AlertDialogTrigger>
+
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>
+                          Delete this variable?
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This will permanently delete "{variable.name}". This
+                          action cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <Button
+                          variant='destructive'
+                          onClick={() => onDelete(variable.id, variable.name)}
+                        >
+                          Delete
+                        </Button>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </TooltipProvider>
               </div>
             </div>

@@ -48,7 +48,7 @@ const StaticVariablesSection: React.FC = () => {
   const [typeFilter, setTypeFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
-  const { error: errorToast, success: successToast } = useToast();
+  const { error: showError, success: showSuccess, toast } = useToast();
 
   // CREATE
   const handleCreate = async (payload: any) => {
@@ -65,10 +65,16 @@ const StaticVariablesSection: React.FC = () => {
         ...payload,
         name: finalName,
       });
+      toast({
+        title: 'Variable Created',
+        description: 'The variable has been created successfully.',
+      });
     } catch (error: any) {
-      errorToast(
-        error instanceof Error ? error.message : 'Failed to create variable'
-      );
+      toast({
+        title: 'Error',
+        description:
+          error instanceof Error ? error.message : 'Failed to create variable',
+      });
       return;
     }
 
@@ -100,6 +106,10 @@ const StaticVariablesSection: React.FC = () => {
           updatedAt: new Date().toISOString(),
         });
       }
+      toast({
+        title: 'Variable Updated',
+        description: 'The variable has been updated successfully.',
+      });
       setEditingVariable(null);
       setIsEditOpen(false);
     } catch (error: any) {
