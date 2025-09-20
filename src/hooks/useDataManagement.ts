@@ -123,10 +123,7 @@ export function useDataManagement() {
     variables,
     dynamicVariables,
 
-    // Use this setter in components instead of dataManagementActions.setActiveEnvironment
     setActiveEnvironment,
-
-    // Keep the others the same
     setEnvironments,
     setVariables: dataManagementActions.setVariables,
     setDynamicVariables: dataManagementActions.setDynamicVariables,
