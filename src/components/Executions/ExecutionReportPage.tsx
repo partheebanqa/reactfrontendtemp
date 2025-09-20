@@ -68,6 +68,8 @@ const ExecutionReportPage: React.FC = () => {
   });
 
   const renderTestSuiteReport = (data: any) => {
+    console.log('data123:', data);
+
     const testCategories = [
       {
         name: 'Positive Tests',
@@ -79,6 +81,8 @@ const ExecutionReportPage: React.FC = () => {
             method: api.method,
             endpoint: api.url,
             duration: `${api.duration}ms`,
+            requestCurl: api.requestCurl,
+            response: api.response,
             statusCode: api.status === 'passed' ? 200 : 400,
             status:
               api.status === 'passed'
@@ -98,6 +102,8 @@ const ExecutionReportPage: React.FC = () => {
             method: api.method,
             endpoint: api.url,
             duration: `${api.duration}ms`,
+            requestCurl: api.requestCurl,
+            response: api.response,
             statusCode: api.status === 'passed' ? 200 : 400,
             status:
               api.status === 'passed'
@@ -116,6 +122,8 @@ const ExecutionReportPage: React.FC = () => {
             name: api.name,
             method: api.method,
             endpoint: api.url,
+            requestCurl: api.requestCurl,
+            response: api.response,
             duration: `${api.duration}ms`,
             statusCode: api.status === 'passed' ? 200 : 400,
             status:
@@ -135,6 +143,8 @@ const ExecutionReportPage: React.FC = () => {
             name: api.name,
             method: api.method,
             endpoint: api.url,
+            requestCurl: api.requestCurl,
+            response: api.response,
             duration: `${api.duration}ms`,
             statusCode: api.status === 'passed' ? 200 : 400,
             status:
@@ -154,6 +164,8 @@ const ExecutionReportPage: React.FC = () => {
             name: api.name,
             method: api.method,
             endpoint: api.url,
+            requestCurl: api.requestCurl,
+            response: api.response,
             duration: `${api.duration}ms`,
             statusCode: api.status === 'passed' ? 200 : 400,
             status:
@@ -173,6 +185,8 @@ const ExecutionReportPage: React.FC = () => {
             name: api.name,
             method: api.method,
             endpoint: api.url,
+            requestCurl: api.requestCurl,
+            response: api.response,
             duration: `${api.duration}ms`,
             statusCode: api.status === 'passed' ? 200 : 400,
             status:
@@ -192,6 +206,8 @@ const ExecutionReportPage: React.FC = () => {
             name: api.name,
             method: api.method,
             endpoint: api.url,
+            requestCurl: api.requestCurl,
+            response: api.response,
             duration: `${api.duration}ms`,
             statusCode: api.status === 'passed' ? 200 : 400,
             status:
