@@ -28,10 +28,7 @@ export function useDataManagement() {
     isLoading,
     variables,
     dynamicVariables,
-  } = useDataManagementStore(); // ⬅️ also grab dynamicVariables
-
-  console.log('dynamicVariables in useDataManagement:', dynamicVariables);
-  console.log('variables in useDataManagement:', variables);
+  } = useDataManagementStore();
 
   const { currentWorkspace } = useWorkspace();
 
