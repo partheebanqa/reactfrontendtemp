@@ -1,5 +1,5 @@
-import React, { useState, useCallback } from 'react';
-import { CheckSquare, Square, Zap, Filter } from 'lucide-react';
+import React, { useState, useCallback, useEffect } from 'react';
+import { CheckSquare, Square, Zap, Filter, Settings } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -43,7 +43,15 @@ const AssertionManager: React.FC<AssertionManagerProps> = ({
 }) => {
   const [showAssertionDialog, setShowAssertionDialog] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [uiAssertions, setUiAssertions] = useState<Assertion[]>([]);
   const { toast } = useToast();
+
+  // Sync UI assertions with main assertions when they change
+  useEffect(() => {
+    if (assertions && Array.isArray(assertions)) {
+      setUiAssertions([...assertions]);
+    }
+  }, [assertions]);
 
   const parseTextWithEditableNumbers = (
     text: string,
@@ -71,11 +79,11 @@ const AssertionManager: React.FC<AssertionManagerProps> = ({
           key={editKey}
           value={numberValue}
           onSave={(newValue) => {
-            // Create a safe update function that preserves response data
-            const updateAssertions = (prevAssertions: Assertion[]) => {
+            // Update UI assertions directly
+            const updateUiAssertions = (prevAssertions: Assertion[]) => {
               if (!Array.isArray(prevAssertions)) {
                 console.warn(
-                  'Previous assertions is not an array:',
+                  'Previous UI assertions is not an array:',
                   prevAssertions
                 );
                 return prevAssertions;
@@ -131,8 +139,11 @@ const AssertionManager: React.FC<AssertionManagerProps> = ({
               });
             };
 
-            // Use the update function
-            setAssertions(updateAssertions);
+            // Update UI state
+            setUiAssertions(updateUiAssertions);
+
+            // Also update main assertions state
+            setAssertions(updateUiAssertions);
           }}
         />
       );
@@ -149,10 +160,10 @@ const AssertionManager: React.FC<AssertionManagerProps> = ({
   };
 
   const getSelectedAssertions = (): Assertion[] => {
-    if (!assertions || !Array.isArray(assertions)) {
+    if (!uiAssertions || !Array.isArray(uiAssertions)) {
       return [];
     }
-    return assertions.filter((a) => a.enabled);
+    return uiAssertions.filter((a) => a.enabled);
   };
 
   const formatBackendResponse = (result: any): FormattedResponse => {
@@ -191,22 +202,22 @@ const AssertionManager: React.FC<AssertionManagerProps> = ({
     };
   };
 
-  const handleGenerateAssertions = () => {
+  const handleGenerateNewAssertions = () => {
     if (!responseData) {
       toast({
         title: 'No Response',
-        description: 'Please send a request first to generate assertions.',
+        description: 'Please send a request first to generate new assertions.',
         variant: 'destructive',
       });
       return;
     }
 
-    // Generate assertions if not already available or if we want to refresh them
+    // Generate new assertions only when we have response data
     const formattedResponse = formatBackendResponse(responseData);
     const generatedAssertions = generateAssertions(formattedResponse);
 
-    // Merge with existing assertions, keeping existing ones enabled
-    const existingAssertions = Array.isArray(assertions) ? assertions : [];
+    // Merge with existing UI assertions, keeping existing ones enabled
+    const existingAssertions = Array.isArray(uiAssertions) ? uiAssertions : [];
     const existingIds = new Set(existingAssertions.map((a) => a.id));
 
     // Add new generated assertions that don't already exist
@@ -215,15 +226,40 @@ const AssertionManager: React.FC<AssertionManagerProps> = ({
     );
 
     const mergedAssertions = [...existingAssertions, ...newAssertions];
+    setUiAssertions(mergedAssertions);
     setAssertions(mergedAssertions);
 
     setShowAssertionDialog(true);
   };
 
+  const handleManageExistingAssertions = () => {
+    // Just open the dialog to manage existing assertions - no response data needed
+    setShowAssertionDialog(true);
+  };
+
+  const handleToggleAssertion = (id: string) => {
+    const updateToggle = (prevAssertions: Assertion[]) => {
+      if (!Array.isArray(prevAssertions)) return prevAssertions;
+
+      return prevAssertions.map((assertion) =>
+        assertion.id === id
+          ? { ...assertion, enabled: !assertion.enabled }
+          : assertion
+      );
+    };
+
+    // Update both UI state and main state
+    setUiAssertions(updateToggle);
+    setAssertions(updateToggle);
+  };
+
   const handleSaveAssertions = async () => {
     try {
-      if (!assertions || !Array.isArray(assertions)) {
-        console.error('[v0] Assertions is not an array:', assertions);
+      if (!uiAssertions || !Array.isArray(uiAssertions)) {
+        console.error(
+          '[AssertionManager] UI Assertions is not an array:',
+          uiAssertions
+        );
         return;
       }
 
@@ -236,7 +272,7 @@ const AssertionManager: React.FC<AssertionManagerProps> = ({
         return;
       }
 
-      const selectedAssertions = assertions
+      const selectedAssertions = uiAssertions
         .filter((assertion) => assertion.enabled)
         .map((assertion) => ({
           ...assertion,
@@ -260,13 +296,16 @@ const AssertionManager: React.FC<AssertionManagerProps> = ({
         requestData,
       });
 
+      // Update main assertions state with UI changes
+      setAssertions([...uiAssertions]);
+
       toast({
         title: 'Success',
         description: 'Assertions saved successfully',
       });
       setShowAssertionDialog(false);
     } catch (error) {
-      console.error('[v0] Error saving assertions:', error);
+      console.error('[AssertionManager] Error saving assertions:', error);
       toast({
         title: 'Error',
         description: 'Failed to save assertions',
@@ -290,12 +329,16 @@ const AssertionManager: React.FC<AssertionManagerProps> = ({
     }
   };
 
-  // Get unique categories from assertions - with proper array check
+  // Get unique categories from UI assertions - with proper array check
   const getCategories = (): string[] => {
-    if (!assertions || !Array.isArray(assertions) || assertions.length === 0)
+    if (
+      !uiAssertions ||
+      !Array.isArray(uiAssertions) ||
+      uiAssertions.length === 0
+    )
       return [];
     const categories = [
-      ...new Set(assertions.map((assertion) => assertion.category)),
+      ...new Set(uiAssertions.map((assertion) => assertion.category)),
     ];
     return categories.sort();
   };
@@ -324,14 +367,17 @@ const AssertionManager: React.FC<AssertionManagerProps> = ({
   };
 
   const getFilteredAssertions = (): Assertion[] => {
-    if (!assertions || !Array.isArray(assertions)) {
+    if (!uiAssertions || !Array.isArray(uiAssertions)) {
       return [];
     }
-    if (selectedCategory === 'all') return assertions;
-    return assertions.filter(
+    if (selectedCategory === 'all') return uiAssertions;
+    return uiAssertions.filter(
       (assertion) => assertion.category === selectedCategory
     );
   };
+
+  const hasExistingAssertions =
+    Array.isArray(uiAssertions) && uiAssertions.length > 0;
 
   return (
     <div className='space-y-4'>
@@ -341,14 +387,21 @@ const AssertionManager: React.FC<AssertionManagerProps> = ({
             Manage Assertions
           </h3>
           <p className='text-sm text-gray-500 dark:text-gray-400 mt-1'>
-            Send a request and click "Generate Assertions" to automatically
-            create and manage test assertions.
+            Generate new assertions from response data or manage existing ones.
           </p>
         </div>
-        <Button onClick={handleGenerateAssertions}>
-          <Zap className='h-3 w-3 mr-1' />
-          Generate Assertions
-        </Button>
+        <div className='flex gap-2'>
+          {hasExistingAssertions && (
+            <Button variant='outline' onClick={handleManageExistingAssertions}>
+              <Settings className='h-3 w-3 mr-1' />
+              Manage Existing
+            </Button>
+          )}
+          <Button onClick={handleGenerateNewAssertions}>
+            <Zap className='h-3 w-3 mr-1' />
+            Generate New
+          </Button>
+        </div>
       </div>
 
       {/* Show selected assertions with full details */}
@@ -386,7 +439,7 @@ const AssertionManager: React.FC<AssertionManagerProps> = ({
                           'description'
                         )}
                         {assertion.operator && (
-                          <span className='inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'>
+                          <span className='inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 ml-2'>
                             Operator: {assertion.operator}
                           </span>
                         )}
@@ -430,11 +483,11 @@ const AssertionManager: React.FC<AssertionManagerProps> = ({
             ))}
           </div>
         </div>
-      ) : Array.isArray(assertions) && assertions.length > 0 ? (
+      ) : hasExistingAssertions ? (
         <div className='text-center p-6 border border-dashed border-gray-300 dark:border-gray-700 rounded-lg'>
           <p className='text-gray-500 dark:text-gray-400'>
-            You have {assertions.length} assertions available. Click "Generate
-            Assertions" to select which ones to include.
+            You have {uiAssertions.length} assertions available. Click "Manage
+            Existing" to select which ones to include.
           </p>
         </div>
       ) : (
@@ -452,7 +505,7 @@ const AssertionManager: React.FC<AssertionManagerProps> = ({
         </div>
       )}
 
-      {/* Assertion Generation Dialog */}
+      {/* Assertion Management Dialog */}
       <Dialog open={showAssertionDialog} onOpenChange={setShowAssertionDialog}>
         <DialogContent className='max-w-4xl max-h-[80vh] overflow-hidden flex flex-col'>
           <DialogHeader className='flex-shrink-0'>
@@ -474,12 +527,12 @@ const AssertionManager: React.FC<AssertionManagerProps> = ({
                 >
                   <option value='all'>
                     All Categories (
-                    {Array.isArray(assertions) ? assertions.length : 0})
+                    {Array.isArray(uiAssertions) ? uiAssertions.length : 0})
                   </option>
                   {getCategories().map((category) => {
                     const count =
-                      assertions && Array.isArray(assertions)
-                        ? assertions.filter((a) => a.category === category)
+                      uiAssertions && Array.isArray(uiAssertions)
+                        ? uiAssertions.filter((a) => a.category === category)
                             .length
                         : 0;
                     return (
@@ -494,9 +547,7 @@ const AssertionManager: React.FC<AssertionManagerProps> = ({
           </div>
 
           <div className='flex-1 overflow-y-auto'>
-            {assertions &&
-            Array.isArray(assertions) &&
-            assertions.length > 0 ? (
+            {hasExistingAssertions ? (
               <div className='space-y-3 p-1'>
                 {getFilteredAssertions().map((assertion) => (
                   <div
@@ -510,7 +561,7 @@ const AssertionManager: React.FC<AssertionManagerProps> = ({
                     <div className='flex items-start space-x-3'>
                       {/* Checkbox */}
                       <button
-                        onClick={() => toggleAssertion(assertion.id)}
+                        onClick={() => handleToggleAssertion(assertion.id)}
                         className='flex-shrink-0 mt-0.5 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors'
                         title={
                           assertion.enabled
@@ -543,7 +594,7 @@ const AssertionManager: React.FC<AssertionManagerProps> = ({
                               'description'
                             )}
 
-                            <span className='inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'>
+                            <span className='inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 ml-2'>
                               Operator: {assertion.operator}
                             </span>
                           </p>
@@ -591,7 +642,7 @@ const AssertionManager: React.FC<AssertionManagerProps> = ({
                   <CheckSquare className='h-12 w-12 mx-auto' />
                 </div>
                 <h4 className='text-lg font-medium text-gray-900 dark:text-white mb-2'>
-                  No Response Data Available
+                  No Assertions Available
                 </h4>
                 <p className='text-gray-500 dark:text-gray-400 max-w-md'>
                   Send a request first to generate assertions based on the
@@ -605,10 +656,10 @@ const AssertionManager: React.FC<AssertionManagerProps> = ({
             <div className='w-full flex items-center justify-between'>
               {/* Left side: count */}
               <span className='text-sm text-gray-600 dark:text-gray-400'>
-                {Array.isArray(assertions)
-                  ? assertions.filter((a) => a.enabled).length
+                {Array.isArray(uiAssertions)
+                  ? uiAssertions.filter((a) => a.enabled).length
                   : 0}{' '}
-                of {Array.isArray(assertions) ? assertions.length : 0}{' '}
+                of {Array.isArray(uiAssertions) ? uiAssertions.length : 0}{' '}
                 assertions selected
               </span>
 
