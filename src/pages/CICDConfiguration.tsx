@@ -46,7 +46,7 @@ export default function CICDConfiguration() {
     toast({
       title: "Token copied successfully!",
       duration: 3000,
-      type: "success",
+      // type: "success",
     });
   };
 
@@ -85,7 +85,7 @@ export default function CICDConfiguration() {
       toast({
         title: "Token generated successfully!",
         duration: 3000,
-        type: "success",
+        // type: "success",
       });
 
       // No need to call getToken()
@@ -94,7 +94,7 @@ export default function CICDConfiguration() {
       toast({
         title: "Failed to generate token.",
         duration: 3000,
-        type: "error",
+        // type: "error",
       });
     } finally {
       setIsLoading(false);
@@ -119,7 +119,68 @@ export default function CICDConfiguration() {
         iconBgClass="bg-orange-100"
         iconColor="#f97316"
         iconSize={40}
+        quickGuideTitle="🚀 Guided Onboarding: Integrating with CI/CD"
+        quickGuideContent={
+          <div>
+            <p className="mb-4 text-base font-medium mt-4">Here’s how to integrate with your CI/CD pipeline:</p>
+            <ul className="list-none pl-5 space-y-4 text-sm leading-relaxed">
+              <li>
+                🟩 <b className='text-[#000000]'>Step 1: Validate Your Workspace API Key</b> – Location: “Regenerate” button.
+                <span className="block mt-1">
+                  Ensure your API key is active. If expired, click <b>Regenerate</b> to generate a new one. This key is required to authenticate CI/CD requests.
+                </span>
+              </li>
+
+              <li>
+                🟨 <b className='text-[#000000]'>Step 2: Retrieve Your Workspace ID</b> – Location: next to the workspace name.
+                <span className="block mt-1">
+                  Locate the <b>Workspace ID</b>. You’ll need this for request configuration.
+                </span>
+              </li>
+
+              <li>
+                🟦 <b className='text-[#000000]'>Step 3: Select the Target ID (Test Suite / Request Chain)</b> – Location: list view.
+                <span className="block mt-1">
+                  From the respective list view, copy the <b>Test Suite ID</b> or <b>Request Chain ID</b> that you want to configure for CI/CD execution.
+                </span>
+              </li>
+
+              <li>
+                🟪 <b className='text-[#000000]'>Step 4: Configure Your Request</b> – Update your request with the following values:
+                <ul className="list-disc pl-6 mt-2 space-y-1">
+                  <li>Replace <code>YOUR_API_KEY</code> in the request header</li>
+                  <li>Replace <code>YOUR_WORKSPACE_ID</code> in the request header</li>
+                  <li>Replace <code>TEST_SUITE_ID</code> or <code>REQUEST_CHAIN_ID</code> in the request body</li>
+                </ul>
+                <span className="block mt-2">
+                  Use the updated API endpoint in your automated test scripts.
+                </span>
+              </li>
+
+              <li>
+                🟧 <b className='text-[#000000]'>Step 5: Trigger CI/CD Execution</b> – Initiate the request via your pipeline, <b>cURL</b>, or <b>Postman</b>.
+              </li>
+
+              <li>
+                ✅ <b className='text-[#000000]'>Final Step: Review Execution Results</b> – Location: Executions page.
+                <span className="block mt-1">
+                  Navigate to the <b>Executions</b> page to view:
+                </span>
+                <ul className="list-disc pl-6 mt-2 space-y-1">
+                  <li>Detailed logs</li>
+                  <li>Status codes</li>
+                  <li>Assertion results</li>
+                  <li>Schema validations per test case</li>
+                </ul>
+                <i className="block mt-2 text-gray-600">
+                  You’ll soon be able to check execution status via API (coming soon).
+                </i>
+              </li>
+            </ul>
+          </div>
+        }
       />
+
       <div className="flex-1 overflow-y-auto mt-3">
         {/* API Key Required Notice */}
         <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">
