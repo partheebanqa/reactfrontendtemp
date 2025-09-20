@@ -157,43 +157,43 @@ export default function ScheduleList({
   // Filter schedules based on search and filters
   const filteredSchedules = Array.isArray(schedules)
     ? schedules.filter((schedule: any) => {
-        const matchesSearch =
-          schedule.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          schedule.testSuite?.name
-            ?.toLowerCase()
-            .includes(searchQuery.toLowerCase());
+      const matchesSearch =
+        schedule.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        schedule.testSuite?.name
+          ?.toLowerCase()
+          .includes(searchQuery.toLowerCase());
 
-        const matchesType =
-          typeFilter === 'all' ||
-          (typeFilter === 'test-suite' && schedule.testSuite) ||
-          (typeFilter === 'request-chain' && !schedule.testSuite);
+      const matchesType =
+        typeFilter === 'all' ||
+        (typeFilter === 'test-suite' && schedule.testSuite) ||
+        (typeFilter === 'request-chain' && !schedule.testSuite);
 
-        const matchesExecutionMode =
-          executionModeFilter === 'all' ||
-          (executionModeFilter === 'one-time' &&
-            schedule.scheduleType === 'one-time') ||
-          (executionModeFilter === 'recurring' &&
-            schedule.scheduleType === 'recurring');
+      const matchesExecutionMode =
+        executionModeFilter === 'all' ||
+        (executionModeFilter === 'one-time' &&
+          schedule.scheduleType === 'one-time') ||
+        (executionModeFilter === 'recurring' &&
+          schedule.scheduleType === 'recurring');
 
-        const scheduleStatus = schedule.isActive ? 'active' : 'disabled';
-        const matchesStatus =
-          statusFilter === 'all' || scheduleStatus === statusFilter;
+      const scheduleStatus = schedule.isActive ? 'active' : 'disabled';
+      const matchesStatus =
+        statusFilter === 'all' || scheduleStatus === statusFilter;
 
-        const matchesDateRange =
-          !dateRange.from ||
-          !dateRange.to ||
-          (schedule.createdAt &&
-            new Date(schedule.createdAt) >= dateRange.from &&
-            new Date(schedule.createdAt) <= dateRange.to);
+      const matchesDateRange =
+        !dateRange.from ||
+        !dateRange.to ||
+        (schedule.createdAt &&
+          new Date(schedule.createdAt) >= dateRange.from &&
+          new Date(schedule.createdAt) <= dateRange.to);
 
-        return (
-          matchesSearch &&
-          matchesType &&
-          matchesExecutionMode &&
-          matchesStatus &&
-          matchesDateRange
-        );
-      })
+      return (
+        matchesSearch &&
+        matchesType &&
+        matchesExecutionMode &&
+        matchesStatus &&
+        matchesDateRange
+      );
+    })
     : [];
 
   // Helper function to get execution mode icon
@@ -216,9 +216,8 @@ export default function ScheduleList({
   const formatScheduleDate = (schedule: any) => {
     if (schedule.scheduledDate && schedule.scheduledTime) {
       const date = new Date(schedule.scheduledDate);
-      return `${format(date, 'MMM dd, yyyy')} at ${schedule.scheduledTime} (${
-        schedule.timezone || 'UTC'
-      })`;
+      return `${format(date, 'MMM dd, yyyy')} at ${schedule.scheduledTime} (${schedule.timezone || 'UTC'
+        })`;
     }
     if (schedule.nextRun) {
       return formatDistanceToNow(new Date(schedule.nextRun), {
@@ -368,27 +367,28 @@ export default function ScheduleList({
           <div className='bg-white rounded-lg border border-slate-200 overflow-hidden'>
             <Table>
               <TableHeader>
-                <TableRow className='bg-slate-50'>
-                  <TableHead className='font-semibold text-slate-600 text-xs uppercase tracking-wider'>
-                    SCHEDULE
+                <TableRow className="bg-slate-50">
+                  <TableHead className="font-semibold text-slate-600 text-sm capitalize tracking-wider">
+                    Schedule
                   </TableHead>
-                  <TableHead className='font-semibold text-slate-600 text-xs uppercase tracking-wider'>
-                    TYPE
+                  <TableHead className="font-semibold text-slate-600 text-sm capitalize tracking-wider">
+                    Type
                   </TableHead>
-                  <TableHead className='font-semibold text-slate-600 text-xs uppercase tracking-wider'>
-                    EXECUTION MODE
+                  <TableHead className="font-semibold text-slate-600 text-sm capitalize tracking-wider">
+                    {/* Execution */}
+                    Mode
                   </TableHead>
-                  <TableHead className='font-semibold text-slate-600 text-xs uppercase tracking-wider'>
-                    STATUS
+                  <TableHead className="font-semibold text-slate-600 text-sm capitalize tracking-wider">
+                    Status
                   </TableHead>
-                  <TableHead className='font-semibold text-slate-600 text-xs uppercase tracking-wider'>
-                    ENVIRONMENT
+                  <TableHead className="font-semibold text-slate-600 text-sm capitalize tracking-wider">
+                    Environment
                   </TableHead>
-                  <TableHead className='font-semibold text-slate-600 text-xs uppercase tracking-wider'>
-                    NEXT RUN
+                  <TableHead className="font-semibold text-slate-600 text-sm capitalize tracking-wider">
+                    Next Run
                   </TableHead>
-                  <TableHead className='font-semibold text-slate-600 text-xs uppercase tracking-wider'>
-                    ACTIONS
+                  <TableHead className="font-semibold text-slate-600 text-sm capitalize tracking-wider">
+                    Actions
                   </TableHead>
                 </TableRow>
               </TableHeader>
@@ -424,19 +424,18 @@ export default function ScheduleList({
                           {schedule.scheduleType === 'one-time'
                             ? 'One-time'
                             : schedule.scheduleType === 'recurring'
-                            ? 'Recurring'
-                            : schedule.scheduleType === 'ci-cd'
-                            ? 'CI/CD'
-                            : 'Scheduled'}
+                              ? 'Recurring'
+                              : schedule.scheduleType === 'ci-cd'
+                                ? 'CI/CD'
+                                : 'Scheduled'}
                         </span>
                       </div>
                     </TableCell>
                     <TableCell className='py-4'>
                       <div className='flex items-center gap-2'>
                         <div
-                          className={`w-2 h-2 rounded-full ${
-                            schedule.isActive ? 'bg-green-500' : 'bg-gray-400'
-                          }`}
+                          className={`w-2 h-2 rounded-full ${schedule.isActive ? 'bg-green-500' : 'bg-gray-400'
+                            }`}
                         ></div>
                         <span className='text-sm text-slate-700'>
                           {schedule.isActive ? 'Active' : 'Disabled'}
@@ -604,9 +603,8 @@ export default function ScheduleList({
                     <Button
                       id='date'
                       variant='outline'
-                      className={`w-full justify-start text-left font-normal ${
-                        !dateRange.from && 'text-muted-foreground'
-                      }`}
+                      className={`w-full justify-start text-left font-normal ${!dateRange.from && 'text-muted-foreground'
+                        }`}
                     >
                       <CalendarIcon className='mr-2 h-4 w-4' />
                       {dateRange.from ? (

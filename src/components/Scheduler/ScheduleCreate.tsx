@@ -81,6 +81,7 @@ interface ScheduleCreateProps {
   testSuites: any[];
   requestChains: any[];
   onScheduleCreated: () => void;
+
 }
 
 export default function ScheduleCreate({
@@ -198,7 +199,7 @@ export default function ScheduleCreate({
       open={createDialogOpen}
       onOpenChange={(open) => {
         if (open) {
-          // Reset form to default values when opening create dialog
+
           form.reset({
             name: '',
             description: '',
@@ -221,7 +222,7 @@ export default function ScheduleCreate({
       }}
     >
       <DialogTrigger asChild>
-        <Button className='bg-primary hover:bg-primary/90 text-primary-foreground'>
+        <Button className="hover-scale bg-[#136fb0] text-white" >
           <Plus className='mr-2' size={16} />
           New Schedule
         </Button>
@@ -415,9 +416,8 @@ export default function ScheduleCreate({
                             <FormControl>
                               <Button
                                 variant='outline'
-                                className={`w-full pl-3 text-left font-normal ${
-                                  !field.value && 'text-muted-foreground'
-                                }`}
+                                className={`w-full pl-3 text-left font-normal ${!field.value && 'text-muted-foreground'
+                                  }`}
                               >
                                 {field.value ? (
                                   format(field.value, 'PPP')
@@ -712,16 +712,14 @@ export default function ScheduleCreate({
                     />
                     <label
                       htmlFor='enable-schedule'
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${
-                        form.watch('isActive') ? 'bg-blue-600' : 'bg-gray-200'
-                      }`}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${form.watch('isActive') ? 'bg-blue-600' : 'bg-gray-200'
+                        }`}
                     >
                       <span
-                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                          form.watch('isActive')
-                            ? 'translate-x-6'
-                            : 'translate-x-1'
-                        }`}
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${form.watch('isActive')
+                          ? 'translate-x-6'
+                          : 'translate-x-1'
+                          }`}
                       />
                     </label>
                   </div>

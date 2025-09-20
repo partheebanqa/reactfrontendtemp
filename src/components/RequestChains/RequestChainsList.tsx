@@ -233,25 +233,97 @@ export function RequestChainsList({
   return (
     <div className='space-y-3'>
       <BreadCum
-        title='Request Chains'
-        subtitle='Manage your API automation workflows'
-        buttonTitle='Create Request Chain'
-        onClickQuickGuide={() => console.log('Exporting...')}
+        title="Request Chains"
+        subtitle="Manage your API automation workflows"
+        buttonTitle="Create Request Chain"
+        onClickQuickGuide={() => console.log("Exporting...")}
         onClickCreateNew={onCreateChain}
-        quickGuideTitle='How to Use Reports'
+        quickGuideTitle="🚀 Guided Onboarding: Working with Request Chains"
         quickGuideContent={
           <div>
-            <p className='mb-2'>Here’s how to get started:</p>
-            <ul className='list-disc pl-5 space-y-1 text-sm'>
+            <p className="mb-4 text-base font-medium mt-4">Here’s how to get started:</p>
+            <ul className="list-none pl-5 space-y-4 text-sm leading-relaxed">
               <li>
-                Step 1: Click <b>New Report</b> to create.
+                🟩 <b className='text-[#000000]'>Step 1: Create a Request Chain</b> – Location: “Create Request Chain” button.
+                <span className="block mt-1">
+                  Provide a name and description for your chain.
+                  Set the status to <b>Active</b>.
+                  Select the target environment where the chain should run.
+                  This defines the execution context for all included requests.
+                </span>
               </li>
-              <li>Step 2: Fill in details like name and filters.</li>
-              <li>Step 3: Save and view analytics.</li>
+
+              <li>
+                🟨 <b className='text-[#000000]'>Step 2: Add Requests to the Chain</b> – Location: “Import from Collection” or “Add New Request”.
+                <ul className="list-disc pl-6 mt-2 space-y-1">
+                  <li>Use <b>Import from Collection</b> to include requests from an existing collection.</li>
+                  <li>You can also import a new collection not yet added to the Request Builder.</li>
+                  <li>Use <b>Add New Request</b> to manually create and add a request to the chain.</li>
+                </ul>
+              </li>
+
+              <li>
+                🟦 <b className='text-[#000000]'>Step 3: Reorder Requests</b> – Location: Drag each request.
+                <span className="block mt-1">
+                  Drag and drop requests to define the execution sequence.
+                  <i>Note: The order is critical—it determines how requests are executed.</i>
+                </span>
+              </li>
+
+              <li>
+                🟪 <b className='text-[#000000]'>Step 4: Add Variable Extraction</b> – Location: Expand icon on a request → then click “Run”.
+                <ul className="list-disc pl-6 mt-2 space-y-1">
+                  <li>Run the request to generate a successful response.</li>
+                  <li>Hover over the response body or headers and click <b>Extract</b>.</li>
+                  <li>Name the variable and save it (variables follow the naming convention: <code>E_Variable_NAME</code>).</li>
+                  <li>Extracted variables will appear at the bottom of each request (headers or body).</li>
+                  <li>You can review all extracted variables in the <b>Extracted Variables</b> table above the “Add Request” section.</li>
+                </ul>
+              </li>
+
+              <li>
+                🟧 <b className='text-[#000000]'>Step 5: Pass the Extracted Variables</b> – Inject extracted variables into URL, body, headers, or auth fields.
+                <span className="block mt-1">
+                  Use double curly braces to reference variables: <code>{"{{Key}}"}</code>
+                </span>
+                <p className="mt-2 font-medium">🔤 Variable Naming Conventions:</p>
+                <ul className="list-disc pl-6 mt-1 space-y-1">
+                  <li><code>E_</code> → Extracted variables</li>
+                  <li><code>S_</code> → Static variables</li>
+                  <li><code>D_</code> → Dynamic variables</li>
+                </ul>
+              </li>
+
+              <li>
+                🟥 <b className='text-[#000000]'>Step 6: Run All Requests Before Saving</b> – Location: “Run All” button.
+                <span className="block mt-1">
+                  Execute the full chain to verify API responses and variable substitutions.
+                  <i>Note: You can pass values using previous responses, static variables, or dynamic variables.</i>
+                </span>
+              </li>
+
+              <li>
+                🟫 <b className='text-[#000000]'>Step 7: Save the Request Chain</b> – Location: “Save” button.
+                <span className="block mt-1">
+                  Save your configured request chain. Optionally, click <b>Execute</b> to run the chain immediately.
+                </span>
+              </li>
+
+              <li>
+                🟨 <b className='text-[#000000]'>Step 8: Execute from List View</b> – From the list view, select and execute your saved request chain.
+              </li>
+
+              <li>
+                ✅ <b className='text-[#000000]'>Final Step: Review Execution Results</b> – Location: Executions page.
+                <span className="block mt-1">
+                  Navigate to the <b>Executions</b> page to view logs, extracted variables, and detailed execution insights.
+                </span>
+              </li>
             </ul>
           </div>
         }
       />
+
 
       {/* Filters and Search */}
       <div className='flex flex-col lg:flex-row gap-4'>
