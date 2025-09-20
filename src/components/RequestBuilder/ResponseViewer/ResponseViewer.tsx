@@ -21,7 +21,6 @@ interface ResponseViewerProps {
 
 const ResponseViewer = ({ isBottomLayout }: ResponseViewerProps) => {
   const { responseData } = useRequest();
-  console.log('Response Data:', responseData);
 
   const isMobile = useIsMobile();
   const [activeTab, setActiveTab] = useState<

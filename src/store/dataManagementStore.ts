@@ -36,8 +36,6 @@ export const dataManagementActions = {
   },
 
   setVariables: (variables: DataManagementState['variables']) => {
-    console.log('setVariables called with:', variables);
-
     dataManagementStore.setState((state) => ({
       ...state,
       variables,
