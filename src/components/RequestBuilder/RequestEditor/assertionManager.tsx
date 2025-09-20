@@ -1,5 +1,12 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { CheckSquare, Square, Zap, Filter, Settings } from 'lucide-react';
+import {
+  CheckSquare,
+  Square,
+  Zap,
+  Filter,
+  Settings,
+  Search,
+} from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -43,6 +50,7 @@ const AssertionManager: React.FC<AssertionManagerProps> = ({
 }) => {
   const [showAssertionDialog, setShowAssertionDialog] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [searchTerm, setSearchTerm] = useState<string>('');
   const [uiAssertions, setUiAssertions] = useState<Assertion[]>([]);
   const { toast } = useToast();
 
@@ -113,15 +121,18 @@ const AssertionManager: React.FC<AssertionManagerProps> = ({
                 const originalValue = Number.parseInt(numberValue);
 
                 if (!isNaN(numericValue) && !isNaN(originalValue)) {
-                  // Update expectedValue if it matches
-                  if (assertion.expectedValue === originalValue) {
-                    updatedAssertion.expectedValue = numericValue;
+                  // Update expectedValue if it matches (handle both string and number types)
+                  if (assertion.expectedValue == originalValue) {
+                    updatedAssertion.expectedValue =
+                      typeof assertion.expectedValue === 'string'
+                        ? newValue
+                        : numericValue;
                   }
 
                   // Update ID if it contains the original value
                   if (assertion.id.includes(numberValue)) {
                     updatedAssertion.id = assertion.id.replace(
-                      numberValue,
+                      new RegExp(`\\b${numberValue}\\b`, 'g'),
                       newValue
                     );
                   }
@@ -133,6 +144,24 @@ const AssertionManager: React.FC<AssertionManagerProps> = ({
                   if (assertion.maxValue === originalValue) {
                     updatedAssertion.maxValue = numericValue;
                   }
+
+                  // Update any other string fields that might contain the number
+                  ['field', 'operator', 'group', 'priority'].forEach(
+                    (fieldName) => {
+                      const fieldValue =
+                        updatedAssertion[
+                          fieldName as keyof typeof updatedAssertion
+                        ];
+                      if (
+                        typeof fieldValue === 'string' &&
+                        fieldValue.includes(numberValue)
+                      ) {
+                        const regex = new RegExp(`\\b${numberValue}\\b`, 'g');
+                        (updatedAssertion as any)[fieldName] =
+                          fieldValue.replace(regex, newValue);
+                      }
+                    }
+                  );
                 }
 
                 return updatedAssertion;
@@ -370,14 +399,40 @@ const AssertionManager: React.FC<AssertionManagerProps> = ({
     if (!uiAssertions || !Array.isArray(uiAssertions)) {
       return [];
     }
-    if (selectedCategory === 'all') return uiAssertions;
-    return uiAssertions.filter(
-      (assertion) => assertion.category === selectedCategory
-    );
+
+    let filteredAssertions = uiAssertions;
+
+    // Filter by category
+    if (selectedCategory !== 'all') {
+      filteredAssertions = filteredAssertions.filter(
+        (assertion) => assertion.category === selectedCategory
+      );
+    }
+
+    // Filter by search term (search in both category and description)
+    if (searchTerm.trim()) {
+      const searchLower = searchTerm.toLowerCase().trim();
+      filteredAssertions = filteredAssertions.filter(
+        (assertion) =>
+          assertion.description.toLowerCase().includes(searchLower) ||
+          assertion.category.toLowerCase().includes(searchLower)
+      );
+    }
+
+    return filteredAssertions;
   };
 
   const hasExistingAssertions =
     Array.isArray(uiAssertions) && uiAssertions.length > 0;
+
+  // Clear search when dialog closes
+  const handleDialogOpenChange = (open: boolean) => {
+    setShowAssertionDialog(open);
+    if (!open) {
+      setSearchTerm('');
+      setSelectedCategory('all');
+    }
+  };
 
   return (
     <div className='space-y-4'>
@@ -438,7 +493,7 @@ const AssertionManager: React.FC<AssertionManagerProps> = ({
                           assertion.id,
                           'description'
                         )}
-                        {assertion.operator && (
+                        {assertion?.operator && (
                           <span className='inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 ml-2'>
                             Operator: {assertion.operator}
                           </span>
@@ -506,24 +561,52 @@ const AssertionManager: React.FC<AssertionManagerProps> = ({
       )}
 
       {/* Assertion Management Dialog */}
-      <Dialog open={showAssertionDialog} onOpenChange={setShowAssertionDialog}>
+      <Dialog open={showAssertionDialog} onOpenChange={handleDialogOpenChange}>
         <DialogContent className='max-w-4xl max-h-[80vh] overflow-hidden flex flex-col'>
           <DialogHeader className='flex-shrink-0'>
             <DialogTitle>Select Assertions to Include</DialogTitle>
           </DialogHeader>
 
           <div className='flex-shrink-0 border-b border-gray-200 dark:border-gray-700 pb-4 space-y-4'>
-            {/* Category Filter only */}
-            <div className='flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-end'>
+            {/* Search and Filter Row */}
+            <div className='flex items-center justify-between gap-3'>
+              {/* Search Input */}
+              <div className='relative w-[320px]'>
+                <div className='absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none'>
+                  <Search className='h-4 w-4 text-gray-400' />
+                </div>
+                <input
+                  type='text'
+                  placeholder='Search assertions...'
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className='block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md
+        bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100
+        placeholder-gray-500 dark:placeholder-gray-400
+        hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500
+        focus:outline-none transition-all duration-150'
+                />
+                {searchTerm && (
+                  <button
+                    onClick={() => setSearchTerm('')}
+                    className='absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600'
+                    title='Clear search'
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+
+              {/* Category Filter */}
               <div className='flex items-center space-x-2'>
                 <Filter className='h-4 w-4 text-gray-500' />
                 <select
                   value={selectedCategory}
                   onChange={(e) => setSelectedCategory(e.target.value)}
-                  className='border border-gray-300 dark:border-gray-600 rounded-md px-3 py-1.5 text-sm 
-             bg-white dark:bg-gray-800 hover:border-blue-400 
-             focus:ring-2 focus:ring-blue-500 focus:border-blue-500 
-             focus:outline-none transition-all duration-150'
+                  className='border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm
+        bg-white dark:bg-gray-800 hover:border-blue-400
+        focus:ring-2 focus:ring-blue-500 focus:border-blue-500
+        focus:outline-none transition-all duration-150 min-w-[180px]'
                 >
                   <option value='all'>
                     All Categories (
@@ -549,92 +632,113 @@ const AssertionManager: React.FC<AssertionManagerProps> = ({
           <div className='flex-1 overflow-y-auto'>
             {hasExistingAssertions ? (
               <div className='space-y-3 p-1'>
-                {getFilteredAssertions().map((assertion) => (
-                  <div
-                    key={assertion.id}
-                    className={`border rounded-lg p-4 transition-all duration-200 ${
-                      assertion.enabled
-                        ? 'border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-900/20'
-                        : 'border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800/20'
-                    } hover:shadow-sm`}
-                  >
-                    <div className='flex items-start space-x-3'>
-                      {/* Checkbox */}
-                      <button
-                        onClick={() => handleToggleAssertion(assertion.id)}
-                        className='flex-shrink-0 mt-0.5 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors'
-                        title={
-                          assertion.enabled
-                            ? 'Unselect assertion'
-                            : 'Select assertion'
-                        }
-                      >
-                        {assertion.enabled ? (
-                          <CheckSquare className='h-5 w-5 text-blue-600 dark:text-blue-400' />
-                        ) : (
-                          <Square className='h-5 w-5 text-gray-400' />
-                        )}
-                      </button>
+                {getFilteredAssertions().length > 0 ? (
+                  getFilteredAssertions().map((assertion) => (
+                    <div
+                      key={assertion.id}
+                      className={`border rounded-lg p-4 transition-all duration-200 ${
+                        assertion.enabled
+                          ? 'border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-900/20'
+                          : 'border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800/20'
+                      } hover:shadow-sm`}
+                    >
+                      <div className='flex items-start space-x-3'>
+                        {/* Checkbox */}
+                        <button
+                          onClick={() => handleToggleAssertion(assertion.id)}
+                          className='flex-shrink-0 mt-0.5 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors'
+                          title={
+                            assertion.enabled
+                              ? 'Unselect assertion'
+                              : 'Select assertion'
+                          }
+                        >
+                          {assertion.enabled ? (
+                            <CheckSquare className='h-5 w-5 text-blue-600 dark:text-blue-400' />
+                          ) : (
+                            <Square className='h-5 w-5 text-gray-400' />
+                          )}
+                        </button>
 
-                      {/* Content */}
-                      <div className='flex-1 min-w-0'>
-                        {/* Top row: Description + Category + Priority */}
-                        <div className='flex items-center justify-between gap-2'>
-                          <p
-                            className={`text-sm font-medium truncate ${
-                              assertion.enabled
-                                ? 'text-gray-900 dark:text-white'
-                                : 'text-gray-600 dark:text-gray-400'
-                            }`}
-                            title={assertion.description}
-                          >
-                            {parseTextWithEditableNumbers(
-                              assertion.description,
-                              assertion.id,
-                              'description'
-                            )}
-
-                            <span className='inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 ml-2'>
-                              Operator: {assertion.operator}
-                            </span>
-                          </p>
-
-                          <div className='flex items-center gap-2'>
-                            <span
-                              className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getAssertionTypeColor(
-                                assertion.category
-                              )}`}
+                        {/* Content */}
+                        <div className='flex-1 min-w-0'>
+                          {/* Top row: Description + Category + Priority */}
+                          <div className='flex items-center justify-between gap-2'>
+                            <p
+                              className={`text-sm font-medium truncate ${
+                                assertion.enabled
+                                  ? 'text-gray-900 dark:text-white'
+                                  : 'text-gray-600 dark:text-gray-400'
+                              }`}
+                              title={assertion.description}
                             >
-                              {getCategoryDisplayName(assertion.category)}
-                            </span>
+                              {parseTextWithEditableNumbers(
+                                assertion.description,
+                                assertion.id,
+                                'description'
+                              )}
+                              {assertion.operator && (
+                                <span className='inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 ml-2'>
+                                  Operator: {assertion.operator}
+                                </span>
+                              )}
+                            </p>
 
-                            {assertion?.priority && (
+                            <div className='flex items-center gap-2'>
                               <span
-                                className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(
-                                  assertion.priority
+                                className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getAssertionTypeColor(
+                                  assertion.category
                                 )}`}
                               >
-                                {assertion.priority}
+                                {getCategoryDisplayName(assertion.category)}
                               </span>
-                            )}
-                          </div>
-                        </div>
 
-                        {/* Impact */}
-                        {assertion?.impact && (
-                          <div className='mt-2 text-xs text-gray-500 dark:text-gray-400 font-mono bg-gray-100 dark:bg-gray-800 rounded px-2 py-1 italic'>
-                            Impact:{' '}
-                            {parseTextWithEditableNumbers(
-                              assertion.impact,
-                              assertion.id,
-                              'impact'
-                            )}
+                              {assertion?.priority && (
+                                <span
+                                  className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(
+                                    assertion.priority
+                                  )}`}
+                                >
+                                  {assertion.priority}
+                                </span>
+                              )}
+                            </div>
                           </div>
-                        )}
+
+                          {/* Impact */}
+                          {assertion?.impact && (
+                            <div className='mt-2 text-xs text-gray-500 dark:text-gray-400 font-mono bg-gray-100 dark:bg-gray-800 rounded px-2 py-1 italic'>
+                              Impact:{' '}
+                              {parseTextWithEditableNumbers(
+                                assertion.impact,
+                                assertion.id,
+                                'impact'
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
+                  ))
+                ) : (
+                  <div className='flex flex-col items-center justify-center h-32 text-center'>
+                    <Search className='h-8 w-8 text-gray-400 mb-2' />
+                    <p className='text-gray-500 dark:text-gray-400'>
+                      No assertions found matching your search criteria.
+                    </p>
+                    <Button
+                      variant='ghost'
+                      size='sm'
+                      onClick={() => {
+                        setSearchTerm('');
+                        setSelectedCategory('all');
+                      }}
+                      className='mt-2'
+                    >
+                      Clear filters
+                    </Button>
                   </div>
-                ))}
+                )}
               </div>
             ) : (
               <div className='flex flex-col items-center justify-center h-48 text-center'>
@@ -663,20 +767,15 @@ const AssertionManager: React.FC<AssertionManagerProps> = ({
                 assertions selected
               </span>
 
-              {/* Right side: buttons*/}
+              {/* Right side: buttons */}
               <div className='flex space-x-3'>
-                <button
+                <Button
+                  variant='outline'
                   onClick={() => setShowAssertionDialog(false)}
-                  className='px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md'
                 >
                   Cancel
-                </button>
-                <button
-                  onClick={handleSaveAssertions}
-                  className='px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md'
-                >
-                  Save Assertions
-                </button>
+                </Button>
+                <Button onClick={handleSaveAssertions}>Save Assertions</Button>
               </div>
             </div>
           </DialogFooter>
