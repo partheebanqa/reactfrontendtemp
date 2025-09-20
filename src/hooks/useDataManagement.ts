@@ -8,11 +8,13 @@ import {
   useCreateVariableMutation,
   useDeleteEnvironmentMutation,
   useDeleteVariableMutation,
+  useDeleteDynamicVariableMutation,
   usefetchVariablesQuery,
   usefetchDynamicVariablesQuery,
   usegetEnvironmentQuery,
   useUpdateEnvironmentMutation,
   useUpdateVariableMutation,
+  useUpdateDynamicVariableMutation,
 } from '@/store/query/dataManagementQuery';
 import { useWorkspace } from './useWorkspace';
 import { Environment } from '@/shared/types/datamanagement';
@@ -51,8 +53,10 @@ export function useDataManagement() {
   const createVariableMutation = useCreateVariableMutation();
   const updateEnvironmentMutation = useUpdateEnvironmentMutation();
   const updateVariableMutation = useUpdateVariableMutation();
+  const updateDynamicVariableMutation = useUpdateDynamicVariableMutation();
   const deleteEnvironmentMutation = useDeleteEnvironmentMutation();
   const deletedVariableMutation = useDeleteVariableMutation();
+  const deletedDynamicVariableMutation = useDeleteDynamicVariableMutation();
 
   /**
    * Wrapper: set active env + persist to localStorage (per workspace)
@@ -131,7 +135,9 @@ export function useDataManagement() {
     createVariableMutation,
     updateEnvironmentMutation,
     updateVariableMutation,
+    updateDynamicVariableMutation,
     deleteEnvironmentMutation,
     deletedVariableMutation,
+    deletedDynamicVariableMutation,
   };
 }

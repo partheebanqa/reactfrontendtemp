@@ -9,6 +9,8 @@ import {
   fetchDynamicVariables,
   updateEnvironment,
   updateVariable,
+  updateDynamicVariable,
+  deleteDynamicVariable,
 } from '@/services/dataManagement.service';
 import { workspaceStore } from '../workspaceStore';
 import { useMutation, useQuery } from '@tanstack/react-query';
@@ -176,10 +178,16 @@ export const useDeleteEnvironmentMutation = () => {
 
 export const useCreateVariableMutation = () => {
   const fetchVariablesQuery = usefetchVariablesQuery();
+  const fetchDynamicVariablesQuery = usefetchDynamicVariablesQuery();
+
   return useMutation({
     mutationFn: createVariable,
     onSuccess: () => {
       fetchVariablesQuery.refetch();
+      fetchDynamicVariablesQuery.refetch();
+    },
+    onError: (error) => {
+      console.error('Error creating variable:', error);
     },
   });
 };
@@ -197,6 +205,19 @@ export const useUpdateVariableMutation = () => {
   });
 };
 
+export const useUpdateDynamicVariableMutation = () => {
+  const fetchDynamicVariablesQuery = usefetchDynamicVariablesQuery();
+  return useMutation({
+    mutationFn: updateDynamicVariable,
+    onSuccess: () => {
+      fetchDynamicVariablesQuery.refetch();
+    },
+    onError: (error) => {
+      console.error('Error updating dynamic variable:', error);
+    },
+  });
+};
+
 export const useDeleteVariableMutation = () => {
   const fetchVariablesQuery = usefetchVariablesQuery();
   return useMutation({
@@ -207,6 +228,20 @@ export const useDeleteVariableMutation = () => {
     onError: (error) => {
       console.error('Error deleting variable:', error);
       fetchVariablesQuery.refetch();
+    },
+  });
+};
+
+export const useDeleteDynamicVariableMutation = () => {
+  const fetchDynamicVariablesQuery = usefetchDynamicVariablesQuery();
+  return useMutation({
+    mutationFn: deleteDynamicVariable,
+    onSuccess: () => {
+      fetchDynamicVariablesQuery.refetch();
+    },
+    onError: (error) => {
+      console.error('Error deleting variable:', error);
+      fetchDynamicVariablesQuery.refetch();
     },
   });
 };

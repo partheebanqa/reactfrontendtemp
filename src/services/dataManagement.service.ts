@@ -116,8 +116,35 @@ export const updateVariable = async (variable: any): Promise<any> => {
   return response.json();
 };
 
+export const updateDynamicVariable = async (variable: any): Promise<any> => {
+  const response = await apiRequest(
+    'PUT',
+    `${API_VARIABLES_NEW}/dynamic/${variable.id}`,
+    {
+      body: JSON.stringify(variable),
+    }
+  );
+  if (!response.ok) {
+    throw new Error('Failed to update dynamic variable');
+  }
+  return response.json();
+};
+
 export const deleteVariable = async (variableId: string): Promise<any> => {
   const response = await apiRequest('DELETE', `${API_VARIABLES}/${variableId}`);
+  if (!response.ok) {
+    throw new Error('Failed to delete variable');
+  }
+  return response.json();
+};
+
+export const deleteDynamicVariable = async (
+  variableId: string
+): Promise<any> => {
+  const response = await apiRequest(
+    'DELETE',
+    `${API_VARIABLES_NEW}/dynamic/${variableId}`
+  );
   if (!response.ok) {
     throw new Error('Failed to delete variable');
   }
