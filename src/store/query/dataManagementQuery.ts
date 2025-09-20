@@ -102,17 +102,12 @@ export const usefetchDynamicVariablesQuery = (enabled = true) => {
 
       const response = await fetchDynamicVariables(workspaceId);
 
-      console.log('Dynamic variables response:', response);
-
-      if (response.variables?.length > 0) {
+      if (response?.variables?.length > 0) {
         const mappedDynamicVariables =
-          response.variables.map(mapDynamicVariable);
-
-        console.log('Mapped dynamic variables:', mappedDynamicVariables);
+          response?.variables.map(mapDynamicVariable);
 
         dataManagementActions.setDynamicVariables(mappedDynamicVariables);
 
-        // Optional: handle baseUrl if your dynamic API includes such a variable
         const baseUrlVar = mappedDynamicVariables.find(
           (v) => v.name.toLowerCase() === 'baseurl'
         );
@@ -126,7 +121,6 @@ export const usefetchDynamicVariablesQuery = (enabled = true) => {
           dataManagementActions.setActiveEnvironment(updatedEnvironment);
         }
       } else {
-        // Set empty array if no dynamic variables
         dataManagementActions.setDynamicVariables([]);
       }
 

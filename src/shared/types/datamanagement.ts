@@ -148,6 +148,7 @@ export interface DynamicVariable {
 
 /** Response from API for paginated variable list */
 export interface FetchVariablesResponse {
+  variables: any;
   count: number;
   items: ResponseVariable[];
   page: number;
