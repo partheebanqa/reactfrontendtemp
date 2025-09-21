@@ -175,7 +175,34 @@ export function RequestEditor({
   console.log('Store variables:', storeVariables);
 
   const getUsedDynamicVariables = () => {
-    return getUsedDynamicVariablesFromRequest(request, dynamicStructured);
+    const allTextFields = [
+      request.url || '',
+      request.body || '',
+      request.authToken || '',
+      request.authUsername || '',
+      request.authPassword || '',
+      request.authApiKey || '',
+      request.authApiValue || '',
+      request.authorization?.token || '',
+      request.authorization?.username || '',
+      request.authorization?.password || '',
+      request.authorization?.key || '',
+      request.authorization?.value || '',
+      ...(request.headers || []).map((h) => `${h.key} ${h.value}`),
+      ...(request.params || []).map((p) => `${p.key} ${p.value}`),
+    ];
+
+    const allText = allTextFields.join(' ');
+    const variableMatches = allText.match(/\{\{(\w+)\}\}/g) || [];
+    const usedVariableNames = [
+      ...new Set(
+        variableMatches.map((match) => match.replace(/\{\{(\w+)\}\}/, '$1'))
+      ),
+    ];
+
+    return dynamicStructured.filter((variable) =>
+      usedVariableNames.includes(variable.name)
+    );
   };
 
   const usedDynamicVariables = getUsedDynamicVariables();
@@ -1216,8 +1243,6 @@ export function RequestEditor({
 
   const DynamicVariablesPanel = () => {
     // Only show if there are used dynamic variables
-    console.log('usedDynamicVariables:', usedDynamicVariables);
-
     if (usedDynamicVariables.length === 0) return null;
 
     return (
@@ -1251,7 +1276,9 @@ export function RequestEditor({
               return (
                 <div key={variable.id} className='flex items-center gap-3'>
                   <div className='flex items-center gap-2 flex-1'>
-                    <span className='text-xs font-mono text-purple-700 min-w-0'>{`{{${variable.name}}}`}</span>
+                    <span className='text-xs font-mono text-purple-700 min-w-0'>
+                      {`{{${variable.name}}}`}
+                    </span>
                     <Input
                       value={String(currentOverride?.value || variable.value)}
                       onChange={(e) =>

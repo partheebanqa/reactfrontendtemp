@@ -199,10 +199,6 @@ export function RequestChainEditor({
     dynamicOverrides
   );
 
-  console.log('Dynamic Variables:', dynamicStructured);
-  console.log('Store variables:', storeVariables);
-
-  // Function to find used dynamic variables in all requests
   const getUsedDynamicVariables = () => {
     return getUsedDynamicVariablesFromRequests(
       formData.chainRequests || [],
