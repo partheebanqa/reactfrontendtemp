@@ -303,3 +303,242 @@ export const processRequestWithVariables = (
       : request.authorization,
   };
 };
+
+export interface Variable {
+  id: string;
+  name: string;
+  value?: string;
+  initialValue?: string;
+  type?: string;
+  isDynamic?: boolean;
+}
+
+export interface DynamicVariableOverride {
+  name: string;
+  value: string;
+}
+
+export interface AutocompleteState {
+  show: boolean;
+  position: { top: number; left: number };
+  suggestions: Variable[];
+  prefix: 'D_' | 'S_' | null;
+  inputRef: HTMLInputElement | HTMLTextAreaElement | null;
+  cursorPosition: number;
+}
+
+// Common function to map dynamic variables to static format
+export const mapDynamicToStatic = (
+  dynamicVariables: any[],
+  overrides: DynamicVariableOverride[] = []
+) => {
+  const randInt = (min: number, max: number) =>
+    Math.floor(Math.random() * (max - min + 1)) + min;
+
+  const randString = (len: number) =>
+    Array.from({ length: len }, () =>
+      Math.random().toString(36).charAt(2)
+    ).join('');
+
+  const fakeName = () =>
+    ['Alice Johnson', 'Bob Smith', 'Charlie Brown'][
+      Math.floor(Math.random() * 3)
+    ];
+
+  return dynamicVariables.map((d) => {
+    const override = overrides.find((o) => o.name === d.name);
+    if (override) {
+      return {
+        id: d.id,
+        environmentId: null,
+        name: `${d.name}`,
+        description: '',
+        type: 'dynamic',
+        initialValue: '',
+        currentValue: override.value,
+        createdAt: d.createdAt,
+        updatedAt: d.updatedAt,
+        deletedAt: d.deletedAt,
+        value: override.value,
+        scope: 'environment',
+        isGlobal: false,
+        isSecret: false,
+        isDynamic: true,
+      };
+    }
+
+    let generated: string | number;
+
+    switch (d.generatorId) {
+      case 'randomString':
+        generated = randString(d.parameters?.length || 8);
+        break;
+      case 'randomInteger':
+        generated = randInt(d.parameters?.min || 0, d.parameters?.max || 100);
+        break;
+      case 'name':
+        generated = fakeName();
+        break;
+      default:
+        generated = '';
+    }
+
+    return {
+      id: d.id,
+      environmentId: null,
+      name: `${d.name}`,
+      description: '',
+      type: 'dynamic',
+      initialValue: '',
+      currentValue: String(generated),
+      createdAt: d.createdAt,
+      updatedAt: d.updatedAt,
+      deletedAt: d.deletedAt,
+      value: String(generated),
+      scope: 'environment',
+      isGlobal: false,
+      isSecret: false,
+      isDynamic: true,
+    };
+  });
+};
+
+// Common function to regenerate dynamic variable values
+export const regenerateDynamicVariable = (dynamicVar: any) => {
+  if (!dynamicVar) return '';
+
+  const randInt = (min: number, max: number) =>
+    Math.floor(Math.random() * (max - min + 1)) + min;
+  const randString = (len: number) =>
+    Array.from({ length: len }, () =>
+      Math.random().toString(36).charAt(2)
+    ).join('');
+  const fakeName = () =>
+    ['Alice Johnson', 'Bob Smith', 'Charlie Brown'][
+      Math.floor(Math.random() * 3)
+    ];
+
+  let newValue: string | number;
+  switch (dynamicVar.generatorId) {
+    case 'randomString':
+      newValue = randString(dynamicVar.parameters?.length || 8);
+      break;
+    case 'randomInteger':
+      newValue = randInt(
+        dynamicVar.parameters?.min || 0,
+        dynamicVar.parameters?.max || 100
+      );
+      break;
+    case 'name':
+      newValue = fakeName();
+      break;
+    default:
+      newValue = '';
+  }
+
+  return String(newValue);
+};
+
+// Common function to get variables by prefix (D_ or S_)
+export const getVariablesByPrefix = (
+  variables: Variable[],
+  prefix: 'D_' | 'S_'
+): Variable[] => {
+  return variables.filter((variable) => variable.name.startsWith(prefix));
+};
+
+// Common function to find used dynamic variables in text fields
+export const findUsedVariables = (textFields: string[]): string[] => {
+  const allText = textFields.join(' ');
+  const variableMatches = allText.match(/\{\{(\w+)\}\}/g) || [];
+  return [
+    ...new Set(
+      variableMatches.map((match) => match.replace(/\{\{(\w+)\}\}/, '$1'))
+    ),
+  ];
+};
+
+// Common function to get used dynamic variables from a request
+export const getUsedDynamicVariablesFromRequest = (
+  request: any,
+  dynamicVariables: Variable[]
+): Variable[] => {
+  const textFields = [
+    request.url || '',
+    request.body || '',
+    request.authToken || '',
+    request.authUsername || '',
+    request.authPassword || '',
+    request.authApiKey || '',
+    request.authApiValue || '',
+    request.authorization?.token || '',
+    request.authorization?.username || '',
+    request.authorization?.password || '',
+    request.authorization?.key || '',
+    request.authorization?.value || '',
+    ...(request.headers || []).map((h: any) => `${h.key} ${h.value}`),
+    ...(request.params || []).map((p: any) => `${p.key} ${p.value}`),
+  ];
+
+  const usedVariableNames = findUsedVariables(textFields);
+  return dynamicVariables.filter((variable) =>
+    usedVariableNames.includes(variable.name)
+  );
+};
+
+// Common function to get used dynamic variables from multiple requests
+export const getUsedDynamicVariablesFromRequests = (
+  requests: any[],
+  dynamicVariables: Variable[]
+): Variable[] => {
+  const allTextFields: string[] = [];
+
+  requests.forEach((request) => {
+    allTextFields.push(
+      request.url || '',
+      request.body || '',
+      request.authToken || '',
+      request.authUsername || '',
+      request.authPassword || '',
+      request.authApiKey || '',
+      request.authApiValue || '',
+      request.authorization?.token || '',
+      request.authorization?.username || '',
+      request.authorization?.password || '',
+      request.authorization?.key || '',
+      request.authorization?.value || '',
+      ...(request.headers || []).map((h: any) => `${h.key} ${h.value}`),
+      ...(request.params || []).map((p: any) => `${p.key} ${p.value}`)
+    );
+  });
+
+  const usedVariableNames = findUsedVariables(allTextFields);
+  return dynamicVariables.filter((variable) =>
+    usedVariableNames.includes(variable.name)
+  );
+};
+
+// Common function to handle autocomplete input detection
+export const detectAutocompletePrefix = (
+  value: string,
+  cursorPosition: number
+): 'D_' | 'S_' | null => {
+  const textBeforeCursor = value.substring(0, cursorPosition);
+  const lastTwoChars = textBeforeCursor.slice(-2);
+
+  if (lastTwoChars === 'D_' || lastTwoChars === 'S_') {
+    return lastTwoChars as 'D_' | 'S_';
+  }
+
+  return null;
+};
+
+export const calculateAutocompletePosition = (
+  input: HTMLInputElement | HTMLTextAreaElement
+) => {
+  const rect = input.getBoundingClientRect();
+  return {
+    top: rect.bottom + window.scrollY,
+    left: rect.left + window.scrollX,
+  };
+};

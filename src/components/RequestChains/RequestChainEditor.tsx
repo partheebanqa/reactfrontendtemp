@@ -1,5 +1,7 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
+import type React from 'react';
+
 import {
   ArrowLeft,
   Plus,
@@ -20,6 +22,8 @@ import {
   Pencil,
   X,
   Check,
+  Shuffle,
+  Edit3,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -42,6 +46,7 @@ import type {
   Variable,
   ExecutionLog,
   DataExtraction,
+  DynamicVariableOverride, // Import DynamicVariableOverride
 } from '@/shared/types/requestChain.model';
 import { ImportModal } from '@/components/TestSuit/ImportModal';
 import type { ExtendedRequest } from '@/models/collection.model';
@@ -70,9 +75,18 @@ import {
   extractDataFromResponse,
   transformRequestForSave,
   getExecutionLogForRequest,
+  copyToClipboard,
+  mapDynamicToStatic,
+  regenerateDynamicVariable,
+  getVariablesByPrefix,
+  getUsedDynamicVariablesFromRequests,
+  detectAutocompletePrefix,
+  calculateAutocompletePosition,
+  type AutocompleteState,
 } from '@/lib/request-utils';
 import { ResponseExplorer } from './ResponseExplorer';
 import BreadCum from '../BreadCum/Breadcum';
+import { useDataManagementStore } from '@/store/dataManagementStore';
 
 interface RequestChainEditorProps {
   chain?: RequestChain;
@@ -80,6 +94,9 @@ interface RequestChainEditorProps {
   onSave: (chain: RequestChain) => void;
   requestChainId?: string;
 }
+
+// Removed duplicate type definitions for Variable and DynamicVariableOverride
+// They are now imported from '@/lib/request-utils'
 
 export function RequestChainEditor({
   chain,
@@ -91,6 +108,16 @@ export function RequestChainEditor({
   const dragItem = useRef<number | null>(null);
   const dragOverItem = useRef<number | null>(null);
   const { currentWorkspace } = useWorkspace();
+
+  // Dynamic variables store
+  const { variables: storeVariables, dynamicVariables } =
+    useDataManagementStore();
+
+  const [dynamicOverrides, setDynamicOverrides] = useState<
+    DynamicVariableOverride[]
+  >([]);
+  const [showDynamicEditor, setShowDynamicEditor] = useState(false);
+
   const [globalVariables, setGlobalVariables] = useState<Variable[]>([
     {
       id: '1',
@@ -155,12 +182,150 @@ export function RequestChainEditor({
   const [activeTab, setActiveTab] = useState('requests');
   const [isSaving, setIsSaving] = useState(false);
 
+  const [autocompleteState, setAutocompleteState] = useState<AutocompleteState>(
+    {
+      show: false,
+      position: { top: 0, left: 0 },
+      suggestions: [],
+      prefix: null,
+      inputRef: null,
+      cursorPosition: 0,
+    }
+  );
+
+  // Dynamic variable mapping function
+  const dynamicStructured = mapDynamicToStatic(
+    dynamicVariables,
+    dynamicOverrides
+  );
+
+  const getUsedDynamicVariables = () => {
+    return getUsedDynamicVariablesFromRequests(
+      formData.chainRequests || [],
+      dynamicStructured
+    );
+  };
+
+  const usedDynamicVariables = getUsedDynamicVariables();
+
+  const updateDynamicOverride = (name: string, value: string | number) => {
+    setDynamicOverrides((prev) => {
+      const existing = prev.find((o) => o.name === name);
+      if (existing) {
+        return prev.map((o) => (o.name === name ? { ...o, value } : o));
+      } else {
+        return [...prev, { name, value }];
+      }
+    });
+  };
+
+  const regenerateDynamicVariableLocal = (variableName: string) => {
+    const dynamicVar = dynamicVariables.find((v) => v.name === variableName);
+    if (!dynamicVar) return;
+
+    const newValue = regenerateDynamicVariable(dynamicVar);
+
+    setDynamicOverrides((prev) => [
+      ...prev.filter((o) => o.name !== variableName),
+      { name: variableName, value: newValue },
+    ]);
+  };
+
+  // Dynamic Variables Panel Component
+  const DynamicVariablesPanel = () => {
+    if (usedDynamicVariables.length === 0) return null;
+
+    return (
+      <div className='mt-4 p-4 bg-purple-50 border border-purple-200 rounded-lg'>
+        <div className='flex items-center justify-between mb-3'>
+          <div className='flex items-center gap-2'>
+            <Shuffle className='w-4 h-4 text-purple-600' />
+            <h4 className='text-sm font-medium text-purple-900'>
+              Dynamic Variables ({usedDynamicVariables.length})
+            </h4>
+          </div>
+          <Button
+            variant='outline'
+            size='sm'
+            onClick={() => setShowDynamicEditor(!showDynamicEditor)}
+            className='text-purple-700 border-purple-300 hover:bg-purple-100'
+          >
+            <Edit3 className='w-3 h-3 mr-1' />
+            {showDynamicEditor ? 'Hide Editor' : 'Edit Values'}
+          </Button>
+        </div>
+
+        {showDynamicEditor ? (
+          <div className='space-y-3'>
+            {usedDynamicVariables.map((variable) => {
+              const originalName = variable.name.replace('', '');
+              const currentOverride = dynamicOverrides.find(
+                (o) => o.name === originalName
+              );
+
+              return (
+                <div key={variable.id} className='flex items-center gap-3'>
+                  <div className='flex items-center gap-2 flex-1'>
+                    <span className='text-xs font-mono text-purple-700 min-w-0'>{`{{${variable.name}}}`}</span>
+                    <Input
+                      value={String(currentOverride?.value || variable.value)}
+                      onChange={(e) =>
+                        updateDynamicOverride(originalName, e.target.value)
+                      }
+                      className='h-8 text-sm'
+                      placeholder='Enter value'
+                    />
+                  </div>
+                  <Button
+                    variant='ghost'
+                    size='sm'
+                    onClick={() => regenerateDynamicVariableLocal(originalName)}
+                    className='h-8 w-8 p-0 text-purple-600 hover:bg-purple-100'
+                    title='Regenerate random value'
+                  >
+                    <Shuffle className='w-3 h-3' />
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className='flex flex-wrap gap-2'>
+            {usedDynamicVariables.map((variable) => {
+              const originalName = variable.name.replace('', '');
+              return (
+                <div
+                  key={variable.id}
+                  className='flex items-center gap-1 px-2 py-1 bg-purple-100 text-purple-800 rounded border border-purple-200'
+                >
+                  <span className='text-xs font-mono'>
+                    {`{{${variable.name}}}`} = {String(variable.value)}
+                  </span>
+                  <button
+                    onClick={() => regenerateDynamicVariableLocal(originalName)}
+                    className='ml-1 p-0.5 hover:bg-purple-200 rounded transition-colors'
+                    title='Regenerate value'
+                  >
+                    <Shuffle className='w-3 h-3' />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const replaceVariables = (text: string, vars: Variable[]): string => {
     if (!text) return text;
     let result = text;
     vars.forEach((variable) => {
       const regex = new RegExp(`{{${variable.name}}}`, 'g');
-      result = result.replace(regex, variable?.value ?? '');
+      result = result.replace(
+        regex,
+        variable.value ?? variable.initialValue ?? ''
+      );
     });
     return result;
   };
@@ -235,11 +400,15 @@ export function RequestChainEditor({
 
     return [
       ...globalVariables,
+      ...storeVariables,
+      ...dynamicStructured,
       ...(formData.variables || []),
       ...environmentVars.filter(
         (ev) =>
           !previouslyExtractedVars.some((pv) => pv.name === ev.name) &&
           !globalVariables.some((gv) => gv.name === ev.name) &&
+          !storeVariables.some((sv) => sv.name === ev.name) &&
+          !dynamicStructured.some((dv) => dv.name === ev.name) &&
           !(formData.variables || []).some((fv) => fv.name === ev.name)
       ),
       ...previouslyExtractedVars,
@@ -296,11 +465,15 @@ export function RequestChainEditor({
 
     return [
       ...globalVariables,
+      ...storeVariables,
+      ...dynamicStructured,
       ...(formData.variables || []),
       ...environmentVars.filter(
         (ev) =>
           !previouslyExtractedVars.some((pv) => pv.name === ev.name) &&
-          !globalExtractedVars.some((gv) => gv.name === ev.name)
+          !globalExtractedVars.some((gv) => gv.name === ev.name) &&
+          !storeVariables.some((sv) => sv.name === ev.name) &&
+          !dynamicStructured.some((dv) => dv.name === ev.name)
       ),
       ...previouslyExtractedVars,
       ...globalExtractedVars.filter(
@@ -407,7 +580,10 @@ export function RequestChainEditor({
         const raw = localStorage.getItem('lastExecutionByRequest');
         const map = raw ? JSON.parse(raw) : {};
         map[request.id] = errorLog;
-        localStorage.setItem('lastExecutionByRequest', JSON.stringify(map));
+        localStorage.setItem(
+          'lastExecutionByRequest',
+          JSON.stringify(errorLog)
+        );
       } catch (e) {
         console.error('Failed to persist lastExecutionByRequest (error):', e);
       }
@@ -435,13 +611,17 @@ export function RequestChainEditor({
 
     const allLogs: ExecutionLog[] = [];
 
-    // Get initial base variables (globals + chain variables + environment variables)
+    // Get initial base variables (globals + chain variables + environment variables + store variables + dynamic variables)
     const baseVariables = [
       ...globalVariables,
+      ...storeVariables,
+      ...dynamicStructured, // Include dynamic variables with current values/overrides
       ...(formData.variables || []),
       ...getExtractVariablesByEnvironment(activeEnvironment?.id).filter(
         (ev) =>
           !globalVariables.some((gv) => gv.name === ev.name) &&
+          !storeVariables.some((sv) => sv.name === ev.name) &&
+          !dynamicStructured.some((dv) => dv.name === ev.name) &&
           !(formData.variables || []).some((fv) => fv.name === ev.name)
       ),
     ];
@@ -704,7 +884,7 @@ export function RequestChainEditor({
   const handleCopyForRequest = async (requestId: string, value: string) => {
     try {
       const formattedValue = `{{${value}}}`;
-      await navigator.clipboard.writeText(formattedValue);
+      await copyToClipboard(formattedValue); // Use utility function
       setCopiedStates((prev) => ({ ...prev, [requestId]: true }));
       toast({
         title: 'Copied to Clipboard',
@@ -1062,6 +1242,208 @@ export function RequestChainEditor({
     setFormData({ ...formData, chainRequests: updated });
   }
 
+  const getVariablesByPrefixLocal = (
+    prefix: 'D_' | 'S_',
+    requestIndex: number
+  ): Variable[] => {
+    const allVars = getAllVariablesForRequest(requestIndex);
+    return getVariablesByPrefix(allVars, prefix);
+  };
+
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+    requestIndex: number,
+    originalHandler?: (
+      e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    ) => void
+  ) => {
+    const input = e.target;
+    const value = input.value;
+    const cursorPosition = input.selectionStart || 0;
+
+    if (originalHandler) {
+      originalHandler(e);
+    }
+
+    const prefix = detectAutocompletePrefix(value, cursorPosition);
+
+    if (prefix) {
+      const suggestions = getVariablesByPrefixLocal(prefix, requestIndex);
+
+      if (suggestions.length > 0) {
+        const position = calculateAutocompletePosition(input);
+
+        setAutocompleteState({
+          show: true,
+          position,
+          suggestions,
+          prefix,
+          inputRef: input,
+          cursorPosition,
+        });
+      }
+    } else {
+      setAutocompleteState((prev) => ({ ...prev, show: false }));
+    }
+  };
+
+  const handleVariableSelect = (variable: Variable) => {
+    if (!autocompleteState.inputRef || !autocompleteState.prefix) return;
+
+    const input = autocompleteState.inputRef;
+    const currentValue = input.value;
+    const cursorPos = autocompleteState.cursorPosition;
+
+    // Replace D_ or S_ with the selected variable name
+    const beforePrefix = currentValue.substring(0, cursorPos - 2);
+    const afterCursor = currentValue.substring(cursorPos);
+    const newValue = beforePrefix + variable.name + afterCursor;
+
+    // Find which field this input belongs to and update the corresponding state
+    const inputName =
+      input.getAttribute('name') || input.getAttribute('data-field');
+    const requestIndex = Number.parseInt(
+      input.getAttribute('data-request-index') || '-1'
+    ); // Use -1 to indicate not found
+
+    // Ensure requestIndex is valid before proceeding
+    if (requestIndex === -1) {
+      // Fallback: directly update input value and dispatch event if requestIndex is not found
+      input.value = newValue;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    } else {
+      // Use a local copy of requests to avoid direct mutation of formData.chainRequests
+      const requests = [...(formData.chainRequests || [])];
+
+      if (inputName === 'url') {
+        requests[requestIndex] = { ...requests[requestIndex], url: newValue };
+        setFormData({ ...formData, chainRequests: requests });
+      } else if (inputName === 'body') {
+        requests[requestIndex] = { ...requests[requestIndex], body: newValue };
+        setFormData({ ...formData, chainRequests: requests });
+      } else if (inputName?.startsWith('header-key-')) {
+        const headerIndex = Number.parseInt(inputName.split('-')[2]);
+        if (!isNaN(headerIndex) && requests[requestIndex].headers) {
+          const newHeaders = [...requests[requestIndex].headers];
+          newHeaders[headerIndex] = {
+            ...newHeaders[headerIndex],
+            key: newValue,
+          };
+          requests[requestIndex] = {
+            ...requests[requestIndex],
+            headers: newHeaders,
+          };
+          setFormData({ ...formData, chainRequests: requests });
+        }
+      } else if (inputName?.startsWith('header-value-')) {
+        const headerIndex = Number.parseInt(inputName.split('-')[2]);
+        if (!isNaN(headerIndex) && requests[requestIndex].headers) {
+          const newHeaders = [...requests[requestIndex].headers];
+          newHeaders[headerIndex] = {
+            ...newHeaders[headerIndex],
+            value: newValue,
+          };
+          requests[requestIndex] = {
+            ...requests[requestIndex],
+            headers: newHeaders,
+          };
+          setFormData({ ...formData, chainRequests: requests });
+        }
+      } else if (inputName?.startsWith('param-key-')) {
+        const paramIndex = Number.parseInt(inputName.split('-')[2]);
+        if (!isNaN(paramIndex) && requests[requestIndex].params) {
+          const newParams = [...requests[requestIndex].params];
+          newParams[paramIndex] = { ...newParams[paramIndex], key: newValue };
+          requests[requestIndex] = {
+            ...requests[requestIndex],
+            params: newParams,
+          };
+          setFormData({ ...formData, chainRequests: requests });
+        }
+      } else if (inputName?.startsWith('param-value-')) {
+        const paramIndex = Number.parseInt(inputName.split('-')[2]);
+        if (!isNaN(paramIndex) && requests[requestIndex].params) {
+          const newParams = [...requests[requestIndex].params];
+          newParams[paramIndex] = { ...newParams[paramIndex], value: newValue };
+          requests[requestIndex] = {
+            ...requests[requestIndex],
+            params: newParams,
+          };
+          setFormData({ ...formData, chainRequests: requests });
+        }
+      } else if (inputName === 'auth-username') {
+        requests[requestIndex] = {
+          ...requests[requestIndex],
+          authUsername: newValue, // Assuming authUsername is a direct property
+        };
+        setFormData({ ...formData, chainRequests: requests });
+      } else if (inputName === 'auth-password') {
+        requests[requestIndex] = {
+          ...requests[requestIndex],
+          authPassword: newValue, // Assuming authPassword is a direct property
+        };
+        setFormData({ ...formData, chainRequests: requests });
+      } else if (inputName === 'auth-token') {
+        requests[requestIndex] = {
+          ...requests[requestIndex],
+          authToken: newValue, // Assuming authToken is a direct property
+        };
+        setFormData({ ...formData, chainRequests: requests });
+      } else {
+        // Fallback: directly update input value and dispatch event if no specific handler found
+        input.value = newValue;
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+    }
+
+    // Set cursor position after the inserted variable name
+    const newCursorPos = beforePrefix.length + variable.name.length;
+    setTimeout(() => {
+      input.setSelectionRange(newCursorPos, newCursorPos);
+      input.focus();
+    }, 0);
+
+    setAutocompleteState((prev) => ({ ...prev, show: false }));
+  };
+
+  const VariableAutocomplete = () => {
+    if (!autocompleteState.show) return null;
+
+    return (
+      <div
+        className='fixed z-50 bg-white border border-gray-200 rounded-md shadow-lg max-h-48 overflow-y-auto'
+        style={{
+          top: autocompleteState.position.top,
+          left: autocompleteState.position.left,
+        }}
+      >
+        <div className='p-2 text-xs text-gray-500 border-b'>
+          {autocompleteState.prefix === 'D_'
+            ? 'Dynamic Variables'
+            : 'Static Variables'}
+        </div>
+        {autocompleteState.suggestions.map((variable) => (
+          <button
+            key={variable.id}
+            className='w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center justify-between'
+            onClick={() => handleVariableSelect(variable)}
+          >
+            <span className='font-mono text-sm'>{variable.name}</span>
+            <span className='text-xs text-gray-400 ml-2'>
+              {String(variable.value || variable.initialValue || '').substring(
+                0,
+                20
+              )}
+              {String(variable.value || variable.initialValue || '').length > 20
+                ? '...'
+                : ''}
+            </span>
+          </button>
+        ))}
+      </div>
+    );
+  };
+
   if (editingRequestId) {
     const request = formData.chainRequests?.find(
       (r) => r.id === editingRequestId
@@ -1131,6 +1513,8 @@ export function RequestChainEditor({
         iconColor='#660275'
         iconSize={36}
       />
+
+      <VariableAutocomplete />
 
       <div className='flex-1 border border-gray-200 rounded-lg bg-background mt-3'>
         <div className='p-6 space-y-6'>
@@ -1214,6 +1598,9 @@ export function RequestChainEditor({
                   </SelectContent>
                 </Select>
               </div>
+
+              {/* Dynamic Variables Panel */}
+              <DynamicVariablesPanel />
             </CardContent>
           </Card>
 
@@ -1303,397 +1690,409 @@ export function RequestChainEditor({
                       {formData.chainRequests &&
                       formData.chainRequests.length > 0 ? (
                         <div className='space-y-3'>
-                          {formData.chainRequests.map((request, index) => {
-                            const executionLog = getExecutionLogForRequest(
-                              executionLogs,
-                              request.id
-                            );
+                          {formData.chainRequests.map(
+                            (request, requestIndex) => {
+                              const executionLog = getExecutionLogForRequest(
+                                executionLogs,
+                                request.id
+                              );
 
-                            return (
-                              <Card
-                                key={request.id}
-                                className={`hover:shadow-sm transition-shadow ${
-                                  currentRequestIndex === index
-                                    ? 'ring-2 ring-primary'
-                                    : ''
-                                }`}
-                              >
-                                {/* ... existing card content ... */}
-                                <CardContent className='p-4'>
-                                  <div className='flex items-center'>
-                                    <div className='flex items-center space-x-3'>
-                                      <TooltipProvider>
-                                        <Tooltip>
-                                          <TooltipTrigger asChild>
-                                            <div
-                                              className='cursor-move'
-                                              draggable
-                                              onDragStart={() =>
-                                                handleDragStart(index)
-                                              }
-                                              onDragEnter={() =>
-                                                handleDragEnter(index)
-                                              }
-                                              onDragEnd={handleDragEnd}
-                                            >
-                                              <GripVertical className='w-5 h-5 text-muted-foreground' />
-                                            </div>
-                                          </TooltipTrigger>
-                                          <TooltipContent>
-                                            <p>Drag to change the order</p>
-                                          </TooltipContent>
-                                        </Tooltip>
-                                      </TooltipProvider>
-                                      <div
-                                        className={`w-8 h-8 ${
-                                          currentRequestIndex === index
-                                            ? 'bg-primary text-primary-foreground animate-pulse'
-                                            : 'bg-blue-100 text-blue-600'
-                                        } rounded-full flex items-center justify-center text-sm font-medium`}
-                                      >
-                                        {currentRequestIndex === index ? (
-                                          <Loader2 className='w-4 h-4 animate-spin' />
-                                        ) : (
-                                          index + 1
-                                        )}
-                                      </div>
-                                    </div>
-                                    <div className='flex-1 flex items-center space-x-4 ml-3'>
-                                      <Badge
-                                        className={getMethodColor(
-                                          request.method
-                                        )}
-                                      >
-                                        {request.method}
-                                      </Badge>
-                                      <div className='flex-1'>
-                                        {editingNameId === request.id ? (
-                                          <div className='flex items-center gap-2'>
-                                            <Input
-                                              value={tempName}
-                                              onChange={(e) =>
-                                                setTempName(e.target.value)
-                                              }
-                                              className='h-8 max-w-[280px]'
-                                              placeholder='Request name'
-                                              autoFocus
-                                            />
-                                            <Button
-                                              variant='ghost'
-                                              size='icon'
-                                              aria-label='Save name'
-                                              onClick={() => {
-                                                commitRequestName(
-                                                  index,
-                                                  tempName
-                                                );
-                                                setEditingNameId(null);
-                                                setTempName('');
-                                              }}
-                                              className='text-green-600 hover:text-green-700'
-                                              title='Save'
-                                            >
-                                              <Check className='w-4 h-4' />
-                                            </Button>
-                                            <Button
-                                              variant='ghost'
-                                              size='icon'
-                                              aria-label='Cancel'
-                                              onClick={() => {
-                                                setEditingNameId(null);
-                                                setTempName('');
-                                              }}
-                                              className='text-red-600 hover:text-red-700'
-                                              title='Cancel'
-                                            >
-                                              <X className='w-4 h-4' />
-                                            </Button>
-                                          </div>
-                                        ) : (
-                                          <div className='flex items-center gap-2'>
-                                            <p className='font-medium'>
-                                              {request.name ||
-                                                request.url ||
-                                                'New Request'}
-                                            </p>
-                                            <Button
-                                              variant='ghost'
-                                              size='icon'
-                                              aria-label='Edit name'
-                                              onClick={() => {
-                                                setEditingNameId(request.id);
-                                                setTempName(
-                                                  request.name ||
-                                                    request.url ||
-                                                    ''
-                                                );
-                                              }}
-                                              title='Edit name'
-                                            >
-                                              <Pencil className='w-4 h-4' />
-                                            </Button>
-                                          </div>
-                                        )}
-                                        <p className='text-sm text-muted-foreground'>
-                                          {/* {request.url || 'No URL specified'} */}
-                                        </p>
-                                      </div>
-                                      <div className='flex items-center space-x-2'>
-                                        {executionLog && (
-                                          <div className='flex items-center space-x-1'>
-                                            {executionLog.status ===
-                                            'success' ? (
-                                              <CheckCircle className='w-4 h-4 text-green-500' />
-                                            ) : (
-                                              <XCircle className='w-4 h-4 text-red-500' />
-                                            )}
-                                            {executionLog.response && (
-                                              <Badge
-                                                variant={
-                                                  executionLog.response.status <
-                                                  300
-                                                    ? 'default'
-                                                    : 'destructive'
+                              return (
+                                <Card
+                                  key={request.id}
+                                  className={`hover:shadow-sm transition-shadow ${
+                                    currentRequestIndex === requestIndex
+                                      ? 'ring-2 ring-primary'
+                                      : ''
+                                  }`}
+                                >
+                                  <CardContent className='p-4'>
+                                    <div className='flex items-center'>
+                                      <div className='flex items-center space-x-3'>
+                                        <TooltipProvider>
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <div
+                                                className='cursor-move'
+                                                draggable
+                                                onDragStart={() =>
+                                                  handleDragStart(requestIndex)
                                                 }
-                                                className='text-xs'
+                                                onDragEnter={() =>
+                                                  handleDragEnter(requestIndex)
+                                                }
+                                                onDragEnd={handleDragEnd}
                                               >
-                                                {executionLog.response.status}
-                                              </Badge>
-                                            )}
-                                          </div>
-                                        )}
+                                                <GripVertical className='w-5 h-5 text-muted-foreground' />
+                                              </div>
+                                            </TooltipTrigger>
+                                            <TooltipContent>
+                                              <p>Drag to change the order</p>
+                                            </TooltipContent>
+                                          </Tooltip>
+                                        </TooltipProvider>
+                                        <div
+                                          className={`w-8 h-8 ${
+                                            currentRequestIndex === requestIndex
+                                              ? 'bg-primary text-primary-foreground animate-pulse'
+                                              : 'bg-blue-100 text-blue-600'
+                                          } rounded-full flex items-center justify-center text-sm font-medium`}
+                                        >
+                                          {currentRequestIndex ===
+                                          requestIndex ? (
+                                            <Loader2 className='w-4 h-4 animate-spin' />
+                                          ) : (
+                                            requestIndex + 1
+                                          )}
+                                        </div>
                                       </div>
-                                    </div>
-                                    <TooltipProvider>
-                                      <div className='flex items-center space-x-2 ml-4'>
-                                        <Tooltip>
-                                          <TooltipTrigger asChild>
-                                            <Button
-                                              variant='ghost'
-                                              size='sm'
-                                              onClick={() =>
-                                                duplicateRequest(request.id)
-                                              }
-                                            >
-                                              <Copy className='w-4 h-4' />
-                                            </Button>
-                                          </TooltipTrigger>
-                                          <TooltipContent>
-                                            Duplicate Request
-                                          </TooltipContent>
-                                        </Tooltip>
-                                        <Tooltip>
-                                          <TooltipTrigger asChild>
-                                            <Button
-                                              variant='ghost'
-                                              size='sm'
-                                              onClick={() =>
-                                                removeRequest(request.id)
-                                              }
-                                              className='text-red-600 hover:text-red-700'
-                                            >
-                                              <Trash2 className='w-4 h-4' />
-                                            </Button>
-                                          </TooltipTrigger>
-                                          <TooltipContent>
-                                            Delete Request
-                                          </TooltipContent>
-                                        </Tooltip>
-                                        <Tooltip>
-                                          <TooltipTrigger asChild>
-                                            <Button
-                                              variant='ghost'
-                                              size='sm'
-                                              onClick={() =>
-                                                toggleRequestExpanded(
-                                                  request.id
-                                                )
-                                              }
-                                            >
-                                              {expandedRequests.has(
-                                                request.id
-                                              ) ? (
-                                                <ChevronUp className='w-4 h-4' />
-                                              ) : (
-                                                <ChevronDown className='w-4 h-4' />
-                                              )}
-                                            </Button>
-                                          </TooltipTrigger>
-                                          <TooltipContent>
-                                            {expandedRequests.has(request.id)
-                                              ? 'Collapse'
-                                              : 'Expand'}{' '}
-                                            Request
-                                          </TooltipContent>
-                                        </Tooltip>
-                                      </div>
-                                    </TooltipProvider>
-                                  </div>
-
-                                  {expandedRequests.has(request.id) && (
-                                    <div className='mt-4 pt-4 border-t space-y-4'>
-                                      <RequestEditor
-                                        request={request}
-                                        onUpdate={(updates) =>
-                                          updateRequest(request.id, updates)
-                                        }
-                                        compact={true}
-                                        chainName={formData.name}
-                                        chainDescription={formData.description}
-                                        chainEnabled={formData.enabled}
-                                        environmentBaseUrl={environmentBaseUrl}
-                                        chainId={chain?.id || ''}
-                                        hideResponseExplorer={true}
-                                        onRequestExecution={(executionLog) =>
-                                          handleRequestExecution(
-                                            request.id,
-                                            executionLog
-                                          )
-                                        }
-                                        extractedVariables={extractedVariables}
-                                        chainVariables={
-                                          formData.variables || []
-                                        }
-                                      />
-
-                                      {/* Response Section - Only show here, not in RequestEditor */}
-                                      {executionLog && (
-                                        <div className='border-t border-gray-200 pt-4'>
-                                          <div className='flex items-center justify-between p-4 bg-gray-50 border-b border-gray-200 rounded-t-lg'>
-                                            <div className='flex items-center space-x-4'>
-                                              {executionLog.status ===
-                                              'success' ? (
-                                                <div className='flex items-center space-x-2'>
-                                                  <CheckCircle className='w-5 h-5 text-green-500' />
-                                                  <span className='text-sm font-medium text-green-700'>
-                                                    Response
-                                                  </span>
-                                                </div>
-                                              ) : (
-                                                <div className='flex items-center space-x-2'>
-                                                  <XCircle className='w-5 h-5 text-red-500' />
-                                                  <span className='text-sm font-medium text-red-700'>
-                                                    Response
-                                                  </span>
-                                                </div>
-                                              )}
-                                              {executionLog.response && (
-                                                <>
-                                                  <span
-                                                    className={`px-2 py-1 text-xs font-medium rounded ${
-                                                      executionLog.response
-                                                        .status < 300
-                                                        ? 'bg-green-100 text-green-800'
-                                                        : executionLog.response
-                                                            .status < 400
-                                                        ? 'bg-yellow-100 text-yellow-800'
-                                                        : 'bg-red-100 text-red-800'
-                                                    }`}
-                                                  >
-                                                    {
-                                                      executionLog.response
-                                                        .status
-                                                    }{' '}
-                                                    {executionLog.response
-                                                      .status === 200
-                                                      ? 'OK'
-                                                      : executionLog.response
-                                                          .status === 201
-                                                      ? 'Created'
-                                                      : executionLog.response
-                                                          .status === 404
-                                                      ? 'Not Found'
-                                                      : executionLog.response
-                                                          .status === 500
-                                                      ? 'Server Error'
-                                                      : ''}
-                                                  </span>
-                                                  <span className='text-sm text-gray-600'>
-                                                    {executionLog.duration}ms
-                                                  </span>
-                                                  <span className='text-sm text-gray-600'>
-                                                    {(
-                                                      executionLog.response
-                                                        .size / 1024
-                                                    ).toFixed(2)}{' '}
-                                                    KB
-                                                  </span>
-                                                </>
-                                              )}
-                                            </div>
-                                          </div>
-
-                                          {executionLog.response && (
-                                            <div className='border-t border-gray-200 p-6'>
-                                              <h3 className='text-lg font-medium text-gray-900 mb-4'>
-                                                Extract Variables from Response
-                                              </h3>
-                                              <ResponseExplorer
-                                                response={executionLog.response}
-                                                onExtractVariable={(
-                                                  extraction
-                                                ) =>
-                                                  handleExtractVariableForRequest(
-                                                    executionLog.requestId,
-                                                    extraction
-                                                  )
+                                      <div className='flex-1 flex items-center space-x-4 ml-3'>
+                                        <Badge
+                                          className={getMethodColor(
+                                            request.method
+                                          )}
+                                        >
+                                          {request.method}
+                                        </Badge>
+                                        <div className='flex-1'>
+                                          {editingNameId === request.id ? (
+                                            <div className='flex items-center gap-2'>
+                                              <Input
+                                                value={tempName}
+                                                onChange={(e) =>
+                                                  setTempName(e.target.value)
                                                 }
-                                                extractedVariables={
-                                                  extractedVariablesByRequest[
-                                                    executionLog.requestId
-                                                  ] || {}
-                                                }
-                                                existingExtractions={
-                                                  formData.chainRequests.find(
-                                                    (r) =>
-                                                      r.id ===
-                                                      executionLog.requestId
-                                                  )?.extractVariables || []
-                                                }
-                                                onRemoveExtraction={(
-                                                  variableName
-                                                ) =>
-                                                  handleRemoveExtractionForRequest(
-                                                    executionLog.requestId,
-                                                    variableName
-                                                  )
-                                                }
-                                                handleCopy={(value) =>
-                                                  handleCopyForRequest(
-                                                    executionLog.requestId,
-                                                    value
-                                                  )
-                                                }
-                                                chainId={chain?.id ?? ''}
-                                                copied={
-                                                  copiedStates[
-                                                    executionLog.requestId
-                                                  ] || false
-                                                }
+                                                className='h-8 max-w-[280px]'
+                                                placeholder='Request name'
+                                                autoFocus
                                               />
+                                              <Button
+                                                variant='ghost'
+                                                size='icon'
+                                                aria-label='Save name'
+                                                onClick={() => {
+                                                  commitRequestName(
+                                                    requestIndex,
+                                                    tempName
+                                                  );
+                                                  setEditingNameId(null);
+                                                  setTempName('');
+                                                }}
+                                                className='text-green-600 hover:text-green-700'
+                                                title='Save'
+                                              >
+                                                <Check className='w-4 h-4' />
+                                              </Button>
+                                              <Button
+                                                variant='ghost'
+                                                size='icon'
+                                                aria-label='Cancel'
+                                                onClick={() => {
+                                                  setEditingNameId(null);
+                                                  setTempName('');
+                                                }}
+                                                className='text-red-600 hover:text-red-700'
+                                                title='Cancel'
+                                              >
+                                                <X className='w-4 h-4' />
+                                              </Button>
+                                            </div>
+                                          ) : (
+                                            <div className='flex items-center gap-2'>
+                                              <p className='font-medium'>
+                                                {request.name ||
+                                                  request.url ||
+                                                  'New Request'}
+                                              </p>
+                                              <Button
+                                                variant='ghost'
+                                                size='icon'
+                                                aria-label='Edit name'
+                                                onClick={() => {
+                                                  setEditingNameId(request.id);
+                                                  setTempName(
+                                                    request.name ||
+                                                      request.url ||
+                                                      ''
+                                                  );
+                                                }}
+                                                title='Edit name'
+                                              >
+                                                <Pencil className='w-4 h-4' />
+                                              </Button>
                                             </div>
                                           )}
-
-                                          {!executionLog.response && (
-                                            <div className='p-6'>
-                                              <div className='text-red-600'>
-                                                <h4 className='font-medium mb-2'>
-                                                  Error
-                                                </h4>
-                                                <p className='text-sm'>
-                                                  {executionLog.error}
-                                                </p>
-                                              </div>
+                                          <p className='text-sm text-muted-foreground'>
+                                            {/* {request.url || 'No URL specified'} */}
+                                          </p>
+                                        </div>
+                                        <div className='flex items-center space-x-2'>
+                                          {executionLog && (
+                                            <div className='flex items-center space-x-1'>
+                                              {executionLog.status ===
+                                              'success' ? (
+                                                <CheckCircle className='w-4 h-4 text-green-500' />
+                                              ) : (
+                                                <XCircle className='w-4 h-4 text-red-500' />
+                                              )}
+                                              {executionLog.response && (
+                                                <Badge
+                                                  variant={
+                                                    executionLog.response
+                                                      .status < 300
+                                                      ? 'default'
+                                                      : 'destructive'
+                                                  }
+                                                  className='text-xs'
+                                                >
+                                                  {executionLog.response.status}
+                                                </Badge>
+                                              )}
                                             </div>
                                           )}
                                         </div>
-                                      )}
+                                      </div>
+                                      <TooltipProvider>
+                                        <div className='flex items-center space-x-2 ml-4'>
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <Button
+                                                variant='ghost'
+                                                size='sm'
+                                                onClick={() =>
+                                                  duplicateRequest(request.id)
+                                                }
+                                              >
+                                                <Copy className='w-4 h-4' />
+                                              </Button>
+                                            </TooltipTrigger>
+                                            <TooltipContent>
+                                              Duplicate Request
+                                            </TooltipContent>
+                                          </Tooltip>
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <Button
+                                                variant='ghost'
+                                                size='sm'
+                                                onClick={() =>
+                                                  removeRequest(request.id)
+                                                }
+                                                className='text-red-600 hover:text-red-700'
+                                              >
+                                                <Trash2 className='w-4 h-4' />
+                                              </Button>
+                                            </TooltipTrigger>
+                                            <TooltipContent>
+                                              Delete Request
+                                            </TooltipContent>
+                                          </Tooltip>
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <Button
+                                                variant='ghost'
+                                                size='sm'
+                                                onClick={() =>
+                                                  toggleRequestExpanded(
+                                                    request.id
+                                                  )
+                                                }
+                                              >
+                                                {expandedRequests.has(
+                                                  request.id
+                                                ) ? (
+                                                  <ChevronUp className='w-4 h-4' />
+                                                ) : (
+                                                  <ChevronDown className='w-4 h-4' />
+                                                )}
+                                              </Button>
+                                            </TooltipTrigger>
+                                            <TooltipContent>
+                                              {expandedRequests.has(request.id)
+                                                ? 'Collapse'
+                                                : 'Expand'}{' '}
+                                              Request
+                                            </TooltipContent>
+                                          </Tooltip>
+                                        </div>
+                                      </TooltipProvider>
                                     </div>
-                                  )}
-                                </CardContent>
-                              </Card>
-                            );
-                          })}
+
+                                    {expandedRequests.has(request.id) && (
+                                      <div className='mt-4 pt-4 border-t space-y-4'>
+                                        <RequestEditor
+                                          request={request}
+                                          onUpdate={(updates) =>
+                                            updateRequest(request.id, updates)
+                                          }
+                                          compact={true}
+                                          chainName={formData.name}
+                                          chainDescription={
+                                            formData.description
+                                          }
+                                          chainEnabled={formData.enabled}
+                                          environmentBaseUrl={
+                                            environmentBaseUrl
+                                          }
+                                          chainId={chain?.id || ''}
+                                          hideResponseExplorer={true}
+                                          onRequestExecution={(executionLog) =>
+                                            handleRequestExecution(
+                                              request.id,
+                                              executionLog
+                                            )
+                                          }
+                                          extractedVariables={
+                                            extractedVariables
+                                          }
+                                          chainVariables={
+                                            formData.variables || []
+                                          }
+                                        />
+
+                                        {/* Response Section - Only show here, not in RequestEditor */}
+                                        {executionLog && (
+                                          <div className='border-t border-gray-200 pt-4'>
+                                            <div className='flex items-center justify-between p-4 bg-gray-50 border-b border-gray-200 rounded-t-lg'>
+                                              <div className='flex items-center space-x-4'>
+                                                {executionLog.status ===
+                                                'success' ? (
+                                                  <div className='flex items-center space-x-2'>
+                                                    <CheckCircle className='w-5 h-5 text-green-500' />
+                                                    <span className='text-sm font-medium text-green-700'>
+                                                      Response
+                                                    </span>
+                                                  </div>
+                                                ) : (
+                                                  <div className='flex items-center space-x-2'>
+                                                    <XCircle className='w-5 h-5 text-red-500' />
+                                                    <span className='text-sm font-medium text-red-700'>
+                                                      Response
+                                                    </span>
+                                                  </div>
+                                                )}
+                                                {executionLog.response && (
+                                                  <>
+                                                    <span
+                                                      className={`px-2 py-1 text-xs font-medium rounded ${
+                                                        executionLog.response
+                                                          .status < 300
+                                                          ? 'bg-green-100 text-green-800'
+                                                          : executionLog
+                                                              .response.status <
+                                                            400
+                                                          ? 'bg-yellow-100 text-yellow-800'
+                                                          : 'bg-red-100 text-red-800'
+                                                      }`}
+                                                    >
+                                                      {
+                                                        executionLog.response
+                                                          .status
+                                                      }{' '}
+                                                      {executionLog.response
+                                                        .status === 200
+                                                        ? 'OK'
+                                                        : executionLog.response
+                                                            .status === 201
+                                                        ? 'Created'
+                                                        : executionLog.response
+                                                            .status === 404
+                                                        ? 'Not Found'
+                                                        : executionLog.response
+                                                            .status === 500
+                                                        ? 'Server Error'
+                                                        : ''}
+                                                    </span>
+                                                    <span className='text-sm text-gray-600'>
+                                                      {executionLog.duration}ms
+                                                    </span>
+                                                    <span className='text-sm text-gray-600'>
+                                                      {(
+                                                        executionLog.response
+                                                          .size / 1024
+                                                      ).toFixed(2)}{' '}
+                                                      KB
+                                                    </span>
+                                                  </>
+                                                )}
+                                              </div>
+                                            </div>
+
+                                            {executionLog.response && (
+                                              <div className='border-t border-gray-200 p-6'>
+                                                <h3 className='text-lg font-medium text-gray-900 mb-4'>
+                                                  Extract Variables from
+                                                  Response
+                                                </h3>
+                                                <ResponseExplorer
+                                                  response={
+                                                    executionLog.response
+                                                  }
+                                                  onExtractVariable={(
+                                                    extraction
+                                                  ) =>
+                                                    handleExtractVariableForRequest(
+                                                      executionLog.requestId,
+                                                      extraction
+                                                    )
+                                                  }
+                                                  extractedVariables={
+                                                    extractedVariablesByRequest[
+                                                      executionLog.requestId
+                                                    ] || {}
+                                                  }
+                                                  existingExtractions={
+                                                    formData.chainRequests.find(
+                                                      (r) =>
+                                                        r.id ===
+                                                        executionLog.requestId
+                                                    )?.extractVariables || []
+                                                  }
+                                                  onRemoveExtraction={(
+                                                    variableName
+                                                  ) =>
+                                                    handleRemoveExtractionForRequest(
+                                                      executionLog.requestId,
+                                                      variableName
+                                                    )
+                                                  }
+                                                  handleCopy={(value) =>
+                                                    handleCopyForRequest(
+                                                      executionLog.requestId,
+                                                      value
+                                                    )
+                                                  }
+                                                  chainId={chain?.id ?? ''}
+                                                  copied={
+                                                    copiedStates[
+                                                      executionLog.requestId
+                                                    ] || false
+                                                  }
+                                                />
+                                              </div>
+                                            )}
+
+                                            {!executionLog.response && (
+                                              <div className='p-6'>
+                                                <div className='text-red-600'>
+                                                  <h4 className='font-medium mb-2'>
+                                                    Error
+                                                  </h4>
+                                                  <p className='text-sm'>
+                                                    {executionLog.error}
+                                                  </p>
+                                                </div>
+                                              </div>
+                                            )}
+                                          </div>
+                                        )}
+                                      </div>
+                                    )}
+                                  </CardContent>
+                                </Card>
+                              );
+                            }
+                          )}
                         </div>
                       ) : (
                         <div className='text-center py-12'>
