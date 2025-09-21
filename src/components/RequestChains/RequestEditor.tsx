@@ -29,7 +29,7 @@ import {
   GitBranch,
   ChevronDown,
   ChevronRight,
-  AlertTriangle as TriangleAlert,
+  TriangleAlert,
   Play,
   Copy,
   AlertTriangle,
@@ -125,6 +125,33 @@ export function RequestEditor({
     DynamicVariableOverride[]
   >([]);
   const [showDynamicEditor, setShowDynamicEditor] = useState(false);
+
+  const [autocompleteState, setAutocompleteState] = useState<{
+    show: boolean;
+    position: { top: number; left: number };
+    suggestions: Variable[];
+    prefix: 'D_' | 'S_' | null;
+    inputRef: HTMLInputElement | HTMLTextAreaElement | null;
+    cursorPosition: number;
+  }>({
+    show: false,
+    position: { top: 0, left: 0 },
+    suggestions: [],
+    prefix: null,
+    inputRef: null,
+    cursorPosition: 0,
+  });
+
+  // State for individual fields to manage updates
+  const [url, setUrl] = useState(request.url || '');
+  const [body, setBody] = useState(request.body || '');
+  const [headers, setHeaders] = useState<KeyValuePair[]>(request.headers || []);
+  const [params, setParams] = useState<KeyValuePair[]>(request.params || []);
+  const [auth, setAuth] = useState({
+    username: request.authUsername || '',
+    password: request.authPassword || '',
+    token: request.authToken || '',
+  });
 
   function mapDynamicToStatic(
     dynamicVariables: any[],
@@ -256,8 +283,6 @@ export function RequestEditor({
   const [responseTab, setResponseTab] = useState<
     'body' | 'cookies' | 'headers' | 'test-results'
   >('body');
-  const params = request.params || [];
-  const headers = request.headers || [];
   const { toast } = useToast();
 
   const [processedRequest, setProcessedRequest] = useState<APIRequest>(request);
@@ -308,6 +333,11 @@ export function RequestEditor({
     ];
 
     return allVariables;
+  };
+
+  const getVariablesByPrefix = (prefix: 'D_' | 'S_'): Variable[] => {
+    const allVars = getAllAvailableVariables();
+    return allVars.filter((variable) => variable.name.startsWith(prefix));
   };
 
   useEffect(() => {
@@ -429,6 +459,148 @@ export function RequestEditor({
     };
   };
 
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+    updateState: (value: string) => void
+  ) => {
+    const input = e.target;
+    const value = input.value;
+    const cursorPosition = input.selectionStart || 0;
+
+    updateState(value); // Update the specific state for the input
+
+    // Check for D_ or S_ at cursor position
+    const textBeforeCursor = value.substring(0, cursorPosition);
+    const lastTwoChars = textBeforeCursor.slice(-2);
+
+    if (lastTwoChars === 'D_' || lastTwoChars === 'S_') {
+      const suggestions = getVariablesByPrefix(lastTwoChars as 'D_' | 'S_');
+
+      if (suggestions.length > 0) {
+        // Calculate position for dropdown
+        const rect = input.getBoundingClientRect();
+        const position = {
+          top: rect.bottom + window.scrollY,
+          left: rect.left + window.scrollX,
+        };
+
+        setAutocompleteState({
+          show: true,
+          position,
+          suggestions,
+          prefix: lastTwoChars as 'D_' | 'S_',
+          inputRef: input,
+          cursorPosition,
+        });
+      } else {
+        setAutocompleteState((prev) => ({ ...prev, show: false }));
+      }
+    } else {
+      setAutocompleteState((prev) => ({ ...prev, show: false }));
+    }
+  };
+
+  const handleVariableSelect = (variable: Variable) => {
+    if (!autocompleteState.inputRef || !autocompleteState.prefix) return;
+
+    const input = autocompleteState.inputRef;
+    const currentValue = input.value;
+    const cursorPos = autocompleteState.cursorPosition;
+
+    // Replace D_ or S_ with the selected variable name
+    const beforePrefix = currentValue.substring(0, cursorPos - 2);
+    const afterCursor = currentValue.substring(cursorPos);
+    const newValue = beforePrefix + variable.name + afterCursor;
+
+    // Find which field this input belongs to and update the corresponding state
+    const inputName =
+      input.getAttribute('name') || input.getAttribute('data-field');
+
+    if (inputName === 'url') {
+      setUrl(newValue);
+    } else if (inputName === 'body') {
+      setBody(newValue);
+    } else if (inputName?.startsWith('header-key-')) {
+      const index = Number.parseInt(inputName.split('-')[2]);
+      const newHeaders = [...headers];
+      newHeaders[index] = { ...newHeaders[index], key: newValue };
+      setHeaders(newHeaders);
+    } else if (inputName?.startsWith('header-value-')) {
+      const index = Number.parseInt(inputName.split('-')[2]);
+      const newHeaders = [...headers];
+      newHeaders[index] = { ...newHeaders[index], value: newValue };
+      setHeaders(newHeaders);
+    } else if (inputName?.startsWith('param-key-')) {
+      const index = Number.parseInt(inputName.split('-')[2]);
+      const newParams = [...params];
+      newParams[index] = { ...newParams[index], key: newValue };
+      setParams(newParams);
+    } else if (inputName?.startsWith('param-value-')) {
+      const index = Number.parseInt(inputName.split('-')[2]);
+      const newParams = [...params];
+      newParams[index] = { ...newParams[index], value: newValue };
+      setParams(newParams);
+    } else if (inputName === 'auth-username') {
+      setAuth((prev) => ({ ...prev, username: newValue }));
+    } else if (inputName === 'auth-password') {
+      setAuth((prev) => ({ ...prev, password: newValue }));
+    } else if (inputName === 'auth-token') {
+      setAuth((prev) => ({ ...prev, token: newValue }));
+    } else {
+      // Fallback: directly update input value and dispatch event
+      input.value = newValue;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+
+    // Set cursor position after the inserted variable name
+    const newCursorPos = beforePrefix.length + variable.name.length;
+    setTimeout(() => {
+      input.setSelectionRange(newCursorPos, newCursorPos);
+      input.focus();
+    }, 0);
+
+    setAutocompleteState((prev) => ({ ...prev, show: false }));
+  };
+
+  // Function to handle autocomplete suggestions based on key up event
+  const handleAutocomplete = (
+    e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    const input = e.target as HTMLInputElement | HTMLTextAreaElement;
+    const value = input.value;
+    const cursorPosition = input.selectionStart || 0;
+
+    // Check for D_ or S_ at cursor position
+    const textBeforeCursor = value.substring(0, cursorPosition);
+    const lastTwoChars = textBeforeCursor.slice(-2);
+
+    if (lastTwoChars === 'D_' || lastTwoChars === 'S_') {
+      const suggestions = getVariablesByPrefix(lastTwoChars as 'D_' | 'S_');
+
+      if (suggestions.length > 0) {
+        // Calculate position for dropdown
+        const rect = input.getBoundingClientRect();
+        const position = {
+          top: rect.bottom + window.scrollY,
+          left: rect.left + window.scrollX,
+        };
+
+        setAutocompleteState({
+          show: true,
+          position,
+          suggestions,
+          prefix: lastTwoChars as 'D_' | 'S_',
+          inputRef: input,
+          cursorPosition,
+        });
+      } else {
+        setAutocompleteState((prev) => ({ ...prev, show: false }));
+      }
+    } else {
+      setAutocompleteState((prev) => ({ ...prev, show: false }));
+    }
+  };
+
   React.useEffect(() => {
     const allVariables = getAllAvailableVariables();
     const processed = processRequestWithVariables(request, allVariables);
@@ -442,10 +614,15 @@ export function RequestEditor({
     request,
     parentExtractedVariables,
     chainVariables,
+    url, // Include state variables that affect processed request
+    body,
+    headers,
+    params,
+    auth,
   ]);
 
   const getPreviewUrl = (variables: Variable[]) => {
-    const replacedUrl = replaceVariables(request.url, variables);
+    const replacedUrl = replaceVariables(url, variables); // Use state variable
     const baseUrl = environmentBaseUrl?.trim();
     if (!baseUrl) return replacedUrl;
     try {
@@ -508,7 +685,7 @@ export function RequestEditor({
 
   const renderEnhancedPreviewUrl = () => {
     const allVariables = getAllAvailableVariables();
-    let previewUrl = getPreviewUrl(allVariables);
+    const previewUrl = getPreviewUrl(allVariables);
 
     const dynamicVarMatches = previewUrl.match(/\{\{\w+\}\}/g) || [];
     const dynamicVarsInUrl = dynamicVarMatches.map((match) =>
@@ -568,6 +745,13 @@ export function RequestEditor({
       extractVariables: request.extractVariables ?? [],
       headers: request.headers ?? [],
       params: request.params ?? [],
+      url: url, // Use state variable for URL
+      body: body, // Use state variable for body
+      authToken: auth.token, // Use state variable for auth token
+      authUsername: auth.username, // Use state variable for auth username
+      authPassword: auth.password, // Use state variable for auth password
+      headers: headers, // Use state variable for headers
+      params: params, // Use state variable for params
     };
     if (!safeRequest.url) {
       toast({
@@ -634,7 +818,7 @@ export function RequestEditor({
 
       try {
         const raw = localStorage.getItem('lastExecutionByRequest');
-        const map = raw ? JSON.parse(raw) : {};
+        const map = raw ? JSON.JSON.parse(raw) : {};
         map[request.id] = log;
         localStorage.setItem('lastExecutionByRequest', JSON.stringify(map));
       } catch (e) {
@@ -699,9 +883,9 @@ export function RequestEditor({
       description: '',
     };
     if (type === 'params') {
-      onUpdate({ params: [...(request.params || []), newPair] });
+      setParams((prev) => [...prev, newPair]);
     } else {
-      onUpdate({ headers: [...(request.headers || []), newPair] });
+      setHeaders((prev) => [...prev, newPair]);
     }
   };
 
@@ -711,25 +895,21 @@ export function RequestEditor({
     updates: Partial<KeyValuePair>
   ) => {
     if (type === 'params') {
-      onUpdate({
-        params: (request.params || []).map((p) =>
-          p.id === id ? { ...p, ...updates } : p
-        ),
-      });
+      setParams((prev) =>
+        prev.map((p) => (p.id === id ? { ...p, ...updates } : p))
+      );
     } else {
-      onUpdate({
-        headers: (request.headers || []).map((h) =>
-          h.id === id ? { ...h, ...updates } : h
-        ),
-      });
+      setHeaders((prev) =>
+        prev.map((h) => (h.id === id ? { ...h, ...updates } : h))
+      );
     }
   };
 
   const removeKeyValuePair = (type: 'params' | 'headers', id: string) => {
     if (type === 'params') {
-      onUpdate({ params: (request.params || []).filter((p) => p.id !== id) });
+      setParams((prev) => prev.filter((p) => p.id !== id));
     } else {
-      onUpdate({ headers: (request.headers || []).filter((h) => h.id !== id) });
+      setHeaders((prev) => prev.filter((h) => h.id !== id));
     }
   };
 
@@ -757,28 +937,28 @@ export function RequestEditor({
   };
 
   const addParam = () => {
-    onUpdate({
-      params: [
-        ...(request.params || []),
-        { key: '', value: '', enabled: true },
-      ],
-    });
+    setParams((prev) => [
+      ...prev,
+      {
+        key: '',
+        value: '',
+        enabled: true,
+        id: `temp_${Date.now().toString()}`,
+      },
+    ]);
   };
 
   const updateParam = (
     index: number,
     updates: Partial<{ key: string; value: string; enabled: boolean }>
   ) => {
-    const updatedParams = (request.params || []).map((param, i) =>
-      i === index ? { ...param, ...updates } : param
+    setParams((prev) =>
+      prev.map((param, i) => (i === index ? { ...param, ...updates } : param))
     );
-    onUpdate({ params: updatedParams });
   };
 
   const removeParam = (index: number) => {
-    onUpdate({
-      params: (request.params || []).filter((_, i) => i !== index),
-    });
+    setParams((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleExtractVariable = (extraction: DataExtraction) => {
@@ -948,28 +1128,30 @@ export function RequestEditor({
   };
 
   const addHeader = () => {
-    onUpdate({
-      headers: [
-        ...(request.headers || []),
-        { key: '', value: '', enabled: true },
-      ],
-    });
+    setHeaders((prev) => [
+      ...prev,
+      {
+        key: '',
+        value: '',
+        enabled: true,
+        id: `temp_${Date.now().toString()}`,
+      },
+    ]);
   };
 
   const updateHeader = (
     index: number,
     updates: Partial<{ key: string; value: string; enabled: boolean }>
   ) => {
-    const updatedHeaders = (request.headers || []).map((header, i) =>
-      i === index ? { ...header, ...updates } : header
+    setHeaders((prev) =>
+      prev.map((header, i) =>
+        i === index ? { ...header, ...updates } : header
+      )
     );
-    onUpdate({ headers: updatedHeaders });
   };
 
   const removeHeader = (index: number) => {
-    onUpdate({
-      headers: (request.headers || []).filter((_, i) => i !== index),
-    });
+    setHeaders((prev) => prev.filter((_, i) => i !== index));
   };
 
   const addTest = (type: 'status' | 'responseTime' | 'jsonContent') => {
@@ -1172,9 +1354,7 @@ export function RequestEditor({
               return (
                 <div key={variable.id} className='flex items-center gap-3'>
                   <div className='flex items-center gap-2 flex-1'>
-                    <span className='text-xs font-mono text-purple-700 min-w-0'>
-                      {`{{${variable.name}}}`}
-                    </span>
+                    <span className='text-xs font-mono text-purple-700 min-w-0'>{`{{${variable.name}}}`}</span>
                     <Input
                       value={String(currentOverride?.value || variable.value)}
                       onChange={(e) =>
@@ -1225,9 +1405,49 @@ export function RequestEditor({
     );
   };
 
+  const VariableAutocomplete = () => {
+    if (!autocompleteState.show) return null;
+
+    return (
+      <div
+        className='fixed z-50 bg-white border border-gray-200 rounded-md shadow-lg max-h-48 overflow-y-auto'
+        style={{
+          top: autocompleteState.position.top,
+          left: autocompleteState.position.left,
+        }}
+      >
+        <div className='p-2 text-xs text-gray-500 border-b'>
+          {autocompleteState.prefix === 'D_'
+            ? 'Dynamic Variables'
+            : 'Static Variables'}
+        </div>
+        {autocompleteState.suggestions.map((variable) => (
+          <button
+            key={variable.id}
+            className='w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center justify-between'
+            onClick={() => handleVariableSelect(variable)}
+          >
+            <span className='font-mono text-sm'>{variable.name}</span>
+            <span className='text-xs text-gray-400 ml-2'>
+              {String(variable.value || variable.initialValue || '').substring(
+                0,
+                20
+              )}
+              {String(variable.value || variable.initialValue || '').length > 20
+                ? '...'
+                : ''}
+            </span>
+          </button>
+        ))}
+      </div>
+    );
+  };
+
   if (compact) {
     return (
       <div className='space-y-4'>
+        <VariableAutocomplete />
+
         {/* Request URL */}
         <div className='flex items-center space-x-2'>
           <Select
@@ -1248,21 +1468,12 @@ export function RequestEditor({
             </SelectContent>
           </Select>
           <Input
-            value={request.url}
-            onChange={(e) => {
-              const value = e.target.value;
-              const shouldSyncName =
-                !hasManuallyEditedNameRef.current &&
-                (!request.name ||
-                  request.name === 'New Request' ||
-                  request.name === request.url);
-
-              onUpdate(
-                shouldSyncName ? { url: value, name: value } : { url: value }
-              );
-            }}
+            value={url}
+            onChange={(e) => handleInputChange(e, setUrl)}
+            onKeyUp={(e) => handleAutocomplete(e)}
             placeholder='Enter request URL'
             className='flex-1'
+            name='url'
           />
           <Button
             onClick={handleExecute}
@@ -1343,23 +1554,41 @@ export function RequestEditor({
 
               {/* Parameters List (no empty state) */}
               <div className='space-y-2'>
-                {(request?.params || []).map((param, index) => (
-                  <div key={index} className='flex items-center space-x-2'>
+                {params.map((param, index) => (
+                  <div key={param.id} className='flex items-center space-x-2'>
                     <input
                       type='text'
+                      name={`param-key-${index}`}
                       value={param.key}
                       onChange={(e) =>
-                        updateParam(index, { key: e.target.value })
+                        handleInputChange(e, (value) => {
+                          const newParams = [...params];
+                          newParams[index] = {
+                            ...newParams[index],
+                            key: value,
+                          };
+                          setParams(newParams);
+                        })
                       }
+                      onKeyUp={(e) => handleAutocomplete(e)}
                       className='flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm'
                       placeholder='Key'
                     />
                     <input
                       type='text'
+                      name={`param-value-${index}`}
                       value={param.value}
                       onChange={(e) =>
-                        updateParam(index, { value: e.target.value })
+                        handleInputChange(e, (value) => {
+                          const newParams = [...params];
+                          newParams[index] = {
+                            ...newParams[index],
+                            value: value,
+                          };
+                          setParams(newParams);
+                        })
                       }
+                      onKeyUp={(e) => handleAutocomplete(e)}
                       className='flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm'
                       placeholder='Value (use {{variableName}} or {{dynamicVar}} for variables)'
                     />
@@ -1409,23 +1638,41 @@ export function RequestEditor({
 
               {/* Headers List (no empty state) */}
               <div className='space-y-2'>
-                {(request?.headers || []).map((header, index) => (
-                  <div key={index} className='flex items-center space-x-2'>
+                {headers.map((header, index) => (
+                  <div key={header.id} className='flex items-center space-x-2'>
                     <input
                       type='text'
+                      name={`header-key-${index}`}
                       value={header.key}
                       onChange={(e) =>
-                        updateHeader(index, { key: e.target.value })
+                        handleInputChange(e, (value) => {
+                          const newHeaders = [...headers];
+                          newHeaders[index] = {
+                            ...newHeaders[index],
+                            key: value,
+                          };
+                          setHeaders(newHeaders);
+                        })
                       }
+                      onKeyUp={(e) => handleAutocomplete(e)}
                       className='flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm'
                       placeholder='Key'
                     />
                     <input
                       type='text'
+                      name={`header-value-${index}`}
                       value={header.value}
                       onChange={(e) =>
-                        updateHeader(index, { value: e.target.value })
+                        handleInputChange(e, (value) => {
+                          const newHeaders = [...headers];
+                          newHeaders[index] = {
+                            ...newHeaders[index],
+                            value: value,
+                          };
+                          setHeaders(newHeaders);
+                        })
                       }
+                      onKeyUp={(e) => handleAutocomplete(e)}
                       className='flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm'
                       placeholder='Value (use {{variableName}} or {{dynamicVar}} for variables)'
                     />
@@ -1551,8 +1798,10 @@ export function RequestEditor({
                     </select>
                   </div>
                   <textarea
-                    value={request.body || ''}
-                    onChange={(e) => onUpdate({ body: e.target.value })}
+                    name='body'
+                    value={body}
+                    onChange={(e) => handleInputChange(e, setBody)}
+                    onKeyUp={(e) => handleAutocomplete(e)}
                     rows={8}
                     className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm'
                     placeholder='Enter request body... Use {{variableName}} or {{dynamicVar}} for variables'
@@ -1613,19 +1862,14 @@ export function RequestEditor({
                     </label>
                     <input
                       type='text'
-                      value={
-                        request.authorization?.token || request.authToken || ''
+                      name='auth-token'
+                      value={auth.token}
+                      onChange={(e) =>
+                        handleInputChange(e, (value) =>
+                          setAuth((prev) => ({ ...prev, token: value }))
+                        )
                       }
-                      onChange={(e) => {
-                        const tokenValue = e.target.value;
-                        onUpdate({
-                          authToken: tokenValue,
-                          authorization: {
-                            ...request.authorization,
-                            token: tokenValue,
-                          },
-                        });
-                      }}
+                      onKeyUp={(e) => handleAutocomplete(e)}
                       className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
                       placeholder='Enter bearer token or use {{tokenVariable}} or {{dynamicToken}}'
                     />
@@ -1649,10 +1893,14 @@ export function RequestEditor({
                       </label>
                       <input
                         type='text'
-                        value={request.authUsername || ''}
+                        name='auth-username'
+                        value={auth.username}
                         onChange={(e) =>
-                          onUpdate({ authUsername: e.target.value })
+                          handleInputChange(e, (value) =>
+                            setAuth((prev) => ({ ...prev, username: value }))
+                          )
                         }
+                        onKeyUp={(e) => handleAutocomplete(e)}
                         className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
                         placeholder='Username or {{usernameVar}} or {{dynamicUsername}}'
                       />
@@ -1670,10 +1918,14 @@ export function RequestEditor({
                       </label>
                       <input
                         type='password'
-                        value={request.authPassword || ''}
+                        name='auth-password'
+                        value={auth.password}
                         onChange={(e) =>
-                          onUpdate({ authPassword: e.target.value })
+                          handleInputChange(e, (value) =>
+                            setAuth((prev) => ({ ...prev, password: value }))
+                          )
                         }
+                        onKeyUp={(e) => handleAutocomplete(e)}
                         className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
                         placeholder='Password or {{passwordVar}} or {dynamicPassword}}'
                       />
@@ -1697,9 +1949,12 @@ export function RequestEditor({
                         <input
                           type='text'
                           value={request.authApiKey || ''}
-                          onChange={(e) =>
-                            onUpdate({ authApiKey: e.target.value })
-                          }
+                          // Updated onChange to use handleInputChange
+                          onChange={(e) => {
+                            handleInputChange(e, (e) =>
+                              onUpdate({ authApiKey: e.target.value })
+                            );
+                          }}
                           className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
                           placeholder='API Key name or {{keyVar}} or {{dynamicKey}}'
                         />
@@ -1718,9 +1973,12 @@ export function RequestEditor({
                         <input
                           type='text'
                           value={request.authApiValue || ''}
-                          onChange={(e) =>
-                            onUpdate({ authApiValue: e.target.value })
-                          }
+                          // Updated onChange to use handleInputChange
+                          onChange={(e) => {
+                            handleInputChange(e, (e) =>
+                              onUpdate({ authApiValue: e.target.value })
+                            );
+                          }}
                           className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
                           placeholder='API Key value or {{valueVar}} or {{dynamicValue}}'
                         />
@@ -2043,7 +2301,6 @@ export function RequestEditor({
                       type='radio'
                       name='errorHandling'
                       value='continue'
-                      disabled
                       checked={
                         request.errorHandling === 'continue' ||
                         !request.errorHandling
@@ -2399,7 +2656,9 @@ export function RequestEditor({
     );
   }
   return (
-    <div className='space-y-6'>
+    <div className='flex flex-col h-full'>
+      <VariableAutocomplete />
+
       {/* Request Configuration */}
       <Card>
         <CardHeader>
@@ -2447,19 +2706,10 @@ export function RequestEditor({
           <div className='space-y-2'>
             <Label>URL</Label>
             <Input
-              value={request.url}
-              onChange={(e) => {
-                const value = e.target.value;
-                const shouldSyncName =
-                  !hasManuallyEditedNameRef.current &&
-                  (!request.name ||
-                    request.name === 'New Request' ||
-                    request.name === request.url);
-
-                onUpdate(
-                  shouldSyncName ? { url: value, name: value } : { url: value }
-                );
-              }}
+              name='url'
+              value={url}
+              onChange={(e) => handleInputChange(e, setUrl)}
+              onKeyUp={(e) => handleAutocomplete(e)}
               placeholder='https://api.example.com/endpoint'
             />
           </div>
@@ -2506,6 +2756,17 @@ export function RequestEditor({
                   <span className='text-blue-600 ml-1'>
                     {processedRequest.authorization?.token ||
                       processedRequest.authToken}
+                  </span>
+                </div>
+              </div>
+            )}
+            {processedRequest.url !== request.url && (
+              <div>
+                <span className='font-medium'>URL:</span>
+                <div className='font-mono bg-white p-1 rounded border'>
+                  <span className='text-gray-500'>{request.url}</span> →
+                  <span className='text-blue-600 ml-1'>
+                    {processedRequest.url}
                   </span>
                 </div>
               </div>
@@ -2620,8 +2881,10 @@ export function RequestEditor({
                 <div className='space-y-2'>
                   <Label>Body Content</Label>
                   <Textarea
-                    value={request.body || ''}
-                    onChange={(e) => onUpdate({ body: e.target.value })}
+                    name='body'
+                    value={body}
+                    onChange={(e) => handleInputChange(e, setBody)}
+                    onKeyUp={(e) => handleAutocomplete(e)}
                     placeholder={
                       request.bodyType === 'json'
                         ? '{\n  "key": "value",\n  "array": [1, 2, 3]\n}'
@@ -2662,6 +2925,94 @@ export function RequestEditor({
                   </SelectContent>
                 </Select>
               </div>
+              {request.authorizationType === 'bearer' && (
+                <div className='space-y-2'>
+                  <Label>Bearer Token</Label>
+                  <Input
+                    name='auth-token'
+                    value={auth.token}
+                    onChange={(e) =>
+                      handleInputChange(e, (value) =>
+                        setAuth((prev) => ({ ...prev, token: value }))
+                      )
+                    }
+                    onKeyUp={(e) => handleAutocomplete(e)}
+                    placeholder='Enter bearer token'
+                  />
+                </div>
+              )}
+              {request.authorizationType === 'basic' && (
+                <div className='grid grid-cols-2 gap-4'>
+                  <div className='space-y-2'>
+                    <Label>Username</Label>
+                    <Input
+                      name='auth-username'
+                      value={auth.username}
+                      onChange={(e) =>
+                        handleInputChange(e, (value) =>
+                          setAuth((prev) => ({ ...prev, username: value }))
+                        )
+                      }
+                      onKeyUp={(e) => handleAutocomplete(e)}
+                      placeholder='Username'
+                    />
+                  </div>
+                  <div className='space-y-2'>
+                    <Label>Password</Label>
+                    <Input
+                      name='auth-password'
+                      type='password'
+                      value={auth.password}
+                      onChange={(e) =>
+                        handleInputChange(e, (value) =>
+                          setAuth((prev) => ({ ...prev, password: value }))
+                        )
+                      }
+                      onKeyUp={(e) => handleAutocomplete(e)}
+                      placeholder='Password'
+                    />
+                  </div>
+                </div>
+              )}
+              {request.authorizationType === 'apikey' && (
+                <div className='grid grid-cols-2 gap-4'>
+                  <div className='space-y-2'>
+                    <Label>API Key Name</Label>
+                    <Input
+                      value={request.authApiKey || ''}
+                      onChange={(e) => onUpdate({ authApiKey: e.target.value })}
+                      placeholder='X-API-Key'
+                    />
+                  </div>
+                  <div className='space-y-2'>
+                    <Label>API Key Value</Label>
+                    <Input
+                      value={request.authApiValue || ''}
+                      onChange={(e) =>
+                        onUpdate({ authApiValue: e.target.value })
+                      }
+                      placeholder='Your API Key'
+                    />
+                  </div>
+                  <div className='col-span-2 space-y-2'>
+                    <Label>Add to</Label>
+                    <Select
+                      value={request.authApiLocation || 'header'}
+                      onValueChange={(value) =>
+                        onUpdate({ authApiLocation: value as any })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value='header'>Header</SelectItem>
+                        <SelectItem value='query'>Query Params</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
