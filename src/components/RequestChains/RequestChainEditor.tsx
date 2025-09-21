@@ -20,6 +20,8 @@ import {
   Pencil,
   X,
   Check,
+  Shuffle,
+  Edit3,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -73,12 +75,18 @@ import {
 } from '@/lib/request-utils';
 import { ResponseExplorer } from './ResponseExplorer';
 import BreadCum from '../BreadCum/Breadcum';
+import { useDataManagementStore } from '@/store/dataManagementStore';
 
 interface RequestChainEditorProps {
   chain?: RequestChain;
   onBack: () => void;
   onSave: (chain: RequestChain) => void;
   requestChainId?: string;
+}
+
+interface DynamicVariableOverride {
+  name: string;
+  value: string | number;
 }
 
 export function RequestChainEditor({
@@ -91,6 +99,16 @@ export function RequestChainEditor({
   const dragItem = useRef<number | null>(null);
   const dragOverItem = useRef<number | null>(null);
   const { currentWorkspace } = useWorkspace();
+
+  // Dynamic variables store
+  const { variables: storeVariables, dynamicVariables } =
+    useDataManagementStore();
+
+  const [dynamicOverrides, setDynamicOverrides] = useState<
+    DynamicVariableOverride[]
+  >([]);
+  const [showDynamicEditor, setShowDynamicEditor] = useState(false);
+
   const [globalVariables, setGlobalVariables] = useState<Variable[]>([
     {
       id: '1',
@@ -155,12 +173,274 @@ export function RequestChainEditor({
   const [activeTab, setActiveTab] = useState('requests');
   const [isSaving, setIsSaving] = useState(false);
 
+  // Dynamic variable mapping function
+  function mapDynamicToStatic(
+    dynamicVariables: any[],
+    overrides: DynamicVariableOverride[] = []
+  ) {
+    const randInt = (min: number, max: number) =>
+      Math.floor(Math.random() * (max - min + 1)) + min;
+
+    const randString = (len: number) =>
+      Array.from({ length: len }, () =>
+        Math.random().toString(36).charAt(2)
+      ).join('');
+
+    const fakeName = () =>
+      ['Alice Johnson', 'Bob Smith', 'Charlie Brown'][
+        Math.floor(Math.random() * 3)
+      ];
+
+    return dynamicVariables.map((d) => {
+      const override = overrides.find((o) => o.name === d.name);
+      if (override) {
+        return {
+          id: d.id,
+          environmentId: null,
+          name: `${d.name}`,
+          description: '',
+          type: 'dynamic',
+          initialValue: '',
+          currentValue: override.value,
+          createdAt: d.createdAt,
+          updatedAt: d.updatedAt,
+          deletedAt: d.deletedAt,
+          value: override.value,
+          scope: 'environment',
+          isGlobal: false,
+          isSecret: false,
+          isDynamic: true,
+        };
+      }
+
+      let generated: string | number;
+
+      switch (d.generatorId) {
+        case 'randomString':
+          generated = randString(d.parameters?.length || 8);
+          break;
+        case 'randomInteger':
+          generated = randInt(d.parameters?.min || 0, d.parameters?.max || 100);
+          break;
+        case 'name':
+          generated = fakeName();
+          break;
+        default:
+          generated = '';
+      }
+
+      return {
+        id: d.id,
+        environmentId: null,
+        name: `${d.name}`,
+        description: '',
+        type: 'dynamic',
+        initialValue: '',
+        currentValue: generated,
+        createdAt: d.createdAt,
+        updatedAt: d.updatedAt,
+        deletedAt: d.deletedAt,
+        value: generated,
+        scope: 'environment',
+        isGlobal: false,
+        isSecret: false,
+        isDynamic: true,
+      };
+    });
+  }
+
+  const dynamicStructured = mapDynamicToStatic(
+    dynamicVariables,
+    dynamicOverrides
+  );
+
+  console.log('Dynamic Variables:', dynamicStructured);
+  console.log('Store variables:', storeVariables);
+
+  // Function to find used dynamic variables in all requests
+  const getUsedDynamicVariables = () => {
+    const allTextFields: string[] = [];
+
+    formData.chainRequests?.forEach((request) => {
+      allTextFields.push(
+        request.url || '',
+        request.body || '',
+        request.authToken || '',
+        request.authUsername || '',
+        request.authPassword || '',
+        request.authApiKey || '',
+        request.authApiValue || '',
+        request.authorization?.token || '',
+        request.authorization?.username || '',
+        request.authorization?.password || '',
+        request.authorization?.key || '',
+        request.authorization?.value || '',
+        ...(request.headers || []).map((h) => `${h.key} ${h.value}`),
+        ...(request.params || []).map((p) => `${p.key} ${p.value}`)
+      );
+    });
+
+    const allText = allTextFields.join(' ');
+    const variableMatches = allText.match(/\{\{(\w+)\}\}/g) || [];
+    const usedVariableNames = [
+      ...new Set(
+        variableMatches.map((match) => match.replace(/\{\{(\w+)\}\}/, '$1'))
+      ),
+    ];
+
+    return dynamicStructured.filter((variable) =>
+      usedVariableNames.includes(variable.name)
+    );
+  };
+
+  const usedDynamicVariables = getUsedDynamicVariables();
+
+  const updateDynamicOverride = (name: string, value: string | number) => {
+    setDynamicOverrides((prev) => {
+      const existing = prev.find((o) => o.name === name);
+      if (existing) {
+        return prev.map((o) => (o.name === name ? { ...o, value } : o));
+      } else {
+        return [...prev, { name, value }];
+      }
+    });
+  };
+
+  const regenerateDynamicVariable = (variableName: string) => {
+    const dynamicVar = dynamicVariables.find((v) => v.name === variableName);
+    if (!dynamicVar) return;
+
+    const randInt = (min: number, max: number) =>
+      Math.floor(Math.random() * (max - min + 1)) + min;
+
+    const randString = (len: number) =>
+      Array.from({ length: len }, () =>
+        Math.random().toString(36).charAt(2)
+      ).join('');
+
+    const fakeName = () =>
+      ['Alice Johnson', 'Bob Smith', 'Charlie Brown'][
+        Math.floor(Math.random() * 3)
+      ];
+
+    let newValue: string | number;
+    switch (dynamicVar.generatorId) {
+      case 'randomString':
+        newValue = randString(dynamicVar.parameters?.length || 8);
+        break;
+      case 'randomInteger':
+        newValue = randInt(
+          dynamicVar.parameters?.min || 0,
+          dynamicVar.parameters?.max || 100
+        );
+        break;
+      case 'name':
+        newValue = fakeName();
+        break;
+      default:
+        newValue = '';
+    }
+
+    updateDynamicOverride(variableName, newValue);
+  };
+
+  // Dynamic Variables Panel Component
+  const DynamicVariablesPanel = () => {
+    if (usedDynamicVariables.length === 0) return null;
+
+    return (
+      <div className='mt-4 p-4 bg-purple-50 border border-purple-200 rounded-lg'>
+        <div className='flex items-center justify-between mb-3'>
+          <div className='flex items-center gap-2'>
+            <Shuffle className='w-4 h-4 text-purple-600' />
+            <h4 className='text-sm font-medium text-purple-900'>
+              Dynamic Variables ({usedDynamicVariables.length})
+            </h4>
+          </div>
+          <Button
+            variant='outline'
+            size='sm'
+            onClick={() => setShowDynamicEditor(!showDynamicEditor)}
+            className='text-purple-700 border-purple-300 hover:bg-purple-100'
+          >
+            <Edit3 className='w-3 h-3 mr-1' />
+            {showDynamicEditor ? 'Hide Editor' : 'Edit Values'}
+          </Button>
+        </div>
+
+        {showDynamicEditor ? (
+          <div className='space-y-3'>
+            {usedDynamicVariables.map((variable) => {
+              const originalName = variable.name.replace('', '');
+              const currentOverride = dynamicOverrides.find(
+                (o) => o.name === originalName
+              );
+
+              return (
+                <div key={variable.id} className='flex items-center gap-3'>
+                  <div className='flex items-center gap-2 flex-1'>
+                    <span className='text-xs font-mono text-purple-700 min-w-0'>
+                      {`{{${variable.name}}}`}
+                    </span>
+                    <Input
+                      value={String(currentOverride?.value || variable.value)}
+                      onChange={(e) =>
+                        updateDynamicOverride(originalName, e.target.value)
+                      }
+                      className='h-8 text-sm'
+                      placeholder='Enter value'
+                    />
+                  </div>
+                  <Button
+                    variant='ghost'
+                    size='sm'
+                    onClick={() => regenerateDynamicVariable(originalName)}
+                    className='h-8 w-8 p-0 text-purple-600 hover:bg-purple-100'
+                    title='Regenerate random value'
+                  >
+                    <Shuffle className='w-3 h-3' />
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className='flex flex-wrap gap-2'>
+            {usedDynamicVariables.map((variable) => {
+              const originalName = variable.name.replace('', '');
+              return (
+                <div
+                  key={variable.id}
+                  className='flex items-center gap-1 px-2 py-1 bg-purple-100 text-purple-800 rounded border border-purple-200'
+                >
+                  <span className='text-xs font-mono'>
+                    {`{{${variable.name}}}`} = {String(variable.value)}
+                  </span>
+                  <button
+                    onClick={() => regenerateDynamicVariable(originalName)}
+                    className='ml-1 p-0.5 hover:bg-purple-200 rounded transition-colors'
+                    title='Regenerate value'
+                  >
+                    <Shuffle className='w-3 h-3' />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const replaceVariables = (text: string, vars: Variable[]): string => {
     if (!text) return text;
     let result = text;
     vars.forEach((variable) => {
       const regex = new RegExp(`{{${variable.name}}}`, 'g');
-      result = result.replace(regex, variable?.value ?? '');
+      result = result.replace(
+        regex,
+        variable.value ?? variable.initialValue ?? ''
+      );
     });
     return result;
   };
@@ -235,11 +515,15 @@ export function RequestChainEditor({
 
     return [
       ...globalVariables,
+      ...storeVariables,
+      ...dynamicStructured,
       ...(formData.variables || []),
       ...environmentVars.filter(
         (ev) =>
           !previouslyExtractedVars.some((pv) => pv.name === ev.name) &&
           !globalVariables.some((gv) => gv.name === ev.name) &&
+          !storeVariables.some((sv) => sv.name === ev.name) &&
+          !dynamicStructured.some((dv) => dv.name === ev.name) &&
           !(formData.variables || []).some((fv) => fv.name === ev.name)
       ),
       ...previouslyExtractedVars,
@@ -296,11 +580,15 @@ export function RequestChainEditor({
 
     return [
       ...globalVariables,
+      ...storeVariables,
+      ...dynamicStructured,
       ...(formData.variables || []),
       ...environmentVars.filter(
         (ev) =>
           !previouslyExtractedVars.some((pv) => pv.name === ev.name) &&
-          !globalExtractedVars.some((gv) => gv.name === ev.name)
+          !globalExtractedVars.some((gv) => gv.name === ev.name) &&
+          !storeVariables.some((sv) => sv.name === ev.name) &&
+          !dynamicStructured.some((dv) => dv.name === ev.name)
       ),
       ...previouslyExtractedVars,
       ...globalExtractedVars.filter(
@@ -435,13 +723,17 @@ export function RequestChainEditor({
 
     const allLogs: ExecutionLog[] = [];
 
-    // Get initial base variables (globals + chain variables + environment variables)
+    // Get initial base variables (globals + chain variables + environment variables + store variables + dynamic variables)
     const baseVariables = [
       ...globalVariables,
+      ...storeVariables,
+      ...dynamicStructured, // Include dynamic variables with current values/overrides
       ...(formData.variables || []),
       ...getExtractVariablesByEnvironment(activeEnvironment?.id).filter(
         (ev) =>
           !globalVariables.some((gv) => gv.name === ev.name) &&
+          !storeVariables.some((sv) => sv.name === ev.name) &&
+          !dynamicStructured.some((dv) => dv.name === ev.name) &&
           !(formData.variables || []).some((fv) => fv.name === ev.name)
       ),
     ];
@@ -1214,6 +1506,9 @@ export function RequestChainEditor({
                   </SelectContent>
                 </Select>
               </div>
+
+              {/* Dynamic Variables Panel */}
+              <DynamicVariablesPanel />
             </CardContent>
           </Card>
 
