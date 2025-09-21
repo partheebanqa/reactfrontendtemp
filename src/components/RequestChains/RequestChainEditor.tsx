@@ -46,6 +46,7 @@ import type {
   Variable,
   ExecutionLog,
   DataExtraction,
+  DynamicVariableOverride, // Import DynamicVariableOverride
 } from '@/shared/types/requestChain.model';
 import { ImportModal } from '@/components/TestSuit/ImportModal';
 import type { ExtendedRequest } from '@/models/collection.model';
@@ -74,6 +75,14 @@ import {
   extractDataFromResponse,
   transformRequestForSave,
   getExecutionLogForRequest,
+  copyToClipboard,
+  mapDynamicToStatic,
+  regenerateDynamicVariable,
+  getVariablesByPrefix,
+  getUsedDynamicVariablesFromRequests,
+  detectAutocompletePrefix,
+  calculateAutocompletePosition,
+  type AutocompleteState,
 } from '@/lib/request-utils';
 import { ResponseExplorer } from './ResponseExplorer';
 import BreadCum from '../BreadCum/Breadcum';
@@ -86,10 +95,8 @@ interface RequestChainEditorProps {
   requestChainId?: string;
 }
 
-interface DynamicVariableOverride {
-  name: string;
-  value: string | number;
-}
+// Removed duplicate type definitions for Variable and DynamicVariableOverride
+// They are now imported from '@/lib/request-utils'
 
 export function RequestChainEditor({
   chain,
@@ -175,98 +182,18 @@ export function RequestChainEditor({
   const [activeTab, setActiveTab] = useState('requests');
   const [isSaving, setIsSaving] = useState(false);
 
-  const [autocompleteState, setAutocompleteState] = useState<{
-    show: boolean;
-    position: { top: number; left: number };
-    suggestions: Variable[];
-    prefix: 'D_' | 'S_' | null;
-    inputRef: HTMLInputElement | HTMLTextAreaElement | null;
-    cursorPosition: number;
-  }>({
-    show: false,
-    position: { top: 0, left: 0 },
-    suggestions: [],
-    prefix: null,
-    inputRef: null,
-    cursorPosition: 0,
-  });
+  const [autocompleteState, setAutocompleteState] = useState<AutocompleteState>(
+    {
+      show: false,
+      position: { top: 0, left: 0 },
+      suggestions: [],
+      prefix: null,
+      inputRef: null,
+      cursorPosition: 0,
+    }
+  );
 
   // Dynamic variable mapping function
-  function mapDynamicToStatic(
-    dynamicVariables: any[],
-    overrides: DynamicVariableOverride[] = []
-  ) {
-    const randInt = (min: number, max: number) =>
-      Math.floor(Math.random() * (max - min + 1)) + min;
-
-    const randString = (len: number) =>
-      Array.from({ length: len }, () =>
-        Math.random().toString(36).charAt(2)
-      ).join('');
-
-    const fakeName = () =>
-      ['Alice Johnson', 'Bob Smith', 'Charlie Brown'][
-        Math.floor(Math.random() * 3)
-      ];
-
-    return dynamicVariables.map((d) => {
-      const override = overrides.find((o) => o.name === d.name);
-      if (override) {
-        return {
-          id: d.id,
-          environmentId: null,
-          name: `${d.name}`,
-          description: '',
-          type: 'dynamic',
-          initialValue: '',
-          currentValue: override.value,
-          createdAt: d.createdAt,
-          updatedAt: d.updatedAt,
-          deletedAt: d.deletedAt,
-          value: override.value,
-          scope: 'environment',
-          isGlobal: false,
-          isSecret: false,
-          isDynamic: true,
-        };
-      }
-
-      let generated: string | number;
-
-      switch (d.generatorId) {
-        case 'randomString':
-          generated = randString(d.parameters?.length || 8);
-          break;
-        case 'randomInteger':
-          generated = randInt(d.parameters?.min || 0, d.parameters?.max || 100);
-          break;
-        case 'name':
-          generated = fakeName();
-          break;
-        default:
-          generated = '';
-      }
-
-      return {
-        id: d.id,
-        environmentId: null,
-        name: `${d.name}`,
-        description: '',
-        type: 'dynamic',
-        initialValue: '',
-        currentValue: generated,
-        createdAt: d.createdAt,
-        updatedAt: d.updatedAt,
-        deletedAt: d.deletedAt,
-        value: generated,
-        scope: 'environment',
-        isGlobal: false,
-        isSecret: false,
-        isDynamic: true,
-      };
-    });
-  }
-
   const dynamicStructured = mapDynamicToStatic(
     dynamicVariables,
     dynamicOverrides
@@ -277,37 +204,9 @@ export function RequestChainEditor({
 
   // Function to find used dynamic variables in all requests
   const getUsedDynamicVariables = () => {
-    const allTextFields: string[] = [];
-
-    formData.chainRequests?.forEach((request) => {
-      allTextFields.push(
-        request.url || '',
-        request.body || '',
-        request.authToken || '',
-        request.authUsername || '',
-        request.authPassword || '',
-        request.authApiKey || '',
-        request.authApiValue || '',
-        request.authorization?.token || '',
-        request.authorization?.username || '',
-        request.authorization?.password || '',
-        request.authorization?.key || '',
-        request.authorization?.value || '',
-        ...(request.headers || []).map((h) => `${h.key} ${h.value}`),
-        ...(request.params || []).map((p) => `${p.key} ${p.value}`)
-      );
-    });
-
-    const allText = allTextFields.join(' ');
-    const variableMatches = allText.match(/\{\{(\w+)\}\}/g) || [];
-    const usedVariableNames = [
-      ...new Set(
-        variableMatches.map((match) => match.replace(/\{\{(\w+)\}\}/, '$1'))
-      ),
-    ];
-
-    return dynamicStructured.filter((variable) =>
-      usedVariableNames.includes(variable.name)
+    return getUsedDynamicVariablesFromRequests(
+      formData.chainRequests || [],
+      dynamicStructured
     );
   };
 
@@ -324,42 +223,16 @@ export function RequestChainEditor({
     });
   };
 
-  const regenerateDynamicVariable = (variableName: string) => {
+  const regenerateDynamicVariableLocal = (variableName: string) => {
     const dynamicVar = dynamicVariables.find((v) => v.name === variableName);
     if (!dynamicVar) return;
 
-    const randInt = (min: number, max: number) =>
-      Math.floor(Math.random() * (max - min + 1)) + min;
+    const newValue = regenerateDynamicVariable(dynamicVar);
 
-    const randString = (len: number) =>
-      Array.from({ length: len }, () =>
-        Math.random().toString(36).charAt(2)
-      ).join('');
-
-    const fakeName = () =>
-      ['Alice Johnson', 'Bob Smith', 'Charlie Brown'][
-        Math.floor(Math.random() * 3)
-      ];
-
-    let newValue: string | number;
-    switch (dynamicVar.generatorId) {
-      case 'randomString':
-        newValue = randString(dynamicVar.parameters?.length || 8);
-        break;
-      case 'randomInteger':
-        newValue = randInt(
-          dynamicVar.parameters?.min || 0,
-          dynamicVar.parameters?.max || 100
-        );
-        break;
-      case 'name':
-        newValue = fakeName();
-        break;
-      default:
-        newValue = '';
-    }
-
-    updateDynamicOverride(variableName, newValue);
+    setDynamicOverrides((prev) => [
+      ...prev.filter((o) => o.name !== variableName),
+      { name: variableName, value: newValue },
+    ]);
   };
 
   // Dynamic Variables Panel Component
@@ -410,7 +283,7 @@ export function RequestChainEditor({
                   <Button
                     variant='ghost'
                     size='sm'
-                    onClick={() => regenerateDynamicVariable(originalName)}
+                    onClick={() => regenerateDynamicVariableLocal(originalName)}
                     className='h-8 w-8 p-0 text-purple-600 hover:bg-purple-100'
                     title='Regenerate random value'
                   >
@@ -433,7 +306,7 @@ export function RequestChainEditor({
                     {`{{${variable.name}}}`} = {String(variable.value)}
                   </span>
                   <button
-                    onClick={() => regenerateDynamicVariable(originalName)}
+                    onClick={() => regenerateDynamicVariableLocal(originalName)}
                     className='ml-1 p-0.5 hover:bg-purple-200 rounded transition-colors'
                     title='Regenerate value'
                   >
@@ -1015,7 +888,7 @@ export function RequestChainEditor({
   const handleCopyForRequest = async (requestId: string, value: string) => {
     try {
       const formattedValue = `{{${value}}}`;
-      await navigator.clipboard.writeText(formattedValue);
+      await copyToClipboard(formattedValue); // Use utility function
       setCopiedStates((prev) => ({ ...prev, [requestId]: true }));
       toast({
         title: 'Copied to Clipboard',
@@ -1373,12 +1246,12 @@ export function RequestChainEditor({
     setFormData({ ...formData, chainRequests: updated });
   }
 
-  const getVariablesByPrefix = (
+  const getVariablesByPrefixLocal = (
     prefix: 'D_' | 'S_',
     requestIndex: number
   ): Variable[] => {
     const allVars = getAllVariablesForRequest(requestIndex);
-    return allVars.filter((variable) => variable.name.startsWith(prefix));
+    return getVariablesByPrefix(allVars, prefix);
   };
 
   const handleInputChange = (
@@ -1392,34 +1265,23 @@ export function RequestChainEditor({
     const value = input.value;
     const cursorPosition = input.selectionStart || 0;
 
-    // Call original handler if provided
     if (originalHandler) {
       originalHandler(e);
     }
 
-    // Check for D_ or S_ at cursor position
-    const textBeforeCursor = value.substring(0, cursorPosition);
-    const lastTwoChars = textBeforeCursor.slice(-2);
+    const prefix = detectAutocompletePrefix(value, cursorPosition);
 
-    if (lastTwoChars === 'D_' || lastTwoChars === 'S_') {
-      const suggestions = getVariablesByPrefix(
-        lastTwoChars as 'D_' | 'S_',
-        requestIndex
-      );
+    if (prefix) {
+      const suggestions = getVariablesByPrefixLocal(prefix, requestIndex);
 
       if (suggestions.length > 0) {
-        // Calculate position for dropdown
-        const rect = input.getBoundingClientRect();
-        const position = {
-          top: rect.bottom + window.scrollY,
-          left: rect.left + window.scrollX,
-        };
+        const position = calculateAutocompletePosition(input);
 
         setAutocompleteState({
           show: true,
           position,
           suggestions,
-          prefix: lastTwoChars as 'D_' | 'S_',
+          prefix,
           inputRef: input,
           cursorPosition,
         });
