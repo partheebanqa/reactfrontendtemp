@@ -35,6 +35,7 @@ export interface ApiTestCase {
   testcase_id:string;
   validation_type:string;
   severity:string;
+  subCategory:string;
 
 }
 
