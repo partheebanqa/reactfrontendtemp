@@ -28,6 +28,8 @@ import {
 } from '@/shared/types/datamanagement';
 
 export const usegetEnvironmentQuery = (enabled = true) => {
+
+
   const workspaceId = workspaceStore.state.currentWorkspace?.id;
 
   return useQuery({
@@ -128,6 +130,8 @@ export const usefetchDynamicVariablesQuery = (enabled = true) => {
     },
   });
 };
+
+
 
 export const useCreateEnvironmentMutation = () => {
   const fetchEnvironmentsQuery = usegetEnvironmentQuery();
