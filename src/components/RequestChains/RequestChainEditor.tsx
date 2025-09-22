@@ -123,10 +123,22 @@ export function RequestChainEditor({
 
   useEffect(() => {
     if (activeEnvironment) {
-      setSelectedEnvironment(activeEnvironment.id);
-      setEnvironmentBaseUrl(activeEnvironment.baseUrl || '');
+      if (chain?.environmentId && environments.length > 0) {
+        // Edit mode: set from the chain’s environment
+        const chainEnvironment = environments.find(
+          (env) => env.id === chain.environmentId
+        );
+        if (chainEnvironment) {
+          setSelectedEnvironment(chain.environmentId);
+          setEnvironmentBaseUrl(chainEnvironment.baseUrl || '');
+        }
+      } else if (!chain) {
+        // Create mode: use the currently active environment
+        setSelectedEnvironment(activeEnvironment.id);
+        setEnvironmentBaseUrl(activeEnvironment.baseUrl || '');
+      }
     }
-  }, [activeEnvironment]);
+  }, [activeEnvironment, chain, environments]);
 
   const handleEnvironmentChange = (environmentId: string) => {
     setSelectedEnvironment(environmentId);
