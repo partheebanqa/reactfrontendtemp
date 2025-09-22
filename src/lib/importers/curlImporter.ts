@@ -1,9 +1,11 @@
 import { v4 as uuidv4 } from 'uuid';
 import { Collection, CollectionRequest, ImportResult } from '../../types';
+// import { toPostmanCollection } from 'curlconverter';
+
 
 export function importCurlCommand(curl: string): ImportResult {
   try {
-    // Basic cURL parsing - this can be expanded for more complex commands
+
     const parts = curl.split(' ');
     let method = 'GET';
     let url = '';
@@ -71,3 +73,18 @@ export function importCurlCommand(curl: string): ImportResult {
     throw new Error(`Failed to import cURL command: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
+
+
+
+
+
+
+// export const importCurlCommandNew = (curl: string) => {
+//   const postmanJson = toPostmanCollection(curl);
+
+//   return {
+//     collectionName: postmanJson.info?.name || 'Imported cURL Collection',
+//     specificationType: 'postman',
+//     ...postmanJson
+//   };
+// };

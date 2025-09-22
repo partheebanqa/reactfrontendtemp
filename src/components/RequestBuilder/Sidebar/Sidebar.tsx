@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import ReactDOM from 'react-dom';
 import {
   ChevronDown,
@@ -210,6 +210,7 @@ const Sidebar: React.FC = () => {
         await renameRequestMutation.mutateAsync({
           requestId: requestId,
           newName: renameValue,
+          workspaceId: ''
         });
         setShowRequestRenameModal(false);
       }
@@ -294,57 +295,57 @@ const Sidebar: React.FC = () => {
             body:
               request.bodyType !== 'none'
                 ? {
-                    mode: getPostmanBodyMode(request.bodyType),
-                    ...(request.bodyType === 'json'
-                      ? {
-                          raw: request.bodyRawContent || '{}',
-                          options: {
-                            raw: {
-                              language: 'json',
-                            },
-                          },
-                        }
-                      : {}),
-                    ...(request.bodyType === 'form-data'
-                      ? {
-                          formdata: Array.isArray(request.bodyFormData)
-                            ? request.bodyFormData.map((item: any) => ({
-                                key: item.key,
-                                value: item.type === 'file' ? '' : item.value,
-                                type: item.type || 'text',
-                                disabled: !item.enabled,
-                              }))
-                            : [],
-                        }
-                      : {}),
-                    ...(request.bodyType === 'x-www-form-urlencoded'
-                      ? {
-                          urlencoded: Array.isArray(
-                            (request as any).urlEncodedData
-                          )
-                            ? (request as any).urlEncodedData.map(
-                                (item: any) => ({
-                                  key: item.key,
-                                  value: item.value,
-                                  disabled: !item.enabled,
-                                })
-                              )
-                            : [],
-                        }
-                      : {}),
-                    ...(request.bodyType === 'raw'
-                      ? {
-                          raw: request.bodyRawContent || '',
-                        }
-                      : {}),
-                  }
+                  mode: getPostmanBodyMode(request.bodyType),
+                  ...(request.bodyType === 'json'
+                    ? {
+                      raw: request.bodyRawContent || '{}',
+                      options: {
+                        raw: {
+                          language: 'json',
+                        },
+                      },
+                    }
+                    : {}),
+                  ...(request.bodyType === 'form-data'
+                    ? {
+                      formdata: Array.isArray(request.bodyFormData)
+                        ? request.bodyFormData.map((item: any) => ({
+                          key: item.key,
+                          value: item.type === 'file' ? '' : item.value,
+                          type: item.type || 'text',
+                          disabled: !item.enabled,
+                        }))
+                        : [],
+                    }
+                    : {}),
+                  ...(request.bodyType === 'x-www-form-urlencoded'
+                    ? {
+                      urlencoded: Array.isArray(
+                        (request as any).urlEncodedData
+                      )
+                        ? (request as any).urlEncodedData.map(
+                          (item: any) => ({
+                            key: item.key,
+                            value: item.value,
+                            disabled: !item.enabled,
+                          })
+                        )
+                        : [],
+                    }
+                    : {}),
+                  ...(request.bodyType === 'raw'
+                    ? {
+                      raw: request.bodyRawContent || '',
+                    }
+                    : {}),
+                }
                 : undefined,
             auth:
               request.authorizationType !== 'none'
                 ? {
-                    type: request.authorizationType,
-                    [request.authorizationType]: getAuthDetails(request),
-                  }
+                  type: request.authorizationType,
+                  [request.authorizationType]: getAuthDetails(request),
+                }
                 : undefined,
           },
           response: [],
@@ -497,11 +498,11 @@ const Sidebar: React.FC = () => {
       collections.map((col) =>
         col.id === selectedCollection?.id
           ? {
-              ...col,
-              requests: col.requests.filter(
-                (req, index) => index !== requstIndex
-              ),
-            }
+            ...col,
+            requests: col.requests.filter(
+              (req, index) => index !== requstIndex
+            ),
+          }
           : col
       )
     );
@@ -515,9 +516,39 @@ const Sidebar: React.FC = () => {
 
   const [searchQuery, setSearchQuery] = useState('');
 
-  const filteredCollections = collections.filter((collection) =>
-    collection.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredCollections = useMemo(() => {
+    if (!searchQuery.trim()) return collections;
+
+    const query = searchQuery.toLowerCase();
+
+    return collections
+      .map((collection) => {
+        const collectionMatches = collection.name.toLowerCase().includes(query);
+
+        const matchingRequests = collection.requests.filter((req) =>
+          req.name && req.name.toLowerCase().includes(query)
+        );
+
+        if (collectionMatches || matchingRequests.length > 0) {
+          return {
+            ...collection,
+            requests: collectionMatches ? collection.requests : matchingRequests,
+          };
+        }
+        return null;
+      })
+      .filter(Boolean) as typeof collections;
+  }, [collections, searchQuery]);
+
+
+
+  // useEffect(() => {
+  //   if (searchQuery.trim()) {
+  //     setExpandedCollections(new Set(collections.map((c) => c.id)));
+  //   }
+  // }, [searchQuery, collections]);
+
+
 
   return (
     <div
@@ -539,7 +570,7 @@ const Sidebar: React.FC = () => {
                 className='border border-gray-300 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800'
                 title='Create collection'
               >
-                <FolderPlus className='h-4 w-4 text-[#136fb0]' />
+                <FolderPlus className='text-[#136fb0]' size={23} />
               </button>
             </TooltipContainer>
             <TooltipContainer text='Import collection'>
@@ -549,7 +580,7 @@ const Sidebar: React.FC = () => {
                 aria-label='Import collection'
                 title='Import from Existing Collection'
               >
-                <Upload className='h-4 w-4 text-[#136fb0]' />
+                <Upload className='text-[#136fb0]' size={23} />
               </button>
             </TooltipContainer>
           </div>
@@ -619,11 +650,10 @@ const Sidebar: React.FC = () => {
                             onClick={() => handleFavoriteCollection(collection)}
                           >
                             <Star
-                              className={`h-4 w-4  ${
-                                collection.isImportant
-                                  ? 'fill-yellow-400 text-yellow-500'
-                                  : ''
-                              }`}
+                              className={`h-4 w-4  ${collection.isImportant
+                                ? 'fill-yellow-400 text-yellow-500'
+                                : ''
+                                }`}
                             />
                           </button>
                         }
@@ -665,11 +695,10 @@ const Sidebar: React.FC = () => {
                             className={`
             flex items-center justify-between p-2 rounded-md cursor-pointer
             hover:bg-gray-50 dark:hover:bg-gray-800
-            ${
-              activeRequest?.id === request.id
-                ? 'bg-blue-50 dark:bg-blue-900/20'
-                : ''
-            }
+            ${activeRequest?.id === request.id
+                                ? 'bg-blue-50 dark:bg-blue-900/20'
+                                : ''
+                              }
           `}
                           >
                             <div

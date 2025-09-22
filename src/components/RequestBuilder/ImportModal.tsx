@@ -17,25 +17,7 @@ import { useToast } from '@/hooks/useToast';
 import { Input } from '../ui/input';
 import { Textarea } from '../ui/textarea';
 
-// Helper function to validate JSON
-const isValidJson = (text: string): boolean => {
-  try {
-    JSON.parse(text);
-    return true;
-  } catch (e) {
-    return false;
-  }
-};
 
-// Helper function to check if it's a Postman collection
-const isPostmanCollection = (json: any): boolean => {
-  return json?.info?.schema?.includes('schema.getpostman.com');
-};
-
-// Helper function to check if it's a Swagger/OpenAPI specification
-const isSwaggerSpec = (json: any): boolean => {
-  return Boolean(json?.swagger || json?.openapi);
-};
 
 interface ImportModalProps {
   isOpen: boolean;
@@ -61,7 +43,7 @@ const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose }) => {
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      // Check file type - allow JSON and other formats that might be valid for import
+
       const isAcceptedType =
         file.type.includes('json') ||
         file.type.includes('application/x-yaml') ||
@@ -74,19 +56,16 @@ const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose }) => {
         setError('Invalid file type. Please select a JSON, YAML, or text file');
         showError('Invalid File Type', 'Please select a supported file format');
         setSelectedFile(null);
-        // Reset the file input
         if (fileInputRef.current) {
           fileInputRef.current.value = '';
         }
         return;
       }
 
-      // Check file size (5MB = 5 * 1024 * 1024 bytes)
       if (file.size > 5 * 1024 * 1024) {
         setError('File size exceeds 5MB limit');
         showError('File Too Large', 'Please select a file under 5MB');
         setSelectedFile(null);
-        // Reset the file input
         if (fileInputRef.current) {
           fileInputRef.current.value = '';
         }
@@ -107,41 +86,35 @@ const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose }) => {
     onClose();
   };
 
-  const detectImportFormat = (content, url = null) => {
-    // If URL is provided, try to detect from URL pattern
-    if (url) {
-      if (url.includes('swagger') || url.includes('openapi')) {
-        return 'openapi';
-      }
-    }
 
-    // Try to parse as JSON first
-    try {
-      const parsed =
-        typeof content === 'string' ? JSON.parse(content) : content;
+  //   if (url) {
+  //     if (url.includes('swagger') || url.includes('openapi')) {
+  //       return 'openapi';
+  //     }
+  //   }
 
-      // Check for Postman collection
-      if (parsed.info && (parsed.info.schema || parsed.item)) {
-        return 'postman';
-      }
 
-      // Check for OpenAPI/Swagger
-      if (parsed.openapi || parsed.swagger) {
-        return 'openapi';
-      }
+  //   try {
+  //     const parsed =
+  //       typeof content === 'string' ? JSON.parse(content) : content;
 
-      // Default to postman for JSON objects
-      return 'postman';
-    } catch (parseError) {
-      // Not valid JSON, check for cURL
-      if (typeof content === 'string' && content.trim().startsWith('curl')) {
-        return 'curl';
-      }
+  //     if (parsed.info && (parsed.info.schema || parsed.item)) {
+  //       return 'postman';
+  //     }
 
-      // Default fallback
-      return 'raw';
-    }
-  };
+  //     if (parsed.openapi || parsed.swagger) {
+  //       return 'openapi';
+  //     }
+
+  //     return 'postman';
+  //   } catch (parseError) {
+  //     if (typeof content === 'string' && content.trim().startsWith('curl')) {
+  //       return 'curl';
+  //     }
+
+  //     return 'raw';
+  //   }
+  // };
 
   const handleImport = async () => {
     setImporting(true);
@@ -160,9 +133,16 @@ const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose }) => {
           specificationType: specificationType,
           raw: JSON.stringify(json),
         });
-      } else if (importType === 'curl') {
-        // cURL import is not yet implemented
-        throw new Error('cURL import is not yet implemented');
+      } else if (importType === 'curl' && importText.trim()) {
+        const parsed = await importCurlCommand(importText.trim());
+
+        await importCollectionMutation.mutateAsync({
+          name: parsed.collectionName,
+          workspaceId: currentWorkspace?.id || '',
+          inputMethod: 'raw',
+          specificationType: 'specificationType',
+          raw: JSON.stringify(parsed),
+        });
       } else if (importType === 'file' && selectedFile) {
         const fileText = await selectedFile.text();
         const json = JSON.parse(fileText);
@@ -177,16 +157,13 @@ const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose }) => {
         });
       }
 
-      // Show success message
       success(
         'Collection Imported',
         'Your collection has been imported successfully'
       );
 
-      // Close the modal first
       handleOnClose();
 
-      // Refresh collections to show the newly imported collection
       setTimeout(async () => {
         try {
           await refetch();
@@ -204,7 +181,7 @@ const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose }) => {
     }
   };
 
-  const checkJson = (json) => {
+  const checkJson = (json: { info: { schema: string | string[]; name: string; title: string; }; swagger: any; openapi: any; }) => {
     let specificationType: 'postman' | 'swagger' | 'openapi' | 'file' = 'file';
     let collectionName = '';
 
@@ -287,7 +264,7 @@ const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose }) => {
                 onClick={() => setImportType('curl')}
               >
                 <Terminal size={16} />
-                cURL Command
+                cURL Command(bash)
               </button>
             </div>
 
@@ -315,12 +292,9 @@ const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose }) => {
                     value={importText}
                     onChange={(e) => {
                       setImportText(e.target.value);
-                      // Clear error if there was one when user starts typing
                       if (error && e.target.value) {
                         setError(null);
                       }
-
-                      // Basic validation for cURL format
                       if (
                         !e.target.value.trim().toLowerCase().startsWith('curl')
                       ) {
@@ -359,7 +333,6 @@ const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose }) => {
                       e.dataTransfer.files.length > 0
                     ) {
                       const file = e.dataTransfer.files[0];
-                      // Check file type
                       if (
                         !file.type.includes('json') &&
                         !file.name.endsWith('.json')
@@ -371,7 +344,6 @@ const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose }) => {
                         );
                         return;
                       }
-                      // Check file size
                       if (file.size > 5 * 1024 * 1024) {
                         setError('File size exceeds 5MB limit');
                         showError(
