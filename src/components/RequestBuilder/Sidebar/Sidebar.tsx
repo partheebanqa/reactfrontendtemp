@@ -516,6 +516,11 @@ const Sidebar: React.FC = () => {
 
   const [searchQuery, setSearchQuery] = useState('');
 
+  const isSearching = searchQuery.trim().length > 0;
+  const isCollectionExpanded = (collectionId: string) =>
+    isSearching ? true : expandedCollections.has(collectionId);
+
+
   const filteredCollections = useMemo(() => {
     if (!searchQuery.trim()) return collections;
 
@@ -526,7 +531,7 @@ const Sidebar: React.FC = () => {
         const collectionMatches = collection.name.toLowerCase().includes(query);
 
         const matchingRequests = collection.requests.filter((req) =>
-          req.name && req.name.toLowerCase().includes(query)
+          req.name?.toLowerCase().includes(query)
         );
 
         if (collectionMatches || matchingRequests.length > 0) {
@@ -541,14 +546,7 @@ const Sidebar: React.FC = () => {
   }, [collections, searchQuery]);
 
 
-
-  // useEffect(() => {
-  //   if (searchQuery.trim()) {
-  //     setExpandedCollections(new Set(collections.map((c) => c.id)));
-  //   }
-  // }, [searchQuery, collections]);
-
-
+  const contentRef = useRef<HTMLDivElement>(null);
 
   return (
     <div
@@ -586,73 +584,69 @@ const Sidebar: React.FC = () => {
           </div>
         </div>
 
-        <div className='text-center mb-2'>
-          <div className='mx-auto relative'>
+        <div className="text-center mb-2">
+          <div className="mx-auto relative">
             <Search
-              className='absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400'
+              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400"
               size={20}
             />
             <Input
-              placeholder='Search Collections...'
+              placeholder="Search Collections..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className='pl-10 text-base'
+              className="pl-10 text-base"
             />
           </div>
         </div>
-        <div className=''>
+
+        <div className="">
           {filteredCollections.length > 0 ? (
             filteredCollections.map((collection) => {
+              const expanded = isCollectionExpanded(collection.id);
+
               return (
-                <div key={collection.id} className='group'>
+                <div key={collection.id} className="group">
                   <div
-                    className='flex items-center justify-between p-2 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer group'
-                    onClick={async () =>
-                      await toggleExpandedCollection(collection.id)
-                    }
+                    className="flex items-center justify-between p-2 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer group"
+                    onClick={async () => {
+                      if (isSearching) return;
+                      await toggleExpandedCollection(collection.id);
+                    }}
                   >
-                    <div className='flex items-center space-x-2'>
-                      {expandedCollections?.has(collection.id) ? (
-                        <ChevronDown className='h-4 w-4 text-gray-500' />
+                    <div className="flex items-center space-x-2">
+                      {expanded ? (
+                        <ChevronDown className="h-4 w-4 text-gray-500" />
                       ) : (
-                        <ChevronRight className='h-4 w-4 text-gray-500' />
+                        <ChevronRight className="h-4 w-4 text-gray-500" />
                       )}
-                      <Folder className='h-4 w-4 text-orange-500' />
-                      <TooltipContainer
-                        children={
-                          <span
-                            className='text-sm font-medium text-gray-900 dark:text-white truncate max-w-[120px] inline-block align-bottom'
-                            style={{
-                              textOverflow: 'ellipsis',
-                              overflow: 'hidden',
-                              whiteSpace: 'nowrap',
-                              verticalAlign: 'bottom',
-                            }}
-                          >
-                            {collection.name}
-                            {collection.name.length > 18 && (
-                              <span>&nbsp;…</span>
-                            )}
-                          </span>
-                        }
-                        text={collection.name}
-                      />
+                      <Folder className="h-4 w-4 text-orange-500" />
+                      <TooltipContainer text={collection.name}>
+                        <span
+                          className="text-sm font-medium text-gray-900 dark:text-white truncate max-w-[120px] inline-block align-bottom"
+                          style={{
+                            textOverflow: 'ellipsis',
+                            overflow: 'hidden',
+                            whiteSpace: 'nowrap',
+                            verticalAlign: 'bottom',
+                          }}
+                        >
+                          {collection.name}
+                          {collection.name.length > 18 && <span>&nbsp;…</span>}
+                        </span>
+                      </TooltipContainer>
                     </div>
 
-                    <div className='flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity relative'>
+                    {/* Collection Actions */}
+                    <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity relative">
                       <TooltipContainer
-                        text={
-                          collection.isImportant ? 'Unfavorite' : 'Favorite'
-                        }
+                        text={collection.isImportant ? 'Unfavorite' : 'Favorite'}
                         children={
                           <button
-                            className='p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700'
+                            className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
                             onClick={() => handleFavoriteCollection(collection)}
                           >
                             <Star
-                              className={`h-4 w-4  ${collection.isImportant
-                                ? 'fill-yellow-400 text-yellow-500'
-                                : ''
+                              className={`h-4 w-4 ${collection.isImportant ? 'fill-yellow-400 text-yellow-500' : ''
                                 }`}
                             />
                           </button>
@@ -663,46 +657,38 @@ const Sidebar: React.FC = () => {
                         onClick={(e) => {
                           e.stopPropagation();
                           const rect = e.currentTarget.getBoundingClientRect();
-                          setMenuPosition({
-                            top: rect.bottom,
-                            left: rect.left,
-                          });
+                          setMenuPosition({ top: rect.bottom, left: rect.left });
                           setSelectedCollection(collection);
                           setShowMenu(collection.id);
                         }}
-                        className='p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700'
-                        aria-label='More options'
+                        className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
+                        aria-label="More options"
                       >
-                        <MoreVertical className='h-3 w-3' />
+                        <MoreVertical className="h-3 w-3" />
                       </button>
-
-                      {/* Menu will be rendered outside the sidebar using React Portal */}
                     </div>
                   </div>
 
-                  {expandedCollections?.has(collection.id) && (
-                    <div
-                      className={`
-      ml-4 sm:ml-6 overflow-hidden transition-all duration-300 ease-in-out
-      ${expandedCollections.has(collection.id) ? 'max-h-[1000px]' : 'max-h-0'}
-    `}
-                    >
-                      {/* Scrollable area for long request lists */}
-                      <div className='overflow-y-auto max-h-[600px]'>
+                  {/* Collection Requests */}
+                  <div
+                    className={`
+    ml-4 sm:ml-6 overflow-hidden
+    ${expanded ? (isSearching ? 'max-h-none' : 'max-h-[1000px]') : 'max-h-0'}
+  `}
+                  >
+                    {expanded && (
+                      <div className="overflow-y-auto max-h-[600px]">
                         {collection.requests.map((request, index) => (
                           <div
                             key={request.id}
                             className={`
-            flex items-center justify-between p-2 rounded-md cursor-pointer
-            hover:bg-gray-50 dark:hover:bg-gray-800
-            ${activeRequest?.id === request.id
-                                ? 'bg-blue-50 dark:bg-blue-900/20'
-                                : ''
-                              }
-          `}
+                      flex items-center justify-between p-2 rounded-md cursor-pointer
+                      hover:bg-gray-50 dark:hover:bg-gray-800
+                      ${activeRequest?.id === request.id ? 'bg-blue-50 dark:bg-blue-900/20' : ''}
+                    `}
                           >
                             <div
-                              className='flex items-center space-x-2 flex-1 min-w-0'
+                              className="flex items-center space-x-2 flex-1 min-w-0"
                               onClick={() => setActiveRequest(request)}
                             >
                               <span
@@ -712,61 +698,58 @@ const Sidebar: React.FC = () => {
                               >
                                 {request.method}
                               </span>
-                              <span className='text-sm text-gray-900 dark:text-white truncate min-w-0'>
+                              <span className="text-sm text-gray-900 dark:text-white truncate min-w-0">
                                 {request.name}
                               </span>
                             </div>
 
-                            <div className='flex items-center opacity-0 group-hover:opacity-100 transition-opacity relative'>
+                            <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity relative">
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  const rect =
-                                    e.currentTarget.getBoundingClientRect();
-                                  setMenuPosition({
-                                    top: rect.bottom,
-                                    left: rect.left,
-                                  });
+                                  const rect = e.currentTarget.getBoundingClientRect();
+                                  setMenuPosition({ top: rect.bottom, left: rect.left });
                                   setSelectedRequest(request);
                                   setShowMenu(`request-${request.id}`);
                                   setRequestId(request.id || '');
                                   setRequestIndex(index);
                                 }}
-                                className='p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700'
+                                className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
                               >
-                                <MoreVertical className='h-3 w-3' />
+                                <MoreVertical className="h-3 w-3" />
                               </button>
                             </div>
                           </div>
                         ))}
                       </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
               );
             })
           ) : (
-            <>
-              <div className='text-center py-2 px-2'>
-                <p className='text-gray-500 mb-3 text-sm'>No collections yet</p>
-                <div className='space-y-2'>
-                  <button
-                    onClick={handleCreateCollection}
-                    className='flex items-center justify-center w-full px-2 py-1.5 text-sm text-blue-600 border border-blue-600 rounded-md hover:bg-blue-50'
-                  >
-                    <Plus className='h-3 w-3 mr-1.5' /> Create Collection
-                  </button>
-                  <button
-                    onClick={() => setShowImportModal(true)}
-                    className='flex items-center justify-center w-full px-2 py-1.5 text-sm text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50'
-                  >
-                    <Upload className='h-3 w-3 mr-1.5' /> Import Collection
-                  </button>
-                </div>
+            <div className="text-center py-2 px-2">
+              <p className="text-gray-500 mb-3 text-sm">No collections yet</p>
+              <div className="space-y-2">
+                <button
+                  onClick={handleCreateCollection}
+                  className="flex items-center justify-center w-full px-2 py-1.5 text-sm text-blue-600 border border-blue-600 rounded-md hover:bg-blue-50"
+                >
+                  <Plus className="h-3 w-3 mr-1.5" /> Create Collection
+                </button>
+                <button
+                  onClick={() => setShowImportModal(true)}
+                  className="flex items-center justify-center w-full px-2 py-1.5 text-sm text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50"
+                >
+                  <Upload className="h-3 w-3 mr-1.5" /> Import Collection
+                </button>
               </div>
-            </>
+            </div>
           )}
         </div>
+
+
+
       </div>
 
       {showCollectionModal && (

@@ -256,7 +256,7 @@ const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose }) => {
                 <LinkIcon size={16} />
                 Swagger URL
               </button>
-              <button
+              {/* <button
                 className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center justify-center gap-2 ${importType === 'curl'
                   ? 'bg-white text-gray-800 shadow'
                   : 'text-gray-600 hover:text-gray-800'
@@ -265,7 +265,7 @@ const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose }) => {
               >
                 <Terminal size={16} />
                 cURL Command(bash)
-              </button>
+              </button> */}
             </div>
 
             {importType === 'swagger' && (
