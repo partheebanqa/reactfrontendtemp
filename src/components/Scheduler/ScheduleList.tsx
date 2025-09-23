@@ -48,6 +48,17 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '../ui/alert-dialog';
 import {
   Tooltip,
   TooltipContent,
@@ -539,25 +550,52 @@ export default function ScheduleList({
                           </Tooltip>
                         </TooltipProvider>
 
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
+                        <AlertDialog>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <AlertDialogTrigger asChild>
+                                  <Button
+                                    variant='ghost'
+                                    size='sm'
+                                    className='h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600'
+                                  >
+                                    <Trash2 size={16} />
+                                  </Button>
+                                </AlertDialogTrigger>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Delete Schedule</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>
+                                Delete this schedule?
+                              </AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This will permanently delete{' '}
+                                <span className='font-medium text-red-600'>
+                                  {schedule.name || 'this schedule'}
+                                </span>
+                                . This action cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
                               <Button
-                                variant='ghost'
-                                size='sm'
-                                className='h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600'
+                                variant='destructive'
                                 onClick={() =>
                                   deleteMutation.mutate(schedule.scheduleId)
                                 }
                               >
-                                <Trash2 size={16} />
+                                Delete
                               </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Delete Schedule</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       </div>
                     </TableCell>
                   </TableRow>

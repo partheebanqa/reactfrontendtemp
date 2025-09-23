@@ -1491,7 +1491,7 @@ export function RequestEditor({
           </nav>
         </div>
         {/* Tab Content */}
-        <div className='p-6'>
+        <div className='p-2'>
           {activeTab === 'params' && (
             <div className='space-y-4'>
               <div className='flex items-center justify-between'>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Plus, Info, CalendarIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -114,6 +114,7 @@ export default function ScheduleCreate({
   const { currentWorkspace } = useWorkspace();
 
   // Fetch test suites using React Query
+
   const {
     data: testSuites = [],
     isLoading: isLoadingTestSuites,
@@ -259,6 +260,13 @@ export default function ScheduleCreate({
 
     createMutation.mutate(submitData);
   };
+
+  useEffect(() => {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if (!form.getValues('timezone')) {
+      form.setValue('timezone', tz);
+    }
+  }, [form]);
 
   return (
     <Dialog
@@ -602,6 +610,25 @@ export default function ScheduleCreate({
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
+                          {/* Auto-detected timezone */}
+                          {![
+                            'UTC',
+                            'America/New_York',
+                            'America/Chicago',
+                            'America/Denver',
+                            'America/Los_Angeles',
+                            'Europe/London',
+                            'Europe/Paris',
+                            'Asia/Tokyo',
+                            'Asia/Shanghai',
+                            'Asia/Kolkata',
+                            'Australia/Sydney',
+                          ].includes(field.value) && (
+                            <SelectItem value={field.value}>
+                              {field.value} (Auto-detected)
+                            </SelectItem>
+                          )}
+
                           <SelectItem value='UTC'>UTC</SelectItem>
                           <SelectItem value='America/New_York'>
                             Eastern Time (ET)
@@ -805,7 +832,7 @@ export default function ScheduleCreate({
                 <Button
                   type='submit'
                   disabled={createMutation.isPending}
-                  className='shadow-elegant'
+                  // className='shadow-elegant'
                 >
                   {createMutation.isPending ? 'Creating...' : 'Create'}
                 </Button>
