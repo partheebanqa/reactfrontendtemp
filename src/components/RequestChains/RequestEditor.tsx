@@ -62,7 +62,6 @@ import {
   copyToClipboard,
   mapDynamicToStatic,
   getVariablesByPrefix,
-  getUsedDynamicVariablesFromRequest,
   detectAutocompletePrefix,
   calculateAutocompletePosition,
   type DynamicVariableOverride, // Removed redeclaration of Variable
@@ -165,6 +164,42 @@ export function RequestEditor({
     password: request.authPassword || '',
     token: request.authToken || '',
   });
+
+  useEffect(() => {
+    onUpdate({ url });
+  }, [url]);
+
+  useEffect(() => {
+    onUpdate({ body });
+  }, [body]);
+
+  useEffect(() => {
+    onUpdate({ headers });
+  }, [headers]);
+
+  useEffect(() => {
+    onUpdate({ params });
+  }, [params]);
+
+  useEffect(() => {
+    onUpdate({
+      authUsername: auth.username,
+      authPassword: auth.password,
+      authToken: auth.token,
+    });
+  }, [auth]);
+
+  useEffect(() => {
+    setUrl(request.url || '');
+    setBody(request.body || '');
+    setHeaders(request.headers || []);
+    setParams(request.params || []);
+    setAuth({
+      username: request.authUsername || '',
+      password: request.authPassword || '',
+      token: request.authToken || '',
+    });
+  }, [request.id]); // Only update when request ID changes to avoid infinite loops
 
   const dynamicStructured = mapDynamicToStatic(
     dynamicVariables,
@@ -672,8 +707,6 @@ export function RequestEditor({
       authToken: auth.token, // Use state variable for auth token
       authUsername: auth.username, // Use state variable for auth username
       authPassword: auth.password, // Use state variable for auth password
-      headers: headers, // Use state variable for headers
-      params: params, // Use state variable for params
     };
     if (!safeRequest.url) {
       toast({
@@ -1276,9 +1309,7 @@ export function RequestEditor({
               return (
                 <div key={variable.id} className='flex items-center gap-3'>
                   <div className='flex items-center gap-2 flex-1'>
-                    <span className='text-xs font-mono text-purple-700 min-w-0'>
-                      {`{{${variable.name}}}`}
-                    </span>
+                    <span className='text-xs font-mono text-purple-700 min-w-0'>{`{{${variable.name}}}`}</span>
                     <Input
                       value={String(currentOverride?.value || variable.value)}
                       onChange={(e) =>
@@ -1731,7 +1762,7 @@ export function RequestEditor({
                     placeholder='Enter request body... Use {{variableName}} or {{dynamicVar}} for variables'
                   />
                   {/* Show processed value if different */}
-                  {/* {processedRequest.body !== request.body &&
+                  {processedRequest.body !== request.body &&
                     processedRequest.body && (
                       <div className='mt-2 p-2 bg-blue-50 border border-blue-200 rounded'>
                         <div className='text-xs font-medium text-blue-900 mb-1'>
@@ -1741,7 +1772,7 @@ export function RequestEditor({
                           {processedRequest.body}
                         </pre>
                       </div>
-                    )} */}
+                    )}
                 </div>
               )}
               {request.bodyType !== 'none' && request.bodyType !== 'raw' && (
@@ -2862,6 +2893,7 @@ export function RequestEditor({
                     }
                     onKeyUp={(e) => handleAutocomplete(e)}
                     placeholder='Enter bearer token'
+                    type='password'
                   />
                 </div>
               )}
@@ -2878,14 +2910,13 @@ export function RequestEditor({
                         )
                       }
                       onKeyUp={(e) => handleAutocomplete(e)}
-                      placeholder='Username'
+                      placeholder='Enter username'
                     />
                   </div>
                   <div className='space-y-2'>
                     <Label>Password</Label>
                     <Input
                       name='auth-password'
-                      type='password'
                       value={auth.password}
                       onChange={(e) =>
                         handleInputChange(e, (value) =>
@@ -2893,7 +2924,8 @@ export function RequestEditor({
                         )
                       }
                       onKeyUp={(e) => handleAutocomplete(e)}
-                      placeholder='Password'
+                      placeholder='Enter password'
+                      type='password'
                     />
                   </div>
                 </div>

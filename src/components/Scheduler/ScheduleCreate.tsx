@@ -1,3 +1,5 @@
+'use client';
+
 import { useState } from 'react';
 import { Plus, Info, CalendarIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -50,8 +52,10 @@ import RecurringScheduleBuilder from './RecurringScheduleBuilder';
 import { createSchedule } from '@/services/scheduler.service';
 import { getAllTestSuites } from '@/services/testSuites.service';
 import { getRequestChains } from '@/services/requestChain.service';
-import { TestSuite } from '@/shared/types/TestSuite.model';
-import { RequestChain } from '@/shared/types/requestChain.model';
+import type { TestSuite } from '@/shared/types/TestSuite.model';
+import type { RequestChain } from '@/shared/types/requestChain.model';
+import { useWorkspace } from '@/hooks/useWorkspace';
+import { cn } from '@/lib/utils';
 
 const STOP_CONDITIONS = [
   { id: '500', label: 'If an API returns a 500 (Internal Server Error)' },
@@ -107,7 +111,7 @@ export default function ScheduleCreate({
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const currentWorkspace = { id: '7c5775d4-68e7-4771-b585-9b366b26b2ca' }; // Mock workspace
+  const { currentWorkspace } = useWorkspace();
 
   // Fetch test suites using React Query
   const {
@@ -184,7 +188,12 @@ export default function ScheduleCreate({
 
     // Create ISO date string with timezone
     const scheduledDateTime = new Date(scheduleDate);
-    scheduledDateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+    scheduledDateTime.setHours(
+      Number.parseInt(hours),
+      Number.parseInt(minutes),
+      0,
+      0
+    );
     const scheduledTimeISO =
       scheduledDateTime.toISOString().slice(0, 19) + '+05:30';
 
@@ -199,7 +208,7 @@ export default function ScheduleCreate({
           case '429':
             return 3;
           default:
-            return parseInt(condition);
+            return Number.parseInt(condition);
         }
       }
     );
@@ -212,7 +221,7 @@ export default function ScheduleCreate({
           .filter((email) => email)
       : [];
 
-    // Get the correct target ID based on target type
+    // Get the correct target ID based on target type - THIS IS THE KEY LOGIC
     const targetId =
       targetType === 'testSuite' ? data.testSuiteId : data.requestChainId;
 
@@ -221,8 +230,8 @@ export default function ScheduleCreate({
       scheduleName: data.name,
       description: data.description || '',
       workspaceId: currentWorkspace?.id,
-      target: targetType === 'testSuite' ? 1 : 2,
-      targetId,
+      target: targetType === 'testSuite' ? 1 : 2, // 1 for test suite, 2 for request chain
+      targetId, // This will be testSuiteId or requestChainId based on target type
       isOneTime: data.scheduleType === 'one-time',
       scheduledTime: scheduledTimeISO,
       timezone:
@@ -242,28 +251,14 @@ export default function ScheduleCreate({
         submitData.daysOfWeek = recurringData.daysOfWeek;
       }
     }
+    if (data.scheduleType === 'one-time') {
+      submitData.frequencyMode = 1;
+    }
 
     console.log('Processed submission data:', submitData);
 
     createMutation.mutate(submitData);
   };
-
-  // Show error toast if there are API errors
-  if (testSuitesError) {
-    toast({
-      title: 'Error',
-      description: 'Failed to load test suites',
-      variant: 'destructive',
-    });
-  }
-
-  if (requestChainsError) {
-    toast({
-      title: 'Error',
-      description: 'Failed to load request chains',
-      variant: 'destructive',
-    });
-  }
 
   return (
     <Dialog
@@ -292,7 +287,7 @@ export default function ScheduleCreate({
       }}
     >
       <DialogTrigger asChild>
-        <Button className='bg-primary hover:bg-primary/90 text-primary-foreground'>
+        <Button variant='default' className='shadow-elegant'>
           <Plus className='mr-2' size={16} />
           New Schedule
         </Button>
@@ -313,6 +308,7 @@ export default function ScheduleCreate({
             </Button>
           </div>
         </DialogHeader>
+
         <TooltipProvider>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-6'>
@@ -511,9 +507,10 @@ export default function ScheduleCreate({
                             <FormControl>
                               <Button
                                 variant='outline'
-                                className={`w-full pl-3 text-left font-normal ${
+                                className={cn(
+                                  'w-full pl-3 text-left font-normal',
                                   !field.value && 'text-muted-foreground'
-                                }`}
+                                )}
                               >
                                 {field.value ? (
                                   format(field.value, 'PPP')
@@ -534,6 +531,7 @@ export default function ScheduleCreate({
                                 date < new Date('1900-01-01')
                               }
                               initialFocus
+                              className={cn('p-3 pointer-events-auto')}
                             />
                           </PopoverContent>
                         </Popover>
@@ -665,7 +663,9 @@ export default function ScheduleCreate({
                             max='5'
                             {...field}
                             onChange={(e) =>
-                              field.onChange(parseInt(e.target.value) || 0)
+                              field.onChange(
+                                Number.parseInt(e.target.value) || 0
+                              )
                             }
                           />
                         </FormControl>
@@ -683,19 +683,17 @@ export default function ScheduleCreate({
                           <FormLabel className='text-sm font-medium'>
                             Email Notifications
                           </FormLabel>
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Info className='h-4 w-4 text-muted-foreground cursor-help' />
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>
-                                  Enter multiple email addresses separated by
-                                  commas
-                                </p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Info className='h-4 w-4 text-muted-foreground cursor-help' />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>
+                                Enter multiple email addresses separated by
+                                commas
+                              </p>
+                            </TooltipContent>
+                          </Tooltip>
                         </div>
                         <FormControl>
                           <Input
@@ -777,16 +775,18 @@ export default function ScheduleCreate({
                     />
                     <label
                       htmlFor='enable-schedule'
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${
+                      className={cn(
+                        'relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer',
                         form.watch('isActive') ? 'bg-primary' : 'bg-muted'
-                      }`}
+                      )}
                     >
                       <span
-                        className={`inline-block h-4 w-4 transform rounded-full bg-background transition-transform ${
+                        className={cn(
+                          'inline-block h-4 w-4 transform rounded-full bg-background transition-transform',
                           form.watch('isActive')
                             ? 'translate-x-6'
                             : 'translate-x-1'
-                        }`}
+                        )}
                       />
                     </label>
                   </div>
@@ -805,7 +805,7 @@ export default function ScheduleCreate({
                 <Button
                   type='submit'
                   disabled={createMutation.isPending}
-                  className='bg-primary hover:bg-primary/90 text-primary-foreground'
+                  className='shadow-elegant'
                 >
                   {createMutation.isPending ? 'Creating...' : 'Create'}
                 </Button>

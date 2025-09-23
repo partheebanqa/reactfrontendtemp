@@ -1,3 +1,5 @@
+'use client';
+
 import { useState, useEffect } from 'react';
 import { Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -100,7 +102,7 @@ export default function RecurringScheduleBuilder({
 
   const formatTime = (timeStr: string) => {
     const [hours, minutes] = timeStr.split(':');
-    const hour = parseInt(hours);
+    const hour = Number.parseInt(hours);
     const ampm = hour >= 12 ? 'PM' : 'AM';
     const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
     return `${displayHour}:${minutes} ${ampm}`;
@@ -128,18 +130,20 @@ export default function RecurringScheduleBuilder({
   const getDaysOfWeek = () => {
     if (pattern === 'weekly') {
       // Convert string IDs to numbers and map Sunday (0) to 7
-      return selectedWeekdays.map((id) => (id === '0' ? 7 : parseInt(id)));
+      return selectedWeekdays.map((id) =>
+        id === '0' ? 7 : Number.parseInt(id)
+      );
     } else if (pattern === 'custom') {
       // Convert string IDs to numbers and map Sunday (0) to 7
-      return customWeekdays.map((id) => (id === '0' ? 7 : parseInt(id)));
+      return customWeekdays.map((id) => (id === '0' ? 7 : Number.parseInt(id)));
     }
     return undefined;
   };
 
   const buildCronExpression = () => {
     const [hours, minutes] = time.split(':');
-    const hour = parseInt(hours);
-    const minute = parseInt(minutes);
+    const hour = Number.parseInt(hours);
+    const minute = Number.parseInt(minutes);
 
     let cron = '';
     let description = '';
@@ -168,7 +172,7 @@ export default function RecurringScheduleBuilder({
         if (monthlyType === 'date') {
           cron = `${minute} ${hour} ${monthlyDate} * *`;
           description = `${monthlyDate}${getOrdinalSuffix(
-            parseInt(monthlyDate)
+            Number.parseInt(monthlyDate)
           )} of every month at ${formatTime(time)}`;
         } else {
           const weekdayOption = MONTHLY_WEEKDAY_OPTIONS.find(
@@ -191,7 +195,7 @@ export default function RecurringScheduleBuilder({
       case 'custom':
         const customWeekdayStr = customWeekdays.sort().join(',');
         cron = `${minute} ${hour} * * ${customWeekdayStr}`;
-        const interval = parseInt(customInterval);
+        const interval = Number.parseInt(customInterval);
         const customDayNames = customWeekdays
           .map((id) => WEEKDAYS.find((w) => w.id === id)?.name)
           .join(' and ');
@@ -366,8 +370,8 @@ export default function RecurringScheduleBuilder({
               </Select>
               <p className='text-sm text-gray-600'>
                 {monthlyDate}
-                {getOrdinalSuffix(parseInt(monthlyDate))} of every month at{' '}
-                {formatTime(time)}
+                {getOrdinalSuffix(Number.parseInt(monthlyDate))} of every month
+                at {formatTime(time)}
               </p>
             </div>
           ) : (

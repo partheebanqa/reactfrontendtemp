@@ -1,3 +1,5 @@
+'use client';
+
 import { useState, useEffect } from 'react';
 import {
   Search,
@@ -61,6 +63,11 @@ import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { format, formatDistanceToNow } from 'date-fns';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
+import {
+  updateSchedule,
+  deleteSchedule,
+  duplicateSchedule,
+} from '@/services/scheduler.service';
 
 interface ScheduleListProps {
   schedules: any[];
@@ -94,13 +101,8 @@ export default function ScheduleList({
   const queryClient = useQueryClient();
 
   const updateMutation = useMutation({
-    // mutationFn: ({
-    //   id,
-    //   data,
-    // }: {
-    //   id: number;
-    //   data: Partial<any>;
-    // }) => schedulesApi.update(id, data),
+    mutationFn: ({ id, data }: { id: string; data: Partial<any> }) =>
+      updateSchedule(id, data),
     onSuccess: () => {
       onRefresh();
       queryClient.invalidateQueries({ queryKey: ['/api/schedules'] });
@@ -119,8 +121,9 @@ export default function ScheduleList({
   });
 
   const deleteMutation = useMutation({
-    // mutationFn: schedulesApi.delete,
+    mutationFn: (scheduleId: string) => deleteSchedule(scheduleId),
     onSuccess: () => {
+      onRefresh();
       queryClient.invalidateQueries({ queryKey: ['/api/schedules'] });
       toast({
         title: 'Success',
@@ -137,19 +140,20 @@ export default function ScheduleList({
   });
 
   const cloneMutation = useMutation({
-    // mutationFn: (schedule: any) => {
-    //   const clonedSchedule = {
-    //     ...schedule,
-    //     name: `${schedule.name} (Copy)`,
-    //     id: undefined,
-    //   };
-    //   // return schedulesApi.create(clonedSchedule);
-    // },
+    mutationFn: (scheduleId: string) => duplicateSchedule(scheduleId),
     onSuccess: () => {
+      onRefresh();
       queryClient.invalidateQueries({ queryKey: ['/api/schedules'] });
       toast({
         title: 'Success',
         description: 'Schedule cloned successfully',
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to clone schedule',
+        variant: 'destructive',
       });
     },
   });
@@ -157,43 +161,43 @@ export default function ScheduleList({
   // Filter schedules based on search and filters
   const filteredSchedules = Array.isArray(schedules)
     ? schedules.filter((schedule: any) => {
-      const matchesSearch =
-        schedule.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        schedule.testSuite?.name
-          ?.toLowerCase()
-          .includes(searchQuery.toLowerCase());
+        const matchesSearch =
+          schedule.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          schedule.testSuite?.name
+            ?.toLowerCase()
+            .includes(searchQuery.toLowerCase());
 
-      const matchesType =
-        typeFilter === 'all' ||
-        (typeFilter === 'test-suite' && schedule.testSuite) ||
-        (typeFilter === 'request-chain' && !schedule.testSuite);
+        const matchesType =
+          typeFilter === 'all' ||
+          (typeFilter === 'test-suite' && schedule.testSuite) ||
+          (typeFilter === 'request-chain' && !schedule.testSuite);
 
-      const matchesExecutionMode =
-        executionModeFilter === 'all' ||
-        (executionModeFilter === 'one-time' &&
-          schedule.scheduleType === 'one-time') ||
-        (executionModeFilter === 'recurring' &&
-          schedule.scheduleType === 'recurring');
+        const matchesExecutionMode =
+          executionModeFilter === 'all' ||
+          (executionModeFilter === 'one-time' &&
+            schedule.scheduleType === 'one-time') ||
+          (executionModeFilter === 'recurring' &&
+            schedule.scheduleType === 'recurring');
 
-      const scheduleStatus = schedule.isActive ? 'active' : 'disabled';
-      const matchesStatus =
-        statusFilter === 'all' || scheduleStatus === statusFilter;
+        const scheduleStatus = schedule.isActive ? 'active' : 'disabled';
+        const matchesStatus =
+          statusFilter === 'all' || scheduleStatus === statusFilter;
 
-      const matchesDateRange =
-        !dateRange.from ||
-        !dateRange.to ||
-        (schedule.createdAt &&
-          new Date(schedule.createdAt) >= dateRange.from &&
-          new Date(schedule.createdAt) <= dateRange.to);
+        const matchesDateRange =
+          !dateRange.from ||
+          !dateRange.to ||
+          (schedule.createdAt &&
+            new Date(schedule.createdAt) >= dateRange.from &&
+            new Date(schedule.createdAt) <= dateRange.to);
 
-      return (
-        matchesSearch &&
-        matchesType &&
-        matchesExecutionMode &&
-        matchesStatus &&
-        matchesDateRange
-      );
-    })
+        return (
+          matchesSearch &&
+          matchesType &&
+          matchesExecutionMode &&
+          matchesStatus &&
+          matchesDateRange
+        );
+      })
     : [];
 
   // Helper function to get execution mode icon
@@ -216,8 +220,9 @@ export default function ScheduleList({
   const formatScheduleDate = (schedule: any) => {
     if (schedule.scheduledDate && schedule.scheduledTime) {
       const date = new Date(schedule.scheduledDate);
-      return `${format(date, 'MMM dd, yyyy')} at ${schedule.scheduledTime} (${schedule.timezone || 'UTC'
-        })`;
+      return `${format(date, 'MMM dd, yyyy')} at ${schedule.scheduledTime} (${
+        schedule.timezone || 'UTC'
+      })`;
     }
     if (schedule.nextRun) {
       return formatDistanceToNow(new Date(schedule.nextRun), {
@@ -334,7 +339,7 @@ export default function ScheduleList({
                   variant='outline'
                   size='sm'
                   disabled={schedulesLoading}
-                  className='gap-2'
+                  className='gap-2 bg-transparent'
                 >
                   <RefreshCw
                     size={16}
@@ -367,27 +372,27 @@ export default function ScheduleList({
           <div className='bg-white rounded-lg border border-slate-200 overflow-hidden'>
             <Table>
               <TableHeader>
-                <TableRow className="bg-slate-50">
-                  <TableHead className="font-semibold text-slate-600 text-sm capitalize tracking-wider">
+                <TableRow className='bg-slate-50'>
+                  <TableHead className='font-semibold text-slate-600 text-sm capitalize tracking-wider'>
                     Schedule
                   </TableHead>
-                  <TableHead className="font-semibold text-slate-600 text-sm capitalize tracking-wider">
+                  <TableHead className='font-semibold text-slate-600 text-sm capitalize tracking-wider'>
                     Type
                   </TableHead>
-                  <TableHead className="font-semibold text-slate-600 text-sm capitalize tracking-wider">
+                  <TableHead className='font-semibold text-slate-600 text-sm capitalize tracking-wider'>
                     {/* Execution */}
                     Mode
                   </TableHead>
-                  <TableHead className="font-semibold text-slate-600 text-sm capitalize tracking-wider">
+                  <TableHead className='font-semibold text-slate-600 text-sm capitalize tracking-wider'>
                     Status
                   </TableHead>
-                  <TableHead className="font-semibold text-slate-600 text-sm capitalize tracking-wider">
+                  <TableHead className='font-semibold text-slate-600 text-sm capitalize tracking-wider'>
                     Environment
                   </TableHead>
-                  <TableHead className="font-semibold text-slate-600 text-sm capitalize tracking-wider">
+                  <TableHead className='font-semibold text-slate-600 text-sm capitalize tracking-wider'>
                     Next Run
                   </TableHead>
-                  <TableHead className="font-semibold text-slate-600 text-sm capitalize tracking-wider">
+                  <TableHead className='font-semibold text-slate-600 text-sm capitalize tracking-wider'>
                     Actions
                   </TableHead>
                 </TableRow>
@@ -424,18 +429,19 @@ export default function ScheduleList({
                           {schedule.scheduleType === 'one-time'
                             ? 'One-time'
                             : schedule.scheduleType === 'recurring'
-                              ? 'Recurring'
-                              : schedule.scheduleType === 'ci-cd'
-                                ? 'CI/CD'
-                                : 'Scheduled'}
+                            ? 'Recurring'
+                            : schedule.scheduleType === 'ci-cd'
+                            ? 'CI/CD'
+                            : 'Scheduled'}
                         </span>
                       </div>
                     </TableCell>
                     <TableCell className='py-4'>
                       <div className='flex items-center gap-2'>
                         <div
-                          className={`w-2 h-2 rounded-full ${schedule.isActive ? 'bg-green-500' : 'bg-gray-400'
-                            }`}
+                          className={`w-2 h-2 rounded-full ${
+                            schedule.isActive ? 'bg-green-500' : 'bg-gray-400'
+                          }`}
                         ></div>
                         <span className='text-sm text-slate-700'>
                           {schedule.isActive ? 'Active' : 'Disabled'}
@@ -457,7 +463,7 @@ export default function ScheduleList({
                         <Button
                           variant='outline'
                           size='sm'
-                          className='h-8 px-3 text-sm'
+                          className='h-8 px-3 text-sm bg-transparent'
                         >
                           <Play size={14} className='mr-1' />
                           Run
@@ -484,12 +490,12 @@ export default function ScheduleList({
                               Edit Schedule
                             </DropdownMenuItem>
                             <DropdownMenuItem
-                              // onClick={() =>
-                              //   updateMutation.mutate({
-                              //     id: schedule.id,
-                              //     data: { isActive: !schedule.isActive },
-                              //   })
-                              // }
+                              onClick={() =>
+                                updateMutation.mutate({
+                                  id: schedule.scheduleId,
+                                  data: { isActive: !schedule.isActive },
+                                })
+                              }
                               className='flex items-center px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 cursor-pointer'
                             >
                               <Clock
@@ -500,14 +506,18 @@ export default function ScheduleList({
                               Schedule
                             </DropdownMenuItem>
                             <DropdownMenuItem
-                              onClick={() => cloneMutation.mutate(schedule)}
+                              onClick={() =>
+                                cloneMutation.mutate(schedule.scheduleId)
+                              }
                               className='flex items-center px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 cursor-pointer'
                             >
                               <Copy size={14} className='mr-3 text-slate-500' />
                               Clone Schedule
                             </DropdownMenuItem>
                             <DropdownMenuItem
-                              onClick={() => deleteMutation.mutate(schedule.id)}
+                              onClick={() =>
+                                deleteMutation.mutate(schedule.scheduleId)
+                              }
                               className='flex items-center px-3 py-2 text-sm text-red-600 hover:bg-red-50 cursor-pointer'
                             >
                               <Trash2 size={14} className='mr-3 text-red-500' />
@@ -603,8 +613,9 @@ export default function ScheduleList({
                     <Button
                       id='date'
                       variant='outline'
-                      className={`w-full justify-start text-left font-normal ${!dateRange.from && 'text-muted-foreground'
-                        }`}
+                      className={`w-full justify-start text-left font-normal ${
+                        !dateRange.from && 'text-muted-foreground'
+                      }`}
                     >
                       <CalendarIcon className='mr-2 h-4 w-4' />
                       {dateRange.from ? (

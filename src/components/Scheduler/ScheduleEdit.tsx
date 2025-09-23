@@ -1,3 +1,5 @@
+'use client';
+
 import { useState, useEffect } from 'react';
 import { Info, CalendarIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -46,6 +48,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useWorkspace } from '@/hooks/useWorkspace';
 import { Checkbox } from '@/components/ui/checkbox';
 import RecurringScheduleBuilder from '@/components/Scheduler/RecurringScheduleBuilder';
+import { updateSchedule } from '@/services/scheduler.service';
 
 const STOP_CONDITIONS = [
   { id: '500', label: 'If an API returns a 500 (Internal Server Error)' },
@@ -100,6 +103,10 @@ export default function ScheduleEdit({
   const [cronExpression, setCronExpression] = useState('');
   const [cronDescription, setCronDescription] = useState('');
   const [scheduleTime, setScheduleTime] = useState('08:00');
+  const [recurringData, setRecurringData] = useState({
+    frequencyMode: 1,
+    daysOfWeek: [],
+  });
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -119,18 +126,19 @@ export default function ScheduleEdit({
       email: '',
       isActive: true,
       requestDelay: 0,
+      cronExpression: '',
       stopConditions: [],
     },
   });
 
   const updateMutation = useMutation({
-    // mutationFn: ({
-    //   id,
-    //   data,
-    // }: {
-    //   id: number;
-    //   data: Partial<ScheduleFormData>;
-    // }) => schedulesApi.update(id, data),
+    mutationFn: ({
+      id,
+      data,
+    }: {
+      id: string;
+      data: Partial<ScheduleFormData>;
+    }) => updateSchedule(id, data),
     onSuccess: () => {
       onScheduleUpdated();
       queryClient.invalidateQueries({ queryKey: ['/api/schedules'] });
@@ -156,55 +164,82 @@ export default function ScheduleEdit({
     console.log('📝 Form submission data:', data);
     console.log('📝 Form validation errors:', form.formState.errors);
 
-    // Generate cron expression based on schedule type
-    let finalCronExpression;
-    if (data.scheduleType === 'recurring') {
-      finalCronExpression = cronExpression || '0 9 * * *'; // Default to daily at 9 AM
-    } else {
-      // For one-time schedules, create a cron expression from the scheduled date/time
-      const scheduleDate = data.scheduledDate || new Date();
-      const [hours, minutes] = (data.scheduledTime || '09:00').split(':');
-      const day = scheduleDate.getDate();
-      const month = scheduleDate.getMonth() + 1;
-      finalCronExpression = `${parseInt(minutes)} ${parseInt(
-        hours
-      )} ${day} ${month} *`;
-    }
+    const scheduleDate = data.scheduledDate || new Date();
+    const currentScheduleTime = data.scheduledTime || scheduleTime || '09:00';
+    const [hours, minutes] = currentScheduleTime.split(':');
 
-    // Ensure all required fields are properly formatted
-    const submitData = {
-      name: data.name,
+    const scheduledDateTime = new Date(scheduleDate);
+    scheduledDateTime.setHours(
+      Number.parseInt(hours),
+      Number.parseInt(minutes),
+      0,
+      0
+    );
+    const scheduledTimeISO =
+      scheduledDateTime.toISOString().slice(0, 19) + '+05:30';
+
+    const stopExecutionAfterFailure = (data.stopConditions || []).map(
+      (condition) => {
+        switch (condition) {
+          case '500':
+            return 1;
+          case '401-403':
+            return 2;
+          case '429':
+            return 3;
+          default:
+            return Number.parseInt(condition);
+        }
+      }
+    );
+
+    const mailRecipients = data.email
+      ? data.email
+          .split(',')
+          .map((email) => email.trim())
+          .filter((email) => email)
+      : [];
+
+    const targetId =
+      targetType === 'testSuite' ? data.testSuiteId : testSuites[0]?.id;
+
+    const submitData: any = {
+      scheduleName: data.name,
       description: data.description || '',
-      testSuiteId:
-        targetType === 'testSuite' ? data.testSuiteId : testSuites[0]?.id,
       workspaceId: currentWorkspace?.id,
-      scheduleType: data.scheduleType,
-      scheduledDate:
-        data.scheduleType === 'one-time'
-          ? data.scheduledDate || new Date()
-          : new Date(),
-      scheduledTime:
-        data.scheduleType === 'one-time' ? data.scheduledTime || '09:00' : null,
-      environment: data.environment || 'development',
+      target: targetType === 'testSuite' ? 1 : 2,
+      targetId,
+      isOneTime: data.scheduleType === 'one-time',
+      scheduledTime: scheduledTimeISO,
       timezone:
         data.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
       retryAttempts: data.retryAttempts || 0,
-      emailNotifications: data.email || null,
+      mailRecipients,
+      stopExecutionAfterFailure,
       isActive: data.isActive !== undefined ? data.isActive : true,
-      requestDelay: data.requestDelay || 0,
-      cronExpression: finalCronExpression,
     };
+
+    if (data.scheduleType === 'recurring') {
+      submitData.frequencyMode = recurringData.frequencyMode;
+
+      if (recurringData.frequencyMode === 3 && recurringData.daysOfWeek) {
+        submitData.daysOfWeek = recurringData.daysOfWeek;
+      }
+    }
 
     console.log('Processed submission data:', submitData);
 
-    // updateMutation.mutate({ id: editingSchedule.id, data: submitData });
+    updateMutation.mutate({ id: editingSchedule.scheduleId, data: submitData });
   };
 
-  // Set form values when editing schedule changes
   useEffect(() => {
     if (editingSchedule) {
       setCronExpression(editingSchedule.cronExpression || '');
       setCronDescription('');
+      setRecurringData({
+        frequencyMode: editingSchedule.frequencyMode || 1,
+        daysOfWeek: editingSchedule.daysOfWeek || [],
+      });
       form.reset({
         name: editingSchedule.name,
         description: editingSchedule.description || '',
@@ -237,7 +272,6 @@ export default function ScheduleEdit({
         <TooltipProvider>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-6'>
-              {/* Schedule Name */}
               <FormField
                 control={form.control}
                 name='name'
@@ -254,7 +288,6 @@ export default function ScheduleEdit({
                 )}
               />
 
-              {/* Schedule Description */}
               <FormField
                 control={form.control}
                 name='description'
@@ -275,7 +308,6 @@ export default function ScheduleEdit({
                 )}
               />
 
-              {/* Target */}
               <div className='space-y-4'>
                 <FormLabel className='text-base font-medium'>Target</FormLabel>
                 <div className='grid grid-cols-2 gap-4'>
@@ -345,7 +377,6 @@ export default function ScheduleEdit({
                 </div>
               </div>
 
-              {/* Execution Mode */}
               <FormField
                 control={form.control}
                 name='scheduleType'
@@ -395,7 +426,6 @@ export default function ScheduleEdit({
                 )}
               />
 
-              {/* Date and Time */}
               <div className='grid grid-cols-2 gap-4'>
                 <FormField
                   control={form.control}
@@ -482,7 +512,6 @@ export default function ScheduleEdit({
                 />
               </div>
 
-              {/* Recurring Schedule Configuration */}
               {form.watch('scheduleType') === 'recurring' && (
                 <div className='space-y-4'>
                   <RecurringScheduleBuilder
@@ -497,11 +526,11 @@ export default function ScheduleEdit({
                     }
                     time={scheduleTime}
                     onTimeChange={setScheduleTime}
+                    onRecurringDataChange={setRecurringData}
                   />
                 </div>
               )}
 
-              {/* Environment and Timezone */}
               <div className='grid grid-cols-2 gap-4'>
                 <FormField
                   control={form.control}
@@ -590,7 +619,6 @@ export default function ScheduleEdit({
                 />
               </div>
 
-              {/* Advanced Settings */}
               <div className='space-y-4'>
                 <FormLabel className='text-base font-medium'>
                   Advanced Settings
@@ -612,7 +640,9 @@ export default function ScheduleEdit({
                             max='5'
                             {...field}
                             onChange={(e) =>
-                              field.onChange(parseInt(e.target.value) || 0)
+                              field.onChange(
+                                Number.parseInt(e.target.value) || 0
+                              )
                             }
                           />
                         </FormControl>
@@ -657,7 +687,6 @@ export default function ScheduleEdit({
                   />
                 </div>
 
-                {/* Stop Execution Conditions */}
                 <FormField
                   control={form.control}
                   name='stopConditions'
@@ -707,7 +736,6 @@ export default function ScheduleEdit({
                   )}
                 />
 
-                {/* Active Schedule Toggle */}
                 <div className='flex items-center justify-between'>
                   <FormLabel className='text-base font-medium'>
                     Active Schedule
