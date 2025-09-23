@@ -42,12 +42,16 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { format } from 'date-fns';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
-import { useWorkspace } from '@/hooks/useWorkspace';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Checkbox } from '@/components/ui/checkbox';
-import RecurringScheduleBuilder from '@/components/Scheduler/RecurringScheduleBuilder';
+import RecurringScheduleBuilder from './RecurringScheduleBuilder';
+import { createSchedule } from '@/services/scheduler.service';
+import { getAllTestSuites } from '@/services/testSuites.service';
+import { getRequestChains } from '@/services/requestChain.service';
+import { TestSuite } from '@/shared/types/TestSuite.model';
+import { RequestChain } from '@/shared/types/requestChain.model';
 
 const STOP_CONDITIONS = [
   { id: '500', label: 'If an API returns a 500 (Internal Server Error)' },
@@ -62,10 +66,10 @@ const scheduleFormSchema = z.object({
   name: z.string().min(1, 'Schedule name is required'),
   description: z.string().optional(),
   testSuiteId: z.string().optional(),
+  requestChainId: z.string().optional(),
   scheduleType: z.enum(['one-time', 'recurring']),
   scheduledDate: z.date().optional(),
   scheduledTime: z.string().optional(),
-  environment: z.string().min(1, 'Environment is required'),
   timezone: z.string().min(1, 'Timezone is required'),
   retryAttempts: z.number().min(0).max(5),
   email: z.string().optional(),
@@ -73,20 +77,21 @@ const scheduleFormSchema = z.object({
   requestDelay: z.number().optional(),
   cronExpression: z.string().optional(),
   stopConditions: z.array(z.string()).optional(),
+  workspaceId: z.string().optional(),
 });
 
-type ScheduleFormData = z.infer<typeof scheduleFormSchema>;
+export type ScheduleFormData = z.infer<typeof scheduleFormSchema>;
 
 interface ScheduleCreateProps {
-  testSuites: any[];
-  requestChains: any[];
   onScheduleCreated: () => void;
+}
 
+interface RecurringData {
+  frequencyMode: number;
+  daysOfWeek?: number[];
 }
 
 export default function ScheduleCreate({
-  testSuites,
-  requestChains,
   onScheduleCreated,
 }: ScheduleCreateProps) {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -96,10 +101,35 @@ export default function ScheduleCreate({
   const [cronExpression, setCronExpression] = useState('');
   const [cronDescription, setCronDescription] = useState('');
   const [scheduleTime, setScheduleTime] = useState('08:00');
+  const [recurringData, setRecurringData] = useState<RecurringData>({
+    frequencyMode: 2,
+  });
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { currentWorkspace } = useWorkspace();
+  const currentWorkspace = { id: '7c5775d4-68e7-4771-b585-9b366b26b2ca' }; // Mock workspace
+
+  // Fetch test suites using React Query
+  const {
+    data: testSuites = [],
+    isLoading: isLoadingTestSuites,
+    error: testSuitesError,
+  } = useQuery({
+    queryKey: ['test-suites', currentWorkspace?.id],
+    queryFn: () => getAllTestSuites(currentWorkspace!.id),
+    enabled: !!currentWorkspace?.id,
+  });
+
+  // Fetch request chains using React Query
+  const {
+    data: requestChains = [],
+    isLoading: isLoadingRequestChains,
+    error: requestChainsError,
+  } = useQuery({
+    queryKey: ['request-chains', currentWorkspace?.id],
+    queryFn: () => getRequestChains(currentWorkspace!.id),
+    enabled: !!currentWorkspace?.id,
+  });
 
   const form = useForm<ScheduleFormData>({
     resolver: zodResolver(scheduleFormSchema),
@@ -109,25 +139,22 @@ export default function ScheduleCreate({
       scheduleType: 'one-time',
       scheduledDate: new Date(),
       scheduledTime: '09:00',
-      environment: 'development',
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       retryAttempts: 0,
       email: '',
       isActive: true,
       requestDelay: 0,
       stopConditions: [],
+      workspaceId: currentWorkspace?.id || '',
     },
   });
 
   const createMutation = useMutation({
-    // mutationFn: (data: any) => {
-    //   console.log('🚀 Calling schedulesApi.create with data:', data);
-    //   // return schedulesApi.create(data);
-    // },
+    mutationFn: (data: any) => {
+      return createSchedule(data);
+    },
     onSuccess: (response) => {
-      console.log('✅ Schedule creation successful:', response);
       onScheduleCreated();
-      queryClient.invalidateQueries({ queryKey: ['/api/schedules'] });
       setCreateDialogOpen(false);
       form.reset();
       toast({
@@ -150,63 +177,105 @@ export default function ScheduleCreate({
     console.log('📝 Form submission data:', data);
     console.log('📝 Form validation errors:', form.formState.errors);
 
-    // Generate cron expression based on schedule type
-    let finalCronExpression;
-    if (data.scheduleType === 'recurring') {
-      finalCronExpression = cronExpression || '0 9 * * *'; // Default to daily at 9 AM
-    } else {
-      // For one-time schedules, create a cron expression from the scheduled date/time
-      const scheduleDate = data.scheduledDate || new Date();
-      const [hours, minutes] = (data.scheduledTime || '09:00').split(':');
-      const day = scheduleDate.getDate();
-      const month = scheduleDate.getMonth() + 1;
-      finalCronExpression = `${parseInt(minutes)} ${parseInt(
-        hours
-      )} ${day} ${month} *`;
-    }
+    // Create scheduled time in ISO format
+    const scheduleDate = data.scheduledDate || new Date();
+    const currentScheduleTime = data.scheduledTime || scheduleTime || '09:00';
+    const [hours, minutes] = currentScheduleTime.split(':');
 
-    // Ensure all required fields are properly formatted
-    const submitData = {
-      name: data.name,
+    // Create ISO date string with timezone
+    const scheduledDateTime = new Date(scheduleDate);
+    scheduledDateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+    const scheduledTimeISO =
+      scheduledDateTime.toISOString().slice(0, 19) + '+05:30';
+
+    // Parse stop conditions to numbers
+    const stopExecutionAfterFailure = (data.stopConditions || []).map(
+      (condition) => {
+        switch (condition) {
+          case '500':
+            return 1;
+          case '401-403':
+            return 2;
+          case '429':
+            return 3;
+          default:
+            return parseInt(condition);
+        }
+      }
+    );
+
+    // Parse email recipients
+    const mailRecipients = data.email
+      ? data.email
+          .split(',')
+          .map((email) => email.trim())
+          .filter((email) => email)
+      : [];
+
+    // Get the correct target ID based on target type
+    const targetId =
+      targetType === 'testSuite' ? data.testSuiteId : data.requestChainId;
+
+    // Base payload
+    const submitData: any = {
+      scheduleName: data.name,
       description: data.description || '',
-      testSuiteId:
-        targetType === 'testSuite' ? data.testSuiteId : testSuites[0]?.id,
       workspaceId: currentWorkspace?.id,
-      scheduleType: data.scheduleType,
-      scheduledDate:
-        data.scheduleType === 'one-time'
-          ? data.scheduledDate || new Date()
-          : new Date(),
-      scheduledTime:
-        data.scheduleType === 'one-time' ? data.scheduledTime || '09:00' : null,
-      environment: data.environment || 'development',
+      target: targetType === 'testSuite' ? 1 : 2,
+      targetId,
+      isOneTime: data.scheduleType === 'one-time',
+      scheduledTime: scheduledTimeISO,
       timezone:
         data.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
       retryAttempts: data.retryAttempts || 0,
-      emailNotifications: data.email || null,
+      mailRecipients,
+      stopExecutionAfterFailure,
       isActive: data.isActive !== undefined ? data.isActive : true,
-      requestDelay: data.requestDelay || 0,
-      cronExpression: finalCronExpression,
     };
+
+    // Add recurring schedule specific fields
+    if (data.scheduleType === 'recurring') {
+      submitData.frequencyMode = recurringData.frequencyMode;
+
+      // Add daysOfWeek for weekly schedules
+      if (recurringData.frequencyMode === 3 && recurringData.daysOfWeek) {
+        submitData.daysOfWeek = recurringData.daysOfWeek;
+      }
+    }
 
     console.log('Processed submission data:', submitData);
 
-    // createMutation.mutate(submitData);
+    createMutation.mutate(submitData);
   };
+
+  // Show error toast if there are API errors
+  if (testSuitesError) {
+    toast({
+      title: 'Error',
+      description: 'Failed to load test suites',
+      variant: 'destructive',
+    });
+  }
+
+  if (requestChainsError) {
+    toast({
+      title: 'Error',
+      description: 'Failed to load request chains',
+      variant: 'destructive',
+    });
+  }
 
   return (
     <Dialog
       open={createDialogOpen}
       onOpenChange={(open) => {
         if (open) {
-
           form.reset({
             name: '',
             description: '',
             scheduleType: 'one-time',
             scheduledDate: new Date(),
             scheduledTime: '',
-            environment: 'development',
             timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
             retryAttempts: 0,
             email: '',
@@ -217,12 +286,13 @@ export default function ScheduleCreate({
           setCronExpression('');
           setCronDescription('');
           setScheduleTime('08:00');
+          setRecurringData({ frequencyMode: 2 });
         }
         setCreateDialogOpen(open);
       }}
     >
       <DialogTrigger asChild>
-        <Button className="hover-scale bg-[#136fb0] text-white" >
+        <Button className='bg-primary hover:bg-primary/90 text-primary-foreground'>
           <Plus className='mr-2' size={16} />
           New Schedule
         </Button>
@@ -236,7 +306,7 @@ export default function ScheduleCreate({
             <Button
               variant='ghost'
               size='sm'
-              className='text-blue-600 hover:text-blue-700 hover:bg-blue-50'
+              className='text-primary hover:text-primary/90 hover:bg-primary/10'
             >
               <Info size={16} className='mr-2' />
               Quick Guide
@@ -246,7 +316,6 @@ export default function ScheduleCreate({
         <TooltipProvider>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-6'>
-              {/* Schedule Name */}
               <FormField
                 control={form.control}
                 name='name'
@@ -263,7 +332,6 @@ export default function ScheduleCreate({
                 )}
               />
 
-              {/* Schedule Description */}
               <FormField
                 control={form.control}
                 name='description'
@@ -284,7 +352,6 @@ export default function ScheduleCreate({
                 )}
               />
 
-              {/* Target */}
               <div className='space-y-4'>
                 <FormLabel className='text-base font-medium'>Target</FormLabel>
                 <div className='grid grid-cols-2 gap-4'>
@@ -321,12 +388,21 @@ export default function ScheduleCreate({
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              {Array.isArray(testSuites) &&
-                                testSuites.map((suite: any) => (
+                              {isLoadingTestSuites ? (
+                                <SelectItem value='' disabled>
+                                  Loading test suites...
+                                </SelectItem>
+                              ) : testSuites.length > 0 ? (
+                                testSuites.map((suite: TestSuite) => (
                                   <SelectItem key={suite.id} value={suite.id}>
                                     {suite.name}
                                   </SelectItem>
-                                ))}
+                                ))
+                              ) : (
+                                <SelectItem value='' disabled>
+                                  No test suites available
+                                </SelectItem>
+                              )}
                             </SelectContent>
                           </Select>
                           <FormMessage />
@@ -334,27 +410,46 @@ export default function ScheduleCreate({
                       )}
                     />
                   ) : (
-                    <Select>
-                      <SelectTrigger>
-                        <SelectValue placeholder='Select request chain' />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Array.isArray(requestChains) &&
-                          requestChains.map((chain: any) => (
-                            <SelectItem
-                              key={chain.id}
-                              value={chain.id.toString()}
-                            >
-                              {chain.name}
-                            </SelectItem>
-                          ))}
-                      </SelectContent>
-                    </Select>
+                    <FormField
+                      control={form.control}
+                      name='requestChainId'
+                      render={({ field }) => (
+                        <FormItem>
+                          <Select
+                            onValueChange={(value) => field.onChange(value)}
+                            value={field.value || ''}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder='Select request chain' />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {isLoadingRequestChains ? (
+                                <SelectItem value='' disabled>
+                                  Loading request chains...
+                                </SelectItem>
+                              ) : requestChains.length > 0 ? (
+                                requestChains.map((chain: RequestChain) => (
+                                  <SelectItem key={chain.id} value={chain.id}>
+                                    {chain.name}
+                                  </SelectItem>
+                                ))
+                              ) : (
+                                <SelectItem value='' disabled>
+                                  No request chains available
+                                </SelectItem>
+                              )}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                   )}
                 </div>
               </div>
 
-              {/* Execution Mode */}
               <FormField
                 control={form.control}
                 name='scheduleType'
@@ -393,6 +488,7 @@ export default function ScheduleCreate({
                       setCronExpression(cron);
                       setCronDescription(description);
                     }}
+                    onRecurringDataChange={setRecurringData}
                     timezone={form.watch('timezone')}
                     time={scheduleTime}
                     onTimeChange={setScheduleTime}
@@ -400,7 +496,6 @@ export default function ScheduleCreate({
                 </div>
               )}
 
-              {/* Date and Time - Only for one-time schedules */}
               {form.watch('scheduleType') === 'one-time' && (
                 <div className='grid grid-cols-2 gap-4'>
                   <FormField
@@ -416,8 +511,9 @@ export default function ScheduleCreate({
                             <FormControl>
                               <Button
                                 variant='outline'
-                                className={`w-full pl-3 text-left font-normal ${!field.value && 'text-muted-foreground'
-                                  }`}
+                                className={`w-full pl-3 text-left font-normal ${
+                                  !field.value && 'text-muted-foreground'
+                                }`}
                               >
                                 {field.value ? (
                                   format(field.value, 'PPP')
@@ -489,38 +585,7 @@ export default function ScheduleCreate({
                 </div>
               )}
 
-              {/* Environment and Timezone */}
               <div className='grid grid-cols-2 gap-4'>
-                <FormField
-                  control={form.control}
-                  name='environment'
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className='text-base font-medium'>
-                        Environment
-                      </FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder='Select environment' />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value='development'>
-                            Development
-                          </SelectItem>
-                          <SelectItem value='staging'>Staging</SelectItem>
-                          <SelectItem value='production'>Production</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
                 <FormField
                   control={form.control}
                   name='timezone'
@@ -621,7 +686,7 @@ export default function ScheduleCreate({
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <Info className='h-4 w-4 text-slate-400 cursor-help' />
+                                <Info className='h-4 w-4 text-muted-foreground cursor-help' />
                               </TooltipTrigger>
                               <TooltipContent>
                                 <p>
@@ -712,14 +777,16 @@ export default function ScheduleCreate({
                     />
                     <label
                       htmlFor='enable-schedule'
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${form.watch('isActive') ? 'bg-blue-600' : 'bg-gray-200'
-                        }`}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${
+                        form.watch('isActive') ? 'bg-primary' : 'bg-muted'
+                      }`}
                     >
                       <span
-                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${form.watch('isActive')
-                          ? 'translate-x-6'
-                          : 'translate-x-1'
-                          }`}
+                        className={`inline-block h-4 w-4 transform rounded-full bg-background transition-transform ${
+                          form.watch('isActive')
+                            ? 'translate-x-6'
+                            : 'translate-x-1'
+                        }`}
                       />
                     </label>
                   </div>
@@ -738,12 +805,7 @@ export default function ScheduleCreate({
                 <Button
                   type='submit'
                   disabled={createMutation.isPending}
-                  className='bg-blue-600 hover:bg-blue-700'
-                  onClick={() => {
-                    console.log('🔘 Create button clicked');
-                    console.log('🔘 Form valid:', form.formState.isValid);
-                    console.log('🔘 Form errors:', form.formState.errors);
-                  }}
+                  className='bg-primary hover:bg-primary/90 text-primary-foreground'
                 >
                   {createMutation.isPending ? 'Creating...' : 'Create'}
                 </Button>
