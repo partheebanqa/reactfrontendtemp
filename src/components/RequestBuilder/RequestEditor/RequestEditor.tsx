@@ -28,7 +28,6 @@ import AssertionManager from './assertionManager';
 import ImportModal from './ImportModal';
 import { Input } from '@/components/ui/input';
 
-
 interface FormattedResponse {
   status: number;
   statusText: string;
@@ -187,12 +186,12 @@ const RequestEditor: React.FC = () => {
       setBodyType(
         allowedBodyTypes.includes(bodyTypeValue)
           ? (bodyTypeValue as
-            | 'none'
-            | 'json'
-            | 'form-data'
-            | 'x-www-form-urlencoded'
-            | 'raw'
-            | 'binary')
+              | 'none'
+              | 'json'
+              | 'form-data'
+              | 'x-www-form-urlencoded'
+              | 'raw'
+              | 'binary')
           : 'json'
       );
       setBodyContent(activeRequest.bodyRawContent || '');
@@ -421,12 +420,12 @@ const RequestEditor: React.FC = () => {
         if (allowedBodyTypes.includes(parsedRequest.bodyType)) {
           setBodyType(
             parsedRequest.bodyType as
-            | 'none'
-            | 'json'
-            | 'form-data'
-            | 'x-www-form-urlencoded'
-            | 'raw'
-            | 'binary'
+              | 'none'
+              | 'json'
+              | 'form-data'
+              | 'x-www-form-urlencoded'
+              | 'raw'
+              | 'binary'
           );
         }
       }
@@ -693,18 +692,18 @@ const RequestEditor: React.FC = () => {
 
       const selectedAssertions = Array.isArray(assertions)
         ? assertions
-          .filter((assertion) => assertion.enabled)
-          .map((assertion) => ({
-            ...assertion,
-            requestId: activeRequest.id, // ✅ attach requestId
-            expectedValue:
-              assertion.expectedValue !== undefined &&
+            .filter((assertion) => assertion.enabled)
+            .map((assertion) => ({
+              ...assertion,
+              requestId: activeRequest.id, // ✅ attach requestId
+              expectedValue:
+                assertion.expectedValue !== undefined &&
                 assertion.expectedValue !== null
-                ? typeof assertion.expectedValue === 'string'
-                  ? assertion.expectedValue
-                  : JSON.stringify(assertion.expectedValue)
-                : '', // fallback to empty string
-          }))
+                  ? typeof assertion.expectedValue === 'string'
+                    ? assertion.expectedValue
+                    : JSON.stringify(assertion.expectedValue)
+                  : '', // fallback to empty string
+            }))
         : [];
 
       const requestData = {
@@ -718,23 +717,23 @@ const RequestEditor: React.FC = () => {
         bodyFormData:
           bodyType === 'form-data'
             ? formFields
-              .filter((f) => f.enabled)
-              .reduce((acc: Record<string, any>, field) => {
-                if (field.key) {
-                  if (field.type === 'file' && field.value instanceof File) {
-                    acc[field.key] = field.value;
-                  } else {
-                    acc[field.key] = String(field.value);
+                .filter((f) => f.enabled)
+                .reduce((acc: Record<string, any>, field) => {
+                  if (field.key) {
+                    if (field.type === 'file' && field.value instanceof File) {
+                      acc[field.key] = field.value;
+                    } else {
+                      acc[field.key] = String(field.value);
+                    }
                   }
-                }
-                return acc;
-              }, {})
+                  return acc;
+                }, {})
             : [],
         bodyRawContent:
           bodyType === 'raw' || bodyType === 'json'
             ? bodyContent
             : bodyType === 'x-www-form-urlencoded'
-              ? new URLSearchParams(
+            ? new URLSearchParams(
                 urlEncodedFields
                   .filter((f) => f.enabled)
                   .reduce((acc, field) => {
@@ -742,7 +741,7 @@ const RequestEditor: React.FC = () => {
                     return acc;
                   }, {} as Record<string, string>)
               ).toString()
-              : '',
+            : '',
         authorizationType: authType,
         authorization: {
           token: authType === 'bearer' ? authData.token : '',
@@ -754,29 +753,29 @@ const RequestEditor: React.FC = () => {
           oauth1:
             authType === 'oauth1'
               ? {
-                consumerKey: authData.oauth1.consumerKey,
-                consumerSecret: authData.oauth1.consumerSecret,
-                token: authData.oauth1.token,
-                tokenSecret: authData.oauth1.tokenSecret,
-                signatureMethod: authData.oauth1.signatureMethod,
-                version: '1.0',
-                realm: authData.oauth1.realm,
-                nonce: authData.oauth1.nonce,
-                timestamp: authData.oauth1.timestamp,
-              }
+                  consumerKey: authData.oauth1.consumerKey,
+                  consumerSecret: authData.oauth1.consumerSecret,
+                  token: authData.oauth1.token,
+                  tokenSecret: authData.oauth1.tokenSecret,
+                  signatureMethod: authData.oauth1.signatureMethod,
+                  version: '1.0',
+                  realm: authData.oauth1.realm,
+                  nonce: authData.oauth1.nonce,
+                  timestamp: authData.oauth1.timestamp,
+                }
               : undefined,
           oauth2:
             authType === 'oauth2'
               ? {
-                clientId: authData.oauth2.clientId,
-                clientSecret: authData.oauth2.clientSecret,
-                accessToken: authData.oauth2.accessToken,
-                tokenType: authData.oauth2.tokenType,
-                refreshToken: authData.oauth2.refreshToken,
-                scope: authData.oauth2.scope,
-                grantType: authData.oauth2.grantType,
-                redirectUri: authData.oauth2.redirectUri,
-              }
+                  clientId: authData.oauth2.clientId,
+                  clientSecret: authData.oauth2.clientSecret,
+                  accessToken: authData.oauth2.accessToken,
+                  tokenType: authData.oauth2.tokenType,
+                  refreshToken: authData.oauth2.refreshToken,
+                  scope: authData.oauth2.scope,
+                  grantType: authData.oauth2.grantType,
+                  redirectUri: authData.oauth2.redirectUri,
+                }
               : undefined,
         },
         params: params,
@@ -854,8 +853,8 @@ const RequestEditor: React.FC = () => {
       // Get selected assertions from the store - ensure it's an array
       const selectedAssertions = Array.isArray(assertions)
         ? assertions
-          .filter((assertion) => assertion.enabled)
-          .map((assertion) => assertion)
+            .filter((assertion) => assertion.enabled)
+            .map((assertion) => assertion)
         : [];
 
       const requestData = {
@@ -871,23 +870,23 @@ const RequestEditor: React.FC = () => {
         bodyFormData:
           bodyType === 'form-data'
             ? formFields
-              .filter((f) => f.enabled)
-              .reduce((acc: Record<string, any>, field) => {
-                if (field.key) {
-                  if (field.type === 'file' && field.value instanceof File) {
-                    acc[field.key] = field.value;
-                  } else {
-                    acc[field.key] = String(field.value);
+                .filter((f) => f.enabled)
+                .reduce((acc: Record<string, any>, field) => {
+                  if (field.key) {
+                    if (field.type === 'file' && field.value instanceof File) {
+                      acc[field.key] = field.value;
+                    } else {
+                      acc[field.key] = String(field.value);
+                    }
                   }
-                }
-                return acc;
-              }, {})
+                  return acc;
+                }, {})
             : null,
         bodyRawContent:
           bodyType === 'raw' || bodyType === 'json'
             ? bodyContent
             : bodyType === 'x-www-form-urlencoded'
-              ? new URLSearchParams(
+            ? new URLSearchParams(
                 urlEncodedFields
                   .filter((f) => f.enabled)
                   .reduce((acc, field) => {
@@ -897,7 +896,7 @@ const RequestEditor: React.FC = () => {
                     return acc;
                   }, {} as Record<string, string>)
               ).toString()
-              : null,
+            : null,
         authorizationType: authType,
         authorization: {
           token: authType === 'bearer' ? authData.token : '',
@@ -909,29 +908,29 @@ const RequestEditor: React.FC = () => {
           oauth1:
             authType === 'oauth1'
               ? {
-                consumerKey: authData.oauth1.consumerKey,
-                consumerSecret: authData.oauth1.consumerSecret,
-                token: authData.oauth1.token,
-                tokenSecret: authData.oauth1.tokenSecret,
-                signatureMethod: authData.oauth1.signatureMethod,
-                version: '1.0',
-                realm: authData.oauth1.realm,
-                nonce: authData.oauth1.nonce,
-                timestamp: authData.oauth1.timestamp,
-              }
+                  consumerKey: authData.oauth1.consumerKey,
+                  consumerSecret: authData.oauth1.consumerSecret,
+                  token: authData.oauth1.token,
+                  tokenSecret: authData.oauth1.tokenSecret,
+                  signatureMethod: authData.oauth1.signatureMethod,
+                  version: '1.0',
+                  realm: authData.oauth1.realm,
+                  nonce: authData.oauth1.nonce,
+                  timestamp: authData.oauth1.timestamp,
+                }
               : undefined,
           oauth2:
             authType === 'oauth2'
               ? {
-                clientId: authData.oauth2.clientId,
-                clientSecret: authData.oauth2.clientSecret,
-                accessToken: authData.oauth2.accessToken,
-                tokenType: authData.oauth2.tokenType,
-                refreshToken: authData.oauth2.refreshToken,
-                scope: authData.oauth2.scope,
-                grantType: authData.oauth2.grantType,
-                redirectUri: authData.oauth2.redirectUri,
-              }
+                  clientId: authData.oauth2.clientId,
+                  clientSecret: authData.oauth2.clientSecret,
+                  accessToken: authData.oauth2.accessToken,
+                  tokenType: authData.oauth2.tokenType,
+                  refreshToken: authData.oauth2.refreshToken,
+                  scope: authData.oauth2.scope,
+                  grantType: authData.oauth2.grantType,
+                  redirectUri: authData.oauth2.redirectUri,
+                }
               : undefined,
         },
         params: params,
@@ -1187,7 +1186,6 @@ const RequestEditor: React.FC = () => {
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               placeholder='Enter request URL'
-
             />
 
             <div className='flex space-x-2'>
@@ -1231,10 +1229,8 @@ const RequestEditor: React.FC = () => {
                   title='Import from cURL'
                 >
                   <FileTerminal className='h-4 w-4 text-[#136fb0]' />
-
                 </button>
               </TooltipContainer>
-
 
               <TooltipContainer text='New request'>
                 <button
@@ -1295,9 +1291,10 @@ const RequestEditor: React.FC = () => {
                 onClick={() => setActiveTab(tab.id as any)}
                 className={`
                   py-4 px-2 sm:px-4 border-b-2 font-medium text-sm transition-colors whitespace-nowrap
-                  ${activeTab === tab.id
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  ${
+                    activeTab === tab.id
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                   }
                 `}
               >
@@ -1438,353 +1435,35 @@ const RequestEditor: React.FC = () => {
                 <h3 className='text-base sm:text-lg font-medium text-gray-900 dark:text-white'>
                   Authorization
                 </h3>
+                {/* Locked to Bearer only */}
                 <select
-                  value={authType}
-                  onChange={(e) => setAuthType(e.target.value as any)}
-                  className='border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-800 text-sm font-medium hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all duration-150'
+                  value='bearer'
+                  disabled
+                  className='border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-800 text-sm font-medium focus:outline-none'
                 >
-                  <option value='none'>No Auth</option>
-                  <option value='basic'>Basic Auth</option>
                   <option value='bearer'>Bearer Token</option>
-                  <option value='apiKey'>API Key</option>
-                  <option value='oauth1'>OAuth 1.0</option>
-                  <option value='oauth2'>OAuth 2.0</option>
                 </select>
               </div>
 
-              {authType === 'none' && (
-                <div className='text-gray-500 dark:text-gray-400 text-center p-8 border border-dashed border-gray-300 dark:border-gray-700 rounded-md'>
-                  No authorization is set for this request
-                </div>
-              )}
-
-              {authType === 'basic' && (
-                <div className='space-y-4'>
-                  <div>
-                    <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
-                      Username
-                    </label>
-                    <input
-                      type='text'
-                      value={authData.username}
-                      onChange={(e) =>
-                        setAuthData({ ...authData, username: e.target.value })
-                      }
-                      placeholder='Enter username'
-                      className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 bg-white dark:bg-gray-800 text-sm'
-                    />
-                  </div>
-                  <div>
-                    <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
-                      Password
-                    </label>
-                    <input
-                      type='password'
-                      value={authData.password}
-                      onChange={(e) =>
-                        setAuthData({ ...authData, password: e.target.value })
-                      }
-                      placeholder='Enter password'
-                      className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 bg-white dark:bg-gray-800 text-sm'
-                    />
-                  </div>
-                </div>
-              )}
-
-              {authType === 'bearer' && (
-                <div>
-                  <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
-                    Token
-                  </label>
-                  <input
-                    type='text'
-                    value={authData.token}
-                    onChange={(e) =>
-                      setAuthData({ ...authData, token: e.target.value })
-                    }
-                    placeholder='Enter token'
-                    className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 bg-white dark:bg-gray-800 text-sm'
-                  />
-                  <p className='mt-1 text-xs text-gray-500 dark:text-gray-400'>
-                    The token will be sent as "Bearer {token}" in the
-                    Authorization header
-                  </p>
-                </div>
-              )}
-
-              {authType === 'apiKey' && (
-                <div className='space-y-4'>
-                  <div>
-                    <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
-                      Key
-                    </label>
-                    <input
-                      type='text'
-                      value={authData.key}
-                      onChange={(e) =>
-                        setAuthData({ ...authData, key: e.target.value })
-                      }
-                      placeholder='Enter API key name'
-                      className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 bg-white dark:bg-gray-800 text-sm'
-                    />
-                  </div>
-                  <div>
-                    <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
-                      Value
-                    </label>
-                    <input
-                      type='text'
-                      value={authData.value}
-                      onChange={(e) =>
-                        setAuthData({ ...authData, value: e.target.value })
-                      }
-                      placeholder='Enter API key value'
-                      className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 bg-white dark:bg-gray-800 text-sm'
-                    />
-                  </div>
-                  <div>
-                    <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
-                      Add to
-                    </label>
-                    <div className='flex space-x-4'>
-                      <label className='inline-flex items-center'>
-                        <input
-                          type='radio'
-                          checked={authData.addTo === 'header'}
-                          onChange={() =>
-                            setAuthData({ ...authData, addTo: 'header' })
-                          }
-                          className='h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300'
-                        />
-                        <span className='ml-2 text-sm text-gray-700 dark:text-gray-300'>
-                          Header
-                        </span>
-                      </label>
-                      <label className='inline-flex items-center'>
-                        <input
-                          type='radio'
-                          checked={authData.addTo === 'query'}
-                          onChange={() =>
-                            setAuthData({ ...authData, addTo: 'query' })
-                          }
-                          className='h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300'
-                        />
-                        <span className='ml-2 text-sm text-gray-700 dark:text-gray-300'>
-                          Query Parameter
-                        </span>
-                      </label>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {authType === 'oauth1' && (
-                <div className='space-y-4'>
-                  <div>
-                    <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
-                      Consumer Key
-                    </label>
-                    <input
-                      type='text'
-                      value={authData.oauth1.consumerKey}
-                      onChange={(e) =>
-                        setAuthData({
-                          ...authData,
-                          oauth1: {
-                            ...authData.oauth1,
-                            consumerKey: e.target.value,
-                          },
-                        })
-                      }
-                      placeholder='Enter consumer key'
-                      className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 bg-white dark:bg-gray-800 text-sm'
-                    />
-                  </div>
-                  <div>
-                    <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
-                      Consumer Secret
-                    </label>
-                    <input
-                      type='password'
-                      value={authData.oauth1.consumerSecret}
-                      onChange={(e) =>
-                        setAuthData({
-                          ...authData,
-                          oauth1: {
-                            ...authData.oauth1,
-                            consumerSecret: e.target.value,
-                          },
-                        })
-                      }
-                      placeholder='Enter consumer secret'
-                      className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 bg-white dark:bg-gray-800 text-sm'
-                    />
-                  </div>
-                  <div>
-                    <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
-                      Access Token
-                    </label>
-                    <input
-                      type='text'
-                      value={authData.oauth1.token}
-                      onChange={(e) =>
-                        setAuthData({
-                          ...authData,
-                          oauth1: { ...authData.oauth1, token: e.target.value },
-                        })
-                      }
-                      placeholder='Enter access token'
-                      className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 bg-white dark:bg-gray-800 text-sm'
-                    />
-                  </div>
-                  <div>
-                    <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
-                      Token Secret
-                    </label>
-                    <input
-                      type='password'
-                      value={authData.oauth1.tokenSecret}
-                      onChange={(e) =>
-                        setAuthData({
-                          ...authData,
-                          oauth1: {
-                            ...authData.oauth1,
-                            tokenSecret: e.target.value,
-                          },
-                        })
-                      }
-                      placeholder='Enter token secret'
-                      className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 bg-white dark:bg-gray-800 text-sm'
-                    />
-                  </div>
-                  <div>
-                    <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
-                      Signature Method
-                    </label>
-                    <select
-                      value={authData.oauth1.signatureMethod}
-                      onChange={(e) =>
-                        setAuthData({
-                          ...authData,
-                          oauth1: {
-                            ...authData.oauth1,
-                            signatureMethod: e.target.value,
-                          },
-                        })
-                      }
-                      className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-800 text-sm font-medium hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all duration-150'
-                    >
-                      <option value='HMAC-SHA1'>HMAC-SHA1</option>
-                      <option value='HMAC-SHA256'>HMAC-SHA256</option>
-                      <option value='PLAINTEXT'>PLAINTEXT</option>
-                      <option value='RSA-SHA1'>RSA-SHA1</option>
-                    </select>
-                  </div>
-                  <div>
-                    <p className='mt-1 text-xs text-gray-500 dark:text-gray-400'>
-                      OAuth 1.0 parameters will be automatically generated and
-                      added to the Authorization header.
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {authType === 'oauth2' && (
-                <div className='space-y-4'>
-                  <div>
-                    <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
-                      Grant Type
-                    </label>
-                    <select
-                      value={authData.oauth2.grantType}
-                      onChange={(e) =>
-                        setAuthData({
-                          ...authData,
-                          oauth2: {
-                            ...authData.oauth2,
-                            grantType: e.target.value as any,
-                          },
-                        })
-                      }
-                      className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-800 text-sm font-medium hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all duration-150'
-                    >
-                      <option value='authorization_code'>
-                        Authorization Code
-                      </option>
-                      <option value='client_credentials'>
-                        Client Credentials
-                      </option>
-                      <option value='password'>Password</option>
-                      <option value='refresh_token'>Refresh Token</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
-                      Client ID
-                    </label>
-                    <input
-                      type='text'
-                      value={authData.oauth2.clientId}
-                      onChange={(e) =>
-                        setAuthData({
-                          ...authData,
-                          oauth2: {
-                            ...authData.oauth2,
-                            clientId: e.target.value,
-                          },
-                        })
-                      }
-                      placeholder='Enter client ID'
-                      className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 bg-white dark:bg-gray-800 text-sm'
-                    />
-                  </div>
-                  {authData.oauth2.grantType === 'authorization_code' && (
-                    <div>
-                      <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
-                        Redirect URI
-                      </label>
-                      <input
-                        type='text'
-                        value={authData.oauth2.redirectUri}
-                        onChange={(e) =>
-                          setAuthData({
-                            ...authData,
-                            oauth2: {
-                              ...authData.oauth2,
-                              redirectUri: e.target.value,
-                            },
-                          })
-                        }
-                        placeholder='Enter redirect URI'
-                        className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 bg-white dark:bg-gray-800 text-sm'
-                      />
-                    </div>
-                  )}
-                  <div>
-                    <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
-                      Scope
-                    </label>
-                    <input
-                      type='text'
-                      value={authData.oauth2.scope}
-                      onChange={(e) =>
-                        setAuthData({
-                          ...authData,
-                          oauth2: { ...authData.oauth2, scope: e.target.value },
-                        })
-                      }
-                      placeholder='Enter scope (space-separated)'
-                      className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 bg-white dark:bg-gray-800 text-sm'
-                    />
-                  </div>
-                  <div>
-                    <p className='mt-1 text-xs text-gray-500 dark:text-gray-400'>
-                      OAuth 2.0 access token will be sent as a Bearer token in
-                      the Authorization header.
-                    </p>
-                  </div>
-                </div>
-              )}
+              {/* Bearer Token only */}
+              <div>
+                <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
+                  Token
+                </label>
+                <input
+                  type='text'
+                  value={authData.token}
+                  onChange={(e) =>
+                    setAuthData({ ...authData, token: e.target.value })
+                  }
+                  placeholder='Enter token'
+                  className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 bg-white dark:bg-gray-800 text-sm'
+                />
+                <p className='mt-1 text-xs text-gray-500 dark:text-gray-400'>
+                  The token will be sent as <code>Bearer {authData.token}</code>{' '}
+                  in the Authorization header
+                </p>
+              </div>
             </div>
           )}
 
@@ -1975,4 +1654,3 @@ const RequestEditor: React.FC = () => {
 };
 
 export default RequestEditor;
-

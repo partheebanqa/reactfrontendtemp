@@ -128,7 +128,7 @@ export function RequestEditor({
 }: RequestEditorProps) {
   const [isJsonOpen, setIsJsonOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<
-    'params' | 'headers' | 'body' | 'auth' | 'tests' | 'settings'
+    'params' | 'headers' | 'body' | 'auth' | 'settings'
   >('params');
   const [isExecuting, setIsExecuting] = useState(false);
   const [executionResult, setExecutionResult] = useState<ExecutionLog | null>(
@@ -873,7 +873,7 @@ export function RequestEditor({
     { id: 'headers', label: 'Headers', icon: Code },
     { id: 'body', label: 'Body', icon: FileText },
     { id: 'auth', label: 'Auth', icon: Shield },
-    { id: 'tests', label: 'Tests', icon: TestTube },
+    // { id: 'tests', label: 'Tests', icon: TestTube },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
 
@@ -1794,189 +1794,46 @@ export function RequestEditor({
                     Auth Type
                   </label>
                   <select
-                    value={request.authorizationType || 'none'}
-                    onChange={(e) =>
-                      onUpdate({
-                        authorizationType: e.target
-                          .value as APIRequest['authorizationType'],
-                      })
-                    }
+                    value='bearer'
+                    onChange={() => {}}
                     className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+                    disabled
                   >
-                    <option value='none'>No Auth</option>
                     <option value='bearer'>Bearer Token</option>
-                    <option value='basic'>Basic Auth</option>
-                    <option value='apikey'>API Key</option>
-                    <option value='oauth2'>OAuth 2.0</option>
                   </select>
                 </div>
-                {request.authorizationType === 'bearer' && (
-                  <div>
-                    <label className='block text-sm font-medium text-gray-700 mb-2'>
-                      Bearer Token
-                    </label>
-                    <input
-                      type='text'
-                      name='auth-token'
-                      value={auth.token}
-                      onChange={(e) =>
-                        handleInputChange(e, (value) =>
-                          setAuth((prev) => ({ ...prev, token: value }))
-                        )
-                      }
-                      onKeyUp={(e) => handleAutocomplete(e)}
-                      className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-                      placeholder='Enter bearer token or use {{tokenVariable}} or {{dynamicToken}}'
-                    />
-                    {/* Show processed value if different */}
-                    {(processedRequest.authorization?.token ||
-                      processedRequest.authToken) !==
-                      (request.authorization?.token || request.authToken) && (
-                      <div className='mt-1 px-2 py-1 bg-blue-50 border border-blue-200 rounded text-xs font-mono'>
-                        Processed:{' '}
-                        {processedRequest.authorization?.token ||
-                          processedRequest.authToken}
-                      </div>
-                    )}
-                  </div>
-                )}
-                {request.authorizationType === 'basic' && (
-                  <div className='grid grid-cols-2 gap-4'>
-                    <div>
-                      <label className='block text-sm font-medium text-gray-700 mb-2'>
-                        Username
-                      </label>
-                      <input
-                        type='text'
-                        name='auth-username'
-                        value={auth.username}
-                        onChange={(e) =>
-                          handleInputChange(e, (value) =>
-                            setAuth((prev) => ({ ...prev, username: value }))
-                          )
-                        }
-                        onKeyUp={(e) => handleAutocomplete(e)}
-                        className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-                        placeholder='Username or {{usernameVar}} or {{dynamicUsername}}'
-                      />
-                      {/* Show processed value if different */}
-                      {processedRequest.authUsername !== request.authUsername &&
-                        processedRequest.authUsername && (
-                          <div className='mt-1 px-2 py-1 bg-blue-50 border border-blue-200 rounded text-xs font-mono'>
-                            Processed: {processedRequest.authUsername}
-                          </div>
-                        )}
+
+                <div>
+                  <label className='block text-sm font-medium text-gray-700 mb-2'>
+                    Bearer Token
+                  </label>
+                  <input
+                    type='text'
+                    name='auth-token'
+                    value={auth.token}
+                    onChange={(e) =>
+                      handleInputChange(e, (value) =>
+                        setAuth((prev) => ({ ...prev, token: value }))
+                      )
+                    }
+                    onKeyUp={(e) => handleAutocomplete(e)}
+                    className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+                    placeholder='Enter bearer token or use {{tokenVariable}}'
+                  />
+                  {(processedRequest.authorization?.token ||
+                    processedRequest.authToken) !==
+                    (request.authorization?.token || request.authToken) && (
+                    <div className='mt-1 px-2 py-1 bg-blue-50 border border-blue-200 rounded text-xs font-mono'>
+                      Processed:{' '}
+                      {processedRequest.authorization?.token ||
+                        processedRequest.authToken}
                     </div>
-                    <div>
-                      <label className='block text-sm font-medium text-gray-700 mb-2'>
-                        Password
-                      </label>
-                      <input
-                        type='password'
-                        name='auth-password'
-                        value={auth.password}
-                        onChange={(e) =>
-                          handleInputChange(e, (value) =>
-                            setAuth((prev) => ({ ...prev, password: value }))
-                          )
-                        }
-                        onKeyUp={(e) => handleAutocomplete(e)}
-                        className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-                        placeholder='Password or {{passwordVar}} or {dynamicPassword}}'
-                      />
-                      {/* Show processed value if different */}
-                      {processedRequest.authPassword !== request.authPassword &&
-                        processedRequest.authPassword && (
-                          <div className='mt-1 px-2 py-1 bg-blue-50 border border-blue-200 rounded text-xs font-mono'>
-                            Processed: {processedRequest.authPassword}
-                          </div>
-                        )}
-                    </div>
-                  </div>
-                )}
-                {request.authorizationType === 'apikey' && (
-                  <div className='space-y-4'>
-                    <div className='grid grid-cols-2 gap-4'>
-                      <div>
-                        <label className='block text-sm font-medium text-gray-700 mb-2'>
-                          Key
-                        </label>
-                        <input
-                          type='text'
-                          value={request.authApiKey || ''}
-                          // Updated onChange to use handleInputChange
-                          onChange={(e) => {
-                            handleInputChange(e, (e) =>
-                              onUpdate({ authApiKey: e.target.value })
-                            );
-                          }}
-                          className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-                          placeholder='API Key name or {{keyVar}} or {{dynamicKey}}'
-                        />
-                        {/* Show processed value if different */}
-                        {processedRequest.authApiKey !== request.authApiKey &&
-                          processedRequest.authApiKey && (
-                            <div className='mt-1 px-2 py-1 bg-blue-50 border border-blue-200 rounded text-xs font-mono'>
-                              Processed: {processedRequest.authApiKey}
-                            </div>
-                          )}
-                      </div>
-                      <div>
-                        <label className='block text-sm font-medium text-gray-700 mb-2'>
-                          Value
-                        </label>
-                        <input
-                          type='text'
-                          value={request.authApiValue || ''}
-                          // Updated onChange to use handleInputChange
-                          onChange={(e) => {
-                            handleInputChange(e, (e) =>
-                              onUpdate({ authApiValue: e.target.value })
-                            );
-                          }}
-                          className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-                          placeholder='API Key value or {{valueVar}} or {{dynamicValue}}'
-                        />
-                        {/* Show processed value if different */}
-                        {processedRequest.authApiValue !==
-                          request.authApiValue &&
-                          processedRequest.authApiValue && (
-                            <div className='mt-1 px-2 py-1 bg-blue-50 border border-blue-200 rounded text-xs font-mono'>
-                              Processed: {processedRequest.authApiValue}
-                            </div>
-                          )}
-                      </div>
-                    </div>
-                    <div>
-                      <label className='block text-sm font-medium text-gray-700 mb-2'>
-                        Add to
-                      </label>
-                      <select
-                        value={request.authApiLocation || 'header'}
-                        onChange={(e) =>
-                          onUpdate({
-                            authApiLocation: e.target.value as
-                              | 'header'
-                              | 'query',
-                          })
-                        }
-                        className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-                      >
-                        <option value='header'>Header</option>
-                        <option value='query'>Query Params</option>
-                      </select>
-                    </div>
-                  </div>
-                )}
-                {request.authorizationType === 'oauth2' && (
-                  <div className='text-center py-8 text-gray-500'>
-                    <Shield className='w-12 h-12 text-gray-300 mx-auto mb-3' />
-                    <p>OAuth 2.0 configuration coming soon...</p>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             </div>
           )}
+
           {activeTab === 'tests' && (
             <div className='space-y-4'>
               <div className='flex items-center justify-between'>
@@ -2861,117 +2718,35 @@ export function RequestEditor({
             <CardContent className='space-y-4'>
               <div className='flex items-center space-x-4'>
                 <Label>Auth Type:</Label>
-                <Select
-                  value={request.authorizationType || 'none'}
-                  onValueChange={(value) =>
-                    onUpdate({ authorizationType: value as any })
-                  }
-                >
+                <Select value='bearer' onValueChange={() => {}} disabled>
                   <SelectTrigger className='w-40'>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value='none'>No Auth</SelectItem>
                     <SelectItem value='bearer'>Bearer Token</SelectItem>
-                    <SelectItem value='basic'>Basic Auth</SelectItem>
-                    <SelectItem value='apikey'>API Key</SelectItem>
-                    <SelectItem value='oauth1'>OAuth 1.0</SelectItem>
-                    <SelectItem value='oauth2'>OAuth 2.0</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-              {request.authorizationType === 'bearer' && (
-                <div className='space-y-2'>
-                  <Label>Bearer Token</Label>
-                  <Input
-                    name='auth-token'
-                    value={auth.token}
-                    onChange={(e) =>
-                      handleInputChange(e, (value) =>
-                        setAuth((prev) => ({ ...prev, token: value }))
-                      )
-                    }
-                    onKeyUp={(e) => handleAutocomplete(e)}
-                    placeholder='Enter bearer token'
-                    type='password'
-                  />
-                </div>
-              )}
-              {request.authorizationType === 'basic' && (
-                <div className='grid grid-cols-2 gap-4'>
-                  <div className='space-y-2'>
-                    <Label>Username</Label>
-                    <Input
-                      name='auth-username'
-                      value={auth.username}
-                      onChange={(e) =>
-                        handleInputChange(e, (value) =>
-                          setAuth((prev) => ({ ...prev, username: value }))
-                        )
-                      }
-                      onKeyUp={(e) => handleAutocomplete(e)}
-                      placeholder='Enter username'
-                    />
-                  </div>
-                  <div className='space-y-2'>
-                    <Label>Password</Label>
-                    <Input
-                      name='auth-password'
-                      value={auth.password}
-                      onChange={(e) =>
-                        handleInputChange(e, (value) =>
-                          setAuth((prev) => ({ ...prev, password: value }))
-                        )
-                      }
-                      onKeyUp={(e) => handleAutocomplete(e)}
-                      placeholder='Enter password'
-                      type='password'
-                    />
-                  </div>
-                </div>
-              )}
-              {request.authorizationType === 'apikey' && (
-                <div className='grid grid-cols-2 gap-4'>
-                  <div className='space-y-2'>
-                    <Label>API Key Name</Label>
-                    <Input
-                      value={request.authApiKey || ''}
-                      onChange={(e) => onUpdate({ authApiKey: e.target.value })}
-                      placeholder='X-API-Key'
-                    />
-                  </div>
-                  <div className='space-y-2'>
-                    <Label>API Key Value</Label>
-                    <Input
-                      value={request.authApiValue || ''}
-                      onChange={(e) =>
-                        onUpdate({ authApiValue: e.target.value })
-                      }
-                      placeholder='Your API Key'
-                    />
-                  </div>
-                  <div className='col-span-2 space-y-2'>
-                    <Label>Add to</Label>
-                    <Select
-                      value={request.authApiLocation || 'header'}
-                      onValueChange={(value) =>
-                        onUpdate({ authApiLocation: value as any })
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value='header'>Header</SelectItem>
-                        <SelectItem value='query'>Query Params</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              )}
+
+              <div className='space-y-2'>
+                <Label>Bearer Token</Label>
+                <Input
+                  name='auth-token'
+                  value={auth.token}
+                  onChange={(e) =>
+                    handleInputChange(e, (value) =>
+                      setAuth((prev) => ({ ...prev, token: value }))
+                    )
+                  }
+                  onKeyUp={(e) => handleAutocomplete(e)}
+                  placeholder='Enter bearer token'
+                  type='password'
+                />
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
+
         <TabsContent value='tests' className='space-y-4'>
           <Card>
             <CardHeader>
