@@ -10,6 +10,10 @@ import {
   CheckCircle,
   Calendar,
   Workflow,
+  Check,
+  Link2,
+  CheckCheck,
+  Layers,
 } from "lucide-react";
 import HelpLink from "@/components/HelpModal/HelpLink";
 import BreadCum from "@/components/BreadCum/Breadcum";
@@ -36,10 +40,53 @@ export default function CICDConfiguration() {
   const [showApiKey, setShowApiKey] = useState(false);
 
   const [exampleCode, setExampleCode] =
-    useState(`curl -X POST https://api-tester.example.com/api/execute-schedule \\
-  -H "Authorization: Bearer YOUR_API_KEY" \\
+    useState(`curl -X POST "https://apibackenddev.onrender.com/test-suites/execute" \\
   -H "Content-Type: application/json" \\
-  -d '{"scheduleId": 1, "environmentId": 1}'`);
+  -H "X-API-Key: YOUR_API_KEY" \\
+  -H "X-Workspace-ID: YOUR_WORKSPACE_ID" \\
+  -d '{
+    "testSuiteId": "TEST_SUITE_ID"
+  }'`);
+
+
+  const [requestChainCode, setRequestChainCode] =
+    useState(`curl -X POST "https://apibackenddev.onrender.com/request-chains/execute" \\
+  -H "Content-Type: application/json" \\
+  -H "X-API-Key: YOUR_API_KEY" \\
+  -H "X-Workspace-ID: YOUR_WORKSPACE_ID" \\
+  -d '{
+    "requestChainId": "REQUEST_CHAIN_ID"
+  }`);
+
+
+
+  const [requestChainGet, setRequestChainGet] =
+    useState(`curl -X GET "https://apibackenddev.onrender.com/cicd/request-chains/REQUEST_CHAIN_ID/executionstatus" \\
+  -H "Content-Type: application/json" \\
+  -H "X-API-Key: YOUR_API_KEY" \\
+  -H "X-Workspace-ID: YOUR_WORKSPACE_ID" \\
+  -d '{}'`);
+
+
+  const [testSuitGet, settestSuitGet] =
+    useState(`curl -X GET "https://apibackenddev.onrender.com/cicd/test-suites/TEST_SUITE_ID/executionstatus" \\
+  -H "Content-Type: application/json" \\
+  -H "X-API-Key: YOUR_API_KEY" \\
+  -H "X-Workspace-ID: YOUR_WORKSPACE_ID" \\
+  -d '{}'`);
+
+
+  const [sampleResonpse, setSampleResponse] =
+    useState(`{
+    "name": "PostMethodTesting",
+    "executionId": "0457e632-4c8e-43a9-95fd-939d2895b964",
+    "dateTime": "2025-09-19T08:56:14.463754Z",
+    "environmentName": "",
+    "status": "completed"
+}
+`);
+
+
 
   const handleCopyApiKey = () => {
     navigator.clipboard.writeText(apiKey);
@@ -50,8 +97,60 @@ export default function CICDConfiguration() {
     });
   };
 
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(workspaceId || "");
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+      toast({
+        title: "Workspace ID copied successfully!",
+        duration: 3000,
+        // type: "success",
+      });
+    } catch (err) {
+      console.error("Failed to copy: ", err);
+    }
+  };
+
   const handleCopyCode = () => {
     navigator.clipboard.writeText(exampleCode);
+    toast({
+      title: "Curl copied successfully!",
+      duration: 3000,
+      // type: "success",
+    });
+  };
+
+
+  const handleCopyRequest = () => {
+    navigator.clipboard.writeText(requestChainCode);
+    toast({
+      title: "Curl copied successfully!",
+      duration: 3000,
+      // type: "success",
+    });
+  };
+
+
+  const handleCopyRequestGet = () => {
+    navigator.clipboard.writeText(requestChainGet);
+    toast({
+      title: "Curl copied successfully!",
+      duration: 3000,
+      // type: "success",
+    });
+  };
+
+
+  const handleCopyTestSuitGet = () => {
+    navigator.clipboard.writeText(testSuitGet);
+    toast({
+      title: "Curl copied successfully!",
+      duration: 3000,
+      // type: "success",
+    });
   };
 
   const { currentWorkspace } = useWorkspace();
@@ -201,8 +300,19 @@ export default function CICDConfiguration() {
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mt-3">
           <div className="flex items-center space-x-3 mb-6">
             <Key className="w-6 h-6 text-gray-700" />
-            <h3 className="text-lg font-semibold text-gray-900">
+            <h3 className="flex items-center text-lg font-semibold text-gray-900">
               API Configuration - {workspaceName}
+              <span className="flex items-center ml-2">
+                ({workspaceId})
+                {copied ? (
+                  <Check className="w-4 h-4 ml-1 text-green-600" />
+                ) : (
+                  <Copy
+                    onClick={handleCopy}
+                    className="w-4 h-4 ml-1 cursor-pointer text-gray-600 hover:text-gray-900"
+                  />
+                )}
+              </span>
             </h3>
           </div>
 
@@ -327,11 +437,11 @@ export default function CICDConfiguration() {
 
         {/* Example Usage */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mt-3">
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center justify-between mb-3">
             <div className="flex items-center space-x-3">
-              <Code className="w-6 h-6 text-gray-700" />
+              <Layers className="w-6 h-6 text-gray-700" />
               <h3 className="text-lg font-semibold text-gray-900">
-                Example Usage
+                Test Suit
               </h3>
             </div>
             <button
@@ -349,16 +459,132 @@ export default function CICDConfiguration() {
             </pre>
           </div>
 
+          <div className="flex items-center justify-between mb-3 mt-3">
+            <div className="flex items-center space-x-3">
+              <Link2 className="w-6 h-6 text-gray-700" />
+              <h3 className="text-lg font-semibold text-gray-900">
+                Request Chain
+              </h3>
+            </div>
+            <button
+              onClick={handleCopyRequest}
+              className="text-[#136fb0] hover:text-blue-700 font-medium text-sm transition-colors flex items-center space-x-2"
+            >
+              <Copy className="w-4 h-4" />
+              <span>Copy</span>
+            </button>
+          </div>
+
+          <div className="bg-gray-900 rounded-lg p-4 overflow-x-auto">
+            <pre className="text-green-400 text-sm font-mono">
+              <code>{requestChainCode}</code>
+            </pre>
+          </div>
+
+
+
           <div className="mt-4 p-4 bg-blue-50 rounded-lg">
             <h4 className="font-medium text-blue-900 mb-2">
               Integration Steps:
             </h4>
             <ol className="list-decimal list-inside space-y-1 text-sm text-blue-800">
-              <li>Copy the API key from above</li>
-              <li>Replace YOUR_API_KEY in your CI/CD pipeline configuration</li>
-              <li>Use the API endpoint in your automated test scripts</li>
-              <li>Monitor test results in your pipeline dashboard</li>
+              <li>Copy the API key from above.</li>
+              <li>Verify the Key validity, if expired, click on <strong>"Regenerate"</strong> button to generate new Key.</li>
+              <li>Replace <code>YOUR_API_KEY</code> in request header configuration.</li>
+              <li>Copy the workspace Id from the above.</li>
+              <li>Replace <code>YOUR_WORKSPACE_ID</code> in request header configuration.</li>
+              <li>Copy the Test suite id / Request chain id from respective list view.</li>
+              <li>
+                Replace {" "}
+                <code>
+                  <a href="https://apiautomationnew.onrender.com/test-suites" target="_blank" rel="noopener noreferrer" className="underline">
+                    TEST_SUITE_ID
+                  </a>
+                </code>
+                {" "} /{" "}
+                <code>
+                  <a href="https://apiautomationnew.onrender.com/request-chains" target="_blank" rel="noopener noreferrer" className="underline">
+                    REQUEST_CHAIN_ID {" "}
+                  </a>
+                </code>
+                in request body configuration.
+              </li>
+              <li>Use the API endpoint in your automated test scripts.</li>
+              <li>
+                Monitor test results in
+                <a href="https://apiautomationnew.onrender.com/executions" target="_blank" rel="noopener noreferrer" className="underline">
+                  {" "} Executions dashboard
+                </a>.
+              </li>
+              <li>You can hit the below APIs to get the latest CICD execution status.</li>
             </ol>
+          </div>
+
+          <div className="flex items-center justify-between mb-3 mt-3">
+            <div className="flex items-center space-x-3">
+              <Layers className="w-6 h-6 text-gray-700" />
+              <h3 className="text-lg font-semibold text-gray-900">
+                Test Suit
+              </h3>
+            </div>
+            <button
+              onClick={handleCopyTestSuitGet}
+              className="text-[#136fb0] hover:text-blue-700 font-medium text-sm transition-colors flex items-center space-x-2"
+            >
+              <Copy className="w-4 h-4" />
+              <span>Copy</span>
+            </button>
+          </div>
+
+          <div className="bg-gray-900 rounded-lg p-4 overflow-x-auto">
+            <pre className="text-green-400 text-sm font-mono">
+              <code>{testSuitGet}</code>
+            </pre>
+          </div>
+
+          <div className="flex items-center justify-between mb-3 mt-3">
+            <div className="flex items-center space-x-3">
+              <Link2 className="w-6 h-6 text-gray-700" />
+              <h3 className="text-lg font-semibold text-gray-900">
+                Request Chain
+              </h3>
+            </div>
+            <button
+              onClick={handleCopyRequestGet}
+              className="text-[#136fb0] hover:text-blue-700 font-medium text-sm transition-colors flex items-center space-x-2"
+            >
+              <Copy className="w-4 h-4" />
+              <span>Copy</span>
+            </button>
+          </div>
+
+          <div className="bg-gray-900 rounded-lg p-4 overflow-x-auto">
+            <pre className="text-green-400 text-sm font-mono">
+              <code>{requestChainGet}</code>
+            </pre>
+          </div>
+
+
+          <div className="flex items-center justify-between mb-3 mt-3">
+            <div className="flex items-center space-x-3">
+              <Check className="w-6 h-6 text-gray-700" />
+              <h3 className="text-lg font-semibold text-gray-900">
+                Sample Response
+              </h3>
+            </div>
+            {/* <button
+             
+              className="text-[#136fb0] hover:text-blue-700 font-medium text-sm transition-colors flex items-center space-x-2"
+            >
+              <Copy className="w-4 h-4" />
+              <span>Copy</span>
+            </button> */}
+          </div>
+
+          <div className="bg-gray-900 rounded-lg p-4 overflow-x-auto">
+            <pre className="text-green-400 text-sm font-mono">
+              <code>{sampleResonpse}</code>
+            </pre>
           </div>
         </div>
       </div>

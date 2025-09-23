@@ -1,8 +1,8 @@
 'use client';
 
 import type React from 'react';
-import { useState, useEffect, useCallback } from 'react';
-import { Play, Save, FolderPlus, Plus } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Play, Save, FolderPlus, Plus, FileTerminal } from 'lucide-react';
 import { useRequest } from '@/hooks/useRequest';
 import { useCollection } from '@/hooks/useCollection';
 import { useWorkspace } from '@/hooks/useWorkspace';
@@ -25,6 +25,9 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
 import { generateAssertions } from '@/utils/assertionGenerator';
 import AssertionManager from './assertionManager';
+import ImportModal from './ImportModal';
+import { Input } from '@/components/ui/input';
+
 
 interface FormattedResponse {
   status: number;
@@ -65,6 +68,7 @@ const RequestEditor: React.FC = () => {
   const { variables, environments, activeEnvironment } = useDataManagement();
   const { error: showError, success: showSuccess, toast } = useToast();
   const { currentWorkspace } = useWorkspace();
+  const [showCurlImport, setShowCurlImport] = useState(false);
   const [activeTab, setActiveTab] = useState<
     | 'params'
     | 'headers'
@@ -183,12 +187,12 @@ const RequestEditor: React.FC = () => {
       setBodyType(
         allowedBodyTypes.includes(bodyTypeValue)
           ? (bodyTypeValue as
-              | 'none'
-              | 'json'
-              | 'form-data'
-              | 'x-www-form-urlencoded'
-              | 'raw'
-              | 'binary')
+            | 'none'
+            | 'json'
+            | 'form-data'
+            | 'x-www-form-urlencoded'
+            | 'raw'
+            | 'binary')
           : 'json'
       );
       setBodyContent(activeRequest.bodyRawContent || '');
@@ -359,6 +363,188 @@ const RequestEditor: React.FC = () => {
     };
   };
 
+  const handleCurlImport = (parsedRequest: any) => {
+    console.log('parsedRequest:', parsedRequest);
+
+    try {
+      // Set URL
+      if (parsedRequest.url) {
+        setUrl(parsedRequest.url);
+      }
+
+      // Set method
+      if (parsedRequest.method) {
+        const supportedMethods: RequestMethod[] = [
+          'GET',
+          'POST',
+          'PUT',
+          'DELETE',
+          'PATCH',
+        ];
+        const requestMethod =
+          parsedRequest.method.toUpperCase() as RequestMethod;
+        if (supportedMethods.includes(requestMethod)) {
+          setMethod(requestMethod);
+        }
+      }
+
+      // Set headers
+      if (parsedRequest.headers && Array.isArray(parsedRequest.headers)) {
+        const formattedHeaders = parsedRequest.headers.map((header: any) => ({
+          key: header.key || '',
+          value: header.value || '',
+          enabled: header.enabled !== undefined ? header.enabled : true,
+        }));
+        setHeaders(formattedHeaders);
+      }
+
+      // Set params
+      if (parsedRequest.params && Array.isArray(parsedRequest.params)) {
+        const formattedParams = parsedRequest.params.map((param: any) => ({
+          key: param.key || '',
+          value: param.value || '',
+          enabled: param.enabled !== undefined ? param.enabled : true,
+        }));
+        setParams(formattedParams);
+      }
+
+      // Set body type and content
+      if (parsedRequest.bodyType) {
+        const allowedBodyTypes = [
+          'none',
+          'json',
+          'form-data',
+          'x-www-form-urlencoded',
+          'raw',
+          'binary',
+        ];
+        if (allowedBodyTypes.includes(parsedRequest.bodyType)) {
+          setBodyType(
+            parsedRequest.bodyType as
+            | 'none'
+            | 'json'
+            | 'form-data'
+            | 'x-www-form-urlencoded'
+            | 'raw'
+            | 'binary'
+          );
+        }
+      }
+
+      // Set body content
+      if (parsedRequest.body) {
+        let bodyContentToSet = '';
+        if (typeof parsedRequest.body === 'string') {
+          bodyContentToSet = parsedRequest.body;
+        } else if (typeof parsedRequest.body === 'object') {
+          bodyContentToSet = JSON.stringify(parsedRequest.body, null, 2);
+        }
+        setBodyContent(bodyContentToSet);
+      }
+
+      // Set authentication
+      if (parsedRequest.auth && parsedRequest.auth.type) {
+        const authTypeValue = parsedRequest.auth.type.toLowerCase();
+
+        switch (authTypeValue) {
+          case 'bearer':
+            setAuthType('bearer');
+            if (parsedRequest.auth.token) {
+              setAuthData((prev) => ({
+                ...prev,
+                token: parsedRequest.auth.token,
+              }));
+            }
+            break;
+          case 'basic':
+            setAuthType('basic');
+            if (parsedRequest.auth.username && parsedRequest.auth.password) {
+              setAuthData((prev) => ({
+                ...prev,
+                username: parsedRequest.auth.username,
+                password: parsedRequest.auth.password,
+              }));
+            }
+            break;
+          case 'apikey':
+            setAuthType('apiKey');
+            if (parsedRequest.auth.key && parsedRequest.auth.value) {
+              setAuthData((prev) => ({
+                ...prev,
+                key: parsedRequest.auth.key,
+                value: parsedRequest.auth.value,
+                addTo: parsedRequest.auth.addTo || 'header',
+              }));
+            }
+            break;
+          default:
+            setAuthType('none');
+            break;
+        }
+      }
+
+      // Handle form data
+      if (parsedRequest.bodyType === 'form-data' && parsedRequest.formData) {
+        const formDataFields = Object.entries(parsedRequest.formData).map(
+          ([key, value]) => ({
+            key,
+            value: String(value),
+            enabled: true,
+            type: 'text' as const,
+          })
+        );
+        setFormFields(formDataFields);
+      }
+
+      // Handle URL encoded fields
+      if (
+        parsedRequest.bodyType === 'x-www-form-urlencoded' &&
+        parsedRequest.body
+      ) {
+        try {
+          const urlParams = new URLSearchParams(parsedRequest.body);
+          const encodedFields: Param[] = [];
+          urlParams.forEach((value, key) => {
+            encodedFields.push({ key, value, enabled: true });
+          });
+          setUrlEncodedFields(encodedFields);
+        } catch (e) {
+          console.error('Error parsing URL encoded body:', e);
+        }
+      }
+
+      // Switch to appropriate tab based on what was imported
+      if (
+        parsedRequest.auth &&
+        parsedRequest.auth.type &&
+        parsedRequest.auth.type !== 'none'
+      ) {
+        setActiveTab('auth');
+      } else if (parsedRequest.body || parsedRequest.bodyType !== 'none') {
+        setActiveTab('body');
+      } else if (parsedRequest.headers && parsedRequest.headers.length > 0) {
+        setActiveTab('headers');
+      } else if (parsedRequest.params && parsedRequest.params.length > 0) {
+        setActiveTab('params');
+      }
+
+      setShowCurlImport(false);
+
+      toast({
+        title: 'cURL Imported Successfully',
+        description: 'Request has been populated from cURL command',
+        type: 'success',
+      });
+    } catch (error) {
+      console.error('Error importing cURL:', error);
+      toast({
+        title: 'Import Error',
+        description: 'Failed to import cURL command. Please check the format.',
+        type: 'error',
+      });
+    }
+  };
+
   const handleSendRequest = async () => {
     if (!activeRequest) return;
     clearError();
@@ -507,18 +693,18 @@ const RequestEditor: React.FC = () => {
 
       const selectedAssertions = Array.isArray(assertions)
         ? assertions
-            .filter((assertion) => assertion.enabled)
-            .map((assertion) => ({
-              ...assertion,
-              requestId: activeRequest.id, // ✅ attach requestId
-              expectedValue:
-                assertion.expectedValue !== undefined &&
+          .filter((assertion) => assertion.enabled)
+          .map((assertion) => ({
+            ...assertion,
+            requestId: activeRequest.id, // ✅ attach requestId
+            expectedValue:
+              assertion.expectedValue !== undefined &&
                 assertion.expectedValue !== null
-                  ? typeof assertion.expectedValue === 'string'
-                    ? assertion.expectedValue
-                    : JSON.stringify(assertion.expectedValue)
-                  : '', // fallback to empty string
-            }))
+                ? typeof assertion.expectedValue === 'string'
+                  ? assertion.expectedValue
+                  : JSON.stringify(assertion.expectedValue)
+                : '', // fallback to empty string
+          }))
         : [];
 
       const requestData = {
@@ -532,23 +718,23 @@ const RequestEditor: React.FC = () => {
         bodyFormData:
           bodyType === 'form-data'
             ? formFields
-                .filter((f) => f.enabled)
-                .reduce((acc: Record<string, any>, field) => {
-                  if (field.key) {
-                    if (field.type === 'file' && field.value instanceof File) {
-                      acc[field.key] = field.value;
-                    } else {
-                      acc[field.key] = String(field.value);
-                    }
+              .filter((f) => f.enabled)
+              .reduce((acc: Record<string, any>, field) => {
+                if (field.key) {
+                  if (field.type === 'file' && field.value instanceof File) {
+                    acc[field.key] = field.value;
+                  } else {
+                    acc[field.key] = String(field.value);
                   }
-                  return acc;
-                }, {})
+                }
+                return acc;
+              }, {})
             : [],
         bodyRawContent:
           bodyType === 'raw' || bodyType === 'json'
             ? bodyContent
             : bodyType === 'x-www-form-urlencoded'
-            ? new URLSearchParams(
+              ? new URLSearchParams(
                 urlEncodedFields
                   .filter((f) => f.enabled)
                   .reduce((acc, field) => {
@@ -556,7 +742,7 @@ const RequestEditor: React.FC = () => {
                     return acc;
                   }, {} as Record<string, string>)
               ).toString()
-            : '',
+              : '',
         authorizationType: authType,
         authorization: {
           token: authType === 'bearer' ? authData.token : '',
@@ -568,29 +754,29 @@ const RequestEditor: React.FC = () => {
           oauth1:
             authType === 'oauth1'
               ? {
-                  consumerKey: authData.oauth1.consumerKey,
-                  consumerSecret: authData.oauth1.consumerSecret,
-                  token: authData.oauth1.token,
-                  tokenSecret: authData.oauth1.tokenSecret,
-                  signatureMethod: authData.oauth1.signatureMethod,
-                  version: '1.0',
-                  realm: authData.oauth1.realm,
-                  nonce: authData.oauth1.nonce,
-                  timestamp: authData.oauth1.timestamp,
-                }
+                consumerKey: authData.oauth1.consumerKey,
+                consumerSecret: authData.oauth1.consumerSecret,
+                token: authData.oauth1.token,
+                tokenSecret: authData.oauth1.tokenSecret,
+                signatureMethod: authData.oauth1.signatureMethod,
+                version: '1.0',
+                realm: authData.oauth1.realm,
+                nonce: authData.oauth1.nonce,
+                timestamp: authData.oauth1.timestamp,
+              }
               : undefined,
           oauth2:
             authType === 'oauth2'
               ? {
-                  clientId: authData.oauth2.clientId,
-                  clientSecret: authData.oauth2.clientSecret,
-                  accessToken: authData.oauth2.accessToken,
-                  tokenType: authData.oauth2.tokenType,
-                  refreshToken: authData.oauth2.refreshToken,
-                  scope: authData.oauth2.scope,
-                  grantType: authData.oauth2.grantType,
-                  redirectUri: authData.oauth2.redirectUri,
-                }
+                clientId: authData.oauth2.clientId,
+                clientSecret: authData.oauth2.clientSecret,
+                accessToken: authData.oauth2.accessToken,
+                tokenType: authData.oauth2.tokenType,
+                refreshToken: authData.oauth2.refreshToken,
+                scope: authData.oauth2.scope,
+                grantType: authData.oauth2.grantType,
+                redirectUri: authData.oauth2.redirectUri,
+              }
               : undefined,
         },
         params: params,
@@ -668,8 +854,8 @@ const RequestEditor: React.FC = () => {
       // Get selected assertions from the store - ensure it's an array
       const selectedAssertions = Array.isArray(assertions)
         ? assertions
-            .filter((assertion) => assertion.enabled)
-            .map((assertion) => assertion)
+          .filter((assertion) => assertion.enabled)
+          .map((assertion) => assertion)
         : [];
 
       const requestData = {
@@ -685,23 +871,23 @@ const RequestEditor: React.FC = () => {
         bodyFormData:
           bodyType === 'form-data'
             ? formFields
-                .filter((f) => f.enabled)
-                .reduce((acc: Record<string, any>, field) => {
-                  if (field.key) {
-                    if (field.type === 'file' && field.value instanceof File) {
-                      acc[field.key] = field.value;
-                    } else {
-                      acc[field.key] = String(field.value);
-                    }
+              .filter((f) => f.enabled)
+              .reduce((acc: Record<string, any>, field) => {
+                if (field.key) {
+                  if (field.type === 'file' && field.value instanceof File) {
+                    acc[field.key] = field.value;
+                  } else {
+                    acc[field.key] = String(field.value);
                   }
-                  return acc;
-                }, {})
+                }
+                return acc;
+              }, {})
             : null,
         bodyRawContent:
           bodyType === 'raw' || bodyType === 'json'
             ? bodyContent
             : bodyType === 'x-www-form-urlencoded'
-            ? new URLSearchParams(
+              ? new URLSearchParams(
                 urlEncodedFields
                   .filter((f) => f.enabled)
                   .reduce((acc, field) => {
@@ -711,7 +897,7 @@ const RequestEditor: React.FC = () => {
                     return acc;
                   }, {} as Record<string, string>)
               ).toString()
-            : null,
+              : null,
         authorizationType: authType,
         authorization: {
           token: authType === 'bearer' ? authData.token : '',
@@ -723,29 +909,29 @@ const RequestEditor: React.FC = () => {
           oauth1:
             authType === 'oauth1'
               ? {
-                  consumerKey: authData.oauth1.consumerKey,
-                  consumerSecret: authData.oauth1.consumerSecret,
-                  token: authData.oauth1.token,
-                  tokenSecret: authData.oauth1.tokenSecret,
-                  signatureMethod: authData.oauth1.signatureMethod,
-                  version: '1.0',
-                  realm: authData.oauth1.realm,
-                  nonce: authData.oauth1.nonce,
-                  timestamp: authData.oauth1.timestamp,
-                }
+                consumerKey: authData.oauth1.consumerKey,
+                consumerSecret: authData.oauth1.consumerSecret,
+                token: authData.oauth1.token,
+                tokenSecret: authData.oauth1.tokenSecret,
+                signatureMethod: authData.oauth1.signatureMethod,
+                version: '1.0',
+                realm: authData.oauth1.realm,
+                nonce: authData.oauth1.nonce,
+                timestamp: authData.oauth1.timestamp,
+              }
               : undefined,
           oauth2:
             authType === 'oauth2'
               ? {
-                  clientId: authData.oauth2.clientId,
-                  clientSecret: authData.oauth2.clientSecret,
-                  accessToken: authData.oauth2.accessToken,
-                  tokenType: authData.oauth2.tokenType,
-                  refreshToken: authData.oauth2.refreshToken,
-                  scope: authData.oauth2.scope,
-                  grantType: authData.oauth2.grantType,
-                  redirectUri: authData.oauth2.redirectUri,
-                }
+                clientId: authData.oauth2.clientId,
+                clientSecret: authData.oauth2.clientSecret,
+                accessToken: authData.oauth2.accessToken,
+                tokenType: authData.oauth2.tokenType,
+                refreshToken: authData.oauth2.refreshToken,
+                scope: authData.oauth2.scope,
+                grantType: authData.oauth2.grantType,
+                redirectUri: authData.oauth2.redirectUri,
+              }
               : undefined,
         },
         params: params,
@@ -996,12 +1182,12 @@ const RequestEditor: React.FC = () => {
               ))}
             </select>
 
-            <input
+            <Input
               type='text'
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               placeholder='Enter request URL'
-              className='flex-1 min-w-0 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 dark:bg-gray-800 dark:text-white'
+
             />
 
             <div className='flex space-x-2'>
@@ -1018,7 +1204,6 @@ const RequestEditor: React.FC = () => {
                   {isLoading ? 'Sending...' : 'Send'}
                 </span>
               </Button>
-
               <TooltipContainer text='Save request'>
                 {!activeRequest.id ? (
                   <button
@@ -1038,6 +1223,19 @@ const RequestEditor: React.FC = () => {
                   </button>
                 )}
               </TooltipContainer>
+
+              <TooltipContainer text='Import from cURL'>
+                <button
+                  onClick={() => setShowCurlImport(true)}
+                  className='border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 px-3 py-2 rounded-md text-sm font-medium'
+                  title='Import from cURL'
+                >
+                  <FileTerminal className='h-4 w-4 text-[#136fb0]' />
+
+                </button>
+              </TooltipContainer>
+
+
               <TooltipContainer text='New request'>
                 <button
                   onClick={() => {
@@ -1097,10 +1295,9 @@ const RequestEditor: React.FC = () => {
                 onClick={() => setActiveTab(tab.id as any)}
                 className={`
                   py-4 px-2 sm:px-4 border-b-2 font-medium text-sm transition-colors whitespace-nowrap
-                  ${
-                    activeTab === tab.id
-                      ? 'border-blue-500 text-blue-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  ${activeTab === tab.id
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                   }
                 `}
               >
@@ -1767,9 +1964,15 @@ const RequestEditor: React.FC = () => {
               </div>
             )}
         </Modal>
+        <ImportModal
+          isOpen={showCurlImport}
+          onClose={() => setShowCurlImport(false)}
+          onCurlImport={handleCurlImport}
+        />
       </div>
     </TooltipProvider>
   );
 };
 
 export default RequestEditor;
+

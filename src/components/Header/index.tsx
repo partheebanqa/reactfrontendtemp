@@ -79,7 +79,7 @@ export default function Header({ isDrawerOpen, toggleDrawer }: HeaderProps) {
     await logoutClientSide();
   };
 
-  const hiddenPaths = ['/request-chains/create', '/test-suites/create'];
+  const hiddenPaths = ['/request-chains/create', '/test-suites/create', '/executions'];
 
   const shouldHideEnvironment =
     hiddenPaths.includes(location) ||
@@ -121,8 +121,7 @@ export default function Header({ isDrawerOpen, toggleDrawer }: HeaderProps) {
       return true;
     } catch (error) {
       console.error(
-        `Error ${
-          workspaceModalState.mode === 'add' ? 'creating' : 'updating'
+        `Error ${workspaceModalState.mode === 'add' ? 'creating' : 'updating'
         } workspace:`,
         error
       );
