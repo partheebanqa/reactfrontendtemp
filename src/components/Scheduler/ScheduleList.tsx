@@ -69,11 +69,29 @@ import {
   duplicateSchedule,
 } from '@/services/scheduler.service';
 
+interface Schedule {
+  scheduleId: string;
+  scheduleName: string;
+  description: string;
+  workspaceId: string;
+  target: number; // 1 = Test Suite, 2 = Request Chain
+  targetId: string;
+  isOneTime: boolean;
+  frequencyMode: number;
+  scheduledTime: string;
+  timezone: string;
+  daysOfWeek?: number[];
+  environmentId: string;
+  nextRunAt: string;
+  retryAttempts: number;
+  isActive: boolean;
+}
+
 interface ScheduleListProps {
-  schedules: any[];
+  schedules: Schedule[];
   schedulesLoading: boolean;
   onRefresh: () => void;
-  onEdit: (schedule: any) => void;
+  onEdit: (schedule: Schedule) => void;
 }
 
 export default function ScheduleList({
@@ -160,24 +178,24 @@ export default function ScheduleList({
 
   // Filter schedules based on search and filters
   const filteredSchedules = Array.isArray(schedules)
-    ? schedules.filter((schedule: any) => {
+    ? schedules.filter((schedule: Schedule) => {
         const matchesSearch =
-          schedule.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          schedule.testSuite?.name
+          schedule.scheduleName
+            ?.toLowerCase()
+            .includes(searchQuery.toLowerCase()) ||
+          schedule.description
             ?.toLowerCase()
             .includes(searchQuery.toLowerCase());
 
         const matchesType =
           typeFilter === 'all' ||
-          (typeFilter === 'test-suite' && schedule.testSuite) ||
-          (typeFilter === 'request-chain' && !schedule.testSuite);
+          (typeFilter === 'test-suite' && schedule.target === 1) ||
+          (typeFilter === 'request-chain' && schedule.target === 2);
 
         const matchesExecutionMode =
           executionModeFilter === 'all' ||
-          (executionModeFilter === 'one-time' &&
-            schedule.scheduleType === 'one-time') ||
-          (executionModeFilter === 'recurring' &&
-            schedule.scheduleType === 'recurring');
+          (executionModeFilter === 'one-time' && schedule.isOneTime) ||
+          (executionModeFilter === 'recurring' && !schedule.isOneTime);
 
         const scheduleStatus = schedule.isActive ? 'active' : 'disabled';
         const matchesStatus =
@@ -186,9 +204,9 @@ export default function ScheduleList({
         const matchesDateRange =
           !dateRange.from ||
           !dateRange.to ||
-          (schedule.createdAt &&
-            new Date(schedule.createdAt) >= dateRange.from &&
-            new Date(schedule.createdAt) <= dateRange.to);
+          (schedule.scheduledTime &&
+            new Date(schedule.scheduledTime) >= dateRange.from &&
+            new Date(schedule.scheduledTime) <= dateRange.to);
 
         return (
           matchesSearch &&
@@ -200,34 +218,64 @@ export default function ScheduleList({
       })
     : [];
 
-  // Helper function to get execution mode icon
-  const getExecutionModeIcon = (scheduleType: string) => {
-    switch (scheduleType) {
-      case 'one-time':
-        return <Calendar className='h-4 w-4' />;
-      case 'recurring':
-        return <Clock className='h-4 w-4' />;
-      case 'scheduled':
-        return <Clock className='h-4 w-4' />;
-      case 'ci-cd':
-        return <GitBranch className='h-4 w-4' />;
-      default:
-        return <Clock className='h-4 w-4' />;
+  // Helper function to get execution mode icon based on backend data
+  const getExecutionModeIcon = (isOneTime: boolean, frequencyMode: number) => {
+    if (isOneTime) {
+      return <Calendar className='h-4 w-4' />;
+    } else {
+      // Recurring schedule based on frequencyMode
+      return <Clock className='h-4 w-4' />;
     }
   };
 
-  // Helper function to format schedule date and time
-  const formatScheduleDate = (schedule: any) => {
-    if (schedule.scheduledDate && schedule.scheduledTime) {
-      const date = new Date(schedule.scheduledDate);
-      return `${format(date, 'MMM dd, yyyy')} at ${schedule.scheduledTime} (${
-        schedule.timezone || 'UTC'
-      })`;
+  // Helper function to get execution mode text
+  const getExecutionModeText = (isOneTime: boolean, frequencyMode: number) => {
+    if (isOneTime) {
+      return 'One-time';
+    } else {
+      // Map frequencyMode to text
+      switch (frequencyMode) {
+        case 1:
+          return 'Hourly';
+        case 2:
+          return 'Daily';
+        case 3:
+          return 'Weekly';
+        case 4:
+          return 'Weekdays';
+        case 5:
+          return 'Monthly';
+        default:
+          return 'Recurring';
+      }
     }
-    if (schedule.nextRun) {
-      return formatDistanceToNow(new Date(schedule.nextRun), {
-        addSuffix: true,
-      });
+  };
+
+  // Helper function to get target type text
+  const getTargetTypeText = (target: number) => {
+    return target === 1 ? 'Test suite' : 'Request chain';
+  };
+
+  // Helper function to format schedule date and time
+  const formatScheduleDate = (schedule: Schedule) => {
+    if (schedule.scheduledTime) {
+      try {
+        const date = new Date(schedule.scheduledTime);
+        return `${format(date, 'MMM dd, yyyy')} at ${format(date, 'HH:mm')} (${
+          schedule.timezone || 'UTC'
+        })`;
+      } catch (error) {
+        return 'Invalid date';
+      }
+    }
+    if (schedule.nextRunAt) {
+      try {
+        return formatDistanceToNow(new Date(schedule.nextRunAt), {
+          addSuffix: true,
+        });
+      } catch (error) {
+        return 'Invalid date';
+      }
     }
     return 'Not scheduled';
   };
@@ -364,7 +412,9 @@ export default function ScheduleList({
             No schedules
           </h3>
           <p className='mt-1 text-sm text-slate-500'>
-            Get started by creating a new schedule.
+            {schedules.length === 0
+              ? 'Get started by creating a new schedule.'
+              : 'No schedules match your current filters.'}
           </p>
         </div>
       ) : (
@@ -380,17 +430,13 @@ export default function ScheduleList({
                     Type
                   </TableHead>
                   <TableHead className='font-semibold text-slate-600 text-sm capitalize tracking-wider'>
-                    {/* Execution */}
                     Mode
                   </TableHead>
                   <TableHead className='font-semibold text-slate-600 text-sm capitalize tracking-wider'>
                     Status
                   </TableHead>
                   <TableHead className='font-semibold text-slate-600 text-sm capitalize tracking-wider'>
-                    Environment
-                  </TableHead>
-                  <TableHead className='font-semibold text-slate-600 text-sm capitalize tracking-wider'>
-                    Next Run
+                    Schedule Time
                   </TableHead>
                   <TableHead className='font-semibold text-slate-600 text-sm capitalize tracking-wider'>
                     Actions
@@ -398,41 +444,41 @@ export default function ScheduleList({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paginatedSchedules.map((schedule: any) => (
+                {paginatedSchedules.map((schedule: Schedule) => (
                   <TableRow
-                    key={schedule.id}
+                    key={schedule.scheduleId}
                     className='border-b border-slate-100 hover:bg-slate-50'
                   >
                     <TableCell className='py-4'>
                       <div>
                         <div className='font-medium text-slate-900'>
-                          {schedule.name}
+                          {schedule.scheduleName}
                         </div>
-                        {schedule.testSuite && (
-                          <div className='text-sm text-orange-600 border border-orange-200 bg-orange-50 px-2 py-1 rounded mt-1 inline-block'>
-                            {schedule.testSuite.name}
+                        {schedule.description && (
+                          <div className='text-sm text-slate-500 mt-1'>
+                            {schedule.description}
                           </div>
                         )}
                       </div>
                     </TableCell>
                     <TableCell className='py-4'>
                       <span className='text-sm text-slate-700'>
-                        {schedule.testSuite ? 'Test suite' : 'Request chain'}
+                        {getTargetTypeText(schedule.target)}
                       </span>
                     </TableCell>
                     <TableCell className='py-4'>
                       <div className='flex items-center gap-2'>
                         <div className='text-blue-600'>
-                          {getExecutionModeIcon(schedule.scheduleType)}
+                          {getExecutionModeIcon(
+                            schedule.isOneTime,
+                            schedule.frequencyMode
+                          )}
                         </div>
-                        <span className='text-sm text-slate-700 capitalize'>
-                          {schedule.scheduleType === 'one-time'
-                            ? 'One-time'
-                            : schedule.scheduleType === 'recurring'
-                            ? 'Recurring'
-                            : schedule.scheduleType === 'ci-cd'
-                            ? 'CI/CD'
-                            : 'Scheduled'}
+                        <span className='text-sm text-slate-700'>
+                          {getExecutionModeText(
+                            schedule.isOneTime,
+                            schedule.frequencyMode
+                          )}
                         </span>
                       </div>
                     </TableCell>
@@ -449,82 +495,69 @@ export default function ScheduleList({
                       </div>
                     </TableCell>
                     <TableCell className='py-4'>
-                      <span className='text-sm text-slate-700 capitalize'>
-                        {schedule.environment || 'production'}
-                      </span>
-                    </TableCell>
-                    <TableCell className='py-4'>
                       <div className='text-sm text-slate-600'>
                         {formatScheduleDate(schedule)}
                       </div>
                     </TableCell>
                     <TableCell className='py-4'>
                       <div className='flex items-center gap-2'>
-                        <Button
-                          variant='outline'
-                          size='sm'
-                          className='h-8 px-3 text-sm bg-transparent'
-                        >
-                          <Play size={14} className='mr-1' />
-                          Run
-                        </Button>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant='ghost'
-                              size='sm'
-                              className='h-8 w-8 p-0'
-                            >
-                              <MoreVertical size={16} />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent
-                            align='end'
-                            className='w-48 bg-white border border-slate-200 rounded-lg shadow-lg'
-                          >
-                            <DropdownMenuItem
-                              onClick={() => onEdit(schedule)}
-                              className='flex items-center px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 cursor-pointer'
-                            >
-                              <Edit size={14} className='mr-3 text-slate-500' />
-                              Edit Schedule
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() =>
-                                updateMutation.mutate({
-                                  id: schedule.scheduleId,
-                                  data: { isActive: !schedule.isActive },
-                                })
-                              }
-                              className='flex items-center px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 cursor-pointer'
-                            >
-                              <Clock
-                                size={14}
-                                className='mr-3 text-slate-500'
-                              />
-                              {schedule.isActive ? 'Disable' : 'Enable'}{' '}
-                              Schedule
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() =>
-                                cloneMutation.mutate(schedule.scheduleId)
-                              }
-                              className='flex items-center px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 cursor-pointer'
-                            >
-                              <Copy size={14} className='mr-3 text-slate-500' />
-                              Clone Schedule
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() =>
-                                deleteMutation.mutate(schedule.scheduleId)
-                              }
-                              className='flex items-center px-3 py-2 text-sm text-red-600 hover:bg-red-50 cursor-pointer'
-                            >
-                              <Trash2 size={14} className='mr-3 text-red-500' />
-                              Delete Schedule
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant='ghost'
+                                size='sm'
+                                className='h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600'
+                                onClick={() => onEdit(schedule)}
+                              >
+                                <Edit size={16} />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Edit Schedule</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant='ghost'
+                                size='sm'
+                                className='h-8 w-8 p-0 hover:bg-green-50 hover:text-green-600'
+                                onClick={() =>
+                                  cloneMutation.mutate(schedule.scheduleId)
+                                }
+                              >
+                                <Copy size={16} />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Clone Schedule</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant='ghost'
+                                size='sm'
+                                className='h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600'
+                                onClick={() =>
+                                  deleteMutation.mutate(schedule.scheduleId)
+                                }
+                              >
+                                <Trash2 size={16} />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Delete Schedule</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       </div>
                     </TableCell>
                   </TableRow>
