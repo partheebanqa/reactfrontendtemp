@@ -1,3 +1,5 @@
+'use client';
+
 import { useState, useEffect } from 'react';
 import { Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -15,6 +17,10 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 interface RecurringScheduleBuilderProps {
   value?: string;
   onChange?: (cronExpression: string, description: string) => void;
+  onRecurringDataChange?: (data: {
+    frequencyMode: number;
+    daysOfWeek?: number[];
+  }) => void;
   timezone?: string;
   time?: string;
   onTimeChange?: (time: string) => void;
@@ -73,6 +79,7 @@ function getOrdinalSuffix(num: number): string {
 export default function RecurringScheduleBuilder({
   value,
   onChange,
+  onRecurringDataChange,
   timezone = 'UTC',
   time = '08:00',
   onTimeChange,
@@ -95,16 +102,48 @@ export default function RecurringScheduleBuilder({
 
   const formatTime = (timeStr: string) => {
     const [hours, minutes] = timeStr.split(':');
-    const hour = parseInt(hours);
+    const hour = Number.parseInt(hours);
     const ampm = hour >= 12 ? 'PM' : 'AM';
     const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
     return `${displayHour}:${minutes} ${ampm}`;
   };
 
+  const getFrequencyMode = () => {
+    switch (pattern) {
+      case 'hourly':
+        return 1; // FrequencyHourly
+      case 'daily':
+        return 2; // FrequencyDaily
+      case 'weekly':
+        return 3; // FrequencyWeekly
+      case 'weekdays':
+        return 4; // FrequencyWeekdays
+      case 'monthly':
+        return 5; // FrequencyMonthly
+      case 'custom':
+        return 3; // Default to weekly for custom
+      default:
+        return 2; // Default to daily
+    }
+  };
+
+  const getDaysOfWeek = () => {
+    if (pattern === 'weekly') {
+      // Convert string IDs to numbers and map Sunday (0) to 7
+      return selectedWeekdays.map((id) =>
+        id === '0' ? 7 : Number.parseInt(id)
+      );
+    } else if (pattern === 'custom') {
+      // Convert string IDs to numbers and map Sunday (0) to 7
+      return customWeekdays.map((id) => (id === '0' ? 7 : Number.parseInt(id)));
+    }
+    return undefined;
+  };
+
   const buildCronExpression = () => {
     const [hours, minutes] = time.split(':');
-    const hour = parseInt(hours);
-    const minute = parseInt(minutes);
+    const hour = Number.parseInt(hours);
+    const minute = Number.parseInt(minutes);
 
     let cron = '';
     let description = '';
@@ -133,7 +172,7 @@ export default function RecurringScheduleBuilder({
         if (monthlyType === 'date') {
           cron = `${minute} ${hour} ${monthlyDate} * *`;
           description = `${monthlyDate}${getOrdinalSuffix(
-            parseInt(monthlyDate)
+            Number.parseInt(monthlyDate)
           )} of every month at ${formatTime(time)}`;
         } else {
           const weekdayOption = MONTHLY_WEEKDAY_OPTIONS.find(
@@ -156,7 +195,7 @@ export default function RecurringScheduleBuilder({
       case 'custom':
         const customWeekdayStr = customWeekdays.sort().join(',');
         cron = `${minute} ${hour} * * ${customWeekdayStr}`;
-        const interval = parseInt(customInterval);
+        const interval = Number.parseInt(customInterval);
         const customDayNames = customWeekdays
           .map((id) => WEEKDAYS.find((w) => w.id === id)?.name)
           .join(' and ');
@@ -197,8 +236,18 @@ export default function RecurringScheduleBuilder({
 
   useEffect(() => {
     const { cron, description } = buildCronExpression();
+    const frequencyMode = getFrequencyMode();
+    const daysOfWeek = getDaysOfWeek();
+
     if (onChange) {
       onChange(cron, description);
+    }
+
+    if (onRecurringDataChange) {
+      onRecurringDataChange({
+        frequencyMode,
+        ...(daysOfWeek && { daysOfWeek }),
+      });
     }
   }, [
     pattern,
@@ -255,6 +304,7 @@ export default function RecurringScheduleBuilder({
             {WEEKDAYS.map((day) => (
               <Button
                 key={day.id}
+                type='button'
                 variant={
                   selectedWeekdays.includes(day.id) ? 'default' : 'outline'
                 }
@@ -280,6 +330,7 @@ export default function RecurringScheduleBuilder({
         <div className='space-y-4'>
           <div className='flex space-x-4 border-b'>
             <button
+              type='button'
               className={`pb-2 px-1 text-sm font-medium border-b-2 ${
                 monthlyType === 'date'
                   ? 'border-blue-500 text-blue-600'
@@ -290,6 +341,7 @@ export default function RecurringScheduleBuilder({
               Select by Date
             </button>
             <button
+              type='button'
               className={`pb-2 px-1 text-sm font-medium border-b-2 ${
                 monthlyType === 'day'
                   ? 'border-blue-500 text-blue-600'
@@ -318,8 +370,8 @@ export default function RecurringScheduleBuilder({
               </Select>
               <p className='text-sm text-gray-600'>
                 {monthlyDate}
-                {getOrdinalSuffix(parseInt(monthlyDate))} of every month at{' '}
-                {formatTime(time)}
+                {getOrdinalSuffix(Number.parseInt(monthlyDate))} of every month
+                at {formatTime(time)}
               </p>
             </div>
           ) : (
@@ -332,6 +384,7 @@ export default function RecurringScheduleBuilder({
                   return (
                     <Button
                       key={day.id}
+                      type='button'
                       variant={isSelected ? 'default' : 'outline'}
                       size='sm'
                       onClick={() => {
@@ -420,6 +473,7 @@ export default function RecurringScheduleBuilder({
               {WEEKDAYS.map((day) => (
                 <Button
                   key={day.id}
+                  type='button'
                   variant={
                     customWeekdays.includes(day.id) ? 'default' : 'outline'
                   }

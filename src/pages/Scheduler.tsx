@@ -1,14 +1,16 @@
+'use client';
+
 import { useState } from 'react';
-import { useSchedules, useTestSuites, useRequestChains } from '@/hooks/use-api';
+import { useTestSuites, useRequestChains } from '@/hooks/use-api';
 import { useWorkspace } from '@/hooks/useWorkspace';
+import { useQuery } from '@tanstack/react-query';
+import { getScheduleList } from '@/services/scheduler.service';
 import ScheduleCreate from '@/components/Scheduler/ScheduleCreate';
 import ScheduleEdit from '@/components/Scheduler/ScheduleEdit';
 import ScheduleList from '@/components/Scheduler/ScheduleList';
-import BreadCum from '@/components/BreadCum/Breadcum';
-import { CalendarClock, Icon, Settings } from 'lucide-react';
+import { CalendarClock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Info, Link2, Plus } from 'lucide-react';
-import React, { } from 'react';
+import { Info } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -20,16 +22,26 @@ import {
 const Scheduler = () => {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState<any>(null);
+  const [open, setOpen] = useState(false);
 
   const { currentWorkspace } = useWorkspace();
 
+  // Use the service function directly with React Query
   const {
-    data: schedules = [],
+    data: schedulesResponse,
     refetch: refetchSchedules,
     isLoading: schedulesLoading,
-  } = useSchedules(currentWorkspace?.id);
+  } = useQuery({
+    queryKey: ['schedules', currentWorkspace?.id],
+    queryFn: () => getScheduleList({ workspaceId: currentWorkspace!.id }),
+    enabled: !!currentWorkspace?.id,
+  });
+
   const { data: testSuites = [] } = useTestSuites(currentWorkspace?.id);
   const { data: requestChains = [] } = useRequestChains();
+
+  // Extract schedules array from the API response
+  const schedules = schedulesResponse?.schedules || [];
 
   const handleEdit = (schedule: any) => {
     setEditingSchedule(schedule);
@@ -43,133 +55,115 @@ const Scheduler = () => {
   const handleScheduleUpdated = () => {
     refetchSchedules();
   };
-  const [open, setOpen] = useState(false);
 
   return (
     <>
       {/* Header */}
-
-      {/* <header className='bg-white border-b border-slate-200 px-6 py-4'>
+      <header className='border border-gray-200 bg-background rounded-lg px-4 py-4 animate-fade-in mb-2'>
         <div className='flex items-center justify-between'>
-          <div>
-            <h2 className='text-2xl font-semibold text-slate-900'>Scheduler</h2>
-            <p className='text-sm text-slate-500'>
-              Configure automated test execution schedules
-            </p>
-          </div>
-          <ScheduleCreate
-            testSuites={testSuites}
-            requestChains={requestChains}
-            onScheduleCreated={handleScheduleCreated}
-          />
-        </div>
-      </header> */}
-
-      <header className="border border-gray-200 bg-background rounded-lg px-4 py-4 animate-fade-in mb-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center justify-between gap-4">
+          <div className='flex items-center justify-between gap-4'>
             <div>
-              <CalendarClock className='bg-[#f9e3fc] p-2 rounded' size={40} color='#660275' />
+              <CalendarClock
+                className='bg-[#f9e3fc] p-2 rounded'
+                size={40}
+                color='#660275'
+              />
             </div>
             <div>
-              <h2 className="text-2xl font-bold text-foreground">Scheduler</h2>
-              <p className="text-muted-foreground text-md">Configure automated test execution schedules</p>
+              <h2 className='text-2xl font-bold text-foreground'>Scheduler</h2>
+              <p className='text-muted-foreground text-md'>
+                Configure automated test execution schedules
+              </p>
             </div>
           </div>
-          <div className="flex items-center space-x-4">
+          <div className='flex items-center space-x-4'>
             <ScheduleCreate
               testSuites={testSuites}
               requestChains={requestChains}
               onScheduleCreated={handleScheduleCreated}
             />
-            <>
-              <Button
-                variant="outline"
-                className="hover-scale"
-                onClick={() => setOpen(true)}
-              >
-                <Info className="mr-2" size={16} />
-                Quick Guide
-              </Button>
+            <Button
+              variant='outline'
+              className='hover-scale bg-transparent'
+              onClick={() => setOpen(true)}
+            >
+              <Info className='mr-2' size={16} />
+              Quick Guide
+            </Button>
 
-              {/* 🔹 Quick Guide Modal */}
-              <Dialog open={open} onOpenChange={setOpen}>
-                <DialogContent className="max-w-3xl">
-                  <DialogHeader>
-                    <DialogTitle>🚀 Guided Onboarding: Request Builder</DialogTitle>
-                    <DialogDescription className="max-h-[80vh] overflow-y-auto pr-2">
-                      <div>
-                        <p className="mb-4 text-base font-medium mt-4">Here’s how to get started:</p>
-                        <ul className="list-none pl-5 space-y-2 text-sm">
-                          <li>
-                            🟩 <b className='text-[#000000]'>Step 1: Workspace Selection</b> – Location: Top-left workspace
-                            dropdown. Start by selecting your workspace. This is where your APIs,
-                            environments, and test assets live. If you don’t see expected data,
-                            double-check your selection.
-                          </li>
-                          <li>
-                            🟨 <b className='text-[#000000]'>Step 2: Choose an Environment</b> – Location: Top-right
-                            environment selector. Choose the environment you want to test
-                            against—Dev, QA, UAT, or Production. This sets the base URL for your
-                            requests.
-                          </li>
-                          <li>
-                            🟦 <b className='text-[#000000]'>Step 3: Open or Create a Request</b> – Location: Request
-                            dropdown or collection panel. Open an existing request or create a new
-                            one. Organize requests into collections for faster access and better
-                            structure.
-                          </li>
-                          <li>
-                            🟪 <b className='text-[#000000]'>Step 4: Configure Your Request</b> – Location: Request
-                            configuration tabs:
-                            <ul className="list-disc pl-5 space-y-1">
-                              <li>Params: Add query parameters</li>
-                              <li>Headers: Set custom headers</li>
-                              <li>Body: Define payloads (JSON, form-data)</li>
-                              <li>Authorization: Add tokens or credentials</li>
-                              <li>Assertions: Add assertions to API Response</li>
-                              <li>Settings: Customize timeout and redirects</li>
-                              <li>Schemas: Add schema and compare against response</li>
-                            </ul>
-                            Each tab helps you shape the request precisely.
-                          </li>
-                          <li>
-                            🟧 <b className='text-[#000000]'>Step 5: Execute & Inspect Response</b> – Location: Send button
-                            and response panel. Click <i>Send Request</i> to execute. Review
-                            status code, headers, response body, time taken, payload size,
-                            assertion results, and schema comparison results—all in real-time.
-                          </li>
-                          <li>
-                            🟥 <b className='text-[#000000]'>Step 6: Add Assertions</b> – Location: Assertions tab. After a
-                            successful response, assertions are auto-generated. Select the ones
-                            you want to validate every time the API runs.
-                          </li>
-                          <li>
-                            🟫 <b className='text-[#000000]'>Step 7: Attach a Schema</b> – Location: Schemas tab. Upload a
-                            Swagger/OpenAPI spec to validate your response structure. Use the
-                            Swagger Parser under Utilities to generate individual specs.
-                          </li>
-                          <li>
-                            🟨 <b className='text-[#000000]'>Step 8: Reuse & Iterate</b> – Location: Collections and history
-                            panel. Save requests, switch environments. Iterate quickly and scale
-                            your testing with confidence.
-                          </li>
-                          <li>
-                            ✅ <b className='text-[#000000]'>Final Step: You’re Ready!</b> – You’ve completed the Request
-                            Builder walkthrough. You’re now equipped to build smarter, faster, and
-                            more reliable API workflows.
-                          </li>
-                        </ul>
-                      </div>
-                    </DialogDescription>
-                  </DialogHeader>
-                </DialogContent>
-              </Dialog>
-            </>
-
-
-
-
+            {/* Quick Guide Modal */}
+            <Dialog open={open} onOpenChange={setOpen}>
+              <DialogContent className='max-w-3xl'>
+                <DialogHeader>
+                  <DialogTitle>🚀 Guided Onboarding: Scheduler</DialogTitle>
+                  <DialogDescription className='max-h-[80vh] overflow-y-auto pr-2'>
+                    <div>
+                      <p className='mb-4 text-base font-medium mt-4'>
+                        Here's how to get started with the Scheduler:
+                      </p>
+                      <ul className='list-none pl-5 space-y-2 text-sm'>
+                        <li>
+                          🟩{' '}
+                          <b className='text-[#000000]'>
+                            Step 1: Create a Schedule
+                          </b>{' '}
+                          – Click "New Schedule\" to create automated test
+                          execution schedules.
+                        </li>
+                        <li>
+                          🟨{' '}
+                          <b className='text-[#000000]'>
+                            Step 2: Choose Target
+                          </b>{' '}
+                          – Select either a Test Suite or Request Chain to
+                          schedule for execution.
+                        </li>
+                        <li>
+                          🟦{' '}
+                          <b className='text-[#000000]'>
+                            Step 3: Set Execution Mode
+                          </b>{' '}
+                          – Choose between one-time execution or recurring
+                          schedules.
+                        </li>
+                        <li>
+                          🟪{' '}
+                          <b className='text-[#000000]'>
+                            Step 4: Configure Timing
+                          </b>{' '}
+                          – Set the date, time, and timezone for your schedule
+                          execution.
+                        </li>
+                        <li>
+                          🟧{' '}
+                          <b className='text-[#000000]'>
+                            Step 5: Advanced Settings
+                          </b>{' '}
+                          – Configure retry attempts, email notifications, and
+                          stop conditions.
+                        </li>
+                        <li>
+                          🟥{' '}
+                          <b className='text-[#000000]'>
+                            Step 6: Manage Schedules
+                          </b>{' '}
+                          – View, edit, enable/disable, clone, or delete your
+                          schedules from the list.
+                        </li>
+                        <li>
+                          ✅{' '}
+                          <b className='text-[#000000]'>
+                            Final Step: Monitor Execution
+                          </b>{' '}
+                          – Your schedules will run automatically at the
+                          specified times.
+                        </li>
+                      </ul>
+                    </div>
+                  </DialogDescription>
+                </DialogHeader>
+              </DialogContent>
+            </Dialog>
           </div>
         </div>
       </header>
