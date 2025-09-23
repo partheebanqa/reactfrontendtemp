@@ -1,7 +1,6 @@
 import { apiRequest } from '@/lib/queryClient';
 import { API_SCHEDULER } from '@/config/apiRoutes';
 
-// Types based on your backend response structure
 export interface Schedule {
   scheduleId: string;
   scheduleName: string;
@@ -47,11 +46,6 @@ export interface ScheduleListParams {
   isActive?: boolean;
 }
 
-/**
- * CREATE SCHEDULE
- * POST {{domain}}/schedules
- * Creates a new schedule with the provided data
- */
 export const createSchedule = async (
   payload: ScheduleFormData & { workspaceId: string }
 ): Promise<Schedule> => {
@@ -73,11 +67,6 @@ export const createSchedule = async (
   }
 };
 
-/**
- * GET SPECIFIC SCHEDULE
- * GET {{domain}}/schedules/{scheduleId}
- * Retrieves a specific schedule by its ID
- */
 export const getSchedule = async (scheduleId: string): Promise<Schedule> => {
   try {
     const response = await apiRequest('GET', `${API_SCHEDULER}/${scheduleId}`, {
@@ -96,16 +85,10 @@ export const getSchedule = async (scheduleId: string): Promise<Schedule> => {
   }
 };
 
-/**
- * GET SCHEDULE LIST
- * GET {{domain}}/schedules/workspaces/{workspaceId}?isOneTime=false&target=2&isActive=true
- * Retrieves a filtered list of schedules for a workspace
- */
 export const getScheduleList = async (
   params: ScheduleListParams
 ): Promise<ScheduleListResponse> => {
   try {
-    // Build query parameters
     const queryParams = new URLSearchParams();
 
     if (params.isOneTime !== undefined) {
@@ -141,11 +124,6 @@ export const getScheduleList = async (
   }
 };
 
-/**
- * UPDATE SCHEDULE
- * PUT {{domain}}/schedules/{scheduleId}
- * Updates an existing schedule with partial data
- */
 export const updateSchedule = async (
   scheduleId: string,
   payload: Partial<ScheduleFormData>
@@ -168,11 +146,6 @@ export const updateSchedule = async (
   }
 };
 
-/**
- * DELETE SCHEDULE
- * DELETE {{domain}}/schedules/{scheduleId}
- * Deletes a schedule by its ID
- */
 export const deleteSchedule = async (scheduleId: string): Promise<void> => {
   try {
     const response = await apiRequest(
@@ -196,11 +169,6 @@ export const deleteSchedule = async (scheduleId: string): Promise<void> => {
   }
 };
 
-/**
- * DUPLICATE SCHEDULE
- * POST {{domain}}/schedules/{scheduleId}/duplicate
- * Creates a duplicate of an existing schedule
- */
 export const duplicateSchedule = async (
   scheduleId: string
 ): Promise<Schedule> => {
@@ -225,11 +193,6 @@ export const duplicateSchedule = async (
   }
 };
 
-// Additional utility functions for common operations
-
-/**
- * Toggle schedule active status
- */
 export const toggleScheduleStatus = async (
   scheduleId: string,
   isActive: boolean
@@ -237,9 +200,6 @@ export const toggleScheduleStatus = async (
   return updateSchedule(scheduleId, { isActive });
 };
 
-/**
- * Update schedule retry attempts
- */
 export const updateScheduleRetryAttempts = async (
   scheduleId: string,
   retryAttempts: number
@@ -247,9 +207,6 @@ export const updateScheduleRetryAttempts = async (
   return updateSchedule(scheduleId, { retryAttempts });
 };
 
-/**
- * Batch delete multiple schedules
- */
 export const deleteMultipleSchedules = async (
   scheduleIds: string[]
 ): Promise<void> => {
@@ -263,9 +220,6 @@ export const deleteMultipleSchedules = async (
   }
 };
 
-/**
- * Batch duplicate multiple schedules
- */
 export const duplicateMultipleSchedules = async (
   scheduleIds: string[]
 ): Promise<Schedule[]> => {
@@ -279,7 +233,6 @@ export const duplicateMultipleSchedules = async (
   }
 };
 
-// Example usage:
 /*
 // Create a new schedule
 const newSchedule = await createSchedule({
