@@ -453,10 +453,10 @@ export default function ScheduleList({
               <TooltipTrigger asChild>
                 <Button
                   onClick={onRefresh}
-                  variant='outline'
+                  variant='default'
+                  className='hover-scale'
                   size='sm'
                   disabled={schedulesLoading}
-                  className='gap-2 bg-transparent'
                 >
                   <RefreshCw
                     size={16}
