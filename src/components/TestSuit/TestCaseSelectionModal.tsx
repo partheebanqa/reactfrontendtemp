@@ -468,7 +468,7 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className='max-w-6xl max-h-[85vh] overflow-hidden flex flex-col p-0 justify-center'>
+      <DialogContent className='max-w-6xl max-h-[90vh] overflow-hidden flex flex-col p-0 justify-center'>
         <div className="p-3 border-b">
           <DialogHeader>
             <div className="flex items-center gap-4">
