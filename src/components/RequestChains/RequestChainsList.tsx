@@ -12,7 +12,7 @@ import {
   Copy,
   Dot,
   Link2,
-  Pencil,
+  Edit,
   Eye,
   EllipsisVertical,
   RefreshCw,
@@ -233,97 +233,167 @@ export function RequestChainsList({
   return (
     <div className='space-y-3'>
       <BreadCum
-        title="Request Chains"
-        subtitle="Manage your API automation workflows"
-        buttonTitle="Create Request Chain"
-        onClickQuickGuide={() => console.log("Exporting...")}
+        title='Request Chains'
+        subtitle='Manage your API automation workflows'
+        buttonTitle='Create Request Chain'
+        onClickQuickGuide={() => console.log('Exporting...')}
         onClickCreateNew={onCreateChain}
-        quickGuideTitle="🚀 Guided Onboarding: Working with Request Chains"
+        quickGuideTitle='🚀 Guided Onboarding: Working with Request Chains'
         quickGuideContent={
           <div>
-            <p className="mb-4 text-base font-medium mt-4">Here’s how to get started:</p>
-            <ul className="list-none pl-5 space-y-4 text-sm leading-relaxed">
+            <p className='mb-4 text-base font-medium mt-4'>
+              Here’s how to get started:
+            </p>
+            <ul className='list-none pl-5 space-y-4 text-sm leading-relaxed'>
               <li>
-                🟩 <b className='text-[#000000]'>Step 1: Create a Request Chain</b> – Location: “Create Request Chain” button.
-                <span className="block mt-1">
-                  Provide a name and description for your chain.
-                  Set the status to <b>Active</b>.
-                  Select the target environment where the chain should run.
-                  This defines the execution context for all included requests.
+                🟩{' '}
+                <b className='text-[#000000]'>Step 1: Create a Request Chain</b>{' '}
+                – Location: “Create Request Chain” button.
+                <span className='block mt-1'>
+                  Provide a name and description for your chain. Set the status
+                  to <b>Active</b>. Select the target environment where the
+                  chain should run. This defines the execution context for all
+                  included requests.
                 </span>
               </li>
 
               <li>
-                🟨 <b className='text-[#000000]'>Step 2: Add Requests to the Chain</b> – Location: “Import from Collection” or “Add New Request”.
-                <ul className="list-disc pl-6 mt-2 space-y-1">
-                  <li>Use <b>Import from Collection</b> to include requests from an existing collection.</li>
-                  <li>You can also import a new collection not yet added to the Request Builder.</li>
-                  <li>Use <b>Add New Request</b> to manually create and add a request to the chain.</li>
+                🟨{' '}
+                <b className='text-[#000000]'>
+                  Step 2: Add Requests to the Chain
+                </b>{' '}
+                – Location: “Import from Collection” or “Add New Request”.
+                <ul className='list-disc pl-6 mt-2 space-y-1'>
+                  <li>
+                    Use <b>Import from Collection</b> to include requests from
+                    an existing collection.
+                  </li>
+                  <li>
+                    You can also import a new collection not yet added to the
+                    Request Builder.
+                  </li>
+                  <li>
+                    Use <b>Add New Request</b> to manually create and add a
+                    request to the chain.
+                  </li>
                 </ul>
               </li>
 
               <li>
-                🟦 <b className='text-[#000000]'>Step 3: Reorder Requests</b> – Location: Drag each request.
-                <span className="block mt-1">
+                🟦 <b className='text-[#000000]'>Step 3: Reorder Requests</b> –
+                Location: Drag each request.
+                <span className='block mt-1'>
                   Drag and drop requests to define the execution sequence.
-                  <i>Note: The order is critical—it determines how requests are executed.</i>
+                  <i>
+                    Note: The order is critical—it determines how requests are
+                    executed.
+                  </i>
                 </span>
               </li>
 
               <li>
-                🟪 <b className='text-[#000000]'>Step 4: Add Variable Extraction</b> – Location: Expand icon on a request → then click “Run”.
-                <ul className="list-disc pl-6 mt-2 space-y-1">
+                🟪{' '}
+                <b className='text-[#000000]'>
+                  Step 4: Add Variable Extraction
+                </b>{' '}
+                – Location: Expand icon on a request → then click “Run”.
+                <ul className='list-disc pl-6 mt-2 space-y-1'>
                   <li>Run the request to generate a successful response.</li>
-                  <li>Hover over the response body or headers and click <b>Extract</b>.</li>
-                  <li>Name the variable and save it (variables follow the naming convention: <code>E_Variable_NAME</code>).</li>
-                  <li>Extracted variables will appear at the bottom of each request (headers or body).</li>
-                  <li>You can review all extracted variables in the <b>Extracted Variables</b> table above the “Add Request” section.</li>
+                  <li>
+                    Hover over the response body or headers and click{' '}
+                    <b>Extract</b>.
+                  </li>
+                  <li>
+                    Name the variable and save it (variables follow the naming
+                    convention: <code>E_Variable_NAME</code>).
+                  </li>
+                  <li>
+                    Extracted variables will appear at the bottom of each
+                    request (headers or body).
+                  </li>
+                  <li>
+                    You can review all extracted variables in the{' '}
+                    <b>Extracted Variables</b> table above the “Add Request”
+                    section.
+                  </li>
                 </ul>
               </li>
 
               <li>
-                🟧 <b className='text-[#000000]'>Step 5: Pass the Extracted Variables</b> – Inject extracted variables into URL, body, headers, or auth fields.
-                <span className="block mt-1">
-                  Use double curly braces to reference variables: <code>{"{{Key}}"}</code>
+                🟧{' '}
+                <b className='text-[#000000]'>
+                  Step 5: Pass the Extracted Variables
+                </b>{' '}
+                – Inject extracted variables into URL, body, headers, or auth
+                fields.
+                <span className='block mt-1'>
+                  Use double curly braces to reference variables:{' '}
+                  <code>{'{{Key}}'}</code>
                 </span>
-                <p className="mt-2 font-medium">🔤 Variable Naming Conventions:</p>
-                <ul className="list-disc pl-6 mt-1 space-y-1">
-                  <li><code>E_</code> → Extracted variables</li>
-                  <li><code>S_</code> → Static variables</li>
-                  <li><code>D_</code> → Dynamic variables</li>
+                <p className='mt-2 font-medium'>
+                  🔤 Variable Naming Conventions:
+                </p>
+                <ul className='list-disc pl-6 mt-1 space-y-1'>
+                  <li>
+                    <code>E_</code> → Extracted variables
+                  </li>
+                  <li>
+                    <code>S_</code> → Static variables
+                  </li>
+                  <li>
+                    <code>D_</code> → Dynamic variables
+                  </li>
                 </ul>
               </li>
 
               <li>
-                🟥 <b className='text-[#000000]'>Step 6: Run All Requests Before Saving</b> – Location: “Run All” button.
-                <span className="block mt-1">
-                  Execute the full chain to verify API responses and variable substitutions.
-                  <i>Note: You can pass values using previous responses, static variables, or dynamic variables.</i>
+                🟥{' '}
+                <b className='text-[#000000]'>
+                  Step 6: Run All Requests Before Saving
+                </b>{' '}
+                – Location: “Run All” button.
+                <span className='block mt-1'>
+                  Execute the full chain to verify API responses and variable
+                  substitutions.
+                  <i>
+                    Note: You can pass values using previous responses, static
+                    variables, or dynamic variables.
+                  </i>
                 </span>
               </li>
 
               <li>
-                🟫 <b className='text-[#000000]'>Step 7: Save the Request Chain</b> – Location: “Save” button.
-                <span className="block mt-1">
-                  Save your configured request chain. Optionally, click <b>Execute</b> to run the chain immediately.
+                🟫{' '}
+                <b className='text-[#000000]'>Step 7: Save the Request Chain</b>{' '}
+                – Location: “Save” button.
+                <span className='block mt-1'>
+                  Save your configured request chain. Optionally, click{' '}
+                  <b>Execute</b> to run the chain immediately.
                 </span>
               </li>
 
               <li>
-                🟨 <b className='text-[#000000]'>Step 8: Execute from List View</b> – From the list view, select and execute your saved request chain.
+                🟨{' '}
+                <b className='text-[#000000]'>Step 8: Execute from List View</b>{' '}
+                – From the list view, select and execute your saved request
+                chain.
               </li>
 
               <li>
-                ✅ <b className='text-[#000000]'>Final Step: Review Execution Results</b> – Location: Executions page.
-                <span className="block mt-1">
-                  Navigate to the <b>Executions</b> page to view logs, extracted variables, and detailed execution insights.
+                ✅{' '}
+                <b className='text-[#000000]'>
+                  Final Step: Review Execution Results
+                </b>{' '}
+                – Location: Executions page.
+                <span className='block mt-1'>
+                  Navigate to the <b>Executions</b> page to view logs, extracted
+                  variables, and detailed execution insights.
                 </span>
               </li>
             </ul>
           </div>
         }
       />
-
 
       {/* Filters and Search */}
       <div className='flex flex-col lg:flex-row gap-4'>
@@ -443,43 +513,51 @@ export function RequestChainsList({
                             variant='outline'
                             className={`
     flex items-center gap-1
-    ${chain.environment?.name?.toLowerCase().includes('prod')
-                                ? 'bg-green-100 text-green-800 border-green-200'
-                                : ''
-                              }
-    ${chain.environment?.name?.toLowerCase().includes('stage')
-                                ? 'bg-yellow-100 text-yellow-800 border-yellow-200'
-                                : ''
-                              }
-    ${chain.environment?.name?.toLowerCase().includes('dev')
-                                ? 'bg-blue-100 text-blue-800 border-blue-200'
-                                : ''
-                              }
-    ${!chain.environment?.name || chain.environment?.name === 'No Environment'
-                                ? 'bg-gray-100 text-gray-700 border-gray-200'
-                                : ''
-                              }
+    ${
+      chain.environment?.name?.toLowerCase().includes('prod')
+        ? 'bg-green-100 text-green-800 border-green-200'
+        : ''
+    }
+    ${
+      chain.environment?.name?.toLowerCase().includes('stage')
+        ? 'bg-yellow-100 text-yellow-800 border-yellow-200'
+        : ''
+    }
+    ${
+      chain.environment?.name?.toLowerCase().includes('dev')
+        ? 'bg-blue-100 text-blue-800 border-blue-200'
+        : ''
+    }
+    ${
+      !chain.environment?.name || chain.environment?.name === 'No Environment'
+        ? 'bg-gray-100 text-gray-700 border-gray-200'
+        : ''
+    }
   `}
                           >
                             {/* Dot */}
                             <span
                               className={`h-2 w-2 rounded-full 
-      ${chain.environment?.name?.toLowerCase().includes('prod')
-                                  ? 'bg-green-600'
-                                  : ''
-                                }
-      ${chain.environment?.name?.toLowerCase().includes('stage')
-                                  ? 'bg-yellow-600'
-                                  : ''
-                                }
-      ${chain.environment?.name?.toLowerCase().includes('dev')
-                                  ? 'bg-blue-600'
-                                  : ''
-                                }
-      ${!chain.environment?.name || chain.environment?.name === 'No Environment'
-                                  ? 'bg-gray-500'
-                                  : ''
-                                }
+      ${
+        chain.environment?.name?.toLowerCase().includes('prod')
+          ? 'bg-green-600'
+          : ''
+      }
+      ${
+        chain.environment?.name?.toLowerCase().includes('stage')
+          ? 'bg-yellow-600'
+          : ''
+      }
+      ${
+        chain.environment?.name?.toLowerCase().includes('dev')
+          ? 'bg-blue-600'
+          : ''
+      }
+      ${
+        !chain.environment?.name || chain.environment?.name === 'No Environment'
+          ? 'bg-gray-500'
+          : ''
+      }
     `}
                             />
 
@@ -507,12 +585,12 @@ export function RequestChainsList({
                           <span className='font-[500] text-[#64748b] text-[13px]'>
                             {chain.chainRequests.length > 3
                               ? chain.chainRequests
-                                .slice(0, 3)
-                                .map((r) => r.name)
-                                .join(' → ') + ' → ...'
+                                  .slice(0, 3)
+                                  .map((r) => r.name)
+                                  .join(' → ') + ' → ...'
                               : chain.chainRequests
-                                .map((r) => r.name)
-                                .join(' → ')}
+                                  .map((r) => r.name)
+                                  .join(' → ')}
                           </span>
                         </div>
                         <div className='flex items-center space-x-6'>
@@ -596,7 +674,7 @@ export function RequestChainsList({
                               onClick={() => onEditChain(chain)}
                               className='text-muted-foreground hover:text-foreground'
                             >
-                              <Pencil className='w-4 h-4' />
+                              <Edit className='w-4 h-4' />
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>Edit Chain</TooltipContent>

@@ -25,22 +25,40 @@ import {
   Webhook,
   Edit,
   Trash2,
-  Pencil,
 } from 'lucide-react';
 import { useToast } from '@/hooks/useToast';
 import { useWorkspace } from '@/hooks/useWorkspace';
-import { createWorkSpaceIntegration, deleteWorkSpaceIntegration, getWorkSpaceIntegrations, toggleWorkSpaceIntegrationStatus, updateWorkSpaceIntegration } from '@/services/integrationTools.service';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import {
+  createWorkSpaceIntegration,
+  deleteWorkSpaceIntegration,
+  getWorkSpaceIntegrations,
+  toggleWorkSpaceIntegrationStatus,
+  updateWorkSpaceIntegration,
+} from '@/services/integrationTools.service';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../ui/select';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../ui/alert-dialog';
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '../ui/alert-dialog';
 import { useCurrentPlan } from '@/context/CurrentPlanContext';
-
-
 
 const integrationSchema = z.object({
   name: z.string().min(1, 'Integration name is required'),
@@ -77,7 +95,6 @@ interface Integration {
   };
 }
 
-
 interface IntegrationConfig {
   channel: string;
   webhook_url: string;
@@ -98,7 +115,6 @@ export interface WorkSpaceIntegration {
   updatedAt: string;
 }
 
-
 export interface IntegrationPayload {
   name: string;
   type: string;
@@ -110,21 +126,21 @@ export interface IntegrationPayload {
   events: string[];
 }
 
-
 export function ExternalTools() {
-
   const { toast } = useToast();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [editingIntegration, setEditingIntegration] = useState<WorkSpaceIntegration | null>(null);
+  const [editingIntegration, setEditingIntegration] =
+    useState<WorkSpaceIntegration | null>(null);
   const [integrations, setIntegrations] = useState<WorkSpaceIntegration[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [integrationToDelete, setIntegrationToDelete] = useState<string | null>(null);
+  const [integrationToDelete, setIntegrationToDelete] = useState<string | null>(
+    null
+  );
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const { currentWorkspace } = useWorkspace();
   const workspaceId = currentWorkspace?.id;
-
 
   const [integrationForm, setIntegrationForm] = useState({
     name: '',
@@ -137,8 +153,11 @@ export function ExternalTools() {
     events: [] as string[],
   });
 
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >
+  ) => {
     const { name, value } = e.target;
 
     if (name.startsWith('config.')) {
@@ -158,7 +177,6 @@ export function ExternalTools() {
     }
   };
 
-
   const handleEventChange = (eventValue: string, checked: boolean) => {
     setIntegrationForm((prev) => ({
       ...prev,
@@ -168,10 +186,6 @@ export function ExternalTools() {
     }));
   };
 
-
-
-
-
   const availableEvents = [
     { value: 'test_passed', label: 'Test Passed' },
     { value: 'test_failed', label: 'Test Failed' },
@@ -179,8 +193,6 @@ export function ExternalTools() {
     { value: 'execution_started', label: 'Execution Started' },
     { value: 'workspace_updated', label: 'Workspace Updated' },
   ];
-
-
 
   const getIntegrationIcon = (type: string) => {
     switch (type) {
@@ -211,10 +223,6 @@ export function ExternalTools() {
     );
   };
 
-
-
-
-
   const handleTest = (integration: Integration) => {
     toast({
       title: 'Testing integration',
@@ -230,9 +238,6 @@ export function ExternalTools() {
     }, 2000);
   };
 
-
-
-
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -241,13 +246,11 @@ export function ExternalTools() {
     });
   };
 
-
-
   const getIntegrations = async () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await getWorkSpaceIntegrations(workspaceId || "");
+      const response = await getWorkSpaceIntegrations(workspaceId || '');
       const data: WorkSpaceIntegration[] = await response;
       setIntegrations(data);
     } catch (err: any) {
@@ -264,10 +267,11 @@ export function ExternalTools() {
     }
   }, [workspaceId]);
 
-
   const handleToggleStatus = async (integrationId: string) => {
     try {
-      const currentIntegration = integrations.find((i) => i.id === integrationId);
+      const currentIntegration = integrations.find(
+        (i) => i.id === integrationId
+      );
       if (!currentIntegration) return;
 
       setIntegrations((prev) =>
@@ -291,12 +295,16 @@ export function ExternalTools() {
       toast({
         variant: 'success',
         title: `Integration ${updated.isActive ? 'Activated' : 'Deactivated'}`,
-        description: `${currentIntegration.name} has been ${updated.isActive ? 'activated' : 'deactivated'}.`,
+        description: `${currentIntegration.name} has been ${
+          updated.isActive ? 'activated' : 'deactivated'
+        }.`,
       });
       // getIntegrations();
     } catch (error: any) {
       console.error('Failed to toggle integration status:', error.message);
-      const originalIntegration = integrations.find((x) => x.id === integrationId);
+      const originalIntegration = integrations.find(
+        (x) => x.id === integrationId
+      );
       setIntegrations((prev) =>
         prev.map((i) =>
           i.id === integrationId
@@ -313,10 +321,9 @@ export function ExternalTools() {
     }
   };
 
-
   const handleDeleteIntegration = async (integrationId: string) => {
     try {
-      await deleteWorkSpaceIntegration(integrationId, workspaceId || "");
+      await deleteWorkSpaceIntegration(integrationId, workspaceId || '');
       toast({
         variant: 'success',
         title: 'Integration Deleted',
@@ -339,7 +346,7 @@ export function ExternalTools() {
       if (editingIntegration) {
         await updateWorkSpaceIntegration(
           editingIntegration.id,
-          workspaceId || "",
+          workspaceId || '',
           integrationForm
         );
 
@@ -349,7 +356,7 @@ export function ExternalTools() {
           description: `${integrationForm.name} has been successfully updated.`,
         });
       } else {
-        await createWorkSpaceIntegration(workspaceId || "", integrationForm);
+        await createWorkSpaceIntegration(workspaceId || '', integrationForm);
 
         toast({
           variant: 'success',
@@ -378,8 +385,6 @@ export function ExternalTools() {
     }
   };
 
-
-
   const handleEdit = (integration: WorkSpaceIntegration) => {
     setEditingIntegration(integration);
 
@@ -397,11 +402,7 @@ export function ExternalTools() {
     setIsCreateDialogOpen(true);
   };
 
-
   const { currentPlan } = useCurrentPlan();
-
-
-
 
   return (
     <Card>
@@ -438,35 +439,39 @@ export function ExternalTools() {
                   and updates.
                 </DialogDescription>
               </DialogHeader>
-              <div className="space-y-4">
+              <div className='space-y-4'>
                 <div>
-                  <label className='block text-sm font-medium mb-2'>Integration Name</label>
+                  <label className='block text-sm font-medium mb-2'>
+                    Integration Name
+                  </label>
                   <Input
-                    type="text"
-                    name="name"
+                    type='text'
+                    name='name'
                     value={integrationForm.name}
                     onChange={handleChange}
-                    placeholder="Team Slack"
-                    className="w-full border px-2 py-1 rounded"
+                    placeholder='Team Slack'
+                    className='w-full border px-2 py-1 rounded'
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium mb-2">Integration Type</label>
+                  <label className='block text-sm font-medium mb-2'>
+                    Integration Type
+                  </label>
                   <Select
                     value={integrationForm.type}
                     onValueChange={(value) =>
                       setIntegrationForm((prev) => ({ ...prev, type: value }))
                     }
                   >
-                    <SelectTrigger id="integration-type-select">
-                      <SelectValue placeholder="Select Integration Type" />
+                    <SelectTrigger id='integration-type-select'>
+                      <SelectValue placeholder='Select Integration Type' />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="slack">Slack</SelectItem>
-                      <SelectItem value="teams">Microsoft Teams</SelectItem>
+                      <SelectItem value='slack'>Slack</SelectItem>
+                      <SelectItem value='teams'>Microsoft Teams</SelectItem>
                       <SelectItem
-                        value="jira"
+                        value='jira'
                         disabled={
                           currentPlan?.PlanName !== 'Enterprise' &&
                           currentPlan?.IsTrial !== true
@@ -476,7 +481,7 @@ export function ExternalTools() {
                       </SelectItem>
 
                       <SelectItem
-                        value="webhook"
+                        value='webhook'
                         disabled={
                           currentPlan?.PlanName !== 'Enterprise' &&
                           currentPlan?.IsTrial !== true
@@ -488,49 +493,59 @@ export function ExternalTools() {
                   </Select>
                 </div>
 
-
                 <div>
-                  <label className='block text-sm font-medium mb-2'>Webhook URL</label>
+                  <label className='block text-sm font-medium mb-2'>
+                    Webhook URL
+                  </label>
                   <Input
-                    type="text"
-                    name="config.webhook_url"
+                    type='text'
+                    name='config.webhook_url'
                     value={integrationForm.config.webhook_url}
                     onChange={handleChange}
-                    placeholder="https://hooks.slack.com/services/..."
-                    className="w-full border px-2 py-1 rounded"
+                    placeholder='https://hooks.slack.com/services/...'
+                    className='w-full border px-2 py-1 rounded'
                   />
                 </div>
 
                 <div>
-                  <label className='block text-sm font-medium mb-2'>Description (Optional)</label>
+                  <label className='block text-sm font-medium mb-2'>
+                    Description (Optional)
+                  </label>
                   <Textarea
-                    name="description"
+                    name='description'
                     value={integrationForm.description}
                     onChange={handleChange}
                     rows={2}
-                    className="w-full border px-2 py-1 rounded"
+                    className='w-full border px-2 py-1 rounded'
                   />
                 </div>
 
                 <div>
-                  <label className='block text-sm font-medium mb-2'>Notification Events</label>
-                  <div className="grid grid-cols-3 gap-4">
+                  <label className='block text-sm font-medium mb-2'>
+                    Notification Events
+                  </label>
+                  <div className='grid grid-cols-3 gap-4'>
                     {availableEvents.map((event) => (
-                      <label key={event.value} className="flex items-center space-x-2">
+                      <label
+                        key={event.value}
+                        className='flex items-center space-x-2'
+                      >
                         <input
-                          type="checkbox"
+                          type='checkbox'
                           checked={integrationForm.events.includes(event.value)}
-                          onChange={(e) => handleEventChange(event.value, e.target.checked)}
+                          onChange={(e) =>
+                            handleEventChange(event.value, e.target.checked)
+                          }
                         />
-                        <span className="text-sm">{event.label}</span>
+                        <span className='text-sm'>{event.label}</span>
                       </label>
                     ))}
                   </div>
                 </div>
 
-                <div className="flex justify-end gap-2 pt-4">
+                <div className='flex justify-end gap-2 pt-4'>
                   <button
-                    type="button"
+                    type='button'
                     onClick={() => {
                       setIsCreateDialogOpen(false);
                       setEditingIntegration(null);
@@ -542,60 +557,57 @@ export function ExternalTools() {
                         events: [],
                       });
                     }}
-                    className="px-3 py-1 border rounded"
+                    className='px-3 py-1 border rounded'
                   >
                     Cancel
                   </button>
-                  <Button
-                    type="button"
-                    onClick={handleSubmitForm}
-                  >
-                    {editingIntegration ? 'Update Integration' : 'Create Integration'}
+                  <Button type='button' onClick={handleSubmitForm}>
+                    {editingIntegration
+                      ? 'Update Integration'
+                      : 'Create Integration'}
                   </Button>
                 </div>
               </div>
-
             </DialogContent>
           </Dialog>
         </div>
       </CardHeader>
       <CardContent>
-
-        <div className="space-y-4">
+        <div className='space-y-4'>
           {!integrations || integrations.length === 0 ? (
-            <div className="text-center py-8">
-              <Wrench className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
+            <div className='text-center py-8'>
+              <Wrench className='h-12 w-12 text-gray-400 mx-auto mb-4' />
+              <h3 className='text-lg font-medium text-gray-900 mb-2'>
                 No integrations configured
               </h3>
-              <p className="text-gray-500 mb-4">
+              <p className='text-gray-500 mb-4'>
                 Connect external tools to receive notifications.
               </p>
               <Button onClick={() => setIsCreateDialogOpen(true)}>
-                <Plus className="h-4 w-4 mr-2" /> Add Integration
+                <Plus className='h-4 w-4 mr-2' /> Add Integration
               </Button>
             </div>
           ) : (
             integrations?.map((integration) => (
               <div
                 key={integration.id}
-                className="border rounded-lg p-3 sm:p-4 hover:bg-gray-50 transition-colors"
+                className='border rounded-lg p-3 sm:p-4 hover:bg-gray-50 transition-colors'
               >
-                <div className="flex flex-col gap-3">
-                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-                    <div className="flex items-start gap-3 flex-1 min-w-0">
-                      <div className="flex-shrink-0 mt-1">
+                <div className='flex flex-col gap-3'>
+                  <div className='flex flex-col sm:flex-row sm:items-start justify-between gap-3'>
+                    <div className='flex items-start gap-3 flex-1 min-w-0'>
+                      <div className='flex-shrink-0 mt-1'>
                         {getIntegrationIcon(integration.type)}
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex flex-wrap items-center gap-2 mb-2">
-                          <h3 className="font-medium text-gray-900 text-sm sm:text-base truncate">
+                      <div className='flex-1 min-w-0'>
+                        <div className='flex flex-wrap items-center gap-2 mb-2'>
+                          <h3 className='font-medium text-gray-900 text-sm sm:text-base truncate'>
                             {integration.name}
                           </h3>
                           {getStatusBadge(integration.status)}
                         </div>
                         {integration.description && (
-                          <p className="text-sm text-gray-600 mb-2 line-clamp-2">
+                          <p className='text-sm text-gray-600 mb-2 line-clamp-2'>
                             {integration.description}
                           </p>
                         )}
@@ -603,20 +615,28 @@ export function ExternalTools() {
                     </div>
 
                     {/* Mobile Action Buttons */}
-                    <div className="flex items-center gap-2 sm:hidden">
-                      <div className="flex items-center gap-2">
+                    <div className='flex items-center gap-2 sm:hidden'>
+                      <div className='flex items-center gap-2'>
                         <Switch
                           checked={integration.isActive}
-                          onCheckedChange={() => handleToggleStatus(integration.id)}
-                          className={`${integration.isActive ? 'bg-green-500' : 'bg-gray-300'
-                            } relative inline-flex h-6 w-11 items-center rounded-full transition-colors`}
+                          onCheckedChange={() =>
+                            handleToggleStatus(integration.id)
+                          }
+                          className={`${
+                            integration.isActive
+                              ? 'bg-green-500'
+                              : 'bg-gray-300'
+                          } relative inline-flex h-6 w-11 items-center rounded-full transition-colors`}
                         >
                           <span
-                            className={`${integration.isActive ? 'translate-x-6' : 'translate-x-1'
-                              } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
+                            className={`${
+                              integration.isActive
+                                ? 'translate-x-6'
+                                : 'translate-x-1'
+                            } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
                           />
                         </Switch>
-                        <span className="text-xs text-gray-600">
+                        <span className='text-xs text-gray-600'>
                           {integration.isActive ? 'Active' : 'Inactive'}
                         </span>
                       </div>
@@ -625,12 +645,14 @@ export function ExternalTools() {
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Button
-                              variant="outline"
-                              size="sm"
-                              className="px-2 py-1"
-                              onClick={() => handleEdit(integration as WorkSpaceIntegration)}
+                              variant='outline'
+                              size='sm'
+                              className='px-2 py-1'
+                              onClick={() =>
+                                handleEdit(integration as WorkSpaceIntegration)
+                              }
                             >
-                              <Edit className="h-3 w-3" />
+                              <Edit className='h-3 w-3' />
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>Edit</TooltipContent>
@@ -654,17 +676,16 @@ export function ExternalTools() {
                               Delete this Integration?
                             </AlertDialogTitle>
                             <AlertDialogDescription>
-                              This will permanently delete “
-                              {integration.name}”. This action cannot be
-                              undone.
+                              This will permanently delete “{integration.name}”.
+                              This action cannot be undone.
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
-                            <AlertDialogCancel>
-                              Cancel
-                            </AlertDialogCancel>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
                             <Button
-                              onClick={() => handleDeleteIntegration(integration?.id || "")}
+                              onClick={() =>
+                                handleDeleteIntegration(integration?.id || '')
+                              }
                             >
                               Delete
                             </Button>
@@ -674,20 +695,28 @@ export function ExternalTools() {
                     </div>
 
                     {/* Desktop Action Buttons */}
-                    <div className="hidden sm:flex items-center gap-2">
-                      <div className="flex items-center gap-2">
+                    <div className='hidden sm:flex items-center gap-2'>
+                      <div className='flex items-center gap-2'>
                         <Switch
                           checked={integration.isActive}
-                          onCheckedChange={() => handleToggleStatus(integration.id)}
-                          className={`${integration.isActive ? 'bg-green-500' : 'bg-gray-300'
-                            } relative inline-flex h-6 w-11 items-center rounded-full transition-colors`}
+                          onCheckedChange={() =>
+                            handleToggleStatus(integration.id)
+                          }
+                          className={`${
+                            integration.isActive
+                              ? 'bg-green-500'
+                              : 'bg-gray-300'
+                          } relative inline-flex h-6 w-11 items-center rounded-full transition-colors`}
                         >
                           <span
-                            className={`${integration.isActive ? 'translate-x-6' : 'translate-x-1'
-                              } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
+                            className={`${
+                              integration.isActive
+                                ? 'translate-x-6'
+                                : 'translate-x-1'
+                            } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
                           />
                         </Switch>
-                        <span className="text-xs text-gray-600">
+                        <span className='text-xs text-gray-600'>
                           {integration.isActive ? 'Active' : 'Inactive'}
                         </span>
                       </div>
@@ -695,11 +724,13 @@ export function ExternalTools() {
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleEdit(integration as WorkSpaceIntegration)}
+                              variant='outline'
+                              size='sm'
+                              onClick={() =>
+                                handleEdit(integration as WorkSpaceIntegration)
+                              }
                             >
-                              <Pencil className="h-4 w-4" />
+                              <Edit className='h-4 w-4' />
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>Edit</TooltipContent>
@@ -722,17 +753,16 @@ export function ExternalTools() {
                               Delete this Integration?
                             </AlertDialogTitle>
                             <AlertDialogDescription>
-                              This will permanently delete “
-                              {integration.name}”. This action cannot be
-                              undone.
+                              This will permanently delete “{integration.name}”.
+                              This action cannot be undone.
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
-                            <AlertDialogCancel>
-                              Cancel
-                            </AlertDialogCancel>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
                             <Button
-                              onClick={() => handleDeleteIntegration(integration?.id || "")}
+                              onClick={() =>
+                                handleDeleteIntegration(integration?.id || '')
+                              }
                             >
                               Delete
                             </Button>
@@ -742,28 +772,27 @@ export function ExternalTools() {
                     </div>
                   </div>
 
-
-
                   {/* Mobile Integration Details */}
-                  <div className="grid grid-cols-2 gap-2 text-xs text-gray-500 pt-2 border-t sm:hidden">
+                  <div className='grid grid-cols-2 gap-2 text-xs text-gray-500 pt-2 border-t sm:hidden'>
                     <div>
-                      <span className="font-medium block">Type:</span>
+                      <span className='font-medium block'>Type:</span>
                       <span>
                         {integration.type.charAt(0).toUpperCase() +
                           integration.type.slice(1)}
                       </span>
                     </div>
                     <div>
-                      <span className="font-medium block">Created:</span>
+                      <span className='font-medium block'>Created:</span>
                       <span>{formatDate(integration.createdAt)}</span>
                     </div>
                   </div>
 
                   {/* Desktop Integration Details */}
-                  <div className="hidden sm:block space-y-1 text-xs text-gray-500 pt-2 border-t">
+                  <div className='hidden sm:block space-y-1 text-xs text-gray-500 pt-2 border-t'>
                     <div>
                       Type:{' '}
-                      {integration.type.charAt(0).toUpperCase() + integration.type.slice(1)}
+                      {integration.type.charAt(0).toUpperCase() +
+                        integration.type.slice(1)}
                     </div>
                     <div>Created: {formatDate(integration.createdAt)}</div>
                     <div>Last Updated: {formatDate(integration.updatedAt)}</div>
@@ -774,18 +803,14 @@ export function ExternalTools() {
                         : 'No events configured'}
                     </div>
                   </div>
-
                 </div>
               </div>
             ))
           )}
         </div>
 
-
-
-
         {/* Integration Info */}
-        <div className='mt-8 p-4 bg-blue-50 rounded-lg' >
+        <div className='mt-8 p-4 bg-blue-50 rounded-lg'>
           <h4 className='font-medium text-blue-900 mb-2'>
             Supported Integrations
           </h4>

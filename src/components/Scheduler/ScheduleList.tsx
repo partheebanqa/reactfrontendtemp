@@ -16,6 +16,7 @@ import {
   ChevronLeft,
   ChevronRight,
   RefreshCw,
+  Beaker,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -79,6 +80,7 @@ import {
   deleteSchedule,
   duplicateSchedule,
 } from '@/services/scheduler.service';
+import { Switch } from '@/components/ui/switch';
 
 interface Schedule {
   scheduleId: string;
@@ -186,6 +188,62 @@ export default function ScheduleList({
       });
     },
   });
+
+  const getTargetTypeIcon = (target: number) => {
+    return target === 1 ? (
+      <Beaker className='h-4 w-4 text-blue-600' />
+    ) : (
+      <GitBranch className='h-4 w-4 text-purple-600' />
+    );
+  };
+
+  // Helper function to format schedule date and days left separately
+  const getScheduleDateParts = (schedule: Schedule) => {
+    if (schedule.scheduledTime) {
+      try {
+        const date = new Date(schedule.scheduledTime);
+        const dateText = `${format(date, 'MMM dd, yyyy')} at ${format(
+          date,
+          'HH:mm'
+        )} (${schedule.timezone || 'UTC'})`;
+
+        // Calculate days left
+        const now = new Date();
+        const diffTime = date.getTime() - now.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+        let daysLeftText = '';
+        if (diffDays > 0) {
+          daysLeftText = `${diffDays} day${diffDays > 1 ? 's' : ''} left`;
+        } else if (diffDays === 0) {
+          daysLeftText = `Today`;
+        } else {
+          daysLeftText = `${Math.abs(diffDays)} day${
+            Math.abs(diffDays) > 1 ? 's' : ''
+          } ago`;
+        }
+
+        return { dateText, daysLeftText };
+      } catch (error) {
+        return { dateText: 'Invalid date', daysLeftText: '' };
+      }
+    }
+
+    if (schedule.nextRunAt) {
+      try {
+        return {
+          dateText: format(new Date(schedule.nextRunAt), 'MMM dd, yyyy HH:mm'),
+          daysLeftText: formatDistanceToNow(new Date(schedule.nextRunAt), {
+            addSuffix: true,
+          }),
+        };
+      } catch (error) {
+        return { dateText: 'Invalid date', daysLeftText: '' };
+      }
+    }
+
+    return { dateText: 'Not scheduled', daysLeftText: '' };
+  };
 
   // Filter schedules based on search and filters
   const filteredSchedules = Array.isArray(schedules)
@@ -440,11 +498,12 @@ export default function ScheduleList({
                   <TableHead className='font-semibold text-slate-600 text-sm capitalize tracking-wider'>
                     Type
                   </TableHead>
-                  <TableHead className='font-semibold text-slate-600 text-sm capitalize tracking-wider'>
-                    Mode
-                  </TableHead>
+
                   <TableHead className='font-semibold text-slate-600 text-sm capitalize tracking-wider'>
                     Status
+                  </TableHead>
+                  <TableHead className='font-semibold text-slate-600 text-sm capitalize tracking-wider'>
+                    Mode
                   </TableHead>
                   <TableHead className='font-semibold text-slate-600 text-sm capitalize tracking-wider'>
                     Schedule Time
@@ -465,18 +524,38 @@ export default function ScheduleList({
                         <div className='font-medium text-slate-900'>
                           {schedule.scheduleName}
                         </div>
-                        {schedule.description && (
+                        {/* {schedule.description && (
                           <div className='text-sm text-slate-500 mt-1'>
                             {schedule.description}
                           </div>
-                        )}
+                        )} */}
                       </div>
                     </TableCell>
                     <TableCell className='py-4'>
-                      <span className='text-sm text-slate-700'>
-                        {getTargetTypeText(schedule.target)}
-                      </span>
+                      <div className='flex items-center gap-2'>
+                        {getTargetTypeIcon(schedule.target)}
+                        <span className='text-sm text-slate-700'>
+                          {getTargetTypeText(schedule.target)}
+                        </span>
+                      </div>
                     </TableCell>
+                    <TableCell className='py-4'>
+                      <div className='flex items-center gap-2'>
+                        <Switch
+                          checked={schedule.isActive}
+                          onCheckedChange={(checked) => {
+                            updateMutation.mutate({
+                              id: schedule.scheduleId,
+                              data: { isActive: checked },
+                            });
+                          }}
+                        />
+                        <span className='text-sm text-slate-700'>
+                          {schedule.isActive ? 'Active' : 'Disabled'}
+                        </span>
+                      </div>
+                    </TableCell>
+
                     <TableCell className='py-4'>
                       <div className='flex items-center gap-2'>
                         <div className='text-blue-600'>
@@ -493,23 +572,26 @@ export default function ScheduleList({
                         </span>
                       </div>
                     </TableCell>
+
                     <TableCell className='py-4'>
-                      <div className='flex items-center gap-2'>
-                        <div
-                          className={`w-2 h-2 rounded-full ${
-                            schedule.isActive ? 'bg-green-500' : 'bg-gray-400'
-                          }`}
-                        ></div>
-                        <span className='text-sm text-slate-700'>
-                          {schedule.isActive ? 'Active' : 'Disabled'}
-                        </span>
-                      </div>
+                      {(() => {
+                        const { dateText, daysLeftText } =
+                          getScheduleDateParts(schedule);
+                        return (
+                          <div>
+                            <div className='text-sm text-slate-600'>
+                              {dateText}
+                            </div>
+                            {daysLeftText && (
+                              <div className='text-xs text-slate-400'>
+                                {daysLeftText}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </TableCell>
-                    <TableCell className='py-4'>
-                      <div className='text-sm text-slate-600'>
-                        {formatScheduleDate(schedule)}
-                      </div>
-                    </TableCell>
+
                     <TableCell className='py-4'>
                       <div className='flex items-center gap-2'>
                         <TooltipProvider>

@@ -43,7 +43,7 @@ import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { format } from 'date-fns';
+
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -56,6 +56,7 @@ import type { TestSuite } from '@/shared/types/TestSuite.model';
 import type { RequestChain } from '@/shared/types/requestChain.model';
 import { useWorkspace } from '@/hooks/useWorkspace';
 import { cn } from '@/lib/utils';
+import { format, isToday, addMinutes } from 'date-fns';
 
 const STOP_CONDITIONS = [
   { id: '500', label: 'If an API returns a 500 (Internal Server Error)' },
@@ -178,10 +179,6 @@ export default function ScheduleCreate({
   });
 
   const onSubmit = (data: ScheduleFormData) => {
-    console.log('📝 Form submission started');
-    console.log('📝 Form submission data:', data);
-    console.log('📝 Form validation errors:', form.formState.errors);
-
     // Create scheduled time in ISO format
     const scheduleDate = data.scheduledDate || new Date();
     const currentScheduleTime = data.scheduledTime || scheduleTime || '09:00';
@@ -551,42 +548,66 @@ export default function ScheduleCreate({
                   <FormField
                     control={form.control}
                     name='scheduledTime'
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className='text-base font-medium'>
-                          Time
-                        </FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          value={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder='Select time' />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {Array.from({ length: 24 }, (_, hour) =>
-                              ['00', '15', '30', '45'].map((minute) => (
-                                <SelectItem
-                                  key={`${hour
+                    render={({ field }) => {
+                      const selectedDate = form.watch('scheduledDate'); // assuming you also have a date picker
+                      const nowPlus30 = addMinutes(new Date(), 30);
+
+                      return (
+                        <FormItem>
+                          <FormLabel className='text-base font-medium'>
+                            Time
+                          </FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            value={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder='Select time' />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {Array.from({ length: 24 }, (_, hour) =>
+                                ['00', '15', '30', '45'].map((minute) => {
+                                  const timeString = `${hour
                                     .toString()
-                                    .padStart(2, '0')}:${minute}`}
-                                  value={`${hour
-                                    .toString()
-                                    .padStart(2, '0')}:${minute}`}
-                                >
-                                  {`${hour
-                                    .toString()
-                                    .padStart(2, '0')}:${minute}`}
-                                </SelectItem>
-                              ))
-                            ).flat()}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+                                    .padStart(2, '0')}:${minute}`;
+                                  const [h, m] = timeString
+                                    .split(':')
+                                    .map(Number);
+
+                                  // Build Date object for comparison
+                                  const candidate = new Date(
+                                    selectedDate || new Date()
+                                  );
+                                  candidate.setHours(h, m, 0, 0);
+
+                                  // If today, block times <= now+30min
+                                  if (
+                                    selectedDate &&
+                                    isToday(new Date(selectedDate))
+                                  ) {
+                                    if (candidate <= nowPlus30) {
+                                      return null; // hide this option
+                                    }
+                                  }
+
+                                  return (
+                                    <SelectItem
+                                      key={timeString}
+                                      value={timeString}
+                                    >
+                                      {timeString}
+                                    </SelectItem>
+                                  );
+                                })
+                              ).flat()}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      );
+                    }}
                   />
                 </div>
               )}

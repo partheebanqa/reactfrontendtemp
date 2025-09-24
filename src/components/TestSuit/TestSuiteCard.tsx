@@ -5,12 +5,11 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
   Play,
-  Edit,
   Copy,
   Trash2,
   Info,
   Workflow,
-  Pencil,
+  Edit,
   Pause,
   Link2,
   Layers,
@@ -296,7 +295,7 @@ const TestSuiteCard: React.FC<TestSuiteCardProps> = ({
                   className='text-gray-600 hover:text-blue-600'
                   onClick={() => onEdit(suite)}
                 >
-                  <Pencil className='w-4 h-4' />
+                  <Edit className='w-4 h-4' />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>Edit Suite</TooltipContent>
