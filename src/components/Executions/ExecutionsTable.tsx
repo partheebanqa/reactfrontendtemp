@@ -8,7 +8,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Copy, Calendar, GitBranch, Play, Eye } from 'lucide-react';
+import { Copy, Calendar, GitBranch, Play, Eye, Beaker } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import {
   Tooltip,
@@ -112,7 +112,7 @@ export const ExecutionsTable = ({
               <TableCell>
                 <div className='flex items-center gap-2'>
                   {execution?.testSuite ? (
-                    <Calendar className='text-blue-600' size={16} />
+                    <Beaker className='text-blue-600' size={16} />
                   ) : (
                     <GitBranch className='text-purple-600' size={16} />
                   )}

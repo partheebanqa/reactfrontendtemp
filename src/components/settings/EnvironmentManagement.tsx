@@ -42,16 +42,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import {
-  Settings,
-  Plus,
-  Globe,
-  Lock,
-  Edit,
-  Trash2,
-  Copy,
-  Pencil,
-} from 'lucide-react';
+import { Settings, Plus, Globe, Lock, Trash2, Copy, Edit } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useDataManagement } from '@/hooks/useDataManagement';
 import { Environment } from '@/shared/types/datamanagement';
@@ -551,7 +542,7 @@ export function EnvironmentManagement() {
                                   setEditingEnvironment(environment)
                                 }
                               >
-                                <Pencil className='h-4 w-4' />
+                                <Edit className='h-4 w-4' />
                               </Button>
                             </TooltipTrigger>
                             <TooltipContent>Edit</TooltipContent>

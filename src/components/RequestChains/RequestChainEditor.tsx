@@ -19,7 +19,7 @@ import {
   XCircle,
   Info,
   Link2,
-  Pencil,
+  Edit,
   X,
   Check,
   Shuffle,
@@ -1830,7 +1830,7 @@ export function RequestChainEditor({
                                                 }}
                                                 title='Edit name'
                                               >
-                                                <Pencil className='w-4 h-4' />
+                                                <Edit className='w-4 h-4' />
                                               </Button>
                                             </div>
                                           )}
