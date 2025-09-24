@@ -49,11 +49,15 @@ const initialFormData: ContactFormData = {
   message: '',
   subscribe: false
 };
+interface ContactFormProps {
+  submitted: boolean;
+  setSubmitted: React.Dispatch<React.SetStateAction<boolean>>;
+}
 
-export const ContactForm: React.FC = () => {
+export const ContactForm: React.FC<ContactFormProps> = ({ submitted, setSubmitted }) => {
   const [formData, setFormData] = useState<ContactFormData>(initialFormData);
   const [errors, setErrors] = useState<ContactFormErrors>({});
-  const [submitted, setSubmitted] = useState(false);
+  // const [submitted, setSubmitted] = useState(false);
   const [locationDetected, setLocationDetected] = useState(false);
 
   const { locationData, isLoading: isLocationLoading } = useGeolocation();
@@ -76,7 +80,7 @@ export const ContactForm: React.FC = () => {
       const detectedCountry = countries.find(
         country => country.value === locationData.countryCode
       );
-      
+
       if (detectedCountry) {
         setFormData(prev => ({
           ...prev,
@@ -92,7 +96,7 @@ export const ContactForm: React.FC = () => {
   ) => {
     const { name, value, type } = e.target;
     const checked = type === 'checkbox' ? (e.target as HTMLInputElement).checked : undefined;
-    
+
     setFormData(prev => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value
@@ -109,9 +113,9 @@ export const ContactForm: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     const validationErrors = validateContactForm(formData);
-    
+
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
       return;
@@ -153,7 +157,7 @@ export const ContactForm: React.FC = () => {
           placeholder="Enter your full name"
           autoComplete="name"
         />
-        
+
         <CustomInput
           label="Email"
           name="email"
@@ -179,7 +183,7 @@ export const ContactForm: React.FC = () => {
           placeholder="Enter your phone number"
           autoComplete="tel"
         />
-        
+
         <CustomSelect
           label="Country"
           name="country"
