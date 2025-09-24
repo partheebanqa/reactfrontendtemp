@@ -2,7 +2,6 @@ import {
   API_COLLECTION_IMPORT,
   API_COLLECTION_REQUESTS,
   API_COLLECTIONS,
-  API_UPLOAD_REQUEST_SCHEMA,
 } from '@/config/apiRoutes';
 import { apiRequest } from '@/lib/queryClient';
 import {
