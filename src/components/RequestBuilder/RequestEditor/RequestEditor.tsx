@@ -64,6 +64,8 @@ const RequestEditor: React.FC = () => {
     fetchCollectionRequests,
   } = useCollection();
 
+  console.log('fetchCollectionRequests:', fetchCollectionRequests);
+
   const { variables, environments, activeEnvironment } = useDataManagement();
   const { error: showError, success: showSuccess, toast } = useToast();
   const { currentWorkspace } = useWorkspace();
@@ -90,9 +92,10 @@ const RequestEditor: React.FC = () => {
   const [bodyContent, setBodyContent] = useState('');
   const [formFields, setFormFields] = useState<KeyValuePairWithFile[]>([]);
   const [urlEncodedFields, setUrlEncodedFields] = useState<Param[]>([]);
+  // ✅ FIX: Initialize authType as 'bearer' by default instead of 'none'
   const [authType, setAuthType] = useState<
     'none' | 'basic' | 'bearer' | 'apiKey' | 'oauth1' | 'oauth2'
-  >('none');
+  >('bearer');
   const [token, setToken] = useState('');
   const [authData, setAuthData] = useState({
     username: '',
@@ -244,15 +247,22 @@ const RequestEditor: React.FC = () => {
       }
 
       setToken(activeRequest.authorization?.token || '');
-      setAuthType(
-        (activeRequest.authorizationType as
-          | 'none'
-          | 'basic'
-          | 'bearer'
-          | 'apiKey'
-          | 'oauth1'
-          | 'oauth2') || 'none'
-      );
+      // ✅ FIX: Set authType properly, defaulting to 'bearer' if there's a token
+      const requestAuthType = activeRequest.authorizationType as
+        | 'none'
+        | 'basic'
+        | 'bearer'
+        | 'apiKey'
+        | 'oauth1'
+        | 'oauth2';
+
+      // If there's a token but no authType specified, assume bearer
+      if (activeRequest.authorization?.token && !requestAuthType) {
+        setAuthType('bearer');
+      } else {
+        setAuthType(requestAuthType || 'bearer');
+      }
+
       setAuthData({
         username: activeRequest.authorization?.username || '',
         password: activeRequest.authorization?.password || '',
@@ -322,6 +332,8 @@ const RequestEditor: React.FC = () => {
     } else {
       handleCreateRequest();
       setAssertions([]);
+      // ✅ FIX: When creating new request, ensure authType is 'bearer'
+      setAuthType('bearer');
     }
     setResponseData(null);
   }, [activeRequest]);
@@ -477,7 +489,7 @@ const RequestEditor: React.FC = () => {
             }
             break;
           default:
-            setAuthType('none');
+            setAuthType('bearer'); // ✅ FIX: Default to bearer instead of none
             break;
         }
       }
@@ -683,12 +695,14 @@ const RequestEditor: React.FC = () => {
         return;
       }
 
-      let requestCount = 0;
+      let maxOrder = 0;
       if (activeCollection) {
         const response = await fetchCollectionRequests.mutateAsync(
           activeCollection.id
         );
-        requestCount = response.length;
+        if (response && response.length > 0) {
+          maxOrder = Math.max(...response.map((req) => req.order || 0));
+        }
       }
 
       const selectedAssertions = Array.isArray(assertions)
@@ -711,7 +725,7 @@ const RequestEditor: React.FC = () => {
         workspaceId: currentWorkspace.id,
         description: '',
         name: activeRequest.name || 'New Request',
-        order: (requestCount || 0) + 1,
+        order: maxOrder + 1,
         method: method,
         url: url,
         bodyType: bodyType === 'json' ? 'raw' : bodyType,
@@ -744,8 +758,9 @@ const RequestEditor: React.FC = () => {
               ).toString()
             : '',
         authorizationType: authType,
+        // ✅ FIX: Always include token when there's one, regardless of authType check
         authorization: {
-          token: authType === 'bearer' ? authData.token : '',
+          token: authData.token, // Always include the token
           username: authType === 'basic' ? authData.username : '',
           password: authType === 'basic' ? authData.password : '',
           key: authType === 'apiKey' ? authData.key : '',
@@ -843,12 +858,14 @@ const RequestEditor: React.FC = () => {
         );
         return;
       }
-      let requestCount = 0;
+      let maxOrder = 0;
       if (activeCollection) {
         const response = await fetchCollectionRequests.mutateAsync(
           activeCollection.id
         );
-        requestCount = response.length;
+        if (response && response.length > 0) {
+          maxOrder = Math.max(...response.map((req) => req.order || 0));
+        }
       }
 
       // Get selected assertions from the store - ensure it's an array
@@ -864,7 +881,7 @@ const RequestEditor: React.FC = () => {
           : activeCollection?.id,
         description: '',
         name: activeRequest.name || 'New Request',
-        order: (requestCount || 0) + 1,
+        order: maxOrder + 1,
         method: method,
         url: url,
         bodyType: bodyType == 'json' ? 'raw' : bodyType,
@@ -899,8 +916,9 @@ const RequestEditor: React.FC = () => {
               ).toString()
             : null,
         authorizationType: authType,
+        // ✅ FIX: Always include token when there's one, regardless of authType check
         authorization: {
-          token: authType === 'bearer' ? authData.token : '',
+          token: authData.token, // Always include the token
           username: authType === 'basic' ? authData.username : '',
           password: authType === 'basic' ? authData.password : '',
           key: authType === 'apiKey' ? authData.key : '',
