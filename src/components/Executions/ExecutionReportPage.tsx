@@ -253,7 +253,7 @@ const ExecutionReportPage: React.FC = () => {
           successRate={`${data.successRate || 0}%`}
           meta={{
             environment,
-            executedAt: safeExecutedAt(started), // ← use safe helper
+            executedAt: safeExecutedAt(started),
             duration: `${Math.round((data.duration || 0) / 1000)}s`,
             executedBy: data.executedBy || 'Unknown',
           }}
