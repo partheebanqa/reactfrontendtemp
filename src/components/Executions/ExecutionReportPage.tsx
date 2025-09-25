@@ -59,6 +59,8 @@ const ExecutionReportPage: React.FC = () => {
   const started = qs.get('started'); // string | null
   const executionId = qs.get('executionId');
 
+  const reportRef = useRef<HTMLDivElement>(null);
+
   const { data: reportData, isLoading } = useQuery({
     queryKey: ['execution-report', entityId, type, executionId],
     queryFn: () => {
@@ -70,26 +72,26 @@ const ExecutionReportPage: React.FC = () => {
     enabled: !!entityId && !!type && !!executionId,
   });
 
+  console.log('reportData:', reportData);
+
+  const handleDownloadPDF = async (reportName: string) => {
+    if (!reportRef.current) return;
+
+    const element = reportRef.current;
+    const canvas = await html2canvas(element, { scale: 2 });
+    const imgData = canvas.toDataURL('image/png');
+
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    const imgProps = pdf.getImageProperties(imgData);
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+
+    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+    pdf.save(`${reportName || 'Report'}.pdf`);
+  };
+
   const renderTestSuiteReport = (data: any) => {
     console.log('data123:', data);
-
-    const reportRef = useRef<HTMLDivElement>(null);
-
-    const handleDownloadPDF = async () => {
-      if (!reportRef.current) return;
-
-      const element = reportRef.current;
-      const canvas = await html2canvas(element, { scale: 2 });
-      const imgData = canvas.toDataURL('image/png');
-
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const imgProps = pdf.getImageProperties(imgData);
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-
-      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-      pdf.save(`${data.name || 'TestSuiteReport'}.pdf`);
-    };
 
     const testCategories = [
       {
@@ -109,8 +111,8 @@ const ExecutionReportPage: React.FC = () => {
               api.status === 'passed'
                 ? 'success'
                 : api.status === 'failed'
-                  ? 'fail'
-                  : 'warning',
+                ? 'fail'
+                : 'warning',
           })) || [],
       },
       {
@@ -130,8 +132,8 @@ const ExecutionReportPage: React.FC = () => {
               api.status === 'passed'
                 ? 'success'
                 : api.status === 'failed'
-                  ? 'fail'
-                  : 'warning',
+                ? 'fail'
+                : 'warning',
           })) || [],
       },
       {
@@ -151,8 +153,8 @@ const ExecutionReportPage: React.FC = () => {
               api.status === 'passed'
                 ? 'success'
                 : api.status === 'failed'
-                  ? 'fail'
-                  : 'warning',
+                ? 'fail'
+                : 'warning',
           })) || [],
       },
       {
@@ -172,8 +174,8 @@ const ExecutionReportPage: React.FC = () => {
               api.status === 'passed'
                 ? 'success'
                 : api.status === 'failed'
-                  ? 'fail'
-                  : 'warning',
+                ? 'fail'
+                : 'warning',
           })) || [],
       },
       {
@@ -193,8 +195,8 @@ const ExecutionReportPage: React.FC = () => {
               api.status === 'passed'
                 ? 'success'
                 : api.status === 'failed'
-                  ? 'fail'
-                  : 'warning',
+                ? 'fail'
+                : 'warning',
           })) || [],
       },
       {
@@ -214,8 +216,8 @@ const ExecutionReportPage: React.FC = () => {
               api.status === 'passed'
                 ? 'success'
                 : api.status === 'failed'
-                  ? 'fail'
-                  : 'warning',
+                ? 'fail'
+                : 'warning',
           })) || [],
       },
       {
@@ -235,14 +237,14 @@ const ExecutionReportPage: React.FC = () => {
               api.status === 'passed'
                 ? 'success'
                 : api.status === 'failed'
-                  ? 'fail'
-                  : 'warning',
+                ? 'fail'
+                : 'warning',
           })) || [],
       },
     ];
 
     return (
-      <>
+      <div ref={reportRef}>
         <AnalyticsReport
           title={data.name || 'Test Suite Report'}
           description={
@@ -282,8 +284,6 @@ const ExecutionReportPage: React.FC = () => {
             },
           ]}
         />
-
-
 
         <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mt-5'>
           <TestCategoryCard
@@ -359,7 +359,7 @@ const ExecutionReportPage: React.FC = () => {
         </div>
 
         <DetailedTestResults categories={testCategories} />
-      </>
+      </div>
     );
   };
 
@@ -390,7 +390,7 @@ const ExecutionReportPage: React.FC = () => {
       }, {}) || {};
 
     return (
-      <>
+      <div ref={reportRef}>
         <AnalyticsReport
           title={data.name || 'Request Chain Report'}
           description='Request chain execution flow with variable extraction and data flow analysis'
@@ -437,7 +437,7 @@ const ExecutionReportPage: React.FC = () => {
         </div>
 
         <RequestChainExecutionFlow steps={steps} />
-      </>
+      </div>
     );
   };
 
@@ -454,7 +454,11 @@ const ExecutionReportPage: React.FC = () => {
             </h2>
           </div>
           <div className='flex items-center space-x-4'>
-            <Button>
+            <Button
+              onClick={() =>
+                handleDownloadPDF(reportData?.data?.name || 'Report')
+              }
+            >
               Download Report
             </Button>
           </div>
