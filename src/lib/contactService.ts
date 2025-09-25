@@ -1,13 +1,17 @@
-import { ContactFormData, SubmissionResponse } from '@/shared/types/contact';
-import { sanitizeFormData } from '../utils/validation';
-import { formRateLimiter, getClientFingerprint } from '../utils/security';
+import axios from "axios";
+import { ContactFormData, SubmissionResponse } from "@/shared/types/contact";
+import { sanitizeFormData } from "../utils/validation";
+import { formRateLimiter, getClientFingerprint } from "../utils/security";
 
-// Simulate API call - replace with your actual API endpoint
-export const submitContactForm = async (
-  data: ContactFormData
-): Promise<SubmissionResponse> => {
-  // Rate limiting check
+export const submitContactForm = async ( data: ContactFormData): Promise<SubmissionResponse> => {
+
+
+ 
+  // 1. Rate limiting check
   const clientId = getClientFingerprint();
+   const API_URL = 'https://apibackenddev.onrender.com'
+  
+   
   if (!formRateLimiter.isAllowed(clientId)) {
     const remainingTime = Math.ceil(
       formRateLimiter.getRemainingTime(clientId) / 1000 / 60
@@ -17,28 +21,40 @@ export const submitContactForm = async (
     );
   }
 
-  // Sanitize form data before processing
+  // 2. Sanitize data
   const sanitizedData = sanitizeFormData(data);
 
-  // Additional server-side validation would go here
+  // 3. Extra validation before sending
   if (!sanitizedData.name || !sanitizedData.email || !sanitizedData.message) {
-    throw new Error('Required fields are missing or invalid');
+    throw new Error("Required fields are missing or invalid");
   }
 
-  // Simulate network delay
-  await new Promise((resolve) => setTimeout(resolve, 2000));
+  try {
+    // 4. Send to API
+    const response = await axios.post(
+      `${API_URL}/contact`,
+      sanitizedData,
+      {
+        headers: { "Content-Type": "application/json" },
+      }
+    );
 
-  // Simulate random success/failure for demo
-  const shouldSucceed = Math.random() > 0.2;
-
-  if (!shouldSucceed) {
-    throw new Error('Failed to submit form. Please try again.');
+    return {
+      success: true,
+      message:
+        response.data?.message ||
+        "Thank you for your message! We'll get back to you soon.",
+    };
+    
+  } catch (error: any) {
+    if (error.response) {
+      throw new Error(
+        error.response.data?.message || "Failed to submit contact form"
+      );
+    } else if (error.request) {
+      throw new Error("No response from server. Please try again later.");
+    } else {
+      throw new Error(error.message || "Unexpected error");
+    }
   }
-
-  // Log sanitized data (in production, use proper logging)
-
-  return {
-    success: true,
-    message: "Thank you for your message! We'll get back to you soon.",
-  };
 };

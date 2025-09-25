@@ -468,90 +468,78 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className='max-w-6xl max-h-[85vh] overflow-hidden flex flex-col p-0'>
-        {/* Header */}
-        <div className='p-6 border-b'>
-          <DialogHeader className='space-y-0'>
-            <DialogTitle className='text-xl'>Select Test Cases</DialogTitle>
-            <p className='text-sm text-muted-foreground mt-1'>
-              Choose test cases for: {name}
-            </p>
+      <DialogContent className='max-w-6xl max-h-[90vh] overflow-hidden flex flex-col p-0 justify-center'>
+        <div className="p-3 border-b">
+          <DialogHeader>
+            <div className="flex items-center gap-4">
+              <DialogTitle className="text-xl whitespace-nowrap">
+                Select Test Cases :
+              </DialogTitle>
+              <p className="text-[14px] text-muted-foreground whitespace-nowrap">
+                Choose test cases for: {name}
+              </p>
+
+              <div className="relative flex-1 max-w-md">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search test cases by name, description, or tags..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                  disabled={isLoading}
+                />
+              </div>
+
+              <Select
+                value={categoryFilter}
+                onValueChange={setCategoryFilter}
+                disabled={isLoading}
+              >
+                <SelectTrigger className="w-48">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="All Categories">
+                    All Categories ({totalAvailableTests})
+                  </SelectItem>
+                  {testCaseCategories.map((category) => (
+                    <SelectItem key={category.category} value={category.category}>
+                      {category.category} ({category.count})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </DialogHeader>
         </div>
 
-        {/* Search and Filter Bar */}
-        <div className='px-6 py-4 border-b bg-muted/20'>
-          <div className='flex items-center space-x-4'>
-            <div className='relative flex-1'>
-              <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground' />
-              <Input
-                placeholder='Search test cases by name, description, or tags...'
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className='pl-10'
-                disabled={isLoading}
-              />
-            </div>
-            <Select
-              value={categoryFilter}
-              onValueChange={setCategoryFilter}
-              disabled={isLoading}
-            >
-              <SelectTrigger className='w-48'>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value='All Categories'>
-                  All Categories ({totalAvailableTests})
-                </SelectItem>
-                {testCaseCategories.map((category) => (
-                  <SelectItem key={category.category} value={category.category}>
-                    {category.category} ({category.count})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        {/* Subcategory chips */}
         <div className='px-3'>
-          {!isLoading && !error && (
-            <Accordion type="single" collapsible className="w-full border rounded-md px-2">
-              <AccordionItem value="sub-category">
-                <AccordionTrigger className='text-[14px]'>Filter by Sub Category</AccordionTrigger>
-                <AccordionContent>
-                  <div className="flex flex-wrap gap-2">
-                    {subcatChips.map((chip) => {
-                      const active = subcatFilter === chip.name;
-
-                      return (
-                        <button
-                          key={chip.name}
-                          onClick={() =>
-                            setSubcatFilter(active ? "" : chip.name) // toggle
-                          }
-                          className={`inline-flex items-center rounded-md border px-2 py-1 text-xs ${active
-                            ? "bg-[#136fb0] text-white border-[#136fb0]"
-                            : "bg-transparent text-foreground border-muted-foreground/30 hover:bg-muted/40"
-                            }`}
-                          title={chip.name}
-                        >
-                          <span className="mr-1">{chip.name}</span>
-                          <span
-                            className={`ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[#136fb0] ${active ? "bg-white/20 text-[#ffffff]" : "bg-muted"
-                              }`}
-                          >
-                            {chip.count}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
-          )}
+          <div className="flex flex-wrap gap-2 justify-center">
+            {subcatChips.map((chip) => {
+              const active = subcatFilter === chip.name;
+              return (
+                <button
+                  key={chip.name}
+                  onClick={() =>
+                    setSubcatFilter(active ? "" : chip.name) // toggle
+                  }
+                  className={`inline-flex items-center rounded-md border px-2 py-1 text-xs ${active
+                    ? "bg-[#136fb0] text-white border-[#136fb0]"
+                    : "bg-transparent text-foreground border-muted-foreground/30 hover:bg-muted/40"
+                    }`}
+                  title={chip.name}
+                >
+                  <span className="mr-1">{chip.name}</span>
+                  <span
+                    className={`ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[#136fb0] ${active ? "bg-white/20 text-[#ffffff]" : "bg-muted"
+                      }`}
+                  >
+                    {chip.count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* Main Content */}

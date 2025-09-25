@@ -23,6 +23,9 @@ import {
 } from 'lucide-react';
 import { formatDistanceToNow, isValid } from 'date-fns';
 import { Button } from '@/components/ui/button';
+import { useRef } from 'react';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 type RouteParams = {
   type: 'test_suite' | 'request_chain';
@@ -70,6 +73,24 @@ const ExecutionReportPage: React.FC = () => {
   const renderTestSuiteReport = (data: any) => {
     console.log('data123:', data);
 
+    const reportRef = useRef<HTMLDivElement>(null);
+
+    const handleDownloadPDF = async () => {
+      if (!reportRef.current) return;
+
+      const element = reportRef.current;
+      const canvas = await html2canvas(element, { scale: 2 });
+      const imgData = canvas.toDataURL('image/png');
+
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const imgProps = pdf.getImageProperties(imgData);
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      pdf.save(`${data.name || 'TestSuiteReport'}.pdf`);
+    };
+
     const testCategories = [
       {
         name: 'Positive Tests',
@@ -88,8 +109,8 @@ const ExecutionReportPage: React.FC = () => {
               api.status === 'passed'
                 ? 'success'
                 : api.status === 'failed'
-                ? 'fail'
-                : 'warning',
+                  ? 'fail'
+                  : 'warning',
           })) || [],
       },
       {
@@ -109,8 +130,8 @@ const ExecutionReportPage: React.FC = () => {
               api.status === 'passed'
                 ? 'success'
                 : api.status === 'failed'
-                ? 'fail'
-                : 'warning',
+                  ? 'fail'
+                  : 'warning',
           })) || [],
       },
       {
@@ -130,8 +151,8 @@ const ExecutionReportPage: React.FC = () => {
               api.status === 'passed'
                 ? 'success'
                 : api.status === 'failed'
-                ? 'fail'
-                : 'warning',
+                  ? 'fail'
+                  : 'warning',
           })) || [],
       },
       {
@@ -151,8 +172,8 @@ const ExecutionReportPage: React.FC = () => {
               api.status === 'passed'
                 ? 'success'
                 : api.status === 'failed'
-                ? 'fail'
-                : 'warning',
+                  ? 'fail'
+                  : 'warning',
           })) || [],
       },
       {
@@ -172,8 +193,8 @@ const ExecutionReportPage: React.FC = () => {
               api.status === 'passed'
                 ? 'success'
                 : api.status === 'failed'
-                ? 'fail'
-                : 'warning',
+                  ? 'fail'
+                  : 'warning',
           })) || [],
       },
       {
@@ -193,8 +214,8 @@ const ExecutionReportPage: React.FC = () => {
               api.status === 'passed'
                 ? 'success'
                 : api.status === 'failed'
-                ? 'fail'
-                : 'warning',
+                  ? 'fail'
+                  : 'warning',
           })) || [],
       },
       {
@@ -214,8 +235,8 @@ const ExecutionReportPage: React.FC = () => {
               api.status === 'passed'
                 ? 'success'
                 : api.status === 'failed'
-                ? 'fail'
-                : 'warning',
+                  ? 'fail'
+                  : 'warning',
           })) || [],
       },
     ];
@@ -261,6 +282,8 @@ const ExecutionReportPage: React.FC = () => {
             },
           ]}
         />
+
+
 
         <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mt-5'>
           <TestCategoryCard
@@ -430,7 +453,11 @@ const ExecutionReportPage: React.FC = () => {
                 : 'Request Chain Report'}
             </h2>
           </div>
-          <div className='flex items-center space-x-4'></div>
+          <div className='flex items-center space-x-4'>
+            <Button>
+              Download Report
+            </Button>
+          </div>
         </div>
       </header>
 
