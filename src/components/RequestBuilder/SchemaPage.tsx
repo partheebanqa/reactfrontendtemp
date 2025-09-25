@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Download, Server, X, GitCompare, Upload } from 'lucide-react';
@@ -9,9 +9,14 @@ import SchemaList from './schema/SchemaList';
 import SchemaComparer from './schema/SchemaComparer';
 import JsonTreeViewer from './schema/JsonTreeViewer';
 import { useSchema } from '@/hooks/useSchema';
+import { useCollection } from '@/hooks/useCollection';
+import { useToast } from '@/hooks/use-toast';
 
 const SchemaPage: React.FC = () => {
-  const { schemas } = useSchema();
+  const { schemas, uploadSchemaMutation } = useSchema();
+  const { activeRequest } = useCollection();
+  const { toast } = useToast();
+
   const [compareMode, setCompareMode] = useState(false);
   const [selectedSchemas, setSelectedSchemas] = useState<string[]>([]);
   const [viewSchema, setViewSchema] = useState<{
@@ -19,6 +24,36 @@ const SchemaPage: React.FC = () => {
     name: string;
     schema: any;
   } | null>(null);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Upload handler shared by both button + drag-drop
+  const processFile = async (file: File) => {
+    if (!activeRequest?.id) {
+      toast({
+        title: 'Error',
+        description: 'Please save the request before uploading a schema.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    try {
+      const response = await uploadSchemaMutation.mutateAsync({
+        requestId: activeRequest.id,
+        schema: file,
+      });
+      toast({
+        title: 'Schema Uploaded',
+        description: response.message,
+      });
+    } catch {
+      toast({
+        title: 'Upload Failed',
+        description: 'Error reading or uploading schema file.',
+        variant: 'destructive',
+      });
+    }
+  };
 
   const toggleCompareMode = () => {
     setCompareMode(!compareMode);
@@ -66,16 +101,30 @@ const SchemaPage: React.FC = () => {
         <CardHeader className='flex flex-row items-center justify-between space-y-0'>
           <div>
             <h3 className='text-base sm:text-lg font-medium text-gray-900 dark:text-white'>
-              API Schemas{' '}
+              API Schemas
             </h3>
           </div>
           <div className='flex space-x-2'>
-            <Button
-              variant='outline'
-              onClick={() => document.getElementById('schema-upload')?.click()}
-            >
-              <Upload className='w-4 h-4 mr-2' /> Upload Schema
-            </Button>
+            {/* Hidden input for Upload button */}
+            <input
+              ref={fileInputRef}
+              type='file'
+              accept='.json,.yaml,.yml'
+              className='hidden'
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) processFile(file);
+              }}
+            />
+            {schemas.length < 2 && (
+              <Button
+                variant='outline'
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <Upload className='w-4 h-4 mr-2' /> Upload Schema
+              </Button>
+            )}
+
             <Button
               variant={compareMode ? 'outline' : 'default'}
               onClick={toggleCompareMode}
@@ -101,9 +150,9 @@ const SchemaPage: React.FC = () => {
           </div>
         </CardHeader>
         <CardContent>
-          {schemas.length === 0 && <SchemaUploader />}
-
-          {schemas.length > 0 && (
+          {schemas.length === 0 ? (
+            <SchemaUploader onUpload={processFile} />
+          ) : (
             <SchemaList
               compareMode={compareMode}
               selectedSchemas={selectedSchemas}

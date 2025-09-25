@@ -144,10 +144,10 @@ const SchemaList: React.FC<SchemaListProps> = ({
               )}
             </div>
 
-            <div className='flex items-center text-xs text-muted-foreground'>
+            {/* <div className='flex items-center text-xs text-muted-foreground'>
               <Calendar size={14} className='mr-1' />
               <span>{formatDate(schema.createdAt)}</span>
-            </div>
+            </div> */}
           </CardContent>
         </Card>
       ))}

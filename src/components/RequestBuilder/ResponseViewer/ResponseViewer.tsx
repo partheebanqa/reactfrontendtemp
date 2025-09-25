@@ -12,7 +12,6 @@ import {
 } from 'lucide-react';
 import { useRequest } from '@/hooks/useRequest';
 import JsonViewer from '../RequestEditor/JsonViewer';
-import PrimarySchemaPanel from '../schema/PrimarySchemaPanel';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 interface ResponseViewerProps {
@@ -21,6 +20,8 @@ interface ResponseViewerProps {
 
 const ResponseViewer = ({ isBottomLayout }: ResponseViewerProps) => {
   const { responseData } = useRequest();
+
+  console.log('responseData:', responseData);
 
   const isMobile = useIsMobile();
   const [activeTab, setActiveTab] = useState<
@@ -317,19 +318,21 @@ const ResponseViewer = ({ isBottomLayout }: ResponseViewerProps) => {
         {activeTab === 'headers' && (
           <div className='p-4 overflow-auto h-full'>
             <div className='space-y-2 min-w-0'>
-              {Object.entries(responseData.headers).map(([key, value]) => (
-                <div
-                  key={key}
-                  className='flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-4 py-2 border-b border-gray-100 dark:border-gray-800'
-                >
-                  <span className='font-medium text-gray-900 dark:text-white min-w-0 sm:flex-1 break-all'>
-                    {key}:
-                  </span>
-                  <span className='text-gray-600 dark:text-gray-400 min-w-0 sm:flex-1 break-all'>
-                    {value}
-                  </span>
-                </div>
-              ))}
+              {Object.entries(responseData.headers).map(
+                ([key, value]: [string, any]) => (
+                  <div
+                    key={key}
+                    className='flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-4 py-2 border-b border-gray-100 dark:border-gray-800'
+                  >
+                    <span className='font-medium text-gray-900 dark:text-white min-w-0 sm:flex-1 break-all'>
+                      {key}:
+                    </span>
+                    <span className='text-gray-600 dark:text-gray-400 min-w-0 sm:flex-1 break-all'>
+                      {value}
+                    </span>
+                  </div>
+                )
+              )}
             </div>
           </div>
         )}
@@ -469,40 +472,12 @@ const ResponseViewer = ({ isBottomLayout }: ResponseViewerProps) => {
                           </div>
                         )}
 
-                        {/* <div className='flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-4'>
-                          <span className='font-medium text-gray-700 dark:text-gray-300 min-w-[100px]'>
-                            Actual value:
-                          </span>
-                          <span className='text-gray-600 dark:text-gray-400 font-mono bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded'>
-                            {assertion.responseStatus || 'N/A'}
-                          </span>
-                        </div> */}
-
                         {assertion.errorMessage && (
                           <div className='mt-3 p-3 bg-red-100 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded text-red-700 dark:text-red-300'>
                             <span className='font-medium'>Error: </span>
                             {assertion.errorMessage}
                           </div>
                         )}
-
-                        {/* Execution Details */}
-                        {/* <div className='grid grid-cols-1 sm:grid-cols-3 gap-4 mt-3 pt-3 border-t border-gray-200 dark:border-gray-700'>
-                          <div className='text-xs'>
-                            <span className='font-medium text-gray-500 dark:text-gray-400'>
-                              Response Time: {assertion.responseTime}ms
-                            </span>
-                          </div>
-                          <div className='text-xs'>
-                            <span className='font-medium text-gray-500 dark:text-gray-400'>
-                              Response Size: {assertion.responseSize} bytes
-                            </span>
-                          </div>
-                          <div className='text-xs'>
-                            <span className='font-medium text-gray-500 dark:text-gray-400'>
-                              Source: {assertion.source}
-                            </span>
-                          </div>
-                        </div> */}
                       </div>
                     </div>
                   ))}
@@ -521,7 +496,55 @@ const ResponseViewer = ({ isBottomLayout }: ResponseViewerProps) => {
           </div>
         )}
 
-        {activeTab === 'schema' && <PrimarySchemaPanel />}
+        {activeTab === 'schema' && (
+          <div className='p-4 overflow-auto h-full'>
+            {responseData.schemaValidation ? (
+              <div className='space-y-4'>
+                <div
+                  className={`border rounded-lg p-4 ${
+                    responseData.schemaValidation.passed
+                      ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
+                      : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
+                  }`}
+                >
+                  <div className='flex items-center space-x-2'>
+                    {responseData.schemaValidation.passed ? (
+                      <CheckCircle className='h-5 w-5 text-green-600 flex-shrink-0' />
+                    ) : (
+                      <X className='h-5 w-5 text-red-600 flex-shrink-0' />
+                    )}
+                    <div>
+                      <h3
+                        className={`font-medium ${
+                          responseData.schemaValidation.passed
+                            ? 'text-green-800 dark:text-green-300'
+                            : 'text-red-800 dark:text-red-300'
+                        }`}
+                      >
+                        Schema Validation{' '}
+                        {responseData.schemaValidation.passed
+                          ? 'Passed'
+                          : 'Failed'}
+                      </h3>
+                      <p className='text-sm text-gray-600 dark:text-gray-400 mt-1'>
+                        Schema: {responseData.schemaValidation.name}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className='text-center py-8'>
+                <div className='text-gray-500 dark:text-gray-400 mb-2'>
+                  No schema validation results
+                </div>
+                <div className='text-sm text-gray-400'>
+                  Schema validation will appear here when available
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

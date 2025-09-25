@@ -4,15 +4,22 @@ import {
   setPrimarySchema,
   deleteSchema,
 } from '@/services/schema.service';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { schemaActions } from '../schemaStore';
 
 export const useUploadRequestSchemaMutation = () => {
+  const queryClient = useQueryClient();
+  const { mutate: fetchSchemaMutate } = fetchSchemaMutation();
+
   return useMutation({
     mutationFn: uploadSchema,
-    onSuccess: (newSchema: any) => {
+    onSuccess: (newSchema: any, variables) => {
       console.log('New schema uploaded:', newSchema);
-      schemaActions.addSchema(newSchema);
+      queryClient.invalidateQueries({
+        queryKey: ['schemas', variables.requestId],
+      });
+      // Refetch schemas from server
+      fetchSchemaMutate(variables.requestId);
     },
     onError: (error) => {
       console.error('Error uploading schema:', error);
@@ -33,12 +40,17 @@ export const fetchSchemaMutation = () => {
 };
 
 export const useSetPrimarySchemaMutation = () => {
+  const queryClient = useQueryClient();
+  const { mutate: fetchSchemaMutate } = fetchSchemaMutation();
+
   return useMutation({
     mutationFn: setPrimarySchema,
     onSuccess: (data: any, variables) => {
       console.log('Schema set as primary:', data);
-      // Update local state
-      schemaActions.setPrimarySchema(variables.schemaId);
+      queryClient.invalidateQueries({
+        queryKey: ['schemas', variables.requestId],
+      });
+      fetchSchemaMutate(variables.requestId);
     },
     onError: (error) => {
       console.error('Error setting primary schema:', error);
@@ -47,12 +59,17 @@ export const useSetPrimarySchemaMutation = () => {
 };
 
 export const useDeleteSchemaMutation = () => {
+  const queryClient = useQueryClient();
+  const { mutate: fetchSchemaMutate } = fetchSchemaMutation();
+
   return useMutation({
     mutationFn: deleteSchema,
     onSuccess: (data: any, variables) => {
       console.log('Schema deleted:', data);
-      // Update local state
-      schemaActions.deleteSchema(variables.schemaId);
+      queryClient.invalidateQueries({
+        queryKey: ['schemas', variables.requestId],
+      });
+      fetchSchemaMutate(variables.requestId);
     },
     onError: (error) => {
       console.error('Error deleting schema:', error);
