@@ -1,13 +1,22 @@
-import React, { useState } from "react";
-import { Download, Eye, Server } from "lucide-react";
-import SchemaUploader from "./schema/SchemaUploader";
-import SchemaList from "./schema/SchemaList";
-import SchemaComparer from "./schema/SchemaComparer";
-import JsonTreeViewer from "./schema/JsonTreeViewer";
-import { useSchema } from "@/hooks/useSchema";
+'use client';
+
+import React, { useState, useRef } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Download, Server, X, GitCompare, Upload } from 'lucide-react';
+import SchemaUploader from './schema/SchemaUploader';
+import SchemaList from './schema/SchemaList';
+import SchemaComparer from './schema/SchemaComparer';
+import JsonTreeViewer from './schema/JsonTreeViewer';
+import { useSchema } from '@/hooks/useSchema';
+import { useCollection } from '@/hooks/useCollection';
+import { useToast } from '@/hooks/use-toast';
 
 const SchemaPage: React.FC = () => {
-  const { schemas } = useSchema();
+  const { schemas, uploadSchemaMutation } = useSchema();
+  const { activeRequest } = useCollection();
+  const { toast } = useToast();
+
   const [compareMode, setCompareMode] = useState(false);
   const [selectedSchemas, setSelectedSchemas] = useState<string[]>([]);
   const [viewSchema, setViewSchema] = useState<{
@@ -15,6 +24,36 @@ const SchemaPage: React.FC = () => {
     name: string;
     schema: any;
   } | null>(null);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Upload handler shared by both button + drag-drop
+  const processFile = async (file: File) => {
+    if (!activeRequest?.id) {
+      toast({
+        title: 'Error',
+        description: 'Please save the request before uploading a schema.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    try {
+      const response = await uploadSchemaMutation.mutateAsync({
+        requestId: activeRequest.id,
+        schema: file,
+      });
+      toast({
+        title: 'Schema Uploaded',
+        description: response.message,
+      });
+    } catch {
+      toast({
+        title: 'Upload Failed',
+        description: 'Error reading or uploading schema file.',
+        variant: 'destructive',
+      });
+    }
+  };
 
   const toggleCompareMode = () => {
     setCompareMode(!compareMode);
@@ -41,10 +80,10 @@ const SchemaPage: React.FC = () => {
 
   const handleDownloadSchema = (schema: { name: string; schema: any }) => {
     const blob = new Blob([JSON.stringify(schema.schema, null, 2)], {
-      type: "application/json",
+      type: 'application/json',
     });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
+    const a = document.createElement('a');
     a.href = url;
     a.download = `${schema.name}.json`;
     document.body.appendChild(a);
@@ -56,103 +95,119 @@ const SchemaPage: React.FC = () => {
   const canCompare = selectedSchemas.length === 2;
 
   return (
-    <div className="space-y-6">
-      <div className="bg-white rounded-lg shadow-md p-4">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold">API Schemas</h2>
-          <div className="flex space-x-3">
-            <button
-              className={`px-3 py-1 rounded-md transition-colors ${
-                compareMode
-                  ? "bg-gray-200 text-gray-800"
-                  : "bg-indigo-600 text-white hover:bg-indigo-700"
-              }`}
+    <div className='space-y-6'>
+      {/* Schemas Section */}
+      <Card>
+        <CardHeader className='flex flex-row items-center justify-between space-y-0'>
+          <div>
+            <h3 className='text-base sm:text-lg font-medium text-gray-900 dark:text-white'>
+              API Schemas
+            </h3>
+          </div>
+          <div className='flex space-x-2'>
+            {/* Hidden input for Upload button */}
+            <input
+              ref={fileInputRef}
+              type='file'
+              accept='.json,.yaml,.yml'
+              className='hidden'
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) processFile(file);
+              }}
+            />
+            {schemas.length < 2 && (
+              <Button
+                variant='outline'
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <Upload className='w-4 h-4 mr-2' /> Upload Schema
+              </Button>
+            )}
+
+            <Button
+              variant={compareMode ? 'outline' : 'default'}
               onClick={toggleCompareMode}
             >
-              {compareMode ? "Cancel Compare" : "Compare Schemas"}
-            </button>
+              {compareMode ? (
+                <>
+                  <X className='w-4 h-4 mr-2' /> Cancel Compare
+                </>
+              ) : (
+                <>
+                  <GitCompare className='w-4 h-4 mr-2' /> Compare Schemas
+                </>
+              )}
+            </Button>
             {compareMode && (
-              <button
-                className={`px-3 py-1 rounded-md ${
-                  canCompare
-                    ? "bg-green-600 text-white hover:bg-green-700"
-                    : "bg-gray-200 text-gray-400 cursor-not-allowed"
-                } transition-colors`}
+              <Button
+                variant={canCompare ? 'default' : 'outline'}
                 disabled={!canCompare}
               >
-                Compare Selected
-              </button>
+                <GitCompare className='w-4 h-4 mr-2' /> Compare Selected
+              </Button>
             )}
           </div>
-        </div>
+        </CardHeader>
+        <CardContent>
+          {schemas.length === 0 ? (
+            <SchemaUploader onUpload={processFile} />
+          ) : (
+            <SchemaList
+              compareMode={compareMode}
+              selectedSchemas={selectedSchemas}
+              onSchemaSelect={handleSchemaSelect}
+              onViewSchema={handleViewSchema}
+              onDownloadSchema={handleDownloadSchema}
+            />
+          )}
+        </CardContent>
+      </Card>
 
-        <SchemaUploader />
-
-        {schemas.length > 0 ? (
-          <SchemaList
-            compareMode={compareMode}
-            selectedSchemas={selectedSchemas}
-            onSchemaSelect={handleSchemaSelect}
-            onViewSchema={handleViewSchema}
-            onDownloadSchema={handleDownloadSchema}
-          />
-        ) : (
-          <div className="p-6 border border-dashed border-gray-300 rounded-md text-center text-gray-500">
-            <p>No schemas available</p>
-            <p className="mt-2 text-sm">
-              Upload a schema or generate one from an API response
-            </p>
-          </div>
-        )}
-      </div>
-
+      {/* Schema Comparison */}
       {canCompare && (
-        <div className="bg-white rounded-lg shadow-md p-4">
-          <h2 className="text-xl font-semibold mb-4">Schema Comparison</h2>
-          <SchemaComparer schemaIds={selectedSchemas} />
-        </div>
+        <Card>
+          <CardHeader>
+            <h3 className='text-base sm:text-lg font-medium text-gray-900 dark:text-white'>
+              Schema Comparison
+            </h3>
+          </CardHeader>
+          <CardContent>
+            <SchemaComparer schemaIds={selectedSchemas} />
+          </CardContent>
+        </Card>
       )}
 
       {/* Schema Viewer Modal */}
       {viewSchema && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl w-11/12 max-w-4xl max-h-[90vh] overflow-hidden">
-            <div className="p-4 border-b border-gray-200 flex justify-between items-center">
-              <div className="flex items-center space-x-2">
-                <Server size={20} className="text-indigo-600" />
-                <h3 className="text-lg font-semibold">{viewSchema.name}</h3>
+        <div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50'>
+          <div className='bg-white dark:bg-gray-900 rounded-lg shadow-xl w-11/12 max-w-4xl max-h-[90vh] overflow-hidden'>
+            <div className='p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center'>
+              <div className='flex items-center space-x-2'>
+                <Server size={20} className='text-indigo-600' />
+                <h3 className='text-base sm:text-lg font-medium text-gray-900 dark:text-white'>
+                  {viewSchema.name}
+                </h3>
               </div>
-              <button
+              <Button
+                variant='ghost'
+                size='icon'
                 onClick={() => setViewSchema(null)}
-                className="text-gray-500 hover:text-gray-700"
               >
-                <span className="sr-only">Close</span>
-                <svg
-                  className="h-6 w-6"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </button>
+                <X className='h-5 w-5' />
+              </Button>
             </div>
-            <div className="p-4 overflow-auto max-h-[calc(90vh-8rem)]">
+            <div className='p-4 overflow-auto max-h-[calc(90vh-8rem)]'>
               <JsonTreeViewer json={viewSchema.schema} />
             </div>
-            <div className="p-4 border-t border-gray-200 flex justify-end">
-              <button
+            <div className='p-4 border-t border-gray-200 dark:border-gray-700 flex justify-end'>
+              <Button
                 onClick={() => handleDownloadSchema(viewSchema)}
-                className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors flex items-center space-x-2"
+                className='flex items-center'
               >
-                <Download size={16} />
-                <span>Download JSON</span>
-              </button>
+                <Download size={16} className='mr-2' />
+                Download JSON
+              </Button>
             </div>
           </div>
         </div>

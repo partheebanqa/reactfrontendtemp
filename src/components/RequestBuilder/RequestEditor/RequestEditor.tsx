@@ -598,6 +598,7 @@ const RequestEditor: React.FC = () => {
           rawBody: backendBody,
           metrics: backendData?.data?.metrics ?? {},
           assertionLogs: backendData?.data?.assertionLogs || [],
+          schemaValidation: backendData?.data?.schemaValidation || null,
         };
 
         setResponseData(normalizedResponse as any);
