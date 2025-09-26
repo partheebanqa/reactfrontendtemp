@@ -9,16 +9,16 @@ import { CurrentPlanProvider } from "./context/CurrentPlanContext";
 function App() {
   try {
     return (
-      <CurrentPlanProvider>
+      <QueryClientProvider client={queryClient}>
         <HelmetProvider>
-          <QueryClientProvider client={queryClient}>
+          <CurrentPlanProvider>
             <TooltipProvider>
               <Toaster />
               <Router />
             </TooltipProvider>
-          </QueryClientProvider>
+          </CurrentPlanProvider>
         </HelmetProvider>
-      </CurrentPlanProvider>
+      </QueryClientProvider>
     );
   } catch (error) {
     console.error("App error:", error);

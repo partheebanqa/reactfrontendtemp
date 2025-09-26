@@ -57,7 +57,7 @@ export function PlanManagement() {
     country: 'United States'
   });
 
-  const { currentPlan, refreshCurrentPlan } = useCurrentPlan();
+  const { currentPlan } = useCurrentPlan();
 
 
   const featuresConst =
@@ -235,7 +235,6 @@ export function PlanManagement() {
 
   useEffect(() => {
     getPlans();
-
   }, [])
 
 
