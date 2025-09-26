@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { ENV } from '@/config/env';
 import { apiRequest } from '@/lib/queryClient';
+import { useAuth } from '@/hooks/useAuth';
 
 interface CurrentPlan {
   ID: string;
@@ -24,8 +25,7 @@ interface CurrentPlanContextType {
 const CurrentPlanContext = createContext<CurrentPlanContextType | undefined>(undefined);
 
 export const CurrentPlanProvider = ({ children }: { children: React.ReactNode }) => {
-
-
+  const { user, token } = useAuth();
   const [currentPlan, setCurrentPlan] = useState<CurrentPlan | null>(null);
 
   const fetchCurrentPlan = async () => {
@@ -48,8 +48,10 @@ export const CurrentPlanProvider = ({ children }: { children: React.ReactNode })
   };
 
   useEffect(() => {
-    fetchCurrentPlan();
-  }, []);
+    if (user && token) {   // ✅ only fetch after login
+      fetchCurrentPlan();
+    }
+  }, [user, token]);
 
   return (
     <CurrentPlanContext.Provider value={{ currentPlan, refreshCurrentPlan: fetchCurrentPlan }}>
@@ -57,7 +59,6 @@ export const CurrentPlanProvider = ({ children }: { children: React.ReactNode })
     </CurrentPlanContext.Provider>
   );
 };
-
 
 export const useCurrentPlan = () => {
   const context = useContext(CurrentPlanContext);

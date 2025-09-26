@@ -295,9 +295,8 @@ export function ExternalTools() {
       toast({
         variant: 'success',
         title: `Integration ${updated.isActive ? 'Activated' : 'Deactivated'}`,
-        description: `${currentIntegration.name} has been ${
-          updated.isActive ? 'activated' : 'deactivated'
-        }.`,
+        description: `${currentIntegration.name} has been ${updated.isActive ? 'activated' : 'deactivated'
+          }.`,
       });
       // getIntegrations();
     } catch (error: any) {
@@ -622,18 +621,16 @@ export function ExternalTools() {
                           onCheckedChange={() =>
                             handleToggleStatus(integration.id)
                           }
-                          className={`${
-                            integration.isActive
-                              ? 'bg-green-500'
-                              : 'bg-gray-300'
-                          } relative inline-flex h-6 w-11 items-center rounded-full transition-colors`}
+                          className={`${integration.isActive
+                            ? 'bg-green-500'
+                            : 'bg-gray-300'
+                            } relative inline-flex h-6 w-11 items-center rounded-full transition-colors`}
                         >
                           <span
-                            className={`${
-                              integration.isActive
-                                ? 'translate-x-6'
-                                : 'translate-x-1'
-                            } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
+                            className={`${integration.isActive
+                              ? 'translate-x-6'
+                              : 'translate-x-1'
+                              } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
                           />
                         </Switch>
                         <span className='text-xs text-gray-600'>
@@ -702,18 +699,16 @@ export function ExternalTools() {
                           onCheckedChange={() =>
                             handleToggleStatus(integration.id)
                           }
-                          className={`${
-                            integration.isActive
-                              ? 'bg-green-500'
-                              : 'bg-gray-300'
-                          } relative inline-flex h-6 w-11 items-center rounded-full transition-colors`}
+                          className={`${integration.isActive
+                            ? 'bg-green-500'
+                            : 'bg-gray-300'
+                            } relative inline-flex h-6 w-11 items-center rounded-full transition-colors`}
                         >
                           <span
-                            className={`${
-                              integration.isActive
-                                ? 'translate-x-6'
-                                : 'translate-x-1'
-                            } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
+                            className={`${integration.isActive
+                              ? 'translate-x-6'
+                              : 'translate-x-1'
+                              } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
                           />
                         </Switch>
                         <span className='text-xs text-gray-600'>
