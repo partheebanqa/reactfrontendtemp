@@ -833,6 +833,7 @@ const RequestEditor: React.FC = () => {
         );
         return;
       }
+
       let createdCollectionId: string | null = null;
       if (isCreatingCollection && newCollectionName.trim()) {
         const res = await addCollectionMutation.mutateAsync({
@@ -848,6 +849,7 @@ const RequestEditor: React.FC = () => {
           setActiveCollection(createdCollection || null);
         }
       }
+
       if (
         !activeCollection &&
         (!isCreatingCollection || !newCollectionName.trim())
@@ -858,6 +860,7 @@ const RequestEditor: React.FC = () => {
         );
         return;
       }
+
       let maxOrder = 0;
       if (activeCollection) {
         const response = await fetchCollectionRequests.mutateAsync(
@@ -868,23 +871,26 @@ const RequestEditor: React.FC = () => {
         }
       }
 
-      // Get selected assertions from the store - ensure it's an array
+      // ✅ normalize authorizationType
+      let effectiveAuthType = authType;
+      if (authData?.token && (!authType || authType === 'none')) {
+        effectiveAuthType = 'bearer';
+      }
+
+      // Get selected assertions
       const selectedAssertions = Array.isArray(assertions)
-        ? assertions
-            .filter((assertion) => assertion.enabled)
-            .map((assertion) => assertion)
+        ? assertions.filter((a) => a.enabled).map((a) => a)
         : [];
 
       const requestData = {
-        collectionId: createdCollectionId
-          ? createdCollectionId
-          : activeCollection?.id,
+        workspaceId: currentWorkspace.id,
+        collectionId: createdCollectionId || activeCollection?.id,
         description: '',
         name: activeRequest.name || 'New Request',
         order: maxOrder + 1,
-        method: method,
-        url: url,
-        bodyType: bodyType == 'json' ? 'raw' : bodyType,
+        method,
+        url,
+        bodyType: bodyType === 'json' ? 'raw' : bodyType,
         bodyFormData:
           bodyType === 'form-data'
             ? formFields
@@ -899,7 +905,7 @@ const RequestEditor: React.FC = () => {
                   }
                   return acc;
                 }, {})
-            : null,
+            : [],
         bodyRawContent:
           bodyType === 'raw' || bodyType === 'json'
             ? bodyContent
@@ -908,24 +914,21 @@ const RequestEditor: React.FC = () => {
                 urlEncodedFields
                   .filter((f) => f.enabled)
                   .reduce((acc, field) => {
-                    if (field.key) {
-                      acc[field.key] = field.value;
-                    }
+                    if (field.key) acc[field.key] = field.value;
                     return acc;
                   }, {} as Record<string, string>)
               ).toString()
-            : null,
-        authorizationType: authType,
-        // ✅ FIX: Always include token when there's one, regardless of authType check
+            : '',
+        authorizationType: effectiveAuthType, // ✅ fixed here
         authorization: {
-          token: authData.token, // Always include the token
-          username: authType === 'basic' ? authData.username : '',
-          password: authType === 'basic' ? authData.password : '',
-          key: authType === 'apiKey' ? authData.key : '',
-          value: authType === 'apiKey' ? authData.value : '',
-          addTo: authType === 'apiKey' ? authData.addTo : 'header',
+          token: authData.token,
+          username: effectiveAuthType === 'basic' ? authData.username : '',
+          password: effectiveAuthType === 'basic' ? authData.password : '',
+          key: effectiveAuthType === 'apiKey' ? authData.key : '',
+          value: effectiveAuthType === 'apiKey' ? authData.value : '',
+          addTo: effectiveAuthType === 'apiKey' ? authData.addTo : 'header',
           oauth1:
-            authType === 'oauth1'
+            effectiveAuthType === 'oauth1'
               ? {
                   consumerKey: authData.oauth1.consumerKey,
                   consumerSecret: authData.oauth1.consumerSecret,
@@ -939,7 +942,7 @@ const RequestEditor: React.FC = () => {
                 }
               : undefined,
           oauth2:
-            authType === 'oauth2'
+            effectiveAuthType === 'oauth2'
               ? {
                   clientId: authData.oauth2.clientId,
                   clientSecret: authData.oauth2.clientSecret,
@@ -952,10 +955,9 @@ const RequestEditor: React.FC = () => {
                 }
               : undefined,
         },
-        params: params,
-        headers: headers,
+        params,
+        headers,
         assertions: selectedAssertions,
-        // variables: activeRequest.variables || {},
       };
 
       console.log('requestData to save:', requestData);
@@ -975,13 +977,13 @@ const RequestEditor: React.FC = () => {
           id: savedRequestResponse.id,
           collectionId: createdCollectionId || activeCollection?.id,
           name: activeRequest.name || 'New Request',
-          method: method,
-          url: url,
-          bodyType: bodyType,
-          authorizationType: authType,
+          method,
+          url,
+          bodyType,
+          authorizationType: effectiveAuthType,
           authorization: requestData.authorization,
-          params: params,
-          headers: headers,
+          params,
+          headers,
         };
         setActiveRequest(updatedRequest);
       }
@@ -1466,9 +1468,6 @@ const RequestEditor: React.FC = () => {
 
               {/* Bearer Token only */}
               <div>
-                <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
-                  Token
-                </label>
                 <input
                   type='text'
                   value={authData.token}
@@ -1478,10 +1477,6 @@ const RequestEditor: React.FC = () => {
                   placeholder='Enter token'
                   className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 bg-white dark:bg-gray-800 text-sm'
                 />
-                <p className='mt-1 text-xs text-gray-500 dark:text-gray-400'>
-                  The token will be sent as <code>Bearer {authData.token}</code>{' '}
-                  in the Authorization header
-                </p>
               </div>
             </div>
           )}

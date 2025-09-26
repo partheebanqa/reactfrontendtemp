@@ -1,7 +1,7 @@
 'use client';
 
 import type React from 'react';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
 import {
   Dialog,
@@ -21,7 +21,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
 import {
   Send,
   Plus,
@@ -33,36 +32,20 @@ import {
   ChevronDown,
   Info,
 } from 'lucide-react';
+import type {
+  Request,
+  RequestHeader,
+  RequestParam,
+} from '@/shared/types/TestSuite.model';
+
+import { executeRequest } from '@/services/executeRequest.service';
+import type { ExecuteRequestPayload } from '@/shared/types/requestChain.model';
+import { useWorkspace } from '@/hooks/useWorkspace';
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-
-interface RequestHeader {
-  key: string;
-  value: string;
-  enabled: boolean;
-}
-
-interface RequestParam {
-  key: string;
-  value: string;
-  enabled: boolean;
-}
-
-interface Request {
-  id: string;
-  method: string;
-  name: string;
-  url: string;
-  bodyType?: string;
-  bodyRawContent?: string;
-  authorizationType?: string;
-  authorization?: any;
-  headers?: RequestHeader[];
-  params?: RequestParam[];
-}
 
 interface ExtractedField {
   variableName: string;
@@ -86,7 +69,6 @@ interface RequestTestDialogProps {
     requestId: string,
     extractVariables: ExtractedVariable[]
   ) => void;
-  existingExtractedVariables?: ExtractedVariable[];
 }
 
 export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
@@ -94,17 +76,27 @@ export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
   onClose,
   request,
   onSaveExtractVariables,
-  existingExtractedVariables = [],
 }) => {
-  const [url, setUrl] = useState('');
+  const { currentWorkspace } = useWorkspace();
+  const [url, setUrl] = useState(request.url);
   const [showToken, setShowToken] = useState(false);
-  const [method, setMethod] = useState('GET');
-  const [headers, setHeaders] = useState<RequestHeader[]>([]);
-  const [params, setParams] = useState<RequestParam[]>([]);
-  const [body, setBody] = useState('');
-  const [bodyType, setBodyType] = useState('raw');
-  const [authType, setAuthType] = useState('none');
-  const [authToken, setAuthToken] = useState('');
+  const [method, setMethod] = useState(request.method);
+  const [headers, setHeaders] = useState<RequestHeader[]>(
+    request?.headers?.length && request.headers.length > 0
+      ? request.headers
+      : [{ key: '', value: '', enabled: true }]
+  );
+  const [params, setParams] = useState<RequestParam[]>(
+    request?.params?.length
+      ? request.params
+      : [{ key: '', value: '', enabled: true }]
+  );
+  const [body, setBody] = useState(request.bodyRawContent);
+  const [bodyType, setBodyType] = useState(request.bodyType);
+  const [authType, setAuthType] = useState(request.authorizationType);
+  const [authToken, setAuthToken] = useState(
+    request.authorization?.token || ''
+  );
 
   // response state can hold either string or object
   const [response, setResponse] = useState<any>(null);
@@ -116,70 +108,6 @@ export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [extractedFields, setExtractedFields] = useState<ExtractedField[]>([]);
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set());
-
-  // Initialize state when request changes or dialog opens
-  useEffect(() => {
-    if (isOpen && request) {
-      console.log('Initializing RequestTestDialog with request:', request);
-
-      setUrl(request.url || '');
-      setMethod(request.method || 'GET');
-
-      // Enhanced body initialization with multiple possible field names
-      const requestBody =
-        request.bodyRawContent ||
-        request.body ||
-        request.bodyContent ||
-        (request as any).body_raw_content ||
-        '';
-
-      console.log('Setting body content:', {
-        bodyRawContent: request.bodyRawContent,
-        body: (request as any).body,
-        bodyContent: (request as any).bodyContent,
-        body_raw_content: (request as any).body_raw_content,
-        finalBody: requestBody,
-      });
-
-      setBody(requestBody);
-      setBodyType(request.bodyType || 'raw');
-      setAuthType(request.authorizationType || 'none');
-      setAuthToken(request.authorization?.token || '');
-
-      // Initialize headers with better fallback handling
-      if (Array.isArray(request.headers) && request.headers.length > 0) {
-        setHeaders(request.headers);
-      } else {
-        setHeaders([{ key: '', value: '', enabled: true }]);
-      }
-
-      // Initialize params with better fallback handling
-      if (Array.isArray(request.params) && request.params.length > 0) {
-        setParams(request.params);
-      } else {
-        setParams([{ key: '', value: '', enabled: true }]);
-      }
-
-      // Convert existing extracted variables to ExtractedField format for display
-      if (existingExtractedVariables && existingExtractedVariables.length > 0) {
-        const convertedFields: ExtractedField[] =
-          existingExtractedVariables.map((variable) => ({
-            variableName: variable.name,
-            value: `Extracted from ${variable.source}`, // We don't have the actual value, just show info
-            source: variable.source,
-            path: variable.path,
-          }));
-        setExtractedFields(convertedFields);
-      } else {
-        setExtractedFields([]);
-      }
-
-      // Reset response data
-      setResponse(null);
-      setResponseHeaders({});
-      setExpandedPaths(new Set());
-    }
-  }, [isOpen, request, existingExtractedVariables]);
 
   const addHeader = () => {
     setHeaders([...headers, { key: '', value: '', enabled: true }]);
@@ -567,34 +495,30 @@ export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
     try {
       const finalBodyType = bodyType ?? 'raw';
 
-      // Mock response for demonstration
-      const mockResponse = {
-        data: {
-          responses: [
-            {
-              body: JSON.stringify({
-                token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9',
-                user: {
-                  id: '12345',
-                  email: 'user@example.com',
-                  name: 'John Doe',
-                  role: 'admin',
-                },
-                expires_in: 3600,
-                refresh_token: 'refresh_123456789',
-              }),
-              headers: {
-                'Content-Type': 'application/json',
-                Authorization: 'Bearer token_here',
-                'X-RateLimit-Remaining': '99',
-                'Set-Cookie': 'session=abc123; HttpOnly',
-              },
-            },
-          ],
+      const requestPayload: ExecuteRequestPayload = {
+        request: {
+          workspaceId: currentWorkspace?.id || '1234',
+          name: 'Login Request',
+          order: 1,
+          method,
+          url: buildUrl(),
+          bodyType: finalBodyType,
+          bodyFormData: finalBodyType === 'form-data' ? body : undefined,
+          bodyRawContent: finalBodyType === 'raw' ? body : undefined,
+          authorizationType: authType,
+          authorization: authToken ? { token: authToken } : undefined,
+          headers: headers.filter((h) => h.enabled && h.key),
+          params: params.filter((p) => p.enabled && p.key),
         },
       };
 
-      const firstResponse = mockResponse?.data?.responses?.[0];
+      console.log('requestPayload123:', requestPayload);
+
+      const json = (await executeRequest(requestPayload)) as any;
+
+      console.log('backendResponse', json);
+
+      const firstResponse = json?.data?.responses?.[0];
 
       let parsedBody: unknown = firstResponse?.body;
       try {
@@ -617,41 +541,33 @@ export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
   };
 
   const handleSaveVariables = () => {
-    if (onSaveExtractVariables) {
-      // Filter out existing variables (those without actual response values)
-      const newExtractedFields = extractedFields.filter(
-        (field) => field.value !== `Extracted from ${field.source}`
+    if (onSaveExtractVariables && extractedFields.length > 0) {
+      const formattedVariables: ExtractedVariable[] = extractedFields.map(
+        (field) => ({
+          name: field.variableName,
+          path: field.path,
+          source: field.source,
+          type:
+            typeof field.value === 'string'
+              ? 'string'
+              : typeof field.value === 'number'
+              ? 'number'
+              : typeof field.value === 'boolean'
+              ? 'boolean'
+              : Array.isArray(field.value)
+              ? 'array'
+              : typeof field.value === 'object'
+              ? 'object'
+              : 'string',
+        })
       );
 
-      if (newExtractedFields.length > 0) {
-        const formattedVariables: ExtractedVariable[] = newExtractedFields.map(
-          (field) => ({
-            name: field.variableName,
-            path: field.path,
-            source: field.source,
-            type:
-              typeof field.value === 'string'
-                ? 'string'
-                : typeof field.value === 'number'
-                ? 'number'
-                : typeof field.value === 'boolean'
-                ? 'boolean'
-                : Array.isArray(field.value)
-                ? 'array'
-                : typeof field.value === 'object'
-                ? 'object'
-                : 'string',
-          })
-        );
+      console.log('Saving variables from RequestTestDialog:', {
+        requestId: request.id,
+        variables: formattedVariables,
+      });
 
-        console.log('Saving variables from RequestTestDialog:', {
-          requestId: request.id,
-          variables: formattedVariables,
-        });
-
-        onSaveExtractVariables(request.id, formattedVariables);
-      }
-
+      onSaveExtractVariables(request.id, formattedVariables);
       setExtractedFields([]);
       onClose();
     }
@@ -1053,7 +969,11 @@ export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
                   <Label className='text-sm font-medium'>
                     Extracted Fields ({extractedFields.length})
                   </Label>
-                  <Button size='sm' onClick={handleSaveVariables}>
+                  <Button
+                    size='sm'
+                    onClick={handleSaveVariables}
+                    // className='bg-green-600 hover:bg-green-700 text-white'
+                  >
                     Save Variables
                   </Button>
                 </div>
@@ -1061,19 +981,9 @@ export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
                   {extractedFields.map((field, index) => (
                     <div
                       key={index}
-                      className={`border rounded p-2 text-sm ${
-                        field.value === `Extracted from ${field.source}`
-                          ? 'bg-blue-50 border-blue-200'
-                          : 'bg-green-50 border-green-200'
-                      }`}
+                      className='bg-green-50 border border-green-200 rounded p-2 text-sm'
                     >
-                      <div
-                        className={`font-medium ${
-                          field.value === `Extracted from ${field.source}`
-                            ? 'text-blue-800'
-                            : 'text-green-800'
-                        }`}
-                      >
+                      <div className='font-medium text-green-800'>
                         {field.variableName}
                       </div>
                       <div className='text-gray-600'>
