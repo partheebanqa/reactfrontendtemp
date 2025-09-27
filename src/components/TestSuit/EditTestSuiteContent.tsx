@@ -1,6 +1,6 @@
 'use client';
 import type React from 'react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,6 +23,7 @@ import {
   createTestSuite,
   updateTestSuite,
 } from '@/services/testSuites.service';
+import { getCollectionsWithRequests } from '@/services/collection.service';
 import type {
   CreateTestSuitePayload,
   ExtendedRequest,
@@ -108,6 +109,33 @@ const EditTestSuiteContent: React.FC = () => {
     queryFn: () => getTestSuites(id!),
     enabled: !!id && !isCreateMode,
   });
+
+  const { data: collectionsWithRequests } = useQuery({
+    queryKey: ['collectionsWithRequests'],
+    queryFn: () => getCollectionsWithRequests(),
+  });
+
+  const { data: collectionsData } = useQuery({
+    queryKey: ['collections', currentWorkspace?.id],
+    queryFn: () => {
+      if (!currentWorkspace?.id) throw new Error('workspaceId is undefined');
+      return getCollectionsWithRequests(currentWorkspace.id);
+    },
+    enabled: !!currentWorkspace?.id && !isCreateMode,
+  });
+
+  // Build a map of requestId -> imported request for quick fallback lookups
+  const importedRequestMap = useMemo(() => {
+    const map: Record<string, any> = {};
+    const cols = collectionsData?.collections ?? [];
+    for (const col of cols) {
+      const reqs = Array.isArray(col.requests) ? col.requests : [];
+      for (const r of reqs) {
+        map[r.id] = r;
+      }
+    }
+    return map;
+  }, [collectionsData, isCreateMode]);
 
   useEffect(() => {
     if (activeEnvironment) {
@@ -248,28 +276,66 @@ const EditTestSuiteContent: React.FC = () => {
       setTestSuiteName(testSuite.name || '');
       setDescription(testSuite.description || '');
 
-      // Enhanced request mapping with better data preservation
       if (Array.isArray(testSuite.requests) && testSuite.requests.length > 0) {
         console.log('Original testSuite.requests:', testSuite.requests);
 
         const transformedRequests: Request[] =
           testSuite.requests.map(transformRequestData);
 
-        console.log('Transformed requests:', transformedRequests);
+        // Fallback merge: if backend request lacks headers/body/etc, enrich from imported source by id
+        const enrichedRequests: Request[] = transformedRequests.map((req) => {
+          const imported = importedRequestMap[req.id];
+          if (!imported) return req;
 
-        setRequests(transformedRequests);
-        // Store original request IDs for tracking changes
-        setOriginalRequestIds(transformedRequests.map((req) => req.id));
+          const hasHeaders =
+            Array.isArray(req.headers) && req.headers.length > 0;
+          const hasParams = Array.isArray(req.params) && req.params.length > 0;
+          const hasBody =
+            typeof req.bodyRawContent === 'string'
+              ? req.bodyRawContent.trim().length > 0
+              : false;
+          const hasBodyType = !!req.bodyType && req.bodyType !== 'none';
+          const hasAuthType =
+            !!req.authorizationType && req.authorizationType !== 'none';
+          const hasAuth = !!req.authorization;
+
+          return {
+            ...req,
+            headers: hasHeaders
+              ? req.headers
+              : Array.isArray(imported.headers)
+              ? imported.headers
+              : [],
+            params: hasParams
+              ? req.params
+              : Array.isArray(imported.params)
+              ? imported.params
+              : [],
+            bodyRawContent: hasBody
+              ? req.bodyRawContent
+              : imported.bodyRawContent ?? imported.body ?? '',
+            bodyType: hasBodyType ? req.bodyType : imported.bodyType ?? 'raw',
+            authorizationType: hasAuthType
+              ? req.authorizationType
+              : imported.authorizationType ?? 'none',
+            authorization: hasAuth
+              ? req.authorization
+              : imported.authorization ?? null,
+          };
+        });
+
+        console.log('Transformed requests:', enrichedRequests);
+
+        setRequests(enrichedRequests);
+        setOriginalRequestIds(enrichedRequests.map((r) => r.id));
       }
 
-      // Handle preRequestId from either preRequestDetails.id or direct preRequestId field
       if (testSuite.preRequestDetails?.id) {
         setPreRequestId(testSuite.preRequestDetails.id);
       } else if (testSuite.preRequestId) {
         setPreRequestId(testSuite.preRequestId);
       }
 
-      // Set existing extractVariables if they exist
       if (
         testSuite.extractVariables &&
         Array.isArray(testSuite.extractVariables)
@@ -277,7 +343,7 @@ const EditTestSuiteContent: React.FC = () => {
         setExtractVariables(testSuite.extractVariables);
       }
     }
-  }, [testSuite, isCreateMode]);
+  }, [testSuite, isCreateMode, importedRequestMap]);
 
   useEffect(() => {
     if (isError && error && !isCreateMode) {
@@ -423,6 +489,18 @@ const EditTestSuiteContent: React.FC = () => {
     (total, req) => total + (req.selectedTestCases?.length || 0),
     0
   );
+
+  const importableRequests = useMemo(() => {
+    if (collectionsWithRequests) {
+      return collectionsWithRequests.flatMap((collection) =>
+        collection.requests.map((request) => ({
+          ...request,
+          collectionName: collection.name,
+        }))
+      );
+    }
+    return [];
+  }, [collectionsWithRequests]);
 
   function setIsQuickGuideOpen(arg0: boolean): void {
     throw new Error('Function not implemented.');
@@ -603,7 +681,6 @@ const EditTestSuiteContent: React.FC = () => {
                       await refetchRequests();
                     }}
                     onSaveExtractVariables={handleSaveExtractVariables}
-                    requestStats={testSuite?.stats?.requestStats ?? []}
                     preRequestId={preRequestId}
                     extractVariables={extractVariables}
                   />
@@ -646,7 +723,6 @@ const EditTestSuiteContent: React.FC = () => {
               )}
             </CardContent>
           </Card>
-
           <ImportModal
             isOpen={isImportModalOpen}
             onClose={() => setIsImportModalOpen(false)}

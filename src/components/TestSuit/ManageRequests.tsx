@@ -34,18 +34,12 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { TestCaseSelectionModal } from './TestCaseSelectionModal';
-
-interface RequestHeader {
-  key: string;
-  value: string;
-  enabled: boolean;
-}
-
-interface RequestParam {
-  key: string;
-  value: string;
-  enabled: boolean;
-}
+import {
+  CategoryCount,
+  RequestHeader,
+  RequestParam,
+} from '@/shared/types/TestSuite.model';
+import { ExtractedVariable } from '@/shared/types/requestChain.model';
 
 interface Request {
   id: string;
@@ -79,27 +73,6 @@ interface Request {
   };
 }
 
-interface CategoryCount {
-  category: string;
-  count: number;
-}
-
-interface RequestStat {
-  requestId: string;
-  meta?: {
-    totalTests?: number;
-    selectedTests?: number;
-    selectedByCategory?: CategoryCount[];
-  };
-}
-
-interface ExtractedVariable {
-  name: string;
-  path: string;
-  source: string;
-  type: string;
-}
-
 interface ManageRequestsProps {
   requests: Request[];
   testSuiteId?: string;
@@ -111,7 +84,6 @@ interface ManageRequestsProps {
     requestId: string,
     extractedData: ExtractedVariable[]
   ) => void;
-  requestStats?: RequestStat[];
   variables?: Array<{ name: string; initialValue: string }>;
   environments?: any[];
   activeEnvironment?: any;
@@ -144,7 +116,6 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
   onUpdateTestCases,
   onRefreshRequests,
   onSaveExtractVariables,
-  requestStats = [],
   variables = [],
   environments = [],
   activeEnvironment,
