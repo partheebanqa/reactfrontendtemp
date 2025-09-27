@@ -37,7 +37,12 @@ import JsonView from 'react18-json-view';
 import 'react18-json-view/src/style.css';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../ui/accordion';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '../ui/accordion';
 
 type TestCase = {
   id?: string;
@@ -157,7 +162,7 @@ const transformTestCases = (
       params: apiTestCase.params,
       expectedResponse: apiTestCase.expectedResponse,
       tags: generateTags(apiTestCase),
-      subCategory: apiTestCase?.subCategory
+      subCategory: apiTestCase?.subCategory,
     };
 
     if (!categoriesMap[categoryName]) {
@@ -346,13 +351,18 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
 
   // before you compute the final filtered list by subcategory, create a "pre" list:
   const filteredCategoriesPreSubcat = useMemo(() => {
-    if (!searchTerm?.trim() && (categoryFilter === 'All Categories')) return testCaseCategories;
+    if (!searchTerm?.trim() && categoryFilter === 'All Categories')
+      return testCaseCategories;
 
     const searchLower = searchTerm?.toLowerCase() ?? '';
 
     return testCaseCategories
       .filter((category) => {
-        if (categoryFilter !== 'All Categories' && category.category !== categoryFilter) return false;
+        if (
+          categoryFilter !== 'All Categories' &&
+          category.category !== categoryFilter
+        )
+          return false;
         if (!searchLower) return true;
 
         return category.tests.some(
@@ -374,9 +384,7 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
       });
   }, [testCaseCategories, categoryFilter, searchTerm]);
 
-
-
-  console.log(filteredCategoriesPreSubcat, "filteredCategories");
+  console.log(filteredCategoriesPreSubcat, 'filteredCategories');
 
   const totalAvailableTests = testCaseCategories.reduce(
     (sum, cat) => sum + cat.tests.length,
@@ -421,10 +429,11 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
 
   const [expandedTestId, setExpandedTestId] = useState<string | null>(null);
 
-  const [expandedSubCategory, setExpandedSubCategory] = useState<string | null>(null);
+  const [expandedSubCategory, setExpandedSubCategory] = useState<string | null>(
+    null
+  );
 
   const [subcatFilter, setSubcatFilter] = useState<string>('All');
-
 
   const filteredCategories = useMemo(() => {
     // start from the pre-subcat list
@@ -443,7 +452,6 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
       .filter((c) => c.tests.length > 0); // drop empty categories after subcat filter
   }, [filteredCategoriesPreSubcat, subcatFilter]);
   // 'All' means no filter
-
 
   const subcatChips: SubcatChip[] = useMemo(() => {
     const counts = new Map<string, number>();
@@ -469,23 +477,23 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className='max-w-6xl max-h-[90vh] overflow-hidden flex flex-col p-0 justify-center'>
-        <div className="p-3 border-b">
+        <div className='p-3 border-b'>
           <DialogHeader>
-            <div className="flex items-center gap-4">
-              <DialogTitle className="text-xl whitespace-nowrap">
+            <div className='flex items-center gap-4'>
+              <DialogTitle className='text-xl whitespace-nowrap'>
                 Select Test Cases :
               </DialogTitle>
-              <p className="text-[14px] text-muted-foreground whitespace-nowrap">
+              <p className='text-[14px] text-muted-foreground whitespace-nowrap'>
                 Choose test cases for: {name}
               </p>
 
-              <div className="relative flex-1 max-w-md">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <div className='relative flex-1 max-w-md'>
+                <Search className='absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground' />
                 <Input
-                  placeholder="Search test cases by name, description, or tags..."
+                  placeholder='Search test cases by name, description, or tags...'
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
+                  className='pl-10'
                   disabled={isLoading}
                 />
               </div>
@@ -495,15 +503,18 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
                 onValueChange={setCategoryFilter}
                 disabled={isLoading}
               >
-                <SelectTrigger className="w-48">
+                <SelectTrigger className='w-48'>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="All Categories">
+                  <SelectItem value='All Categories'>
                     All Categories ({totalAvailableTests})
                   </SelectItem>
                   {testCaseCategories.map((category) => (
-                    <SelectItem key={category.category} value={category.category}>
+                    <SelectItem
+                      key={category.category}
+                      value={category.category}
+                    >
                       {category.category} ({category.count})
                     </SelectItem>
                   ))}
@@ -514,25 +525,27 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
         </div>
 
         <div className='px-3'>
-          <div className="flex flex-wrap gap-2 justify-center">
+          <div className='flex flex-wrap gap-2 justify-center'>
             {subcatChips.map((chip) => {
               const active = subcatFilter === chip.name;
               return (
                 <button
                   key={chip.name}
-                  onClick={() =>
-                    setSubcatFilter(active ? "" : chip.name) // toggle
+                  onClick={
+                    () => setSubcatFilter(active ? '' : chip.name) // toggle
                   }
-                  className={`inline-flex items-center rounded-md border px-2 py-1 text-xs ${active
-                    ? "bg-[#136fb0] text-white border-[#136fb0]"
-                    : "bg-transparent text-foreground border-muted-foreground/30 hover:bg-muted/40"
-                    }`}
+                  className={`inline-flex items-center rounded-md border px-2 py-1 text-xs ${
+                    active
+                      ? 'bg-[#136fb0] text-white border-[#136fb0]'
+                      : 'bg-transparent text-foreground border-muted-foreground/30 hover:bg-muted/40'
+                  }`}
                   title={chip.name}
                 >
-                  <span className="mr-1">{chip.name}</span>
+                  <span className='mr-1'>{chip.name}</span>
                   <span
-                    className={`ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[#136fb0] ${active ? "bg-white/20 text-[#ffffff]" : "bg-muted"
-                      }`}
+                    className={`ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[#136fb0] ${
+                      active ? 'bg-white/20 text-[#ffffff]' : 'bg-muted'
+                    }`}
                   >
                     {chip.count}
                   </span>
@@ -592,7 +605,7 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
                     );
                     const categoryTests = category.tests;
                     const selectedInCategory = categoryTests.filter((test) =>
-                      selectedTestCases.includes(test?.id || "")
+                      selectedTestCases.includes(test?.id || '')
                     ).length;
 
                     return (
@@ -618,7 +631,7 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
                             </span>
                             <span className='font-medium'>
                               {category.category}
-                              { }
+                              {}
                             </span>
                             <Badge variant='outline'>
                               {categoryTests.length}
@@ -783,9 +796,9 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
                                                 <JsonView
                                                   dark
                                                   enableClipboard
-                                                  onAdd={() => { }}
-                                                  onDelete={() => { }}
-                                                  onEdit={() => { }}
+                                                  onAdd={() => {}}
+                                                  onDelete={() => {}}
+                                                  onEdit={() => {}}
                                                   src={test}
                                                   theme='default'
                                                 />
@@ -807,9 +820,9 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
                                                 <JsonView
                                                   dark
                                                   enableClipboard
-                                                  onAdd={() => { }}
-                                                  onDelete={() => { }}
-                                                  onEdit={() => { }}
+                                                  onAdd={() => {}}
+                                                  onDelete={() => {}}
+                                                  onEdit={() => {}}
                                                   src={test}
                                                   theme='default'
                                                 />

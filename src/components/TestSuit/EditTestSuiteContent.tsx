@@ -51,6 +51,16 @@ interface Request {
     total: number;
   };
   selectedTestCases?: string[];
+  meta?: {
+    totalTests?: number;
+    selectedTests?: number;
+    positive?: number;
+    negative?: number;
+    semantic?: number;
+    edgeCase?: number;
+    security?: number;
+    advancedSecurity?: number;
+  };
 }
 
 interface ExtractedVariable {
@@ -175,7 +185,6 @@ const EditTestSuiteContent: React.FC = () => {
     },
   });
 
-  // Enhanced request transformation to preserve all original properties
   const transformRequestData = (req: any): Request => {
     return {
       id: req.id,
@@ -186,7 +195,6 @@ const EditTestSuiteContent: React.FC = () => {
       description:
         req.description || `${req.method} ${req.url || req.endpoint}`,
 
-      // Preserve body-related properties with various possible field names
       bodyType: req.bodyType || req.body_type || 'raw',
       bodyRawContent:
         req.bodyRawContent ||
@@ -219,6 +227,19 @@ const EditTestSuiteContent: React.FC = () => {
         total: req.testCases?.total || 0,
       },
       selectedTestCases: req.selectedTestCases || [],
+
+      meta: req.meta
+        ? {
+            totalTests: req.meta.totalTests,
+            selectedTests: req.meta.selectedTests,
+            positive: req.meta.positive,
+            negative: req.meta.negative,
+            semantic: req.meta.semantic,
+            edgeCase: req.meta.edgeCase,
+            security: req.meta.security,
+            advancedSecurity: req.meta.advancedSecurity,
+          }
+        : undefined,
     };
   };
 
@@ -279,6 +300,8 @@ const EditTestSuiteContent: React.FC = () => {
         functional: 0,
         total: 0,
       },
+      // Preserve meta field during import
+      meta: extReq.meta,
     }));
 
     // Add the transformed requests to the existing requests
