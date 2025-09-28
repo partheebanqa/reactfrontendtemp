@@ -110,3 +110,8 @@ export interface RequestStat {
     selectedTests?: number;
   };
 }
+
+export interface CategoryCount {
+  category: string;
+  count: number;
+}

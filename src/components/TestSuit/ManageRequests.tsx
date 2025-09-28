@@ -12,6 +12,8 @@ import {
   Play,
   RefreshCcw,
   FileKey,
+  ChevronDown,
+  ChevronRight,
 } from 'lucide-react';
 import { RequestTestDialog } from './RequestTestDialog';
 import {
@@ -32,18 +34,12 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { TestCaseSelectionModal } from './TestCaseSelectionModal';
-
-interface RequestHeader {
-  key: string;
-  value: string;
-  enabled: boolean;
-}
-
-interface RequestParam {
-  key: string;
-  value: string;
-  enabled: boolean;
-}
+import {
+  CategoryCount,
+  RequestHeader,
+  RequestParam,
+} from '@/shared/types/TestSuite.model';
+import { ExtractedVariable } from '@/shared/types/requestChain.model';
 
 interface Request {
   id: string;
@@ -65,27 +61,16 @@ interface Request {
     total: number;
   };
   selectedTestCases?: string[];
-}
-
-interface CategoryCount {
-  category: string;
-  count: number;
-}
-
-interface RequestStat {
-  requestId: string;
   meta?: {
     totalTests?: number;
     selectedTests?: number;
-    selectedByCategory?: CategoryCount[];
+    positive?: number;
+    negative?: number;
+    semantic?: number;
+    edgeCase?: number;
+    security?: number;
+    advancedSecurity?: number;
   };
-}
-
-interface ExtractedVariable {
-  name: string;
-  path: string;
-  source: string;
-  type: string;
 }
 
 interface ManageRequestsProps {
@@ -99,7 +84,6 @@ interface ManageRequestsProps {
     requestId: string,
     extractedData: ExtractedVariable[]
   ) => void;
-  requestStats?: RequestStat[];
   variables?: Array<{ name: string; initialValue: string }>;
   environments?: any[];
   activeEnvironment?: any;
@@ -132,26 +116,60 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
   onUpdateTestCases,
   onRefreshRequests,
   onSaveExtractVariables,
-  requestStats = [],
   variables = [],
   environments = [],
   activeEnvironment,
   preRequestId,
   extractVariables = [],
 }) => {
+  const [showCategories, setShowCategories] = useState(false);
+
   const [selectedRequest, setSelectedRequest] = useState<Request | null>(null);
   const [isTestCaseModalOpen, setIsTestCaseModalOpen] = useState(false);
+
+  console.log('requests123:', requests);
 
   const [isTestDialogOpen, setIsTestDialogOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [pendingRequest, setPendingRequest] = useState<Request | null>(null);
   const [showOverwriteDialog, setShowOverwriteDialog] = useState(false);
 
-  const statMap = useMemo(() => {
-    const m = new Map<string, RequestStat>();
-    requestStats.forEach((s) => m.set(s.requestId, s));
-    return m;
-  }, [requestStats]);
+  const mapCategoryData = (meta: any) => {
+    if (!meta)
+      return { totalTests: 0, selectedTests: 0, selectedByCategory: [] };
+
+    const categoryMapping: { [key: string]: string } = {
+      positive: 'positive',
+      negative: 'negative',
+      semantic: 'semantic',
+      edgeCase: 'edgeCase',
+      security: 'security',
+      advancedSecurity: 'advancedSecurity',
+    };
+
+    const categoryCounts: { [key: string]: number } = {};
+
+    // Sum up counts by UI category
+    Object.entries(meta).forEach(([key, value]) => {
+      if (categoryMapping[key] && typeof value === 'number' && value > 0) {
+        const uiCategory = categoryMapping[key];
+        categoryCounts[uiCategory] = (categoryCounts[uiCategory] || 0) + value;
+      }
+    });
+
+    const selectedByCategory = Object.entries(categoryCounts).map(
+      ([category, count]) => ({
+        category,
+        count,
+      })
+    );
+
+    return {
+      totalTests: meta.totalTests || 0,
+      selectedTests: meta.selectedTests || 0,
+      selectedByCategory,
+    };
+  };
 
   const substituteVariables = (text: string): string => {
     let result = text;
@@ -270,39 +288,76 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
     }
   };
 
-  const getCategoryColor = (category: string) => {
-    switch (category) {
-      case 'Functional':
-        return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100';
-      case 'Performance':
-        return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-100';
-      case 'Security':
-        return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-100';
-      case 'General':
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-100';
-      case 'Regression':
-        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100';
-      default:
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-100';
-    }
+  // ✅ Central mapping of all categories with color + icon
+  const categoryConfig: {
+    [key: string]: { color: string; icon: string };
+  } = {
+    Functional: {
+      color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100',
+      icon: '🔧',
+    },
+    Performance: {
+      color:
+        'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-100',
+      icon: '⚡',
+    },
+    Security: {
+      color:
+        'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-100',
+      icon: '🛡️',
+    },
+    General: {
+      color: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-100',
+      icon: '📋',
+    },
+    Regression: {
+      color:
+        'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100',
+      icon: '🔄',
+    },
+
+    // 🔥 New categories
+    positive: {
+      color:
+        'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100',
+      icon: '👍',
+    },
+    negative: {
+      color: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100',
+      icon: '👎',
+    },
+    semantic: {
+      color:
+        'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-100',
+      icon: '🧩',
+    },
+    edgeCase: {
+      color:
+        'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100',
+      icon: '⚠️',
+    },
+    security: {
+      color:
+        'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-100',
+      icon: '🛡️',
+    },
+    advancedSecurity: {
+      color: 'bg-red-200 text-red-900 dark:bg-red-900 dark:text-red-100',
+      icon: '🚨',
+    },
   };
 
-  const getCategoryIcon = (category: string) => {
-    switch (category) {
-      case 'Functional':
-        return '🔧';
-      case 'Performance':
-        return '⚡';
-      case 'Security':
-        return '🛡️';
-      case 'General':
-        return '📋';
-      case 'Regression':
-        return '🔄';
-      default:
-        return '📋';
-    }
-  };
+  // ✅ Default fallback values
+  const DEFAULT_COLOR =
+    'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-100';
+  const DEFAULT_ICON = '📋';
+
+  // 👉 Functions to use everywhere
+  const getCategoryColor = (category: string) =>
+    categoryConfig[category]?.color || DEFAULT_COLOR;
+
+  const getCategoryIcon = (category: string) =>
+    categoryConfig[category]?.icon || DEFAULT_ICON;
 
   return (
     <Card>
@@ -335,10 +390,8 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
         <div className='space-y-3'>
           {requests.map((request) => {
             const finalUrl = buildFinalUrl(request.url);
-            const stat = statMap.get(request.id);
-            const totalTests = stat?.meta?.totalTests ?? 0;
-            const selectedTests = stat?.meta?.selectedTests ?? 0;
-            const selectedByCategory = stat?.meta?.selectedByCategory ?? [];
+            const { totalTests, selectedTests, selectedByCategory } =
+              mapCategoryData(request.meta);
 
             return (
               <div
@@ -450,44 +503,76 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
                 </div>
                 {testSuiteId && preRequestId !== request.id && (
                   <div className='mt-4'>
-                    <h5 className='text-sm font-medium mb-2'>Test Cases</h5>
-
-                    {/* Show selected test cases by category */}
+                    {selectedByCategory.length === 0 && (
+                      <h5 className='text-sm font-medium mb-2'>Test Cases</h5>
+                    )}
+                    {/* <h5 className='text-sm font-medium mb-2'>Test Cases</h5> */}
                     {selectedByCategory.length > 0 && (
-                      <div className='space-y-2 mb-3'>
-                        {selectedByCategory.map((categoryData) => (
-                          <div
-                            key={categoryData.category}
-                            className='flex items-center justify-between text-xs'
+                      <div>
+                        {/* header row with toggle */}
+                        <div className='flex items-center justify-between mb-1'>
+                          <span className='text-sm font-medium mb-2'>
+                            Test Cases
+                          </span>
+                          <button
+                            onClick={() => setShowCategories(!showCategories)}
+                            className='flex items-center text-xs font-medium text-primary hover:underline'
                           >
-                            <div className='flex items-center'>
-                              <span className='mr-1'>
-                                {getCategoryIcon(categoryData.category)}
-                              </span>
-                              <span className='capitalize text-gray-600 dark:text-gray-300'>
-                                {categoryData.category}
-                              </span>
-                            </div>
-                            <span
-                              className={`px-2 py-0.5 rounded-full font-medium ${getCategoryColor(
-                                categoryData.category
-                              )}`}
-                            >
-                              {categoryData.count}
-                            </span>
+                            {showCategories ? (
+                              <>
+                                <ChevronDown className='w-4 h-4 mr-1' /> Hide
+                              </>
+                            ) : (
+                              <>
+                                <ChevronRight className='w-4 h-4 mr-1' /> Show
+                              </>
+                            )}
+                          </button>
+                        </div>
+
+                        {/* collapsible category list */}
+                        <div
+                          className={`overflow-hidden transition-all duration-300 ${
+                            showCategories
+                              ? 'max-h-[1000px] opacity-100'
+                              : 'max-h-0 opacity-0'
+                          }`}
+                        >
+                          <div className='space-y-2'>
+                            {selectedByCategory.map((categoryData) => (
+                              <div
+                                key={categoryData.category}
+                                className='flex items-center justify-between text-xs'
+                              >
+                                <div className='flex items-center'>
+                                  <span className='mr-1'>
+                                    {getCategoryIcon(categoryData.category)}
+                                  </span>
+                                  <span className='capitalize text-gray-600 dark:text-gray-300'>
+                                    {categoryData.category}
+                                  </span>
+                                </div>
+                                <span
+                                  className={`px-2 py-0.5 rounded-full font-medium ${getCategoryColor(
+                                    categoryData.category
+                                  )}`}
+                                >
+                                  {categoryData.count}
+                                </span>
+                              </div>
+                            ))}
                           </div>
-                        ))}
+                        </div>
                       </div>
                     )}
 
-                    {/* Show total test cases */}
                     <div className='pt-1 border-t border-gray-200 dark:border-gray-700'>
                       <div className='flex items-center justify-between text-xs font-medium'>
                         <span className='text-gray-700 dark:text-gray-300'>
-                          Total:
+                          Selected:
                         </span>
                         <span className='text-gray-900 dark:text-gray-100'>
-                          {totalTests ? <>{totalTests}</> : null} test cases
+                          {selectedTests ?? 0} / {totalTests ?? 0} test cases
                         </span>
                       </div>
                     </div>
