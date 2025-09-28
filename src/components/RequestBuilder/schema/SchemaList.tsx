@@ -5,6 +5,12 @@ import { useSchema } from '@/hooks/useSchema';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 interface SchemaListProps {
   compareMode: boolean;
@@ -90,56 +96,78 @@ const SchemaList: React.FC<SchemaListProps> = ({
 
               {!compareMode && (
                 <div className='flex items-center gap-2'>
-                  <Button
-                    size='icon'
-                    variant='ghost'
-                    aria-label='View schema'
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onViewSchema(schema);
-                    }}
-                  >
-                    <Eye size={18} />
-                  </Button>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          size='icon'
+                          variant='ghost'
+                          aria-label='View schema'
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onViewSchema(schema);
+                          }}
+                        >
+                          <Eye size={18} />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>View</TooltipContent>
+                    </Tooltip>
 
-                  <Button
-                    size='icon'
-                    variant='ghost'
-                    aria-label='Download schema'
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDownloadSchema(schema);
-                    }}
-                  >
-                    <Download size={18} />
-                  </Button>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          size='icon'
+                          variant='ghost'
+                          aria-label='Download schema'
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDownloadSchema(schema);
+                          }}
+                        >
+                          <Download size={18} />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Download</TooltipContent>
+                    </Tooltip>
 
-                  {!schema.isPrimary && (
-                    <Button
-                      size='icon'
-                      variant='ghost'
-                      aria-label='Set as primary'
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setPrimarySchema(schema.id);
-                      }}
-                    >
-                      <Star size={18} />
-                    </Button>
-                  )}
+                    {!schema.isPrimary && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            size='icon'
+                            variant='ghost'
+                            aria-label='Set as primary'
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setPrimarySchema(schema.id);
+                            }}
+                          >
+                            <Star size={18} />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Set Primary</TooltipContent>
+                      </Tooltip>
+                    )}
 
-                  <Button
-                    size='icon'
-                    variant='ghost'
-                    className='text-red-600 hover:text-red-700'
-                    aria-label='Delete schema'
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      deleteSchema(schema.id);
-                    }}
-                  >
-                    <Trash2 size={18} />
-                  </Button>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          size='icon'
+                          variant='ghost'
+                          className='text-red-600 hover:text-red-700'
+                          aria-label='Delete schema'
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteSchema(schema.id);
+                          }}
+                        >
+                          <Trash2 size={18} />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Delete</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </div>
               )}
             </div>

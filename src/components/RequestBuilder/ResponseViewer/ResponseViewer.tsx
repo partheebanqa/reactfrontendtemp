@@ -529,6 +529,38 @@ const ResponseViewer = ({ isBottomLayout }: ResponseViewerProps) => {
                     </div>
                   </div>
                 </div>
+
+                {!responseData.schemaValidation.passed &&
+                  responseData.schemaValidation.results?.length > 0 && (
+                    <div className='border rounded-lg p-4 bg-white dark:bg-gray-900'>
+                      <h4 className='font-medium text-sm mb-3 text-red-700 dark:text-red-400'>
+                        Validation Errors:
+                      </h4>
+                      <ul className='space-y-2 text-sm'>
+                        {responseData.schemaValidation.results.map(
+                          (issue: any, idx: number) => (
+                            <li
+                              key={idx}
+                              className='flex flex-col border-l-2 border-red-400 pl-2'
+                            >
+                              <span className='font-medium text-gray-800 dark:text-gray-200'>
+                                {issue.field}
+                              </span>
+                              <span className='text-gray-600 dark:text-gray-400'>
+                                {issue.description}
+                              </span>
+                              {issue.value !== undefined &&
+                                issue.value !== null && (
+                                  <span className='text-xs text-gray-400'>
+                                    Value: {String(issue.value)}
+                                  </span>
+                                )}
+                            </li>
+                          )
+                        )}
+                      </ul>
+                    </div>
+                  )}
               </div>
             ) : (
               <div className='text-center py-8'>

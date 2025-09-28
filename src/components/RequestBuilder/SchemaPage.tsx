@@ -134,14 +134,13 @@ const SchemaPage: React.FC = () => {
                 if (file) processFile(file);
               }}
             />
-            {schemas.length < 2 && (
-              <Button
-                variant='outline'
-                onClick={() => fileInputRef.current?.click()}
-              >
-                <Upload className='w-4 h-4 mr-2' /> Upload Schema
-              </Button>
-            )}
+            <Button
+              variant='outline'
+              disabled={schemas.length >= 2}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <Upload className='w-4 h-4 mr-2' /> Upload Schema
+            </Button>
 
             <Button
               variant={compareMode ? 'outline' : 'default'}
