@@ -1273,7 +1273,7 @@ const RequestEditor: React.FC = () => {
             </div>
           </div>
 
-          {previewUrl && activeEnvironment?.baseUrl && (
+          {previewUrl && activeEnvironment?.name !== 'No Environment' && (
             <div className='mt-2 mb-1'>
               <div className='bg-gray-50 dark:bg-gray-800 rounded px-3 py-2 flex gap-2  items-center'>
                 <p className='text-sm text-gray-600 dark:text-gray-400'>
