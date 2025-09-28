@@ -23,7 +23,11 @@ const accountInfoSchema = z.object({
   firstName: z.string().min(1, 'First name is required'),
   lastName: z.string().min(1, 'Last name is required'),
   email: z.string().email('Invalid email address'),
-  bio: z.string().max(500, 'Bio must be less than 500 characters').optional().or(z.literal('')),
+  bio: z
+    .string()
+    .max(500, 'Bio must be less than 500 characters')
+    .optional()
+    .or(z.literal('')),
   company: z.string().optional().or(z.literal('')),
   companyWebsite: z.string().url('Invalid URL').optional().or(z.literal('')),
   sector: z.string().optional().or(z.literal('')),
@@ -31,13 +35,15 @@ const accountInfoSchema = z.object({
   phone: z.string().optional().or(z.literal('')),
   // Avatar represented as either existing URL or a File for upload
   avatar: z
-    .union([z.instanceof(File), z.string().url().optional(), z.literal('').optional()])
+    .union([
+      z.instanceof(File),
+      z.string().url().optional(),
+      z.literal('').optional(),
+    ])
     .optional(),
 });
 
 type AccountInfoFormData = z.infer<typeof accountInfoSchema>;
-
-
 
 export function AccountInfo() {
   const { toast } = useToast();
@@ -143,47 +149,55 @@ export function AccountInfo() {
   };
 
   return (
- <Card>
+    <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <UserIcon className="h-5 w-5" />
+        <CardTitle className='flex items-center gap-2'>
+          <UserIcon className='h-5 w-5' />
           Account Information
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="flex flex-col sm:flex-row gap-6">
+        <div className='flex flex-col sm:flex-row gap-6'>
           {/* Avatar Section */}
-          <div className="flex flex-col items-center gap-4 sm:w-48">
-            <Avatar className="h-24 w-24">
-              <AvatarImage src={avatarPreview || (user as any)?.avatarUrl || ''} alt="Profile" />
-              <AvatarFallback className="text-lg">{initials}</AvatarFallback>
+          <div className='flex flex-col items-center gap-4 sm:w-48'>
+            <Avatar className='h-24 w-24'>
+              <AvatarImage
+                src={avatarPreview || (user as any)?.avatarUrl || ''}
+                alt='Profile'
+              />
+              <AvatarFallback className='text-lg'>{initials}</AvatarFallback>
             </Avatar>
             <Controller
               control={form.control}
-              name="avatar"
+              name='avatar'
               render={({ field: { onChange, value, ref } }) => (
-                <div className="flex flex-col items-center gap-2 w-full">
-                  <label className="w-full" htmlFor="avatar-input">
+                <div className='flex flex-col items-center gap-2 w-full'>
+                  <label className='w-full' htmlFor='avatar-input'>
                     <input
-                      id="avatar-input"
+                      id='avatar-input'
                       ref={ref}
-                      type="file"
-                      accept="image/png,image/jpeg,image/jpg,image/gif"
-                      className="hidden"
-                 onChange={(e) => {
-    const file = e.target.files?.[0] || null; 
-    onChange(file ?? value ?? ''); 
-    onAvatarChange(file); 
-  }}
+                      type='file'
+                      accept='image/png,image/jpeg,image/jpg,image/gif'
+                      className='hidden'
+                      onChange={(e) => {
+                        const file = e.target.files?.[0] || null;
+                        onChange(file ?? value ?? '');
+                        onAvatarChange(file);
+                      }}
                     />
-                    <Button asChild variant="outline" size="sm" className="text-xs w-full">
+                    <Button
+                      asChild
+                      variant='outline'
+                      size='sm'
+                      className='text-xs w-full'
+                    >
                       <span>
-                        <Camera className="h-3 w-3 mr-2" />
+                        <Camera className='h-3 w-3 mr-2' />
                         Change Photo
                       </span>
                     </Button>
                   </label>
-                  <div className="text-center text-xs text-gray-500">
+                  <div className='text-center text-xs text-gray-500'>
                     <p>JPG, PNG or GIF</p>
                     <p>Max size: 2MB</p>
                   </div>
@@ -193,18 +207,21 @@ export function AccountInfo() {
           </div>
 
           {/* Form Section */}
-          <div className="flex-1">
+          <div className='flex-1'>
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <form
+                onSubmit={form.handleSubmit(onSubmit)}
+                className='space-y-4'
+              >
+                <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
                   <FormField
                     control={form.control}
-                    name="firstName"
+                    name='firstName'
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>First Name</FormLabel>
                         <FormControl>
-                          <Input placeholder="John" {...field} />
+                          <Input placeholder='John' {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -213,12 +230,12 @@ export function AccountInfo() {
 
                   <FormField
                     control={form.control}
-                    name="lastName"
+                    name='lastName'
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Last Name</FormLabel>
                         <FormControl>
-                          <Input placeholder="Doe" {...field} />
+                          <Input placeholder='Doe' {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -228,103 +245,14 @@ export function AccountInfo() {
 
                 <FormField
                   control={form.control}
-                  name="email"
+                  name='email'
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Email Address</FormLabel>
                       <FormControl>
-                        <Input type="email" placeholder="john@example.com" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="company"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Company (Optional)</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Your Company" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="jobTitle"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Job Title (Optional)</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Software Developer" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="companyWebsite"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Company Website (Optional)</FormLabel>
-                        <FormControl>
-                          <Input placeholder="https://example.com" type="url" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="sector"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Sector (Optional)</FormLabel>
-                        <FormControl>
-                          <Input placeholder="e.g., Technology, Healthcare, Finance" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <FormField
-                  control={form.control}
-                  name="phone"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Phone Number (Optional)</FormLabel>
-                      <FormControl>
-                        <Input placeholder="+1 (555) 123-4567" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="bio"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Bio (Optional)</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          placeholder="Tell us about yourself..."
-                          rows={3}
-                          className="resize-none"
+                        <Input
+                          type='email'
+                          placeholder='john@example.com'
                           {...field}
                         />
                       </FormControl>
@@ -333,12 +261,117 @@ export function AccountInfo() {
                   )}
                 />
 
-                <div className="flex justify-end pt-4 border-t">
-                  <Button type="submit" disabled={updateProfileMutation.isPending}>
-                    <Save className="h-4 w-4 mr-2" />
-                    {updateProfileMutation.isPending ? 'Saving...' : 'Save Changes'}
-                  </Button>
+                <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
+                  <FormField
+                    control={form.control}
+                    name='company'
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Company (Optional)</FormLabel>
+                        <FormControl>
+                          <Input placeholder='Your Company' {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name='jobTitle'
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Job Title (Optional)</FormLabel>
+                        <FormControl>
+                          <Input placeholder='Software Developer' {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </div>
+
+                <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
+                  <FormField
+                    control={form.control}
+                    name='companyWebsite'
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Company Website (Optional)</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder='https://example.com'
+                            type='url'
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name='sector'
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Sector (Optional)</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder='e.g., Technology, Healthcare, Finance'
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <FormField
+                  control={form.control}
+                  name='phone'
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Phone Number (Optional)</FormLabel>
+                      <FormControl>
+                        <Input placeholder='+1 (555) 123-4567' {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name='bio'
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Bio (Optional)</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder='Tell us about yourself...'
+                          rows={3}
+                          className='resize-none'
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* <div className='flex justify-end pt-4'>
+                  <Button
+                    type='submit'
+                    disabled={updateProfileMutation.isPending}
+                  >
+                    <Save className='h-4 w-4 mr-2' />
+                    {updateProfileMutation.isPending
+                      ? 'Saving...'
+                      : 'Save Changes'}
+                  </Button>
+                </div> */}
               </form>
             </Form>
           </div>

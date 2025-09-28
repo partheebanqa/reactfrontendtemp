@@ -88,13 +88,13 @@ export default function AccountSettings() {
       component: ExternalTools,
       upcoming: false,
     },
-    {
-      id: 'data-purge',
-      label: 'Purge Old Data',
-      icon: Database,
-      component: DataPurgeConfig,
-      upcoming: true,
-    },
+    // {
+    //   id: 'data-purge',
+    //   label: 'Purge Old Data',
+    //   icon: Database,
+    //   component: DataPurgeConfig,
+    //   upcoming: true,
+    // },
     {
       id: 'deactivate',
       label: 'Deactivate Account',

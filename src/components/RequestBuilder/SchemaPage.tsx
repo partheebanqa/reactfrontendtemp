@@ -3,7 +3,7 @@
 import React, { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Download, Server, X, GitCompare, Upload } from 'lucide-react';
+import { Download, Server, X, GitCompare, Upload, Info } from 'lucide-react';
 import SchemaUploader from './schema/SchemaUploader';
 import SchemaList from './schema/SchemaList';
 import SchemaComparer from './schema/SchemaComparer';
@@ -11,6 +11,12 @@ import JsonTreeViewer from './schema/JsonTreeViewer';
 import { useSchema } from '@/hooks/useSchema';
 import { useCollection } from '@/hooks/useCollection';
 import { useToast } from '@/hooks/use-toast';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '../ui/tooltip';
 
 const SchemaPage: React.FC = () => {
   const { schemas, uploadSchemaMutation } = useSchema();
@@ -100,8 +106,20 @@ const SchemaPage: React.FC = () => {
       <Card>
         <CardHeader className='flex flex-row items-center justify-between space-y-0'>
           <div>
-            <h3 className='text-base sm:text-lg font-medium text-gray-900 dark:text-white'>
+            <h3 className='text-base sm:text-lg font-medium text-gray-900 dark:text-white flex items-center gap-2'>
               API Schemas
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className='w-4 h-4 text-muted-foreground cursor-pointer' />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>
+                      You can upload up to 2 JSON schema files for comparison
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </h3>
           </div>
           <div className='flex space-x-2'>
@@ -116,14 +134,13 @@ const SchemaPage: React.FC = () => {
                 if (file) processFile(file);
               }}
             />
-            {schemas.length < 2 && (
-              <Button
-                variant='outline'
-                onClick={() => fileInputRef.current?.click()}
-              >
-                <Upload className='w-4 h-4 mr-2' /> Upload Schema
-              </Button>
-            )}
+            <Button
+              variant='outline'
+              disabled={schemas.length >= 2}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <Upload className='w-4 h-4 mr-2' /> Upload Schema
+            </Button>
 
             <Button
               variant={compareMode ? 'outline' : 'default'}
