@@ -215,7 +215,9 @@ export function EnvironmentManagement() {
       workspaceId: environment.workspaceId,
       name: `${environment.name} (Copy)`,
       description: environment.description,
-      baseUrl: environment.baseUrl,
+      defaultVariables: {
+        baseUrl: environment.baseUrl,
+      },
       isDefault: false,
     };
 
