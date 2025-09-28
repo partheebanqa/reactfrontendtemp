@@ -1394,12 +1394,24 @@ const RequestEditor: React.FC = () => {
               )}
 
               {bodyType === 'json' && (
-                <textarea
+                // <textarea
+                //   value={bodyContent}
+                //   onChange={(e) => setBodyContent(e.target.value)}
+                //   placeholder='Enter JSON body'
+                //   rows={8}
+                //   className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 font-mono text-sm dark:bg-gray-800 dark:text-white'
+                // />
+                <CodeMirror
                   value={bodyContent}
-                  onChange={(e) => setBodyContent(e.target.value)}
-                  placeholder='Enter JSON body'
-                  rows={8}
-                  className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 font-mono text-sm dark:bg-gray-800 dark:text-white'
+                  options={{
+                    mode: { name: 'javascript', json: true },
+                    theme: 'material',
+                    lineNumbers: true,
+                    lineWrapping: true,
+                  }}
+                  onBeforeChange={(editor, data, value) => {
+                    setBodyContent(value);
+                  }}
                 />
               )}
 
