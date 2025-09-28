@@ -232,6 +232,7 @@ export interface ExecuteRequestPayload {
 
 export interface ExecutionResponse {
   data: {
+    body: any;
     schemaValidation: null;
     assertionLogs: never[];
     metrics: {};

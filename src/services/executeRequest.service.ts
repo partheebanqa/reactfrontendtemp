@@ -124,14 +124,20 @@ export const executeRequestChain = async (
 };
 
 export const executeCollectionRequest = async (
-  requestId: string
+  requestId: string,
+  environmentId?: string
 ): Promise<ExecutionResponse> => {
   try {
+    const body: Record<string, string> = { requestId };
+    if (environmentId) {
+      body.environmentId = environmentId;
+    }
+
     const response = await apiRequest(
       'POST',
       `${API_EXECUTOR}/collection-request`,
       {
-        body: JSON.stringify({ requestId }), // ✅ wrap in object
+        body: JSON.stringify(body),
         headers: {
           'Content-Type': 'application/json',
         },
