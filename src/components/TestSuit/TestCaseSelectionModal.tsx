@@ -479,47 +479,60 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
       <DialogContent className='max-w-6xl max-h-[90vh] overflow-hidden flex flex-col p-0 justify-center'>
         <div className='p-3 border-b'>
           <DialogHeader>
-            <div className='flex items-center gap-4'>
-              <DialogTitle className='text-xl whitespace-nowrap'>
-                Select Test Cases :
-              </DialogTitle>
-              <p className='text-[14px] text-muted-foreground whitespace-nowrap'>
-                Choose test cases for: {name}
-              </p>
-
-              <div className='relative flex-1 max-w-md'>
-                <Search className='absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground' />
-                <Input
-                  placeholder='Search test cases by name, description, or tags...'
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className='pl-10'
-                  disabled={isLoading}
-                />
+            <div className='flex items-center justify-between gap-4'>
+              {/* Left side: Name + Search */}
+              <div className='flex items-center gap-4'>
+                <DialogTitle className='text-xl whitespace-nowrap'>
+                  Select Test Cases :{' '}
+                  <span className='text-[14px] text-muted-foreground whitespace-nowrap'>
+                    {name}
+                  </span>
+                </DialogTitle>
+                <div className='relative flex-1 max-w-xs'>
+                  <Search className='absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground' />
+                  <Input
+                    placeholder='Search test cases...'
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className='pl-10 pr-8'
+                    disabled={isLoading}
+                  />
+                </div>
               </div>
 
-              <Select
-                value={categoryFilter}
-                onValueChange={setCategoryFilter}
-                disabled={isLoading}
-              >
-                <SelectTrigger className='w-48'>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value='All Categories'>
-                    All Categories ({totalAvailableTests})
-                  </SelectItem>
-                  {testCaseCategories.map((category) => (
-                    <SelectItem
-                      key={category.category}
-                      value={category.category}
-                    >
-                      {category.category} ({category.count})
+              {/* Right side: Filter + Clear button */}
+              <div className='flex items-center gap-2'>
+                <Select
+                  value={categoryFilter}
+                  onValueChange={setCategoryFilter}
+                  disabled={isLoading}
+                >
+                  <SelectTrigger className='w-48'>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value='All Categories'>
+                      All Categories ({totalAvailableTests})
                     </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                    {testCaseCategories.map((category) => (
+                      <SelectItem
+                        key={category.category}
+                        value={category.category}
+                      >
+                        {category.category} ({category.count})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                {/* Always show clear button */}
+                {/* <button
+                  onClick={() => setCategoryFilter('All Categories')}
+                  className='flex items-center justify-center w-8 h-8 rounded-full hover:bg-gray-100 text-gray-500'
+                >
+                  ×
+                </button> */}
+              </div>
             </div>
           </DialogHeader>
         </div>
@@ -690,10 +703,8 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
                                     >
                                       <div className='flex items-center justify-between space-x-2'>
                                         <h4 className='font-medium text-sm'>
-                                          {test.name}
-                                          {test?.subCategory}
+                                          {test?.subCategory}:: {test.name}
                                         </h4>
-
                                         <button
                                           onClick={() =>
                                             setExpandedTestId(

@@ -86,8 +86,6 @@ const DynamicVariablesSection: React.FC = () => {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const { error: errorToast, success: successToast } = useToast();
 
-  console.log('Dynamic Variables:', dynamicVariables);
-
   // CREATE
   const handleCreate = async (payload: any) => {
     try {
@@ -243,9 +241,6 @@ const DynamicVariablesSection: React.FC = () => {
             </span>
             Dynamic Variables
           </h2>
-          <div className='text-sm text-muted-foreground'>
-            {filteredVariables.length} of {dynamicVariables.length} variables
-          </div>
         </div>
 
         <div className='flex flex-col sm:flex-row items-start sm:items-center gap-2 w-full sm:w-auto'>

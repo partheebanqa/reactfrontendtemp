@@ -80,7 +80,10 @@ const VariableCard: React.FC<VariableListProps> = ({
   return (
     <div className='grid gap-4'>
       {variables.map((variable) => (
-        <Card key={variable.id} className='hover:shadow-md transition-shadow'>
+        <Card
+          key={variable.id}
+          className='hover:shadow-md transition-shadow border-l-4 border-l-orange-500'
+        >
           <CardContent className='p-4'>
             <div className='flex items-center justify-between'>
               <div className='flex items-center space-x-4 flex-1'>
@@ -125,7 +128,7 @@ const VariableCard: React.FC<VariableListProps> = ({
                   </div>
                   <div className='flex items-center space-x-2 mb-2'>
                     <code
-                      className={`px-2 py-1 rounded text-sm ${
+                      className={`px-2 py-1 rounded text-sm max-w-xs truncate ${
                         variable.type === 'dynamic'
                           ? 'bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300'
                           : variable.type === 'static'
