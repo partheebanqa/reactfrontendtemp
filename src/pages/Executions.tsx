@@ -148,7 +148,7 @@ const Executions = () => {
         if (triggerFilter !== execution.source) return false;
       }
 
-      // Execution ID filter
+      // Execution ID filte
       if (idFilter && !(execution.id ?? '').toLowerCase().includes(idFilter)) {
         return false;
       }
