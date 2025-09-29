@@ -22,7 +22,7 @@ const JsonViewer: React.FC<JsonViewerProps> = ({ data, view, isError = false, se
 
   const highlightSearchQuery = (text: string, query: string): string => {
     if (!query.trim()) return text;
-    
+
     const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
     return text.replace(regex, '<mark class="bg-yellow-200 dark:bg-yellow-800">$1</mark>');
   };
@@ -31,23 +31,27 @@ const JsonViewer: React.FC<JsonViewerProps> = ({ data, view, isError = false, se
     if (errorData?.error) {
       const error = errorData.error;
       return (
-        <div className="space-y-4">
+        <div className="space-y-2">
           <div className="flex items-center space-x-2 text-red-600 dark:text-red-400">
             <AlertTriangle className="h-5 w-5" />
             <h3 className="font-semibold">{error.type?.toUpperCase()} ERROR</h3>
+
           </div>
-          
-          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
-            <h4 className="font-medium text-red-800 dark:text-red-200 mb-2">
+
+          <div className="rounded-lg p-2">
+            {/* <h4 className="font-medium text-red-800 dark:text-red-200 mb-2">
               {error.message}
-            </h4>
-            
-            {error.description && (
+            </h4> */}
+            <pre className="text-sm font-mono text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-800 p-3 rounded overflow-auto whitespace-pre-wrap">
+              {formatJson(errorData, view)}
+            </pre>
+
+            {/* {error.description && (
               <p className="text-sm text-red-700 dark:text-red-300 mb-3">
                 {error.description}
               </p>
-            )}
-            
+            )} */}
+
             {error.suggestions && error.suggestions.length > 0 && (
               <div>
                 <p className="text-sm font-medium text-red-800 dark:text-red-200 mb-2">
@@ -63,7 +67,7 @@ const JsonViewer: React.FC<JsonViewerProps> = ({ data, view, isError = false, se
                 </ul>
               </div>
             )}
-            
+
             {error.originalError && (
               <details className="mt-3">
                 <summary className="text-sm font-medium text-red-800 dark:text-red-200 cursor-pointer">
@@ -75,19 +79,10 @@ const JsonViewer: React.FC<JsonViewerProps> = ({ data, view, isError = false, se
               </details>
             )}
           </div>
-          
-          <details>
-            <summary className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
-              Raw Response Data
-            </summary>
-            <pre className="mt-2 text-sm font-mono text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-800 p-3 rounded overflow-auto whitespace-pre-wrap">
-              {formatJson(errorData, view)}
-            </pre>
-          </details>
         </div>
       );
     }
-    
+
     return (
       <pre className="text-sm font-mono text-gray-900 dark:text-gray-100 whitespace-pre-wrap">
         {formatJson(data, view)}
@@ -98,9 +93,9 @@ const JsonViewer: React.FC<JsonViewerProps> = ({ data, view, isError = false, se
   const renderSuccessResponse = (data: any) => {
     const formattedData = formatJson(data, view);
     const highlightedData = highlightSearchQuery(formattedData, searchQuery);
-    
+
     return (
-      <pre 
+      <pre
         className="text-sm font-mono text-gray-900 dark:text-gray-100 whitespace-pre-wrap break-all sm:break-normal"
         dangerouslySetInnerHTML={{ __html: highlightedData }}
       />
