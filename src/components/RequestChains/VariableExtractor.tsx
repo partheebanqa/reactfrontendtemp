@@ -156,7 +156,7 @@ export function VariableExtractor({
                     onChange={(e) =>
                       updateExtraction(index, {
                         source: e.target.value as DataExtraction['source'],
-                        path: '', // Reset path when source changes
+                        path: '',
                       })
                     }
                     className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm'
