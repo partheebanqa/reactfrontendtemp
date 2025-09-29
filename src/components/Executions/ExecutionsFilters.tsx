@@ -80,9 +80,8 @@ interface ExecutionsFiltersProps {
   setDurationRange: (range: { min: number; max: number }) => void;
   clearAllFilters: () => void;
   handleDeleteEnvironment: (environmentId: string) => void;
-    onRefresh: () => void;
+  onRefresh: () => void;
   refreshing: boolean;
- 
 }
 
 export const ExecutionsFilters = ({
@@ -112,25 +111,21 @@ export const ExecutionsFilters = ({
   clearAllFilters,
   handleDeleteEnvironment,
   onRefresh,
-  refreshing
- 
-
+  refreshing,
 }: ExecutionsFiltersProps) => {
-
   const { environments } = useDataManagement();
   const envOptions = useMemo(() => {
     const set = new Set<string>();
-    environments?.forEach(e => e?.name && set.add(e.name));
-    return ['all', ...Array.from(set).sort((a,b)=>a.localeCompare(b))];
+    environments?.forEach((e) => e?.name && set.add(e.name));
+    return ['all', ...Array.from(set).sort((a, b) => a.localeCompare(b))];
   }, [environments]);
- 
+
   return (
     <div className='mb-2 space-y-4 mt-2 bg-card p-4 rounded-lg border border-border'>
       {/* Quick Filters */}
-     
 
       {/* Search & Filters */}
-       <div className='flex flex-wrap gap-2 '>
+      <div className='flex flex-wrap gap-2 '>
         <Button
           variant={activeQuickFilter === 'last24hours' ? 'default' : 'outline'}
           size='sm'
@@ -178,8 +173,6 @@ export const ExecutionsFilters = ({
         </Button>
       </div>
       <div className=' flex flex-col lg:flex-row gap-4'>
-
-        
         {/* Search */}
         <div className='flex-1 max-w-md relative'>
           <Input
@@ -207,13 +200,13 @@ export const ExecutionsFilters = ({
               <SelectItem value='production'>Production</SelectItem>
             </SelectContent>
           </Select> */}
-           
-           <Select
+
+          <Select
             value={environmentFilter}
             onValueChange={setEnvironmentFilter}
           >
-            <SelectTrigger className="w-48">
-              <SelectValue placeholder="All environments" />
+            <SelectTrigger className='w-48'>
+              <SelectValue placeholder='All environments' />
             </SelectTrigger>
             <SelectContent>
               {envOptions.map((name) => (
@@ -221,8 +214,7 @@ export const ExecutionsFilters = ({
                   {name === 'all' ? (
                     'All'
                   ) : (
-                    <div className="flex items-center gap-2">
-                      
+                    <div className='flex items-center gap-2'>
                       <span>{name}</span>
                     </div>
                   )}
@@ -344,10 +336,10 @@ export const ExecutionsFilters = ({
                       <SelectItem value='all'>All Triggers</SelectItem>
                       <SelectItem value='manual'>Manual</SelectItem>
                       <SelectItem value='scheduled'>Scheduled</SelectItem>
+                      <SelectItem value='cicd'>CICD</SelectItem>{' '}
                     </SelectContent>
                   </Select>
                 </div>
-
                 {/* Execution ID */}
                 <div>
                   <Label
@@ -439,19 +431,18 @@ export const ExecutionsFilters = ({
             </Select>
           )}
 
-         <Button
-  variant="default"
-  className="hover-scale"
-  onClick={onRefresh}
-  disabled={refreshing}
->
-  <RefreshCw
-    className={`mr-2 ${refreshing ? "animate-spin" : ""}`} // 👈 spinner effect
-    size={16}
-  />
-  {refreshing ? "Refreshing..." : "Refresh"}
-</Button>
-
+          <Button
+            variant='default'
+            className='hover-scale'
+            onClick={onRefresh}
+            disabled={refreshing}
+          >
+            <RefreshCw
+              className={`mr-2 ${refreshing ? 'animate-spin' : ''}`} // 👈 spinner effect
+              size={16}
+            />
+            {refreshing ? 'Refreshing...' : 'Refresh'}
+          </Button>
         </div>
       </div>
     </div>

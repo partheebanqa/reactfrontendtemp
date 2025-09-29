@@ -586,7 +586,8 @@ export function ResponseExplorer({
           <div className='relative group pr-4'>
             <Info className='w-5 h-5 text-gray-400 cursor-pointer' />
             <div className='absolute right-0 mt-2 w-56 p-2 text-xs text-gray-700 bg-white border border-gray-200 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity'>
-              Click on the element to extract variables.
+              Mouse over on element and click on "extract" button to extract
+              variable.
             </div>
           </div>
         </div>
@@ -659,13 +660,14 @@ export function ResponseExplorer({
                       </div>
                     </div>
                     <div className='text-sm'>
-                      <p className='text-gray-600 mb-1'>
-                        Path:{' '}
-                        <code className='bg-gray-100 px-1 rounded overflow-x-auto whitespace-nowrap block'>
+                      <p className='text-gray-600 mb-1 flex items-center gap-2'>
+                        <span>Path:</span>
+                        <span className='bg-gray-50 px-2 py-1 rounded border text-sm font-mono flex-1 overflow-x-auto whitespace-nowrap'>
                           {extraction?.path}
-                        </code>
+                        </span>
                       </p>
-                      <div className='bg-gray-50 p-2 rounded border text-xs font-mono overflow-x-auto whitespace-nowrap'>
+
+                      <div className='bg-gray-50 px-2 py-1 rounded border text-sm font-mono overflow-x-auto whitespace-nowrap'>
                         {typeof value === 'object'
                           ? JSON.stringify(value)
                           : String(value)}

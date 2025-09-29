@@ -29,6 +29,8 @@ export const ExecutionsTable = ({
 }: any) => {
   const [_, setLocation] = useLocation();
 
+  console.log('schedules:', executions);
+
   const goToReport = (execution: any, environment: string) => {
     const type = execution?.executionType;
     const entityId =
@@ -171,16 +173,22 @@ export const ExecutionsTable = ({
               </TableCell>
               <TableCell>
                 <div className='flex items-center gap-2'>
-                  {execution.scheduleId ? (
+                  {execution.source === 'scheduled' && (
                     <Calendar className='text-blue-600' size={12} />
-                  ) : (
+                  )}
+                  {execution.source === 'manual' && (
                     <Play className='text-muted-foreground' size={12} />
                   )}
-                  <span className='text-sm text-foreground'>
-                    {execution.scheduleId ? 'Scheduled' : 'Manual'}
+                  {execution.source === 'cicd' && (
+                    <GitBranch className='text-green-600' size={12} />
+                  )}
+
+                  <span className='text-sm text-foreground capitalize'>
+                    {execution.source || 'N/A'}
                   </span>
                 </div>
               </TableCell>
+
               <TableCell>
                 <div className='flex items-center gap-1'>
                   <TooltipProvider>
