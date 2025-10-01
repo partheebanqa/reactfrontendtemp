@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -85,15 +84,14 @@ export default function RecurringScheduleBuilder({
   onTimeChange,
 }: RecurringScheduleBuilderProps) {
   const [pattern, setPattern] = useState('weekly');
-  const [selectedWeekdays, setSelectedWeekdays] = useState<string[]>(['5']); // Default to Friday
+  const [selectedWeekdays, setSelectedWeekdays] = useState<string[]>(['5']);
   const [monthlyType, setMonthlyType] = useState<'date' | 'day'>('date');
   const [monthlyDate, setMonthlyDate] = useState('1');
   const [monthlyWeekday, setMonthlyWeekday] = useState('first-monday');
 
-  // Custom pattern state
   const [customInterval, setCustomInterval] = useState('2');
   const [customFrequency, setCustomFrequency] = useState('weeks');
-  const [customWeekdays, setCustomWeekdays] = useState<string[]>(['2', '4']); // Tue, Thu
+  const [customWeekdays, setCustomWeekdays] = useState<string[]>(['2', '4']);
   const [customEndType, setCustomEndType] = useState<'never' | 'after' | 'on'>(
     'after'
   );
@@ -283,16 +281,27 @@ export default function RecurringScheduleBuilder({
           </Select>
         </div>
         <div className='space-y-2'>
-          <Label>Time</Label>
-          <div className='relative'>
-            <Input
-              type='time'
-              value={time}
-              onChange={(e) => onTimeChange?.(e.target.value)}
-              className='pr-10'
-            />
-            <Clock className='absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400' />
-          </div>
+          <Label className='text-base font-medium'>Time</Label>
+          <Select value={time} onValueChange={(value) => onTimeChange?.(value)}>
+            <SelectTrigger>
+              <SelectValue placeholder='Select time' />
+            </SelectTrigger>
+            <SelectContent>
+              {Array.from({ length: 24 }, (_, hour) =>
+                ['00', '15', '30', '45'].map((minute) => {
+                  const timeString = `${hour
+                    .toString()
+                    .padStart(2, '0')}:${minute}`;
+
+                  return (
+                    <SelectItem key={timeString} value={timeString}>
+                      {timeString}
+                    </SelectItem>
+                  );
+                })
+              ).flat()}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
@@ -540,7 +549,6 @@ export default function RecurringScheduleBuilder({
         </div>
       )}
 
-      {/* Simple descriptions for other patterns */}
       {pattern === 'daily' && (
         <p className='text-sm text-gray-600'>
           Runs every day at {formatTime(time)}

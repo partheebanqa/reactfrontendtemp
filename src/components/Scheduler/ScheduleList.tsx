@@ -668,7 +668,7 @@ export default function ScheduleList({
                             <AlertDialogFooter>
                               <AlertDialogCancel>Cancel</AlertDialogCancel>
                               <Button
-                                variant='destructive'
+                                // variant='destructive'
                                 onClick={() =>
                                   deleteMutation.mutate(schedule.scheduleId)
                                 }

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { formatInTimeZone } from 'date-fns-tz';
 import { Plus, Info, CalendarIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -179,21 +180,18 @@ export default function ScheduleCreate({
   });
 
   const onSubmit = (data: ScheduleFormData) => {
-    // Create scheduled time in ISO format
     const scheduleDate = data.scheduledDate || new Date();
     const currentScheduleTime = data.scheduledTime || scheduleTime || '09:00';
     const [hours, minutes] = currentScheduleTime.split(':');
 
-    // Create ISO date string with timezone
     const scheduledDateTime = new Date(scheduleDate);
-    scheduledDateTime.setHours(
-      Number.parseInt(hours),
-      Number.parseInt(minutes),
-      0,
-      0
+    scheduledDateTime.setHours(Number(hours), Number(minutes), 0, 0);
+
+    const scheduledTimeISO = formatInTimeZone(
+      scheduledDateTime,
+      data.timezone,
+      "yyyy-MM-dd'T'HH:mm:ssXXX"
     );
-    const scheduledTimeISO =
-      scheduledDateTime.toISOString().slice(0, 19) + '+05:30';
 
     // Parse stop conditions to numbers
     const stopExecutionAfterFailure = (data.stopConditions || []).map(
@@ -219,7 +217,6 @@ export default function ScheduleCreate({
           .filter((email) => email)
       : [];
 
-    // Get the correct target ID based on target type - THIS IS THE KEY LOGIC
     const targetId =
       targetType === 'testSuite' ? data.testSuiteId : data.requestChainId;
 
@@ -228,8 +225,8 @@ export default function ScheduleCreate({
       scheduleName: data.name,
       description: data.description || '',
       workspaceId: currentWorkspace?.id,
-      target: targetType === 'testSuite' ? 1 : 2, // 1 for test suite, 2 for request chain
-      targetId, // This will be testSuiteId or requestChainId based on target type
+      target: targetType === 'testSuite' ? 1 : 2,
+      targetId,
       isOneTime: data.scheduleType === 'one-time',
       scheduledTime: scheduledTimeISO,
       timezone:
