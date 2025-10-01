@@ -14,7 +14,6 @@ import {
   Link2,
   Layers,
   EllipsisVertical,
-  Delete,
 } from 'lucide-react';
 import { useToast } from '@/hooks/useToast';
 import { formatDate } from '@/utils/formatDate';

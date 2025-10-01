@@ -153,8 +153,8 @@ const SchemaList: React.FC<SchemaListProps> = ({
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Button
-                          size='icon'
                           variant='ghost'
+                          size='lg'
                           className='text-red-600 hover:text-red-700'
                           aria-label='Delete schema'
                           onClick={(e) => {
