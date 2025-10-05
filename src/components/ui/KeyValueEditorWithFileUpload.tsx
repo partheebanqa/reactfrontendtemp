@@ -1,6 +1,8 @@
 import { Trash2, File as FileIcon } from 'lucide-react';
 import React, { useState } from 'react';
 import TooltipContainer from './tooltip-container';
+import { Button } from './button';
+import { Input } from './input';
 
 export interface KeyValuePairWithFile {
   key: string;
@@ -40,7 +42,7 @@ const KeyValueEditorWithFileUpload: React.FC<KeyValueEditorWithFileUploadProps> 
   const toggleItemType = (index: number) => {
     const currentType = items[index].type;
     const newType = currentType === 'text' ? 'file' : 'text';
-    
+
     // Reset value when switching types
     if (newType === 'text') {
       onUpdate(index, 'value', '');
@@ -48,7 +50,7 @@ const KeyValueEditorWithFileUpload: React.FC<KeyValueEditorWithFileUploadProps> 
     } else {
       onUpdate(index, 'value', '');
     }
-    
+
     onUpdate(index, 'type', newType);
   };
 
@@ -58,13 +60,14 @@ const KeyValueEditorWithFileUpload: React.FC<KeyValueEditorWithFileUploadProps> 
         <h3 className='text-base sm:text-lg font-medium text-gray-900 dark:text-white'>
           {title}
         </h3>
-        <button
+        <Button
           onClick={onAdd}
-          className='bg-blue-600 hover:bg-blue-700 text-white px-3 sm:px-4 py-2 rounded-md text-sm'
+
+        // className='bg-blue-600 hover:bg-blue-700 text-white px-3 sm:px-4 py-2 rounded-md text-sm'
         >
           <span className='hidden sm:inline'>{addButtonLabel}</span>
           <span className='sm:hidden'>Add</span>
-        </button>
+        </Button>
       </div>
 
       {items.length > 0 ? (
@@ -90,17 +93,17 @@ const KeyValueEditorWithFileUpload: React.FC<KeyValueEditorWithFileUploadProps> 
                 />
 
                 {item.type === 'text' ? (
-                  <input
+                  <Input
                     type='text'
                     value={typeof item.value === 'string' ? item.value : ''}
                     onChange={(e) => onUpdate(index, 'value', e.target.value)}
                     placeholder='Value'
-                    className='flex-1 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 dark:bg-gray-800 dark:text-white hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/50 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150'
+                  // className='flex-1 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 dark:bg-gray-800 dark:text-white hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/50 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150'
                   />
                 ) : (
                   <div className='flex-1 flex items-center space-x-2 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 dark:bg-gray-800 dark:text-white'>
                     <label className='flex-1 cursor-pointer overflow-hidden'>
-                      <input
+                      <Input
                         type='file'
                         onChange={(e) => handleFileChange(index, e)}
                         className='hidden'
@@ -115,21 +118,21 @@ const KeyValueEditorWithFileUpload: React.FC<KeyValueEditorWithFileUploadProps> 
                   </div>
                 )}
 
-                <button
+                <Button
                   type='button'
                   onClick={() => toggleItemType(index)}
-                  className='bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 px-3 py-2 rounded-md text-xs whitespace-nowrap'
+                // className='bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 px-3 py-2 rounded-md text-xs whitespace-nowrap'
                 >
                   {item.type === 'text' ? 'File' : 'Text'}
-                </button>
+                </Button>
 
                 <TooltipContainer text='Remove' position='bottom' children={
-                  <button
+                  <Button
                     onClick={() => onRemove(index)}
-                    className='text-red-600 hover:text-red-700 px-2 py-1 whitespace-nowrap'
+                  // className='text-red-600 hover:text-red-700 px-2 py-1 whitespace-nowrap'
                   >
                     <Trash2 className='h-4 w-4' />
-                  </button>
+                  </Button>
                 } />
               </div>
             </div>
