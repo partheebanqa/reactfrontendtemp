@@ -1372,7 +1372,7 @@ const RequestEditor: React.FC = () => {
                 <h3 className='text-base sm:text-lg font-medium text-gray-900 dark:text-white'>
                   Request Body
                 </h3>
-                <select
+                {/* <select
                   value={bodyType}
                   onChange={(e) => setBodyType(e.target.value as any)}
                   className='border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-800 text-sm font-medium hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all duration-150'
@@ -1385,7 +1385,7 @@ const RequestEditor: React.FC = () => {
                   </option>
                   <option value='raw'>Raw</option>
                   <option value='binary'>Binary</option>
-                </select>
+                </select> */}
               </div>
 
               {bodyType === 'none' && (
