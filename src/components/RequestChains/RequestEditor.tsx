@@ -713,6 +713,41 @@ export function RequestEditor({
       authUsername: auth.username, // Use state variable for auth username
       authPassword: auth.password, // Use state variable for auth password
     };
+
+    {
+      const token = (
+        safeRequest.authToken ||
+        safeRequest.authorization?.token ||
+        ''
+      ).trim();
+      if (token) {
+        (safeRequest as any).authorizationType = 'bearer';
+
+        const headers = Array.isArray(safeRequest.headers)
+          ? [...safeRequest.headers]
+          : [];
+        const authIdx = headers.findIndex(
+          (h) => h?.key?.toLowerCase() === 'authorization'
+        );
+        const value = `Bearer ${token}`;
+        if (authIdx >= 0) {
+          headers[authIdx] = {
+            ...headers[authIdx],
+            value,
+            enabled: true,
+          };
+        } else {
+          headers.push({
+            id: `temp_${Date.now()}`,
+            key: 'Authorization',
+            value,
+            enabled: true,
+          });
+        }
+        (safeRequest as any).headers = headers;
+      }
+    }
+
     if (!safeRequest.url) {
       toast({
         title: 'Error',
@@ -2058,7 +2093,7 @@ export function RequestEditor({
             </div>
           )}
           {activeTab === 'settings' && (
-            <div className='space-y-6'>
+            <div className='space-y-4'>
               <h3 className='text-lg font-medium text-gray-900'>
                 Request Settings
               </h3>
