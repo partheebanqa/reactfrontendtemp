@@ -163,10 +163,6 @@ export const copyToClipboard = async (text: string) => {
   try {
     const formattedText = `{{${text}}}`;
     await navigator.clipboard.writeText(formattedText);
-    toast({
-      title: 'Copied to Clipboard',
-      description: `Copied: ${formattedText}`,
-    });
   } catch (err) {
     console.error('Failed to copy:', err);
   }

@@ -86,8 +86,6 @@ export function EnvironmentManagement() {
   } = useDataManagement();
   const { workspaces } = useWorkspace();
 
-  console.log('environments999,', environments);
-
   const form = useForm<EnvironmentFormData>({
     resolver: zodResolver(environmentSchema),
     defaultValues: {

@@ -511,6 +511,40 @@ export function RequestChainEditor({
     const startTime = Date.now();
 
     const processedRequest = processRequestWithVariables(request, variables);
+    {
+      const token = (
+        processedRequest.authToken ||
+        processedRequest.authorization?.token ||
+        ''
+      ).trim();
+      if (token) {
+        (processedRequest as any).authorizationType = 'bearer';
+
+        const headers = Array.isArray(processedRequest.headers)
+          ? [...processedRequest.headers]
+          : [];
+        const authIdx = headers.findIndex(
+          (h) => h?.key?.toLowerCase() === 'authorization'
+        );
+        const value = `Bearer ${token}`;
+        if (authIdx >= 0) {
+          headers[authIdx] = {
+            ...headers[authIdx],
+            value,
+            enabled: true,
+          };
+        } else {
+          headers.push({
+            id: `temp_${Date.now()}`,
+            key: 'Authorization',
+            value,
+            enabled: true,
+          });
+        }
+        (processedRequest as any).headers = headers;
+      }
+    }
+
     const payload = buildRequestPayload(processedRequest, variables);
     const previewUrl = getPreviewUrl(request, variables);
     payload.request.url = previewUrl;
@@ -896,7 +930,7 @@ export function RequestChainEditor({
   const handleCopyForRequest = async (requestId: string, value: string) => {
     try {
       const formattedValue = `{{${value}}}`;
-      await copyToClipboard(formattedValue); // Use utility function
+      await copyToClipboard(formattedValue);
       setCopiedStates((prev) => ({ ...prev, [requestId]: true }));
       toast({
         title: 'Copied to Clipboard',
