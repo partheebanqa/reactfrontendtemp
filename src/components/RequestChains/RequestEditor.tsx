@@ -67,6 +67,11 @@ import {
   type DynamicVariableOverride, // Removed redeclaration of Variable
   type AutocompleteState,
 } from '@/lib/request-utils';
+import { Controlled as CodeMirror } from 'react-codemirror2';
+import 'codemirror/lib/codemirror.css';
+import 'codemirror/theme/material.css';
+import 'codemirror/mode/javascript/javascript';
+import "./../RequestBuilder/RequestEditor/whiteorange.css"
 
 // Define Variable interface here as it's used in the props and functions
 interface Variable {
@@ -285,8 +290,8 @@ export function RequestEditor({
           typeof value === 'number'
             ? 'number'
             : typeof value === 'boolean'
-            ? 'boolean'
-            : 'string',
+              ? 'boolean'
+              : 'string',
       })
     );
 
@@ -408,25 +413,25 @@ export function RequestEditor({
       authApiValue: replaceVariables(request.authApiValue || '', variables),
       authorization: request.authorization
         ? {
-            ...request.authorization,
-            token: replaceVariables(
-              request.authorization.token || '',
-              variables
-            ),
-            username: replaceVariables(
-              request.authorization.username || '',
-              variables
-            ),
-            password: replaceVariables(
-              request.authorization.password || '',
-              variables
-            ),
-            key: replaceVariables(request.authorization.key || '', variables),
-            value: replaceVariables(
-              request.authorization.value || '',
-              variables
-            ),
-          }
+          ...request.authorization,
+          token: replaceVariables(
+            request.authorization.token || '',
+            variables
+          ),
+          username: replaceVariables(
+            request.authorization.username || '',
+            variables
+          ),
+          password: replaceVariables(
+            request.authorization.password || '',
+            variables
+          ),
+          key: replaceVariables(request.authorization.key || '', variables),
+          value: replaceVariables(
+            request.authorization.value || '',
+            variables
+          ),
+        }
         : request.authorization,
     };
   };
@@ -616,7 +621,7 @@ export function RequestEditor({
 
     const fakeName = () =>
       ['Alice Johnson', 'Bob Smith', 'Charlie Brown'][
-        Math.floor(Math.random() * 3)
+      Math.floor(Math.random() * 3)
       ];
 
     let newValue: string | number;
@@ -1036,7 +1041,7 @@ export function RequestEditor({
       (chain: any) =>
         normalizeString(chain.name) === normalizeString(chainName) &&
         normalizeString(chain.description) ===
-          normalizeString(chainDescription) &&
+        normalizeString(chainDescription) &&
         normalizeBool(chain.isImportant) === normalizeBool(chainEnabled) &&
         chain.environmentId === activeEnvironment?.id
     );
@@ -1304,7 +1309,7 @@ export function RequestEditor({
       processedRequest.body !== request.body ||
       processedRequest.url !== request.url ||
       JSON.stringify(processedRequest.headers) !==
-        JSON.stringify(request.headers) ||
+      JSON.stringify(request.headers) ||
       JSON.stringify(processedRequest.params) !== JSON.stringify(request.params)
     );
   };
@@ -1505,11 +1510,10 @@ export function RequestEditor({
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id as typeof activeTab)}
-                  className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors flex items-center space-x-2 ${
-                    activeTab === tab.id
-                      ? 'border-blue-500 text-[#136fb0]'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
+                  className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors flex items-center space-x-2 ${activeTab === tab.id
+                    ? 'border-blue-500 text-[#136fb0]'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
                 >
                   <Icon className='w-4 h-4' />
                   <span>{tab.label}</span>
@@ -1593,11 +1597,10 @@ export function RequestEditor({
                       onClick={() =>
                         updateParam(index, { enabled: !param.enabled })
                       }
-                      className={`p-2 rounded-lg transition-colors ${
-                        param.enabled
-                          ? 'text-green-600 hover:bg-green-50'
-                          : 'text-gray-400 hover:bg-gray-50'
-                      }`}
+                      className={`p-2 rounded-lg transition-colors ${param.enabled
+                        ? 'text-green-600 hover:bg-green-50'
+                        : 'text-gray-400 hover:bg-gray-50'
+                        }`}
                     >
                       {/* toggle visibility icon here */}
                     </button>
@@ -1678,11 +1681,10 @@ export function RequestEditor({
                       onClick={() =>
                         updateHeader(index, { enabled: !header.enabled })
                       }
-                      className={`p-2 rounded-lg transition-colors ${
-                        header.enabled
-                          ? 'text-green-600 hover:bg-green-50'
-                          : 'text-gray-400 hover:bg-gray-50'
-                      }`}
+                      className={`p-2 rounded-lg transition-colors ${header.enabled
+                        ? 'text-green-600 hover:bg-green-50'
+                        : 'text-gray-400 hover:bg-gray-50'
+                        }`}
                     >
                       {/* toggle visibility icon */}
                     </button>
@@ -1703,7 +1705,7 @@ export function RequestEditor({
               <h3 className='text-lg font-medium text-gray-900'>
                 Request Body
               </h3>
-              <div className='flex items-center space-x-4'>
+              {/* <div className='flex items-center space-x-4'>
                 <label className='flex items-center space-x-2'>
                   <input
                     type='radio'
@@ -1764,10 +1766,10 @@ export function RequestEditor({
                   />
                   <span className='text-sm'>Raw</span>
                 </label>
-              </div>
+              </div> */}
               {request.bodyType === 'raw' && (
                 <div className='space-y-2'>
-                  <div className='flex items-center justify-end'>
+                  {/* <div className='flex items-center justify-end'>
                     <select
                       value={request.rawBodyType || 'text'}
                       onChange={(e) =>
@@ -1786,8 +1788,8 @@ export function RequestEditor({
                       <option value='xml'>XML</option>
                       <option value='html'>HTML</option>
                     </select>
-                  </div>
-                  <textarea
+                  </div> */}
+                  {/* <textarea
                     name='body'
                     value={body}
                     onChange={(e) => handleInputChange(e, setBody)}
@@ -1795,7 +1797,23 @@ export function RequestEditor({
                     rows={8}
                     className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm'
                     placeholder='Enter request body... Use {{variableName}} or {{dynamicVar}} for variables'
+                  /> */}
+
+                  <CodeMirror
+                    value={body}
+                    options={{
+                      mode: { name: 'javascript', json: true },
+                      theme: 'whiteorange',
+                      lineNumbers: true,
+                      lineWrapping: true,
+                    }}
+                    onBeforeChange={(editor, data, value) => {
+                      handleInputChange({ target: { value } }, setBody);
+                    }}
+                    onKeyUp={(editor, event) => handleAutocomplete(event)}
+                    className='w-full border border-gray-300 rounded-lg font-mono text-[12px]'
                   />
+
                   {/* Show processed value if different */}
                   {processedRequest.body !== request.body &&
                     processedRequest.body && (
@@ -1830,7 +1848,7 @@ export function RequestEditor({
                   </label>
                   <select
                     value='bearer'
-                    onChange={() => {}}
+                    onChange={() => { }}
                     className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
                     disabled
                   >
@@ -1858,12 +1876,12 @@ export function RequestEditor({
                   {(processedRequest.authorization?.token ||
                     processedRequest.authToken) !==
                     (request.authorization?.token || request.authToken) && (
-                    <div className='mt-1 px-2 py-1 bg-blue-50 border border-blue-200 rounded text-xs font-mono'>
-                      Processed:{' '}
-                      {processedRequest.authorization?.token ||
-                        processedRequest.authToken}
-                    </div>
-                  )}
+                      <div className='mt-1 px-2 py-1 bg-blue-50 border border-blue-200 rounded text-xs font-mono'>
+                        Processed:{' '}
+                        {processedRequest.authorization?.token ||
+                          processedRequest.authToken}
+                      </div>
+                    )}
                 </div>
               </div>
             </div>
@@ -1917,11 +1935,10 @@ export function RequestEditor({
                             onClick={() =>
                               updateTest(test.id, { enabled: !test.enabled })
                             }
-                            className={`p-1 rounded transition-colors ${
-                              test.enabled
-                                ? 'text-green-600 hover:bg-green-50'
-                                : 'text-gray-400 hover:bg-gray-50'
-                            }`}
+                            className={`p-1 rounded transition-colors ${test.enabled
+                              ? 'text-green-600 hover:bg-green-50'
+                              : 'text-gray-400 hover:bg-gray-50'
+                              }`}
                           >
                             {/* {test.enabled ? (
                               <Eye className='w-4 h-4' />
@@ -2202,21 +2219,21 @@ export function RequestEditor({
             <div className='space-y-2 text-xs'>
               {(processedRequest.authToken !== request.authToken ||
                 processedRequest.authorization?.token !==
-                  request.authorization?.token) && (
-                <div>
-                  <span className='font-medium'>Auth Token:</span>
-                  <div className='font-mono bg-white p-1 rounded border max-w-full overflow-hidden text-ellipsis whitespace-nowrap'>
-                    <span className='text-gray-500'>
-                      {request.authorization?.token || request.authToken}
-                    </span>{' '}
-                    →
-                    <span className='text-blue-600 ml-1'>
-                      {processedRequest.authorization?.token ||
-                        processedRequest.authToken}
-                    </span>
+                request.authorization?.token) && (
+                  <div>
+                    <span className='font-medium'>Auth Token:</span>
+                    <div className='font-mono bg-white p-1 rounded border max-w-full overflow-hidden text-ellipsis whitespace-nowrap'>
+                      <span className='text-gray-500'>
+                        {request.authorization?.token || request.authToken}
+                      </span>{' '}
+                      →
+                      <span className='text-blue-600 ml-1'>
+                        {processedRequest.authorization?.token ||
+                          processedRequest.authToken}
+                      </span>
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
               {processedRequest.url !== request.url && (
                 <div>
                   <span className='font-medium'>URL:</span>
@@ -2266,24 +2283,23 @@ export function RequestEditor({
                 {executionResult.response && (
                   <>
                     <span
-                      className={`px-2 py-1 text-xs font-medium rounded ${
-                        executionResult.response.status < 300
-                          ? 'bg-green-100 text-green-800'
-                          : executionResult.response.status < 400
+                      className={`px-2 py-1 text-xs font-medium rounded ${executionResult.response.status < 300
+                        ? 'bg-green-100 text-green-800'
+                        : executionResult.response.status < 400
                           ? 'bg-yellow-100 text-yellow-800'
                           : 'bg-red-100 text-red-800'
-                      }`}
+                        }`}
                     >
                       {executionResult.response.status}{' '}
                       {executionResult.response.status === 200
                         ? 'OK'
                         : executionResult.response.status === 201
-                        ? 'Created'
-                        : executionResult.response.status === 404
-                        ? 'Not Found'
-                        : executionResult.response.status === 500
-                        ? 'Server Error'
-                        : ''}
+                          ? 'Created'
+                          : executionResult.response.status === 404
+                            ? 'Not Found'
+                            : executionResult.response.status === 500
+                              ? 'Server Error'
+                              : ''}
                     </span>
                     <span className='text-sm text-gray-600'>
                       {executionResult.duration}ms
@@ -2338,11 +2354,10 @@ export function RequestEditor({
                         onClick={() =>
                           setResponseTab(tab.id as typeof responseTab)
                         }
-                        className={`py-3 px-1 border-b-2 font-medium text-sm transition-colors flex items-center space-x-2 ${
-                          responseTab === tab.id
-                            ? 'border-blue-500 text-blue-600'
-                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                        }`}
+                        className={`py-3 px-1 border-b-2 font-medium text-sm transition-colors flex items-center space-x-2 ${responseTab === tab.id
+                          ? 'border-blue-500 text-blue-600'
+                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                          }`}
                       >
                         <span>{tab.label}</span>
                         {tab.count !== null && tab.count > 0 && (
@@ -2401,7 +2416,7 @@ export function RequestEditor({
                   {responseTab === 'cookies' && (
                     <div className='space-y-3'>
                       {executionResult.response.cookies &&
-                      Object.keys(executionResult.response.cookies).length >
+                        Object.keys(executionResult.response.cookies).length >
                         0 ? (
                         Object.entries(executionResult.response.cookies).map(
                           ([name, value]) => (
@@ -2592,21 +2607,21 @@ export function RequestEditor({
           <div className='space-y-2 text-xs'>
             {(processedRequest.authToken !== request.authToken ||
               processedRequest.authorization?.token !==
-                request.authorization?.token) && (
-              <div>
-                <span className='font-medium'>Auth Token:</span>
-                <div className='font-mono bg-white p-1 rounded border'>
-                  <span className='text-gray-500'>
-                    {request.authorization?.token || request.authToken}
-                  </span>{' '}
-                  →
-                  <span className='text-blue-600 ml-1'>
-                    {processedRequest.authorization?.token ||
-                      processedRequest.authToken}
-                  </span>
+              request.authorization?.token) && (
+                <div>
+                  <span className='font-medium'>Auth Token:</span>
+                  <div className='font-mono bg-white p-1 rounded border'>
+                    <span className='text-gray-500'>
+                      {request.authorization?.token || request.authToken}
+                    </span>{' '}
+                    →
+                    <span className='text-blue-600 ml-1'>
+                      {processedRequest.authorization?.token ||
+                        processedRequest.authToken}
+                    </span>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
             {processedRequest.url !== request.url && (
               <div>
                 <span className='font-medium'>URL:</span>
@@ -2753,7 +2768,7 @@ export function RequestEditor({
             <CardContent className='space-y-4'>
               <div className='flex items-center space-x-4'>
                 <Label>Auth Type:</Label>
-                <Select value='bearer' onValueChange={() => {}} disabled>
+                <Select value='bearer' onValueChange={() => { }} disabled>
                   <SelectTrigger className='w-40'>
                     <SelectValue />
                   </SelectTrigger>

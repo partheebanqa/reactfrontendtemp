@@ -476,39 +476,41 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className='max-w-6xl max-h-[90vh] overflow-hidden flex flex-col p-0 justify-center'>
+      <DialogContent className='max-w-6xl max-h-[90vh] overflow-hidden flex flex-col p-0 justify-center' >
         <div className='p-3 border-b'>
           <DialogHeader>
-            <div className='flex items-center justify-between gap-4'>
-              {/* Left side: Name + Search */}
-              <div className='flex items-center gap-4'>
-                <DialogTitle className='text-xl whitespace-nowrap'>
-                  Select Test Cases :{' '}
-                  <span className='text-[14px] text-muted-foreground whitespace-nowrap'>
-                    {name}
-                  </span>
-                </DialogTitle>
-                <div className='relative flex-1 max-w-xs'>
+            <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3'>
+              {/* Left side: Title */}
+              <DialogTitle className='text-xl whitespace-nowrap'>
+                Select Test Cases:{' '}
+                <span className='text-[14px] text-muted-foreground whitespace-nowrap'>
+                  {name}
+                </span>
+              </DialogTitle>
+
+              {/* Right side: Search + Category Filter */}
+              <div className='flex items-center gap-3 w-full sm:w-auto mr-8'>
+                {/* Search */}
+                <div className='relative flex-1 max-w-lg'>
                   <Search className='absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground' />
                   <Input
                     placeholder='Search test cases...'
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className='pl-10 pr-8'
+                    className='pl-10 pr-8 w-full'
                     disabled={isLoading}
                   />
                 </div>
-              </div>
 
-              {/* Right side: Filter + Clear button */}
-              <div className='flex items-center gap-2'>
+
+                {/* Category Select */}
                 <Select
                   value={categoryFilter}
                   onValueChange={setCategoryFilter}
                   disabled={isLoading}
                 >
                   <SelectTrigger className='w-48'>
-                    <SelectValue />
+                    <SelectValue placeholder='Select category' />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value='All Categories'>
@@ -524,11 +526,9 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
                     ))}
                   </SelectContent>
                 </Select>
-
-                {/* Always show clear button */}
                 {/* <button
-                  onClick={() => setCategoryFilter('All Categories')}
-                  className='flex items-center justify-center w-8 h-8 rounded-full hover:bg-gray-100 text-gray-500'
+                  onClick={onClose}
+                  className='ml-2 flex items-center justify-center w-8 h-8 rounded-full hover:bg-gray-100 text-gray-500 shrink-0'
                 >
                   ×
                 </button> */}
@@ -536,6 +536,7 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
             </div>
           </DialogHeader>
         </div>
+
 
         <div className='px-3'>
           <div className='flex flex-wrap gap-2 justify-center'>
@@ -547,18 +548,16 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
                   onClick={
                     () => setSubcatFilter(active ? '' : chip.name) // toggle
                   }
-                  className={`inline-flex items-center rounded-md border px-2 py-1 text-xs ${
-                    active
-                      ? 'bg-[#136fb0] text-white border-[#136fb0]'
-                      : 'bg-transparent text-foreground border-muted-foreground/30 hover:bg-muted/40'
-                  }`}
+                  className={`inline-flex items-center rounded-md border px-2 py-1 text-xs ${active
+                    ? 'bg-[#136fb0] text-white border-[#136fb0]'
+                    : 'bg-transparent text-foreground border-muted-foreground/30 hover:bg-muted/40'
+                    }`}
                   title={chip.name}
                 >
-                  <span className='mr-1'>{chip.name}</span>
+                  <span className='mr-1 capitalize'>{chip.name}</span>
                   <span
-                    className={`ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[#136fb0] ${
-                      active ? 'bg-white/20 text-[#ffffff]' : 'bg-muted'
-                    }`}
+                    className={`ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[#136fb0] ${active ? 'bg-white/20 text-[#ffffff]' : 'bg-muted'
+                      }`}
                   >
                     {chip.count}
                   </span>
@@ -644,7 +643,7 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
                             </span>
                             <span className='font-medium'>
                               {category.category}
-                              {}
+                              { }
                             </span>
                             <Badge variant='outline'>
                               {categoryTests.length}
@@ -807,9 +806,9 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
                                                 <JsonView
                                                   dark
                                                   enableClipboard
-                                                  onAdd={() => {}}
-                                                  onDelete={() => {}}
-                                                  onEdit={() => {}}
+                                                  onAdd={() => { }}
+                                                  onDelete={() => { }}
+                                                  onEdit={() => { }}
                                                   src={test}
                                                   theme='default'
                                                 />
@@ -831,9 +830,9 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
                                                 <JsonView
                                                   dark
                                                   enableClipboard
-                                                  onAdd={() => {}}
-                                                  onDelete={() => {}}
-                                                  onEdit={() => {}}
+                                                  onAdd={() => { }}
+                                                  onDelete={() => { }}
+                                                  onEdit={() => { }}
                                                   src={test}
                                                   theme='default'
                                                 />

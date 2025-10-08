@@ -31,6 +31,7 @@ import { Controlled as CodeMirror } from 'react-codemirror2';
 import 'codemirror/lib/codemirror.css';
 import 'codemirror/theme/material.css';
 import 'codemirror/mode/javascript/javascript';
+import "./whiteorange.css"
 
 interface FormattedResponse {
   status: number;
@@ -1323,7 +1324,7 @@ const RequestEditor: React.FC = () => {
                 className={`
                   py-4 px-2 sm:px-4 border-b-2 font-medium text-sm transition-colors whitespace-nowrap
                   ${activeTab === tab.id
-                    ? 'border-blue-500 text-blue-600'
+                    ? 'border-[#136fb0] text-[#136fb0]'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                   }
                 `}
@@ -1371,7 +1372,7 @@ const RequestEditor: React.FC = () => {
                 <h3 className='text-base sm:text-lg font-medium text-gray-900 dark:text-white'>
                   Request Body
                 </h3>
-                <select
+                {/* <select
                   value={bodyType}
                   onChange={(e) => setBodyType(e.target.value as any)}
                   className='border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-800 text-sm font-medium hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all duration-150'
@@ -1384,7 +1385,7 @@ const RequestEditor: React.FC = () => {
                   </option>
                   <option value='raw'>Raw</option>
                   <option value='binary'>Binary</option>
-                </select>
+                </select> */}
               </div>
 
               {bodyType === 'none' && (
@@ -1405,7 +1406,7 @@ const RequestEditor: React.FC = () => {
                   value={bodyContent}
                   options={{
                     mode: { name: 'javascript', json: true },
-                    theme: 'material',
+                    theme: 'whiteorange',
                     lineNumbers: true,
                     lineWrapping: true,
                   }}
@@ -1457,11 +1458,28 @@ const RequestEditor: React.FC = () => {
                   rows={8}
                   className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 font-mono text-sm dark:bg-gray-800 dark:text-white'
                 /> */}
+                  {/* <CodeMirror
+                    value={bodyContent}
+                    options={{
+                      mode: { name: 'javascript', json: true },
+                      theme: 'material', // base dark theme
+                      lineNumbers: true,
+                      lineWrapping: true,
+                    }}
+                    onBeforeChange={(editor, data, value) => {
+                      setBodyContent(value);
+                    }}
+                    editorDidMount={(editor) => {
+                      editor.getWrapperElement().style.fontSize = '14px';
+                      editor.getWrapperElement().style.color = '#FFA500';
+                    }}
+                  /> */}
+
                   <CodeMirror
                     value={bodyContent}
                     options={{
                       mode: { name: 'javascript', json: true },
-                      theme: 'material',
+                      theme: 'whiteorange',
                       lineNumbers: true,
                       lineWrapping: true,
                     }}
@@ -1469,6 +1487,7 @@ const RequestEditor: React.FC = () => {
                       setBodyContent(value);
                     }}
                   />
+
                 </>
 
 
@@ -1481,9 +1500,9 @@ const RequestEditor: React.FC = () => {
                   <p className='text-gray-500 dark:text-gray-400 mb-4'>
                     Select a file to upload
                   </p>
-                  <button className='px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md'>
+                  <Button   >
                     Choose File
-                  </button>
+                  </Button>
                 </div>
               )}
             </div>
@@ -1507,14 +1526,14 @@ const RequestEditor: React.FC = () => {
 
               {/* Bearer Token only */}
               <div>
-                <input
+                <Input
                   type='text'
                   value={authData.token}
                   onChange={(e) =>
                     setAuthData({ ...authData, token: e.target.value })
                   }
                   placeholder='Enter token'
-                  className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 bg-white dark:bg-gray-800 text-sm'
+                // className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 bg-white dark:bg-gray-800 text-sm'
                 />
               </div>
             </div>
