@@ -68,7 +68,12 @@ export function PeopleManagement() {
     email?: string;
     firstName?: string;
     lastName?: string;
+    workspace?: string;
+    role?: string;
   }>({});
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [showSuggestions, setShowSuggestions] = useState(false); // add local visibility state for the email suggestions popover
 
   // Fetch users from backend
   const {
@@ -91,8 +96,6 @@ export function PeopleManagement() {
   const [filterRole, setFilterRole] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
   const [userType, setUserType] = useState<'existing' | 'new'>('existing');
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -132,6 +135,21 @@ export function PeopleManagement() {
   const availableWorkspaces = useMemo(() => {
     return [...new Set(members.map((member) => member.workspace))];
   }, [members]);
+
+  // Suggestions for existing users while typing a new email
+  const emailSuggestions = useMemo(() => {
+    if (userType !== 'new') return [];
+    const q = inviteEmail.trim().toLowerCase();
+    if (!q) return [];
+    return backendUsers
+      .filter((u) => {
+        const fields = [u.email, u.firstName, u.lastName]
+          .filter(Boolean)
+          .map((v) => String(v).toLowerCase());
+        return fields.some((f) => f.includes(q));
+      })
+      .slice(0, 8);
+  }, [userType, inviteEmail, backendUsers]);
 
   // Filter and search logic
   const filteredMembers = useMemo(() => {
@@ -238,8 +256,13 @@ export function PeopleManagement() {
     const trimmedFirst = firstName.trim();
     const trimmedLast = lastName.trim();
 
-    const newErrors: { email?: string; firstName?: string; lastName?: string } =
-      {};
+    const newErrors: {
+      email?: string;
+      firstName?: string;
+      lastName?: string;
+      workspace?: string;
+      role?: string;
+    } = {};
     if (!trimmedEmail) newErrors.email = 'Email is required';
     else if (!isValidEmail(trimmedEmail))
       newErrors.email = 'Enter a valid email address';
@@ -247,15 +270,18 @@ export function PeopleManagement() {
     if (!trimmedFirst) newErrors.firstName = 'First name is required';
     if (!trimmedLast) newErrors.lastName = 'Last name is required';
 
-    setErrors(newErrors);
-    if (Object.keys(newErrors).length > 0) return;
+    if (!selectedWorkspace) newErrors.workspace = 'Workspace is required';
+    if (!selectedRole) newErrors.role = 'Role is required';
 
-    if (!selectedWorkspace || !selectedRole) {
-      toast({
-        title: 'Error',
-        description: 'Please select a workspace and role',
-        variant: 'destructive',
-      });
+    setErrors(newErrors);
+    if (Object.keys(newErrors).length > 0) {
+      if (!selectedWorkspace || !selectedRole) {
+        toast({
+          title: 'Error',
+          description: 'Please select a workspace and role',
+          variant: 'destructive',
+        });
+      }
       return;
     }
 
@@ -342,35 +368,52 @@ export function PeopleManagement() {
 
   const isValidEmail = (email: string) =>
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
+  const emailValid = useMemo(
+    () => isValidEmail(inviteEmail.trim()),
+    [inviteEmail]
+  );
+  const canInvite = useMemo(
+    () =>
+      emailValid &&
+      firstName.trim().length > 0 &&
+      lastName.trim().length > 0 &&
+      selectedWorkspace.length > 0 &&
+      selectedRole.length > 0,
+    [emailValid, firstName, lastName, selectedWorkspace, selectedRole]
+  );
+
   return (
     <div className='space-y-6'>
       <Card>
-        <CardHeader>
+        <CardHeader className='flex flex-row items-center justify-between'>
           <CardTitle className='flex items-center gap-2'>
             <UserPlus className='h-5 w-5' />
             Invite Team Member
           </CardTitle>
+
+          {/* 🔹 Toggle between Existing and Add New */}
+          <button
+            type='button'
+            onClick={() => {
+              setUserType((prev) => (prev === 'existing' ? 'new' : 'existing'));
+              setShowSuggestions(false);
+            }}
+            className='text-sm text-blue-600 hover:underline'
+          >
+            {userType === 'existing'
+              ? 'Switch to New Member'
+              : 'Switch to Existing Member'}
+          </button>
         </CardHeader>
 
         <CardContent>
           <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
+            {/* Email Field */}
             <div className='space-y-2'>
-              <div className='flex items-center justify-between'>
-                <Label htmlFor='invite-email'>
-                  Email Address <span className='text-red-600'>*</span>
-                </Label>
-                <button
-                  type='button'
-                  onClick={() =>
-                    setUserType((prev) =>
-                      prev === 'existing' ? 'new' : 'existing'
-                    )
-                  }
-                  className='text-sm text-blue-600 hover:underline'
-                >
-                  {userType === 'existing' ? 'Add New' : 'Existing'}
-                </button>
-              </div>
+              <Label htmlFor='invite-email'>
+                Email Address <span className='text-red-600'>*</span>
+              </Label>
 
               {userType === 'existing' ? (
                 <Select
@@ -420,26 +463,70 @@ export function PeopleManagement() {
                   </SelectContent>
                 </Select>
               ) : (
-                <Input
-                  id='invite-email'
-                  type='email'
-                  placeholder='colleague@company.com'
-                  value={inviteEmail}
-                  onChange={(e) => {
-                    setInviteEmail(e.target.value);
-                    if (errors.email)
-                      setErrors((prev) => ({ ...prev, email: undefined }));
-                  }}
-                  aria-invalid={!!errors.email}
-                  aria-describedby={
-                    errors.email ? 'invite-email-error' : undefined
-                  }
-                  className={`${
-                    errors.email
-                      ? 'border-red-500 focus-visible:ring-red-500'
-                      : ''
-                  }`}
-                />
+                <div className='relative'>
+                  <Input
+                    id='invite-email'
+                    type='email'
+                    placeholder='colleague@company.com'
+                    value={inviteEmail}
+                    onChange={(e) => {
+                      setInviteEmail(e.target.value);
+                      setShowSuggestions(!!e.target.value.trim());
+                      if (errors.email)
+                        setErrors((prev) => ({ ...prev, email: undefined }));
+                    }}
+                    onFocus={() => {
+                      if (inviteEmail.trim()) setShowSuggestions(true);
+                    }}
+                    onBlur={() => {
+                      setTimeout(() => setShowSuggestions(false), 120);
+                    }}
+                    aria-invalid={!!errors.email}
+                    aria-describedby={
+                      errors.email ? 'invite-email-error' : undefined
+                    }
+                    className={`${
+                      errors.email
+                        ? 'border-red-500 focus-visible:ring-red-500'
+                        : ''
+                    }`}
+                  />
+                  {showSuggestions && emailSuggestions.length > 0 && (
+                    <ul
+                      role='listbox'
+                      aria-label='Existing matching users'
+                      className='absolute z-10 mt-1 w-full bg-background border rounded-md shadow-md max-h-60 overflow-auto'
+                    >
+                      {emailSuggestions.map((u) => (
+                        <li key={u.id} role='option' aria-selected='false'>
+                          <button
+                            type='button'
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              setInviteEmail(u.email);
+                              setFirstName(u.firstName || '');
+                              setLastName(u.lastName || '');
+                              setSelectedUser('');
+                              setErrors((prev) => ({
+                                ...prev,
+                                email: undefined,
+                                firstName: undefined,
+                                lastName: undefined,
+                              }));
+                              setShowSuggestions(false);
+                            }}
+                            className='w-full text-left px-3 py-2 hover:bg-accent hover:text-accent-foreground'
+                          >
+                            <div className='text-sm font-medium'>{u.email}</div>
+                            <div className='text-xs opacity-70'>
+                              {(u.firstName || '') + ' ' + (u.lastName || '')}
+                            </div>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
               )}
 
               {errors.email && (
@@ -449,6 +536,7 @@ export function PeopleManagement() {
               )}
             </div>
 
+            {/* First Name */}
             <div className='space-y-2'>
               <Label htmlFor='first-name'>
                 First Name <span className='text-red-600'>*</span>
@@ -479,6 +567,7 @@ export function PeopleManagement() {
               )}
             </div>
 
+            {/* Last Name */}
             <div className='space-y-2'>
               <Label htmlFor='last-name'>
                 Last Name <span className='text-red-600'>*</span>
@@ -509,15 +598,31 @@ export function PeopleManagement() {
               )}
             </div>
 
+            {/* Workspace */}
             <div className='space-y-2'>
               <Label htmlFor='workspace-select'>
-                Workspace <span className='text-red-600'>*</span>
+                Workspace<span className='text-red-600'>*</span>
               </Label>
               <Select
                 value={selectedWorkspace}
-                onValueChange={setSelectedWorkspace}
+                onValueChange={(v) => {
+                  setSelectedWorkspace(v);
+                  if (errors.workspace)
+                    setErrors((prev) => ({ ...prev, workspace: undefined }));
+                }}
               >
-                <SelectTrigger id='workspace-select'>
+                <SelectTrigger
+                  id='workspace-select'
+                  aria-invalid={!!errors.workspace}
+                  aria-describedby={
+                    errors.workspace ? 'workspace-error' : undefined
+                  }
+                  className={`${
+                    errors.workspace
+                      ? 'border-red-500 focus-visible:ring-red-500'
+                      : ''
+                  }`}
+                >
                   <SelectValue placeholder='Select workspace' />
                 </SelectTrigger>
                 <SelectContent>
@@ -528,14 +633,36 @@ export function PeopleManagement() {
                   ))}
                 </SelectContent>
               </Select>
+              {errors.workspace && (
+                <p id='workspace-error' className='text-xs text-red-600'>
+                  {errors.workspace}
+                </p>
+              )}
             </div>
 
+            {/* Role */}
             <div className='space-y-2'>
               <Label htmlFor='role-select'>
                 Role <span className='text-red-600'>*</span>
               </Label>
-              <Select value={selectedRole} onValueChange={setSelectedRole}>
-                <SelectTrigger id='role-select'>
+              <Select
+                value={selectedRole}
+                onValueChange={(v) => {
+                  setSelectedRole(v);
+                  if (errors.role)
+                    setErrors((prev) => ({ ...prev, role: undefined }));
+                }}
+              >
+                <SelectTrigger
+                  id='role-select'
+                  aria-invalid={!!errors.role}
+                  aria-describedby={errors.role ? 'role-error' : undefined}
+                  className={`${
+                    errors.role
+                      ? 'border-red-500 focus-visible:ring-red-500'
+                      : ''
+                  }`}
+                >
                   <SelectValue placeholder='Select role' />
                 </SelectTrigger>
                 <SelectContent>
@@ -556,13 +683,19 @@ export function PeopleManagement() {
                   )}
                 </SelectContent>
               </Select>
+              {errors.role && (
+                <p id='role-error' className='text-xs text-red-600'>
+                  {errors.role}
+                </p>
+              )}
             </div>
           </div>
 
+          {/* Submit */}
           <div className='flex justify-end mt-4'>
             <Button
               onClick={handleInviteUser}
-              disabled={isPending}
+              disabled={!canInvite || isPending}
               className='flex items-center gap-2'
             >
               <Mail className='h-4 w-4' />
@@ -571,6 +704,7 @@ export function PeopleManagement() {
           </div>
         </CardContent>
       </Card>
+
       <Card>
         <CardHeader>
           <div className='flex flex-col sm:flex-row sm:items-center justify-between gap-4'>
