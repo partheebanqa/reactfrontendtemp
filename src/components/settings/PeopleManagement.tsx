@@ -44,6 +44,7 @@ import type {
   RemoveUserPayload,
   UpdateRolePayload,
 } from '@/shared/types/manageUser';
+import { prepareInvitePayload } from '@/lib/people-validators';
 
 interface TeamMember {
   id: string;
@@ -54,6 +55,7 @@ interface TeamMember {
   status: 'active' | 'pending' | 'inactive';
   lastActive: string;
   workspace: string;
+  workspaceList?: string[];
   avatar?: string;
 }
 
@@ -85,6 +87,8 @@ export function PeopleManagement() {
     queryFn: getUserList,
   });
 
+  console.log('userList:', usersData);
+
   const { data: roles, isLoading: isLoadingRoles } = useQuery({
     queryKey: ['userRoles'],
     queryFn: getUserRoles,
@@ -101,7 +105,6 @@ export function PeopleManagement() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(5);
 
-  // Transform backend users to TeamMember format
   const members: TeamMember[] = useMemo(() => {
     if (!usersData?.users || !roles?.roles) return [];
 
@@ -111,15 +114,27 @@ export function PeopleManagement() {
         (r) => r.name.toLowerCase() === userRoleName.toLowerCase()
       );
 
+      const rawWorkspaceList: string[] =
+        Array.isArray(user.workspaces) && user.workspaces.length > 0
+          ? user.workspaces
+              .map((w: any) => (w?.name || '').toString().trim())
+              .filter(Boolean)
+          : [];
+      const workspaceList = Array.from(new Set(rawWorkspaceList)); // dedupe names
+
+      const workspaceDisplay =
+        workspaceList.length > 0 ? workspaceList.join(', ') : 'No Workspace';
+
       return {
         id: user.id,
         name: `${user.firstName} ${user.lastName}`,
         email: user.email,
-        role: userRoleName, // keep original role name (e.g., "Org Admin")
+        role: userRoleName,
         roleId: matchingRole?.id,
         status: 'active' as const,
         lastActive: user.createdAt,
-        workspace: 'Main Workspace',
+        workspace: workspaceDisplay,
+        workspaceList,
         avatar: undefined,
       };
     });
@@ -133,7 +148,15 @@ export function PeopleManagement() {
 
   // Get unique workspaces for filtering
   const availableWorkspaces = useMemo(() => {
-    return [...new Set(members.map((member) => member.workspace))];
+    const set = new Set<string>();
+    members.forEach((m) => {
+      if (Array.isArray(m.workspaceList) && m.workspaceList.length) {
+        m.workspaceList.forEach((n) => set.add(n));
+      } else if (m.workspace && m.workspace !== 'No Workspace') {
+        set.add(m.workspace);
+      }
+    });
+    return Array.from(set);
   }, [members]);
 
   // Suggestions for existing users while typing a new email
@@ -159,7 +182,9 @@ export function PeopleManagement() {
         member.email.toLowerCase().includes(searchTerm.toLowerCase());
 
       const matchesWorkspace =
-        filterWorkspace === 'all' || member.workspace === filterWorkspace;
+        filterWorkspace === 'all' ||
+        (member.workspaceList?.includes(filterWorkspace) ??
+          member.workspace === filterWorkspace);
 
       const matchesRole = filterRole === 'all' || member.roleId === filterRole;
 
@@ -252,29 +277,31 @@ export function PeopleManagement() {
   });
 
   const handleInviteUser = async () => {
-    const trimmedEmail = inviteEmail.trim();
-    const trimmedFirst = firstName.trim();
-    const trimmedLast = lastName.trim();
+    const { payload, errors: rawErrors } = prepareInvitePayload({
+      firstName,
+      lastName,
+      email: inviteEmail,
+      roleId: selectedRole,
+      workspaceId: selectedWorkspace,
+    });
 
-    const newErrors: {
+    const mappedErrors: {
       email?: string;
       firstName?: string;
       lastName?: string;
       workspace?: string;
       role?: string;
-    } = {};
-    if (!trimmedEmail) newErrors.email = 'Email is required';
-    else if (!isValidEmail(trimmedEmail))
-      newErrors.email = 'Enter a valid email address';
+    } = {
+      email: rawErrors.email,
+      firstName: rawErrors.firstName,
+      lastName: rawErrors.lastName,
+      workspace: rawErrors.workspaceId,
+      role: rawErrors.roleId,
+    };
 
-    if (!trimmedFirst) newErrors.firstName = 'First name is required';
-    if (!trimmedLast) newErrors.lastName = 'Last name is required';
+    setErrors(mappedErrors);
 
-    if (!selectedWorkspace) newErrors.workspace = 'Workspace is required';
-    if (!selectedRole) newErrors.role = 'Role is required';
-
-    setErrors(newErrors);
-    if (Object.keys(newErrors).length > 0) {
+    if (Object.values(mappedErrors).some(Boolean)) {
       if (!selectedWorkspace || !selectedRole) {
         toast({
           title: 'Error',
@@ -285,17 +312,7 @@ export function PeopleManagement() {
       return;
     }
 
-    const payload: AddMemberPayload = {
-      accessList: [
-        {
-          roleIds: [selectedRole],
-          workspaceId: selectedWorkspace,
-        },
-      ],
-      email: trimmedEmail,
-      firstName: trimmedFirst,
-      lastName: trimmedLast,
-    };
+    if (!payload) return;
 
     await inviteUser(payload);
   };
@@ -366,13 +383,7 @@ export function PeopleManagement() {
     }
   };
 
-  const isValidEmail = (email: string) =>
-    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-
-  const emailValid = useMemo(
-    () => isValidEmail(inviteEmail.trim()),
-    [inviteEmail]
-  );
+  const emailValid = useMemo(() => !errors.email, [errors.email]);
   const canInvite = useMemo(
     () =>
       emailValid &&
@@ -382,6 +393,20 @@ export function PeopleManagement() {
       selectedRole.length > 0,
     [emailValid, firstName, lastName, selectedWorkspace, selectedRole]
   );
+
+  const renderWorkspaceInline = (names?: string[]) => {
+    const list = Array.isArray(names) ? names.filter(Boolean) : [];
+    if (list.length === 0) return 'No Workspace';
+    const full = list.join(', ');
+    if (list.length <= 2) return <span title={full}>{full}</span>;
+    const shown = list.slice(0, 2).join(', ');
+    const more = list.length - 2;
+    return (
+      <span title={full}>
+        {shown}, +{more} more
+      </span>
+    );
+  };
 
   return (
     <div className='space-y-6'>
@@ -878,8 +903,8 @@ export function PeopleManagement() {
                           </div>
 
                           <div className='text-xs text-gray-500'>
-                            {member.workspace} • Last active:{' '}
-                            {formatLastActive(member.lastActive)}
+                            {renderWorkspaceInline(member.workspaceList)} • Last
+                            active: {formatLastActive(member.lastActive)}
                           </div>
                         </div>
                       </div>
