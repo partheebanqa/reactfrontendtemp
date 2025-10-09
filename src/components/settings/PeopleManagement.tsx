@@ -44,6 +44,7 @@ import type {
   RemoveUserPayload,
   UpdateRolePayload,
 } from '@/shared/types/manageUser';
+import { prepareInvitePayload } from '@/lib/people-validators';
 
 interface TeamMember {
   id: string;
@@ -54,6 +55,7 @@ interface TeamMember {
   status: 'active' | 'pending' | 'inactive';
   lastActive: string;
   workspace: string;
+  workspaceList?: string[];
   avatar?: string;
 }
 
@@ -68,7 +70,12 @@ export function PeopleManagement() {
     email?: string;
     firstName?: string;
     lastName?: string;
+    workspace?: string;
+    role?: string;
   }>({});
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [showSuggestions, setShowSuggestions] = useState(false); // add local visibility state for the email suggestions popover
 
   // Fetch users from backend
   const {
@@ -79,6 +86,8 @@ export function PeopleManagement() {
     queryKey: ['userList'],
     queryFn: getUserList,
   });
+
+  console.log('userList:', usersData);
 
   const { data: roles, isLoading: isLoadingRoles } = useQuery({
     queryKey: ['userRoles'],
@@ -91,14 +100,11 @@ export function PeopleManagement() {
   const [filterRole, setFilterRole] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
   const [userType, setUserType] = useState<'existing' | 'new'>('existing');
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(5);
 
-  // Transform backend users to TeamMember format
   const members: TeamMember[] = useMemo(() => {
     if (!usersData?.users || !roles?.roles) return [];
 
@@ -108,15 +114,27 @@ export function PeopleManagement() {
         (r) => r.name.toLowerCase() === userRoleName.toLowerCase()
       );
 
+      const rawWorkspaceList: string[] =
+        Array.isArray(user.workspaces) && user.workspaces.length > 0
+          ? user.workspaces
+              .map((w: any) => (w?.name || '').toString().trim())
+              .filter(Boolean)
+          : [];
+      const workspaceList = Array.from(new Set(rawWorkspaceList)); // dedupe names
+
+      const workspaceDisplay =
+        workspaceList.length > 0 ? workspaceList.join(', ') : 'No Workspace';
+
       return {
         id: user.id,
         name: `${user.firstName} ${user.lastName}`,
         email: user.email,
-        role: userRoleName, // keep original role name (e.g., "Org Admin")
+        role: userRoleName,
         roleId: matchingRole?.id,
         status: 'active' as const,
         lastActive: user.createdAt,
-        workspace: 'Main Workspace',
+        workspace: workspaceDisplay,
+        workspaceList,
         avatar: undefined,
       };
     });
@@ -130,8 +148,31 @@ export function PeopleManagement() {
 
   // Get unique workspaces for filtering
   const availableWorkspaces = useMemo(() => {
-    return [...new Set(members.map((member) => member.workspace))];
+    const set = new Set<string>();
+    members.forEach((m) => {
+      if (Array.isArray(m.workspaceList) && m.workspaceList.length) {
+        m.workspaceList.forEach((n) => set.add(n));
+      } else if (m.workspace && m.workspace !== 'No Workspace') {
+        set.add(m.workspace);
+      }
+    });
+    return Array.from(set);
   }, [members]);
+
+  // Suggestions for existing users while typing a new email
+  const emailSuggestions = useMemo(() => {
+    if (userType !== 'new') return [];
+    const q = inviteEmail.trim().toLowerCase();
+    if (!q) return [];
+    return backendUsers
+      .filter((u) => {
+        const fields = [u.email, u.firstName, u.lastName]
+          .filter(Boolean)
+          .map((v) => String(v).toLowerCase());
+        return fields.some((f) => f.includes(q));
+      })
+      .slice(0, 8);
+  }, [userType, inviteEmail, backendUsers]);
 
   // Filter and search logic
   const filteredMembers = useMemo(() => {
@@ -141,7 +182,9 @@ export function PeopleManagement() {
         member.email.toLowerCase().includes(searchTerm.toLowerCase());
 
       const matchesWorkspace =
-        filterWorkspace === 'all' || member.workspace === filterWorkspace;
+        filterWorkspace === 'all' ||
+        (member.workspaceList?.includes(filterWorkspace) ??
+          member.workspace === filterWorkspace);
 
       const matchesRole = filterRole === 'all' || member.roleId === filterRole;
 
@@ -234,42 +277,42 @@ export function PeopleManagement() {
   });
 
   const handleInviteUser = async () => {
-    const trimmedEmail = inviteEmail.trim();
-    const trimmedFirst = firstName.trim();
-    const trimmedLast = lastName.trim();
+    const { payload, errors: rawErrors } = prepareInvitePayload({
+      firstName,
+      lastName,
+      email: inviteEmail,
+      roleId: selectedRole,
+      workspaceId: selectedWorkspace,
+    });
 
-    const newErrors: { email?: string; firstName?: string; lastName?: string } =
-      {};
-    if (!trimmedEmail) newErrors.email = 'Email is required';
-    else if (!isValidEmail(trimmedEmail))
-      newErrors.email = 'Enter a valid email address';
+    const mappedErrors: {
+      email?: string;
+      firstName?: string;
+      lastName?: string;
+      workspace?: string;
+      role?: string;
+    } = {
+      email: rawErrors.email,
+      firstName: rawErrors.firstName,
+      lastName: rawErrors.lastName,
+      workspace: rawErrors.workspaceId,
+      role: rawErrors.roleId,
+    };
 
-    if (!trimmedFirst) newErrors.firstName = 'First name is required';
-    if (!trimmedLast) newErrors.lastName = 'Last name is required';
+    setErrors(mappedErrors);
 
-    setErrors(newErrors);
-    if (Object.keys(newErrors).length > 0) return;
-
-    if (!selectedWorkspace || !selectedRole) {
-      toast({
-        title: 'Error',
-        description: 'Please select a workspace and role',
-        variant: 'destructive',
-      });
+    if (Object.values(mappedErrors).some(Boolean)) {
+      if (!selectedWorkspace || !selectedRole) {
+        toast({
+          title: 'Error',
+          description: 'Please select a workspace and role',
+          variant: 'destructive',
+        });
+      }
       return;
     }
 
-    const payload: AddMemberPayload = {
-      accessList: [
-        {
-          roleIds: [selectedRole],
-          workspaceId: selectedWorkspace,
-        },
-      ],
-      email: trimmedEmail,
-      firstName: trimmedFirst,
-      lastName: trimmedLast,
-    };
+    if (!payload) return;
 
     await inviteUser(payload);
   };
@@ -340,37 +383,62 @@ export function PeopleManagement() {
     }
   };
 
-  const isValidEmail = (email: string) =>
-    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  const emailValid = useMemo(() => !errors.email, [errors.email]);
+  const canInvite = useMemo(
+    () =>
+      emailValid &&
+      firstName.trim().length > 0 &&
+      lastName.trim().length > 0 &&
+      selectedWorkspace.length > 0 &&
+      selectedRole.length > 0,
+    [emailValid, firstName, lastName, selectedWorkspace, selectedRole]
+  );
+
+  const renderWorkspaceInline = (names?: string[]) => {
+    const list = Array.isArray(names) ? names.filter(Boolean) : [];
+    if (list.length === 0) return 'No Workspace';
+    const full = list.join(', ');
+    if (list.length <= 2) return <span title={full}>{full}</span>;
+    const shown = list.slice(0, 2).join(', ');
+    const more = list.length - 2;
+    return (
+      <span title={full}>
+        {shown}, +{more} more
+      </span>
+    );
+  };
+
   return (
     <div className='space-y-6'>
       <Card>
-        <CardHeader>
+        <CardHeader className='flex flex-row items-center justify-between'>
           <CardTitle className='flex items-center gap-2'>
             <UserPlus className='h-5 w-5' />
             Invite Team Member
           </CardTitle>
+
+          {/* 🔹 Toggle between Existing and Add New */}
+          <button
+            type='button'
+            onClick={() => {
+              setUserType((prev) => (prev === 'existing' ? 'new' : 'existing'));
+              setShowSuggestions(false);
+            }}
+            className='text-sm text-blue-600 hover:underline'
+          >
+            {userType === 'existing'
+              ? 'Switch to New Member'
+              : 'Switch to Existing Member'}
+          </button>
         </CardHeader>
 
         <CardContent>
           <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
+            {/* Email Field */}
             <div className='space-y-2'>
-              <div className='flex items-center justify-between'>
-                <Label htmlFor='invite-email'>
-                  Email Address <span className='text-red-600'>*</span>
-                </Label>
-                <button
-                  type='button'
-                  onClick={() =>
-                    setUserType((prev) =>
-                      prev === 'existing' ? 'new' : 'existing'
-                    )
-                  }
-                  className='text-sm text-blue-600 hover:underline'
-                >
-                  {userType === 'existing' ? 'Add New' : 'Existing'}
-                </button>
-              </div>
+              <Label htmlFor='invite-email'>
+                Email Address <span className='text-red-600'>*</span>
+              </Label>
 
               {userType === 'existing' ? (
                 <Select
@@ -420,26 +488,70 @@ export function PeopleManagement() {
                   </SelectContent>
                 </Select>
               ) : (
-                <Input
-                  id='invite-email'
-                  type='email'
-                  placeholder='colleague@company.com'
-                  value={inviteEmail}
-                  onChange={(e) => {
-                    setInviteEmail(e.target.value);
-                    if (errors.email)
-                      setErrors((prev) => ({ ...prev, email: undefined }));
-                  }}
-                  aria-invalid={!!errors.email}
-                  aria-describedby={
-                    errors.email ? 'invite-email-error' : undefined
-                  }
-                  className={`${
-                    errors.email
-                      ? 'border-red-500 focus-visible:ring-red-500'
-                      : ''
-                  }`}
-                />
+                <div className='relative'>
+                  <Input
+                    id='invite-email'
+                    type='email'
+                    placeholder='colleague@company.com'
+                    value={inviteEmail}
+                    onChange={(e) => {
+                      setInviteEmail(e.target.value);
+                      setShowSuggestions(!!e.target.value.trim());
+                      if (errors.email)
+                        setErrors((prev) => ({ ...prev, email: undefined }));
+                    }}
+                    onFocus={() => {
+                      if (inviteEmail.trim()) setShowSuggestions(true);
+                    }}
+                    onBlur={() => {
+                      setTimeout(() => setShowSuggestions(false), 120);
+                    }}
+                    aria-invalid={!!errors.email}
+                    aria-describedby={
+                      errors.email ? 'invite-email-error' : undefined
+                    }
+                    className={`${
+                      errors.email
+                        ? 'border-red-500 focus-visible:ring-red-500'
+                        : ''
+                    }`}
+                  />
+                  {showSuggestions && emailSuggestions.length > 0 && (
+                    <ul
+                      role='listbox'
+                      aria-label='Existing matching users'
+                      className='absolute z-10 mt-1 w-full bg-background border rounded-md shadow-md max-h-60 overflow-auto'
+                    >
+                      {emailSuggestions.map((u) => (
+                        <li key={u.id} role='option' aria-selected='false'>
+                          <button
+                            type='button'
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              setInviteEmail(u.email);
+                              setFirstName(u.firstName || '');
+                              setLastName(u.lastName || '');
+                              setSelectedUser('');
+                              setErrors((prev) => ({
+                                ...prev,
+                                email: undefined,
+                                firstName: undefined,
+                                lastName: undefined,
+                              }));
+                              setShowSuggestions(false);
+                            }}
+                            className='w-full text-left px-3 py-2 hover:bg-accent hover:text-accent-foreground'
+                          >
+                            <div className='text-sm font-medium'>{u.email}</div>
+                            <div className='text-xs opacity-70'>
+                              {(u.firstName || '') + ' ' + (u.lastName || '')}
+                            </div>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
               )}
 
               {errors.email && (
@@ -449,6 +561,7 @@ export function PeopleManagement() {
               )}
             </div>
 
+            {/* First Name */}
             <div className='space-y-2'>
               <Label htmlFor='first-name'>
                 First Name <span className='text-red-600'>*</span>
@@ -479,6 +592,7 @@ export function PeopleManagement() {
               )}
             </div>
 
+            {/* Last Name */}
             <div className='space-y-2'>
               <Label htmlFor='last-name'>
                 Last Name <span className='text-red-600'>*</span>
@@ -509,15 +623,31 @@ export function PeopleManagement() {
               )}
             </div>
 
+            {/* Workspace */}
             <div className='space-y-2'>
               <Label htmlFor='workspace-select'>
-                Workspace <span className='text-red-600'>*</span>
+                Workspace<span className='text-red-600'>*</span>
               </Label>
               <Select
                 value={selectedWorkspace}
-                onValueChange={setSelectedWorkspace}
+                onValueChange={(v) => {
+                  setSelectedWorkspace(v);
+                  if (errors.workspace)
+                    setErrors((prev) => ({ ...prev, workspace: undefined }));
+                }}
               >
-                <SelectTrigger id='workspace-select'>
+                <SelectTrigger
+                  id='workspace-select'
+                  aria-invalid={!!errors.workspace}
+                  aria-describedby={
+                    errors.workspace ? 'workspace-error' : undefined
+                  }
+                  className={`${
+                    errors.workspace
+                      ? 'border-red-500 focus-visible:ring-red-500'
+                      : ''
+                  }`}
+                >
                   <SelectValue placeholder='Select workspace' />
                 </SelectTrigger>
                 <SelectContent>
@@ -528,14 +658,36 @@ export function PeopleManagement() {
                   ))}
                 </SelectContent>
               </Select>
+              {errors.workspace && (
+                <p id='workspace-error' className='text-xs text-red-600'>
+                  {errors.workspace}
+                </p>
+              )}
             </div>
 
+            {/* Role */}
             <div className='space-y-2'>
               <Label htmlFor='role-select'>
                 Role <span className='text-red-600'>*</span>
               </Label>
-              <Select value={selectedRole} onValueChange={setSelectedRole}>
-                <SelectTrigger id='role-select'>
+              <Select
+                value={selectedRole}
+                onValueChange={(v) => {
+                  setSelectedRole(v);
+                  if (errors.role)
+                    setErrors((prev) => ({ ...prev, role: undefined }));
+                }}
+              >
+                <SelectTrigger
+                  id='role-select'
+                  aria-invalid={!!errors.role}
+                  aria-describedby={errors.role ? 'role-error' : undefined}
+                  className={`${
+                    errors.role
+                      ? 'border-red-500 focus-visible:ring-red-500'
+                      : ''
+                  }`}
+                >
                   <SelectValue placeholder='Select role' />
                 </SelectTrigger>
                 <SelectContent>
@@ -556,13 +708,19 @@ export function PeopleManagement() {
                   )}
                 </SelectContent>
               </Select>
+              {errors.role && (
+                <p id='role-error' className='text-xs text-red-600'>
+                  {errors.role}
+                </p>
+              )}
             </div>
           </div>
 
+          {/* Submit */}
           <div className='flex justify-end mt-4'>
             <Button
               onClick={handleInviteUser}
-              disabled={isPending}
+              disabled={!canInvite || isPending}
               className='flex items-center gap-2'
             >
               <Mail className='h-4 w-4' />
@@ -571,6 +729,7 @@ export function PeopleManagement() {
           </div>
         </CardContent>
       </Card>
+
       <Card>
         <CardHeader>
           <div className='flex flex-col sm:flex-row sm:items-center justify-between gap-4'>
@@ -744,8 +903,8 @@ export function PeopleManagement() {
                           </div>
 
                           <div className='text-xs text-gray-500'>
-                            {member.workspace} • Last active:{' '}
-                            {formatLastActive(member.lastActive)}
+                            {renderWorkspaceInline(member.workspaceList)} • Last
+                            active: {formatLastActive(member.lastActive)}
                           </div>
                         </div>
                       </div>

@@ -29,6 +29,7 @@ export interface AddMemberResponse {
 }
 
 export interface User {
+  workspaces(workspaces: any): unknown;
   id: string;
   firstName: string;
   lastName: string;
