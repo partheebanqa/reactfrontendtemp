@@ -84,16 +84,16 @@ export default function Dashboard() {
             // description='from last month'
             iconBgColor='bg-blue-100'
           />
-
           <StatsCard
-            title='Total Collections'
-            value={data?.totalCollections || 0}
-            icon={<div className='text-green-600'>✅</div>}
-            // change='+2.1%'
+            title='Total Request Chains'
+            value={data?.totalRequestChains || 0}
+            icon={<div className='text-orange-600'>⏱️</div>}
+            // change='-0.3s'
             // changeType='positive'
-            // description='improvement'
-            iconBgColor='bg-green-100'
+            // description='faster'
+            iconBgColor='bg-orange-100'
           />
+
 
           <StatsCard
             title='Active Schedules'
@@ -104,25 +104,28 @@ export default function Dashboard() {
           />
 
           <StatsCard
-            title='Total RequestChain'
-            value={data?.totalRequestChains || 0}
-            icon={<div className='text-orange-600'>⏱️</div>}
-            // change='-0.3s'
+            title='Total Import Collections'
+            value={data?.totalCollections || 0}
+            icon={<div className='text-green-600'>✅</div>}
+            // change='+2.1%'
             // changeType='positive'
-            // description='faster'
-            iconBgColor='bg-orange-100'
+            // description='improvement'
+            iconBgColor='bg-green-100'
           />
+
+
 
         </div>
 
         {/* Charts and Recent Activity */}
         <div className='grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8'>
-          <ExecutionChart />
+          {/* <ExecutionChart /> */}
           <RecentExecutions data={data?.lastExecutions || []} />
+          <QuickActions />
         </div>
 
         {/* Active Schedules and Quick Actions */}
-        <div className='grid grid-cols-1 lg:grid-cols-4 gap-3'>
+        {/* <div className='grid grid-cols-1 lg:grid-cols-4 gap-3'>
           <div className='lg:col-span-2'>
             <ActiveSchedules />
           </div>
@@ -132,7 +135,7 @@ export default function Dashboard() {
           <div className='space-y-3'>
             <QuickActions />
           </div>
-        </div>
+        </div> */}
       </div>
     </div>
   );
