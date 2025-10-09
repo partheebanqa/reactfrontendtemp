@@ -63,7 +63,7 @@ type MenuItem = {
 };
 
 const menuItems: MenuItem[] = [
-  { label: 'Dashboard', icon: LayoutDashboard, feature: 'dashboard', upcoming: true },
+  { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard, feature: 'dashboard' },
   { label: 'Request Builder', path: '/request-builder', icon: Settings, feature: 'request_builder' },
   { label: 'Request Chains', path: '/request-chains', icon: Link2, feature: 'request_chains' },
   { label: 'Test Suites', path: '/test-suites', icon: Layers, feature: 'test_suites' },

@@ -1,118 +1,136 @@
-import { Button } from '@/components/ui/button';
-import { Plus, Play, Building2 } from 'lucide-react';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+
+import { LayoutDashboard } from 'lucide-react';
 import StatsCard from './StatsCard';
 import ExecutionChart from './ExecutionChart';
 import ActiveSchedules from './ActiveSchedules';
 import RecentExecutions from './RecentExecutions';
 import SystemStatus from './SystemStatus';
 import QuickActions from './QuickActions';
+import BreadCum from '../BreadCum/Breadcum';
+import { getDashboard } from '@/services/dashboard.service';
+import { useWorkspace } from '@/hooks/useWorkspace';
+import { useEffect, useState } from 'react';
+
+
+
+export interface DashboardStats {
+  totalTestSuites: number;
+  totalRequestChains: number;
+  totalCollections: number;
+  totalCICDExecutions: number;
+  totalActiveSchedules: number;
+  lastExecutions: Execution[];
+}
+
+export interface Execution {
+  executionId: string;
+  type: 'testsuite' | 'requestchain' | string;
+  date: string;
+  status: 'running' | 'completed' | 'failed' | string;
+}
+
+
 
 export default function Dashboard() {
+
+
+  const { currentWorkspace } = useWorkspace();
+  const workspaceId = currentWorkspace?.id;
+
+  const [data, setData] = useState<DashboardStats>();
+
+  const fetchDashboard = async () => {
+    try {
+      const response = await getDashboard(workspaceId || "");
+      setData(response)
+      // console.log(response, "res")
+    } catch (err) {
+      console.log(err, "err");
+    }
+  };
+
+
+  useEffect(() => {
+    if (workspaceId) {
+      fetchDashboard();
+    }
+  }, [workspaceId]);
+
   return (
     <div className='min-h-screen bg-slate-50'>
-      {/* Top Header */}
-      <header className='bg-white border-b border-slate-200 px-6 py-4'>
-        <div className='flex items-center justify-between'>
-          <div className='flex items-center gap-6'>
-            <div>
-              <h2 className='text-2xl font-semibold text-slate-900'>
-                Dashboard
-              </h2>
-              <p className='text-sm text-slate-500'>
-                Monitor your API tests and execution schedules
-              </p>
-            </div>
-            {/* <div className='flex items-center gap-2'>
-              <Building2 className='h-4 w-4 text-slate-500' />
-              <Select defaultValue='default'>
-                <SelectTrigger className='w-[200px]'>
-                  <SelectValue placeholder='Select workspace' />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value='default'>Default Workspace</SelectItem>
-                  <SelectItem value='staging'>Staging Environment</SelectItem>
-                  <SelectItem value='production'>Production Tests</SelectItem>
-                </SelectContent>
-              </Select>
-            </div> */}
-          </div>
-          <div className='flex items-center space-x-4'>
-            <Button className='bg-blue-600 hover:bg-blue-700 text-white'>
-              <Plus className='mr-2' size={16} />
-              New Test Suite
-            </Button>
-            <Button variant='outline'>
-              <Play className='mr-2' size={16} />
-              Run Now
-            </Button>
-          </div>
-        </div>
-      </header>
+      <BreadCum
+        title="Dashboard"
+        subtitle="Monitor your API tests and execution schedules"
+        showCreateButton={false}
+        showQuickGuide={false}
+        buttonTitle="Run Execution"
+        onClickCreateNew={() => console.log("Create execution")}
+        icon={LayoutDashboard}
+        iconBgClass="bg-blue-100"
+        iconColor="#136fb0"
+        iconSize={40}
+      />
 
       {/* Dashboard Content */}
-      <div className='flex-1 overflow-auto p-6'>
+      <div className='flex-1 overflow-auto mt-3'>
         {/* Stats Overview */}
-        <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8'>
+        <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-3'>
           <StatsCard
             title='Total Test Suites'
-            value='0'
+            value={data?.totalTestSuites || 0}
             icon={<div className='text-blue-600'>📊</div>}
-            change='+12%'
-            changeType='positive'
-            description='from last month'
+            // change='+12%'
+            // changeType='positive'
+            // description='from last month'
             iconBgColor='bg-blue-100'
           />
 
           <StatsCard
-            title='Success Rate'
-            value='0%'
+            title='Total Collections'
+            value={data?.totalCollections || 0}
             icon={<div className='text-green-600'>✅</div>}
-            change='+2.1%'
-            changeType='positive'
-            description='improvement'
+            // change='+2.1%'
+            // changeType='positive'
+            // description='improvement'
             iconBgColor='bg-green-100'
           />
 
           <StatsCard
             title='Active Schedules'
-            value='0'
+            value={data?.totalActiveSchedules || 0}
             icon={<div className='text-purple-600'>🕘</div>}
-            description='Next run in 2h 15m'
+            // description='Next run in 2h 15m'
             iconBgColor='bg-purple-100'
           />
 
           <StatsCard
-            title='Avg Duration'
-            value='0s'
+            title='Total RequestChain'
+            value={data?.totalRequestChains || 0}
             icon={<div className='text-orange-600'>⏱️</div>}
-            change='-0.3s'
-            changeType='positive'
-            description='faster'
+            // change='-0.3s'
+            // changeType='positive'
+            // description='faster'
             iconBgColor='bg-orange-100'
           />
+
         </div>
 
         {/* Charts and Recent Activity */}
         <div className='grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8'>
           <ExecutionChart />
-          <RecentExecutions />
+          <RecentExecutions data={data?.lastExecutions || []} />
         </div>
 
         {/* Active Schedules and Quick Actions */}
-        <div className='grid grid-cols-1 lg:grid-cols-3 gap-6'>
+        <div className='grid grid-cols-1 lg:grid-cols-4 gap-3'>
           <div className='lg:col-span-2'>
             <ActiveSchedules />
           </div>
-          <div className='space-y-6'>
-            <QuickActions />
+          <div className='space-y-3'>
             <SystemStatus />
+          </div>
+          <div className='space-y-3'>
+            <QuickActions />
           </div>
         </div>
       </div>
