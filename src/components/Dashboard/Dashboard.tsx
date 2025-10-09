@@ -36,6 +36,7 @@ export default function Dashboard() {
 
   const { currentWorkspace } = useWorkspace();
   const workspaceId = currentWorkspace?.id;
+  const workSpaceName = currentWorkspace?.name;
 
   const [data, setData] = useState<DashboardStats>();
 
@@ -59,7 +60,7 @@ export default function Dashboard() {
   return (
     <div className='min-h-screen bg-slate-50'>
       <BreadCum
-        title="Dashboard"
+        title={`Dashboard  -  ${workSpaceName || 'Workspace'}`}
         subtitle="Monitor your API tests and execution schedules"
         showCreateButton={false}
         showQuickGuide={false}
