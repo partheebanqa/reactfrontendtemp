@@ -20,12 +20,19 @@ import {
   AlertTriangle,
   Eye,
   ShieldAlert,
+  FileText,
+  User,
+  Database,
+  Clock,
+  Calendar,
+  TrendingUp,
 } from 'lucide-react';
 import { formatDistanceToNow, isValid } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { useRef } from 'react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import { downloadAsHTML, downloadAsPDF, shareReport } from '@/utils/exportUtils';
 
 type RouteParams = {
   type: 'test_suite' | 'request_chain';
@@ -111,8 +118,8 @@ const ExecutionReportPage: React.FC = () => {
               api.status === 'passed'
                 ? 'success'
                 : api.status === 'failed'
-                ? 'fail'
-                : 'warning',
+                  ? 'fail'
+                  : 'warning',
           })) || [],
       },
       {
@@ -132,8 +139,8 @@ const ExecutionReportPage: React.FC = () => {
               api.status === 'passed'
                 ? 'success'
                 : api.status === 'failed'
-                ? 'fail'
-                : 'warning',
+                  ? 'fail'
+                  : 'warning',
           })) || [],
       },
       {
@@ -153,8 +160,8 @@ const ExecutionReportPage: React.FC = () => {
               api.status === 'passed'
                 ? 'success'
                 : api.status === 'failed'
-                ? 'fail'
-                : 'warning',
+                  ? 'fail'
+                  : 'warning',
           })) || [],
       },
       {
@@ -174,8 +181,8 @@ const ExecutionReportPage: React.FC = () => {
               api.status === 'passed'
                 ? 'success'
                 : api.status === 'failed'
-                ? 'fail'
-                : 'warning',
+                  ? 'fail'
+                  : 'warning',
           })) || [],
       },
       {
@@ -195,8 +202,8 @@ const ExecutionReportPage: React.FC = () => {
               api.status === 'passed'
                 ? 'success'
                 : api.status === 'failed'
-                ? 'fail'
-                : 'warning',
+                  ? 'fail'
+                  : 'warning',
           })) || [],
       },
       {
@@ -216,8 +223,8 @@ const ExecutionReportPage: React.FC = () => {
               api.status === 'passed'
                 ? 'success'
                 : api.status === 'failed'
-                ? 'fail'
-                : 'warning',
+                  ? 'fail'
+                  : 'warning',
           })) || [],
       },
       {
@@ -237,15 +244,152 @@ const ExecutionReportPage: React.FC = () => {
               api.status === 'passed'
                 ? 'success'
                 : api.status === 'failed'
-                ? 'fail'
-                : 'warning',
+                  ? 'fail'
+                  : 'warning',
           })) || [],
       },
     ];
 
+    const metrics = [
+      {
+        title: 'Success Rate',
+        value: `${data.successRate || 0}%`,
+        icon: TrendingUp,
+        color: data.successRate >= 80 ? 'text-green-600 bg-green-100' : data.successRate >= 60 ? 'text-yellow-600 bg-yellow-100' : 'text-red-600 bg-red-100',
+      },
+      {
+        title: 'Total Test Cases',
+        value: data.totalTestCases?.toString() || '0',
+        icon: Clock,
+        color: 'text-blue-600 bg-blue-100',
+      },
+      {
+        title: 'Passed',
+        value: data.successfulTestCases?.toString() || '0',
+        icon: CheckCircle,
+        color: 'text-green-600 bg-green-100',
+      },
+      {
+        title: 'Failed',
+        value: data.skippedTestCases?.toString() || '0',
+        icon: XCircle,
+        color: 'text-red-600 bg-red-100',
+      },
+    ];
+
+    const formatDate = (dateString: string) => {
+      return new Date(dateString).toLocaleString();
+    };
+
+    const formatDuration = (ms: number) => {
+      return `${(ms / 1000).toFixed(2)}s`;
+    };
+
+
+    const handleDownloadPDF = () => {
+      downloadAsPDF('report-content', `${data.name}_report.pdf`);
+    };
+
+    const handleDownloadHTML = () => {
+      downloadAsHTML('report-content', `${data.name}_report.html`);
+    };
+
+    const handleShare = () => {
+      shareReport(data.name);
+    };
+
+
     return (
       <div ref={reportRef}>
-        <AnalyticsReport
+        <div className="border border-gray-200 bg-background rounded-lg px-6 py-4 animate-fade-in mt-3">
+          <div className="flex justify-between items-start mb-6">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">{data.name}</h1>
+              <p className="text-gray-600">{data.description}</p>
+            </div>
+
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
+            <div className="flex items-center space-x-3">
+              <Calendar className="w-5 h-5 text-blue-500" />
+              <div>
+                <p className="text-sm text-gray-500">Execution Date</p>
+                <p className="font-semibold">{formatDate(data.lastExecutionDate)}</p>
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-3">
+              <Clock className="w-5 h-5 text-green-500" />
+              <div>
+                <p className="text-sm text-gray-500">Duration</p>
+                <p className="font-semibold">{formatDuration(data.duration)}</p>
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-3">
+              <User className="w-5 h-5 text-purple-500" />
+              <div>
+                <p className="text-sm text-gray-500">Executed By</p>
+                <p className="font-semibold text-xs">{data.executedBy}</p>
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-3">
+              <Database className="w-5 h-5 text-orange-500" />
+              <div>
+                <p className="text-sm text-gray-500">Environment</p>
+                <p className="font-semibold text-xs">{data.environmentId}</p>
+              </div>
+            </div>
+          </div>
+
+
+
+          <div className="flex items-center gap-4">
+            <button
+              onClick={handleDownloadPDF}
+              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors group"
+              title="Download PDF"
+            >
+              <Download className="w-5 h-5" />
+            </button>
+
+            <button
+              onClick={handleDownloadHTML}
+              className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors group"
+              title="Download HTML"
+            >
+              <FileText className="w-5 h-5" />
+            </button>
+
+            <button
+              onClick={handleShare}
+              className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors group"
+              title="Share Report"
+            >
+              <Share2 className="w-5 h-5" />
+            </button>
+          </div>
+
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-3 mt-3">
+          {metrics.map((metric, index) => (
+            <div key={index} className="border border-gray-200 bg-background rounded-lg px-6 py-6 animate-fade-in">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-500 mb-1">{metric.title}</p>
+                  <p className="text-2xl font-bold text-gray-900">{metric.value}</p>
+                </div>
+                <div className={`p-3 rounded-full ${metric.color}`}>
+                  <metric.icon className="w-6 h-6" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+        {/* <AnalyticsReport
           title={data.name || 'Test Suite Report'}
           description={
             data.description || 'Comprehensive test suite execution report'
@@ -283,9 +427,9 @@ const ExecutionReportPage: React.FC = () => {
               textColor: 'text-yellow-700',
             },
           ]}
-        />
+        /> */}
 
-        <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mt-5'>
+        {/* <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mt-5'>
           <TestCategoryCard
             icon={<CheckCircle className='w-5 h-5 text-green-600' />}
             title='Positive Tests'
@@ -356,7 +500,7 @@ const ExecutionReportPage: React.FC = () => {
             bgColor='bg-red-100'
             borderColor='border border-red-300'
           />
-        </div>
+        </div> */}
 
         <DetailedTestResults categories={testCategories} />
       </div>
