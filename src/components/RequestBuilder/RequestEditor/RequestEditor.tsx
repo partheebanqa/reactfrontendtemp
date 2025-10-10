@@ -2,7 +2,7 @@
 
 import type React from 'react';
 import { useState, useEffect } from 'react';
-import { Play, Save, FolderPlus } from 'lucide-react';
+import { Play, Save, FolderPlus, Plus, FileTerminal } from 'lucide-react';
 import { useRequest } from '@/hooks/useRequest';
 import { useCollection } from '@/hooks/useCollection';
 import { useWorkspace } from '@/hooks/useWorkspace';
@@ -18,16 +18,42 @@ import ToggleSwitch from '@/components/ui/ToggleSwitch';
 import EditableText from '@/components/ui/EditableText';
 import Modal from '@/components/ui/Modal';
 import { useDataManagement } from '@/hooks/useDataManagement';
-import HelpLink from '@/components/HelpModal/HelpLink';
-import { executeRequest } from '@/services/executeRequest.service';
+import { executeCollectionRequest } from '@/services/executeRequest.service';
 import { updateRequest } from '@/services/collection.service';
 import { useMutation } from '@tanstack/react-query';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
+import { generateAssertions } from '@/utils/assertionGenerator';
+import AssertionManager from './assertionManager';
+import ImportModal from './ImportModal';
+import { Input } from '@/components/ui/input';
+import { Controlled as CodeMirror } from 'react-codemirror2';
+import 'codemirror/lib/codemirror.css';
+import 'codemirror/theme/material.css';
+import 'codemirror/mode/javascript/javascript';
+import "./whiteorange.css"
+
+interface FormattedResponse {
+  status: number;
+  statusText: string;
+  headers: Record<string, string>;
+  data: any;
+  responseTime: number;
+  size: number;
+}
 
 const RequestEditor: React.FC = () => {
-  const { isLoading, clearError, setLoading, setError, setResponseData } =
-    useRequest();
+  const {
+    isLoading,
+    clearError,
+    setLoading,
+    setError,
+    setResponseData,
+    setAssertions,
+    responseData,
+    assertions,
+    toggleAssertion,
+  } = useRequest();
   const {
     activeCollection,
     activeRequest,
@@ -38,20 +64,28 @@ const RequestEditor: React.FC = () => {
     isCreatingCollection,
     addCollectionMutation,
     addRequestMutation,
-    toggleExpandedCollection,
     renameRequestMutation,
-    setCollection,
-    expandedCollections,
     handleCreateRequest,
     fetchCollectionRequests,
   } = useCollection();
 
+  console.log('fetchCollectionRequests:', fetchCollectionRequests);
+
   const { variables, environments, activeEnvironment } = useDataManagement();
+  console.log('activeEnvironment:', activeEnvironment);
   const { error: showError, success: showSuccess, toast } = useToast();
   const { currentWorkspace } = useWorkspace();
+  const [showCurlImport, setShowCurlImport] = useState(false);
   const [activeTab, setActiveTab] = useState<
-    'params' | 'headers' | 'body' | 'auth' | 'scripts' | 'settings' | 'schemas'
+    | 'params'
+    | 'headers'
+    | 'body'
+    | 'auth'
+    | 'assertions'
+    | 'settings'
+    | 'schemas'
   >('params');
+
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [newCollectionName, setNewCollectionName] = useState('');
   const [url, setUrl] = useState('');
@@ -60,13 +94,14 @@ const RequestEditor: React.FC = () => {
   const [headers, setHeaders] = useState<Header[]>([]);
   const [bodyType, setBodyType] = useState<
     'none' | 'json' | 'form-data' | 'x-www-form-urlencoded' | 'raw' | 'binary'
-  >('json');
+  >('none');
   const [bodyContent, setBodyContent] = useState('');
   const [formFields, setFormFields] = useState<KeyValuePairWithFile[]>([]);
   const [urlEncodedFields, setUrlEncodedFields] = useState<Param[]>([]);
+  // ✅ FIX: Initialize authType as 'bearer' by default instead of 'none'
   const [authType, setAuthType] = useState<
     'none' | 'basic' | 'bearer' | 'apiKey' | 'oauth1' | 'oauth2'
-  >('none');
+  >('bearer');
   const [token, setToken] = useState('');
   const [authData, setAuthData] = useState({
     username: '',
@@ -103,13 +138,13 @@ const RequestEditor: React.FC = () => {
       redirectUri: '',
     },
   });
-  const [preRequestScript, setPreRequestScript] = useState('');
-  const [testScript, setTestScript] = useState('');
   const [settings, setSettings] = useState({
     followRedirects: true,
-    timeout: 30000, // 30 seconds
+    timeout: 30000,
     sslVerification: true,
   });
+
+  console.log('url in state:', url);
 
   const updateRequestMutation = useMutation({
     mutationFn: ({
@@ -160,12 +195,12 @@ const RequestEditor: React.FC = () => {
       setBodyType(
         allowedBodyTypes.includes(bodyTypeValue)
           ? (bodyTypeValue as
-              | 'none'
-              | 'json'
-              | 'form-data'
-              | 'x-www-form-urlencoded'
-              | 'raw'
-              | 'binary')
+            | 'none'
+            | 'json'
+            | 'form-data'
+            | 'x-www-form-urlencoded'
+            | 'raw'
+            | 'binary')
           : 'json'
       );
       setBodyContent(activeRequest.bodyRawContent || '');
@@ -218,15 +253,22 @@ const RequestEditor: React.FC = () => {
       }
 
       setToken(activeRequest.authorization?.token || '');
-      setAuthType(
-        (activeRequest.authorizationType as
-          | 'none'
-          | 'basic'
-          | 'bearer'
-          | 'apiKey'
-          | 'oauth1'
-          | 'oauth2') || 'none'
-      );
+      // ✅ FIX: Set authType properly, defaulting to 'bearer' if there's a token
+      const requestAuthType = activeRequest.authorizationType as
+        | 'none'
+        | 'basic'
+        | 'bearer'
+        | 'apiKey'
+        | 'oauth1'
+        | 'oauth2';
+
+      // If there's a token but no authType specified, assume bearer
+      if (activeRequest.authorization?.token && !requestAuthType) {
+        setAuthType('bearer');
+      } else {
+        setAuthType(requestAuthType || 'bearer');
+      }
+
       setAuthData({
         username: activeRequest.authorization?.username || '',
         password: activeRequest.authorization?.password || '',
@@ -257,24 +299,277 @@ const RequestEditor: React.FC = () => {
           redirectUri: '',
         },
       });
-      setPreRequestScript('');
-      setTestScript('');
+
+      // Load existing assertions from activeRequest if they exist
+      if (
+        activeRequest.assertions &&
+        Array.isArray(activeRequest.assertions) &&
+        activeRequest.assertions.length > 0
+      ) {
+        try {
+          const existingAssertions = activeRequest.assertions.map(
+            (assertion: any) => {
+              // Transform backend assertion format to frontend format
+              return {
+                id: assertion.id || `temp-${Math.random()}`,
+                category: assertion.category || 'general',
+                type: assertion.type || 'custom',
+                description: assertion.description || 'Custom assertion',
+                field: assertion.field,
+                operator: assertion.operator || 'equals',
+                expectedValue: assertion.expectedValue, // Handle both formats
+                enabled:
+                  assertion.enabled !== undefined ? assertion.enabled : true, // Mark as selected
+                impact: assertion.impact,
+                group: assertion.group || 'custom',
+                priority: assertion.priority,
+              } as Assertion;
+            }
+          );
+
+          setAssertions(existingAssertions);
+        } catch (error) {
+          console.error('Error loading existing assertions:', error);
+          setAssertions([]);
+        }
+      } else {
+        setAssertions([]);
+      }
     } else {
       handleCreateRequest();
+      setAssertions([]);
+      // ✅ FIX: When creating new request, ensure authType is 'bearer'
+      setAuthType('bearer');
     }
     setResponseData(null);
   }, [activeRequest]);
 
+  const formatBackendResponse = (result: any): FormattedResponse => {
+    const importantHeaders = [
+      'cache-control',
+      'content-type',
+      'expires',
+      'pragma',
+    ];
+    const filteredHeaders: Record<string, string> = {};
+
+    if (result.headers) {
+      Object.entries(result.headers).forEach(([key, value]) => {
+        if (importantHeaders.includes(key.toLowerCase())) {
+          filteredHeaders[key.toLowerCase()] = value as string;
+        }
+      });
+    }
+
+    let parsedBody: any = result.body;
+    if (typeof result.body === 'string') {
+      try {
+        parsedBody = JSON.parse(result.body);
+      } catch {
+        parsedBody = result.body;
+      }
+    }
+
+    return {
+      status: result.statusCode,
+      statusText: '',
+      headers: filteredHeaders,
+      data: parsedBody,
+      responseTime: result.metrics?.responseTime ?? 0,
+      size: result.metrics?.bytesReceived ?? 0,
+    };
+  };
+
+  const handleCurlImport = (parsedRequest: any) => {
+    console.log('parsedRequest:', parsedRequest);
+
+    try {
+      // Set URL
+      if (parsedRequest.url) {
+        setUrl(parsedRequest.url);
+      }
+
+      // Set method
+      if (parsedRequest.method) {
+        const supportedMethods: RequestMethod[] = [
+          'GET',
+          'POST',
+          'PUT',
+          'DELETE',
+          'PATCH',
+        ];
+        const requestMethod =
+          parsedRequest.method.toUpperCase() as RequestMethod;
+        if (supportedMethods.includes(requestMethod)) {
+          setMethod(requestMethod);
+        }
+      }
+
+      // Set headers
+      if (parsedRequest.headers && Array.isArray(parsedRequest.headers)) {
+        const formattedHeaders = parsedRequest.headers.map((header: any) => ({
+          key: header.key || '',
+          value: header.value || '',
+          enabled: header.enabled !== undefined ? header.enabled : true,
+        }));
+        setHeaders(formattedHeaders);
+      }
+
+      // Set params
+      if (parsedRequest.params && Array.isArray(parsedRequest.params)) {
+        const formattedParams = parsedRequest.params.map((param: any) => ({
+          key: param.key || '',
+          value: param.value || '',
+          enabled: param.enabled !== undefined ? param.enabled : true,
+        }));
+        setParams(formattedParams);
+      }
+
+      // Set body type and content
+      if (parsedRequest.bodyType) {
+        const allowedBodyTypes = [
+          'none',
+          'json',
+          'form-data',
+          'x-www-form-urlencoded',
+          'raw',
+          'binary',
+        ];
+        if (allowedBodyTypes.includes(parsedRequest.bodyType)) {
+          setBodyType(
+            parsedRequest.bodyType as
+            | 'none'
+            | 'json'
+            | 'form-data'
+            | 'x-www-form-urlencoded'
+            | 'raw'
+            | 'binary'
+          );
+        }
+      }
+
+      // Set body content
+      if (parsedRequest.body) {
+        let bodyContentToSet = '';
+        if (typeof parsedRequest.body === 'string') {
+          bodyContentToSet = parsedRequest.body;
+        } else if (typeof parsedRequest.body === 'object') {
+          bodyContentToSet = JSON.stringify(parsedRequest.body, null, 2);
+        }
+        setBodyContent(bodyContentToSet);
+      }
+
+      // Set authentication
+      if (parsedRequest.auth && parsedRequest.auth.type) {
+        const authTypeValue = parsedRequest.auth.type.toLowerCase();
+
+        switch (authTypeValue) {
+          case 'bearer':
+            setAuthType('bearer');
+            if (parsedRequest.auth.token) {
+              setAuthData((prev) => ({
+                ...prev,
+                token: parsedRequest.auth.token,
+              }));
+            }
+            break;
+          case 'basic':
+            setAuthType('basic');
+            if (parsedRequest.auth.username && parsedRequest.auth.password) {
+              setAuthData((prev) => ({
+                ...prev,
+                username: parsedRequest.auth.username,
+                password: parsedRequest.auth.password,
+              }));
+            }
+            break;
+          case 'apikey':
+            setAuthType('apiKey');
+            if (parsedRequest.auth.key && parsedRequest.auth.value) {
+              setAuthData((prev) => ({
+                ...prev,
+                key: parsedRequest.auth.key,
+                value: parsedRequest.auth.value,
+                addTo: parsedRequest.auth.addTo || 'header',
+              }));
+            }
+            break;
+          default:
+            setAuthType('bearer'); // ✅ FIX: Default to bearer instead of none
+            break;
+        }
+      }
+
+      // Handle form data
+      if (parsedRequest.bodyType === 'form-data' && parsedRequest.formData) {
+        const formDataFields = Object.entries(parsedRequest.formData).map(
+          ([key, value]) => ({
+            key,
+            value: String(value),
+            enabled: true,
+            type: 'text' as const,
+          })
+        );
+        setFormFields(formDataFields);
+      }
+
+      // Handle URL encoded fields
+      if (
+        parsedRequest.bodyType === 'x-www-form-urlencoded' &&
+        parsedRequest.body
+      ) {
+        try {
+          const urlParams = new URLSearchParams(parsedRequest.body);
+          const encodedFields: Param[] = [];
+          urlParams.forEach((value, key) => {
+            encodedFields.push({ key, value, enabled: true });
+          });
+          setUrlEncodedFields(encodedFields);
+        } catch (e) {
+          console.error('Error parsing URL encoded body:', e);
+        }
+      }
+
+      // Switch to appropriate tab based on what was imported
+      if (
+        parsedRequest.auth &&
+        parsedRequest.auth.type &&
+        parsedRequest.auth.type !== 'none'
+      ) {
+        setActiveTab('auth');
+      } else if (parsedRequest.body || parsedRequest.bodyType !== 'none') {
+        setActiveTab('body');
+      } else if (parsedRequest.headers && parsedRequest.headers.length > 0) {
+        setActiveTab('headers');
+      } else if (parsedRequest.params && parsedRequest.params.length > 0) {
+        setActiveTab('params');
+      }
+
+      setShowCurlImport(false);
+
+      toast({
+        title: 'cURL Imported Successfully',
+        description: 'Request has been populated from cURL command',
+        type: 'success',
+      });
+    } catch (error) {
+      console.error('Error importing cURL:', error);
+      toast({
+        title: 'Import Error',
+        description: 'Failed to import cURL command. Please check the format.',
+        type: 'error',
+      });
+    }
+  };
+
   const handleSendRequest = async () => {
-    console.log('activeRequest:', activeRequest);
     if (!activeRequest) return;
     clearError();
     setLoading(true);
     const newUrl = buildFinalUrl();
-    try {
-      // Create FormData object for file uploads if needed
-      let requestFormData: FormData | undefined;
 
+    try {
+      let requestFormData: FormData | undefined;
       if (bodyType === 'form-data') {
         const fileFields = formFields.filter(
           (f) => f.enabled && f.type === 'file' && f.value instanceof File
@@ -293,113 +588,71 @@ const RequestEditor: React.FC = () => {
         }
       }
 
-      const requestData = {
-        request: {
-          name: activeRequest.name || 'New Request',
-          workspaceId: currentWorkspace?.id || '',
-          method: method,
-          url: newUrl,
-          params: params,
-          headers: headers,
-          bodyRawContent: requestFormData || bodyContent,
-          bodyType: bodyType,
-          formData:
-            bodyType === 'form-data'
-              ? formFields
-                  .filter((f) => f.enabled)
-                  .reduce((acc, field) => {
-                    if (field.type === 'file' && field.value instanceof File) {
-                      acc[field.key] = field.value;
-                    } else {
-                      acc[field.key] = String(field.value);
-                    }
-                    return acc;
-                  }, {} as Record<string, string | File>)
-              : undefined,
-          urlEncodedData:
-            bodyType === 'x-www-form-urlencoded'
-              ? urlEncodedFields
-                  .filter((f) => f.enabled)
-                  .reduce((acc, field) => {
-                    acc[field.key] = field.value;
-                    return acc;
-                  }, {} as Record<string, string>)
-              : undefined,
-          authorizationType: authType,
-          authorization: {
-            token: authType === 'bearer' ? authData.token : '',
-            username: authType === 'basic' ? authData.username : '',
-            password: authType === 'basic' ? authData.password : '',
-            key: authType === 'apiKey' ? authData.key : '',
-            value: authType === 'apiKey' ? authData.value : '',
-            addTo: authType === 'apiKey' ? authData.addTo : 'header',
-            oauth1:
-              authType === 'oauth1'
-                ? {
-                    consumerKey: authData.oauth1.consumerKey,
-                    consumerSecret: authData.oauth1.consumerSecret,
-                    token: authData.oauth1.token,
-                    tokenSecret: authData.oauth1.tokenSecret,
-                    signatureMethod: authData.oauth1.signatureMethod,
-                    version: '1.0',
-                    realm: authData.oauth1.realm,
-                    nonce: authData.oauth1.nonce,
-                    timestamp: authData.oauth1.timestamp,
-                  }
-                : undefined,
-            oauth2:
-              authType === 'oauth2'
-                ? {
-                    clientId: authData.oauth2.clientId,
-                    clientSecret: authData.oauth2.clientSecret,
-                    accessToken: authData.oauth2.accessToken,
-                    tokenType: authData.oauth2.tokenType,
-                    refreshToken: authData.oauth2.refreshToken,
-                    scope: authData.oauth2.scope,
-                    grantType: authData.oauth2.grantType,
-                    redirectUri: authData.oauth2.redirectUri,
-                  }
-                : undefined,
-          },
-        },
-      };
-      console.log('requestData123:', requestData);
+      if (!activeRequest?.id) {
+        throw new Error('please save a request before sending.');
+      }
 
-      // const response = await makeRequest(requestData);
-      const backendData = await executeRequest(requestData);
+      // 🔹 Decide environmentId
+      const environmentId =
+        activeEnvironment?.name !== 'No Environment'
+          ? activeEnvironment?.id
+          : undefined;
 
-      const result = backendData?.data?.responses?.[0];
+      // 🔹 Send request to backend with optional environmentId
+      const backendData = await executeCollectionRequest(
+        activeRequest.id,
+        environmentId
+      );
 
-      if (result) {
-        let parsedBody: any = result.body;
-        if (typeof result.body === 'string') {
+      const backendBody = backendData?.data?.body;
+
+      if (backendBody) {
+        let parsedBody: any = backendBody;
+        if (typeof backendBody === 'string') {
           try {
-            parsedBody = JSON.parse(result.body);
+            parsedBody = JSON.parse(backendBody);
           } catch {
-            parsedBody = result.body;
+            parsedBody = backendBody;
           }
         }
 
         const normalizedResponse = {
-          status: result.statusCode,
-          statusCode: result.statusCode,
-          headers: result.headers ?? {},
+          status: backendData?.data?.statusCode ?? 200,
+          statusCode: backendData?.data?.statusCode ?? 200,
+          headers: backendData?.data?.headers ?? {},
           body: parsedBody,
-          rawBody: result.body,
-          metrics: result.metrics ?? {},
+          rawBody: backendBody,
+          metrics: backendData?.data?.metrics ?? {},
+          assertionLogs: backendData?.data?.assertionLogs || [],
+          schemaValidation: backendData?.data?.schemaValidation || null,
         };
 
         setResponseData(normalizedResponse as any);
+
+        // 🔹 Generate assertions
+        const formattedResponse = formatBackendResponse(normalizedResponse);
+        const generatedAssertions = generateAssertions(formattedResponse);
+
+        const existingAssertions = Array.isArray(assertions) ? assertions : [];
+        const existingIds = new Set(existingAssertions.map((a) => a.id));
+        const newAssertions = generatedAssertions.filter(
+          (newAssertion) => !existingIds.has(newAssertion.id)
+        );
+        const mergedAssertions = [...existingAssertions, ...newAssertions];
+        setAssertions(mergedAssertions);
       }
     } catch (error: any) {
-      setError({
-        title: 'Unexpected Error',
-        description: 'An unexpected error occurred while sending the request.',
-        suggestions: [
-          'Check your network connection',
-          'Try the request again',
-          'Contact support if the problem persists',
-        ],
+      // Show backend error if present
+      const backendErrorMessage =
+        error?.response?.data?.errorDetails ||
+        error?.response?.data?.error ||
+        error?.message ||
+        'An unknown error occurred.';
+
+      toast({
+        title: 'Error',
+        description: backendErrorMessage,
+        type: 'error',
       });
     } finally {
       setLoading(false);
@@ -410,38 +663,25 @@ const RequestEditor: React.FC = () => {
     try {
       if (!activeRequest) return;
       if (newName.trim() && activeRequest?.id) {
+        // First update the server
         await renameRequestMutation.mutateAsync({
           requestId: activeRequest.id,
           newName: newName.trim(),
+          workspaceId: currentWorkspace?.id || '',
         });
-        toast({
-          title: 'Request renamed successfully!',
-          duration: 3000,
-          type: 'success',
-        });
+
+        // The renameRequest action in the store will update both collections and activeRequest
+        // This prevents the race condition where activeRequest gets overwritten
+      } else if (newName.trim() && !activeRequest?.id) {
+        // For unsaved requests, just update the local state
+        const updatedRequest = {
+          ...activeRequest,
+          name: newName.trim(),
+        };
+        setActiveRequest(updatedRequest);
       }
-      const active = { ...activeRequest, name: newName.trim() };
-      setActiveRequest(active);
-      setCollection(
-        collections.map((collection) => {
-          if (collection.id === activeRequest.collectionId) {
-            return {
-              ...collection,
-              requests: collection.requests.map((request) => {
-                return request.order === activeRequest.order ? active : request;
-              }),
-            };
-          } else {
-            return collection;
-          }
-        })
-      );
     } catch (error) {
-      console.error('Error saving request name:', error);
-      showError(
-        'Rename Failed',
-        'An error occurred while renaming the request name.'
-      );
+      console.error('Error renaming request:', error);
     }
   };
 
@@ -456,19 +696,6 @@ const RequestEditor: React.FC = () => {
     }
 
     setShowSaveModal(true);
-    if (activeRequest.collectionId) {
-      const collection = collections.find(
-        (c) => c.id === activeRequest.collectionId
-      );
-      setActiveCollection(collection || null);
-    } else {
-      const workspaceCollections = collections.filter(
-        (collection) => collection.workspaceId === currentWorkspace?.id
-      );
-      if (workspaceCollections.length > 0) {
-        setActiveCollection(workspaceCollections[0]);
-      }
-    }
   };
 
   const handleUpdateRequest = async () => {
@@ -482,43 +709,60 @@ const RequestEditor: React.FC = () => {
         return;
       }
 
-      let requestCount = 0;
+      let maxOrder = 0;
       if (activeCollection) {
         const response = await fetchCollectionRequests.mutateAsync(
           activeCollection.id
         );
-        requestCount = response.length;
+        if (response && response.length > 0) {
+          maxOrder = Math.max(...response.map((req) => req.order || 0));
+        }
       }
 
+      const selectedAssertions = Array.isArray(assertions)
+        ? assertions
+          .filter((assertion) => assertion.enabled)
+          .map((assertion) => ({
+            ...assertion,
+            requestId: activeRequest.id, // ✅ attach requestId
+            expectedValue:
+              assertion.expectedValue !== undefined &&
+                assertion.expectedValue !== null
+                ? typeof assertion.expectedValue === 'string'
+                  ? assertion.expectedValue
+                  : JSON.stringify(assertion.expectedValue)
+                : '', // fallback to empty string
+          }))
+        : [];
+
       const requestData = {
-        // collectionId removed per backend contract
-        workspaceId: currentWorkspace.id, // REQUIRED by backend
+        workspaceId: currentWorkspace.id,
         description: '',
         name: activeRequest.name || 'New Request',
-        order: (requestCount || 0) + 1,
+        order: maxOrder + 1,
         method: method,
         url: url,
         bodyType: bodyType === 'json' ? 'raw' : bodyType,
         bodyFormData:
           bodyType === 'form-data'
             ? formFields
-                .filter((f) => f.enabled)
-                .reduce((acc: Record<string, any>, field) => {
-                  if (field.key) {
-                    if (field.type === 'file' && field.value instanceof File) {
-                      acc[field.key] = field.value;
-                    } else {
-                      acc[field.key] = String(field.value);
-                    }
+              .filter((f) => f.enabled)
+              .reduce((acc: Record<string, any>, field) => {
+                if (field.key) {
+                  if (field.type === 'file' && field.value instanceof File) {
+                    acc[field.key] = field.value;
+                  } else {
+                    acc[field.key] = String(field.value);
                   }
-                  return acc;
-                }, {})
-            : [], // use empty array when not used (no null)
+                }
+                return acc;
+              }, {})
+            : [],
         bodyRawContent:
           bodyType === 'raw' || bodyType === 'json'
             ? bodyContent
             : bodyType === 'x-www-form-urlencoded'
-            ? new URLSearchParams(
+              ? new URLSearchParams(
                 urlEncodedFields
                   .filter((f) => f.enabled)
                   .reduce((acc, field) => {
@@ -526,10 +770,11 @@ const RequestEditor: React.FC = () => {
                     return acc;
                   }, {} as Record<string, string>)
               ).toString()
-            : '', // use empty string when not used (no null)
+              : '',
         authorizationType: authType,
+        // ✅ FIX: Always include token when there's one, regardless of authType check
         authorization: {
-          token: authType === 'bearer' ? authData.token : '',
+          token: authData.token, // Always include the token
           username: authType === 'basic' ? authData.username : '',
           password: authType === 'basic' ? authData.password : '',
           key: authType === 'apiKey' ? authData.key : '',
@@ -538,33 +783,34 @@ const RequestEditor: React.FC = () => {
           oauth1:
             authType === 'oauth1'
               ? {
-                  consumerKey: authData.oauth1.consumerKey,
-                  consumerSecret: authData.oauth1.consumerSecret,
-                  token: authData.oauth1.token,
-                  tokenSecret: authData.oauth1.tokenSecret,
-                  signatureMethod: authData.oauth1.signatureMethod,
-                  version: '1.0',
-                  realm: authData.oauth1.realm,
-                  nonce: authData.oauth1.nonce,
-                  timestamp: authData.oauth1.timestamp,
-                }
+                consumerKey: authData.oauth1.consumerKey,
+                consumerSecret: authData.oauth1.consumerSecret,
+                token: authData.oauth1.token,
+                tokenSecret: authData.oauth1.tokenSecret,
+                signatureMethod: authData.oauth1.signatureMethod,
+                version: '1.0',
+                realm: authData.oauth1.realm,
+                nonce: authData.oauth1.nonce,
+                timestamp: authData.oauth1.timestamp,
+              }
               : undefined,
           oauth2:
             authType === 'oauth2'
               ? {
-                  clientId: authData.oauth2.clientId,
-                  clientSecret: authData.oauth2.clientSecret,
-                  accessToken: authData.oauth2.accessToken,
-                  tokenType: authData.oauth2.tokenType,
-                  refreshToken: authData.oauth2.refreshToken,
-                  scope: authData.oauth2.scope,
-                  grantType: authData.oauth2.grantType,
-                  redirectUri: authData.oauth2.redirectUri,
-                }
+                clientId: authData.oauth2.clientId,
+                clientSecret: authData.oauth2.clientSecret,
+                accessToken: authData.oauth2.accessToken,
+                tokenType: authData.oauth2.tokenType,
+                refreshToken: authData.oauth2.refreshToken,
+                scope: authData.oauth2.scope,
+                grantType: authData.oauth2.grantType,
+                redirectUri: authData.oauth2.redirectUri,
+              }
               : undefined,
         },
         params: params,
         headers: headers,
+        assertions: selectedAssertions,
       };
 
       if (!activeRequest.id) {
@@ -601,6 +847,7 @@ const RequestEditor: React.FC = () => {
         );
         return;
       }
+
       let createdCollectionId: string | null = null;
       if (isCreatingCollection && newCollectionName.trim()) {
         const res = await addCollectionMutation.mutateAsync({
@@ -616,6 +863,7 @@ const RequestEditor: React.FC = () => {
           setActiveCollection(createdCollection || null);
         }
       }
+
       if (
         !activeCollection &&
         (!isCreatingCollection || !newCollectionName.trim())
@@ -626,100 +874,137 @@ const RequestEditor: React.FC = () => {
         );
         return;
       }
-      let requestCount = 0;
+
+      let maxOrder = 0;
       if (activeCollection) {
         const response = await fetchCollectionRequests.mutateAsync(
           activeCollection.id
         );
-        requestCount = response.length;
+        if (response && response.length > 0) {
+          maxOrder = Math.max(...response.map((req) => req.order || 0));
+        }
       }
 
+      // ✅ normalize authorizationType
+      let effectiveAuthType = authType;
+      if (authData?.token && (!authType || authType === 'none')) {
+        effectiveAuthType = 'bearer';
+      }
+
+      // Get selected assertions
+      const selectedAssertions = Array.isArray(assertions)
+        ? assertions.filter((a) => a.enabled).map((a) => a)
+        : [];
+
       const requestData = {
-        collectionId: createdCollectionId
-          ? createdCollectionId
-          : activeCollection?.id,
+        workspaceId: currentWorkspace.id,
+        collectionId: createdCollectionId || activeCollection?.id,
         description: '',
         name: activeRequest.name || 'New Request',
-        order: (requestCount || 0) + 1,
-        method: method,
-        url: url,
-        bodyType: bodyType == 'json' ? 'raw' : bodyType,
+        order: maxOrder + 1,
+        method,
+        url,
+        bodyType: bodyType === 'json' ? 'raw' : bodyType,
         bodyFormData:
           bodyType === 'form-data'
             ? formFields
-                .filter((f) => f.enabled)
-                .reduce((acc: Record<string, any>, field) => {
-                  if (field.key) {
-                    if (field.type === 'file' && field.value instanceof File) {
-                      acc[field.key] = field.value;
-                    } else {
-                      acc[field.key] = String(field.value);
-                    }
+              .filter((f) => f.enabled)
+              .reduce((acc: Record<string, any>, field) => {
+                if (field.key) {
+                  if (field.type === 'file' && field.value instanceof File) {
+                    acc[field.key] = field.value;
+                  } else {
+                    acc[field.key] = String(field.value);
                   }
-                  return acc;
-                }, {})
-            : null,
+                }
+                return acc;
+              }, {})
+            : [],
         bodyRawContent:
           bodyType === 'raw' || bodyType === 'json'
             ? bodyContent
             : bodyType === 'x-www-form-urlencoded'
-            ? new URLSearchParams(
+              ? new URLSearchParams(
                 urlEncodedFields
                   .filter((f) => f.enabled)
                   .reduce((acc, field) => {
-                    if (field.key) {
-                      acc[field.key] = field.value;
-                    }
+                    if (field.key) acc[field.key] = field.value;
                     return acc;
                   }, {} as Record<string, string>)
               ).toString()
-            : null,
-        authorizationType: authType,
+              : '',
+        authorizationType: effectiveAuthType, // ✅ fixed here
         authorization: {
-          token: authType === 'bearer' ? authData.token : '',
-          username: authType === 'basic' ? authData.username : '',
-          password: authType === 'basic' ? authData.password : '',
-          key: authType === 'apiKey' ? authData.key : '',
-          value: authType === 'apiKey' ? authData.value : '',
-          addTo: authType === 'apiKey' ? authData.addTo : 'header',
+          token: authData.token,
+          username: effectiveAuthType === 'basic' ? authData.username : '',
+          password: effectiveAuthType === 'basic' ? authData.password : '',
+          key: effectiveAuthType === 'apiKey' ? authData.key : '',
+          value: effectiveAuthType === 'apiKey' ? authData.value : '',
+          addTo: effectiveAuthType === 'apiKey' ? authData.addTo : 'header',
           oauth1:
-            authType === 'oauth1'
+            effectiveAuthType === 'oauth1'
               ? {
-                  consumerKey: authData.oauth1.consumerKey,
-                  consumerSecret: authData.oauth1.consumerSecret,
-                  token: authData.oauth1.token,
-                  tokenSecret: authData.oauth1.tokenSecret,
-                  signatureMethod: authData.oauth1.signatureMethod,
-                  version: '1.0',
-                  realm: authData.oauth1.realm,
-                  nonce: authData.oauth1.nonce,
-                  timestamp: authData.oauth1.timestamp,
-                }
+                consumerKey: authData.oauth1.consumerKey,
+                consumerSecret: authData.oauth1.consumerSecret,
+                token: authData.oauth1.token,
+                tokenSecret: authData.oauth1.tokenSecret,
+                signatureMethod: authData.oauth1.signatureMethod,
+                version: '1.0',
+                realm: authData.oauth1.realm,
+                nonce: authData.oauth1.nonce,
+                timestamp: authData.oauth1.timestamp,
+              }
               : undefined,
           oauth2:
-            authType === 'oauth2'
+            effectiveAuthType === 'oauth2'
               ? {
-                  clientId: authData.oauth2.clientId,
-                  clientSecret: authData.oauth2.clientSecret,
-                  accessToken: authData.oauth2.accessToken,
-                  tokenType: authData.oauth2.tokenType,
-                  refreshToken: authData.oauth2.refreshToken,
-                  scope: authData.oauth2.scope,
-                  grantType: authData.oauth2.grantType,
-                  redirectUri: authData.oauth2.redirectUri,
-                }
+                clientId: authData.oauth2.clientId,
+                clientSecret: authData.oauth2.clientSecret,
+                accessToken: authData.oauth2.accessToken,
+                tokenType: authData.oauth2.tokenType,
+                refreshToken: authData.oauth2.refreshToken,
+                scope: authData.oauth2.scope,
+                grantType: authData.oauth2.grantType,
+                redirectUri: authData.oauth2.redirectUri,
+              }
               : undefined,
         },
-        params: params,
-        headers: headers,
-        // variables: activeRequest.variables || {},
+        params,
+        headers,
+        assertions: selectedAssertions,
       };
-      await addRequestMutation.mutateAsync(requestData);
+
+      console.log('requestData to save:', requestData);
+
+      const savedRequestResponse = await addRequestMutation.mutateAsync(
+        requestData
+      );
+
       setShowSaveModal(false);
       setNewCollectionName('');
       setIsCreatingCollection(false);
       showSuccess('Request saved successfully!');
-      handleCreateRequest();
+
+      if (
+        savedRequestResponse &&
+        (savedRequestResponse.id || savedRequestResponse.requestId)
+      ) {
+        const newId = savedRequestResponse.id || savedRequestResponse.requestId;
+        const updatedRequest = {
+          ...activeRequest,
+          id: newId,
+          collectionId: createdCollectionId || activeCollection?.id,
+          name: activeRequest.name || 'New Request',
+          method,
+          url,
+          bodyType,
+          authorizationType: effectiveAuthType,
+          authorization: requestData.authorization,
+          params,
+          headers,
+        };
+        setActiveRequest(updatedRequest);
+      }
     } catch (error) {
       console.error('Error saving request:', error);
       showError('Save Failed', 'An error occurred while saving the request.');
@@ -738,26 +1023,17 @@ const RequestEditor: React.FC = () => {
     });
     return result;
   };
-
   const buildFinalUrl = (): string => {
     if (!url) return '';
     let finalUrl = url;
-
-    // Apply variable substitution
     finalUrl = substituteVariables(finalUrl);
-
-    const baseUrVar =
-      variables.find((v) => v.name === 'baseUrl')?.initialValue || '';
-
-    // Apply environment base URL if not "no-environment"
-    if (baseUrVar) {
+    const envBaseUrl = activeEnvironment?.baseUrl || '';
+    if (envBaseUrl) {
       try {
         const originalUrl = new URL(finalUrl);
         const pathAndQuery =
           originalUrl.pathname + originalUrl.search + originalUrl.hash;
-
-        // Combine activeEnvironment base URL with the path from original URL
-        const baseUrl = baseUrVar.replace(/\/$/, '');
+        const baseUrl = envBaseUrl.replace(/\/$/, '');
         finalUrl = `${baseUrl}${pathAndQuery}`;
       } catch (error) {
         if (
@@ -765,12 +1041,13 @@ const RequestEditor: React.FC = () => {
           !finalUrl.startsWith('https://')
         ) {
           finalUrl = finalUrl.startsWith('/') ? finalUrl : `/${finalUrl}`;
-          finalUrl = `${baseUrVar.replace(/\/$/, '')}${finalUrl}`;
+          finalUrl = `${envBaseUrl.replace(/\/$/, '')}${finalUrl}`;
         }
       }
     }
     return finalUrl;
   };
+
   const previewUrl = buildFinalUrl();
 
   const handleCancelSave = () => {
@@ -909,20 +1186,12 @@ const RequestEditor: React.FC = () => {
                 fontWeight='semibold'
               />
             </div>
-            {/* <HelpLink /> */}
           </div>
         </div>
 
         {/* Request URL Bar */}
         <div className='border-b border-gray-200 dark:border-gray-700 p-4 flex-shrink-0'>
           <div className='flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-2'>
-            {/* Replace the old method selector with the one built into HighlightedUrlInput */}
-            {/* <HighlightedUrlInput 
-              url={url} 
-              setUrl={setUrl} 
-              method={method}
-              setMethod={(newMethod) => setMethod(newMethod as RequestMethod)}
-            /> */}
             <select
               value={method}
               onChange={(e) => setMethod(e.target.value as RequestMethod)}
@@ -931,25 +1200,24 @@ const RequestEditor: React.FC = () => {
               )}`}
               style={{
                 appearance: 'auto',
-              }} /* Ensures dropdown styling is maintained */
+              }}
             >
               {methods.map((m) => (
                 <option
                   key={m}
                   value={m}
-                  className='bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-200' /* Normal styling for options */
+                  className='bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-200'
                 >
                   {m}
                 </option>
               ))}
             </select>
 
-            <input
+            <Input
               type='text'
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               placeholder='Enter request URL'
-              className='flex-1 min-w-0 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 dark:bg-gray-800 dark:text-white'
             />
 
             <div className='flex space-x-2'>
@@ -966,7 +1234,6 @@ const RequestEditor: React.FC = () => {
                   {isLoading ? 'Sending...' : 'Send'}
                 </span>
               </Button>
-
               <TooltipContainer text='Save request'>
                 {!activeRequest.id ? (
                   <button
@@ -974,7 +1241,7 @@ const RequestEditor: React.FC = () => {
                     className='border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 px-3 py-2 rounded-md'
                     aria-label='Save request'
                   >
-                    <Save className='h-4 w-4' />
+                    <Save className='h-4 w-4 text-[#136fb0]' />
                   </button>
                 ) : (
                   <button
@@ -982,21 +1249,36 @@ const RequestEditor: React.FC = () => {
                     className='border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 px-3 py-2 rounded-md'
                     aria-label='Save request'
                   >
-                    <Save className='h-4 w-4' />
+                    <Save className='h-4 w-4 text-[#136fb0]' />
                   </button>
                 )}
               </TooltipContainer>
 
-              {/* <button
-                className="border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 px-3 py-2 rounded-md"
-                aria-label="More options"
-              >
-                <MoreVertical className="h-4 w-4" />
-              </button> */}
+              <TooltipContainer text='Import from cURL'>
+                <button
+                  onClick={() => setShowCurlImport(true)}
+                  className='border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 px-3 py-2 rounded-md text-sm font-medium'
+                  title='Import from cURL'
+                >
+                  <FileTerminal className='h-4 w-4 text-[#136fb0]' />
+                </button>
+              </TooltipContainer>
+
+              <TooltipContainer text='New request'>
+                <button
+                  onClick={() => {
+                    handleCreateRequest();
+                  }}
+                  className='border border-gray-300 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800'
+                  title='Create new request'
+                >
+                  <Plus className='h-4 w-4 text-[#136fb0]' />
+                </button>
+              </TooltipContainer>
             </div>
           </div>
 
-          {previewUrl && (
+          {previewUrl && activeEnvironment?.name !== 'No Environment' && (
             <div className='mt-2 mb-1'>
               <div className='bg-gray-50 dark:bg-gray-800 rounded px-3 py-2 flex gap-2  items-center'>
                 <p className='text-sm text-gray-600 dark:text-gray-400'>
@@ -1026,7 +1308,13 @@ const RequestEditor: React.FC = () => {
               },
               { id: 'body', label: 'Body' },
               { id: 'auth', label: 'Authorization' },
-              { id: 'scripts', label: 'Scripts' },
+              {
+                id: 'assertions',
+                label: 'Assertions',
+                count: Array.isArray(assertions)
+                  ? assertions.filter((a) => a.enabled).length
+                  : 0,
+              },
               { id: 'settings', label: 'Settings' },
               { id: 'schemas', label: 'Schemas' },
             ].map((tab) => (
@@ -1035,10 +1323,9 @@ const RequestEditor: React.FC = () => {
                 onClick={() => setActiveTab(tab.id as any)}
                 className={`
                   py-4 px-2 sm:px-4 border-b-2 font-medium text-sm transition-colors whitespace-nowrap
-                  ${
-                    activeTab === tab.id
-                      ? 'border-blue-500 text-blue-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  ${activeTab === tab.id
+                    ? 'border-[#136fb0] text-[#136fb0]'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                   }
                 `}
               >
@@ -1085,7 +1372,7 @@ const RequestEditor: React.FC = () => {
                 <h3 className='text-base sm:text-lg font-medium text-gray-900 dark:text-white'>
                   Request Body
                 </h3>
-                <select
+                {/* <select
                   value={bodyType}
                   onChange={(e) => setBodyType(e.target.value as any)}
                   className='border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-800 text-sm font-medium hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all duration-150'
@@ -1098,7 +1385,7 @@ const RequestEditor: React.FC = () => {
                   </option>
                   <option value='raw'>Raw</option>
                   <option value='binary'>Binary</option>
-                </select>
+                </select> */}
               </div>
 
               {bodyType === 'none' && (
@@ -1108,12 +1395,24 @@ const RequestEditor: React.FC = () => {
               )}
 
               {bodyType === 'json' && (
-                <textarea
+                // <textarea
+                //   value={bodyContent}
+                //   onChange={(e) => setBodyContent(e.target.value)}
+                //   placeholder='Enter JSON body'
+                //   rows={8}
+                //   className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 font-mono text-sm dark:bg-gray-800 dark:text-white'
+                // />
+                <CodeMirror
                   value={bodyContent}
-                  onChange={(e) => setBodyContent(e.target.value)}
-                  placeholder='Enter JSON body'
-                  rows={8}
-                  className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 font-mono text-sm dark:bg-gray-800 dark:text-white'
+                  options={{
+                    mode: { name: 'javascript', json: true },
+                    theme: 'whiteorange',
+                    lineNumbers: true,
+                    lineWrapping: true,
+                  }}
+                  onBeforeChange={(editor, data, value) => {
+                    setBodyContent(value);
+                  }}
                 />
               )}
 
@@ -1151,23 +1450,59 @@ const RequestEditor: React.FC = () => {
               )}
 
               {bodyType === 'raw' && (
-                <textarea
+                <>
+                  {/* <textarea
                   value={bodyContent}
                   onChange={(e) => setBodyContent(e.target.value)}
                   placeholder='Enter raw request body'
                   rows={8}
                   className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 font-mono text-sm dark:bg-gray-800 dark:text-white'
-                />
+                /> */}
+                  {/* <CodeMirror
+                    value={bodyContent}
+                    options={{
+                      mode: { name: 'javascript', json: true },
+                      theme: 'material', // base dark theme
+                      lineNumbers: true,
+                      lineWrapping: true,
+                    }}
+                    onBeforeChange={(editor, data, value) => {
+                      setBodyContent(value);
+                    }}
+                    editorDidMount={(editor) => {
+                      editor.getWrapperElement().style.fontSize = '14px';
+                      editor.getWrapperElement().style.color = '#FFA500';
+                    }}
+                  /> */}
+
+                  <CodeMirror
+                    value={bodyContent}
+                    options={{
+                      mode: { name: 'javascript', json: true },
+                      theme: 'whiteorange',
+                      lineNumbers: true,
+                      lineWrapping: true,
+                    }}
+                    onBeforeChange={(editor, data, value) => {
+                      setBodyContent(value);
+                    }}
+                  />
+
+                </>
+
+
               )}
+
+
 
               {bodyType === 'binary' && (
                 <div className='text-center p-8 border border-dashed border-gray-300 dark:border-gray-700 rounded-md'>
                   <p className='text-gray-500 dark:text-gray-400 mb-4'>
                     Select a file to upload
                   </p>
-                  <button className='px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md'>
+                  <Button   >
                     Choose File
-                  </button>
+                  </Button>
                 </div>
               )}
             </div>
@@ -1179,455 +1514,41 @@ const RequestEditor: React.FC = () => {
                 <h3 className='text-base sm:text-lg font-medium text-gray-900 dark:text-white'>
                   Authorization
                 </h3>
+                {/* Locked to Bearer only */}
                 <select
-                  value={authType}
-                  onChange={(e) => setAuthType(e.target.value as any)}
-                  className='border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-800 text-sm font-medium hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all duration-150'
+                  value='bearer'
+                  disabled
+                  className='border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-800 text-sm font-medium focus:outline-none'
                 >
-                  <option value='none'>No Auth</option>
-                  <option value='basic'>Basic Auth</option>
                   <option value='bearer'>Bearer Token</option>
-                  <option value='apiKey'>API Key</option>
-                  <option value='oauth1'>OAuth 1.0</option>
-                  <option value='oauth2'>OAuth 2.0</option>
                 </select>
               </div>
 
-              {authType === 'none' && (
-                <div className='text-gray-500 dark:text-gray-400 text-center p-8 border border-dashed border-gray-300 dark:border-gray-700 rounded-md'>
-                  No authorization is set for this request
-                </div>
-              )}
-
-              {authType === 'basic' && (
-                <div className='space-y-4'>
-                  <div>
-                    <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
-                      Username
-                    </label>
-                    <input
-                      type='text'
-                      value={authData.username}
-                      onChange={(e) =>
-                        setAuthData({ ...authData, username: e.target.value })
-                      }
-                      placeholder='Enter username'
-                      className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 bg-white dark:bg-gray-800 text-sm'
-                    />
-                  </div>
-                  <div>
-                    <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
-                      Password
-                    </label>
-                    <input
-                      type='password'
-                      value={authData.password}
-                      onChange={(e) =>
-                        setAuthData({ ...authData, password: e.target.value })
-                      }
-                      placeholder='Enter password'
-                      className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 bg-white dark:bg-gray-800 text-sm'
-                    />
-                  </div>
-                </div>
-              )}
-
-              {authType === 'bearer' && (
-                <div>
-                  <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
-                    Token
-                  </label>
-                  <input
-                    type='text'
-                    value={authData.token}
-                    onChange={(e) =>
-                      setAuthData({ ...authData, token: e.target.value })
-                    }
-                    placeholder='Enter token'
-                    className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 bg-white dark:bg-gray-800 text-sm'
-                  />
-                  <p className='mt-1 text-xs text-gray-500 dark:text-gray-400'>
-                    The token will be sent as "Bearer {token}" in the
-                    Authorization header
-                  </p>
-                </div>
-              )}
-
-              {authType === 'apiKey' && (
-                <div className='space-y-4'>
-                  <div>
-                    <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
-                      Key
-                    </label>
-                    <input
-                      type='text'
-                      value={authData.key}
-                      onChange={(e) =>
-                        setAuthData({ ...authData, key: e.target.value })
-                      }
-                      placeholder='Enter API key name'
-                      className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 bg-white dark:bg-gray-800 text-sm'
-                    />
-                  </div>
-                  <div>
-                    <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
-                      Value
-                    </label>
-                    <input
-                      type='text'
-                      value={authData.value}
-                      onChange={(e) =>
-                        setAuthData({ ...authData, value: e.target.value })
-                      }
-                      placeholder='Enter API key value'
-                      className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 bg-white dark:bg-gray-800 text-sm'
-                    />
-                  </div>
-                  <div>
-                    <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
-                      Add to
-                    </label>
-                    <div className='flex space-x-4'>
-                      <label className='inline-flex items-center'>
-                        <input
-                          type='radio'
-                          checked={authData.addTo === 'header'}
-                          onChange={() =>
-                            setAuthData({ ...authData, addTo: 'header' })
-                          }
-                          className='h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300'
-                        />
-                        <span className='ml-2 text-sm text-gray-700 dark:text-gray-300'>
-                          Header
-                        </span>
-                      </label>
-                      <label className='inline-flex items-center'>
-                        <input
-                          type='radio'
-                          checked={authData.addTo === 'query'}
-                          onChange={() =>
-                            setAuthData({ ...authData, addTo: 'query' })
-                          }
-                          className='h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300'
-                        />
-                        <span className='ml-2 text-sm text-gray-700 dark:text-gray-300'>
-                          Query Parameter
-                        </span>
-                      </label>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {authType === 'oauth1' && (
-                <div className='space-y-4'>
-                  <div>
-                    <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
-                      Consumer Key
-                    </label>
-                    <input
-                      type='text'
-                      value={authData.oauth1.consumerKey}
-                      onChange={(e) =>
-                        setAuthData({
-                          ...authData,
-                          oauth1: {
-                            ...authData.oauth1,
-                            consumerKey: e.target.value,
-                          },
-                        })
-                      }
-                      placeholder='Enter consumer key'
-                      className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 bg-white dark:bg-gray-800 text-sm'
-                    />
-                  </div>
-                  <div>
-                    <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
-                      Consumer Secret
-                    </label>
-                    <input
-                      type='password'
-                      value={authData.oauth1.consumerSecret}
-                      onChange={(e) =>
-                        setAuthData({
-                          ...authData,
-                          oauth1: {
-                            ...authData.oauth1,
-                            consumerSecret: e.target.value,
-                          },
-                        })
-                      }
-                      placeholder='Enter consumer secret'
-                      className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 bg-white dark:bg-gray-800 text-sm'
-                    />
-                  </div>
-                  <div>
-                    <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
-                      Access Token
-                    </label>
-                    <input
-                      type='text'
-                      value={authData.oauth1.token}
-                      onChange={(e) =>
-                        setAuthData({
-                          ...authData,
-                          oauth1: { ...authData.oauth1, token: e.target.value },
-                        })
-                      }
-                      placeholder='Enter access token'
-                      className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 bg-white dark:bg-gray-800 text-sm'
-                    />
-                  </div>
-                  <div>
-                    <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
-                      Token Secret
-                    </label>
-                    <input
-                      type='password'
-                      value={authData.oauth1.tokenSecret}
-                      onChange={(e) =>
-                        setAuthData({
-                          ...authData,
-                          oauth1: {
-                            ...authData.oauth1,
-                            tokenSecret: e.target.value,
-                          },
-                        })
-                      }
-                      placeholder='Enter token secret'
-                      className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 bg-white dark:bg-gray-800 text-sm'
-                    />
-                  </div>
-                  <div>
-                    <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
-                      Signature Method
-                    </label>
-                    <select
-                      value={authData.oauth1.signatureMethod}
-                      onChange={(e) =>
-                        setAuthData({
-                          ...authData,
-                          oauth1: {
-                            ...authData.oauth1,
-                            signatureMethod: e.target.value,
-                          },
-                        })
-                      }
-                      className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-800 text-sm font-medium hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all duration-150'
-                    >
-                      <option value='HMAC-SHA1'>HMAC-SHA1</option>
-                      <option value='HMAC-SHA256'>HMAC-SHA256</option>
-                      <option value='PLAINTEXT'>PLAINTEXT</option>
-                      <option value='RSA-SHA1'>RSA-SHA1</option>
-                    </select>
-                  </div>
-                  <div>
-                    <p className='mt-1 text-xs text-gray-500 dark:text-gray-400'>
-                      OAuth 1.0 parameters will be automatically generated and
-                      added to the Authorization header.
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {authType === 'oauth2' && (
-                <div className='space-y-4'>
-                  <div>
-                    <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
-                      Grant Type
-                    </label>
-                    <select
-                      value={authData.oauth2.grantType}
-                      onChange={(e) =>
-                        setAuthData({
-                          ...authData,
-                          oauth2: {
-                            ...authData.oauth2,
-                            grantType: e.target.value as any,
-                          },
-                        })
-                      }
-                      className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-800 text-sm font-medium hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all duration-150'
-                    >
-                      <option value='authorization_code'>
-                        Authorization Code
-                      </option>
-                      <option value='client_credentials'>
-                        Client Credentials
-                      </option>
-                      <option value='password'>Password</option>
-                      <option value='refresh_token'>Refresh Token</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
-                      Access Token
-                    </label>
-                    <input
-                      type='text'
-                      value={authData.oauth2.accessToken}
-                      onChange={(e) =>
-                        setAuthData({
-                          ...authData,
-                          oauth2: {
-                            ...authData.oauth2,
-                            accessToken: e.target.value,
-                          },
-                        })
-                      }
-                      placeholder='Enter access token'
-                      className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 bg-white dark:bg-gray-800 text-sm'
-                    />
-                  </div>
-                  <div>
-                    <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
-                      Client ID
-                    </label>
-                    <input
-                      type='text'
-                      value={authData.oauth2.clientId}
-                      onChange={(e) =>
-                        setAuthData({
-                          ...authData,
-                          oauth2: {
-                            ...authData.oauth2,
-                            clientId: e.target.value,
-                          },
-                        })
-                      }
-                      placeholder='Enter client ID'
-                      className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 bg-white dark:bg-gray-800 text-sm'
-                    />
-                  </div>
-                  <div>
-                    <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
-                      Client Secret
-                    </label>
-                    <input
-                      type='password'
-                      value={authData.oauth2.clientSecret}
-                      onChange={(e) =>
-                        setAuthData({
-                          ...authData,
-                          oauth2: {
-                            ...authData.oauth2,
-                            clientSecret: e.target.value,
-                          },
-                        })
-                      }
-                      placeholder='Enter client secret'
-                      className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 bg-white dark:bg-gray-800 text-sm'
-                    />
-                  </div>
-                  {authData.oauth2.grantType === 'authorization_code' && (
-                    <div>
-                      <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
-                        Redirect URI
-                      </label>
-                      <input
-                        type='text'
-                        value={authData.oauth2.redirectUri}
-                        onChange={(e) =>
-                          setAuthData({
-                            ...authData,
-                            oauth2: {
-                              ...authData.oauth2,
-                              redirectUri: e.target.value,
-                            },
-                          })
-                        }
-                        placeholder='Enter redirect URI'
-                        className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 bg-white dark:bg-gray-800 text-sm'
-                      />
-                    </div>
-                  )}
-                  <div>
-                    <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
-                      Scope
-                    </label>
-                    <input
-                      type='text'
-                      value={authData.oauth2.scope}
-                      onChange={(e) =>
-                        setAuthData({
-                          ...authData,
-                          oauth2: { ...authData.oauth2, scope: e.target.value },
-                        })
-                      }
-                      placeholder='Enter scope (space-separated)'
-                      className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 bg-white dark:bg-gray-800 text-sm'
-                    />
-                  </div>
-                  <div>
-                    <p className='mt-1 text-xs text-gray-500 dark:text-gray-400'>
-                      OAuth 2.0 access token will be sent as a Bearer token in
-                      the Authorization header.
-                    </p>
-                  </div>
-                </div>
-              )}
+              {/* Bearer Token only */}
+              <div>
+                <Input
+                  type='text'
+                  value={authData.token}
+                  onChange={(e) =>
+                    setAuthData({ ...authData, token: e.target.value })
+                  }
+                  placeholder='Enter token'
+                // className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 bg-white dark:bg-gray-800 text-sm'
+                />
+              </div>
             </div>
           )}
 
-          {activeTab === 'scripts' && (
-            <div className='space-y-6'>
-              <div className='space-y-2'>
-                <h3 className='text-base sm:text-lg font-medium text-gray-900 dark:text-white'>
-                  Pre-request Script
-                </h3>
-                <p className='text-sm text-gray-500 dark:text-gray-400'>
-                  This script will be executed before the request is sent
-                </p>
-                <textarea
-                  value={preRequestScript}
-                  onChange={(e) => setPreRequestScript(e.target.value)}
-                  placeholder='// Write pre-request JavaScript code here'
-                  rows={6}
-                  className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 font-mono text-sm dark:bg-gray-800 dark:text-white'
-                />
-              </div>
-
-              <div className='space-y-2'>
-                <h3 className='text-base sm:text-lg font-medium text-gray-900 dark:text-white'>
-                  Tests
-                </h3>
-                <p className='text-sm text-gray-500 dark:text-gray-400'>
-                  This script will be executed after the response is received
-                </p>
-                <textarea
-                  value={testScript}
-                  onChange={(e) => setTestScript(e.target.value)}
-                  placeholder="// Write test JavaScript code here
-// Example: 
-// pm.test('Status code is 200', function() {
-//   pm.response.to.have.status(200);
-// });"
-                  rows={8}
-                  className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 font-mono text-sm dark:bg-gray-800 dark:text-white'
-                />
-              </div>
-
-              <div className='bg-blue-50 dark:bg-blue-900 p-3 rounded-md'>
-                <h4 className='text-sm font-medium text-blue-800 dark:text-blue-200'>
-                  Tip
-                </h4>
-                <p className='text-xs text-blue-700 dark:text-blue-300 mt-1'>
-                  You can access request and response data using the{' '}
-                  <code className='bg-blue-100 dark:bg-blue-800 px-1 rounded'>
-                    pm
-                  </code>{' '}
-                  object. Use{' '}
-                  <code className='bg-blue-100 dark:bg-blue-800 px-1 rounded'>
-                    pm.request
-                  </code>{' '}
-                  for request data and
-                  <code className='bg-blue-100 dark:bg-blue-800 px-1 rounded'>
-                    pm.response
-                  </code>{' '}
-                  for response data.
-                </p>
-              </div>
-            </div>
+          {activeTab === 'assertions' && (
+            <AssertionManager
+              assertions={assertions}
+              setAssertions={setAssertions}
+              responseData={responseData}
+              activeRequest={activeRequest}
+              currentWorkspace={currentWorkspace}
+              updateRequestMutation={updateRequestMutation}
+              toggleAssertion={toggleAssertion}
+            />
           )}
 
           {activeTab === 'settings' && (
@@ -1733,6 +1654,7 @@ const RequestEditor: React.FC = () => {
             {!isCreatingCollection ? (
               <div className='space-y-2'>
                 <select
+                  value={activeCollection?.id || ''} // Set the value to show selected collection
                   onChange={(e) => {
                     setActiveCollection(
                       collections.find((c) => c.id === e.target.value) || null
@@ -1793,6 +1715,11 @@ const RequestEditor: React.FC = () => {
               </div>
             )}
         </Modal>
+        <ImportModal
+          isOpen={showCurlImport}
+          onClose={() => setShowCurlImport(false)}
+          onCurlImport={handleCurlImport}
+        />
       </div>
     </TooltipProvider>
   );

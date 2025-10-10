@@ -8,7 +8,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Copy, Calendar, GitBranch, Play, Eye } from 'lucide-react';
+import { Copy, Calendar, GitBranch, Play, Eye, Beaker } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import {
   Tooltip,
@@ -28,6 +28,8 @@ export const ExecutionsTable = ({
   getStatusIcon,
 }: any) => {
   const [_, setLocation] = useLocation();
+
+  console.log('schedules:', executions);
 
   const goToReport = (execution: any, environment: string) => {
     const type = execution?.executionType;
@@ -50,7 +52,7 @@ export const ExecutionsTable = ({
     const executionId = encodeURIComponent(execution?.id ?? '');
 
     setLocation(
-      `/executions/report/${type}/${entityId}?env=${env}&started=${started}&executionId=${executionId}`
+      `/executions/report/${type}/${entityId}?executionId=${executionId}`
     );
   };
 
@@ -112,7 +114,7 @@ export const ExecutionsTable = ({
               <TableCell>
                 <div className='flex items-center gap-2'>
                   {execution?.testSuite ? (
-                    <Calendar className='text-blue-600' size={16} />
+                    <Beaker className='text-blue-600' size={16} />
                   ) : (
                     <GitBranch className='text-purple-600' size={16} />
                   )}
@@ -171,16 +173,22 @@ export const ExecutionsTable = ({
               </TableCell>
               <TableCell>
                 <div className='flex items-center gap-2'>
-                  {execution.scheduleId ? (
+                  {execution.source === 'scheduled' && (
                     <Calendar className='text-blue-600' size={12} />
-                  ) : (
+                  )}
+                  {execution.source === 'manual' && (
                     <Play className='text-muted-foreground' size={12} />
                   )}
-                  <span className='text-sm text-foreground'>
-                    {execution.scheduleId ? 'Scheduled' : 'Manual'}
+                  {execution.source === 'cicd' && (
+                    <GitBranch className='text-green-600' size={12} />
+                  )}
+
+                  <span className='text-sm text-foreground capitalize'>
+                    {execution.source || 'N/A'}
                   </span>
                 </div>
               </TableCell>
+
               <TableCell>
                 <div className='flex items-center gap-1'>
                   <TooltipProvider>

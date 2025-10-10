@@ -1,43 +1,62 @@
-import { Store, useStore } from "@tanstack/react-store";
+import { Store, useStore } from '@tanstack/react-store';
 import {
   RequestData,
   ResponseData,
   KeyValuePair,
   RequestState,
   ErrorState,
-} from "@/shared/types/request";
-import { CollectionRequest } from "@/shared/types/collection";
+} from '@/shared/types/request';
+import { CollectionRequest } from '@/shared/types/collection';
 
-// Define the shape of our request state
+// Define the assertion type
+export interface Assertion {
+  priority: any;
+  field: ReactNode;
+  group: any;
+  impact: ReactNode;
+  id: string;
+  category: string;
+  description: string;
+  enabled: boolean;
+  expectedValue: any;
+  operator: string;
+  type: string;
+}
+
+interface ExtendedRequestState extends RequestState {
+  assertions: Assertion[];
+}
 
 // Initial state for request
-export const initialRequestState: RequestState = {
+export const initialRequestState: ExtendedRequestState = {
   requestData: {
-    method: "GET",
-    url: "",
+    method: 'GET',
+    url: '',
     params: [],
     headers: [],
     authorization: {},
-    authorizationType: "none",
+    authorizationType: 'none',
     bodyType: 'none',
     bodyFormData: null,
     bodyRawContent: null,
     variables: {},
     order: 0,
     createdAt: new Date().toISOString(),
-
   },
   responseData: null,
   isLoading: false,
   error: {
-    title: "",
-    description: "",
+    title: '',
+    description: '',
     suggestions: [],
   },
+  assertions: [],
 };
 
 // Create the store
-export const requestStore = new Store<RequestState>(initialRequestState);
+export const requestStore = new Store<ExtendedRequestState>(
+  initialRequestState
+);
 
 // Define actions to update the store
 export const requestActions = {
@@ -55,6 +74,36 @@ export const requestActions = {
       ...state,
       responseData,
       isLoading: false,
+    }));
+  },
+
+  // Set assertions
+  setAssertions: (assertions: Assertion[]) => {
+    requestStore.setState((state) => ({
+      ...state,
+      assertions,
+    }));
+  },
+
+  // Update a single assertion
+  updateAssertion: (assertionId: string, updates: Partial<Assertion>) => {
+    requestStore.setState((state) => ({
+      ...state,
+      assertions: state.assertions.map((assertion) =>
+        assertion.id === assertionId ? { ...assertion, ...updates } : assertion
+      ),
+    }));
+  },
+
+  // Toggle assertion enabled state
+  toggleAssertion: (assertionId: string) => {
+    requestStore.setState((state) => ({
+      ...state,
+      assertions: state.assertions.map((assertion) =>
+        assertion.id === assertionId
+          ? { ...assertion, enabled: !assertion.enabled }
+          : assertion
+      ),
     }));
   },
 
@@ -80,7 +129,7 @@ export const requestActions = {
     const validParams = params.filter((p) => p.key && p.value);
     if (validParams.length === 0) return url;
 
-    const urlObj = new URL(url.startsWith("http") ? url : `http://${url}`);
+    const urlObj = new URL(url.startsWith('http') ? url : `http://${url}`);
     validParams.forEach((param) => {
       urlObj.searchParams.append(param.key, param.value);
     });
@@ -108,8 +157,8 @@ export const requestActions = {
     requestStore.setState((state) => ({
       ...state,
       error: {
-        title: "",
-        description: "",
+        title: '',
+        description: '',
         suggestions: [],
       },
     }));

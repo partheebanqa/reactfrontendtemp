@@ -1,16 +1,23 @@
-import { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { CheckCircle, XCircle, Clock, Play, AlertCircle, ChartColumn } from "lucide-react";
-import { toast } from "@/hooks/use-toast";
-import { executionService } from "@/services/executionService.service";
-import { ExecutionsHeader } from "@/components/Executions/ExecutionsHeader";
-import { ExecutionsFilters } from "@/components/Executions/ExecutionsFilters";
-import { ExecutionsTable } from "@/components/Executions/ExecutionsTable";
-import { ExecutionsPagination } from "@/components/Executions/ExecutionsPagination";
-import { ExecutionDetailsDialog } from "@/components/Executions/ExecutionDetailsDialog";
-import { MappedExecution, SavedFilter } from "@/shared/types/execution";
-import { useWorkspace } from "@/hooks/useWorkspace";
-import BreadCum from "@/components/BreadCum/Breadcum";
+import { useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import {
+  CheckCircle,
+  XCircle,
+  Clock,
+  Play,
+  AlertCircle,
+  ChartColumn,
+} from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
+import { executionService } from '@/services/executionService.service';
+import { ExecutionsHeader } from '@/components/Executions/ExecutionsHeader';
+import { ExecutionsFilters } from '@/components/Executions/ExecutionsFilters';
+import { ExecutionsTable } from '@/components/Executions/ExecutionsTable';
+import { ExecutionsPagination } from '@/components/Executions/ExecutionsPagination';
+import { ExecutionDetailsDialog } from '@/components/Executions/ExecutionDetailsDialog';
+import { MappedExecution, SavedFilter } from '@/shared/types/execution';
+import { useWorkspace } from '@/hooks/useWorkspace';
+import BreadCum from '@/components/BreadCum/Breadcum';
 
 const Executions = () => {
   // Pagination state
@@ -18,12 +25,12 @@ const Executions = () => {
   const [itemsPerPage] = useState(10);
 
   // Filter states
-  const [searchQuery, setSearchQuery] = useState("");
-  const [environmentFilter, setEnvironmentFilter] = useState("all");
-  const [typeFilter, setTypeFilter] = useState("all");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [triggerFilter, setTriggerFilter] = useState("all");
-  const [executionIdFilter, setExecutionIdFilter] = useState("");
+  const [searchQuery, setSearchQuery] = useState('');
+  const [environmentFilter, setEnvironmentFilter] = useState('all');
+  const [typeFilter, setTypeFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [triggerFilter, setTriggerFilter] = useState('all');
+  const [executionIdFilter, setExecutionIdFilter] = useState('');
   const [dateRange, setDateRange] = useState<{
     from: Date | undefined;
     to: Date | undefined;
@@ -44,16 +51,16 @@ const Executions = () => {
   // Saved filters (mock data for now)
   const [savedFilters] = useState<SavedFilter[]>([
     {
-      id: "1",
-      name: "Failed Tests Only",
+      id: '1',
+      name: 'Failed Tests Only',
       filters: {
-        searchQuery: "",
-        statusFilter: "failed",
-        environmentFilter: "all",
-        typeFilter: "all",
-        triggerFilter: "all",
+        searchQuery: '',
+        statusFilter: 'failed',
+        environmentFilter: 'all',
+        typeFilter: 'all',
+        triggerFilter: 'all',
         dateRange: { from: undefined, to: undefined },
-        executionIdFilter: "",
+        executionIdFilter: '',
         durationRange: { min: 0, max: 100000 },
       },
     },
@@ -62,12 +69,12 @@ const Executions = () => {
   // Mock schedules data
   const schedules = [
     {
-      id: "schedule-ece6e34e-1984-4220-9c5a-99305d591d33",
-      environment: "production",
+      id: 'schedule-ece6e34e-1984-4220-9c5a-99305d591d33',
+      environment: 'production',
     },
     {
-      id: "schedule-05083f96-f872-44a2-a22f-220476f29ff0",
-      environment: "staging",
+      id: 'schedule-05083f96-f872-44a2-a22f-220476f29ff0',
+      environment: 'staging',
     },
   ];
 
@@ -82,10 +89,10 @@ const Executions = () => {
     data: executionData,
     isLoading,
     error,
-     refetch,
-  isFetching,
+    refetch,
+    isFetching,
   } = useQuery({
-    queryKey: ["executions", currentPage, itemsPerPage, workspaceId],
+    queryKey: ['executions', currentPage, itemsPerPage, workspaceId],
     queryFn: () =>
       executionService
         .getExecutionHistory({
@@ -108,43 +115,41 @@ const Executions = () => {
       // Search filter
       if (
         q &&
-        !(execution.testSuite?.name ?? "").toLowerCase().includes(q) &&
-        !(execution.requestChain?.name ?? "").toLowerCase().includes(q) &&
-        (execution.id ?? "").toLowerCase().indexOf(q) === -1
+        !(execution.testSuite?.name ?? '').toLowerCase().includes(q) &&
+        !(execution.requestChain?.name ?? '').toLowerCase().includes(q) &&
+        (execution.id ?? '').toLowerCase().indexOf(q) === -1
       ) {
         return false;
       }
 
       // Environment filter
       if (
-        environmentFilter !== "all" &&
-        (execution.environment ?? "").toLowerCase() !==
+        environmentFilter !== 'all' &&
+        (execution.environment ?? '').toLowerCase() !==
           environmentFilter.toLowerCase()
       ) {
         return false;
       }
 
       // Type filter
-      if (typeFilter !== "all") {
-        if (typeFilter === "test_suite" && !execution.testSuite) return false;
-        if (typeFilter === "request_chain" && !execution.requestChain)
+      if (typeFilter !== 'all') {
+        if (typeFilter === 'test_suite' && !execution.testSuite) return false;
+        if (typeFilter === 'request_chain' && !execution.requestChain)
           return false;
       }
 
       // Status filter
-      if (statusFilter !== "all" && execution.status !== statusFilter) {
+      if (statusFilter !== 'all' && execution.status !== statusFilter) {
         return false;
       }
 
       // Trigger filter
-      if (triggerFilter !== "all") {
-        const isScheduled = execution.scheduleId != null;
-        if (triggerFilter === "scheduled" && !isScheduled) return false;
-        if (triggerFilter === "manual" && isScheduled) return false;
+      if (triggerFilter !== 'all') {
+        if (triggerFilter !== execution.source) return false;
       }
 
-      // Execution ID filter
-      if (idFilter && !(execution.id ?? "").toLowerCase().includes(idFilter)) {
+      // Execution ID filte
+      if (idFilter && !(execution.id ?? '').toLowerCase().includes(idFilter)) {
         return false;
       }
 
@@ -180,28 +185,28 @@ const Executions = () => {
   // Helper functions
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
-      case "success":
-        return "bg-green-100 text-green-800";
-      case "failed":
-        return "bg-red-100 text-red-800";
-      case "running":
-        return "bg-blue-100 text-blue-800";
-      case "pending":
-        return "bg-yellow-100 text-yellow-800";
+      case 'success':
+        return 'bg-green-100 text-green-800';
+      case 'failed':
+        return 'bg-red-100 text-red-800';
+      case 'running':
+        return 'bg-blue-100 text-blue-800';
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-800';
       default:
-        return "bg-gray-100 text-gray-800";
+        return 'bg-gray-100 text-gray-800';
     }
   };
 
   const getStatusIcon = (status: string) => {
     switch (status.toLowerCase()) {
-      case "success":
+      case 'success':
         return <CheckCircle size={12} />;
-      case "failed":
+      case 'failed':
         return <XCircle size={12} />;
-      case "running":
+      case 'running':
         return <Play size={12} />;
-      case "pending":
+      case 'pending':
         return <Clock size={12} />;
       default:
         return <AlertCircle size={12} />;
@@ -209,7 +214,7 @@ const Executions = () => {
   };
 
   const formatDuration = (duration: number) => {
-    if (duration === 0) return "N/A";
+    if (duration === 0) return 'N/A';
     const seconds = Math.floor(duration / 1000);
     const minutes = Math.floor(seconds / 60);
     const hours = Math.floor(minutes / 60);
@@ -222,7 +227,7 @@ const Executions = () => {
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
     toast({
-      title: "Copied to clipboard",
+      title: 'Copied to clipboard',
       description: `${label} copied successfully`,
     });
   };
@@ -236,37 +241,37 @@ const Executions = () => {
     setActiveQuickFilter(filterType);
 
     switch (filterType) {
-      case "last24hours":
+      case 'last24hours':
         setDateRange({
           from: new Date(now.getTime() - 24 * 60 * 60 * 1000),
           to: now,
         });
         break;
-      case "lastWeek":
+      case 'lastWeek':
         setDateRange({
           from: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000),
           to: now,
         });
         break;
-      case "failed":
-        setStatusFilter("failed");
+      case 'failed':
+        setStatusFilter('failed');
         break;
-      case "success":
-        setStatusFilter("success");
+      case 'success':
+        setStatusFilter('success');
         break;
-      case "clear":
+      case 'clear':
         clearAllFilters();
         break;
     }
   };
 
   const clearAllFilters = () => {
-    setSearchQuery("");
-    setEnvironmentFilter("all");
-    setTypeFilter("all");
-    setStatusFilter("all");
-    setTriggerFilter("all");
-    setExecutionIdFilter("");
+    setSearchQuery('');
+    setEnvironmentFilter('all');
+    setTypeFilter('all');
+    setStatusFilter('all');
+    setTriggerFilter('all');
+    setExecutionIdFilter('');
     setDateRange({ from: undefined, to: undefined });
     setDurationRange({ min: 0, max: 100000 });
     setActiveQuickFilter(null);
@@ -274,8 +279,8 @@ const Executions = () => {
 
   const saveCurrentFilter = () => {
     toast({
-      title: "Filter saved",
-      description: "Current filter configuration has been saved",
+      title: 'Filter saved',
+      description: 'Current filter configuration has been saved',
     });
   };
 
@@ -290,19 +295,19 @@ const Executions = () => {
     setDurationRange(filter.filters.durationRange);
 
     toast({
-      title: "Filter applied",
+      title: 'Filter applied',
       description: `Applied saved filter: ${filter.name}`,
     });
   };
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-destructive mb-2">
+      <div className='min-h-screen flex items-center justify-center'>
+        <div className='text-center'>
+          <h2 className='text-2xl font-bold text-destructive mb-2'>
             Error Loading Executions
           </h2>
-          <p className="text-muted-foreground">Please try again later</p>
+          <p className='text-muted-foreground'>Please try again later</p>
         </div>
       </div>
     );
@@ -312,7 +317,7 @@ const Executions = () => {
     if (!currentWorkspace) return;
     try {
     } catch (error) {
-      console.error("Error deleting environment:", error);
+      console.error('Error deleting environment:', error);
     }
   };
 
@@ -320,14 +325,14 @@ const Executions = () => {
     <>
       {/* <ExecutionsHeader /> */}
       <BreadCum
-        title="Executions"
-        subtitle="Get execution results of test suite and request chain"
+        title='Executions'
+        subtitle='Get execution results of test suite and request chain'
         showCreateButton={false}
-        buttonTitle="Run Execution"
-        onClickCreateNew={() => console.log("Create execution")}
+        buttonTitle='Run Execution'
+        onClickCreateNew={() => console.log('Create execution')}
         icon={ChartColumn}
-        iconBgClass="bg-blue-100"
-        iconColor="#136fb0"
+        iconBgClass='bg-blue-100'
+        iconColor='#136fb0'
         iconSize={40}
       />
 
@@ -357,16 +362,16 @@ const Executions = () => {
         setDurationRange={setDurationRange}
         clearAllFilters={clearAllFilters}
         handleDeleteEnvironment={handleDeleteEnvironment}
-         onRefresh={refetch}          
-  refreshing={isFetching} 
+        onRefresh={refetch}
+        refreshing={isFetching}
       />
 
-      <div className="bg-card rounded-lg shadow-sm border border-border">
+      <div className='bg-card rounded-lg shadow-sm border border-border'>
         {isLoading ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-              <p className="text-muted-foreground">Loading executions...</p>
+          <div className='flex items-center justify-center py-12'>
+            <div className='text-center'>
+              <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4'></div>
+              <p className='text-muted-foreground'>Loading executions...</p>
             </div>
           </div>
         ) : (

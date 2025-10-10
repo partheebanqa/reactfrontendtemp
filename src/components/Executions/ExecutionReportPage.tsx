@@ -1,4 +1,3 @@
-// src/pages/ExecutionReportPage.tsx
 import React from 'react';
 import { useParams } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
@@ -16,9 +15,17 @@ import {
   Shield,
   ShieldCheck,
   Zap,
+  CheckCircle,
+  XCircle,
+  AlertTriangle,
+  Eye,
+  ShieldAlert,
 } from 'lucide-react';
 import { formatDistanceToNow, isValid } from 'date-fns';
 import { Button } from '@/components/ui/button';
+import { useRef } from 'react';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 type RouteParams = {
   type: 'test_suite' | 'request_chain';
@@ -52,6 +59,8 @@ const ExecutionReportPage: React.FC = () => {
   const started = qs.get('started'); // string | null
   const executionId = qs.get('executionId');
 
+  const reportRef = useRef<HTMLDivElement>(null);
+
   const { data: reportData, isLoading } = useQuery({
     queryKey: ['execution-report', entityId, type, executionId],
     queryFn: () => {
@@ -63,19 +72,62 @@ const ExecutionReportPage: React.FC = () => {
     enabled: !!entityId && !!type && !!executionId,
   });
 
+  console.log('reportData:', reportData);
+
+  const handleDownloadPDF = async (reportName: string) => {
+    if (!reportRef.current) return;
+
+    const element = reportRef.current;
+    const canvas = await html2canvas(element, { scale: 2 });
+    const imgData = canvas.toDataURL('image/png');
+
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    const imgProps = pdf.getImageProperties(imgData);
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+
+    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+    pdf.save(`${reportName || 'Report'}.pdf`);
+  };
+
   const renderTestSuiteReport = (data: any) => {
+    console.log('data123:', data);
+
     const testCategories = [
       {
-        name: 'General Tests',
-        icon: <Settings2 className='w-4 h-4 text-blue-600' />,
-        testCount: data.generalTests?.total || 0,
+        name: 'Positive Tests',
+        icon: <CheckCircle className='w-4 h-4 text-green-600' />,
+        testCount: data.positiveTests?.total || 0,
         tests:
-          data.generalTests?.apis?.map((api: any) => ({
+          data.positiveTests?.apis?.map((api: any) => ({
             name: api.name,
             method: api.method,
             endpoint: api.url,
             duration: `${api.duration}ms`,
-            statusCode: 200,
+            requestCurl: api.requestCurl,
+            response: api.response,
+            statusCode: api.status === 'passed' ? 200 : 400,
+            status:
+              api.status === 'passed'
+                ? 'success'
+                : api.status === 'failed'
+                ? 'fail'
+                : 'warning',
+          })) || [],
+      },
+      {
+        name: 'Negative Tests',
+        icon: <XCircle className='w-4 h-4 text-red-600' />,
+        testCount: data.negativeTests?.total || 0,
+        tests:
+          data.negativeTests?.apis?.map((api: any) => ({
+            name: api.name,
+            method: api.method,
+            endpoint: api.url,
+            duration: `${api.duration}ms`,
+            requestCurl: api.requestCurl,
+            response: api.response,
+            statusCode: api.status === 'passed' ? 200 : 400,
             status:
               api.status === 'passed'
                 ? 'success'
@@ -93,8 +145,10 @@ const ExecutionReportPage: React.FC = () => {
             name: api.name,
             method: api.method,
             endpoint: api.url,
+            requestCurl: api.requestCurl,
+            response: api.response,
             duration: `${api.duration}ms`,
-            statusCode: 200,
+            statusCode: api.status === 'passed' ? 200 : 400,
             status:
               api.status === 'passed'
                 ? 'success'
@@ -104,16 +158,39 @@ const ExecutionReportPage: React.FC = () => {
           })) || [],
       },
       {
-        name: 'Performance Tests',
-        icon: <Zap className='w-4 h-4 text-yellow-600' />,
-        testCount: data.performanceTests?.total || 0,
+        name: 'Semantic Tests',
+        icon: <Eye className='w-4 h-4 text-blue-600' />,
+        testCount: data.semanticTests?.total || 0,
         tests:
-          data.performanceTests?.apis?.map((api: any) => ({
+          data.semanticTests?.apis?.map((api: any) => ({
             name: api.name,
             method: api.method,
             endpoint: api.url,
+            requestCurl: api.requestCurl,
+            response: api.response,
             duration: `${api.duration}ms`,
-            statusCode: 200,
+            statusCode: api.status === 'passed' ? 200 : 400,
+            status:
+              api.status === 'passed'
+                ? 'success'
+                : api.status === 'failed'
+                ? 'fail'
+                : 'warning',
+          })) || [],
+      },
+      {
+        name: 'Edge Case Tests',
+        icon: <AlertTriangle className='w-4 h-4 text-orange-600' />,
+        testCount: data.edgeCaseTests?.total || 0,
+        tests:
+          data.edgeCaseTests?.apis?.map((api: any) => ({
+            name: api.name,
+            method: api.method,
+            endpoint: api.url,
+            requestCurl: api.requestCurl,
+            response: api.response,
+            duration: `${api.duration}ms`,
+            statusCode: api.status === 'passed' ? 200 : 400,
             status:
               api.status === 'passed'
                 ? 'success'
@@ -131,8 +208,31 @@ const ExecutionReportPage: React.FC = () => {
             name: api.name,
             method: api.method,
             endpoint: api.url,
+            requestCurl: api.requestCurl,
+            response: api.response,
             duration: `${api.duration}ms`,
-            statusCode: 200,
+            statusCode: api.status === 'passed' ? 200 : 400,
+            status:
+              api.status === 'passed'
+                ? 'success'
+                : api.status === 'failed'
+                ? 'fail'
+                : 'warning',
+          })) || [],
+      },
+      {
+        name: 'Advanced Security Tests',
+        icon: <ShieldAlert className='w-4 h-4 text-red-700' />,
+        testCount: data.advancedSecurityTests?.total || 0,
+        tests:
+          data.advancedSecurityTests?.apis?.map((api: any) => ({
+            name: api.name,
+            method: api.method,
+            endpoint: api.url,
+            requestCurl: api.requestCurl,
+            response: api.response,
+            duration: `${api.duration}ms`,
+            statusCode: api.status === 'passed' ? 200 : 400,
             status:
               api.status === 'passed'
                 ? 'success'
@@ -144,7 +244,7 @@ const ExecutionReportPage: React.FC = () => {
     ];
 
     return (
-      <>
+      <div ref={reportRef}>
         <AnalyticsReport
           title={data.name || 'Test Suite Report'}
           description={
@@ -153,7 +253,7 @@ const ExecutionReportPage: React.FC = () => {
           successRate={`${data.successRate || 0}%`}
           meta={{
             environment,
-            executedAt: safeExecutedAt(started), // ← use safe helper
+            executedAt: safeExecutedAt(started),
             duration: `${Math.round((data.duration || 0) / 1000)}s`,
             executedBy: data.executedBy || 'Unknown',
           }}
@@ -185,15 +285,26 @@ const ExecutionReportPage: React.FC = () => {
           ]}
         />
 
-        <div className='grid grid-cols-1 md:grid-cols-2 gap-4 mt-5'>
+        <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mt-5'>
           <TestCategoryCard
-            icon={<Settings2 className='w-5 h-5' />}
-            title='General Tests'
-            total={data.generalTests?.total || 0}
-            passed={data.generalTests?.passed || 0}
-            failed={data.generalTests?.failed || 0}
-            warning={data.generalTests?.skipped || 0}
-            borderColor='border border-blue-200'
+            icon={<CheckCircle className='w-5 h-5 text-green-600' />}
+            title='Positive Tests'
+            total={data.positiveTests?.total || 0}
+            passed={data.positiveTests?.passed || 0}
+            failed={data.positiveTests?.failed || 0}
+            warning={data.positiveTests?.skipped || 0}
+            bgColor='bg-green-50'
+            borderColor='border border-green-200'
+          />
+          <TestCategoryCard
+            icon={<XCircle className='w-5 h-5 text-red-600' />}
+            title='Negative Tests'
+            total={data.negativeTests?.total || 0}
+            passed={data.negativeTests?.passed || 0}
+            failed={data.negativeTests?.failed || 0}
+            warning={data.negativeTests?.skipped || 0}
+            bgColor='bg-red-50'
+            borderColor='border border-red-200'
           />
           <TestCategoryCard
             icon={<FileCode className='w-5 h-5 text-purple-600' />}
@@ -202,19 +313,31 @@ const ExecutionReportPage: React.FC = () => {
             passed={data.functionalTests?.passed || 0}
             failed={data.functionalTests?.failed || 0}
             warning={data.functionalTests?.skipped || 0}
+            bgColor='bg-purple-50'
+            borderColor='border border-purple-200'
           />
           <TestCategoryCard
-            icon={<Zap className='w-5 h-5 text-yellow-600' />}
-            title='Performance Tests'
-            total={data.performanceTests?.total || 0}
-            passed={data.performanceTests?.passed || 0}
-            failed={data.performanceTests?.failed || 0}
-            warning={data.performanceTests?.skipped || 0}
-            bgColor='bg-yellow-50'
-            borderColor='border border-yellow-200'
+            icon={<Eye className='w-5 h-5 text-blue-600' />}
+            title='Semantic Tests'
+            total={data.semanticTests?.total || 0}
+            passed={data.semanticTests?.passed || 0}
+            failed={data.semanticTests?.failed || 0}
+            warning={data.semanticTests?.skipped || 0}
+            bgColor='bg-blue-50'
+            borderColor='border border-blue-200'
           />
           <TestCategoryCard
-            icon={<ShieldCheck className='w-5 h-5 text-red-600' />}
+            icon={<AlertTriangle className='w-5 h-5 text-orange-600' />}
+            title='Edge Case Tests'
+            total={data.edgeCaseTests?.total || 0}
+            passed={data.edgeCaseTests?.passed || 0}
+            failed={data.edgeCaseTests?.failed || 0}
+            warning={data.edgeCaseTests?.skipped || 0}
+            bgColor='bg-orange-50'
+            borderColor='border border-orange-200'
+          />
+          <TestCategoryCard
+            icon={<Shield className='w-5 h-5 text-red-600' />}
             title='Security Tests'
             total={data.securityTests?.total || 0}
             passed={data.securityTests?.passed || 0}
@@ -223,10 +346,20 @@ const ExecutionReportPage: React.FC = () => {
             bgColor='bg-red-50'
             borderColor='border border-red-200'
           />
+          <TestCategoryCard
+            icon={<ShieldAlert className='w-5 h-5 text-red-700' />}
+            title='Advanced Security Tests'
+            total={data.advancedSecurityTests?.total || 0}
+            passed={data.advancedSecurityTests?.passed || 0}
+            failed={data.advancedSecurityTests?.failed || 0}
+            warning={data.advancedSecurityTests?.skipped || 0}
+            bgColor='bg-red-100'
+            borderColor='border border-red-300'
+          />
         </div>
 
         <DetailedTestResults categories={testCategories} />
-      </>
+      </div>
     );
   };
 
@@ -257,7 +390,7 @@ const ExecutionReportPage: React.FC = () => {
       }, {}) || {};
 
     return (
-      <>
+      <div ref={reportRef}>
         <AnalyticsReport
           title={data.name || 'Request Chain Report'}
           description='Request chain execution flow with variable extraction and data flow analysis'
@@ -304,7 +437,7 @@ const ExecutionReportPage: React.FC = () => {
         </div>
 
         <RequestChainExecutionFlow steps={steps} />
-      </>
+      </div>
     );
   };
 
@@ -321,21 +454,13 @@ const ExecutionReportPage: React.FC = () => {
             </h2>
           </div>
           <div className='flex items-center space-x-4'>
-            {/* <Button
-              variant="outline"
-              className="hover-scale"
-            
+            <Button
+              onClick={() =>
+                handleDownloadPDF(reportData?.data?.name || 'Report')
+              }
             >
-              <Share2 className="mr-2" size={16} />
-              Share
-            </Button> */}
-
-            {/* <Button className="hover-scale"
-         
-             >
-              <Download className="mr-2" size={16} />
-              Download
-            </Button> */}
+              Download Report
+            </Button>
           </div>
         </div>
       </header>

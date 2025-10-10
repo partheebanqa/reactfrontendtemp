@@ -15,6 +15,9 @@ export default defineConfig({
       "@assets": path.resolve(import.meta.dirname, "attached_assets"),
     },
   },
+    optimizeDeps: {
+    exclude: ['react18-json-view'], 
+  },
   build: {
     outDir: 'dist',
     emptyOutDir: true,

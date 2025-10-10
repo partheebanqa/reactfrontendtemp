@@ -1,3 +1,5 @@
+import { ExtractedVariable } from '@/shared/types/requestChain.model';
+
 export interface ExtendedRequest {
   description?: string;
   id: string;
@@ -69,4 +71,7 @@ export interface CreateTestSuitePayload {
   description?: string;
   requestIds: string[];
   environmentId?: string;
+  workspaceId?: string;
+  preRequestId?: string;
+  extractedVariables?: ExtractedVariable[];
 }

@@ -1,3 +1,5 @@
+'use client';
+
 import { useEffect, useState } from 'react';
 import {
   useAddCollectionMutation,
@@ -16,13 +18,9 @@ import {
 import { collectionActions, useCollectionStore } from '@/store/collectionStore';
 import { useAuth } from './useAuth';
 import { useWorkspace } from './useWorkspace';
-import { Collection, CollectionRequest } from '@/shared/types/collection';
+import type { Collection, CollectionRequest } from '@/shared/types/collection';
 import { useRequest } from './useRequest';
 
-/**
- * Hook for managing API requests
- * This replaces the RequestContext with a store-based approach
- */
 export function useCollection() {
   const { isAuthenticated } = useAuth();
   const { currentWorkspace } = useWorkspace();

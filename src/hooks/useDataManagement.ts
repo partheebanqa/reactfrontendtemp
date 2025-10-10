@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect } from 'react';
 import {
   dataManagementActions,
   useDataManagementStore,
@@ -8,10 +8,13 @@ import {
   useCreateVariableMutation,
   useDeleteEnvironmentMutation,
   useDeleteVariableMutation,
+  useDeleteDynamicVariableMutation,
   usefetchVariablesQuery,
+  usefetchDynamicVariablesQuery,
   usegetEnvironmentQuery,
   useUpdateEnvironmentMutation,
   useUpdateVariableMutation,
+  useUpdateDynamicVariableMutation,
 } from '@/store/query/dataManagementQuery';
 import { useWorkspace } from './useWorkspace';
 import { Environment } from '@/shared/types/datamanagement';
@@ -19,8 +22,13 @@ import { Environment } from '@/shared/types/datamanagement';
 const envKey = (wsId?: string | null) => `dm:activeEnv:${wsId ?? 'default'}`;
 
 export function useDataManagement() {
-  const { environments, activeEnvironment, isLoading, variables } =
-    useDataManagementStore();
+  const {
+    environments,
+    activeEnvironment,
+    isLoading,
+    variables,
+    dynamicVariables,
+  } = useDataManagementStore();
 
   const { currentWorkspace } = useWorkspace();
 
@@ -32,6 +40,8 @@ export function useDataManagement() {
 
   const { data: variablesData, isLoading: isVariablesLoading } =
     usefetchVariablesQuery(!!data?.id);
+  const { data: dynamicVariablesData, isLoading: isDynamicVariablesLoading } =
+    usefetchDynamicVariablesQuery(!!data?.id);
 
   const setEnvironments = dataManagementActions.setEnvironments;
   const _setActiveEnvironment = dataManagementActions.setActiveEnvironment;
@@ -40,8 +50,10 @@ export function useDataManagement() {
   const createVariableMutation = useCreateVariableMutation();
   const updateEnvironmentMutation = useUpdateEnvironmentMutation();
   const updateVariableMutation = useUpdateVariableMutation();
+  const updateDynamicVariableMutation = useUpdateDynamicVariableMutation();
   const deleteEnvironmentMutation = useDeleteEnvironmentMutation();
   const deletedVariableMutation = useDeleteVariableMutation();
+  const deletedDynamicVariableMutation = useDeleteDynamicVariableMutation();
 
   /**
    * Wrapper: set active env + persist to localStorage (per workspace)
@@ -94,26 +106,32 @@ export function useDataManagement() {
       } catch {}
       _setActiveEnvironment(null);
     }
-  }, [environments, activeEnvironment, currentWorkspace?.id, _setActiveEnvironment]);
+  }, [
+    environments,
+    activeEnvironment,
+    currentWorkspace?.id,
+    _setActiveEnvironment,
+  ]);
 
   return {
     environments,
     activeEnvironment,
     isLoading,
     variables,
+    dynamicVariables,
 
-    // Use this setter in components instead of dataManagementActions.setActiveEnvironment
     setActiveEnvironment,
-
-    // Keep the others the same
     setEnvironments,
     setVariables: dataManagementActions.setVariables,
+    setDynamicVariables: dataManagementActions.setDynamicVariables,
 
     createEnvironmentMutation,
     createVariableMutation,
     updateEnvironmentMutation,
     updateVariableMutation,
+    updateDynamicVariableMutation,
     deleteEnvironmentMutation,
     deletedVariableMutation,
+    deletedDynamicVariableMutation,
   };
 }

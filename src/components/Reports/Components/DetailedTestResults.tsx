@@ -1,13 +1,18 @@
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ChevronDown, ChevronUp, CheckCircle, AlertCircle } from 'lucide-react';
 import { useState } from 'react';
+import JsonView from 'react18-json-view';
 
 interface TestItem {
+  id: string;
   name: string;
   method: 'GET' | 'POST' | 'PUT' | 'DELETE';
   endpoint: string;
   duration: string;
   statusCode: number;
   status: 'success' | 'fail' | 'warning';
+  response?: string;
+  requestCurl: string;
 }
 
 interface TestCategory {
@@ -35,29 +40,37 @@ const DetailedTestResults = ({
 }: {
   categories: TestCategory[];
 }) => {
+  console.log('categories123:', categories);
   const [openSections, setOpenSections] = useState<string[]>([]);
+  const [expandedTestId, setExpandedTestId] = useState<string | null>(null);
 
-  const toggle = (name: string) => {
+  const [activeTab, setActiveTab] = useState('request');
+
+  const toggleCategory = (name: string) => {
     setOpenSections((prev) =>
       prev.includes(name) ? prev.filter((n) => n !== name) : [...prev, name]
     );
   };
 
+  const toggleTestDetails = (testId: string) => {
+    setExpandedTestId((prevId) => (prevId === testId ? null : testId));
+  };
+
   return (
-    <div className='rounded-lg border border-gray-200 space-y-3 mt-8 p-5 rounded-lg bg-white'>
+    <div className='rounded-lg border border-gray-200 space-y-3 mt-8 p-5 bg-white'>
       <h2 className='text-1xl font-bold text-foreground mb-1'>
         Detailed Test Results
       </h2>
+
       {categories.map((cat) => {
         const isOpen = openSections.includes(cat.name);
         return (
           <div key={cat.name} className='border border-[#E0E0E0] rounded-lg'>
-            {/* Header Toggle */}
+            {/* Category Header */}
             <button
-              onClick={() => toggle(cat.name)}
-              className={`w-full px-5 py-4 flex items-center justify-between text-left text-sm font-medium rounded-lg ${
-                isOpen ? 'bg-gray-50' : 'bg-white'
-              } hover:bg-gray-100 transition`}
+              onClick={() => toggleCategory(cat.name)}
+              className={`w-full px-5 py-4 flex items-center justify-between text-left text-sm font-medium rounded-lg ${isOpen ? 'bg-gray-50' : 'bg-white'
+                } hover:bg-gray-100 transition`}
             >
               <div className='flex items-center gap-2 text-base text-black font-semibold'>
                 {cat.icon}
@@ -76,38 +89,137 @@ const DetailedTestResults = ({
             {/* Test Items */}
             {isOpen && (
               <div className='divide-y border-t border-[#E0E0E0]'>
-                {cat.tests.map((test, i) => (
-                  <div
-                    key={i}
-                    className='flex items-center justify-between px-6 py-4 bg-white hover:bg-gray-50'
-                  >
-                    <div className='flex items-start gap-3'>
-                      <div className='mt-1'>{statusIcons[test.status]}</div>
-                      <div>
-                        <p className='font-medium text-sm text-gray-900'>
-                          {test.name}
-                        </p>
-                        <div className='flex items-center text-xs text-muted-foreground gap-2 mt-1'>
-                          <span
-                            className={`px-2 py-0.5 rounded-full font-medium ${
-                              methodColors[test.method]
-                            }`}
-                          >
-                            {test.method}
-                          </span>
-                          <span>{test.endpoint}</span>
+                {cat.tests.map((test) => (
+                  <div key={test.id} className='bg-white'>
+                    <div className='flex items-center justify-between px-6 py-4 hover:bg-gray-50'>
+                      <div className='flex items-start gap-3'>
+                        <div className='mt-1'>{statusIcons[test.status]}</div>
+                        <div>
+                          <p className='font-medium text-sm text-gray-900'>
+                            {test.name}
+                          </p>
+                          <div className='flex items-center text-xs text-muted-foreground gap-2 mt-1'>
+                            <span
+                              className={`px-2 py-0.5 rounded-full font-medium ${methodColors[test.method]
+                                }`}
+                            >
+                              {test.method}
+                            </span>
+                            <span>{test.endpoint}</span>
+                          </div>
                         </div>
+                      </div>
+
+                      <div className='text-right text-sm'>
+                        <p className='font-semibold text-gray-900'>
+                          {test.duration}
+                        </p>
+                        <p className='text-muted-foreground text-xs'>
+                          Status: {test.statusCode}
+                        </p>
+
+                        <button
+                          onClick={() => toggleTestDetails(test.id)}
+                          className='flex items-center text-xs text-blue-500 space-x-1 mt-1'
+                        >
+                          {expandedTestId === test.id ? (
+                            <>
+                              <ChevronUp size={20} color='#136fb0' />
+                              <span style={{ color: '#136fb0' }}>
+                                Hide Details
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              <ChevronDown size={20} color='#136fb0' />
+                              <span style={{ color: '#136fb0' }}>
+                                Show Details
+                              </span>
+                            </>
+                          )}
+                        </button>
                       </div>
                     </div>
 
-                    <div className='text-right text-sm'>
-                      <p className='font-semibold text-gray-900'>
-                        {test.duration}
-                      </p>
-                      <p className='text-muted-foreground text-xs'>
-                        Status: {test.statusCode}
-                      </p>
-                    </div>
+                    {/* Tabs and Detailed Data */}
+                    {expandedTestId === test.id && (
+                      <div className='space-y-4 mt-4 p-4'>
+                        <Tabs value={activeTab} onValueChange={setActiveTab}>
+                          <TabsList className='grid w-full grid-cols-4 mt-4'>
+                            <TabsTrigger value='request'>Request</TabsTrigger>
+                            <TabsTrigger value='response'>Response</TabsTrigger>
+                            <TabsTrigger value='assertions'>
+                              Assertions
+                            </TabsTrigger>
+                            <TabsTrigger value='result'>
+                              Assertions Results
+                            </TabsTrigger>
+                          </TabsList>
+
+                          <TabsContent value="request">
+                            <div className="mt-4 p-3 bg-gray-900 rounded max-h-96 overflow-auto text-xs text-white">
+                              <JsonView
+                                dark
+                                enableClipboard
+                                onAdd={() => { }}
+                                onDelete={() => { }}
+                                onEdit={() => { }}
+                                src={
+                                  test?.requestCurl?.trim()
+                                    ? { curl: test.requestCurl }
+                                    : {}
+                                }
+                                theme="default"
+                              />
+
+                            </div>
+                          </TabsContent>
+
+
+                          <TabsContent value='response'>
+                            <div className='mt-4 p-3 bg-gray-900 rounded max-h-96 overflow-auto text-xs text-white'>
+                              <JsonView
+                                dark
+                                enableClipboard
+                                onAdd={() => { }}
+                                onDelete={() => { }}
+                                onEdit={() => { }}
+                                src={test.response ? JSON.parse(test.response) : {}}
+                                theme='default'
+                              />
+                            </div>
+                          </TabsContent>
+
+                          <TabsContent value='assertions'>
+                            <div className='mt-4 p-3 bg-gray-900 rounded max-h-96 overflow-auto text-xs text-white'>
+                              <JsonView
+                                dark
+                                enableClipboard
+                                onAdd={() => { }}
+                                onDelete={() => { }}
+                                onEdit={() => { }}
+                                src={test}
+                                theme='default'
+                              />
+                            </div>
+                          </TabsContent>
+
+                          <TabsContent value='result'>
+                            <div className='mt-4 p-3 bg-gray-900 rounded max-h-96 overflow-auto text-xs text-white'>
+                              <JsonView
+                                dark
+                                enableClipboard
+                                onAdd={() => { }}
+                                onDelete={() => { }}
+                                onEdit={() => { }}
+                                src={test}
+                                theme='default'
+                              />
+                            </div>
+                          </TabsContent>
+                        </Tabs>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

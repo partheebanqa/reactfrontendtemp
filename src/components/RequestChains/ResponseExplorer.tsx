@@ -10,6 +10,7 @@ import {
   Cookie,
   CheckCircle,
   Trash2,
+  Info,
 } from 'lucide-react';
 import type { DataExtraction } from '@/shared/types/requestChain.model';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
@@ -53,19 +54,39 @@ export function ResponseExplorer({
     'body'
   );
 
-  // Auto-extract variables in edit mode from existingExtractions
+  const getValueByPath = (obj: any, path: string): any => {
+    if (!obj || !path) return undefined;
+
+    return path.split('.').reduce((current, key) => {
+      if (current && typeof current === 'object') {
+        if (key.includes('[') && key.includes(']')) {
+          const arrayKey = key.substring(0, key.indexOf('['));
+          const index = Number.parseInt(
+            key.substring(key.indexOf('[') + 1, key.indexOf(']'))
+          );
+          if (current[arrayKey] && Array.isArray(current[arrayKey])) {
+            return current[arrayKey][index];
+          }
+          return undefined;
+        }
+        return current[key];
+      }
+      return undefined;
+    }, obj);
+  };
+
   const getAutoExtractedVariables = () => {
-    if (!chainId || !existingExtractions || existingExtractions.length === 0) {
+    if (!existingExtractions || existingExtractions.length === 0) {
       return extractedVariables || {};
     }
 
     const autoExtracted: Record<string, any> = { ...extractedVariables };
 
     existingExtractions.forEach((extraction) => {
-      if (!extraction.path || (!extraction.variableName && !extraction.name))
-        return;
-
       const variableName = extraction.variableName || extraction.name;
+      if (!extraction.path || !variableName) {
+        return;
+      }
 
       // Skip if already extracted
       if (autoExtracted[variableName] !== undefined) return;
@@ -86,24 +107,17 @@ export function ResponseExplorer({
             try {
               sourceData = JSON.parse(response.body);
             } catch {
-              sourceData = response.body;
+              console.warn(
+                'Failed to parse response body for variable extraction'
+              );
+              return;
             }
             break;
         }
 
         // Extract value using path
         if (sourceData && extraction.path) {
-          let value = sourceData;
-          const pathParts = extraction.path.split('.');
-
-          for (const part of pathParts) {
-            if (value && typeof value === 'object' && part in value) {
-              value = value[part];
-            } else {
-              value = undefined;
-              break;
-            }
-          }
+          const value = getValueByPath(sourceData, extraction.path);
 
           if (value !== undefined) {
             autoExtracted[variableName] = value;
@@ -122,7 +136,6 @@ export function ResponseExplorer({
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(
     new Set(['root'])
   );
-  const [selectedPath, setSelectedPath] = useState<string>('');
   const [extractionModal, setExtractionModal] = useState<{
     isOpen: boolean;
     source: 'response_body' | 'response_header' | 'response_cookie';
@@ -132,16 +145,14 @@ export function ResponseExplorer({
   } | null>(null);
   const [variableName, setVariableName] = useState<string>('');
 
-  // Sanitize variable name: remove special characters, convert spaces to underscores
   const sanitizeVariableName = (name: string): string => {
     return name
-      .replace(/\s+/g, '_') // Convert spaces to underscores
-      .replace(/[^a-zA-Z0-9_]/g, '') // Remove special characters, keep only alphanumeric and underscores
-      .replace(/^_+|_+$/g, '') // Remove leading/trailing underscores
-      .replace(/_+/g, '_'); // Replace multiple underscores with single underscore
+      .replace(/\s+/g, '_')
+      .replace(/[^a-zA-Z0-9_]/g, '')
+      .replace(/^_+|_+$/g, '')
+      .replace(/_+/g, '_');
   };
 
-  // Parse JSON response into explorable nodes
   const parseJsonToNodes = (
     obj: any,
     parentPath = '',
@@ -167,10 +178,10 @@ export function ResponseExplorer({
         const itemType = Array.isArray(item)
           ? 'array'
           : item === null
-          ? 'null'
-          : typeof item === 'object'
-          ? 'object'
-          : typeof item;
+            ? 'null'
+            : typeof item === 'object'
+              ? 'object'
+              : typeof item;
         nodes.push({
           key: `[${index}]`,
           value: item,
@@ -188,10 +199,10 @@ export function ResponseExplorer({
         const valueType = Array.isArray(value)
           ? 'array'
           : value === null
-          ? 'null'
-          : typeof value === 'object'
-          ? 'object'
-          : typeof value;
+            ? 'null'
+            : typeof value === 'object'
+              ? 'object'
+              : typeof value;
         nodes.push({
           key,
           value,
@@ -235,15 +246,13 @@ export function ResponseExplorer({
     });
   };
 
-  // Allow spaces in input, do not sanitize while typing
   const handleVariableNameChange = (value: string) => {
     setVariableName(value);
   };
 
-  // On save: sanitize + add E_ prefix
   const confirmExtraction = (inputVariableName: string, transform?: string) => {
     if (extractionModal && inputVariableName) {
-      const sanitized = sanitizeVariableName(inputVariableName); // clean + convert spaces
+      const sanitized = sanitizeVariableName(inputVariableName);
       const finalVariableName = `E_${sanitized}`;
       const extraction: DataExtraction = {
         variableName: finalVariableName,
@@ -292,15 +301,14 @@ export function ResponseExplorer({
             </span>
             {!hasChildren && (
               <span
-                className={`text-sm font-mono ${
-                  node.type === 'string'
-                    ? 'text-green-600'
-                    : node.type === 'number'
+                className={`text-sm font-mono ${node.type === 'string'
+                  ? 'text-green-600'
+                  : node.type === 'number'
                     ? 'text-purple-600'
                     : node.type === 'boolean'
-                    ? 'text-orange-600'
-                    : 'text-gray-600'
-                }`}
+                      ? 'text-orange-600'
+                      : 'text-gray-600'
+                  }`}
               >
                 {node.type === 'string'
                   ? `"${node.value}"`
@@ -329,7 +337,7 @@ export function ResponseExplorer({
                   onClick={() =>
                     handleExtractClick('response_body', node.path, node.value)
                   }
-                  className='px-2 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 transition-colors'
+                  className='px-2 py-1 bg-[#136fb0] text-white rounded text-xs hover:bg-blue-700 transition-colors'
                   title='Extract as variable'
                 >
                   <Plus className='w-3 h-3 mr-1 inline' />
@@ -347,17 +355,13 @@ export function ResponseExplorer({
     try {
       let jsonData;
       let cleanBody = response.body;
-      // Try to clean the response body
       if (typeof cleanBody === 'string') {
         cleanBody = cleanBody.trim();
-        // Remove any potential BOM or invisible characters
         cleanBody = cleanBody.replace(/^\uFEFF/, '');
       }
       try {
         jsonData = JSON.parse(cleanBody);
       } catch (firstError) {
-        // If direct parsing fails, try to extract JSON from the response
-        // Sometimes responses have extra text before/after JSON
         const jsonMatch =
           cleanBody.match(/\{.*\}/s) || cleanBody.match(/\[.*\]/s);
         if (jsonMatch) {
@@ -466,7 +470,7 @@ export function ResponseExplorer({
                     onClick={() =>
                       handleExtractClick('response_header', key, value)
                     }
-                    className='px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 transition-colors'
+                    className='px-3 py-1 bg-[#136fb0] text-white rounded text-sm hover:bg-blue-700 transition-colors'
                   >
                     <Plus className='w-4 h-4 mr-1 inline' />
                     Extract
@@ -479,19 +483,19 @@ export function ResponseExplorer({
       {(!response.headers ||
         typeof response.headers !== 'object' ||
         Object.keys(response.headers).length === 0) && (
-        <div className='text-center py-8 text-gray-500'>
-          <Hash className='w-12 h-12 text-gray-300 mx-auto mb-3' />
-          <p>No headers found in response</p>
-        </div>
-      )}
+          <div className='text-center py-8 text-gray-500'>
+            <Hash className='w-12 h-12 text-gray-300 mx-auto mb-3' />
+            <p>No headers found in response</p>
+          </div>
+        )}
     </div>
   );
 
   const renderCookiesTab = () => (
     <div className='space-y-2'>
       {response.cookies &&
-      typeof response.cookies === 'object' &&
-      Object.keys(response.cookies).length > 0 ? (
+        typeof response.cookies === 'object' &&
+        Object.keys(response.cookies).length > 0 ? (
         Object.entries(response.cookies).map(([key, value]) => {
           if (!key || value === undefined || value === null) return null;
           const isAlreadyExtracted = existingExtractions.some(
@@ -552,9 +556,8 @@ export function ResponseExplorer({
 
   return (
     <div className='space-y-6'>
-      {/* Response Explorer */}
       <div className='bg-white border border-gray-200 rounded-lg'>
-        <div className='border-b border-gray-200'>
+        <div className='border-b border-gray-200 flex items-center justify-between'>
           <nav className='flex space-x-8 px-6'>
             {[
               { id: 'body', label: 'Response Body', icon: Code },
@@ -566,11 +569,10 @@ export function ResponseExplorer({
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id as typeof activeTab)}
-                  className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors flex items-center space-x-2 ${
-                    activeTab === tab.id
-                      ? 'border-blue-500 text-blue-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
+                  className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors flex items-center space-x-2 ${activeTab === tab.id
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
                 >
                   <Icon className='w-4 h-4' />
                   <span>{tab.label}</span>
@@ -578,15 +580,22 @@ export function ResponseExplorer({
               );
             })}
           </nav>
+
+          <div className='relative group pr-4'>
+            <Info className='w-5 h-5 text-gray-400 cursor-pointer' />
+            <div className='absolute right-0 mt-2 w-56 p-2 text-xs text-gray-700 bg-white border border-gray-200 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity'>
+              Mouse over on element and click on "extract" button to extract
+              variable.
+            </div>
+          </div>
         </div>
+
         <div className='p-6 max-h-96 overflow-auto'>
           {activeTab === 'body' && renderJsonTree()}
           {activeTab === 'headers' && renderHeadersTab()}
           {activeTab === 'cookies' && renderCookiesTab()}
         </div>
       </div>
-
-      {/* Extracted Variables Preview */}
       {finalExtractedVariables &&
         typeof finalExtractedVariables === 'object' &&
         Object.keys(finalExtractedVariables).length > 0 && (
@@ -649,13 +658,14 @@ export function ResponseExplorer({
                       </div>
                     </div>
                     <div className='text-sm'>
-                      <p className='text-gray-600 mb-1'>
-                        Path:{' '}
-                        <code className='bg-gray-100 px-1 rounded overflow-x-auto whitespace-nowrap block'>
+                      <p className='text-gray-600 mb-1 flex items-center gap-2'>
+                        <span>Path:</span>
+                        <span className='bg-gray-50 px-2 py-1 rounded border text-sm font-mono flex-1 overflow-x-auto whitespace-nowrap'>
                           {extraction?.path}
-                        </code>
+                        </span>
                       </p>
-                      <div className='bg-gray-50 p-2 rounded border text-xs font-mono overflow-x-auto whitespace-nowrap'>
+
+                      <div className='bg-gray-50 px-2 py-1 rounded border text-sm font-mono overflow-x-auto whitespace-nowrap'>
                         {typeof value === 'object'
                           ? JSON.stringify(value)
                           : String(value)}
@@ -675,7 +685,6 @@ export function ResponseExplorer({
           </div>
         )}
 
-      {/* Extraction Modal */}
       {extractionModal && (
         <div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50'>
           <div className='bg-white rounded-xl shadow-2xl w-full max-w-md'>
@@ -703,7 +712,6 @@ export function ResponseExplorer({
                   Only letters, numbers, and underscores allowed.
                 </p>
               </div>
-              {/* Source Row */}
               <div className='flex items-center space-x-2 w-full'>
                 <label className='text-sm font-medium text-gray-700 w-16'>
                   Source
@@ -717,7 +725,6 @@ export function ResponseExplorer({
                   className='flex-1 px-3 py-1.5 border border-gray-300 rounded-lg bg-gray-50 text-sm overflow-x-auto whitespace-nowrap'
                 />
               </div>
-              {/* Path Row */}
               <div className='flex items-center space-x-2 w-full'>
                 <label className='text-sm font-medium text-gray-700 w-16'>
                   Path

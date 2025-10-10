@@ -1,4 +1,4 @@
-import { CollectionRequest } from "./collection";
+import { CollectionRequest } from './collection';
 
 export type RequestMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
 
@@ -20,7 +20,6 @@ export interface ErrorState {
   suggestions?: string[];
 }
 
-
 export interface RequestBody {
   type: 'json' | 'form-data' | 'x-www-form-urlencoded' | 'raw' | 'binary';
   content: string;
@@ -32,13 +31,11 @@ export interface Header {
   enabled: boolean;
 }
 
-
 export interface Param {
   key: string;
   value: string;
   enabled: boolean;
 }
-
 
 export interface RequestData {
   method: RequestMethod;
@@ -49,6 +46,7 @@ export interface RequestData {
 }
 
 export interface ResponseData {
+  schemaValidation: any;
   status: number;
   statusText: string;
   headers: any;

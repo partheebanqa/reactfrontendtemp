@@ -38,13 +38,14 @@ import {
   Clock,
   CheckCircle,
   XCircle,
+  Shuffle,
+  Edit3,
 } from 'lucide-react';
 import type {
   APIRequest,
   DataExtraction,
   ExecutionLog,
   TestScript,
-  Variable,
 } from '@/shared/types/requestChain.model';
 import { ResponseExplorer } from './ResponseExplorer';
 import { useToast } from '@/hooks/use-toast';
@@ -59,7 +60,29 @@ import {
   getExtractVariablesByEnvironment,
   extractDataFromResponse,
   copyToClipboard,
+  mapDynamicToStatic,
+  getVariablesByPrefix,
+  detectAutocompletePrefix,
+  calculateAutocompletePosition,
+  type DynamicVariableOverride, // Removed redeclaration of Variable
+  type AutocompleteState,
 } from '@/lib/request-utils';
+import { Controlled as CodeMirror } from 'react-codemirror2';
+import 'codemirror/lib/codemirror.css';
+import 'codemirror/theme/material.css';
+import 'codemirror/mode/javascript/javascript';
+import "./../RequestBuilder/RequestEditor/whiteorange.css"
+
+// Define Variable interface here as it's used in the props and functions
+interface Variable {
+  id: string;
+  name: string;
+  value: string;
+  initialValue?: string;
+  type: 'string' | 'number' | 'boolean';
+  description?: string;
+  environmentId?: string;
+}
 
 interface RequestEditorProps {
   request: APIRequest;
@@ -72,6 +95,10 @@ interface RequestEditorProps {
   environmentBaseUrl?: string;
   requestChainId?: string;
   chainId?: string;
+  hideResponseExplorer?: boolean;
+  onRequestExecution?: (executionLog: ExecutionLog) => void;
+  extractedVariables?: Record<string, any>;
+  chainVariables?: Variable[];
 }
 
 interface KeyValuePair {
@@ -81,6 +108,12 @@ interface KeyValuePair {
   enabled: boolean;
   description?: string;
 }
+
+// Removed redeclaration of DynamicVariableOverride
+// interface DynamicVariableOverride {
+//   name: string
+//   value: string | number
+// }
 
 export function RequestEditor({
   request,
@@ -93,24 +126,131 @@ export function RequestEditor({
   environmentBaseUrl,
   requestChainId,
   chainId,
+  hideResponseExplorer = false,
+  onRequestExecution,
+  extractedVariables: parentExtractedVariables = {},
+  chainVariables = [],
 }: RequestEditorProps) {
   const [isJsonOpen, setIsJsonOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<
-    'params' | 'headers' | 'body' | 'auth' | 'tests' | 'settings'
+    'params' | 'headers' | 'body' | 'auth' | 'settings'
   >('params');
   const [isExecuting, setIsExecuting] = useState(false);
   const [executionResult, setExecutionResult] = useState<ExecutionLog | null>(
     null
   );
-  console.log('executionResult:', executionResult);
-  console.log('requestChainId:', requestChainId);
-  console.log('chainId:', chainId);
 
-  const { variables: storeVariables } = useDataManagementStore();
+  const { variables: storeVariables, dynamicVariables } =
+    useDataManagementStore();
+
+  const [dynamicOverrides, setDynamicOverrides] = useState<
+    DynamicVariableOverride[]
+  >([]);
+  const [showDynamicEditor, setShowDynamicEditor] = useState(false);
+
+  const [autocompleteState, setAutocompleteState] = useState<AutocompleteState>(
+    {
+      show: false,
+      position: { top: 0, left: 0 },
+      suggestions: [],
+      prefix: null,
+      inputRef: null,
+      cursorPosition: 0,
+    }
+  );
+
+  // State for individual fields to manage updates
+  const [url, setUrl] = useState(request.url || '');
+  const [body, setBody] = useState(request.body || '');
+  const [headers, setHeaders] = useState<KeyValuePair[]>(request.headers || []);
+  const [params, setParams] = useState<KeyValuePair[]>(request.params || []);
+  const [auth, setAuth] = useState({
+    username: request.authUsername || '',
+    password: request.authPassword || '',
+    token: request.authToken || '',
+  });
+
+  useEffect(() => {
+    onUpdate({ url });
+  }, [url]);
+
+  useEffect(() => {
+    onUpdate({ body });
+  }, [body]);
+
+  useEffect(() => {
+    onUpdate({ headers });
+  }, [headers]);
+
+  useEffect(() => {
+    onUpdate({ params });
+  }, [params]);
+
+  useEffect(() => {
+    onUpdate({
+      authUsername: auth.username,
+      authPassword: auth.password,
+      authToken: auth.token,
+    });
+  }, [auth]);
+
+  useEffect(() => {
+    setUrl(request.url || '');
+    setBody(request.body || '');
+    setHeaders(request.headers || []);
+    setParams(request.params || []);
+    setAuth({
+      username: request.authUsername || '',
+      password: request.authPassword || '',
+      token: request.authToken || '',
+    });
+  }, [request.id]); // Only update when request ID changes to avoid infinite loops
+
+  const dynamicStructured = mapDynamicToStatic(
+    dynamicVariables,
+    dynamicOverrides
+  );
+
+  console.log('Dynamic Variables:', dynamicStructured);
+  console.log('Store variables:', storeVariables);
+
+  const getUsedDynamicVariables = () => {
+    const allTextFields = [
+      request.url || '',
+      request.body || '',
+      request.authToken || '',
+      request.authUsername || '',
+      request.authPassword || '',
+      request.authApiKey || '',
+      request.authApiValue || '',
+      request.authorization?.token || '',
+      request.authorization?.username || '',
+      request.authorization?.password || '',
+      request.authorization?.key || '',
+      request.authorization?.value || '',
+      ...(request.headers || []).map((h) => `${h.key} ${h.value}`),
+      ...(request.params || []).map((p) => `${p.key} ${p.value}`),
+    ];
+
+    const allText = allTextFields.join(' ');
+    const variableMatches = allText.match(/\{\{(\w+)\}\}/g) || [];
+    const usedVariableNames = [
+      ...new Set(
+        variableMatches.map((match) => match.replace(/\{\{(\w+)\}\}/, '$1'))
+      ),
+    ];
+
+    return dynamicStructured.filter((variable) =>
+      usedVariableNames.includes(variable.name)
+    );
+  };
+
+  const usedDynamicVariables = getUsedDynamicVariables();
+
   const [showResponse, setShowResponse] = useState(false);
   const [extractedVariables, setExtractedVariables] = useState<
     Record<string, any>
-  >({});
+  >(parentExtractedVariables);
   const { activeEnvironment } = useDataManagement();
 
   const [previewUrl, setPreviewUrl] = useState('');
@@ -120,9 +260,9 @@ export function RequestEditor({
   const [responseTab, setResponseTab] = useState<
     'body' | 'cookies' | 'headers' | 'test-results'
   >('body');
-  const params = request.params || [];
-  const headers = request.headers || [];
   const { toast } = useToast();
+
+  const [processedRequest, setProcessedRequest] = useState<APIRequest>(request);
 
   const updateExtractedVariables = (newVars: Record<string, any>) => {
     setExtractedVariables(newVars);
@@ -132,28 +272,81 @@ export function RequestEditor({
   const hasManuallyEditedNameRef = useRef(false);
 
   useEffect(() => {
+    setExtractedVariables(parentExtractedVariables);
+  }, [parentExtractedVariables]);
+
+  const getAllAvailableVariables = (): Variable[] => {
     const extractedVars = getExtractVariablesByEnvironment(
       activeEnvironment?.id
     );
-    const mergedVariables = [
-      ...storeVariables.filter(
-        (sv) => !extractedVars.some((ev) => ev.name === sv.name)
+
+    const parentVars: Variable[] = Object.entries(parentExtractedVariables).map(
+      ([name, value]) => ({
+        id: `extracted_${name}`,
+        name,
+        value: String(value),
+        initialValue: String(value),
+        type:
+          typeof value === 'number'
+            ? 'number'
+            : typeof value === 'boolean'
+              ? 'boolean'
+              : 'string',
+      })
+    );
+
+    const allVariables = [
+      ...storeVariables,
+      ...dynamicStructured,
+      ...extractedVars.filter(
+        (ev) => !parentVars.some((pv) => pv.name === ev.name)
       ),
-      ...extractedVars,
+      ...parentVars,
+      ...chainVariables.filter(
+        (cv) =>
+          !parentVars.some((pv) => pv.name === cv.name) &&
+          !extractedVars.some((ev) => ev.name === cv.name)
+      ),
     ];
-    setPreviewUrl(getPreviewUrl(mergedVariables));
-  }, [storeVariables, activeEnvironment, request.url]);
+
+    return allVariables;
+  };
+
+  const getVariablesByPrefixLocal = (prefix: 'D_' | 'S_'): Variable[] => {
+    const allVars = getAllAvailableVariables();
+    return getVariablesByPrefix(allVars, prefix);
+  };
+
+  useEffect(() => {
+    const allVariables = getAllAvailableVariables();
+    setPreviewUrl(getPreviewUrl(allVariables));
+  }, [
+    storeVariables,
+    dynamicVariables,
+    dynamicOverrides,
+    activeEnvironment,
+    request.url,
+    parentExtractedVariables,
+    chainVariables,
+  ]);
 
   React.useEffect(() => {
+    if (hideResponseExplorer) return;
+
     try {
       const raw = localStorage.getItem('lastExecutionByRequest');
       if (!raw) return;
       const map: Record<string, any> = JSON.parse(raw);
       const saved = map?.[request.id];
-      if (saved?.response || saved?.error) {
+
+      const isRecent =
+        saved?.endTime &&
+        Date.now() - new Date(saved.endTime).getTime() < 3600000;
+
+      if ((saved?.response || saved?.error) && isRecent) {
         setExecutionResult(saved);
         setShowResponse(true);
-        // also hydrate extracted variables preview for this request
+
         if (
           saved.extractedVariables &&
           typeof saved.extractedVariables === 'object'
@@ -162,7 +355,7 @@ export function RequestEditor({
             ...prev,
             ...saved.extractedVariables,
           }));
-          // keep global cache consistent
+
           localStorage.setItem(
             'extractedVariables',
             JSON.stringify({
@@ -171,18 +364,227 @@ export function RequestEditor({
             })
           );
         }
+      } else if (saved && !isRecent) {
+        delete map[request.id];
+        localStorage.setItem('lastExecutionByRequest', JSON.stringify(map));
       }
     } catch (e) {
       console.error('Failed to restore lastExecutionByRequest:', e);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [request.id]);
+  }, [request.id, hideResponseExplorer]);
+
+  const replaceVariables = (text: string, variables: Variable[]): string => {
+    if (!text) return text;
+    let result = text;
+    variables.forEach((variable) => {
+      const regex = new RegExp(`{{${variable.name}}}`, 'g');
+      result = result.replace(
+        regex,
+        variable.value ?? variable.initialValue ?? ''
+      );
+    });
+    return result;
+  };
+
+  const processRequestWithVariables = (
+    request: APIRequest,
+    variables: Variable[]
+  ): APIRequest => {
+    return {
+      ...request,
+      url: replaceVariables(request.url, variables),
+      body: replaceVariables(request.body || '', variables),
+      headers:
+        request.headers?.map((header) => ({
+          ...header,
+          key: replaceVariables(header.key, variables),
+          value: replaceVariables(header.value, variables),
+        })) || [],
+      params:
+        request.params?.map((param) => ({
+          ...param,
+          key: replaceVariables(param.key, variables),
+          value: replaceVariables(param.value, variables),
+        })) || [],
+      authToken: replaceVariables(request.authToken || '', variables),
+      authUsername: replaceVariables(request.authUsername || '', variables),
+      authPassword: replaceVariables(request.authPassword || '', variables),
+      authApiKey: replaceVariables(request.authApiKey || '', variables),
+      authApiValue: replaceVariables(request.authApiValue || '', variables),
+      authorization: request.authorization
+        ? {
+          ...request.authorization,
+          token: replaceVariables(
+            request.authorization.token || '',
+            variables
+          ),
+          username: replaceVariables(
+            request.authorization.username || '',
+            variables
+          ),
+          password: replaceVariables(
+            request.authorization.password || '',
+            variables
+          ),
+          key: replaceVariables(request.authorization.key || '', variables),
+          value: replaceVariables(
+            request.authorization.value || '',
+            variables
+          ),
+        }
+        : request.authorization,
+    };
+  };
+
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+    updateState: (value: string) => void
+  ) => {
+    const input = e.target;
+    const value = input.value;
+    const cursorPosition = input.selectionStart || 0;
+
+    updateState(value);
+
+    const prefix = detectAutocompletePrefix(value, cursorPosition);
+
+    if (prefix) {
+      const suggestions = getVariablesByPrefixLocal(prefix);
+
+      if (suggestions.length > 0) {
+        const position = calculateAutocompletePosition(input);
+
+        setAutocompleteState({
+          show: true,
+          position,
+          suggestions,
+          prefix,
+          inputRef: input,
+          cursorPosition,
+        });
+      } else {
+        setAutocompleteState((prev) => ({ ...prev, show: false }));
+      }
+    } else {
+      setAutocompleteState((prev) => ({ ...prev, show: false }));
+    }
+  };
+
+  const handleVariableSelect = (variable: Variable) => {
+    if (!autocompleteState.inputRef || !autocompleteState.prefix) return;
+
+    const input = autocompleteState.inputRef;
+    const currentValue = input.value;
+    const cursorPos = autocompleteState.cursorPosition;
+
+    // Replace D_ or S_ with the selected variable name
+    const beforePrefix = currentValue.substring(0, cursorPos - 2);
+    const afterCursor = currentValue.substring(cursorPos);
+    const newValue = beforePrefix + variable.name + afterCursor;
+
+    // Find which field this input belongs to and update the corresponding state
+    const inputName =
+      input.getAttribute('name') || input.getAttribute('data-field');
+
+    if (inputName === 'url') {
+      setUrl(newValue);
+    } else if (inputName === 'body') {
+      setBody(newValue);
+    } else if (inputName?.startsWith('header-key-')) {
+      const index = Number.parseInt(inputName.split('-')[2]);
+      const newHeaders = [...headers];
+      newHeaders[index] = { ...newHeaders[index], key: newValue };
+      setHeaders(newHeaders);
+    } else if (inputName?.startsWith('header-value-')) {
+      const index = Number.parseInt(inputName.split('-')[2]);
+      const newHeaders = [...headers];
+      newHeaders[index] = { ...newHeaders[index], value: newValue };
+      setHeaders(newHeaders);
+    } else if (inputName?.startsWith('param-key-')) {
+      const index = Number.parseInt(inputName.split('-')[2]);
+      const newParams = [...params];
+      newParams[index] = { ...newParams[index], key: newValue };
+      setParams(newParams);
+    } else if (inputName?.startsWith('param-value-')) {
+      const index = Number.parseInt(inputName.split('-')[2]);
+      const newParams = [...params];
+      newParams[index] = { ...newParams[index], value: newValue };
+      setParams(newParams);
+    } else if (inputName === 'auth-username') {
+      setAuth((prev) => ({ ...prev, username: newValue }));
+    } else if (inputName === 'auth-password') {
+      setAuth((prev) => ({ ...prev, password: newValue }));
+    } else if (inputName === 'auth-token') {
+      setAuth((prev) => ({ ...prev, token: newValue }));
+    } else {
+      // Fallback: directly update input value and dispatch event
+      input.value = newValue;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+
+    // Set cursor position after the inserted variable name
+    const newCursorPos = beforePrefix.length + variable.name.length;
+    setTimeout(() => {
+      input.setSelectionRange(newCursorPos, newCursorPos);
+      input.focus();
+    }, 0);
+
+    setAutocompleteState((prev) => ({ ...prev, show: false }));
+  };
+
+  const handleAutocomplete = (
+    e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    const input = e.target as HTMLInputElement | HTMLTextAreaElement;
+    const value = input.value;
+    const cursorPosition = input.selectionStart || 0;
+
+    const prefix = detectAutocompletePrefix(value, cursorPosition);
+
+    if (prefix) {
+      const suggestions = getVariablesByPrefixLocal(prefix);
+
+      if (suggestions.length > 0) {
+        const position = calculateAutocompletePosition(input);
+
+        setAutocompleteState({
+          show: true,
+          position,
+          suggestions,
+          prefix,
+          inputRef: input,
+          cursorPosition,
+        });
+      } else {
+        setAutocompleteState((prev) => ({ ...prev, show: false }));
+      }
+    } else {
+      setAutocompleteState((prev) => ({ ...prev, show: false }));
+    }
+  };
+
+  React.useEffect(() => {
+    const allVariables = getAllAvailableVariables();
+    const processed = processRequestWithVariables(request, allVariables);
+    setProcessedRequest(processed);
+    setPreviewUrl(getPreviewUrl(allVariables));
+  }, [
+    storeVariables,
+    dynamicVariables,
+    dynamicOverrides,
+    activeEnvironment,
+    request,
+    parentExtractedVariables,
+    chainVariables,
+    url, // Include state variables that affect processed request
+    body,
+    headers,
+    params,
+    auth,
+  ]);
 
   const getPreviewUrl = (variables: Variable[]) => {
-    const replacedUrl = request.url.replace(/{{(.*?)}}/g, (_, varName) => {
-      const found = variables.find((v) => v.name === varName);
-      return found?.initialValue ?? '';
-    });
+    const replacedUrl = replaceVariables(url, variables); // Use state variable
     const baseUrl = environmentBaseUrl?.trim();
     if (!baseUrl) return replacedUrl;
     try {
@@ -194,22 +596,158 @@ export function RequestEditor({
     }
   };
 
-  const handleExecute = async () => {
-    const extractedVars = getExtractVariablesByEnvironment(
-      activeEnvironment?.id
+  const updateDynamicOverride = (name: string, value: string | number) => {
+    setDynamicOverrides((prev) => {
+      const existing = prev.find((o) => o.name === name);
+      if (existing) {
+        return prev.map((o) => (o.name === name ? { ...o, value } : o));
+      } else {
+        return [...prev, { name, value }];
+      }
+    });
+  };
+
+  const regenerateDynamicVariable = (variableName: string) => {
+    const dynamicVar = dynamicVariables.find((v) => v.name === variableName);
+    if (!dynamicVar) return;
+
+    const randInt = (min: number, max: number) =>
+      Math.floor(Math.random() * (max - min + 1)) + min;
+
+    const randString = (len: number) =>
+      Array.from({ length: len }, () =>
+        Math.random().toString(36).charAt(2)
+      ).join('');
+
+    const fakeName = () =>
+      ['Alice Johnson', 'Bob Smith', 'Charlie Brown'][
+      Math.floor(Math.random() * 3)
+      ];
+
+    let newValue: string | number;
+    switch (dynamicVar.generatorId) {
+      case 'randomString':
+        newValue = randString(dynamicVar.parameters?.length || 8);
+        break;
+      case 'randomInteger':
+        newValue = randInt(
+          dynamicVar.parameters?.min || 0,
+          dynamicVar.parameters?.max || 100
+        );
+        break;
+      case 'name':
+        newValue = fakeName();
+        break;
+      default:
+        newValue = '';
+    }
+
+    updateDynamicOverride(variableName, newValue);
+  };
+
+  const renderEnhancedPreviewUrl = () => {
+    const allVariables = getAllAvailableVariables();
+    const previewUrl = getPreviewUrl(allVariables);
+
+    const dynamicVarMatches = previewUrl.match(/\{\{\w+\}\}/g) || [];
+    const dynamicVarsInUrl = dynamicVarMatches.map((match) =>
+      match.replace(/\{\{(\w+)\}\}/, '$1')
     );
-    const mergedVariables = [
-      ...storeVariables.filter(
-        (sv) => !extractedVars.some((ev) => ev.name === sv.name)
-      ),
-      ...extractedVars,
-    ];
+
+    if (dynamicVarsInUrl.length === 0) {
+      return (
+        <span className='text-blue-600 dark:text-blue-400 font-mono break-all'>
+          {previewUrl}
+        </span>
+      );
+    }
+
+    let parts = [previewUrl];
+    dynamicVarsInUrl.forEach((varName) => {
+      const currentVar = dynamicStructured.find((v) => v.name === `${varName}`);
+      if (currentVar) {
+        parts = parts.flatMap((part) => {
+          if (typeof part === 'string') {
+            return part
+              .split(String(currentVar.value))
+              .flatMap((textPart, index, array) => {
+                if (index === array.length - 1) return [textPart];
+                return [
+                  textPart,
+                  <span
+                    key={`${varName}-${index}`}
+                    className='inline-flex items-center gap-1 px-2 py-1 bg-purple-100 text-purple-800 rounded border border-purple-200 font-mono text-sm'
+                    title={`Dynamic variable: ${varName} (click to edit)`}
+                  >
+                    <Shuffle className='w-3 h-3' />
+                    {String(currentVar.value)}
+                    <button
+                      onClick={() => regenerateDynamicVariable(varName)}
+                      className='ml-1 p-0.5 hover:bg-purple-200 rounded transition-colors'
+                      title='Regenerate value'
+                    >
+                      <Shuffle className='w-3 h-3' />
+                    </button>
+                  </span>,
+                ];
+              });
+          }
+          return [part];
+        });
+      }
+    });
+
+    return <div className='flex flex-wrap items-center gap-0'>{parts}</div>;
+  };
+
+  const handleExecute = async () => {
+    const allVariables = getAllAvailableVariables();
     const safeRequest = {
       ...request,
       extractVariables: request.extractVariables ?? [],
       headers: request.headers ?? [],
       params: request.params ?? [],
+      url: url, // Use state variable for URL
+      body: body, // Use state variable for body
+      authToken: auth.token, // Use state variable for auth token
+      authUsername: auth.username, // Use state variable for auth username
+      authPassword: auth.password, // Use state variable for auth password
     };
+
+    {
+      const token = (
+        safeRequest.authToken ||
+        safeRequest.authorization?.token ||
+        ''
+      ).trim();
+      if (token) {
+        (safeRequest as any).authorizationType = 'bearer';
+
+        const headers = Array.isArray(safeRequest.headers)
+          ? [...safeRequest.headers]
+          : [];
+        const authIdx = headers.findIndex(
+          (h) => h?.key?.toLowerCase() === 'authorization'
+        );
+        const value = `Bearer ${token}`;
+        if (authIdx >= 0) {
+          headers[authIdx] = {
+            ...headers[authIdx],
+            value,
+            enabled: true,
+          };
+        } else {
+          headers.push({
+            id: `temp_${Date.now()}`,
+            key: 'Authorization',
+            value,
+            enabled: true,
+          });
+        }
+        (safeRequest as any).headers = headers;
+      }
+    }
+
     if (!safeRequest.url) {
       toast({
         title: 'Error',
@@ -221,8 +759,8 @@ export function RequestEditor({
     setIsExecuting(true);
     try {
       const startTime = Date.now();
-      const payload = buildRequestPayload(safeRequest, mergedVariables);
-      const previewUrl = getPreviewUrl(mergedVariables);
+      const payload = buildRequestPayload(safeRequest, allVariables);
+      const previewUrl = getPreviewUrl(allVariables);
       payload.request.url = previewUrl;
       const backendData = await executeRequest(payload);
       const result = backendData?.data?.responses?.[0];
@@ -264,10 +802,18 @@ export function RequestEditor({
         },
         extractedVariables: extractedData,
       };
-      setExecutionResult(log);
+
+      if (!hideResponseExplorer) {
+        setExecutionResult(log);
+      }
+
+      if (onRequestExecution) {
+        onRequestExecution(log);
+      }
+
       try {
         const raw = localStorage.getItem('lastExecutionByRequest');
-        const map = raw ? JSON.parse(raw) : {};
+        const map = raw ? JSON.JSON.parse(raw) : {};
         map[request.id] = log;
         localStorage.setItem('lastExecutionByRequest', JSON.stringify(map));
       } catch (e) {
@@ -290,13 +836,21 @@ export function RequestEditor({
         duration: 0,
         request: {
           method: request.method,
-          url: getPreviewUrl(mergedVariables),
+          url: getPreviewUrl(getAllAvailableVariables()),
           headers: {},
           body: request.body,
         },
         error: error instanceof Error ? error.message : 'Unknown error',
       };
-      setExecutionResult(errorLog);
+
+      if (!hideResponseExplorer) {
+        setExecutionResult(errorLog);
+      }
+
+      if (onRequestExecution) {
+        onRequestExecution(errorLog);
+      }
+
       try {
         const raw = localStorage.getItem('lastExecutionByRequest');
         const map = raw ? JSON.parse(raw) : {};
@@ -324,9 +878,9 @@ export function RequestEditor({
       description: '',
     };
     if (type === 'params') {
-      onUpdate({ params: [...params, newPair] });
+      setParams((prev) => [...prev, newPair]);
     } else {
-      onUpdate({ headers: [...headers, newPair] });
+      setHeaders((prev) => [...prev, newPair]);
     }
   };
 
@@ -336,21 +890,21 @@ export function RequestEditor({
     updates: Partial<KeyValuePair>
   ) => {
     if (type === 'params') {
-      onUpdate({
-        params: params.map((p) => (p.id === id ? { ...p, ...updates } : p)),
-      });
+      setParams((prev) =>
+        prev.map((p) => (p.id === id ? { ...p, ...updates } : p))
+      );
     } else {
-      onUpdate({
-        headers: headers.map((h) => (h.id === id ? { ...h, ...updates } : h)),
-      });
+      setHeaders((prev) =>
+        prev.map((h) => (h.id === id ? { ...h, ...updates } : h))
+      );
     }
   };
 
   const removeKeyValuePair = (type: 'params' | 'headers', id: string) => {
     if (type === 'params') {
-      onUpdate({ params: params.filter((p) => p.id !== id) });
+      setParams((prev) => prev.filter((p) => p.id !== id));
     } else {
-      onUpdate({ headers: headers.filter((h) => h.id !== id) });
+      setHeaders((prev) => prev.filter((h) => h.id !== id));
     }
   };
 
@@ -359,7 +913,7 @@ export function RequestEditor({
     { id: 'headers', label: 'Headers', icon: Code },
     { id: 'body', label: 'Body', icon: FileText },
     { id: 'auth', label: 'Auth', icon: Shield },
-    { id: 'tests', label: 'Tests', icon: TestTube },
+    // { id: 'tests', label: 'Tests', icon: TestTube },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
 
@@ -378,31 +932,65 @@ export function RequestEditor({
   };
 
   const addParam = () => {
-    onUpdate({
-      params: [...request.params, { key: '', value: '', enabled: true }],
-    });
+    setParams((prev) => [
+      ...prev,
+      {
+        key: '',
+        value: '',
+        enabled: true,
+        id: `temp_${Date.now().toString()}`,
+      },
+    ]);
   };
 
   const updateParam = (
     index: number,
     updates: Partial<{ key: string; value: string; enabled: boolean }>
   ) => {
-    const updatedParams = request.params.map((param, i) =>
-      i === index ? { ...param, ...updates } : param
+    setParams((prev) =>
+      prev.map((param, i) => (i === index ? { ...param, ...updates } : param))
     );
-    onUpdate({ params: updatedParams });
   };
 
   const removeParam = (index: number) => {
-    onUpdate({
-      params: request.params.filter((_, i) => i !== index),
-    });
+    setParams((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleExtractVariable = (extraction: DataExtraction) => {
     const normalizeString = (value?: string) => (value || '').trim();
     const normalizeBool = (value?: boolean) => !!value;
     const currentExtractions = request.extractVariables || [];
+
+    const variableName = extraction.variableName || extraction.name;
+
+    if (!variableName) {
+      toast({
+        title: 'Error',
+        description: 'Variable name is required',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const isDuplicate = currentExtractions.some(
+      (existing) => (existing.variableName || existing.name) === variableName
+    );
+
+    if (isDuplicate) {
+      toast({
+        title: 'Error',
+        description: `Variable "${variableName}" already exists`,
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const normalizedExtraction = {
+      ...extraction,
+      variableName,
+      name: variableName,
+    };
+
     const existingChains = JSON.parse(
       localStorage.getItem('extractionLogs') || '[]'
     );
@@ -416,15 +1004,13 @@ export function RequestEditor({
     }
     const nextOrder = maxOrder + 1;
     const extractionWithOrder = {
-      ...extraction,
+      ...normalizedExtraction,
       order: nextOrder,
     };
-    const updatedExtractions = [...currentExtractions, extraction];
-    // Create the update payload with requestChainId
+    const updatedExtractions = [...currentExtractions, normalizedExtraction];
     const updatePayload: Partial<APIRequest> & { requestChainId?: string } = {
       extractVariables: updatedExtractions,
     };
-    // Add requestChainId if available (for edit mode)
     if (requestChainId) {
       updatePayload.requestChainId = requestChainId;
     }
@@ -451,17 +1037,15 @@ export function RequestEditor({
       description: request.description,
       order: nextOrder,
     };
-    // Find matching chain by normalized values
     const chainIndex = existingChains.findIndex(
       (chain: any) =>
         normalizeString(chain.name) === normalizeString(chainName) &&
         normalizeString(chain.description) ===
-          normalizeString(chainDescription) &&
+        normalizeString(chainDescription) &&
         normalizeBool(chain.isImportant) === normalizeBool(chainEnabled) &&
         chain.environmentId === activeEnvironment?.id
     );
     if (chainIndex !== -1) {
-      // Prevent pushing the same request twice
       const alreadyExists = existingChains[chainIndex].chainRequests.some(
         (req: any) => req.url === request.url && req.method === request.method
       );
@@ -469,7 +1053,6 @@ export function RequestEditor({
         existingChains[chainIndex].chainRequests.push(newRequest);
       }
     } else {
-      // Create new chain
       const newChain = {
         name: normalizeString(chainName),
         description: normalizeString(chainDescription),
@@ -479,12 +1062,9 @@ export function RequestEditor({
       };
       existingChains.push(newChain);
     }
-    // Save updated chains
     localStorage.setItem('extractionLogs', JSON.stringify(existingChains));
-    // Update state for request's own extracted variables
     setPreviousExtractions(updatedExtractions);
     onUpdate(updatePayload);
-    // If there's a response, extract the values and update React state + localStorage
     if (executionResult?.response) {
       const extracted = extractDataFromResponse(
         executionResult.response,
@@ -517,8 +1097,8 @@ export function RequestEditor({
   };
 
   const handleRemoveExtraction = (variableName: string) => {
-    const updatedExtractions = request.extractVariables.filter(
-      (e) => e.variableName !== variableName
+    const updatedExtractions = (request.extractVariables || []).filter(
+      (e) => (e.variableName || e.name) !== variableName
     );
     onUpdate({ extractVariables: updatedExtractions });
     const newExtracted = { ...extractedVariables };
@@ -543,25 +1123,30 @@ export function RequestEditor({
   };
 
   const addHeader = () => {
-    onUpdate({
-      headers: [...request.headers, { key: '', value: '', enabled: true }],
-    });
+    setHeaders((prev) => [
+      ...prev,
+      {
+        key: '',
+        value: '',
+        enabled: true,
+        id: `temp_${Date.now().toString()}`,
+      },
+    ]);
   };
 
   const updateHeader = (
     index: number,
     updates: Partial<{ key: string; value: string; enabled: boolean }>
   ) => {
-    const updatedHeaders = request.headers.map((header, i) =>
-      i === index ? { ...header, ...updates } : header
+    setHeaders((prev) =>
+      prev.map((header, i) =>
+        i === index ? { ...header, ...updates } : header
+      )
     );
-    onUpdate({ headers: updatedHeaders });
   };
 
   const removeHeader = (index: number) => {
-    onUpdate({
-      headers: request.headers.filter((_, i) => i !== index),
-    });
+    setHeaders((prev) => prev.filter((_, i) => i !== index));
   };
 
   const addTest = (type: 'status' | 'responseTime' | 'jsonContent') => {
@@ -586,7 +1171,6 @@ export function RequestEditor({
         description: 'Response time should be less than 200 ms',
       };
     } else {
-      // type === 'jsonContent'
       newTest = {
         ...base,
         jsonPath: '$.property',
@@ -717,9 +1301,148 @@ export function RequestEditor({
     </div>
   );
 
+  const showVariablePreview = () => {
+    const allVariables = getAllAvailableVariables();
+    return (
+      processedRequest.authToken !== request.authToken ||
+      processedRequest.authorization?.token !== request.authorization?.token ||
+      processedRequest.body !== request.body ||
+      processedRequest.url !== request.url ||
+      JSON.stringify(processedRequest.headers) !==
+      JSON.stringify(request.headers) ||
+      JSON.stringify(processedRequest.params) !== JSON.stringify(request.params)
+    );
+  };
+
+  const DynamicVariablesPanel = () => {
+    // Only show if there are used dynamic variables
+    if (usedDynamicVariables.length === 0) return null;
+
+    return (
+      <div className='mt-4 p-4 bg-purple-50 border border-purple-200 rounded-lg'>
+        <div className='flex items-center justify-between mb-3'>
+          <div className='flex items-center gap-2'>
+            <Shuffle className='w-4 h-4 text-purple-600' />
+            <h4 className='text-sm font-medium text-purple-900'>
+              Dynamic Variables ({usedDynamicVariables.length})
+            </h4>
+          </div>
+          <Button
+            variant='outline'
+            size='sm'
+            onClick={() => setShowDynamicEditor(!showDynamicEditor)}
+            className='text-purple-700 border-purple-300 hover:bg-purple-100'
+          >
+            <Edit3 className='w-3 h-3 mr-1' />
+            {showDynamicEditor ? 'Hide Editor' : 'Edit Values'}
+          </Button>
+        </div>
+
+        {showDynamicEditor ? (
+          <div className='space-y-3'>
+            {usedDynamicVariables.map((variable) => {
+              const originalName = variable.name.replace('', '');
+              const currentOverride = dynamicOverrides.find(
+                (o) => o.name === originalName
+              );
+
+              return (
+                <div key={variable.id} className='flex items-center gap-3'>
+                  <div className='flex items-center gap-2 flex-1'>
+                    <span className='text-xs font-mono text-purple-700 min-w-0'>{`{{${variable.name}}}`}</span>
+                    <Input
+                      value={String(currentOverride?.value || variable.value)}
+                      onChange={(e) =>
+                        updateDynamicOverride(originalName, e.target.value)
+                      }
+                      className='h-8 text-sm'
+                      placeholder='Enter value'
+                    />
+                  </div>
+                  <Button
+                    variant='ghost'
+                    size='sm'
+                    onClick={() => regenerateDynamicVariable(originalName)}
+                    className='h-8 w-8 p-0 text-purple-600 hover:bg-purple-100'
+                    title='Regenerate random value'
+                  >
+                    <Shuffle className='w-3 h-3' />
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className='flex flex-wrap gap-2'>
+            {usedDynamicVariables.map((variable) => {
+              const originalName = variable.name.replace('', '');
+              return (
+                <div
+                  key={variable.id}
+                  className='flex items-center gap-1 px-2 py-1 bg-purple-100 text-purple-800 rounded border border-purple-200'
+                >
+                  <span className='text-xs font-mono'>
+                    {`{{${variable.name}}}`} = {String(variable.value)}
+                  </span>
+                  <button
+                    onClick={() => regenerateDynamicVariable(originalName)}
+                    className='ml-1 p-0.5 hover:bg-purple-200 rounded transition-colors'
+                    title='Regenerate value'
+                  >
+                    <Shuffle className='w-3 h-3' />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const VariableAutocomplete = () => {
+    if (!autocompleteState.show) return null;
+
+    return (
+      <div
+        className='fixed z-50 bg-white border border-gray-200 rounded-md shadow-lg max-h-48 overflow-y-auto'
+        style={{
+          top: autocompleteState.position.top,
+          left: autocompleteState.position.left,
+        }}
+      >
+        <div className='p-2 text-xs text-gray-500 border-b'>
+          {autocompleteState.prefix === 'D_'
+            ? 'Dynamic Variables'
+            : 'Static Variables'}
+        </div>
+        {autocompleteState.suggestions.map((variable) => (
+          <button
+            key={variable.id}
+            className='w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center justify-between'
+            onClick={() => handleVariableSelect(variable)}
+          >
+            <span className='font-mono text-sm'>{variable.name}</span>
+            <span className='text-xs text-gray-400 ml-2'>
+              {String(variable.value || variable.initialValue || '').substring(
+                0,
+                20
+              )}
+              {String(variable.value || variable.initialValue || '').length > 20
+                ? '...'
+                : ''}
+            </span>
+          </button>
+        ))}
+      </div>
+    );
+  };
+
   if (compact) {
     return (
       <div className='space-y-4'>
+        <VariableAutocomplete />
+
         {/* Request URL */}
         <div className='flex items-center space-x-2'>
           <Select
@@ -740,21 +1463,12 @@ export function RequestEditor({
             </SelectContent>
           </Select>
           <Input
-            value={request.url}
-            onChange={(e) => {
-              const value = e.target.value;
-              const shouldSyncName =
-                !hasManuallyEditedNameRef.current &&
-                (!request.name ||
-                  request.name === 'New Request' ||
-                  request.name === request.url);
-
-              onUpdate(
-                shouldSyncName ? { url: value, name: value } : { url: value }
-              );
-            }}
+            value={url}
+            onChange={(e) => handleInputChange(e, setUrl)}
+            onKeyUp={(e) => handleAutocomplete(e)}
             placeholder='Enter request URL'
             className='flex-1'
+            name='url'
           />
           <Button
             onClick={handleExecute}
@@ -765,15 +1479,25 @@ export function RequestEditor({
             {isExecuting ? 'Running...' : 'Run'}
           </Button>
         </div>
-        {/* Final URL Preview */}
-        {activeEnvironment && activeEnvironment.name !== 'No Environment' && (
-          <div className='flex items-center space-x-2 mt-2 text-sm'>
-            <span className='text-gray-600 dark:text-gray-400 font-medium'>
-              Final URL Preview:
-            </span>
-            <span className='text-[#136fb0] dark:text-blue-400 font-mono break-all'>
-              {previewUrl}
-            </span>
+
+        {/* Enhanced URL Preview */}
+        <div className='flex items-start space-x-2 mt-2 text-sm'>
+          <span className='text-gray-600 dark:text-gray-400 font-medium'>
+            Final URL Preview:
+          </span>
+          <div className='flex-1'>{renderEnhancedPreviewUrl()}</div>
+        </div>
+
+        {/* Dynamic Variables Panel - Now only shows used variables */}
+        <DynamicVariablesPanel />
+
+        {/* Show available variables for debugging */}
+        {Object.keys(parentExtractedVariables).length > 0 && (
+          <div className='mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-sm'>
+            <strong>Available Variables:</strong>{' '}
+            {Object.keys(parentExtractedVariables)
+              .map((name) => `{{${name}}}`)
+              .join(', ')}
           </div>
         )}
 
@@ -786,11 +1510,10 @@ export function RequestEditor({
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id as typeof activeTab)}
-                  className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors flex items-center space-x-2 ${
-                    activeTab === tab.id
-                      ? 'border-blue-500 text-[#136fb0]'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
+                  className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors flex items-center space-x-2 ${activeTab === tab.id
+                    ? 'border-blue-500 text-[#136fb0]'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
                 >
                   <Icon className='w-4 h-4' />
                   <span>{tab.label}</span>
@@ -807,7 +1530,7 @@ export function RequestEditor({
           </nav>
         </div>
         {/* Tab Content */}
-        <div className='p-6'>
+        <div className='p-2'>
           {activeTab === 'params' && (
             <div className='space-y-4'>
               <div className='flex items-center justify-between'>
@@ -825,35 +1548,59 @@ export function RequestEditor({
 
               {/* Parameters List (no empty state) */}
               <div className='space-y-2'>
-                {request?.params?.map((param, index) => (
-                  <div key={index} className='flex items-center space-x-2'>
+                {params.map((param, index) => (
+                  <div key={param.id} className='flex items-center space-x-2'>
                     <input
                       type='text'
+                      name={`param-key-${index}`}
                       value={param.key}
                       onChange={(e) =>
-                        updateParam(index, { key: e.target.value })
+                        handleInputChange(e, (value) => {
+                          const newParams = [...params];
+                          newParams[index] = {
+                            ...newParams[index],
+                            key: value,
+                          };
+                          setParams(newParams);
+                        })
                       }
+                      onKeyUp={(e) => handleAutocomplete(e)}
                       className='flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm'
                       placeholder='Key'
                     />
                     <input
                       type='text'
+                      name={`param-value-${index}`}
                       value={param.value}
                       onChange={(e) =>
-                        updateParam(index, { value: e.target.value })
+                        handleInputChange(e, (value) => {
+                          const newParams = [...params];
+                          newParams[index] = {
+                            ...newParams[index],
+                            value: value,
+                          };
+                          setParams(newParams);
+                        })
                       }
+                      onKeyUp={(e) => handleAutocomplete(e)}
                       className='flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm'
-                      placeholder='Value (use {{variableName}} for variables)'
+                      placeholder='Value (use {{variableName}} or {{dynamicVar}} for variables)'
                     />
+                    {/* Show processed value if different */}
+                    {processedRequest.params?.[index]?.value !== param.value &&
+                      processedRequest.params?.[index]?.value && (
+                        <div className='flex-1 px-2 py-1 bg-blue-50 border border-blue-200 rounded text-xs font-mono'>
+                          → {processedRequest.params[index]?.value}
+                        </div>
+                      )}
                     <button
                       onClick={() =>
                         updateParam(index, { enabled: !param.enabled })
                       }
-                      className={`p-2 rounded-lg transition-colors ${
-                        param.enabled
-                          ? 'text-green-600 hover:bg-green-50'
-                          : 'text-gray-400 hover:bg-gray-50'
-                      }`}
+                      className={`p-2 rounded-lg transition-colors ${param.enabled
+                        ? 'text-green-600 hover:bg-green-50'
+                        : 'text-gray-400 hover:bg-gray-50'
+                        }`}
                     >
                       {/* toggle visibility icon here */}
                     </button>
@@ -884,35 +1631,60 @@ export function RequestEditor({
 
               {/* Headers List (no empty state) */}
               <div className='space-y-2'>
-                {request?.headers?.map((header, index) => (
-                  <div key={index} className='flex items-center space-x-2'>
+                {headers.map((header, index) => (
+                  <div key={header.id} className='flex items-center space-x-2'>
                     <input
                       type='text'
+                      name={`header-key-${index}`}
                       value={header.key}
                       onChange={(e) =>
-                        updateHeader(index, { key: e.target.value })
+                        handleInputChange(e, (value) => {
+                          const newHeaders = [...headers];
+                          newHeaders[index] = {
+                            ...newHeaders[index],
+                            key: value,
+                          };
+                          setHeaders(newHeaders);
+                        })
                       }
+                      onKeyUp={(e) => handleAutocomplete(e)}
                       className='flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm'
                       placeholder='Key'
                     />
                     <input
                       type='text'
+                      name={`header-value-${index}`}
                       value={header.value}
                       onChange={(e) =>
-                        updateHeader(index, { value: e.target.value })
+                        handleInputChange(e, (value) => {
+                          const newHeaders = [...headers];
+                          newHeaders[index] = {
+                            ...newHeaders[index],
+                            value: value,
+                          };
+                          setHeaders(newHeaders);
+                        })
                       }
+                      onKeyUp={(e) => handleAutocomplete(e)}
                       className='flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm'
-                      placeholder='Value (use {{variableName}} for variables)'
+                      placeholder='Value (use {{variableName}} or {{dynamicVar}} for variables)'
                     />
+                    {/* Show processed value if different */}
+                    {processedRequest.headers?.[index]?.value !==
+                      header.value &&
+                      processedRequest.headers?.[index]?.value && (
+                        <div className='flex-1 px-2 py-1 bg-blue-50 border border-blue-200 rounded text-xs font-mono'>
+                          → {processedRequest.headers[index]?.value}
+                        </div>
+                      )}
                     <button
                       onClick={() =>
                         updateHeader(index, { enabled: !header.enabled })
                       }
-                      className={`p-2 rounded-lg transition-colors ${
-                        header.enabled
-                          ? 'text-green-600 hover:bg-green-50'
-                          : 'text-gray-400 hover:bg-gray-50'
-                      }`}
+                      className={`p-2 rounded-lg transition-colors ${header.enabled
+                        ? 'text-green-600 hover:bg-green-50'
+                        : 'text-gray-400 hover:bg-gray-50'
+                        }`}
                     >
                       {/* toggle visibility icon */}
                     </button>
@@ -933,7 +1705,7 @@ export function RequestEditor({
               <h3 className='text-lg font-medium text-gray-900'>
                 Request Body
               </h3>
-              <div className='flex items-center space-x-4'>
+              {/* <div className='flex items-center space-x-4'>
                 <label className='flex items-center space-x-2'>
                   <input
                     type='radio'
@@ -994,10 +1766,10 @@ export function RequestEditor({
                   />
                   <span className='text-sm'>Raw</span>
                 </label>
-              </div>
+              </div> */}
               {request.bodyType === 'raw' && (
                 <div className='space-y-2'>
-                  <div className='flex items-center justify-end'>
+                  {/* <div className='flex items-center justify-end'>
                     <select
                       value={request.rawBodyType || 'text'}
                       onChange={(e) =>
@@ -1016,14 +1788,44 @@ export function RequestEditor({
                       <option value='xml'>XML</option>
                       <option value='html'>HTML</option>
                     </select>
-                  </div>
-                  <textarea
-                    value={request.body || ''}
-                    onChange={(e) => onUpdate({ body: e.target.value })}
+                  </div> */}
+                  {/* <textarea
+                    name='body'
+                    value={body}
+                    onChange={(e) => handleInputChange(e, setBody)}
+                    onKeyUp={(e) => handleAutocomplete(e)}
                     rows={8}
                     className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm'
-                    placeholder='Enter request body... Use {{variableName}} for variables'
+                    placeholder='Enter request body... Use {{variableName}} or {{dynamicVar}} for variables'
+                  /> */}
+
+                  <CodeMirror
+                    value={body}
+                    options={{
+                      mode: { name: 'javascript', json: true },
+                      theme: 'whiteorange',
+                      lineNumbers: true,
+                      lineWrapping: true,
+                    }}
+                    onBeforeChange={(editor, data, value) => {
+                      handleInputChange({ target: { value } }, setBody);
+                    }}
+                    onKeyUp={(editor, event) => handleAutocomplete(event)}
+                    className='w-full border border-gray-300 rounded-lg font-mono text-[12px]'
                   />
+
+                  {/* Show processed value if different */}
+                  {processedRequest.body !== request.body &&
+                    processedRequest.body && (
+                      <div className='mt-2 p-2 bg-blue-50 border border-blue-200 rounded'>
+                        <div className='text-xs font-medium text-blue-900 mb-1'>
+                          Processed Body:
+                        </div>
+                        <pre className='text-xs font-mono text-blue-800 max-h-32 overflow-y-auto'>
+                          {processedRequest.body}
+                        </pre>
+                      </div>
+                    )}
                 </div>
               )}
               {request.bodyType !== 'none' && request.bodyType !== 'raw' && (
@@ -1045,140 +1847,46 @@ export function RequestEditor({
                     Auth Type
                   </label>
                   <select
-                    value={request.authorizationType || 'none'}
-                    onChange={(e) =>
-                      onUpdate({
-                        authorizationType: e.target
-                          .value as APIRequest['authorizationType'],
-                      })
-                    }
+                    value='bearer'
+                    onChange={() => { }}
                     className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+                    disabled
                   >
-                    <option value='none'>No Auth</option>
                     <option value='bearer'>Bearer Token</option>
-                    <option value='basic'>Basic Auth</option>
-                    <option value='apikey'>API Key</option>
-                    <option value='oauth2'>OAuth 2.0</option>
                   </select>
                 </div>
-                {request.authorizationType === 'bearer' && (
-                  <div>
-                    <label className='block text-sm font-medium text-gray-700 mb-2'>
-                      Bearer Token
-                    </label>
-                    <input
-                      type='text'
-                      value={
-                        request.authorization?.token || request.authToken || ''
-                      }
-                      onChange={(e) => {
-                        onUpdate({
-                          authToken: e.target.value,
-                          authorization: {
-                            ...request.authorization,
-                            token: e.target.value,
-                          },
-                        });
-                      }}
-                      className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-                      placeholder='Enter bearer token or use {{tokenVariable}}'
-                    />
-                  </div>
-                )}
-                {request.authorizationType === 'basic' && (
-                  <div className='grid grid-cols-2 gap-4'>
-                    <div>
-                      <label className='block text-sm font-medium text-gray-700 mb-2'>
-                        Username
-                      </label>
-                      <input
-                        type='text'
-                        value={request.authUsername || ''}
-                        onChange={(e) =>
-                          onUpdate({ authUsername: e.target.value })
-                        }
-                        className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-                        placeholder='Username'
-                      />
-                    </div>
-                    <div>
-                      <label className='block text-sm font-medium text-gray-700 mb-2'>
-                        Password
-                      </label>
-                      <input
-                        type='password'
-                        value={request.authPassword || ''}
-                        onChange={(e) =>
-                          onUpdate({ authPassword: e.target.value })
-                        }
-                        className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-                        placeholder='Password'
-                      />
-                    </div>
-                  </div>
-                )}
-                {request.authorizationType === 'apikey' && (
-                  <div className='space-y-4'>
-                    <div className='grid grid-cols-2 gap-4'>
-                      <div>
-                        <label className='block text-sm font-medium text-gray-700 mb-2'>
-                          Key
-                        </label>
-                        <input
-                          type='text'
-                          value={request.authApiKey || ''}
-                          onChange={(e) =>
-                            onUpdate({ authApiKey: e.target.value })
-                          }
-                          className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-                          placeholder='API Key name'
-                        />
+
+                <div>
+                  <label className='block text-sm font-medium text-gray-700 mb-2'>
+                    Bearer Token
+                  </label>
+                  <input
+                    type='text'
+                    name='auth-token'
+                    value={auth.token}
+                    onChange={(e) =>
+                      handleInputChange(e, (value) =>
+                        setAuth((prev) => ({ ...prev, token: value }))
+                      )
+                    }
+                    onKeyUp={(e) => handleAutocomplete(e)}
+                    className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+                    placeholder='Enter bearer token or use {{tokenVariable}}'
+                  />
+                  {(processedRequest.authorization?.token ||
+                    processedRequest.authToken) !==
+                    (request.authorization?.token || request.authToken) && (
+                      <div className='mt-1 px-2 py-1 bg-blue-50 border border-blue-200 rounded text-xs font-mono'>
+                        Processed:{' '}
+                        {processedRequest.authorization?.token ||
+                          processedRequest.authToken}
                       </div>
-                      <div>
-                        <label className='block text-sm font-medium text-gray-700 mb-2'>
-                          Value
-                        </label>
-                        <input
-                          type='text'
-                          value={request.authApiValue || ''}
-                          onChange={(e) =>
-                            onUpdate({ authApiValue: e.target.value })
-                          }
-                          className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-                          placeholder='API Key value'
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <label className='block text-sm font-medium text-gray-700 mb-2'>
-                        Add to
-                      </label>
-                      <select
-                        value={request.authApiLocation || 'header'}
-                        onChange={(e) =>
-                          onUpdate({
-                            authApiLocation: e.target.value as
-                              | 'header'
-                              | 'query',
-                          })
-                        }
-                        className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-                      >
-                        <option value='header'>Header</option>
-                        <option value='query'>Query Params</option>
-                      </select>
-                    </div>
-                  </div>
-                )}
-                {request.authorizationType === 'oauth2' && (
-                  <div className='text-center py-8 text-gray-500'>
-                    <Shield className='w-12 h-12 text-gray-300 mx-auto mb-3' />
-                    <p>OAuth 2.0 configuration coming soon...</p>
-                  </div>
-                )}
+                    )}
+                </div>
               </div>
             </div>
           )}
+
           {activeTab === 'tests' && (
             <div className='space-y-4'>
               <div className='flex items-center justify-between'>
@@ -1227,11 +1935,10 @@ export function RequestEditor({
                             onClick={() =>
                               updateTest(test.id, { enabled: !test.enabled })
                             }
-                            className={`p-1 rounded transition-colors ${
-                              test.enabled
-                                ? 'text-green-600 hover:bg-green-50'
-                                : 'text-gray-400 hover:bg-gray-50'
-                            }`}
+                            className={`p-1 rounded transition-colors ${test.enabled
+                              ? 'text-green-600 hover:bg-green-50'
+                              : 'text-gray-400 hover:bg-gray-50'
+                              }`}
                           >
                             {/* {test.enabled ? (
                               <Eye className='w-4 h-4' />
@@ -1386,10 +2093,11 @@ export function RequestEditor({
             </div>
           )}
           {activeTab === 'settings' && (
-            <div className='space-y-6'>
+            <div className='space-y-4'>
               <h3 className='text-lg font-medium text-gray-900'>
                 Request Settings
               </h3>
+
               <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
                 <div>
                   <label className='block text-sm font-medium text-gray-700 mb-2'>
@@ -1408,24 +2116,22 @@ export function RequestEditor({
                     max='60000'
                   />
                 </div>
-                <div>
+
+                {/* Retries (disabled + upcoming) */}
+                <div className='opacity-60'>
                   <label className='block text-sm font-medium text-gray-700 mb-2'>
                     Retries
                   </label>
                   <input
                     type='number'
                     value={request.retries}
-                    onChange={(e) =>
-                      onUpdate({
-                        retries: Number.parseInt(e.target.value) || 0,
-                      })
-                    }
-                    className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-                    min='0'
-                    max='5'
+                    disabled
+                    className='w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed'
                   />
+                  <p className='text-xs text-gray-500 italic mt-1'>Upcoming</p>
                 </div>
               </div>
+
               <div className='p-4 border border-orange-200 bg-orange-50 rounded-lg'>
                 <div className='flex items-center space-x-2 mb-3'>
                   <AlertTriangle className='w-5 h-5 text-orange-600' />
@@ -1454,12 +2160,15 @@ export function RequestEditor({
                       Stop chain on failure
                     </span>
                   </label>
-                  <label className='flex items-center space-x-2'>
+                  <label className='flex items-center space-x-2 opacity-60'>
                     <input
                       type='radio'
                       name='errorHandling'
                       value='continue'
-                      checked={request.errorHandling === 'continue'}
+                      checked={
+                        request.errorHandling === 'continue' ||
+                        !request.errorHandling
+                      }
                       onChange={(e) =>
                         onUpdate({
                           errorHandling: e.target.value as
@@ -1472,26 +2181,27 @@ export function RequestEditor({
                     />
                     <span className='text-sm text-orange-800'>
                       Continue to next step
+                      <span className='text-xs italic text-gray-500'>
+                        (Upcoming)
+                      </span>
                     </span>
                   </label>
-                  <label className='flex items-center space-x-2'>
+
+                  {/* Retry disabled + upcoming */}
+                  <label className='flex items-center space-x-2 opacity-60'>
                     <input
                       type='radio'
                       name='errorHandling'
                       value='retry'
                       checked={request.errorHandling === 'retry'}
-                      onChange={(e) =>
-                        onUpdate({
-                          errorHandling: e.target.value as
-                            | 'stop'
-                            | 'continue'
-                            | 'retry',
-                        })
-                      }
+                      disabled
                       className='text-orange-600'
                     />
                     <span className='text-sm text-orange-800'>
-                      Retry with backoff
+                      Retry with backoff{' '}
+                      <span className='text-xs italic text-gray-500'>
+                        (Upcoming)
+                      </span>
                     </span>
                   </label>
                 </div>
@@ -1499,8 +2209,59 @@ export function RequestEditor({
             </div>
           )}
         </div>
-        {/* Response Section */}
-        {executionResult && (
+
+        {/* Show variable substitution preview for debugging */}
+        {showVariablePreview() && (
+          <div className='mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg'>
+            <h4 className='text-sm font-medium text-blue-900 mb-2'>
+              Variable Substitution Preview:
+            </h4>
+            <div className='space-y-2 text-xs'>
+              {(processedRequest.authToken !== request.authToken ||
+                processedRequest.authorization?.token !==
+                request.authorization?.token) && (
+                  <div>
+                    <span className='font-medium'>Auth Token:</span>
+                    <div className='font-mono bg-white p-1 rounded border max-w-full overflow-hidden text-ellipsis whitespace-nowrap'>
+                      <span className='text-gray-500'>
+                        {request.authorization?.token || request.authToken}
+                      </span>{' '}
+                      →
+                      <span className='text-blue-600 ml-1'>
+                        {processedRequest.authorization?.token ||
+                          processedRequest.authToken}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              {processedRequest.url !== request.url && (
+                <div>
+                  <span className='font-medium'>URL:</span>
+                  <div className='font-mono bg-white p-1 rounded border'>
+                    <span className='text-gray-500'>{request.url}</span> →
+                    <span className='text-blue-600 ml-1'>
+                      {processedRequest.url}
+                    </span>
+                  </div>
+                </div>
+              )}
+              {processedRequest.body !== request.body &&
+                processedRequest.body && (
+                  <div>
+                    <span className='font-medium'>Body:</span>
+                    <div className='font-mono bg-white p-1 rounded border max-h-20 overflow-y-auto'>
+                      <pre className='text-blue-600'>
+                        {processedRequest.body}
+                      </pre>
+                    </div>
+                  </div>
+                )}
+            </div>
+          </div>
+        )}
+
+        {/* Response Section - Only show if not hidden by parent */}
+        {!hideResponseExplorer && executionResult && (
           <div className='border-t border-gray-200'>
             <div className='flex items-center justify-between p-4 bg-gray-50 border-b border-gray-200'>
               <div className='flex items-center space-x-4'>
@@ -1522,24 +2283,23 @@ export function RequestEditor({
                 {executionResult.response && (
                   <>
                     <span
-                      className={`px-2 py-1 text-xs font-medium rounded ${
-                        executionResult.response.status < 300
-                          ? 'bg-green-100 text-green-800'
-                          : executionResult.response.status < 400
+                      className={`px-2 py-1 text-xs font-medium rounded ${executionResult.response.status < 300
+                        ? 'bg-green-100 text-green-800'
+                        : executionResult.response.status < 400
                           ? 'bg-yellow-100 text-yellow-800'
                           : 'bg-red-100 text-red-800'
-                      }`}
+                        }`}
                     >
                       {executionResult.response.status}{' '}
                       {executionResult.response.status === 200
                         ? 'OK'
                         : executionResult.response.status === 201
-                        ? 'Created'
-                        : executionResult.response.status === 404
-                        ? 'Not Found'
-                        : executionResult.response.status === 500
-                        ? 'Server Error'
-                        : ''}
+                          ? 'Created'
+                          : executionResult.response.status === 404
+                            ? 'Not Found'
+                            : executionResult.response.status === 500
+                              ? 'Server Error'
+                              : ''}
                     </span>
                     <span className='text-sm text-gray-600'>
                       {executionResult.duration}ms
@@ -1594,11 +2354,10 @@ export function RequestEditor({
                         onClick={() =>
                           setResponseTab(tab.id as typeof responseTab)
                         }
-                        className={`py-3 px-1 border-b-2 font-medium text-sm transition-colors flex items-center space-x-2 ${
-                          responseTab === tab.id
-                            ? 'border-blue-500 text-blue-600'
-                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                        }`}
+                        className={`py-3 px-1 border-b-2 font-medium text-sm transition-colors flex items-center space-x-2 ${responseTab === tab.id
+                          ? 'border-blue-500 text-blue-600'
+                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                          }`}
                       >
                         <span>{tab.label}</span>
                         {tab.count !== null && tab.count > 0 && (
@@ -1657,7 +2416,7 @@ export function RequestEditor({
                   {responseTab === 'cookies' && (
                     <div className='space-y-3'>
                       {executionResult.response.cookies &&
-                      Object.keys(executionResult.response.cookies).length >
+                        Object.keys(executionResult.response.cookies).length >
                         0 ? (
                         Object.entries(executionResult.response.cookies).map(
                           ([name, value]) => (
@@ -1735,30 +2494,33 @@ export function RequestEditor({
             )}
           </div>
         )}
-        {/* Variable Extraction Section */}
-        {executionResult && executionResult.response && (
-          <div className='border-t border-gray-200 p-6'>
-            <h3 className='text-lg font-medium text-gray-900 mb-4'>
-              Extract Variables from Response
-            </h3>
-            <ResponseExplorer
-              response={executionResult.response}
-              onExtractVariable={handleExtractVariable}
-              extractedVariables={extractedVariables}
-              existingExtractions={request.extractVariables}
-              onRemoveExtraction={handleRemoveExtraction}
-              handleCopy={handleCopy}
-              copied={copied}
-              chainId={chainId || requestChainId || ''}
-            />
-          </div>
-        )}
+        {/* Variable Extraction Section - Only show if not hidden by parent */}
+        {!hideResponseExplorer &&
+          executionResult &&
+          executionResult.response && (
+            <div className='border-t border-gray-200 p-6'>
+              <h3 className='text-lg font-medium text-gray-900 mb-4'>
+                Extract Variables from Response
+              </h3>
+              <ResponseExplorer
+                response={executionResult.response}
+                onExtractVariable={handleExtractVariable}
+                extractedVariables={extractedVariables}
+                existingExtractions={request.extractVariables}
+                onRemoveExtraction={handleRemoveExtraction}
+                handleCopy={handleCopy}
+                copied={copied}
+                chainId={chainId || requestChainId || ''}
+              />
+            </div>
+          )}
       </div>
     );
   }
-  // Full view
   return (
-    <div className='space-y-6'>
+    <div className='flex flex-col h-full'>
+      <VariableAutocomplete />
+
       {/* Request Configuration */}
       <Card>
         <CardHeader>
@@ -1806,34 +2568,83 @@ export function RequestEditor({
           <div className='space-y-2'>
             <Label>URL</Label>
             <Input
-              value={request.url}
-              onChange={(e) => {
-                const value = e.target.value;
-                const shouldSyncName =
-                  !hasManuallyEditedNameRef.current &&
-                  (!request.name ||
-                    request.name === 'New Request' ||
-                    request.name === request.url);
-
-                onUpdate(
-                  shouldSyncName ? { url: value, name: value } : { url: value }
-                );
-              }}
+              name='url'
+              value={url}
+              onChange={(e) => handleInputChange(e, setUrl)}
+              onKeyUp={(e) => handleAutocomplete(e)}
               placeholder='https://api.example.com/endpoint'
             />
           </div>
-          {/* Final URL Preview */}
-          <div className='flex items-center space-x-2 mt-2 text-sm'>
+          {/* Enhanced URL Preview */}
+          <div className='flex items-start space-x-2 mt-2 text-sm'>
             <span className='text-gray-600 dark:text-gray-400 font-medium'>
               Final URL Preview:
             </span>
-            <span className='text-blue-600 dark:text-blue-400 font-mono break-all'>
-              {previewUrl}
-            </span>
+            <div className='flex-1'>{renderEnhancedPreviewUrl()}</div>
           </div>
+
+          {/* Dynamic Variables Panel - Now only shows used variables */}
+          <DynamicVariablesPanel />
+
+          {/* Show available variables for debugging */}
+          {Object.keys(parentExtractedVariables).length > 0 && (
+            <div className='mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-sm'>
+              <strong>Available Variables:</strong>{' '}
+              {Object.keys(parentExtractedVariables)
+                .map((name) => `{{${name}}}`)
+                .join(', ')}
+            </div>
+          )}
         </CardContent>
       </Card>
       {/* Main Tabs */}
+      {/* Show processed values for debugging */}
+      {showVariablePreview() && (
+        <div className='mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg'>
+          <h4 className='text-sm font-medium text-blue-900 mb-2'>
+            Variable Substitution Preview:
+          </h4>
+          <div className='space-y-2 text-xs'>
+            {(processedRequest.authToken !== request.authToken ||
+              processedRequest.authorization?.token !==
+              request.authorization?.token) && (
+                <div>
+                  <span className='font-medium'>Auth Token:</span>
+                  <div className='font-mono bg-white p-1 rounded border'>
+                    <span className='text-gray-500'>
+                      {request.authorization?.token || request.authToken}
+                    </span>{' '}
+                    →
+                    <span className='text-blue-600 ml-1'>
+                      {processedRequest.authorization?.token ||
+                        processedRequest.authToken}
+                    </span>
+                  </div>
+                </div>
+              )}
+            {processedRequest.url !== request.url && (
+              <div>
+                <span className='font-medium'>URL:</span>
+                <div className='font-mono bg-white p-1 rounded border'>
+                  <span className='text-gray-500'>{request.url}</span> →
+                  <span className='text-blue-600 ml-1'>
+                    {processedRequest.url}
+                  </span>
+                </div>
+              </div>
+            )}
+            {processedRequest.body !== request.body &&
+              processedRequest.body && (
+                <div>
+                  <span className='font-medium'>Body:</span>
+                  <div className='font-mono bg-white p-1 rounded border max-h-20 overflow-y-auto'>
+                    <pre className='text-blue-600'>{processedRequest.body}</pre>
+                  </div>
+                </div>
+              )}
+          </div>
+        </div>
+      )}
       <Tabs defaultValue='params' className='w-full'>
         <TabsList className='grid w-full grid-cols-7'>
           <TabsTrigger value='params' className='gap-2'>
@@ -1932,8 +2743,10 @@ export function RequestEditor({
                 <div className='space-y-2'>
                   <Label>Body Content</Label>
                   <Textarea
-                    value={request.body || ''}
-                    onChange={(e) => onUpdate({ body: e.target.value })}
+                    name='body'
+                    value={body}
+                    onChange={(e) => handleInputChange(e, setBody)}
+                    onKeyUp={(e) => handleAutocomplete(e)}
                     placeholder={
                       request.bodyType === 'json'
                         ? '{\n  "key": "value",\n  "array": [1, 2, 3]\n}'
@@ -1955,28 +2768,35 @@ export function RequestEditor({
             <CardContent className='space-y-4'>
               <div className='flex items-center space-x-4'>
                 <Label>Auth Type:</Label>
-                <Select
-                  value={request.authorizationType || 'none'}
-                  onValueChange={(value) =>
-                    onUpdate({ authorizationType: value as any })
-                  }
-                >
+                <Select value='bearer' onValueChange={() => { }} disabled>
                   <SelectTrigger className='w-40'>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value='none'>No Auth</SelectItem>
                     <SelectItem value='bearer'>Bearer Token</SelectItem>
-                    <SelectItem value='basic'>Basic Auth</SelectItem>
-                    <SelectItem value='apikey'>API Key</SelectItem>
-                    <SelectItem value='oauth1'>OAuth 1.0</SelectItem>
-                    <SelectItem value='oauth2'>OAuth 2.0</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div className='space-y-2'>
+                <Label>Bearer Token</Label>
+                <Input
+                  name='auth-token'
+                  value={auth.token}
+                  onChange={(e) =>
+                    handleInputChange(e, (value) =>
+                      setAuth((prev) => ({ ...prev, token: value }))
+                    )
+                  }
+                  onKeyUp={(e) => handleAutocomplete(e)}
+                  placeholder='Enter bearer token'
+                  type='password'
+                />
               </div>
             </CardContent>
           </Card>
         </TabsContent>
+
         <TabsContent value='tests' className='space-y-4'>
           <Card>
             <CardHeader>
@@ -2018,19 +2838,20 @@ export function RequestEditor({
                   placeholder='5000'
                 />
               </div>
-              <div className='space-y-2'>
+
+              {/* Retries disabled + upcoming */}
+              <div className='space-y-2 opacity-60'>
                 <Label htmlFor='retries'>Retries</Label>
                 <Input
                   id='retries'
                   type='number'
                   value={request.retries}
-                  onChange={(e) =>
-                    onUpdate({ retries: Number.parseInt(e.target.value) })
-                  }
-                  placeholder='0'
+                  disabled
                 />
+                <p className='text-xs text-gray-500 italic'>Upcoming</p>
               </div>
             </div>
+
             <div className='space-y-4 p-4 border border-orange-200 bg-orange-50 rounded-lg'>
               <div className='flex items-center gap-2 text-orange-600'>
                 <TriangleAlert className='w-4 h-4' />
@@ -2039,7 +2860,7 @@ export function RequestEditor({
                 </Label>
               </div>
               <RadioGroup
-                value={request.errorHandling}
+                value={request.errorHandling || 'continue'}
                 onValueChange={(value) =>
                   onUpdate({ errorHandling: value as any })
                 }
@@ -2051,20 +2872,31 @@ export function RequestEditor({
                     Stop chain on failure
                   </Label>
                 </div>
-                <div className='flex items-center space-x-2'>
-                  <RadioGroupItem value='continue' id='continue' />
+
+                {/* Continue disabled + upcoming */}
+                <div className='flex items-center space-x-2 opacity-60'>
+                  <RadioGroupItem value='continue' id='continue' disabled />
                   <Label htmlFor='continue' className='text-orange-700'>
-                    Continue to next step
+                    Continue to next step{' '}
+                    <span className='text-xs italic text-gray-500'>
+                      (Upcoming)
+                    </span>
                   </Label>
                 </div>
-                <div className='flex items-center space-x-2'>
-                  <RadioGroupItem value='retry' id='retry' />
+
+                {/* Retry disabled + upcoming */}
+                <div className='flex items-center space-x-2 opacity-60'>
+                  <RadioGroupItem value='retry' id='retry' disabled />
                   <Label htmlFor='retry' className='text-orange-700'>
-                    Retry with backoff
+                    Retry with backoff{' '}
+                    <span className='text-xs italic text-gray-500'>
+                      (Upcoming)
+                    </span>
                   </Label>
                 </div>
               </RadioGroup>
             </div>
+
             <div className='flex items-center space-x-2'>
               <Switch
                 checked={request.enabled}

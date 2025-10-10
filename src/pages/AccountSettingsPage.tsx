@@ -11,6 +11,7 @@ import {
   Wrench,
   Database,
   UserMinus,
+  UserRound,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
@@ -25,6 +26,7 @@ import { ExternalTools } from '@/components/settings/ExternalTools';
 import { DataPurgeConfig } from '@/components/settings/DataPurgeConfig';
 import { AccountDeactivation } from '@/components/settings/AccountDeactivation';
 import { useLocation } from 'wouter';
+import BreadCum from '@/components/BreadCum/Breadcum';
 
 export default function AccountSettings() {
   const searchParams = new URLSearchParams(window.location.search);
@@ -58,7 +60,6 @@ export default function AccountSettings() {
       label: 'Manage People',
       icon: Users,
       component: PeopleManagement,
-      upcoming: true,
     },
     {
       id: 'environments',
@@ -75,31 +76,30 @@ export default function AccountSettings() {
     },
     {
       id: 'plan',
-      label: 'Your Plan',
+      label: 'Subscription',
       icon: CreditCard,
       component: PlanManagement,
-      upcoming: true,
+      upcoming: false,
     },
     {
       id: 'external-tools',
       label: 'External Tools',
       icon: Wrench,
       component: ExternalTools,
-      upcoming: true,
+      upcoming: false,
     },
-    {
-      id: 'data-purge',
-      label: 'Purge Old Data',
-      icon: Database,
-      component: DataPurgeConfig,
-      upcoming: true,
-    },
+    // {
+    //   id: 'data-purge',
+    //   label: 'Purge Old Data',
+    //   icon: Database,
+    //   component: DataPurgeConfig,
+    //   upcoming: true,
+    // },
     {
       id: 'deactivate',
       label: 'Deactivate Account',
       icon: UserMinus,
       component: AccountDeactivation,
-      upcoming: true,
     },
   ];
 
@@ -122,14 +122,18 @@ export default function AccountSettings() {
 
   return (
     <div className='flex-1 bg-gray-50 h-full'>
-      <div className='mb-8'>
-        <h1 className='text-3xl font-bold text-gray-900 dark:text-white'>
-          Account Settings
-        </h1>
-        <p className='mt-2 text-gray-600 dark:text-gray-400'>
-          View and update your account details, profile and more.
-        </p>
-      </div>
+      {/* <BreadCum
+        title=" Account Settings"
+        subtitle="View and update your account details, profile and more."
+        showCreateButton={false}
+        showQuickGuide={false}
+        buttonTitle="Run Execution"
+        onClickCreateNew={() => console.log("Create execution")}
+        icon={UserRound}
+        iconBgClass="bg-orange-100"
+        iconColor="#f97316"
+        iconSize={40}
+      /> */}
 
       <div className='bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg p-6 text-white mb-3'>
         <h2 className='text-2xl font-bold mb-2'>
@@ -141,7 +145,7 @@ export default function AccountSettings() {
         </p>
       </div>
 
-      <div className='flex flex-col lg:flex-row gap-6'>
+      <div className='flex flex-col lg:flex-row gap-3'>
         {/* Mobile Settings Navigation */}
         <div className='lg:hidden'>
           <Card>
@@ -234,7 +238,7 @@ export default function AccountSettings() {
 
         {/* Settings Content */}
         <div className='flex-1 min-w-0'>
-          <div className='space-y-6'>
+          <div className=''>
             {settingsSections.map((section) => {
               const Component = section.component;
               return (

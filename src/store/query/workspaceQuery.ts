@@ -10,25 +10,13 @@ import { apiRequest } from '@/lib/queryClient';
 import { API_WORKSPACES } from '@/config/apiRoutes';
 import { queryClient } from '@/lib/queryClient';
 
-// Remove console log
-// console.log('yeeeeee');
-
-/**
- * Workspaces query with optimized caching strategy
- * - Prevents multiple calls when navigating pages
- * - Updates store directly
- * - Uses direct cache updates instead of invalidation
- */
 export const useWorkspacesQuery = (enabled = true) => {
   return useQuery({
     queryKey: ['/api/workspaces'],
     enabled,
     retry: false,
-    // Set staleTime to prevent unnecessary refetches when navigating between pages
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    // Set cacheTime to keep the data cached longer
-    gcTime: 10 * 60 * 1000, // 10 minutes
-    // Disable refetching on window focus to prevent unnecessary calls
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
     queryFn: async () => {
       try {
@@ -36,7 +24,6 @@ export const useWorkspacesQuery = (enabled = true) => {
         const data = await fetchWorkspaces();
 
         if (data?.workspaces) {
-          // Map API response to Workspace interface if needed
           const mappedWorkspaces = data.workspaces.map((workspace: any) => ({
             id: workspace.Id || workspace.id,
             tenantId: workspace.TenantID || workspace.tenantId,
@@ -86,12 +73,10 @@ export const useUpdateWorkspaceMutation = () => {
       return await updateWorkspace(workspaceData);
     },
     onSuccess: (data, variables) => {
-      // Update the store directly first
       if (variables.id) {
         const updatedWorkspace = { ...variables, ...(data?.workspace || {}) };
         workspaceActions.updateWorkspace(updatedWorkspace);
 
-        // If this was the current workspace, update that too
         const state = workspaceStore.state;
         if (state.currentWorkspace?.id === variables.id) {
           workspaceActions.setCurrentWorkspace(updatedWorkspace);

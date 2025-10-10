@@ -32,6 +32,11 @@ export interface ApiTestCase {
   updatedAt: string;
   updatedBy: string;
   deletedAt: string;
+  testcase_id:string;
+  validation_type:string;
+  severity:string;
+  subCategory:string;
+
 }
 
 export interface TestCasesResponse {

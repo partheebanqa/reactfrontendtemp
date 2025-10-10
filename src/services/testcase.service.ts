@@ -16,8 +16,6 @@ export const getTestCasesByRequestId = async (
       `${API_TEST_CASES}?r=${requestId}&ts=${testSuiteId}`
     );
 
-    console.log('response:', response);
-
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
@@ -64,10 +62,10 @@ export const saveTestCasesForRequest = async (
   allTestCaseIds: string[]
 ): Promise<void> => {
   try {
-    const testCases = allTestCaseIds.map((testCaseId) => ({
-      testCaseId,
-      isSelected: selectedTestCaseIds.includes(testCaseId),
-    }));
+    // Map all test cases but include only selected ones
+    const testCases = allTestCaseIds
+      .filter((id) => selectedTestCaseIds.includes(id)) // keep only selected
+      .map((id) => ({ testCaseId: id, isSelected: true }));
 
     const response = await apiRequest(
       'PUT',

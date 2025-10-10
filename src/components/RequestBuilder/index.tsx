@@ -122,7 +122,7 @@ useEffect(() => {
 
   return (
     
-    <div className="flex h-full bg-white relative border border-gray-200 rounded-lg mt-2 p-1">
+    <div className="flex h-full relative border border-gray-200 bg-background rounded-lg mt-2">
       {/* Sidebar with conditional rendering for mobile */}
       {showSidebar && (
         <div className={`${isMobile ? 'absolute z-10 h-full shadow-lg' : ''}`}>

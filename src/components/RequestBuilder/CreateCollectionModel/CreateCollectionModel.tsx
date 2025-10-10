@@ -1,3 +1,4 @@
+import { Input } from '@/components/ui/input';
 import { Collection } from '@/shared/types/collection';
 import { Save, X } from 'lucide-react';
 import React, { useState } from 'react'
@@ -37,7 +38,7 @@ function CreateCollectionModel({ selectedCollection, handleClose, handleSaveColl
                 <div className="p-4 space-y-4">
                     <div>
                         <label className="block text-sm font-medium mb-1">Name</label>
-                        <input
+                        <Input
                             type="text"
                             value={name}
                             onChange={(e) => {
@@ -61,7 +62,7 @@ function CreateCollectionModel({ selectedCollection, handleClose, handleSaveColl
                     </button>
                     <button
                         onClick={handleSave}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center gap-2"
+                        className="px-4 py-2 bg-[#136fb0] text-white rounded-md hover:bg-blue-700 flex items-center gap-2"
                     >
                         <Save size={16} />
                         Save

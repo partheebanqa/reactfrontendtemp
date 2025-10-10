@@ -12,8 +12,8 @@ import {
 } from 'lucide-react';
 import { useRequest } from '@/hooks/useRequest';
 import JsonViewer from '../RequestEditor/JsonViewer';
-import PrimarySchemaPanel from '../schema/PrimarySchemaPanel';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { JsonViewer as TexteaJsonViewer } from "@textea/json-viewer";
 
 interface ResponseViewerProps {
   isBottomLayout: boolean;
@@ -21,8 +21,6 @@ interface ResponseViewerProps {
 
 const ResponseViewer = ({ isBottomLayout }: ResponseViewerProps) => {
   const { responseData } = useRequest();
-  console.log('Response Data:', responseData);
-
   const isMobile = useIsMobile();
   const [activeTab, setActiveTab] = useState<
     'body' | 'headers' | 'cookies' | 'test-results' | 'schema'
@@ -155,9 +153,8 @@ const ResponseViewer = ({ isBottomLayout }: ResponseViewerProps) => {
       {/* Response Tabs & Status */}
       <div className='border-b border-gray-200 dark:border-gray-700 flex-shrink-0'>
         <div
-          className={`items-center justify-between px-4 ${
-            !isBottomLayout ? 'mt-5' : 'flex'
-          }`}
+          className={`items-center justify-between px-4 ${!isBottomLayout ? 'mt-5' : 'flex'
+            }`}
         >
           {/* Top status summary (desktop) */}
           {!isBottomLayout && (
@@ -171,11 +168,10 @@ const ResponseViewer = ({ isBottomLayout }: ResponseViewerProps) => {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
-                className={`py-4 px-2 sm:px-4 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
-                  activeTab === tab.id
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
+                className={`py-4 px-2 sm:px-4 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${activeTab === tab.id
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
                 aria-current={activeTab === tab.id ? 'page' : undefined}
                 tabIndex={0}
                 type='button'
@@ -234,11 +230,10 @@ const ResponseViewer = ({ isBottomLayout }: ResponseViewerProps) => {
                 <div className='flex items-center gap-1 sm:gap-2'>
                   <button
                     onClick={() => setBodyView('pretty')}
-                    className={`px-2 py-1 rounded-md text-xs sm:text-sm flex items-center ${
-                      bodyView === 'pretty'
-                        ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
-                        : 'hover:bg-gray-100 dark:hover:bg-gray-800'
-                    }`}
+                    className={`px-2 py-1 rounded-md text-xs sm:text-sm flex items-center ${bodyView === 'pretty'
+                      ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-[#136fb0]'
+                      : 'hover:bg-gray-100 dark:hover:bg-gray-800'
+                      }`}
                   >
                     <Eye className='h-3 w-3 sm:h-4 sm:w-4 mr-1' />
                     <span className='hidden sm:inline'>Pretty</span>
@@ -246,11 +241,10 @@ const ResponseViewer = ({ isBottomLayout }: ResponseViewerProps) => {
                   </button>
                   <button
                     onClick={() => setBodyView('raw')}
-                    className={`px-2 py-1 rounded-md text-xs sm:text-sm flex items-center ${
-                      bodyView === 'raw'
-                        ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
-                        : 'hover:bg-gray-100 dark:hover:bg-gray-800'
-                    }`}
+                    className={`px-2 py-1 rounded-md text-xs sm:text-sm flex items-center ${bodyView === 'raw'
+                      ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
+                      : 'hover:bg-gray-100 dark:hover:bg-gray-800'
+                      }`}
                   >
                     <Code className='h-3 w-3 sm:h-4 sm:w-4 mr-1' />
                     <span className='hidden sm:inline'>Raw</span>
@@ -258,11 +252,10 @@ const ResponseViewer = ({ isBottomLayout }: ResponseViewerProps) => {
                   </button>
                   <button
                     onClick={() => setBodyView('preview')}
-                    className={`px-2 py-1 rounded-md text-xs sm:text-sm flex items-center ${
-                      bodyView === 'preview'
-                        ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
-                        : 'hover:bg-gray-100 dark:hover:bg-gray-800'
-                    }`}
+                    className={`px-2 py-1 rounded-md text-xs sm:text-sm flex items-center ${bodyView === 'preview'
+                      ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
+                      : 'hover:bg-gray-100 dark:hover:bg-gray-800'
+                      }`}
                   >
                     <span className='hidden sm:inline'>Preview</span>
                     <span className='sm:hidden'>Prev</span>
@@ -303,14 +296,27 @@ const ResponseViewer = ({ isBottomLayout }: ResponseViewerProps) => {
             </div>
 
             <div className='flex-1 p-4 overflow-auto'>
-              <JsonViewer
+              {/* <JsonViewer
                 data={filterResponseData(responseData.body, searchQuery)}
                 view={bodyView}
                 isError={
                   responseData.status === 0 || responseData.status >= 400
                 }
                 searchQuery={searchQuery}
+              /> */}
+              <TexteaJsonViewer
+                value={filterResponseData(responseData.body, searchQuery)}
+                theme="dark"
+                rootName={false}
+                defaultInspectDepth={2}
+                displayDataTypes={false}
+                search={searchQuery}
+                style={{
+                  fontFamily: "monospace",
+                  fontSize: "13px",
+                }}
               />
+
             </div>
           </div>
         )}
@@ -318,19 +324,21 @@ const ResponseViewer = ({ isBottomLayout }: ResponseViewerProps) => {
         {activeTab === 'headers' && (
           <div className='p-4 overflow-auto h-full'>
             <div className='space-y-2 min-w-0'>
-              {Object.entries(responseData.headers).map(([key, value]) => (
-                <div
-                  key={key}
-                  className='flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-4 py-2 border-b border-gray-100 dark:border-gray-800'
-                >
-                  <span className='font-medium text-gray-900 dark:text-white min-w-0 sm:flex-1 break-all'>
-                    {key}:
-                  </span>
-                  <span className='text-gray-600 dark:text-gray-400 min-w-0 sm:flex-1 break-all'>
-                    {value}
-                  </span>
-                </div>
-              ))}
+              {Object.entries(responseData.headers).map(
+                ([key, value]: [string, any]) => (
+                  <div
+                    key={key}
+                    className='flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-4 py-2 border-b border-gray-100 dark:border-gray-800'
+                  >
+                    <span className='font-medium text-gray-900 dark:text-white min-w-0 sm:flex-1 break-all'>
+                      {key}:
+                    </span>
+                    <span className='text-gray-600 dark:text-gray-400 min-w-0 sm:flex-1 break-all'>
+                      {value}
+                    </span>
+                  </div>
+                )
+              )}
             </div>
           </div>
         )}
@@ -345,13 +353,231 @@ const ResponseViewer = ({ isBottomLayout }: ResponseViewerProps) => {
 
         {activeTab === 'test-results' && (
           <div className='p-4 overflow-auto h-full'>
-            <div className='text-gray-500 dark:text-gray-400'>
-              Test results will appear here...
-            </div>
+            {responseData.assertionLogs &&
+              responseData.assertionLogs.length > 0 ? (
+              <div className='space-y-6'>
+                {/* Summary Cards */}
+                <div className='grid grid-cols-1 sm:grid-cols-3 gap-4'>
+                  {(() => {
+                    const passedCount = responseData.assertionLogs.filter(
+                      (log) => log.status === 'passed'
+                    ).length;
+                    const failedCount = responseData.assertionLogs.filter(
+                      (log) => log.status === 'failed'
+                    ).length;
+                    const totalCount = responseData.assertionLogs.length;
+
+                    return (
+                      <>
+                        {/* Passed Assertions */}
+                        <div className='bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4'>
+                          <div className='flex items-center mb-2'>
+                            <CheckCircle className='h-5 w-5 text-green-600 mr-2' />
+                            <span className='text-2xl font-bold text-green-800 dark:text-green-300'>
+                              {passedCount}{' '}
+                              <span className='text-sm text-green-700 dark:text-green-400'>
+                                Assertions Passed
+                              </span>
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Failed Assertions */}
+                        <div className='bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4'>
+                          <div className='flex items-center mb-2'>
+                            <X className='h-5 w-5 text-red-600 mr-2' />
+                            <span className='text-2xl font-bold text-red-800 dark:text-red-300'>
+                              {failedCount}{' '}
+                              <span className='text-sm text-red-700 dark:text-red-400'>
+                                Assertions Failed
+                              </span>
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Total Assertions */}
+                        <div className='bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4'>
+                          <div className='flex items-center mb-2'>
+                            <Clock className='h-5 w-5 text-blue-600 mr-2' />
+                            <span className='text-2xl font-bold text-blue-800 dark:text-blue-300'>
+                              {totalCount}{' '}
+                              <span className='text-sm text-blue-700 dark:text-blue-400'>
+                                Total Assertions
+                              </span>
+                            </span>
+                          </div>
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
+
+                {/* Individual Assertion Results */}
+                <div className='space-y-3'>
+                  {responseData.assertionLogs.map((assertion, index) => (
+                    <div
+                      key={assertion.id}
+                      className={`border rounded-lg p-4 ${assertion.status === 'passed'
+                        ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
+                        : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
+                        }`}
+                    >
+                      <div className='flex items-start justify-between mb-3'>
+                        <div className='flex items-center space-x-2'>
+                          {assertion.status === 'passed' ? (
+                            <CheckCircle className='h-5 w-5 text-green-600 flex-shrink-0' />
+                          ) : (
+                            <X className='h-5 w-5 text-red-600 flex-shrink-0' />
+                          )}
+                        </div>
+
+                        {/* Description + Category/Group in one line */}
+                        <div className='flex flex-1 items-center justify-between ml-2'>
+                          <h4
+                            className={`font-medium ${assertion.status === 'passed'
+                              ? 'text-green-800 dark:text-green-300'
+                              : 'text-red-800 dark:text-red-300'
+                              }`}
+                          >
+                            {assertion.description ||
+                              `${assertion.type} assertion`}
+                          </h4>
+
+                          {assertion.category && (
+                            <div className='flex items-center space-x-2'>
+                              <span
+                                className={`px-2 py-1 rounded text-xs font-medium ${assertion.category === 'status'
+                                  ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300'
+                                  : assertion.category === 'security'
+                                    ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300'
+                                    : 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300'
+                                  }`}
+                              >
+                                {assertion.category}
+                              </span>
+                              {assertion.group && (
+                                <span className='px-2 py-1 rounded text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300'>
+                                  {assertion.group}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Assertion Details */}
+                      <div className='space-y-2 text-sm'>
+                        {assertion.expectedValue && (
+                          <div className='flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-4'>
+                            <span className='font-medium text-gray-700 dark:text-gray-300 min-w-[100px]'>
+                              Expected: {assertion.expectedValue}
+                            </span>
+                          </div>
+                        )}
+
+                        {assertion.errorMessage && (
+                          <div className='mt-3 p-3 bg-red-100 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded text-red-700 dark:text-red-300'>
+                            <span className='font-medium'>Error: </span>
+                            {assertion.errorMessage}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className='text-center py-8'>
+                <div className='text-gray-500 dark:text-gray-400 mb-2'>
+                  No test results available
+                </div>
+                <div className='text-sm text-gray-400'>
+                  Run tests to see assertion results here
+                </div>
+              </div>
+            )}
           </div>
         )}
 
-        {activeTab === 'schema' && <PrimarySchemaPanel />}
+        {activeTab === 'schema' && (
+          <div className='p-4 overflow-auto h-full'>
+            {responseData.schemaValidation ? (
+              <div className='space-y-4'>
+                <div
+                  className={`border rounded-lg p-4 ${responseData.schemaValidation.passed
+                    ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
+                    : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
+                    }`}
+                >
+                  <div className='flex items-center space-x-2'>
+                    {responseData.schemaValidation.passed ? (
+                      <CheckCircle className='h-5 w-5 text-green-600 flex-shrink-0' />
+                    ) : (
+                      <X className='h-5 w-5 text-red-600 flex-shrink-0' />
+                    )}
+                    <div>
+                      <h3
+                        className={`font-medium ${responseData.schemaValidation.passed
+                          ? 'text-green-800 dark:text-green-300'
+                          : 'text-red-800 dark:text-red-300'
+                          }`}
+                      >
+                        Schema Validation{' '}
+                        {responseData.schemaValidation.passed
+                          ? 'Passed'
+                          : 'Failed'}
+                      </h3>
+                      <p className='text-sm text-gray-600 dark:text-gray-400 mt-1'>
+                        Schema: {responseData.schemaValidation.name}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {!responseData.schemaValidation.passed &&
+                  responseData.schemaValidation.results?.length > 0 && (
+                    <div className='border rounded-lg p-4 bg-white dark:bg-gray-900'>
+                      <h4 className='font-medium text-sm mb-3 text-red-700 dark:text-red-400'>
+                        Validation Errors:
+                      </h4>
+                      <ul className='space-y-2 text-sm'>
+                        {responseData.schemaValidation.results.map(
+                          (issue: any, idx: number) => (
+                            <li
+                              key={idx}
+                              className='flex flex-col border-l-2 border-red-400 pl-2'
+                            >
+                              <span className='font-medium text-gray-800 dark:text-gray-200'>
+                                {issue.field}
+                              </span>
+                              <span className='text-gray-600 dark:text-gray-400'>
+                                {issue.description}
+                              </span>
+                              {issue.value !== undefined &&
+                                issue.value !== null && (
+                                  <span className='text-xs text-gray-400'>
+                                    Value: {String(issue.value)}
+                                  </span>
+                                )}
+                            </li>
+                          )
+                        )}
+                      </ul>
+                    </div>
+                  )}
+              </div>
+            ) : (
+              <div className='text-center py-8'>
+                <div className='text-gray-500 dark:text-gray-400 mb-2'>
+                  No schema validation results
+                </div>
+                <div className='text-sm text-gray-400'>
+                  Schema validation will appear here when available
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

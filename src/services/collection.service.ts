@@ -2,7 +2,6 @@ import {
   API_COLLECTION_IMPORT,
   API_COLLECTION_REQUESTS,
   API_COLLECTIONS,
-  API_UPLOAD_REQUEST_SCHEMA,
 } from '@/config/apiRoutes';
 import { apiRequest } from '@/lib/queryClient';
 import {
@@ -266,16 +265,20 @@ export const duplicateRequest = async ({
 export const renameRequest = async ({
   requestId,
   newName,
+  workspaceId,
 }: {
   requestId: string;
   newName?: string;
+  workspaceId: string;
 }) => {
   try {
     const response = await apiRequest(
       'PUT',
       `${API_COLLECTION_REQUESTS}/${requestId}`,
       {
-        body: newName ? JSON.stringify({ name: newName }) : undefined,
+        body: newName
+          ? JSON.stringify({ name: newName, workspaceId })
+          : undefined,
       }
     );
     if (!response.ok) {
@@ -333,6 +336,7 @@ export const formatRequest = (request: any) => {
     headers: request.Headers || request.headers || [],
     params: request.Params || request.params || [],
     variables: request.Variables || request.variables || {},
+    assertions: request.Assertions || request.assertions || [],
     createdBy: request.CreatedBy || request.createdBy,
     createdAt: request.CreatedAt || request.createdAt,
     updatedAt: request.UpdatedAt || request.updatedAt,

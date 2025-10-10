@@ -20,6 +20,7 @@ import {
   ArrowRight
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import BreadCum from "@/components/BreadCum/Breadcum";
 
 interface FAQItem {
   id: string;
@@ -251,19 +252,25 @@ export default function FAQ() {
   });
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="">
+
+      <BreadCum
+        title="Frequently Asked Questions"
+        subtitle="Everything you need to know about our API testing platform"
+        showCreateButton={false}
+        showQuickGuide={false}
+        buttonTitle="Run Execution"
+        onClickCreateNew={() => console.log("Create execution")}
+        icon={BookOpen}
+        iconBgClass="bg-blue-100"
+        iconColor="#136fb0"
+        iconSize={40}
+      />
       {/* Header */}
-      <div className="bg-white border-b border-slate-200">
-        <div className="px-6 py-8">
+      <div className=" border border-gray-200 bg-background rounded-lg px-4 py-4 animate-fade-in mt-2">
           <div className="text-center">
-            <div className="flex items-center justify-center gap-3 mb-4">
-              <BookOpen className="text-blue-600" size={32} />
-              <h1 className="text-3xl font-bold text-slate-900">Frequently Asked Questions</h1>
-            </div>
-            <p className="text-lg text-slate-600 mb-6">
-              Everything you need to know about our API testing platform
-            </p>
-            <div className="max-w-md mx-auto relative">
+            
+            <div className="mx-auto relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={20} />
               <Input
                 placeholder="Search FAQ..."
@@ -273,10 +280,9 @@ export default function FAQ() {
               />
             </div>
           </div>
-        </div>
       </div>
 
-      <div className="px-2 py-2">
+      <div className="mt-2">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
           {/* Categories Sidebar */}
           <div className="lg:col-span-1">
@@ -368,7 +374,7 @@ export default function FAQ() {
                         <CardHeader className="cursor-pointer hover:bg-slate-50 transition-colors">
                           <div className="flex items-center justify-between">
                             <div className="flex-1">
-                              <CardTitle className="text-left text-base font-medium text-slate-900 pr-4">
+                              <CardTitle className="text-left text-base font-large text-slate-900 pr-4">
                                 {item.question}
                               </CardTitle>
                               <div className="flex items-center gap-2 mt-2">

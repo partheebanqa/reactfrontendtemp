@@ -1,15 +1,19 @@
-import { API_ENVIRONMENT, API_VARIABLES } from '@/config/apiRoutes';
+import {
+  API_ENVIRONMENT,
+  API_VARIABLES,
+  API_VARIABLES_NEW,
+} from '@/config/apiRoutes';
 import { apiRequest } from '@/lib/queryClient';
 import {
   Environment,
-  fetchEnvironmentsResponse,
   FetchVariablesResponse,
   ResponseEnvironment,
 } from '@/shared/types/datamanagement';
+import { FetchEnvironmentsResponse } from '@/shared/types/datamanagement';
 
 export const fetchEnvironments = async (
   workspaceId: string
-): Promise<fetchEnvironmentsResponse> => {
+): Promise<FetchEnvironmentsResponse> => {
   const response = await apiRequest(
     'GET',
     `${API_ENVIRONMENT}?ws=${workspaceId}`
@@ -22,11 +26,24 @@ export const fetchEnvironments = async (
 };
 
 export const fetchVariables = async (
-  environmentId: string
+  workspaceId: string
 ): Promise<FetchVariablesResponse> => {
   const response = await apiRequest(
     'GET',
-    `${API_VARIABLES}?e=${environmentId}&page=1&pageSize=10`
+    `${API_VARIABLES}?ws=${workspaceId}`
+  );
+  if (!response.ok) {
+    throw new Error('Failed to fetch variables');
+  }
+  return response.json();
+};
+
+export const fetchDynamicVariables = async (
+  workspaceId: string
+): Promise<FetchVariablesResponse> => {
+  const response = await apiRequest(
+    'GET',
+    `${API_VARIABLES_NEW}/dynamic?ws=${workspaceId}`
   );
   if (!response.ok) {
     throw new Error('Failed to fetch variables');
@@ -72,13 +89,19 @@ export const deleteEnvironment = async (environmentId: string) => {
 };
 
 export const createVariable = async (variable: any): Promise<any> => {
-  // Replace with your actual variable type
-  const response = await apiRequest('POST', API_VARIABLES, {
+  const url =
+    variable.type === 'static'
+      ? `${API_VARIABLES}`
+      : `${API_VARIABLES_NEW}/dynamic`;
+
+  const response = await apiRequest('POST', url, {
     body: JSON.stringify(variable),
   });
+
   if (!response.ok) {
     throw new Error('Failed to create variable');
   }
+
   return response.json();
 };
 
@@ -93,8 +116,35 @@ export const updateVariable = async (variable: any): Promise<any> => {
   return response.json();
 };
 
+export const updateDynamicVariable = async (variable: any): Promise<any> => {
+  const response = await apiRequest(
+    'PUT',
+    `${API_VARIABLES_NEW}/dynamic/${variable.id}`,
+    {
+      body: JSON.stringify(variable),
+    }
+  );
+  if (!response.ok) {
+    throw new Error('Failed to update dynamic variable');
+  }
+  return response.json();
+};
+
 export const deleteVariable = async (variableId: string): Promise<any> => {
   const response = await apiRequest('DELETE', `${API_VARIABLES}/${variableId}`);
+  if (!response.ok) {
+    throw new Error('Failed to delete variable');
+  }
+  return response.json();
+};
+
+export const deleteDynamicVariable = async (
+  variableId: string
+): Promise<any> => {
+  const response = await apiRequest(
+    'DELETE',
+    `${API_VARIABLES_NEW}/dynamic/${variableId}`
+  );
   if (!response.ok) {
     throw new Error('Failed to delete variable');
   }

@@ -1,4 +1,7 @@
-import React, { useState } from 'react';
+'use client';
+
+import type React from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -16,26 +19,31 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Variable, Environment } from '@/shared/types/datamanagement';
+import type { Variable, Environment } from '@/shared/types/datamanagement';
 import {
   Calendar,
   Code2,
   FileText,
-  Globe,
   Shield,
   Wifi,
   Zap,
+  User,
+  Globe,
+  MapPin,
+  CreditCard,
 } from 'lucide-react';
-import { Switch } from '../ui/switch';
+import { Switch } from '@/components/ui/switch';
 import { allGenerators, getGenerator } from '@/lib/dynamicVariables';
+import { useWorkspace } from '@/hooks/useWorkspace';
 
 interface VariableCreateDialogProps {
   open: boolean;
   setOpen: (val: boolean) => void;
   newVariable: Variable;
   setNewVariable: React.Dispatch<React.SetStateAction<Variable>>;
-  handleCreate: () => void;
+  handleCreate: (payload: any) => void;
   environments: Environment[];
+  type: 'static' | 'dynamic';
 }
 
 const VariableCreateDialog: React.FC<VariableCreateDialogProps> = ({
@@ -45,13 +53,26 @@ const VariableCreateDialog: React.FC<VariableCreateDialogProps> = ({
   setNewVariable,
   handleCreate,
   environments,
+  type,
 }) => {
+  const { currentWorkspace } = useWorkspace();
   const [errors, setErrors] = useState<{
     name?: string;
     environmentId?: string;
     type?: string;
     initialValue?: string;
   }>({});
+
+  useEffect(() => {
+    if (open) {
+      setNewVariable((prev) => ({
+        ...prev,
+        type, // force from prop
+        initialValue: type === 'static' ? prev.initialValue : '',
+        generatorFunction: type === 'dynamic' ? prev.generatorFunction : '',
+      }));
+    }
+  }, [open, type, setNewVariable]);
 
   const validateForm = (): boolean => {
     const newErrors: {
@@ -71,9 +92,9 @@ const VariableCreateDialog: React.FC<VariableCreateDialogProps> = ({
     }
 
     // Validate environment
-    if (!newVariable.environmentId) {
-      newErrors.environmentId = 'Please select an environment';
-    }
+    // if (!newVariable.environmentId) {
+    //   newErrors.environmentId = 'Please select an environment';
+    // }
 
     // Validate type (should already be set by default, but just in case)
     if (!newVariable.type) {
@@ -83,19 +104,6 @@ const VariableCreateDialog: React.FC<VariableCreateDialogProps> = ({
     // Validate initial value (can be optional for some types)
     if (newVariable.type !== 'dynamic' && !newVariable.initialValue.trim()) {
       newErrors.initialValue = 'Initial value is required';
-    } else if (
-      newVariable.type === 'number' &&
-      isNaN(Number(newVariable.initialValue))
-    ) {
-      newErrors.initialValue = 'Initial value must be a valid number';
-    } else if (
-      newVariable.type === 'boolean' &&
-      !['true', 'false', '0', '1'].includes(
-        newVariable.initialValue.toLowerCase()
-      )
-    ) {
-      newErrors.initialValue =
-        'Initial value must be a valid boolean (true/false)';
     }
 
     setErrors(newErrors);
@@ -105,7 +113,117 @@ const VariableCreateDialog: React.FC<VariableCreateDialogProps> = ({
   // Handle form submission with validation
   const handleSubmit = () => {
     if (validateForm()) {
-      handleCreate();
+      const payload: any = {
+        // environmentId: newVariable.environmentId,
+        workspaceId: currentWorkspace?.id,
+        name: newVariable.name,
+        description: newVariable.description,
+        type: newVariable.type,
+        initialValue: newVariable.initialValue,
+        currentValue: newVariable.currentValue,
+      };
+
+      // Handle dynamic variables
+      if (newVariable.type === 'dynamic' && newVariable.generatorFunction) {
+        const generator = getGenerator(newVariable.generatorFunction);
+
+        if (generator?.configSchema) {
+          const finalConfig = {
+            ...Object.fromEntries(
+              Object.entries(generator.configSchema).map(
+                ([key, schema]: [string, any]) => [key, schema.default]
+              )
+            ),
+            ...newVariable.generatorConfig,
+          };
+          setNewVariable((prev) => ({
+            ...prev,
+            generatorConfig: finalConfig,
+          }));
+
+          payload.parameters = finalConfig;
+        } else {
+          payload.parameters = newVariable.generatorConfig || {};
+        }
+
+        payload.generatorId = newVariable.generatorFunction;
+
+        // Add generatorName from the generator's label
+        payload.generatorName = generator?.label;
+
+        // Set category and type based on generator category
+        if (generator?.category === 'custom') {
+          payload.category = 'Custom';
+          // Set type based on generator - number generators vs string generators
+          const numberGenerators = ['randomInteger', 'price'];
+          payload.type = numberGenerators.includes(
+            newVariable.generatorFunction
+          )
+            ? 'number'
+            : 'string';
+        } else if (generator?.category === 'personal') {
+          payload.category = 'Personal';
+          payload.type = 'string';
+        } else if (generator?.category === 'internet') {
+          payload.category = 'Internet';
+          // Set type based on specific generators
+          payload.type =
+            newVariable.generatorFunction === 'boolean' ? 'boolean' : 'string';
+        } else if (generator?.category === 'datetime') {
+          payload.category = 'DateTime';
+          // Set type based on specific generators
+          payload.type =
+            newVariable.generatorFunction === 'year' ? 'number' : 'string';
+        } else if (generator?.category === 'location') {
+          payload.category = 'Location';
+          // Set type based on specific generators
+          const numberGenerators = ['latitude', 'longitude'];
+          payload.type = numberGenerators.includes(
+            newVariable.generatorFunction
+          )
+            ? 'number'
+            : 'string';
+        } else if (generator?.category === 'financial') {
+          payload.category = 'Financial';
+          payload.type = 'string';
+        } else if (generator?.category === 'basic') {
+          payload.category = 'Basic';
+          // Set type based on specific generators
+          payload.type =
+            newVariable.generatorFunction === 'timestamp' ? 'number' : 'string';
+        } else if (generator?.category === 'random') {
+          payload.category = 'Random';
+          // Set type based on specific generators
+          const numberGenerators = ['random_float'];
+          const booleanGenerators = ['random_boolean'];
+          if (numberGenerators.includes(newVariable.generatorFunction)) {
+            payload.type = 'number';
+          } else if (
+            booleanGenerators.includes(newVariable.generatorFunction)
+          ) {
+            payload.type = 'boolean';
+          } else {
+            payload.type = 'string';
+          }
+        } else if (generator?.category === 'auth') {
+          payload.category = 'Authentication';
+          payload.type = 'string';
+        } else if (generator?.category === 'network') {
+          payload.category = 'Network';
+          // Set type based on specific generators
+          payload.type =
+            newVariable.generatorFunction === 'random_port'
+              ? 'number'
+              : 'string';
+        } else if (generator?.category === 'date') {
+          payload.category = 'DateTime';
+          payload.type = 'string';
+        }
+      }
+
+      console.log('Creating variable with payload:', payload);
+
+      handleCreate(payload);
     }
   };
 
@@ -127,7 +245,7 @@ const VariableCreateDialog: React.FC<VariableCreateDialogProps> = ({
             <Input
               placeholder='e.g., USER_ID, API_TOKEN'
               value={newVariable.name}
-              className={errors.name ? 'border-red-500' : ''}
+              className={errors.name ? 'border-destructive' : ''}
               onChange={(e) => {
                 setNewVariable((prev) => ({
                   ...prev,
@@ -142,136 +260,42 @@ const VariableCreateDialog: React.FC<VariableCreateDialogProps> = ({
               }}
             />
             {errors.name ? (
-              <p className='text-xs text-red-500 mt-1'>{errors.name}</p>
+              <p className='text-xs text-destructive mt-1'>{errors.name}</p>
             ) : (
               <p className='text-xs text-muted-foreground mt-1'>
                 Use in requests as:{' '}
-                <code>{'{{' + newVariable.name + '}}'}</code>
-              </p>
-            )}
-          </div>
-
-          {/* Environment */}
-          <div className='space-y-1'>
-            <label className='text-sm font-medium'>Environment</label>
-            <Select
-              value={newVariable.environmentId}
-              onValueChange={(value) => {
-                setNewVariable((prev) => ({ ...prev, environmentId: value }));
-                // Clear error when user selects
-                if (errors.environmentId) {
-                  setErrors((prev) => ({ ...prev, environmentId: undefined }));
-                }
-              }}
-            >
-              <SelectTrigger
-                className={errors.environmentId ? 'border-red-500' : ''}
-              >
-                <SelectValue placeholder='Select environment' />
-              </SelectTrigger>
-              <SelectContent>
-                {environments.map((env) => (
-                  <SelectItem key={env.id} value={env.id}>
-                    {env.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {errors.environmentId && (
-              <p className='text-xs text-red-500 mt-1'>
-                {errors.environmentId}
+                <code className='bg-muted px-1 rounded'>
+                  {'{{' + newVariable.name + '}}'}
+                </code>
               </p>
             )}
           </div>
 
           {/* Type */}
-          {/* <div className='space-y-1'>
+          {/* Type */}
+          <div className='space-y-1'>
             <label className='text-sm font-medium'>Variable Type</label>
-            <Select
-              value={newVariable.type}
-              onValueChange={(value) => {
-                setNewVariable((prev) => ({
-                  ...prev,
-                  type: value,
-                  initialValue: '',
-                  currentValue: '',
-                }));
-                // Clear error when user selects
-                if (errors.type) {
-                  setErrors(prev => ({ ...prev, type: undefined }));
-                }
-              }}
-            >
-              <SelectTrigger className={errors.type ? 'border-red-500' : ''}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value='string'>String</SelectItem>
-                <SelectItem value='number'>Number</SelectItem>
-                <SelectItem value='boolean'>Boolean</SelectItem>
-                <SelectItem value='secret'>Secret</SelectItem>
-                <SelectItem value='environment'>Environment</SelectItem>
-                <SelectItem value='dynamic'>Dynamic</SelectItem>
-              </SelectContent>
-            </Select>
-            {errors.type && (
-              <p className='text-xs text-red-500 mt-1'>{errors.type}</p>
-            )}
-          </div> */}
-
-          <div>
-            <label className='text-sm font-medium'>Variable Type</label>
-            <Select
-              value={newVariable.type}
-              onValueChange={(value: any) =>
-                setNewVariable((prev) => ({
-                  ...prev,
-                  type: value,
-                  value: value === 'static' ? prev.value : '',
-                  generatorFunction:
-                    value === 'dynamic' ? prev.generatorFunction : '',
-                }))
-              }
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value='static'>
-                  <div className='flex items-center gap-2'>
-                    <FileText className='w-4 h-4' />
-                    <div>
-                      <div className='font-medium'>Static Variable</div>
-                      <div className='text-xs text-muted-foreground'>
-                        Fixed value that doesn't change
-                      </div>
-                    </div>
-                  </div>
-                </SelectItem>
-                <SelectItem value='dynamic'>
-                  <div className='flex items-center gap-2'>
-                    <Zap className='w-4 h-4' />
-                    <div>
-                      <div className='font-medium'>Dynamic Variable</div>
-                      <div className='text-xs text-muted-foreground'>
-                        Generated at runtime
-                      </div>
-                    </div>
-                  </div>
-                </SelectItem>
-                {/* <SelectItem value='environment'>
-                  <div className='flex items-center gap-2'>
-                    <Globe className='w-4 h-4' />
-                    <div>
-                      <div className='font-medium'>Environment Variable</div>
-                      <div className='text-xs text-muted-foreground'>
-                        From system environment
-                      </div>
-                    </div>
-                  </div>
-                </SelectItem> */}
-              </SelectContent>
-            </Select>
+            <div className='flex items-center gap-2 p-2 border rounded-md bg-muted/50'>
+              {type === 'static' ? (
+                <>
+                  <FileText className='w-4 h-4 text-muted-foreground' />
+                  <span className='text-sm font-medium'>Static Variable -</span>
+                  <span className='text-xs text-muted-foreground ml-2'>
+                    Fixed value that doesn't change
+                  </span>
+                </>
+              ) : (
+                <>
+                  <Zap className='w-4 h-4 text-muted-foreground' />
+                  <span className='text-sm font-medium'>
+                    Dynamic Variable -
+                  </span>
+                  <span className='text-xs text-muted-foreground ml-2'>
+                    Generated at runtime
+                  </span>
+                </>
+              )}
+            </div>
           </div>
 
           {/* Static Variable Value with Secret Toggle */}
@@ -283,14 +307,26 @@ const VariableCreateDialog: React.FC<VariableCreateDialogProps> = ({
                   placeholder='Enter fixed value'
                   type={newVariable.isSecret ? 'password' : 'text'}
                   value={newVariable.initialValue}
-                  onChange={(e) =>
+                  className={errors.initialValue ? 'border-destructive' : ''}
+                  onChange={(e) => {
                     setNewVariable((prev) => ({
                       ...prev,
                       initialValue: e.target.value,
                       currentValue: e.target.value,
-                    }))
-                  }
+                    }));
+                    if (errors.initialValue) {
+                      setErrors((prev) => ({
+                        ...prev,
+                        initialValue: undefined,
+                      }));
+                    }
+                  }}
                 />
+                {errors.initialValue && (
+                  <p className='text-xs text-destructive mt-1'>
+                    {errors.initialValue}
+                  </p>
+                )}
 
                 <p className='text-xs text-muted-foreground mt-1'>
                   This value will remain constant for all requests
@@ -339,7 +375,7 @@ const VariableCreateDialog: React.FC<VariableCreateDialogProps> = ({
                     setNewVariable((prev) => ({
                       ...prev,
                       generatorFunction: value,
-                      generatorConfig: {},
+                      generatorConfig: {}, // Reset config when changing generator
                     }))
                   }
                 >
@@ -349,6 +385,132 @@ const VariableCreateDialog: React.FC<VariableCreateDialogProps> = ({
                   <SelectContent className='max-h-[300px]'>
                     {/* Group by category */}
                     <div className='px-2 py-1.5 text-xs font-semibold text-muted-foreground'>
+                      Custom Generators
+                    </div>
+                    {allGenerators
+                      .filter((g) => g.category === 'custom')
+                      .map((generator) => (
+                        <SelectItem key={generator.name} value={generator.name}>
+                          <div className='flex items-center gap-2'>
+                            <Zap className='w-4 h-4' />
+                            <div>
+                              <div className='font-medium'>
+                                {generator.label}
+                              </div>
+                              <div className='text-xs text-muted-foreground'>
+                                {generator.description}
+                              </div>
+                            </div>
+                          </div>
+                        </SelectItem>
+                      ))}
+
+                    <div className='px-2 py-1.5 text-xs font-semibold text-muted-foreground border-t mt-2 pt-2'>
+                      Personal Data
+                    </div>
+                    {allGenerators
+                      .filter((g) => g.category === 'personal')
+                      .map((generator) => (
+                        <SelectItem key={generator.name} value={generator.name}>
+                          <div className='flex items-center gap-2'>
+                            <User className='w-4 h-4' />
+                            <div>
+                              <div className='font-medium'>
+                                {generator.label}
+                              </div>
+                              <div className='text-xs text-muted-foreground'>
+                                {generator.description}
+                              </div>
+                            </div>
+                          </div>
+                        </SelectItem>
+                      ))}
+
+                    <div className='px-2 py-1.5 text-xs font-semibold text-muted-foreground border-t mt-2 pt-2'>
+                      Internet
+                    </div>
+                    {allGenerators
+                      .filter((g) => g.category === 'internet')
+                      .map((generator) => (
+                        <SelectItem key={generator.name} value={generator.name}>
+                          <div className='flex items-center gap-2'>
+                            <Globe className='w-4 h-4' />
+                            <div>
+                              <div className='font-medium'>
+                                {generator.label}
+                              </div>
+                              <div className='text-xs text-muted-foreground'>
+                                {generator.description}
+                              </div>
+                            </div>
+                          </div>
+                        </SelectItem>
+                      ))}
+
+                    <div className='px-2 py-1.5 text-xs font-semibold text-muted-foreground border-t mt-2 pt-2'>
+                      Date & Time
+                    </div>
+                    {allGenerators
+                      .filter((g) => g.category === 'datetime')
+                      .map((generator) => (
+                        <SelectItem key={generator.name} value={generator.name}>
+                          <div className='flex items-center gap-2'>
+                            <Calendar className='w-4 h-4' />
+                            <div>
+                              <div className='font-medium'>
+                                {generator.label}
+                              </div>
+                              <div className='text-xs text-muted-foreground'>
+                                {generator.description}
+                              </div>
+                            </div>
+                          </div>
+                        </SelectItem>
+                      ))}
+
+                    <div className='px-2 py-1.5 text-xs font-semibold text-muted-foreground border-t mt-2 pt-2'>
+                      Location
+                    </div>
+                    {allGenerators
+                      .filter((g) => g.category === 'location')
+                      .map((generator) => (
+                        <SelectItem key={generator.name} value={generator.name}>
+                          <div className='flex items-center gap-2'>
+                            <MapPin className='w-4 h-4' />
+                            <div>
+                              <div className='font-medium'>
+                                {generator.label}
+                              </div>
+                              <div className='text-xs text-muted-foreground'>
+                                {generator.description}
+                              </div>
+                            </div>
+                          </div>
+                        </SelectItem>
+                      ))}
+
+                    <div className='px-2 py-1.5 text-xs font-semibold text-muted-foreground border-t mt-2 pt-2'>
+                      Financial
+                    </div>
+                    {allGenerators
+                      .filter((g) => g.category === 'financial')
+                      .map((generator) => (
+                        <SelectItem key={generator.name} value={generator.name}>
+                          <div className='flex items-center gap-2'>
+                            <CreditCard className='w-4 h-4' />
+                            <div>
+                              <div className='font-medium'>
+                                {generator.label}
+                              </div>
+                              <div className='text-xs text-muted-foreground'>
+                                {generator.description}
+                              </div>
+                            </div>
+                          </div>
+                        </SelectItem>
+                      ))}
+
+                    <div className='px-2 py-1.5 text-xs font-semibold text-muted-foreground border-t mt-2 pt-2'>
                       Basic
                     </div>
                     {allGenerators
@@ -412,27 +574,6 @@ const VariableCreateDialog: React.FC<VariableCreateDialogProps> = ({
                       ))}
 
                     <div className='px-2 py-1.5 text-xs font-semibold text-muted-foreground border-t mt-2 pt-2'>
-                      Date & Time
-                    </div>
-                    {allGenerators
-                      .filter((g) => g.category === 'date')
-                      .map((generator) => (
-                        <SelectItem key={generator.name} value={generator.name}>
-                          <div className='flex items-center gap-2'>
-                            <Calendar className='w-4 h-4' />
-                            <div>
-                              <div className='font-medium'>
-                                {generator.label}
-                              </div>
-                              <div className='text-xs text-muted-foreground'>
-                                {generator.description}
-                              </div>
-                            </div>
-                          </div>
-                        </SelectItem>
-                      ))}
-
-                    <div className='px-2 py-1.5 text-xs font-semibold text-muted-foreground border-t mt-2 pt-2'>
                       Network
                     </div>
                     {allGenerators
@@ -470,31 +611,95 @@ const VariableCreateDialog: React.FC<VariableCreateDialogProps> = ({
                           <div key={key} className='space-y-1'>
                             <label className='text-xs font-medium capitalize'>
                               {key.replace(/_/g, ' ')}
+                              {schema.min !== undefined &&
+                                schema.max !== undefined && (
+                                  <span className='text-muted-foreground ml-1'>
+                                    ({schema.min} - {schema.max})
+                                  </span>
+                                )}
                             </label>
-                            <Input
-                              type={schema.type}
-                              placeholder={schema.default?.toString() || ''}
-                              value={
-                                (newVariable.generatorConfig?.[key] ??
-                                  schema.default) ||
-                                ''
-                              }
-                              onChange={(e) => {
-                                const value =
-                                  schema.type === 'number'
-                                    ? parseInt(e.target.value) || schema.default
-                                    : e.target.value;
-                                setNewVariable((prev) => ({
-                                  ...prev,
-                                  generatorConfig: {
-                                    ...prev.generatorConfig,
-                                    [key]: value,
-                                  },
-                                }));
-                              }}
-                              min={schema.min}
-                              max={schema.max}
-                            />
+                            {schema.type === 'boolean' ? (
+                              <div className='flex items-center space-x-2'>
+                                <Switch
+                                  checked={
+                                    newVariable.generatorConfig?.[key] ??
+                                    schema.default
+                                  }
+                                  onCheckedChange={(checked) => {
+                                    setNewVariable((prev) => ({
+                                      ...prev,
+                                      generatorConfig: {
+                                        ...prev.generatorConfig,
+                                        [key]: checked,
+                                      },
+                                    }));
+                                  }}
+                                />
+                                <span className='text-sm'>
+                                  {newVariable.generatorConfig?.[key] ??
+                                  schema.default
+                                    ? 'Yes'
+                                    : 'No'}
+                                </span>
+                              </div>
+                            ) : (
+                              <Input
+                                type={schema.type}
+                                placeholder={schema.default?.toString() || ''}
+                                value={
+                                  newVariable.generatorConfig?.[
+                                    key
+                                  ]?.toString() ||
+                                  schema.default?.toString() ||
+                                  ''
+                                }
+                                onChange={(e) => {
+                                  let value: any = e.target.value;
+
+                                  if (schema.type === 'number') {
+                                    // Parse as number and validate against min/max
+                                    const numValue = Number.parseFloat(value);
+                                    if (!isNaN(numValue)) {
+                                      // Apply min/max constraints if they exist
+                                      if (
+                                        schema.min !== undefined &&
+                                        numValue < schema.min
+                                      ) {
+                                        value = schema.min;
+                                      } else if (
+                                        schema.max !== undefined &&
+                                        numValue > schema.max
+                                      ) {
+                                        value = schema.max;
+                                      } else {
+                                        value = numValue;
+                                      }
+                                    } else {
+                                      // If invalid number, use default or current value
+                                      value =
+                                        newVariable.generatorConfig?.[key] ??
+                                        schema.default;
+                                    }
+                                  }
+
+                                  setNewVariable((prev) => ({
+                                    ...prev,
+                                    generatorConfig: {
+                                      ...prev.generatorConfig,
+                                      [key]: value,
+                                    },
+                                  }));
+                                }}
+                                min={schema.min}
+                                max={schema.max}
+                              />
+                            )}
+                            <p className='text-xs text-muted-foreground'>
+                              Current:{' '}
+                              {newVariable.generatorConfig?.[key]?.toString() ||
+                                schema.default?.toString() ||
+                                'Not set'}
+                            </p>
                           </div>
                         )
                       )}
@@ -515,85 +720,43 @@ const VariableCreateDialog: React.FC<VariableCreateDialogProps> = ({
                           newVariable.generatorFunction
                         );
                         if (generator) {
-                          const preview = generator.generate(
-                            newVariable.generatorConfig
-                          );
+                          const config = {
+                            ...(generator.configSchema &&
+                              Object.fromEntries(
+                                Object.entries(generator.configSchema).map(
+                                  ([key, schema]: [string, any]) => [
+                                    key,
+                                    newVariable.generatorConfig?.[key] ??
+                                      schema.default,
+                                  ]
+                                )
+                              )),
+                            ...newVariable.generatorConfig,
+                          };
+
+                          const preview = generator.generate(config);
                           return String(preview);
                         }
                         return 'Invalid generator';
                       } catch (error) {
-                        return 'Error generating preview';
+                        return `Error: ${
+                          error instanceof Error
+                            ? error.message
+                            : 'Unknown error'
+                        }`;
                       }
                     })()}
                   </div>
+                  {newVariable.generatorConfig &&
+                    Object.keys(newVariable.generatorConfig).length > 0 && (
+                      <div className='text-xs text-blue-600 dark:text-blue-400 mt-2'>
+                        Config: {JSON.stringify(newVariable.generatorConfig)}
+                      </div>
+                    )}
                 </div>
               )}
             </div>
           )}
-
-          {/* Environment Variable */}
-          {newVariable.type === 'environment' && (
-            <div>
-              <label className='text-sm font-medium'>
-                Environment Variable Key
-              </label>
-              <Input
-                placeholder='e.g., API_BASE_URL, DATABASE_URL'
-                value={newVariable.value}
-                onChange={(e) =>
-                  setNewVariable((prev) => ({ ...prev, value: e.target.value }))
-                }
-              />
-              <p className='text-xs text-muted-foreground mt-1'>
-                This will read the value from your system environment variables
-              </p>
-            </div>
-          )}
-
-          {/* <div>
-            <label className="text-sm font-medium">Scope</label>
-            <Select
-              value={newVariable.scope}
-              onValueChange={(value: any) =>
-                setNewVariable((prev) => ({ ...prev, scope: value }))
-              }
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="global">Global (All Projects)</SelectItem>
-                <SelectItem value="project">Project Specific</SelectItem>
-                <SelectItem value="environment">
-                  Environment Specific
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div> */}
-
-          {/* Initial Value */}
-          {/* <div className='space-y-1'>
-            <label className='text-sm font-medium'>Initial Value</label>
-            <Input
-              placeholder='Enter initial value'
-              value={newVariable.initialValue}
-              className={errors.initialValue ? 'border-red-500' : ''}
-              onChange={(e) => {
-                setNewVariable((prev) => ({
-                  ...prev,
-                  initialValue: e.target.value,
-                  currentValue: e.target.value,
-                }));
-                // Clear error when user types
-                if (errors.initialValue) {
-                  setErrors((prev) => ({ ...prev, initialValue: undefined }));
-                }
-              }}
-            />
-            {errors.initialValue && (
-              <p className='text-xs text-red-500 mt-1'>{errors.initialValue}</p>
-            )}
-          </div> */}
 
           {/* Description */}
           <div className='space-y-1'>
@@ -617,7 +780,6 @@ const VariableCreateDialog: React.FC<VariableCreateDialogProps> = ({
               variant='outline'
               onClick={() => {
                 setOpen(false);
-                // Clear all errors when closing the dialog
                 setErrors({});
               }}
             >

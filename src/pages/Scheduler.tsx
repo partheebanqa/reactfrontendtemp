@@ -1,199 +1,194 @@
-import { useState, useEffect } from 'react';
-import { Plus } from 'lucide-react';
+'use client';
+
+import { useState } from 'react';
+import { useTestSuites, useRequestChains } from '@/hooks/use-api';
+import { useWorkspace } from '@/hooks/useWorkspace';
+import { useQuery } from '@tanstack/react-query';
+import { getScheduleList } from '@/services/scheduler.service';
+import ScheduleCreate from '@/components/Scheduler/ScheduleCreate';
+import ScheduleEdit from '@/components/Scheduler/ScheduleEdit';
+import ScheduleList from '@/components/Scheduler/ScheduleList';
+import { CalendarClock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Info } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
-import { useToast } from '@/hooks/useToast';
-import SearchAndFilters from '@/components/Scheduler/SearchAndFilters';
-import SchedulesTable from '@/components/Scheduler/SchedulesTable';
-import CreateScheduleForm from '@/components/Scheduler/CreateScheduleForm';
-import EditScheduleForm from '@/components/Scheduler/EditScheduleForm';
-import { useSchedules, useTestSuites, useRequestChains } from '@/hooks/use-api';
-import HelpLink from '@/components/HelpModal/HelpLink';
 
-export default function Scheduler() {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [typeFilter, setTypeFilter] = useState('all');
-  const [executionModeFilter, setExecutionModeFilter] = useState('all');
-  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+const Scheduler = () => {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState<any>(null);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [open, setOpen] = useState(false);
 
-  const itemsPerPage = 10;
-  const { toast } = useToast();
+  const { currentWorkspace } = useWorkspace();
 
+  // Use the service function directly with React Query
   const {
-    data: schedules = [],
+    data: schedulesResponse,
     refetch: refetchSchedules,
     isLoading: schedulesLoading,
-  } = useSchedules();
-  const { data: testSuites = [] } = useTestSuites();
+  } = useQuery({
+    queryKey: ['schedules', currentWorkspace?.id],
+    queryFn: () => getScheduleList({ workspaceId: currentWorkspace!.id }),
+    enabled: !!currentWorkspace?.id,
+  });
+
+  const { data: testSuites = [] } = useTestSuites(currentWorkspace?.id);
   const { data: requestChains = [] } = useRequestChains();
 
-  const handleCreateSchedule = (data: any) => {
-    console.log('Creating schedule:', data);
-    setCreateDialogOpen(false);
-    toast({
-      title: 'Success',
-      description: 'Schedule created successfully',
-    });
-    refetchSchedules();
-  };
-
-  const handleEditSchedule = (data: any) => {
-    console.log('Updating schedule:', data);
-    setEditDialogOpen(false);
-    setEditingSchedule(null);
-    toast({
-      title: 'Success',
-      description: 'Schedule updated successfully',
-    });
-    refetchSchedules();
-  };
+  // Extract schedules array from the API response
+  const schedules = schedulesResponse?.schedules || [];
 
   const handleEdit = (schedule: any) => {
     setEditingSchedule(schedule);
     setEditDialogOpen(true);
   };
 
-  const handleRun = (schedule: any) => {
-    toast({
-      title: 'Schedule Running',
-      description: `Running ${schedule.name}...`,
-    });
-  };
-
-  const handleClone = (schedule: any) => {
-    toast({
-      title: 'Schedule Cloned',
-      description: `${schedule.name} has been cloned`,
-    });
+  const handleScheduleCreated = () => {
     refetchSchedules();
   };
 
-  const handleDelete = (schedule: any) => {
-    toast({
-      title: 'Schedule Deleted',
-      description: `${schedule.name} has been deleted`,
-    });
+  const handleScheduleUpdated = () => {
     refetchSchedules();
   };
-
-  // Filter schedules based on search and filters
-  const filteredSchedules = Array.isArray(schedules)
-    ? schedules.filter((schedule: any) => {
-      const matchesSearch =
-        schedule.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        schedule.testSuite?.name
-          ?.toLowerCase()
-          .includes(searchQuery.toLowerCase());
-
-      const matchesType =
-        typeFilter === 'all' ||
-        (typeFilter === 'test-suite' && schedule.testSuite) ||
-        (typeFilter === 'request-chain' && !schedule.testSuite);
-
-      const matchesExecutionMode =
-        executionModeFilter === 'all' ||
-        (executionModeFilter === 'one-time' &&
-          schedule.scheduleType === 'one-time') ||
-        (executionModeFilter === 'recurring' &&
-          schedule.scheduleType === 'recurring');
-
-      return matchesSearch && matchesType && matchesExecutionMode;
-    })
-    : [];
-
-  // Pagination logic
-  const totalItems = filteredSchedules.length;
-  const totalPages = Math.ceil(totalItems / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedSchedules = filteredSchedules.slice(
-    startIndex,
-    startIndex + itemsPerPage
-  );
-
-  // Reset to first page when filters change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchQuery, typeFilter, executionModeFilter]);
 
   return (
-    <div className='min-h-screen bg-gray-50'>
+    <>
       {/* Header */}
-      <header className='bg-white border-b border-gray-200 px-6 py-4'>
+      <header className='border border-gray-200 bg-background rounded-lg px-4 py-4 animate-fade-in mb-2'>
         <div className='flex items-center justify-between'>
-          <div>
-            <h1 className='text-2xl font-semibold text-gray-900'>Scheduler</h1>
-            <p className='text-sm text-gray-500 mt-1'>
-              Configure automated test execution schedules
-            </p>
+          <div className='flex items-center justify-between gap-4'>
+            <div>
+              <CalendarClock
+                className='bg-[#f9e3fc] p-2 rounded'
+                size={40}
+                color='#660275'
+              />
+            </div>
+            <div>
+              <h2 className='text-2xl font-bold text-foreground'>Scheduler</h2>
+              <p className='text-muted-foreground text-md'>
+                Configure automated test execution schedules
+              </p>
+            </div>
           </div>
-          <div className='flex items-center gap-2'>
-            <Button onClick={handleCreateSchedule} className='gap-2'>
-              <Plus className='w-4 h-4' />
-              Create Schedule
+          <div className='flex items-center space-x-4'>
+            <ScheduleCreate
+              testSuites={testSuites}
+              requestChains={requestChains}
+              onScheduleCreated={handleScheduleCreated}
+            />
+            <Button
+              variant='outline'
+              className='hover-scale bg-transparent'
+              onClick={() => setOpen(true)}
+            >
+              <Info className='mr-2' size={16} />
+              Quick Guide
             </Button>
-            <HelpLink />
+
+            {/* Quick Guide Modal */}
+            <Dialog open={open} onOpenChange={setOpen}>
+              <DialogContent className='max-w-3xl'>
+                <DialogHeader>
+                  <DialogTitle>🚀 Guided Onboarding: Scheduler</DialogTitle>
+                  <DialogDescription className='max-h-[80vh] overflow-y-auto pr-2'>
+                    <div>
+                      <p className='mb-4 text-base font-medium mt-4'>
+                        Here's how to get started with the Scheduler:
+                      </p>
+                      <ul className='list-none pl-5 space-y-2 text-sm'>
+                        <li>
+                          🟩{' '}
+                          <b className='text-[#000000]'>
+                            Step 1: Create a Schedule
+                          </b>{' '}
+                          – Click "New Schedule\" to create automated test
+                          execution schedules.
+                        </li>
+                        <li>
+                          🟨{' '}
+                          <b className='text-[#000000]'>
+                            Step 2: Choose Target
+                          </b>{' '}
+                          – Select either a Test Suite or Request Chain to
+                          schedule for execution.
+                        </li>
+                        <li>
+                          🟦{' '}
+                          <b className='text-[#000000]'>
+                            Step 3: Set Execution Mode
+                          </b>{' '}
+                          – Choose between one-time execution or recurring
+                          schedules.
+                        </li>
+                        <li>
+                          🟪{' '}
+                          <b className='text-[#000000]'>
+                            Step 4: Configure Timing
+                          </b>{' '}
+                          – Set the date, time, and timezone for your schedule
+                          execution.
+                        </li>
+                        <li>
+                          🟧{' '}
+                          <b className='text-[#000000]'>
+                            Step 5: Advanced Settings
+                          </b>{' '}
+                          – Configure retry attempts, email notifications, and
+                          stop conditions.
+                        </li>
+                        <li>
+                          🟥{' '}
+                          <b className='text-[#000000]'>
+                            Step 6: Manage Schedules
+                          </b>{' '}
+                          – View, edit, enable/disable, clone, or delete your
+                          schedules from the list.
+                        </li>
+                        <li>
+                          ✅{' '}
+                          <b className='text-[#000000]'>
+                            Final Step: Monitor Execution
+                          </b>{' '}
+                          – Your schedules will run automatically at the
+                          specified times.
+                        </li>
+                      </ul>
+                    </div>
+                  </DialogDescription>
+                </DialogHeader>
+              </DialogContent>
+            </Dialog>
           </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <div className='p-6'>
-        <div className='bg-white rounded-lg border border-gray-200'>
-          <div className='p-4 border-b border-gray-200'>
-            <SearchAndFilters
-              searchQuery={searchQuery}
-              setSearchQuery={setSearchQuery}
-              typeFilter={typeFilter}
-              setTypeFilter={setTypeFilter}
-              executionModeFilter={executionModeFilter}
-              setExecutionModeFilter={setExecutionModeFilter}
-              refetchSchedules={refetchSchedules}
-              schedulesLoading={schedulesLoading}
-            />
-          </div>
-
-          <SchedulesTable
-            schedules={paginatedSchedules}
-            totalItems={totalItems}
-            totalPages={totalPages}
-            currentPage={currentPage}
-            setCurrentPage={setCurrentPage}
-            onEdit={handleEdit}
-            onRun={handleRun}
-            onClone={handleClone}
-            onDelete={handleDelete}
-          />
-        </div>
+      <div className='space-y-2'>
+        <ScheduleList
+          schedules={schedules}
+          schedulesLoading={schedulesLoading}
+          onRefresh={refetchSchedules}
+          onEdit={handleEdit}
+        />
       </div>
 
-      {/* Edit Dialog */}
-      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className='max-w-2xl max-h-[90vh] overflow-y-auto'>
-          <DialogHeader>
-            <DialogTitle className='text-xl font-semibold'>
-              Edit Schedule
-            </DialogTitle>
-          </DialogHeader>
-          {editingSchedule && (
-            <EditScheduleForm
-              schedule={editingSchedule}
-              testSuites={testSuites}
-              requestChains={requestChains}
-              onSubmit={handleEditSchedule}
-              onCancel={() => setEditDialogOpen(false)}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
-    </div>
+      <ScheduleEdit
+        editDialogOpen={editDialogOpen}
+        setEditDialogOpen={setEditDialogOpen}
+        editingSchedule={editingSchedule}
+        setEditingSchedule={setEditingSchedule}
+        testSuites={testSuites}
+        requestChains={requestChains}
+        onScheduleUpdated={handleScheduleUpdated}
+      />
+    </>
   );
-}
+};
+
+export default Scheduler;

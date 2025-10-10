@@ -183,7 +183,7 @@ export const useImpotPostmanCollectionMutation = () => {
 export const useImpotCollectionJsonMutation = () => {
   const collectionQuery = useCollectionQuery();
   return useMutation({
-    // mutationFn: importCollectionJson,
+    mutationFn: importCollectionJson,
     onSuccess: async (response) => {
       collectionQuery.refetch();
       return response;
@@ -216,7 +216,8 @@ export const useRenameRequestMutation = () => {
     onSuccess: (data, variables) => {
       collectionActions.renameRequest(
         variables?.newName || '',
-        variables.requestId
+        variables.requestId,
+        variables.workspaceId || ''
       );
     },
     onError: (error) => {

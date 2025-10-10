@@ -97,6 +97,7 @@ const getTestSuiteReport = async (testSuiteId: string, executionId: string) => {
     'GET',
     `${API_REPORTS}/test-suites/${testSuiteId}?execution_id=${executionId}`
   );
+  // console.log(response?.json(), "response")
 
   if (!response.ok) {
     throw new Error('Failed to fetch test suite report');

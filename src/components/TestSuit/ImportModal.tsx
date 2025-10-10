@@ -61,20 +61,27 @@ export const ImportModal: React.FC<ImportModalProps> = ({
     null
   );
 
+  console.log('apiData123:', apiData);
+
   const collections: TransformedCollection[] = React.useMemo(() => {
     if (!apiData?.collections) return [];
 
-    return apiData.collections.map((collection) => ({
-      id: collection.collectionId,
-      name: collection.collectionName,
-      requestCount: collection.requests.length,
-      requests: collection.requests.map((request) => ({
-        ...request,
-        endpoint: request.url,
-        description: `${request.method} ${request.url}`,
-        testCases: { functional: 0, total: 0 },
-      })),
-    }));
+    return apiData.collections
+      .filter(
+        (collection) =>
+          Array.isArray(collection.requests) && collection.requests.length > 0
+      ) // skip if no requests
+      .map((collection) => ({
+        id: collection.collectionId,
+        name: collection.collectionName,
+        requestCount: collection.requests.length,
+        requests: collection.requests.map((request) => ({
+          ...request,
+          endpoint: request.url,
+          description: `${request.method} ${request.url}`,
+          testCases: { functional: 0, total: 0 },
+        })),
+      }));
   }, [apiData]);
 
   // React.useEffect(() => {
@@ -299,7 +306,9 @@ export const ImportModal: React.FC<ImportModalProps> = ({
   };
 
   const [location] = useLocation();
-  const isRequestChainsRoute = location === '/request-chains';
+  const isRequestChainsRoute =
+    location === '/request-chains/create' ||
+    (location.startsWith('/request-chains/') && location.endsWith('/edit'));
 
   if (isLoading) {
     return (

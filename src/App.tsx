@@ -4,18 +4,21 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Router from "./routes";
 import { HelmetProvider } from "react-helmet-async";
+import { CurrentPlanProvider } from "./context/CurrentPlanContext";
 
 function App() {
   try {
     return (
-      <HelmetProvider>
-        <QueryClientProvider client={queryClient}>
-          <TooltipProvider>
-            <Toaster />
-            <Router />
-          </TooltipProvider>
-        </QueryClientProvider>
-      </HelmetProvider>
+      <QueryClientProvider client={queryClient}>
+        <HelmetProvider>
+          <CurrentPlanProvider>
+            <TooltipProvider>
+              <Toaster />
+              <Router />
+            </TooltipProvider>
+          </CurrentPlanProvider>
+        </HelmetProvider>
+      </QueryClientProvider>
     );
   } catch (error) {
     console.error("App error:", error);
