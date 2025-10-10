@@ -1,4 +1,3 @@
-import { toast } from '@/hooks/use-toast';
 import type {
   APIRequest,
   ExecutionLog,
@@ -328,19 +327,6 @@ export const mapDynamicToStatic = (
   dynamicVariables: any[],
   overrides: DynamicVariableOverride[] = []
 ) => {
-  const randInt = (min: number, max: number) =>
-    Math.floor(Math.random() * (max - min + 1)) + min;
-
-  const randString = (len: number) =>
-    Array.from({ length: len }, () =>
-      Math.random().toString(36).charAt(2)
-    ).join('');
-
-  const fakeName = () =>
-    ['Alice Johnson', 'Bob Smith', 'Charlie Brown'][
-      Math.floor(Math.random() * 3)
-    ];
-
   return dynamicVariables.map((d) => {
     const override = overrides.find((o) => o.name === d.name);
     if (override) {
@@ -363,21 +349,7 @@ export const mapDynamicToStatic = (
       };
     }
 
-    let generated: string | number;
-
-    switch (d.generatorId) {
-      case 'randomString':
-        generated = randString(d.parameters?.length || 8);
-        break;
-      case 'randomInteger':
-        generated = randInt(d.parameters?.min || 0, d.parameters?.max || 100);
-        break;
-      case 'name':
-        generated = fakeName();
-        break;
-      default:
-        generated = '';
-    }
+    const generated = generateDynamicValueById(d.generatorId, d.parameters);
 
     return {
       id: d.id,
@@ -402,36 +374,10 @@ export const mapDynamicToStatic = (
 // Common function to regenerate dynamic variable values
 export const regenerateDynamicVariable = (dynamicVar: any) => {
   if (!dynamicVar) return '';
-
-  const randInt = (min: number, max: number) =>
-    Math.floor(Math.random() * (max - min + 1)) + min;
-  const randString = (len: number) =>
-    Array.from({ length: len }, () =>
-      Math.random().toString(36).charAt(2)
-    ).join('');
-  const fakeName = () =>
-    ['Alice Johnson', 'Bob Smith', 'Charlie Brown'][
-      Math.floor(Math.random() * 3)
-    ];
-
-  let newValue: string | number;
-  switch (dynamicVar.generatorId) {
-    case 'randomString':
-      newValue = randString(dynamicVar.parameters?.length || 8);
-      break;
-    case 'randomInteger':
-      newValue = randInt(
-        dynamicVar.parameters?.min || 0,
-        dynamicVar.parameters?.max || 100
-      );
-      break;
-    case 'name':
-      newValue = fakeName();
-      break;
-    default:
-      newValue = '';
-  }
-
+  const newValue = generateDynamicValueById(
+    dynamicVar.generatorId,
+    dynamicVar.parameters
+  );
   return String(newValue);
 };
 
@@ -538,3 +484,540 @@ export const calculateAutocompletePosition = (
     left: rect.left + window.scrollX,
   };
 };
+
+function generateDynamicValueById(id: string, params: any = {}): string {
+  const randInt = (min: number, max: number) =>
+    Math.floor(Math.random() * (max - min + 1)) + min;
+
+  const pick = <T>(arr: T[]) => arr[Math.floor(Math.random() * arr.length)];
+
+  const randStringFrom = (len: number, chars: string) => {
+    let out = '';
+    for (let i = 0; i < len; i++)
+      out += chars.charAt(Math.floor(Math.random() * chars.length));
+    return out;
+  };
+
+  const randString = (len: number) =>
+    randStringFrom(
+      len,
+      'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
+    );
+
+  const uuid = () =>
+    typeof crypto !== 'undefined' && crypto.randomUUID
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
+  const nowIso = () => new Date().toISOString();
+
+  const dateOnly = (d = new Date()) => d.toISOString().split('T')[0];
+
+  const ensureFloat = (min = 0, max = 100, decimals = 2) => {
+    const val = Math.random() * (max - min) + min;
+    return Number.parseFloat(val.toFixed(decimals)).toString();
+  };
+
+  const genPassword = (cfg: any) => {
+    const config = {
+      length: cfg?.length ?? 12,
+      includeUpper: cfg?.includeUpper ?? true,
+      includeLower: cfg?.includeLower ?? true,
+      includeDigit: cfg?.includeDigit ?? true,
+      includeSpecial: cfg?.includeSpecial ?? true,
+    };
+    let chars = '';
+    if (config.includeUpper) chars += 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    if (config.includeLower) chars += 'abcdefghijklmnopqrstuvwxyz';
+    if (config.includeDigit) chars += '0123456789';
+    if (config.includeSpecial) chars += '!@#$%^&*()_+-=[]{}|;:,.<>?';
+    if (!chars) chars = 'abcdefghijklmnopqrstuvwxyz';
+    return randStringFrom(config.length, chars);
+  };
+
+  const domains = [
+    'example.com',
+    'test.com',
+    'demo.org',
+    'sample.net',
+    'gmail.com',
+    'yahoo.com',
+    'outlook.com',
+    'hotmail.com',
+  ];
+
+  switch (id) {
+    // basic / date
+    case 'timestamp':
+      return String(Date.now());
+    case 'iso_date':
+      return nowIso();
+    case 'date_formatted':
+      return dateOnly();
+
+    // random
+    case 'random_uuid':
+      return uuid();
+    case 'random_email': {
+      const local = Math.random().toString(36).substring(2, 10);
+      const domain = pick(domains);
+      return `${local}@${domain}`;
+    }
+    case 'random_phone': {
+      const area = randInt(100, 999);
+      const exch = randInt(100, 999);
+      const num = randInt(1000, 9999);
+      return `+1-${area}-${exch}-${num}`;
+    }
+    case 'random_boolean':
+      return String(Math.random() < 0.5);
+    case 'random_float': {
+      const { min = 0, max = 100, decimals = 2 } = params || {};
+      return ensureFloat(min, max, decimals);
+    }
+
+    // custom
+    case 'randomInteger':
+      return String(randInt(params?.min ?? 1, params?.max ?? 1000));
+    case 'randomString':
+      return randString(params?.length ?? 10);
+    case 'randomAlphaNumeric':
+      return randStringFrom(
+        params?.length ?? 10,
+        'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+      );
+    case 'password':
+      return genPassword(params);
+    case 'bearerToken':
+      return randString(params?.length ?? 32);
+    case 'price': {
+      const min = params?.min ?? 1;
+      const max = params?.max ?? 1000;
+      const value = Math.random() * (max - min) + min;
+      return Number.parseFloat(value.toFixed(2)).toString();
+    }
+    case 'emailWithDomain': {
+      const domain =
+        typeof params?.domain === 'string' && params.domain
+          ? params.domain
+          : 'example.com';
+      const local = Math.random().toString(36).substring(2, 10);
+      return `${local}@${domain}`;
+    }
+    case 'randomDate': {
+      // format: 'YYYY-MM-DD' | 'ISO' | other (locale)
+      const format = params?.format ?? 'YYYY-MM-DD';
+      const start = new Date(2020, 0, 1);
+      const end = new Date();
+      const d = new Date(
+        start.getTime() + Math.random() * (end.getTime() - start.getTime())
+      );
+      if (format === 'YYYY-MM-DD') return dateOnly(d);
+      if (format === 'ISO') return d.toISOString();
+      return d.toLocaleDateString();
+    }
+    case 'pastDate': {
+      const format = params?.format ?? 'YYYY-MM-DD';
+      const years = params?.years ?? 1;
+      const now = new Date();
+      const from = new Date(
+        now.getFullYear() - years,
+        now.getMonth(),
+        now.getDate()
+      );
+      const d = new Date(
+        from.getTime() + Math.random() * (now.getTime() - from.getTime())
+      );
+      if (format === 'YYYY-MM-DD') return dateOnly(d);
+      if (format === 'ISO') return d.toISOString();
+      return d.toLocaleDateString();
+    }
+    case 'futureDate': {
+      const format = params?.format ?? 'YYYY-MM-DD';
+      const years = params?.years ?? 1;
+      const now = new Date();
+      const to = new Date(
+        now.getFullYear() + years,
+        now.getMonth(),
+        now.getDate()
+      );
+      const d = new Date(
+        now.getTime() + Math.random() * (to.getTime() - now.getTime())
+      );
+      if (format === 'YYYY-MM-DD') return dateOnly(d);
+      if (format === 'ISO') return d.toISOString();
+      return d.toLocaleDateString();
+    }
+
+    // personal
+    case 'name': {
+      const first = [
+        'John',
+        'Jane',
+        'Michael',
+        'Sarah',
+        'David',
+        'Emily',
+        'James',
+        'Jessica',
+        'Robert',
+        'Ashley',
+      ];
+      const last = [
+        'Smith',
+        'Johnson',
+        'Williams',
+        'Brown',
+        'Jones',
+        'Garcia',
+        'Miller',
+        'Davis',
+        'Rodriguez',
+        'Martinez',
+      ];
+      return `${pick(first)} ${pick(last)}`;
+    }
+    case 'firstName': {
+      const names = [
+        'John',
+        'Jane',
+        'Michael',
+        'Sarah',
+        'David',
+        'Emily',
+        'James',
+        'Jessica',
+        'Robert',
+        'Ashley',
+        'Christopher',
+        'Amanda',
+        'Matthew',
+        'Stephanie',
+        'Anthony',
+      ];
+      return pick(names);
+    }
+    case 'lastName': {
+      const names = [
+        'Smith',
+        'Johnson',
+        'Williams',
+        'Brown',
+        'Jones',
+        'Garcia',
+        'Miller',
+        'Davis',
+        'Rodriguez',
+        'Martinez',
+        'Hernandez',
+        'Lopez',
+        'Gonzalez',
+        'Wilson',
+        'Anderson',
+      ];
+      return pick(names);
+    }
+    case 'gender': {
+      const genders = ['Male', 'Female', 'Non-binary', 'Other'];
+      return pick(genders);
+    }
+    case 'ssn': {
+      const area = randInt(100, 999);
+      const group = randInt(1, 99).toString().padStart(2, '0');
+      const serial = randInt(1, 9999).toString().padStart(4, '0');
+      return `${area}-${group}-${serial}`;
+    }
+    case 'email': {
+      const local = Math.random().toString(36).substring(2, 10);
+      const domain = pick(domains);
+      return `${local}@${domain}`;
+    }
+    case 'phone': {
+      const area = randInt(100, 999);
+      const exch = randInt(100, 999);
+      const num = randInt(1000, 9999);
+      return `(${area}) ${exch}-${num}`;
+    }
+    case 'username': {
+      const adjectives = [
+        'cool',
+        'awesome',
+        'swift',
+        'brave',
+        'smart',
+        'quick',
+        'happy',
+        'lucky',
+      ];
+      const nouns = [
+        'tiger',
+        'eagle',
+        'wolf',
+        'lion',
+        'shark',
+        'falcon',
+        'bear',
+        'hawk',
+      ];
+      return `${pick(adjectives)}${pick(nouns)}${randInt(1, 999)}`;
+    }
+
+    // internet
+    case 'domain': {
+      const words = [
+        'tech',
+        'web',
+        'digital',
+        'online',
+        'cyber',
+        'net',
+        'data',
+        'cloud',
+        'smart',
+        'fast',
+      ];
+      const tlds = [
+        '.com',
+        '.org',
+        '.net',
+        '.io',
+        '.co',
+        '.tech',
+        '.app',
+        '.dev',
+      ];
+      return `${pick(words)}${randInt(1, 99)}${pick(tlds)}`;
+    }
+    case 'url': {
+      const protocols = ['https', 'http'];
+      const subdomains = ['www', 'api', 'app', 'portal'];
+      const baseDomains = ['example.com', 'test.org', 'demo.net', 'sample.io'];
+      const paths = [
+        '/home',
+        '/about',
+        '/contact',
+        '/api/v1',
+        '/dashboard',
+        '/profile',
+      ];
+      const protocol = pick(protocols);
+      const sub = Math.random() > 0.5 ? `${pick(subdomains)}.` : '';
+      const dom = pick(baseDomains);
+      const path = Math.random() > 0.5 ? pick(paths) : '';
+      return `${protocol}://${sub}${dom}${path}`;
+    }
+    case 'ipv4':
+    case 'random_ip':
+      return Array.from({ length: 4 }, () => randInt(0, 255)).join('.');
+    case 'ipv6': {
+      const seg = () => randInt(0, 0xffff).toString(16);
+      return `${seg()}:${seg()}:${seg()}:${seg()}:${seg()}:${seg()}:${seg()}:${seg()}`;
+    }
+    case 'uuid':
+      return uuid();
+    case 'boolean':
+      return String(Math.random() < 0.5);
+
+    // datetime
+    case 'date': {
+      const start = new Date(2020, 0, 1);
+      const end = new Date();
+      const d = new Date(
+        start.getTime() + Math.random() * (end.getTime() - start.getTime())
+      );
+      return dateOnly(d);
+    }
+    case 'month': {
+      const months = [
+        'January',
+        'February',
+        'March',
+        'April',
+        'May',
+        'June',
+        'July',
+        'August',
+        'September',
+        'October',
+        'November',
+        'December',
+      ];
+      return pick(months);
+    }
+    case 'year': {
+      const current = new Date().getFullYear();
+      return String(randInt(1990, current));
+    }
+
+    // location
+    case 'address': {
+      const streets = [
+        'Main St',
+        'Oak Ave',
+        'First St',
+        'Second Ave',
+        'Park Rd',
+        'Washington Blvd',
+        'Lincoln Way',
+        'Maple Dr',
+        'Elm St',
+        'Cedar Ave',
+      ];
+      return `${randInt(1, 9999)} ${pick(streets)}`;
+    }
+    case 'city': {
+      const cities = [
+        'New York',
+        'Los Angeles',
+        'Chicago',
+        'Houston',
+        'Phoenix',
+        'Philadelphia',
+        'San Antonio',
+        'San Diego',
+        'Dallas',
+        'San Jose',
+        'Austin',
+        'Jacksonville',
+        'Fort Worth',
+        'Columbus',
+        'Charlotte',
+      ];
+      return pick(cities);
+    }
+    case 'state': {
+      const states = [
+        'California',
+        'Texas',
+        'Florida',
+        'New York',
+        'Pennsylvania',
+        'Illinois',
+        'Ohio',
+        'Georgia',
+        'North Carolina',
+        'Michigan',
+        'New Jersey',
+        'Virginia',
+        'Washington',
+        'Arizona',
+        'Massachusetts',
+      ];
+      return pick(states);
+    }
+    case 'country': {
+      const countries = [
+        'United States',
+        'Canada',
+        'Mexico',
+        'United Kingdom',
+        'Germany',
+        'France',
+        'Italy',
+        'Spain',
+        'Japan',
+        'Australia',
+        'Brazil',
+        'India',
+        'China',
+        'South Korea',
+        'Netherlands',
+      ];
+      return pick(countries);
+    }
+    case 'zip':
+    case 'zipCode': {
+      const zip5 = randInt(10000, 99999);
+      if (id === 'zipCode') return String(zip5); // match alt naming
+      const zip4 = randInt(1000, 9999);
+      return Math.random() > 0.5 ? String(zip5) : `${zip5}-${zip4}`;
+    }
+    case 'latitude':
+      return Number((Math.random() * 180 - 90).toFixed(6)).toString();
+    case 'longitude':
+      return Number((Math.random() * 360 - 180).toFixed(6)).toString();
+
+    // financial
+    case 'creditCard':
+    case 'creditCardNumber': {
+      const cardNumber =
+        '4' + Array.from({ length: 15 }, () => randInt(0, 9)).join('');
+      const formatted = cardNumber.replace(/(.{4})/g, '$1 ').trim();
+      if (id === 'creditCardNumber') return formatted;
+      const month = randInt(1, 12).toString().padStart(2, '0');
+      const year = (new Date().getFullYear() + randInt(1, 5))
+        .toString()
+        .slice(-2);
+      const cvv = randInt(100, 999);
+      const types = ['Visa', 'MasterCard', 'American Express', 'Discover'];
+      return `${formatted} ${month}/${year}/${cvv} ${pick(types)}`;
+    }
+    case 'creditCardExp': {
+      const month = randInt(1, 12).toString().padStart(2, '0');
+      const year = (new Date().getFullYear() + randInt(1, 5))
+        .toString()
+        .slice(-2);
+      return `${month}/${year}`;
+    }
+    case 'currency': {
+      const currencies = [
+        'USD',
+        'EUR',
+        'GBP',
+        'JPY',
+        'CAD',
+        'AUD',
+        'CHF',
+        'CNY',
+        'SEK',
+        'NZD',
+        'MXN',
+        'SGD',
+        'HKD',
+        'NOK',
+        'TRY',
+      ];
+      return pick(currencies);
+    }
+
+    // auth
+    case 'bearer_token': {
+      try {
+        const bytes = new Uint8Array(32);
+        if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+          crypto.getRandomValues(bytes);
+          return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join(
+            ''
+          );
+        }
+      } catch {}
+      return randStringFrom(64, 'abcdef0123456789');
+    }
+    case 'api_key': {
+      const prefix = typeof params?.prefix === 'string' ? params.prefix : 'ak_';
+      const length = typeof params?.length === 'number' ? params.length : 32;
+      return prefix + randString(length);
+    }
+
+    // network
+    case 'random_port':
+      return String(randInt(1024, 65535));
+
+    // legacy date
+    case 'future_date': {
+      const days = typeof params?.days === 'number' ? params.days : 30;
+      const d = new Date();
+      d.setDate(d.getDate() + days);
+      return d.toISOString();
+    }
+    case 'past_date': {
+      const days = typeof params?.days === 'number' ? params.days : 30;
+      const d = new Date();
+      d.setDate(d.getDate() - days);
+      return d.toISOString();
+    }
+
+    default:
+      return '';
+  }
+}

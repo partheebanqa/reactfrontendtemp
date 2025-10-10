@@ -57,7 +57,7 @@ export interface RemoveUserResponse {
 export interface UpdateRolePayload {
   userId: string;
   workspaceId: string;
-  roleIds: string[];
+  roleId: string;
 }
 
 export interface UpdateRoleResponse {

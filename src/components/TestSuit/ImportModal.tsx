@@ -61,8 +61,6 @@ export const ImportModal: React.FC<ImportModalProps> = ({
     null
   );
 
-  console.log('apiData123:', apiData);
-
   const collections: TransformedCollection[] = React.useMemo(() => {
     if (!apiData?.collections) return [];
 
@@ -89,8 +87,6 @@ export const ImportModal: React.FC<ImportModalProps> = ({
   //     setExpandedCollections(collections.map((c) => c.id));
   //   }
   // }, [collections, expandedCollections.length]);
-
-  console.log('collections:', collections);
 
   const filteredCollections = collections
     .map((collection: TransformedCollection) => {
