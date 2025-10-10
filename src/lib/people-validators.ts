@@ -17,9 +17,7 @@ export type InviteForm = {
 export type InviteFormErrors = Partial<Record<keyof InviteForm, string>>;
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
 const nameRegex = /^[a-zA-Z\u00C0-\u024F\s\-'.]+$/;
-
 const idRegex = /^[A-Za-z0-9_-]{1,64}$/;
 
 export function sanitizeInviteForm(input: InviteForm) {
@@ -89,12 +87,27 @@ export function sanitizeInviteForm(input: InviteForm) {
     errors.workspaceId = 'Workspace contains unsafe content';
   }
 
-  const fieldsToCheck = [firstName, lastName, email, roleId, workspaceId];
-  for (const field of fieldsToCheck) {
-    const cleaned = preventSQLInjection(field);
-    if (cleaned !== field) {
-      errors.email = errors.email || 'Form contains potentially unsafe content';
-      break;
+  type Key = keyof InviteForm;
+  const checks: Array<[Key, string]> = [
+    ['firstName', firstName],
+    ['lastName', lastName],
+    ['email', email],
+    ['roleId', roleId],
+    ['workspaceId', workspaceId],
+  ];
+
+  const labels: Record<Key, string> = {
+    firstName: 'First name',
+    lastName: 'Last name',
+    email: 'Email',
+    roleId: 'Role',
+    workspaceId: 'Workspace',
+  };
+
+  for (const [key, value] of checks) {
+    const cleaned = preventSQLInjection(value);
+    if (cleaned !== value && !errors[key]) {
+      errors[key] = `${labels[key]} contains potentially unsafe content`;
     }
   }
 

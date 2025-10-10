@@ -46,7 +46,7 @@ import type {
   Variable,
   ExecutionLog,
   DataExtraction,
-  DynamicVariableOverride, // Import DynamicVariableOverride
+  DynamicVariableOverride,
 } from '@/shared/types/requestChain.model';
 import { ImportModal } from '@/components/TestSuit/ImportModal';
 import type { ExtendedRequest } from '@/models/collection.model';
@@ -109,7 +109,6 @@ export function RequestChainEditor({
   const dragOverItem = useRef<number | null>(null);
   const { currentWorkspace } = useWorkspace();
 
-  // Dynamic variables store
   const { variables: storeVariables, dynamicVariables } =
     useDataManagementStore();
 
@@ -205,7 +204,6 @@ export function RequestChainEditor({
     }
   );
 
-  // Dynamic variable mapping function
   const dynamicStructured = mapDynamicToStatic(
     dynamicVariables,
     dynamicOverrides
@@ -929,12 +927,12 @@ export function RequestChainEditor({
 
   const handleCopyForRequest = async (requestId: string, value: string) => {
     try {
-      const formattedValue = `{{${value}}}`;
+      const formattedValue = `${value}`;
       await copyToClipboard(formattedValue);
       setCopiedStates((prev) => ({ ...prev, [requestId]: true }));
       toast({
         title: 'Copied to Clipboard',
-        description: `Variable ${formattedValue} copied to clipboard`,
+        description: `Variable {{${formattedValue}}} copied to clipboard`,
       });
       setTimeout(() => {
         setCopiedStates((prev) => ({ ...prev, [requestId]: false }));
