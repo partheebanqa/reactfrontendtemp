@@ -33,6 +33,7 @@ import { useRef } from 'react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { downloadAsHTML, downloadAsPDF, shareReport } from '@/utils/exportUtils';
+import { RequestGrouping } from '../Reports/Components/RequestGrouping';
 
 type RouteParams = {
   type: 'test_suite' | 'request_chain';
@@ -59,6 +60,82 @@ const safeExecutedAt = (startedQS: string | null): string => {
   return formatDistanceToNow(date, { addSuffix: true });
 };
 
+// Collect *all* test cases from either style of payload
+const collectAllTestCases = (data: any) => {
+  const out: Array<{ status?: string; duration?: number }> = [];
+
+  // Style A: ApiTestReport.requests[*].{positiveTests..}.testCases
+  if (Array.isArray(data?.requests)) {
+    const groups = [
+      "positiveTests",
+      "negativeTests",
+      "functionalTests",
+      "semanticTests",
+      "edgeCaseTests",
+      "securityTests",
+      "advancedSecurityTests",
+    ];
+    for (const req of data.requests) {
+      for (const g of groups) {
+        const tg = req?.[g];
+        if (tg?.testCases?.length) out.push(...tg.testCases);
+      }
+    }
+  }
+
+  // Style B: TestSuiteData.{positiveTests..}.apis
+  const catKeys = [
+    "positiveTests",
+    "negativeTests",
+    "functionalTests",
+    "semanticTests",
+    "edgeCaseTests",
+    "securityTests",
+    "advancedSecurityTests",
+  ];
+  for (const k of catKeys) {
+    const cat = data?.[k];
+    if (cat?.apis?.length) out.push(...cat.apis);
+  }
+
+  return out;
+};
+
+const computeOverall = (data: any) => {
+  const tcs = collectAllTestCases(data);
+
+  const total =
+    (tcs.length || 0) || Number(data?.totalTestCases || 0);
+
+  const passed =
+    (tcs.length ? tcs.filter((t: any) => t.status === "passed").length : 0) ||
+    Number(data?.successfulTestCases || 0);
+
+  const failed =
+    (tcs.length ? tcs.filter((t: any) => t.status === "failed").length : 0) ||
+    Number(data?.failedTestCases || 0);
+
+  const skipped =
+    (tcs.length ? tcs.filter((t: any) => t.status === "skipped").length : 0) ||
+    Number(data?.skippedTestCases || 0);
+
+  const successRate =
+    total > 0 ? Math.round((passed / total) * 100) : Number(data?.successRate || 0);
+
+  const avgDuration =
+    tcs.length > 0
+      ? Math.round(
+        tcs.reduce((s: number, t: any) => s + Number(t?.duration || 0), 0) /
+        tcs.length
+      )
+      : Number.isFinite(data?.duration)
+        ? Number(data.duration)
+        : 0;
+
+  return { total, passed, failed, skipped, successRate, avgDuration };
+};
+
+
 const ExecutionReportPage: React.FC = () => {
   const { type, entityId } = useParams<RouteParams>();
   const qs = useQueryParams();
@@ -79,7 +156,7 @@ const ExecutionReportPage: React.FC = () => {
     enabled: !!entityId && !!type && !!executionId,
   });
 
-  console.log('reportData:', reportData);
+  // console.log('reportData:', reportData);
 
   const handleDownloadPDF = async (reportName: string) => {
     if (!reportRef.current) return;
@@ -98,184 +175,203 @@ const ExecutionReportPage: React.FC = () => {
   };
 
   const renderTestSuiteReport = (data: any) => {
-    console.log('data123:', data);
+    // console.log('data123:', data);
 
-    const testCategories = [
-      {
-        name: 'Positive Tests',
-        icon: <CheckCircle className='w-4 h-4 text-green-600' />,
-        testCount: data.positiveTests?.total || 0,
-        tests:
-          data.positiveTests?.apis?.map((api: any) => ({
-            name: api.name,
-            method: api.method,
-            endpoint: api.url,
-            duration: `${api.duration}ms`,
-            requestCurl: api.requestCurl,
-            response: api.response,
-            statusCode: api.status === 'passed' ? 200 : 400,
-            status:
-              api.status === 'passed'
-                ? 'success'
-                : api.status === 'failed'
-                  ? 'fail'
-                  : 'warning',
-          })) || [],
-      },
-      {
-        name: 'Negative Tests',
-        icon: <XCircle className='w-4 h-4 text-red-600' />,
-        testCount: data.negativeTests?.total || 0,
-        tests:
-          data.negativeTests?.apis?.map((api: any) => ({
-            name: api.name,
-            method: api.method,
-            endpoint: api.url,
-            duration: `${api.duration}ms`,
-            requestCurl: api.requestCurl,
-            response: api.response,
-            statusCode: api.status === 'passed' ? 200 : 400,
-            status:
-              api.status === 'passed'
-                ? 'success'
-                : api.status === 'failed'
-                  ? 'fail'
-                  : 'warning',
-          })) || [],
-      },
-      {
-        name: 'Functional Tests',
-        icon: <FileCode className='w-4 h-4 text-purple-600' />,
-        testCount: data.functionalTests?.total || 0,
-        tests:
-          data.functionalTests?.apis?.map((api: any) => ({
-            name: api.name,
-            method: api.method,
-            endpoint: api.url,
-            requestCurl: api.requestCurl,
-            response: api.response,
-            duration: `${api.duration}ms`,
-            statusCode: api.status === 'passed' ? 200 : 400,
-            status:
-              api.status === 'passed'
-                ? 'success'
-                : api.status === 'failed'
-                  ? 'fail'
-                  : 'warning',
-          })) || [],
-      },
-      {
-        name: 'Semantic Tests',
-        icon: <Eye className='w-4 h-4 text-blue-600' />,
-        testCount: data.semanticTests?.total || 0,
-        tests:
-          data.semanticTests?.apis?.map((api: any) => ({
-            name: api.name,
-            method: api.method,
-            endpoint: api.url,
-            requestCurl: api.requestCurl,
-            response: api.response,
-            duration: `${api.duration}ms`,
-            statusCode: api.status === 'passed' ? 200 : 400,
-            status:
-              api.status === 'passed'
-                ? 'success'
-                : api.status === 'failed'
-                  ? 'fail'
-                  : 'warning',
-          })) || [],
-      },
-      {
-        name: 'Edge Case Tests',
-        icon: <AlertTriangle className='w-4 h-4 text-orange-600' />,
-        testCount: data.edgeCaseTests?.total || 0,
-        tests:
-          data.edgeCaseTests?.apis?.map((api: any) => ({
-            name: api.name,
-            method: api.method,
-            endpoint: api.url,
-            requestCurl: api.requestCurl,
-            response: api.response,
-            duration: `${api.duration}ms`,
-            statusCode: api.status === 'passed' ? 200 : 400,
-            status:
-              api.status === 'passed'
-                ? 'success'
-                : api.status === 'failed'
-                  ? 'fail'
-                  : 'warning',
-          })) || [],
-      },
-      {
-        name: 'Security Tests',
-        icon: <Shield className='w-4 h-4 text-red-600' />,
-        testCount: data.securityTests?.total || 0,
-        tests:
-          data.securityTests?.apis?.map((api: any) => ({
-            name: api.name,
-            method: api.method,
-            endpoint: api.url,
-            requestCurl: api.requestCurl,
-            response: api.response,
-            duration: `${api.duration}ms`,
-            statusCode: api.status === 'passed' ? 200 : 400,
-            status:
-              api.status === 'passed'
-                ? 'success'
-                : api.status === 'failed'
-                  ? 'fail'
-                  : 'warning',
-          })) || [],
-      },
-      {
-        name: 'Advanced Security Tests',
-        icon: <ShieldAlert className='w-4 h-4 text-red-700' />,
-        testCount: data.advancedSecurityTests?.total || 0,
-        tests:
-          data.advancedSecurityTests?.apis?.map((api: any) => ({
-            name: api.name,
-            method: api.method,
-            endpoint: api.url,
-            requestCurl: api.requestCurl,
-            response: api.response,
-            duration: `${api.duration}ms`,
-            statusCode: api.status === 'passed' ? 200 : 400,
-            status:
-              api.status === 'passed'
-                ? 'success'
-                : api.status === 'failed'
-                  ? 'fail'
-                  : 'warning',
-          })) || [],
-      },
-    ];
+    // const testCategories = [
+    //   {
+    //     name: 'Positive Tests',
+    //     icon: <CheckCircle className='w-4 h-4 text-green-600' />,
+    //     testCount: data.positiveTests?.total || 0,
+    //     tests:
+    //       data.positiveTests?.apis?.map((api: any) => ({
+    //         name: api.name,
+    //         method: api.method,
+    //         endpoint: api.url,
+    //         duration: `${api.duration}ms`,
+    //         requestCurl: api.requestCurl,
+    //         response: api.response,
+    //         statusCode: api.status === 'passed' ? 200 : 400,
+    //         status:
+    //           api.status === 'passed'
+    //             ? 'success'
+    //             : api.status === 'failed'
+    //               ? 'fail'
+    //               : 'warning',
+    //       })) || [],
+    //   },
+    //   {
+    //     name: 'Negative Tests',
+    //     icon: <XCircle className='w-4 h-4 text-red-600' />,
+    //     testCount: data.negativeTests?.total || 0,
+    //     tests:
+    //       data.negativeTests?.apis?.map((api: any) => ({
+    //         name: api.name,
+    //         method: api.method,
+    //         endpoint: api.url,
+    //         duration: `${api.duration}ms`,
+    //         requestCurl: api.requestCurl,
+    //         response: api.response,
+    //         statusCode: api.status === 'passed' ? 200 : 400,
+    //         status:
+    //           api.status === 'passed'
+    //             ? 'success'
+    //             : api.status === 'failed'
+    //               ? 'fail'
+    //               : 'warning',
+    //       })) || [],
+    //   },
+    //   {
+    //     name: 'Functional Tests',
+    //     icon: <FileCode className='w-4 h-4 text-purple-600' />,
+    //     testCount: data.functionalTests?.total || 0,
+    //     tests:
+    //       data.functionalTests?.apis?.map((api: any) => ({
+    //         name: api.name,
+    //         method: api.method,
+    //         endpoint: api.url,
+    //         requestCurl: api.requestCurl,
+    //         response: api.response,
+    //         duration: `${api.duration}ms`,
+    //         statusCode: api.status === 'passed' ? 200 : 400,
+    //         status:
+    //           api.status === 'passed'
+    //             ? 'success'
+    //             : api.status === 'failed'
+    //               ? 'fail'
+    //               : 'warning',
+    //       })) || [],
+    //   },
+    //   {
+    //     name: 'Semantic Tests',
+    //     icon: <Eye className='w-4 h-4 text-blue-600' />,
+    //     testCount: data.semanticTests?.total || 0,
+    //     tests:
+    //       data.semanticTests?.apis?.map((api: any) => ({
+    //         name: api.name,
+    //         method: api.method,
+    //         endpoint: api.url,
+    //         requestCurl: api.requestCurl,
+    //         response: api.response,
+    //         duration: `${api.duration}ms`,
+    //         statusCode: api.status === 'passed' ? 200 : 400,
+    //         status:
+    //           api.status === 'passed'
+    //             ? 'success'
+    //             : api.status === 'failed'
+    //               ? 'fail'
+    //               : 'warning',
+    //       })) || [],
+    //   },
+    //   {
+    //     name: 'Edge Case Tests',
+    //     icon: <AlertTriangle className='w-4 h-4 text-orange-600' />,
+    //     testCount: data.edgeCaseTests?.total || 0,
+    //     tests:
+    //       data.edgeCaseTests?.apis?.map((api: any) => ({
+    //         name: api.name,
+    //         method: api.method,
+    //         endpoint: api.url,
+    //         requestCurl: api.requestCurl,
+    //         response: api.response,
+    //         duration: `${api.duration}ms`,
+    //         statusCode: api.status === 'passed' ? 200 : 400,
+    //         status:
+    //           api.status === 'passed'
+    //             ? 'success'
+    //             : api.status === 'failed'
+    //               ? 'fail'
+    //               : 'warning',
+    //       })) || [],
+    //   },
+    //   {
+    //     name: 'Security Tests',
+    //     icon: <Shield className='w-4 h-4 text-red-600' />,
+    //     testCount: data.securityTests?.total || 0,
+    //     tests:
+    //       data.securityTests?.apis?.map((api: any) => ({
+    //         name: api.name,
+    //         method: api.method,
+    //         endpoint: api.url,
+    //         requestCurl: api.requestCurl,
+    //         response: api.response,
+    //         duration: `${api.duration}ms`,
+    //         statusCode: api.status === 'passed' ? 200 : 400,
+    //         status:
+    //           api.status === 'passed'
+    //             ? 'success'
+    //             : api.status === 'failed'
+    //               ? 'fail'
+    //               : 'warning',
+    //       })) || [],
+    //   },
+    //   {
+    //     name: 'Advanced Security Tests',
+    //     icon: <ShieldAlert className='w-4 h-4 text-red-700' />,
+    //     testCount: data.advancedSecurityTests?.total || 0,
+    //     tests:
+    //       data.advancedSecurityTests?.apis?.map((api: any) => ({
+    //         name: api.name,
+    //         method: api.method,
+    //         endpoint: api.url,
+    //         requestCurl: api.requestCurl,
+    //         response: api.response,
+    //         duration: `${api.duration}ms`,
+    //         statusCode: api.status === 'passed' ? 200 : 400,
+    //         status:
+    //           api.status === 'passed'
+    //             ? 'success'
+    //             : api.status === 'failed'
+    //               ? 'fail'
+    //               : 'warning',
+    //       })) || [],
+    //   },
+    // ];
+    const overall = computeOverall(data);
 
     const metrics = [
       {
-        title: 'Success Rate',
-        value: `${data.successRate || 0}%`,
+        title: "Success Rate",
+        value: `${overall.successRate}%`,
         icon: TrendingUp,
-        color: data.successRate >= 80 ? 'text-green-600 bg-green-100' : data.successRate >= 60 ? 'text-yellow-600 bg-yellow-100' : 'text-red-600 bg-red-100',
+        color:
+          overall.successRate >= 80
+            ? "text-green-600 bg-green-100"
+            : overall.successRate >= 60
+              ? "text-yellow-600 bg-yellow-100"
+              : "text-red-600 bg-red-100",
       },
       {
-        title: 'Total Test Cases',
-        value: data.totalTestCases?.toString() || '0',
+        title: "Total Test Cases",
+        value: overall.total.toString(),
         icon: Clock,
-        color: 'text-blue-600 bg-blue-100',
+        color: "text-blue-600 bg-blue-100",
       },
       {
-        title: 'Passed',
-        value: data.successfulTestCases?.toString() || '0',
+        title: "Passed",
+        value: overall.passed.toString(),
         icon: CheckCircle,
-        color: 'text-green-600 bg-green-100',
+        color: "text-green-600 bg-green-100",
       },
       {
-        title: 'Failed',
-        value: data.skippedTestCases?.toString() || '0',
+        title: "Failed",
+        value: overall.failed.toString(), // ✅ was using skipped by mistake
         icon: XCircle,
-        color: 'text-red-600 bg-red-100',
+        color: "text-red-600 bg-red-100",
       },
+      // {
+      //   title: "Skipped",
+      //   value: overall.skipped.toString(),
+      //   icon: AlertTriangle,
+      //   color: "text-yellow-600 bg-yellow-100",
+      // },
+      // {
+      //   title: "Avg Duration",
+      //   value: `${(overall.avgDuration / 1000).toFixed(2)}s`,
+      //   icon: Clock,
+      //   color: "text-gray-700 bg-gray-100",
+      // },
     ];
+
 
     const formatDate = (dateString: string) => {
       return new Date(dateString).toLocaleString();
@@ -301,7 +397,7 @@ const ExecutionReportPage: React.FC = () => {
 
     return (
       <div ref={reportRef}>
-        <div className="border border-gray-200 bg-background rounded-lg px-6 py-4 animate-fade-in mt-3">
+        <div className="border border-gray-200 bg-background rounded-lg px-6 py-3 animate-fade-in mt-3">
           <div className="flex justify-between items-start mb-6">
             <div>
               <h1 className="text-3xl font-bold text-gray-900 mb-2">{data.name}</h1>
@@ -310,7 +406,7 @@ const ExecutionReportPage: React.FC = () => {
 
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-3">
             <div className="flex items-center space-x-3">
               <Calendar className="w-5 h-5 text-blue-500" />
               <div>
@@ -347,7 +443,7 @@ const ExecutionReportPage: React.FC = () => {
 
 
           <div className="flex items-center gap-4">
-            <button
+            {/* <button
               onClick={handleDownloadPDF}
               className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors group"
               title="Download PDF"
@@ -361,15 +457,15 @@ const ExecutionReportPage: React.FC = () => {
               title="Download HTML"
             >
               <FileText className="w-5 h-5" />
-            </button>
+            </button> */}
 
-            <button
+            {/* <button
               onClick={handleShare}
               className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors group"
               title="Share Report"
             >
               <Share2 className="w-5 h-5" />
-            </button>
+            </button> */}
           </div>
 
         </div>
@@ -502,7 +598,10 @@ const ExecutionReportPage: React.FC = () => {
           />
         </div> */}
 
-        <DetailedTestResults categories={testCategories} />
+        {/* <DetailedTestResults categories={testCategories} /> */}
+        <RequestGrouping report={data} />
+
+
       </div>
     );
   };

@@ -65,14 +65,15 @@ type MenuItem = {
 const menuItems: MenuItem[] = [
   { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard, feature: 'dashboard' },
   { label: 'Request Builder', path: '/request-builder', icon: Settings, feature: 'request_builder' },
-  { label: 'Request Chains', path: '/request-chains', icon: Link2, feature: 'request_chains' },
   { label: 'Test Suites', path: '/test-suites', icon: Layers, feature: 'test_suites' },
-  { label: 'Scheduler', path: '/scheduler', icon: CalendarClock, feature: 'scheduler' },
+  { label: 'Request Chains', path: '/request-chains', icon: Link2, feature: 'request_chains' },
   { label: 'Data Management', path: '/data-management', icon: Database, feature: 'test_suites' },
-  { label: 'Reports', icon: FileText, feature: 'reports' },
+  { label: 'Scheduler', path: '/scheduler', icon: CalendarClock, feature: 'scheduler' },
+  { label: 'CI/CD Integration', path: '/cicd-configuration', icon: Workflow, feature: 'cicd_integrations' },
+  // { label: 'Reports', icon: FileText, feature: 'reports' },
   { label: 'Executions', path: '/executions', icon: ChartColumn, feature: 'executions' },
   { label: 'FAQ', path: '/faq', icon: HelpCircle, feature: 'faqs' },
-  { label: 'CI/CD Integration', path: '/cicd-configuration', icon: Workflow, feature: 'cicd_integrations' },
+
 ];
 
 const utilsItems: MenuItem[] = [

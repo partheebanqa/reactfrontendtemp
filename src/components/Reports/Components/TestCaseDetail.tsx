@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { ChevronDown, ChevronRight, Globe, Clock, AlertCircle } from 'lucide-react';
+import { CodeBlock } from './CodeBlock';
+// import JsonView from 'react18-json-view';
 
 
 
@@ -152,32 +154,33 @@ export const TestCaseDetail: React.FC<TestCaseDetailProps> = ({ testCase }) => {
         </div>
       </div>
 
+
+
       {isExpanded && (
         <div className="p-4 border-t border-gray-200 bg-white">
           <div className="space-y-4">
             <div>
               <h4 className="font-medium text-gray-900 mb-2">Endpoint</h4>
-              <code className="block p-3 bg-gray-100 rounded text-sm overflow-x-auto">
-                {testCase.method} {testCase.url}
-              </code>
+              <CodeBlock
+                language="http"
+                code={`${testCase.method.toUpperCase()} ${testCase.url}`}
+              />
             </div>
-
             <div>
               <h4 className="font-medium text-gray-900 mb-2">Request cURL</h4>
-              <code className="block p-3 bg-gray-100 rounded text-sm overflow-x-auto whitespace-pre-wrap">
-                {testCase.requestCurl}
-              </code>
+              <CodeBlock language="bash" code={testCase.requestCurl} />
             </div>
-
             <div>
               <h4 className="font-medium text-gray-900 mb-2">Response</h4>
-              <pre className="block p-3 bg-gray-100 rounded text-sm overflow-x-auto">
-                {formatResponse(testCase.response)}
-              </pre>
+              <CodeBlock
+                language="json"
+                code={formatResponse(testCase.response)}
+              />
             </div>
           </div>
         </div>
       )}
+
     </div>
   );
 };
