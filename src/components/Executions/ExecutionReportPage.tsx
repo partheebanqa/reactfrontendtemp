@@ -34,6 +34,7 @@ import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { downloadAsHTML, downloadAsPDF, shareReport } from '@/utils/exportUtils';
 import { RequestGrouping } from '../Reports/Components/RequestGrouping';
+import Logo from '../../assests/images/OptraLogo.png';
 
 type RouteParams = {
   type: 'test_suite' | 'request_chain';
@@ -175,157 +176,7 @@ const ExecutionReportPage: React.FC = () => {
   };
 
   const renderTestSuiteReport = (data: any) => {
-    // console.log('data123:', data);
 
-    // const testCategories = [
-    //   {
-    //     name: 'Positive Tests',
-    //     icon: <CheckCircle className='w-4 h-4 text-green-600' />,
-    //     testCount: data.positiveTests?.total || 0,
-    //     tests:
-    //       data.positiveTests?.apis?.map((api: any) => ({
-    //         name: api.name,
-    //         method: api.method,
-    //         endpoint: api.url,
-    //         duration: `${api.duration}ms`,
-    //         requestCurl: api.requestCurl,
-    //         response: api.response,
-    //         statusCode: api.status === 'passed' ? 200 : 400,
-    //         status:
-    //           api.status === 'passed'
-    //             ? 'success'
-    //             : api.status === 'failed'
-    //               ? 'fail'
-    //               : 'warning',
-    //       })) || [],
-    //   },
-    //   {
-    //     name: 'Negative Tests',
-    //     icon: <XCircle className='w-4 h-4 text-red-600' />,
-    //     testCount: data.negativeTests?.total || 0,
-    //     tests:
-    //       data.negativeTests?.apis?.map((api: any) => ({
-    //         name: api.name,
-    //         method: api.method,
-    //         endpoint: api.url,
-    //         duration: `${api.duration}ms`,
-    //         requestCurl: api.requestCurl,
-    //         response: api.response,
-    //         statusCode: api.status === 'passed' ? 200 : 400,
-    //         status:
-    //           api.status === 'passed'
-    //             ? 'success'
-    //             : api.status === 'failed'
-    //               ? 'fail'
-    //               : 'warning',
-    //       })) || [],
-    //   },
-    //   {
-    //     name: 'Functional Tests',
-    //     icon: <FileCode className='w-4 h-4 text-purple-600' />,
-    //     testCount: data.functionalTests?.total || 0,
-    //     tests:
-    //       data.functionalTests?.apis?.map((api: any) => ({
-    //         name: api.name,
-    //         method: api.method,
-    //         endpoint: api.url,
-    //         requestCurl: api.requestCurl,
-    //         response: api.response,
-    //         duration: `${api.duration}ms`,
-    //         statusCode: api.status === 'passed' ? 200 : 400,
-    //         status:
-    //           api.status === 'passed'
-    //             ? 'success'
-    //             : api.status === 'failed'
-    //               ? 'fail'
-    //               : 'warning',
-    //       })) || [],
-    //   },
-    //   {
-    //     name: 'Semantic Tests',
-    //     icon: <Eye className='w-4 h-4 text-blue-600' />,
-    //     testCount: data.semanticTests?.total || 0,
-    //     tests:
-    //       data.semanticTests?.apis?.map((api: any) => ({
-    //         name: api.name,
-    //         method: api.method,
-    //         endpoint: api.url,
-    //         requestCurl: api.requestCurl,
-    //         response: api.response,
-    //         duration: `${api.duration}ms`,
-    //         statusCode: api.status === 'passed' ? 200 : 400,
-    //         status:
-    //           api.status === 'passed'
-    //             ? 'success'
-    //             : api.status === 'failed'
-    //               ? 'fail'
-    //               : 'warning',
-    //       })) || [],
-    //   },
-    //   {
-    //     name: 'Edge Case Tests',
-    //     icon: <AlertTriangle className='w-4 h-4 text-orange-600' />,
-    //     testCount: data.edgeCaseTests?.total || 0,
-    //     tests:
-    //       data.edgeCaseTests?.apis?.map((api: any) => ({
-    //         name: api.name,
-    //         method: api.method,
-    //         endpoint: api.url,
-    //         requestCurl: api.requestCurl,
-    //         response: api.response,
-    //         duration: `${api.duration}ms`,
-    //         statusCode: api.status === 'passed' ? 200 : 400,
-    //         status:
-    //           api.status === 'passed'
-    //             ? 'success'
-    //             : api.status === 'failed'
-    //               ? 'fail'
-    //               : 'warning',
-    //       })) || [],
-    //   },
-    //   {
-    //     name: 'Security Tests',
-    //     icon: <Shield className='w-4 h-4 text-red-600' />,
-    //     testCount: data.securityTests?.total || 0,
-    //     tests:
-    //       data.securityTests?.apis?.map((api: any) => ({
-    //         name: api.name,
-    //         method: api.method,
-    //         endpoint: api.url,
-    //         requestCurl: api.requestCurl,
-    //         response: api.response,
-    //         duration: `${api.duration}ms`,
-    //         statusCode: api.status === 'passed' ? 200 : 400,
-    //         status:
-    //           api.status === 'passed'
-    //             ? 'success'
-    //             : api.status === 'failed'
-    //               ? 'fail'
-    //               : 'warning',
-    //       })) || [],
-    //   },
-    //   {
-    //     name: 'Advanced Security Tests',
-    //     icon: <ShieldAlert className='w-4 h-4 text-red-700' />,
-    //     testCount: data.advancedSecurityTests?.total || 0,
-    //     tests:
-    //       data.advancedSecurityTests?.apis?.map((api: any) => ({
-    //         name: api.name,
-    //         method: api.method,
-    //         endpoint: api.url,
-    //         requestCurl: api.requestCurl,
-    //         response: api.response,
-    //         duration: `${api.duration}ms`,
-    //         statusCode: api.status === 'passed' ? 200 : 400,
-    //         status:
-    //           api.status === 'passed'
-    //             ? 'success'
-    //             : api.status === 'failed'
-    //               ? 'fail'
-    //               : 'warning',
-    //       })) || [],
-    //   },
-    // ];
     const overall = computeOverall(data);
 
     const metrics = [
@@ -404,6 +255,9 @@ const ExecutionReportPage: React.FC = () => {
               <p className="text-gray-600">{data.description}</p>
             </div>
 
+            <div>
+              <img src={Logo} alt='Optraflow logo' style={{ width: '100%', height: '50px' }} />
+            </div>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-3">
