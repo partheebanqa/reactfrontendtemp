@@ -77,6 +77,16 @@ export default function Dashboard() {
         {/* Stats Overview */}
         <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-3'>
           <StatsCard
+            title='Total Import Collections'
+            value={data?.totalCollections || 0}
+            icon={<div className='text-green-600'>✅</div>}
+            // change='+2.1%'
+            // changeType='positive'
+            // description='improvement'
+            iconBgColor='bg-green-100'
+          />
+
+          <StatsCard
             title='Total Test Suites'
             value={data?.totalTestSuites || 0}
             icon={<div className='text-blue-600'>📊</div>}
@@ -96,22 +106,15 @@ export default function Dashboard() {
           />
 
 
+
+
+
           <StatsCard
             title='Active Schedules'
             value={data?.totalActiveSchedules || 0}
             icon={<div className='text-purple-600'>🕘</div>}
             // description='Next run in 2h 15m'
             iconBgColor='bg-purple-100'
-          />
-
-          <StatsCard
-            title='Total Import Collections'
-            value={data?.totalCollections || 0}
-            icon={<div className='text-green-600'>✅</div>}
-            // change='+2.1%'
-            // changeType='positive'
-            // description='improvement'
-            iconBgColor='bg-green-100'
           />
 
 

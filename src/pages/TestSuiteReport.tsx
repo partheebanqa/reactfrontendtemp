@@ -102,7 +102,7 @@ const TestSuiteReport = () => {
         onExport={() => console.log("Exporting...")}
         onGenerateReport={() => console.log("Generating report...")}
       />
-        <AnalyticsReport
+      <AnalyticsReport
         title="User Authentication API Test Suite"
         description="Comprehensive testing of user authentication endpoints including login, registration, password reset, and profile management."
         successRate="83%"
@@ -139,47 +139,47 @@ const TestSuiteReport = () => {
           },
         ]}
       />
-       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6 mt-5">
-      <TestCategoryCard
-        icon={<Settings2 className="w-5 h-5" />}
-        title="Functional Tests"
-        total={12}
-        passed={10}
-        failed={1}
-        warning={1}
-        borderColor="border border-blue-200"
-      />
-      <TestCategoryCard
-        icon={<FileCode className="w-5 h-5 text-purple-600" />}
-        title="Schema Tests"
-        total={6}
-        passed={6}
-        failed={0}
-        warning={0}
-      />
-      <TestCategoryCard
-        icon={<Zap className="w-5 h-5 text-yellow-600" />}
-        title="Performance Tests"
-        total={4}
-        passed={3}
-        failed={0}
-        warning={1}
-        bgColor="bg-yellow-50"
-        borderColor="border border-yellow-200"
-      />
-      <TestCategoryCard
-        icon={<ShieldCheck className="w-5 h-5 text-red-600" />}
-        title="Security Tests"
-        total={2}
-        passed={1}
-        failed={1}
-        warning={0}
-        bgColor="bg-red-50"
-        borderColor="border border-red-200"
-      />
-    </div>
+      {/* <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6 mt-5">
+        <TestCategoryCard
+          icon={<Settings2 className="w-5 h-5" />}
+          title="Functional Tests"
+          total={12}
+          passed={10}
+          failed={1}
+          warning={1}
+          borderColor="border border-blue-200"
+        />
+        <TestCategoryCard
+          icon={<FileCode className="w-5 h-5 text-purple-600" />}
+          title="Schema Tests"
+          total={6}
+          passed={6}
+          failed={0}
+          warning={0}
+        />
+        <TestCategoryCard
+          icon={<Zap className="w-5 h-5 text-yellow-600" />}
+          title="Performance Tests"
+          total={4}
+          passed={3}
+          failed={0}
+          warning={1}
+          bgColor="bg-yellow-50"
+          borderColor="border border-yellow-200"
+        />
+        <TestCategoryCard
+          icon={<ShieldCheck className="w-5 h-5 text-red-600" />}
+          title="Security Tests"
+          total={2}
+          passed={1}
+          failed={1}
+          warning={0}
+          bgColor="bg-red-50"
+          borderColor="border border-red-200"
+        />
+      </div> */}
 
-    <DetailedTestResults categories={testCategories} />
+      <DetailedTestResults categories={testCategories} />
     </div>
   );
 };

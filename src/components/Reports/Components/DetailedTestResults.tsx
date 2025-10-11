@@ -57,7 +57,7 @@ const DetailedTestResults = ({
   };
 
   return (
-    <div className='rounded-lg border border-gray-200 space-y-3 mt-8 p-5 bg-white'>
+    <div className='rounded-lg border border-gray-200 space-y-3 mt-3 p-5 bg-white'>
       <h2 className='text-1xl font-bold text-foreground mb-1'>
         Detailed Test Results
       </h2>
