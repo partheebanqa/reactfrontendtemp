@@ -9,17 +9,14 @@ import {
   fetchCollectionList,
   getCollectionRequests,
   importCollectionFile,
+  // importCollectionJson,
   renameCollection,
   renameRequest,
   setFavouriteCollection,
   unsetFavouriteCollection,
 } from '@/services/collection.service';
 import { workspaceStore } from '../workspaceStore';
-import {
-  Collection,
-  CollectionRequest,
-  CreateCollection,
-} from '@/shared/types/collection';
+import type { CollectionRequest } from '@/shared/types/collection';
 import { queryClient } from '@/lib/queryClient';
 
 // Query to fetch collection data with current workspace context
@@ -127,40 +124,81 @@ export const useUnsetFavouriteCollectionMutation = () => {
 };
 
 export const useCollectionRequestsQuery = () => {
+  // helper to flatten nested folders into a single request array (preserves order field)
+  const flattenFolderTree = (folders: any[]): any[] => {
+    const all: any[] = [];
+    const walk = (nodes: any[]) => {
+      for (const f of nodes) {
+        if (Array.isArray(f.requests)) {
+          all.push(...f.requests);
+        }
+        if (Array.isArray(f.folders) && f.folders.length) {
+          walk(f.folders);
+        }
+      }
+    };
+    walk(folders);
+    return all;
+  };
+
   return useMutation({
     mutationFn: getCollectionRequests,
-    onSuccess: (requests, collectionId) => {
+    onSuccess: (payload, collectionId) => {
+      // payload is { folders: FolderNode[], requests: CollectionRequest[] }
+      const rootRequests = Array.isArray(payload?.requests)
+        ? payload.requests
+        : [];
+      const fromFolders = Array.isArray(payload?.folders)
+        ? flattenFolderTree(payload.folders)
+        : [];
+
+      const fetchedAll = [...rootRequests, ...fromFolders];
+
       const updatedCollection = collectionStore.state.collections.map(
         (collection) => {
           if (collection.id === collectionId) {
+            // Keep unsaved local requests
             const unsavedRequests = collection.requests.filter(
               (req) => !req.id
             );
+
+            // If there were unsaved requests, set the activeRequest's order to end
             if (unsavedRequests.length > 0) {
-              const collectionRequest: CollectionRequest = collectionStore.state
+              const collectionRequest = collectionStore.state
                 .activeRequest as CollectionRequest;
               collectionActions.setActiveRequest({
                 ...collectionRequest,
-                order: collection.requests.length,
+                order: fetchedAll.length,
               });
             }
+
+            // Merge unsaved into the end, giving them incremental order
+            const mergedRequests = [
+              ...fetchedAll,
+              ...unsavedRequests.map((req, idx) => ({
+                ...req,
+                order: fetchedAll.length + idx + 1,
+              })),
+            ];
+
+            // Save both flattened list and the folder tree on the collection
             return {
               ...collection,
-              requests: [
-                ...requests,
-                ...unsavedRequests.map((req) => ({
-                  ...req,
-                  order: requests.length + 1,
-                })),
-              ],
+              // flattened list for existing consumers (RequestEditor, etc.)
+              requests: mergedRequests,
+              // keep the folder tree for UI
+              folders: payload?.folders || [],
               hasFetchedRequests: true,
             };
           }
           return collection;
         }
       );
+
       collectionActions.setCollections(updatedCollection);
-      return requests;
+
+      // Return flattened list to keep backward compatibility with callers
+      return fetchedAll;
     },
   });
 };

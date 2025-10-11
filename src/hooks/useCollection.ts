@@ -53,36 +53,22 @@ export function useCollection() {
   const toggleExpandedCollection = async (collectionId: string) => {
     if (!collectionId) return;
     collectionActions.toggleExpandedCollection(collectionId);
+
     const targetCollection = collections?.find(
       (col) => col.id === collectionId
     );
     if (targetCollection?.hasFetchedRequests) {
-      return;
+      return; // already loaded
     }
 
-    // Store any local requests that haven't been saved to the server yet
-    const unsavedRequests =
-      targetCollection?.requests.filter((req) => !req.id) || [];
-
-    // Fetch requests from server, then merge with unsaved local requests
-    fetchCollectionRequests.mutateAsync(collectionId).then(() => {
-      if (unsavedRequests.length > 0) {
-        // After fetching, add back any unsaved requests
-        const updatedCollections = collections.map((col) => {
-          if (col.id === collectionId) {
-            return {
-              ...col,
-              requests: [...col.requests, ...unsavedRequests],
-            };
-          }
-          return col;
-        });
-        setCollection(updatedCollections);
-      }
-    });
+    // Just fetch; merging unsaved requests and setting folders is handled in useCollectionRequestsQuery.onSuccess
+    await fetchCollectionRequests.mutateAsync(collectionId);
   };
 
-  const handleCreateRequest = async (collection?: Collection) => {
+  const handleCreateRequest = async (
+    collection?: Collection,
+    folderId?: string
+  ) => {
     const newRequest: CollectionRequest = {
       name: 'New Request',
       method: 'GET',
@@ -94,30 +80,90 @@ export function useCollection() {
       variables: {},
       headers: [],
       params: [],
-      order: 0, // This will be updated when adding to collection
+      order: 0,
     };
+
     setResponseData(null);
+
     if (collection) {
-      // Ensure collection is expanded when adding a new request
+      // Ensure the collection is expanded when adding a new request
       if (!expandedCollections.has(collection.id)) {
         toggleExpandedCollection(collection.id);
       }
+
+      // Attach collectionId and optionally folderId, compute order from target list
       newRequest.collectionId = collection.id;
-      newRequest.order = (collection.requests?.length || 0) + 1;
+      if (folderId) newRequest.folderId = folderId;
+
+      // Helpers to work with folder tree
+      const findFolderById = (
+        folders: any[] | undefined,
+        id: string
+      ): any | null => {
+        if (!folders) return null;
+        for (const f of folders) {
+          if (f.id === id) return f;
+          const child = findFolderById(f.folders, id);
+          if (child) return child;
+        }
+        return null;
+      };
+
+      const insertIntoFolders = (
+        folders: any[] | undefined,
+        id: string,
+        req: CollectionRequest
+      ): any[] | undefined => {
+        if (!folders) return folders;
+        return folders.map((f) => {
+          if (f.id === id) {
+            return {
+              ...f,
+              requests: [...(f.requests || []), req],
+            };
+          }
+          return {
+            ...f,
+            folders: insertIntoFolders(f.folders, id, req),
+          };
+        });
+      };
+
       setCollection(
-        collections.map((col) =>
-          col.id === collection.id
-            ? {
-                ...col,
-                requests: [...(col.requests || []), newRequest],
-              }
-            : col
-        )
+        collections.map((col) => {
+          if (col.id !== collection.id) return col;
+
+          // Add to folder if folderId provided; else add to root requests
+          if (folderId) {
+            const targetFolder = findFolderById((col as any).folders, folderId);
+            const nextOrder = ((targetFolder?.requests || []).length || 0) + 1;
+            newRequest.order = nextOrder;
+            return {
+              ...col,
+              folders: insertIntoFolders(
+                (col as any).folders,
+                folderId,
+                newRequest
+              ),
+            } as any;
+          } else {
+            const nextOrder =
+              ((col.requests || []).filter((r: any) => !r.folderId).length ||
+                0) + 1;
+            newRequest.order = nextOrder;
+            return {
+              ...col,
+              requests: [...(col.requests || []), newRequest],
+            };
+          }
+        })
       );
+
       setActiveCollection(
         collections.find((col) => col.id === collection.id) || null
       );
     }
+
     setActiveRequest(newRequest);
   };
 

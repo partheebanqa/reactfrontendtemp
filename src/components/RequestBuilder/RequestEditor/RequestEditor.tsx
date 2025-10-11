@@ -31,7 +31,7 @@ import { Controlled as CodeMirror } from 'react-codemirror2';
 import 'codemirror/lib/codemirror.css';
 import 'codemirror/theme/material.css';
 import 'codemirror/mode/javascript/javascript';
-import "./whiteorange.css"
+import './whiteorange.css';
 
 interface FormattedResponse {
   status: number;
@@ -195,12 +195,12 @@ const RequestEditor: React.FC = () => {
       setBodyType(
         allowedBodyTypes.includes(bodyTypeValue)
           ? (bodyTypeValue as
-            | 'none'
-            | 'json'
-            | 'form-data'
-            | 'x-www-form-urlencoded'
-            | 'raw'
-            | 'binary')
+              | 'none'
+              | 'json'
+              | 'form-data'
+              | 'x-www-form-urlencoded'
+              | 'raw'
+              | 'binary')
           : 'json'
       );
       setBodyContent(activeRequest.bodyRawContent || '');
@@ -438,12 +438,12 @@ const RequestEditor: React.FC = () => {
         if (allowedBodyTypes.includes(parsedRequest.bodyType)) {
           setBodyType(
             parsedRequest.bodyType as
-            | 'none'
-            | 'json'
-            | 'form-data'
-            | 'x-www-form-urlencoded'
-            | 'raw'
-            | 'binary'
+              | 'none'
+              | 'json'
+              | 'form-data'
+              | 'x-www-form-urlencoded'
+              | 'raw'
+              | 'binary'
           );
         }
       }
@@ -721,18 +721,18 @@ const RequestEditor: React.FC = () => {
 
       const selectedAssertions = Array.isArray(assertions)
         ? assertions
-          .filter((assertion) => assertion.enabled)
-          .map((assertion) => ({
-            ...assertion,
-            requestId: activeRequest.id, // ✅ attach requestId
-            expectedValue:
-              assertion.expectedValue !== undefined &&
+            .filter((assertion) => assertion.enabled)
+            .map((assertion) => ({
+              ...assertion,
+              requestId: activeRequest.id, // ✅ attach requestId
+              expectedValue:
+                assertion.expectedValue !== undefined &&
                 assertion.expectedValue !== null
-                ? typeof assertion.expectedValue === 'string'
-                  ? assertion.expectedValue
-                  : JSON.stringify(assertion.expectedValue)
-                : '', // fallback to empty string
-          }))
+                  ? typeof assertion.expectedValue === 'string'
+                    ? assertion.expectedValue
+                    : JSON.stringify(assertion.expectedValue)
+                  : '', // fallback to empty string
+            }))
         : [];
 
       const requestData = {
@@ -746,23 +746,23 @@ const RequestEditor: React.FC = () => {
         bodyFormData:
           bodyType === 'form-data'
             ? formFields
-              .filter((f) => f.enabled)
-              .reduce((acc: Record<string, any>, field) => {
-                if (field.key) {
-                  if (field.type === 'file' && field.value instanceof File) {
-                    acc[field.key] = field.value;
-                  } else {
-                    acc[field.key] = String(field.value);
+                .filter((f) => f.enabled)
+                .reduce((acc: Record<string, any>, field) => {
+                  if (field.key) {
+                    if (field.type === 'file' && field.value instanceof File) {
+                      acc[field.key] = field.value;
+                    } else {
+                      acc[field.key] = String(field.value);
+                    }
                   }
-                }
-                return acc;
-              }, {})
+                  return acc;
+                }, {})
             : [],
         bodyRawContent:
           bodyType === 'raw' || bodyType === 'json'
             ? bodyContent
             : bodyType === 'x-www-form-urlencoded'
-              ? new URLSearchParams(
+            ? new URLSearchParams(
                 urlEncodedFields
                   .filter((f) => f.enabled)
                   .reduce((acc, field) => {
@@ -770,7 +770,7 @@ const RequestEditor: React.FC = () => {
                     return acc;
                   }, {} as Record<string, string>)
               ).toString()
-              : '',
+            : '',
         authorizationType: authType,
         // ✅ FIX: Always include token when there's one, regardless of authType check
         authorization: {
@@ -783,29 +783,29 @@ const RequestEditor: React.FC = () => {
           oauth1:
             authType === 'oauth1'
               ? {
-                consumerKey: authData.oauth1.consumerKey,
-                consumerSecret: authData.oauth1.consumerSecret,
-                token: authData.oauth1.token,
-                tokenSecret: authData.oauth1.tokenSecret,
-                signatureMethod: authData.oauth1.signatureMethod,
-                version: '1.0',
-                realm: authData.oauth1.realm,
-                nonce: authData.oauth1.nonce,
-                timestamp: authData.oauth1.timestamp,
-              }
+                  consumerKey: authData.oauth1.consumerKey,
+                  consumerSecret: authData.oauth1.consumerSecret,
+                  token: authData.oauth1.token,
+                  tokenSecret: authData.oauth1.tokenSecret,
+                  signatureMethod: authData.oauth1.signatureMethod,
+                  version: '1.0',
+                  realm: authData.oauth1.realm,
+                  nonce: authData.oauth1.nonce,
+                  timestamp: authData.oauth1.timestamp,
+                }
               : undefined,
           oauth2:
             authType === 'oauth2'
               ? {
-                clientId: authData.oauth2.clientId,
-                clientSecret: authData.oauth2.clientSecret,
-                accessToken: authData.oauth2.accessToken,
-                tokenType: authData.oauth2.tokenType,
-                refreshToken: authData.oauth2.refreshToken,
-                scope: authData.oauth2.scope,
-                grantType: authData.oauth2.grantType,
-                redirectUri: authData.oauth2.redirectUri,
-              }
+                  clientId: authData.oauth2.clientId,
+                  clientSecret: authData.oauth2.clientSecret,
+                  accessToken: authData.oauth2.accessToken,
+                  tokenType: authData.oauth2.tokenType,
+                  refreshToken: authData.oauth2.refreshToken,
+                  scope: authData.oauth2.scope,
+                  grantType: authData.oauth2.grantType,
+                  redirectUri: authData.oauth2.redirectUri,
+                }
               : undefined,
         },
         params: params,
@@ -908,23 +908,23 @@ const RequestEditor: React.FC = () => {
         bodyFormData:
           bodyType === 'form-data'
             ? formFields
-              .filter((f) => f.enabled)
-              .reduce((acc: Record<string, any>, field) => {
-                if (field.key) {
-                  if (field.type === 'file' && field.value instanceof File) {
-                    acc[field.key] = field.value;
-                  } else {
-                    acc[field.key] = String(field.value);
+                .filter((f) => f.enabled)
+                .reduce((acc: Record<string, any>, field) => {
+                  if (field.key) {
+                    if (field.type === 'file' && field.value instanceof File) {
+                      acc[field.key] = field.value;
+                    } else {
+                      acc[field.key] = String(field.value);
+                    }
                   }
-                }
-                return acc;
-              }, {})
+                  return acc;
+                }, {})
             : [],
         bodyRawContent:
           bodyType === 'raw' || bodyType === 'json'
             ? bodyContent
             : bodyType === 'x-www-form-urlencoded'
-              ? new URLSearchParams(
+            ? new URLSearchParams(
                 urlEncodedFields
                   .filter((f) => f.enabled)
                   .reduce((acc, field) => {
@@ -932,7 +932,7 @@ const RequestEditor: React.FC = () => {
                     return acc;
                   }, {} as Record<string, string>)
               ).toString()
-              : '',
+            : '',
         authorizationType: effectiveAuthType, // ✅ fixed here
         authorization: {
           token: authData.token,
@@ -944,29 +944,29 @@ const RequestEditor: React.FC = () => {
           oauth1:
             effectiveAuthType === 'oauth1'
               ? {
-                consumerKey: authData.oauth1.consumerKey,
-                consumerSecret: authData.oauth1.consumerSecret,
-                token: authData.oauth1.token,
-                tokenSecret: authData.oauth1.tokenSecret,
-                signatureMethod: authData.oauth1.signatureMethod,
-                version: '1.0',
-                realm: authData.oauth1.realm,
-                nonce: authData.oauth1.nonce,
-                timestamp: authData.oauth1.timestamp,
-              }
+                  consumerKey: authData.oauth1.consumerKey,
+                  consumerSecret: authData.oauth1.consumerSecret,
+                  token: authData.oauth1.token,
+                  tokenSecret: authData.oauth1.tokenSecret,
+                  signatureMethod: authData.oauth1.signatureMethod,
+                  version: '1.0',
+                  realm: authData.oauth1.realm,
+                  nonce: authData.oauth1.nonce,
+                  timestamp: authData.oauth1.timestamp,
+                }
               : undefined,
           oauth2:
             effectiveAuthType === 'oauth2'
               ? {
-                clientId: authData.oauth2.clientId,
-                clientSecret: authData.oauth2.clientSecret,
-                accessToken: authData.oauth2.accessToken,
-                tokenType: authData.oauth2.tokenType,
-                refreshToken: authData.oauth2.refreshToken,
-                scope: authData.oauth2.scope,
-                grantType: authData.oauth2.grantType,
-                redirectUri: authData.oauth2.redirectUri,
-              }
+                  clientId: authData.oauth2.clientId,
+                  clientSecret: authData.oauth2.clientSecret,
+                  accessToken: authData.oauth2.accessToken,
+                  tokenType: authData.oauth2.tokenType,
+                  refreshToken: authData.oauth2.refreshToken,
+                  scope: authData.oauth2.scope,
+                  grantType: authData.oauth2.grantType,
+                  redirectUri: authData.oauth2.redirectUri,
+                }
               : undefined,
         },
         params,
@@ -1323,9 +1323,10 @@ const RequestEditor: React.FC = () => {
                 onClick={() => setActiveTab(tab.id as any)}
                 className={`
                   py-4 px-2 sm:px-4 border-b-2 font-medium text-sm transition-colors whitespace-nowrap
-                  ${activeTab === tab.id
-                    ? 'border-[#136fb0] text-[#136fb0]'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  ${
+                    activeTab === tab.id
+                      ? 'border-[#136fb0] text-[#136fb0]'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                   }
                 `}
               >
@@ -1487,22 +1488,15 @@ const RequestEditor: React.FC = () => {
                       setBodyContent(value);
                     }}
                   />
-
                 </>
-
-
               )}
-
-
 
               {bodyType === 'binary' && (
                 <div className='text-center p-8 border border-dashed border-gray-300 dark:border-gray-700 rounded-md'>
                   <p className='text-gray-500 dark:text-gray-400 mb-4'>
                     Select a file to upload
                   </p>
-                  <Button   >
-                    Choose File
-                  </Button>
+                  <Button>Choose File</Button>
                 </div>
               )}
             </div>
@@ -1533,7 +1527,7 @@ const RequestEditor: React.FC = () => {
                     setAuthData({ ...authData, token: e.target.value })
                   }
                   placeholder='Enter token'
-                // className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 bg-white dark:bg-gray-800 text-sm'
+                  // className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 bg-white dark:bg-gray-800 text-sm'
                 />
               </div>
             </div>

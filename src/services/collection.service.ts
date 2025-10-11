@@ -4,12 +4,11 @@ import {
   API_COLLECTIONS,
 } from '@/config/apiRoutes';
 import { apiRequest } from '@/lib/queryClient';
-import {
-  Collection,
+import type {
   CreateCollection,
   ImportCollection,
 } from '@/shared/types/collection';
-import { CollectionsResponse } from '../models/collection.model';
+import type { CollectionsResponse } from '../models/collection.model';
 
 export const fetchCollectionList = async (workspaceId: string) => {
   try {
@@ -100,15 +99,41 @@ export const getCollectionRequests = async (collectionId: string) => {
   try {
     const response = await apiRequest(
       'GET',
-      `${API_COLLECTIONS}/${collectionId}/requests`
+      `${API_COLLECTIONS}/${collectionId}/folder-tree`
     );
     if (!response.ok) {
       throw new Error('Failed to fetch collection requests');
     }
     const data = await response.json();
-    return data?.map((request: any) => formatRequest(request)) || [];
+
+    // Expected shape (example):
+    // { folders: [ { ...folder, requests: [...], folders?: [...] } ], requests: [ ...rootRequests ] }
+    // Normalize into our structure and format requests
+    const mapFolder = (folder: any): any => ({
+      id: folder.Id || folder.id,
+      collectionId: folder.CollectionId || folder.collectionId,
+      name: folder.Name || folder.name,
+      order: folder.Order || folder.order || 0,
+      createdAt: folder.CreatedAt || folder.createdAt,
+      updatedAt: folder.UpdatedAt || folder.updatedAt,
+      // requests inside this folder
+      requests: (folder.Requests || folder.requests || []).map((r: any) =>
+        formatRequest(r)
+      ),
+      // nested folders (if present)
+      folders: (folder.Folders || folder.folders || []).map(mapFolder),
+    });
+
+    const normalized = {
+      folders: (data?.Folders || data?.folders || []).map(mapFolder),
+      requests: (data?.Requests || data?.requests || []).map((r: any) =>
+        formatRequest(r)
+      ), // root-level requests (no folderId)
+    };
+
+    return normalized;
   } catch (error) {
-    return [];
+    return { folders: [], requests: [] };
   }
 };
 
@@ -322,6 +347,8 @@ export const formatRequest = (request: any) => {
   return {
     id: request.Id || request.id,
     collectionId: request.CollectionId || request.collectionId,
+    // added folderId support for folder tree
+    folderId: request.FolderId || request.folderId || undefined,
     name: request.Name || request.name,
     description: request.Description || request.description || '',
     method: request.Method || request.method,
