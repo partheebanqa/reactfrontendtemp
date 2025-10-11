@@ -1,7 +1,7 @@
 'use client';
 
 import type React from 'react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Play, Save, FolderPlus, Plus, FileTerminal } from 'lucide-react';
 import { useRequest } from '@/hooks/useRequest';
 import { useCollection } from '@/hooks/useCollection';
@@ -32,6 +32,21 @@ import 'codemirror/lib/codemirror.css';
 import 'codemirror/theme/material.css';
 import 'codemirror/mode/javascript/javascript';
 import './whiteorange.css';
+
+// Define Assertion type to fix the undeclared variable error
+type Assertion = {
+  id: string;
+  category: string;
+  type: string;
+  description: string;
+  field: string;
+  operator: string;
+  expectedValue: any;
+  enabled: boolean;
+  impact: string;
+  group: string;
+  priority: string;
+};
 
 interface FormattedResponse {
   status: number;
@@ -143,6 +158,72 @@ const RequestEditor: React.FC = () => {
     timeout: 30000,
     sslVerification: true,
   });
+
+  const [selectedFolderId, setSelectedFolderId] = useState<string>('');
+  const [folderOptions, setFolderOptions] = useState<
+    Array<{ id: string; label: string }>
+  >([]);
+
+  const collectionsRef = useRef(collections);
+  useEffect(() => {
+    collectionsRef.current = collections;
+  }, [collections]);
+  // </CHANGE>
+
+  const activeCollectionFull =
+    collections.find((c) => c.id === activeCollection?.id) ||
+    activeCollection ||
+    null;
+
+  function buildFolderOptions(
+    folders: any[] = [],
+    depth = 0,
+    acc: Array<{ id: string; label: string }> = []
+  ) {
+    for (const f of folders) {
+      const name = f?.name || f?.Name || 'Folder';
+      const id = f?.id || f?.Id;
+      const label = `${'— '.repeat(depth)}${name}`;
+      if (id) acc.push({ id, label });
+      if (Array.isArray(f?.folders) && f.folders.length) {
+        buildFolderOptions(f.folders, depth + 1, acc);
+      }
+    }
+    return acc;
+  }
+
+  // Load folder tree when Save modal opens or collection changes
+  useEffect(() => {
+    const loadFolders = async () => {
+      if (!showSaveModal || !activeCollection?.id) return;
+      try {
+        // refresh the selected collection's data (this updates the store internally)
+        await fetchCollectionRequests.mutateAsync(activeCollection.id);
+      } catch (e) {
+        // noop
+      } finally {
+        // read the latest folder tree from the ref to avoid using 'collections' as a dependency
+        const latest = collectionsRef.current.find(
+          (c) => c.id === activeCollection.id
+        );
+        const foldersTree = (latest as any)?.folders || [];
+        const options = buildFolderOptions(foldersTree);
+        setFolderOptions(options);
+      }
+    };
+    loadFolders();
+    // NOTE: intentionally NOT depending on 'collections' to avoid infinite refetch loops
+  }, [showSaveModal, activeCollection?.id]);
+  // </CHANGE>
+
+  // Reset folder when collection changes via dropdown
+  useEffect(() => {
+    setSelectedFolderId('');
+    const foldersTree = (activeCollectionFull as any)?.folders || [];
+    const options = buildFolderOptions(foldersTree);
+    setFolderOptions(options);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeCollection?.id]);
 
   console.log('url in state:', url);
 
@@ -335,6 +416,13 @@ const RequestEditor: React.FC = () => {
       } else {
         setAssertions([]);
       }
+
+      // Set selected folder ID if it exists on the request
+      if (activeRequest.folderId) {
+        setSelectedFolderId(activeRequest.folderId);
+      } else {
+        setSelectedFolderId('');
+      }
     } else {
       handleCreateRequest();
       setAssertions([]);
@@ -454,7 +542,19 @@ const RequestEditor: React.FC = () => {
         if (typeof parsedRequest.body === 'string') {
           bodyContentToSet = parsedRequest.body;
         } else if (typeof parsedRequest.body === 'object') {
-          bodyContentToSet = JSON.stringify(parsedRequest.body, null, 2);
+          // FIX: undeclared variable `parsedBody`
+          let parsedBodyContent = parsedRequest.body;
+          if (
+            typeof parsedBodyContent === 'object' &&
+            parsedBodyContent !== null
+          ) {
+            try {
+              parsedBodyContent = JSON.stringify(parsedBodyContent, null, 2);
+            } catch (e) {
+              console.error('Error stringifying parsed body:', e);
+            }
+          }
+          bodyContentToSet = parsedBodyContent;
         }
         setBodyContent(bodyContentToSet);
       }
@@ -724,16 +824,19 @@ const RequestEditor: React.FC = () => {
             .filter((assertion) => assertion.enabled)
             .map((assertion) => ({
               ...assertion,
-              requestId: activeRequest.id, // ✅ attach requestId
+              requestId: activeRequest.id,
               expectedValue:
                 assertion.expectedValue !== undefined &&
                 assertion.expectedValue !== null
                   ? typeof assertion.expectedValue === 'string'
                     ? assertion.expectedValue
                     : JSON.stringify(assertion.expectedValue)
-                  : '', // fallback to empty string
+                  : '',
             }))
         : [];
+
+      const effectiveFolderId =
+        activeRequest?.folderId || selectedFolderId || undefined;
 
       const requestData = {
         workspaceId: currentWorkspace.id,
@@ -742,6 +845,7 @@ const RequestEditor: React.FC = () => {
         order: maxOrder + 1,
         method: method,
         url: url,
+        ...(effectiveFolderId ? { folderId: effectiveFolderId } : {}),
         bodyType: bodyType === 'json' ? 'raw' : bodyType,
         bodyFormData:
           bodyType === 'form-data'
@@ -772,9 +876,8 @@ const RequestEditor: React.FC = () => {
               ).toString()
             : '',
         authorizationType: authType,
-        // ✅ FIX: Always include token when there's one, regardless of authType check
         authorization: {
-          token: authData.token, // Always include the token
+          token: authData.token,
           username: authType === 'basic' ? authData.username : '',
           password: authType === 'basic' ? authData.password : '',
           key: authType === 'apiKey' ? authData.key : '',
@@ -899,6 +1002,7 @@ const RequestEditor: React.FC = () => {
       const requestData = {
         workspaceId: currentWorkspace.id,
         collectionId: createdCollectionId || activeCollection?.id,
+        ...(selectedFolderId ? { folderId: selectedFolderId } : {}),
         description: '',
         name: activeRequest.name || 'New Request',
         order: maxOrder + 1,
@@ -994,6 +1098,7 @@ const RequestEditor: React.FC = () => {
           ...activeRequest,
           id: newId,
           collectionId: createdCollectionId || activeCollection?.id,
+          ...(selectedFolderId ? ({ folderId: selectedFolderId } as any) : {}),
           name: activeRequest.name || 'New Request',
           method,
           url,
@@ -1373,20 +1478,21 @@ const RequestEditor: React.FC = () => {
                 <h3 className='text-base sm:text-lg font-medium text-gray-900 dark:text-white'>
                   Request Body
                 </h3>
-                {/* <select
-                  value={bodyType}
-                  onChange={(e) => setBodyType(e.target.value as any)}
-                  className='border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-800 text-sm font-medium hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all duration-150'
-                >
-                  <option value='none'>None</option>
-                  <option value='json'>JSON</option>
-                  <option value='form-data'>Form Data</option>
-                  <option value='x-www-form-urlencoded'>
-                    x-www-form-urlencoded
-                  </option>
-                  <option value='raw'>Raw</option>
-                  <option value='binary'>Binary</option>
-                </select> */}
+                {/* Added Folder dropdown */}
+                {activeCollection && (
+                  <select
+                    value={selectedFolderId}
+                    onChange={(e) => setSelectedFolderId(e.target.value)}
+                    className='w-full sm:w-auto border rounded-md px-3 py-2 text-sm font-medium hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all duration-150 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-200'
+                  >
+                    <option value=''>Select Folder</option>
+                    {folderOptions.map((folder) => (
+                      <option key={folder.id} value={folder.id}>
+                        {folder.label}
+                      </option>
+                    ))}
+                  </select>
+                )}
               </div>
 
               {bodyType === 'none' && (
@@ -1396,13 +1502,6 @@ const RequestEditor: React.FC = () => {
               )}
 
               {bodyType === 'json' && (
-                // <textarea
-                //   value={bodyContent}
-                //   onChange={(e) => setBodyContent(e.target.value)}
-                //   placeholder='Enter JSON body'
-                //   rows={8}
-                //   className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 font-mono text-sm dark:bg-gray-800 dark:text-white'
-                // />
                 <CodeMirror
                   value={bodyContent}
                   options={{
@@ -1451,44 +1550,18 @@ const RequestEditor: React.FC = () => {
               )}
 
               {bodyType === 'raw' && (
-                <>
-                  {/* <textarea
+                <CodeMirror
                   value={bodyContent}
-                  onChange={(e) => setBodyContent(e.target.value)}
-                  placeholder='Enter raw request body'
-                  rows={8}
-                  className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 font-mono text-sm dark:bg-gray-800 dark:text-white'
-                /> */}
-                  {/* <CodeMirror
-                    value={bodyContent}
-                    options={{
-                      mode: { name: 'javascript', json: true },
-                      theme: 'material', // base dark theme
-                      lineNumbers: true,
-                      lineWrapping: true,
-                    }}
-                    onBeforeChange={(editor, data, value) => {
-                      setBodyContent(value);
-                    }}
-                    editorDidMount={(editor) => {
-                      editor.getWrapperElement().style.fontSize = '14px';
-                      editor.getWrapperElement().style.color = '#FFA500';
-                    }}
-                  /> */}
-
-                  <CodeMirror
-                    value={bodyContent}
-                    options={{
-                      mode: { name: 'javascript', json: true },
-                      theme: 'whiteorange',
-                      lineNumbers: true,
-                      lineWrapping: true,
-                    }}
-                    onBeforeChange={(editor, data, value) => {
-                      setBodyContent(value);
-                    }}
-                  />
-                </>
+                  options={{
+                    mode: { name: 'javascript', json: true },
+                    theme: 'whiteorange',
+                    lineNumbers: true,
+                    lineWrapping: true,
+                  }}
+                  onBeforeChange={(editor, data, value) => {
+                    setBodyContent(value);
+                  }}
+                />
               )}
 
               {bodyType === 'binary' && (
@@ -1527,7 +1600,6 @@ const RequestEditor: React.FC = () => {
                     setAuthData({ ...authData, token: e.target.value })
                   }
                   placeholder='Enter token'
-                  // className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 bg-white dark:bg-gray-800 text-sm'
                 />
               </div>
             </div>
@@ -1648,7 +1720,7 @@ const RequestEditor: React.FC = () => {
             {!isCreatingCollection ? (
               <div className='space-y-2'>
                 <select
-                  value={activeCollection?.id || ''} // Set the value to show selected collection
+                  value={activeCollection?.id || ''}
                   onChange={(e) => {
                     setActiveCollection(
                       collections.find((c) => c.id === e.target.value) || null
@@ -1663,6 +1735,26 @@ const RequestEditor: React.FC = () => {
                     </option>
                   ))}
                 </select>
+
+                {activeCollection?.id && (
+                  <div className='space-y-1'>
+                    <label className='block text-sm font-medium text-gray-700 dark:text-gray-300'>
+                      Folder (optional)
+                    </label>
+                    <select
+                      value={selectedFolderId}
+                      onChange={(e) => setSelectedFolderId(e.target.value)}
+                      className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150'
+                    >
+                      <option value=''>No folder</option>
+                      {folderOptions.map((f) => (
+                        <option key={f.id} value={f.id}>
+                          {f.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
                 <button
                   onClick={() => setIsCreatingCollection(true)}

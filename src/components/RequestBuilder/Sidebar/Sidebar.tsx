@@ -77,6 +77,7 @@ const Sidebar: React.FC = () => {
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(
     new Set()
   );
+  const [selectedFolder, setSelectedFolder] = useState<any | null>(null);
 
   const { mutateAsync: addFolder, loading: addingFolder } = useAddFolder();
 
@@ -560,13 +561,14 @@ const Sidebar: React.FC = () => {
 
   const FolderNodeView: React.FC<{
     folder: any;
+    parentCollection: Collection;
     onClickRequest: (req: CollectionRequest) => void;
-  }> = ({ folder, onClickRequest }) => {
+  }> = ({ folder, parentCollection, onClickRequest }) => {
     const isOpen = expandedFolders.has(folder.id);
     return (
       <div className='ml-3'>
         <div
-          className='flex items-center justify-between p-2 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer'
+          className='flex items-center justify-between p-2 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer group'
           onClick={() => toggleFolder(folder.id)}
         >
           <div className='flex items-center space-x-2'>
@@ -580,6 +582,23 @@ const Sidebar: React.FC = () => {
               {folder.name}
             </span>
           </div>
+
+          <div className='opacity-0 group-hover:opacity-100 transition-opacity'>
+            <button
+              className='p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700'
+              onClick={(e) => {
+                e.stopPropagation();
+                const rect = e.currentTarget.getBoundingClientRect();
+                setMenuPosition({ top: rect.bottom, left: rect.left });
+                setSelectedCollection(parentCollection);
+                setSelectedFolder(folder);
+                setShowMenu(`folder-${folder.id}`);
+              }}
+              aria-label='Folder options'
+            >
+              <MoreVertical className='h-3 w-3' />
+            </button>
+          </div>
         </div>
 
         <div
@@ -587,7 +606,6 @@ const Sidebar: React.FC = () => {
             isOpen ? 'max-h-[1000px]' : 'max-h-0'
           }`}
         >
-          {/* Requests inside this folder */}
           {(folder.requests || []).map((request: CollectionRequest) => (
             <div
               key={request.id || `${folder.id}-${request.name}`}
@@ -613,11 +631,11 @@ const Sidebar: React.FC = () => {
             </div>
           ))}
 
-          {/* Nested sub-folders */}
           {(folder.folders || []).map((sub: any) => (
             <FolderNodeView
               key={sub.id}
               folder={sub}
+              parentCollection={parentCollection}
               onClickRequest={onClickRequest}
             />
           ))}
@@ -764,7 +782,6 @@ const Sidebar: React.FC = () => {
                     >
                       {expanded && (
                         <div className='overflow-y-auto max-h-[600px]'>
-                          {/* Root-level requests (no folderId) */}
                           {collection.requests
                             .filter((r: any) => !r.folderId)
                             .map((request, index) => (
@@ -814,11 +831,11 @@ const Sidebar: React.FC = () => {
                               </div>
                             ))}
 
-                          {/* Folder tree */}
                           {(collection as any).folders?.map((folder: any) => (
                             <FolderNodeView
                               key={folder.id}
                               folder={folder}
+                              parentCollection={collection}
                               onClickRequest={(req) => setActiveRequest(req)}
                             />
                           ))}
@@ -921,7 +938,6 @@ const Sidebar: React.FC = () => {
                 left: `${menuPosition.left}px`,
               }}
             >
-              {/* Collection Menu */}
               {showMenu === selectedCollection?.id && (
                 <div>
                   <button
@@ -989,7 +1005,6 @@ const Sidebar: React.FC = () => {
                 </div>
               )}
 
-              {/* Request Menu */}
               {showMenu.startsWith('request-') && selectedRequest && (
                 <div>
                   <button
@@ -1031,6 +1046,27 @@ const Sidebar: React.FC = () => {
                   </button>
                 </div>
               )}
+
+              {showMenu.startsWith('folder-') &&
+                selectedFolder &&
+                selectedCollection && (
+                  <div>
+                    <button
+                      onClick={() => {
+                        handleCreateRequest(
+                          selectedCollection,
+                          selectedFolder.id
+                        );
+                        setShowMenu(null);
+                        setMenuPosition(null);
+                      }}
+                      className='flex items-center w-full px-4 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
+                    >
+                      <Plus className='h-4 w-4 mr-2' />
+                      Add Request
+                    </button>
+                  </div>
+                )}
             </div>,
             document.body
           )}

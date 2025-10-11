@@ -307,12 +307,12 @@ export const renameRequest = async ({
       }
     );
     if (!response.ok) {
-      throw new Error('Failed to duplicate request');
+      throw new Error('Failed to rename request');
     }
     const data = await response.json();
     return formatRequest(data);
   } catch (error: any) {
-    console.error('Error duplicating request:', error);
+    console.error('Error renaming request:', error);
     throw error;
   }
 };
@@ -333,12 +333,12 @@ export const updateRequest = async ({
       }
     );
     if (!response.ok) {
-      throw new Error('Failed to duplicate request');
+      throw new Error('Failed to update request');
     }
     const data = await response.json();
     return formatRequest(data);
   } catch (error: any) {
-    console.error('Error duplicating request:', error);
+    console.error('Error updating request:', error);
     throw error;
   }
 };
