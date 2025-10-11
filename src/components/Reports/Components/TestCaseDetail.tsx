@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ChevronDown, ChevronRight, Globe, Clock, AlertCircle } from 'lucide-react';
 import { CodeBlock } from './CodeBlock';
+import { prettyCurl } from '@/utils/prettyCurl';
 // import JsonView from 'react18-json-view';
 
 
@@ -138,10 +139,10 @@ export const TestCaseDetail: React.FC<TestCaseDetailProps> = ({ testCase }) => {
           </div>
 
           <div className="flex items-center space-x-6 text-sm text-gray-500">
-            <div className="flex items-center space-x-1">
+            {/* <div className="flex items-center space-x-1">
               <Globe className="w-4 h-4" />
               <span>{testCase.method}</span>
-            </div>
+            </div> */}
             <div className="flex items-center space-x-1">
               <Clock className="w-4 h-4" />
               <span>{testCase.duration}ms</span>
@@ -168,7 +169,7 @@ export const TestCaseDetail: React.FC<TestCaseDetailProps> = ({ testCase }) => {
             </div>
             <div>
               <h4 className="font-medium text-gray-900 mb-2">Request cURL</h4>
-              <CodeBlock language="bash" code={testCase.requestCurl} />
+              <CodeBlock language="bash" code={prettyCurl(testCase.requestCurl)} />
             </div>
             <div>
               <h4 className="font-medium text-gray-900 mb-2">Response</h4>

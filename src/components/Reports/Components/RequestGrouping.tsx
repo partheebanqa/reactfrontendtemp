@@ -1,13 +1,16 @@
 import React, { useMemo, useState } from "react";
-import { ChevronDown, ChevronUp, Globe, Clock, CheckCircle, XCircle, AlertTriangle } from "lucide-react";
-// ⬇️ Adjust this import path to wherever you placed your component
+import {
+  ChevronDown,
+  ChevronUp,
+  Globe,
+  Clock,
+  CheckCircle,
+  XCircle,
+  AlertTriangle,
+} from "lucide-react";
 import { TestCaseDetail } from "@/components/Reports/Components/TestCaseDetail";
 
-/** =========================
- * Types
- * ========================= */
-
-// Matches your external TestCaseDetail props (with optional subCategory to be safe)
+/** ============== Types (same as you had) ============== */
 export interface TestCase {
   id: string;
   name: string;
@@ -24,7 +27,6 @@ export interface TestCase {
   response: string;
 }
 
-// If you are using the ApiTestReport shape (from earlier responses)
 interface ApiTestReport {
   id: string;
   name: string;
@@ -38,19 +40,16 @@ interface ApiTestReport {
   updatedAt: string;
   requests: RequestResult[];
 }
-
 interface RequestResult {
   requestId: string;
   name: string;
   method: string;
   url: string;
-
   totalTestCases: number;
   successfulTestCases: number;
   failedTestCases: number;
   skippedTestCases: number;
   successRate: number;
-
   positiveTests: TestGroup;
   negativeTests: TestGroup;
   functionalTests: TestGroup;
@@ -58,13 +57,11 @@ interface RequestResult {
   edgeCaseTests: TestGroup;
   securityTests: TestGroup;
   advancedSecurityTests: TestGroup;
-
   totalAssertions: number;
   passedAssertions: number;
   failedAssertions: number;
   assertionSuccessRate: number;
 }
-
 interface TestGroup {
   total: number;
   passed: number;
@@ -73,29 +70,12 @@ interface TestGroup {
   testCases: TestCase[];
 }
 
-/** Local grouping type */
-interface RequestGroup {
-  endpoint: string;
-  method: string;
-  testCases: TestCase[];
-  totalTests: number;
-  passedTests: number;
-  failedTests: number;
-  skippedTests: number;
-  avgDuration: number;
-}
-
-/** Props:
- *  - Provide `testCases` directly, OR pass a full `report` and we'll flatten it.
- */
 interface RequestGroupingProps {
   report?: ApiTestReport;
   testCases?: TestCase[];
 }
 
-/** =========================
- * Helpers
- * ========================= */
+/** ============== Helpers ============== */
 const collectAllTestCasesFromReport = (report?: ApiTestReport): TestCase[] => {
   if (!report) return [];
   const groups: (keyof RequestResult)[] = [
@@ -126,6 +106,20 @@ const collectAllTestCasesFromReport = (report?: ApiTestReport): TestCase[] => {
   return all;
 };
 
+// normalize URL (lowercase host; remove trailing slash in path)
+const normalizeUrl = (raw: string) => {
+  try {
+    const u = new URL(raw);
+    const origin = `${u.protocol}//${u.host.toLowerCase()}`;
+    const pathname = u.pathname.replace(/\/$/, ""); // drop trailing slash
+    // keep query string as-is (you said requests differ by query too)
+    return `${origin}${pathname}${u.search}`;
+  } catch {
+    // fallback: trim & drop trailing slash
+    return raw.trim().replace(/\/$/, "");
+  }
+};
+
 const getMethodColor = (method: string) => {
   switch ((method || "").toUpperCase()) {
     case "GET":
@@ -145,78 +139,126 @@ const getMethodColor = (method: string) => {
   }
 };
 
-/** =========================
- * Component
- * ========================= */
-export const RequestGrouping: React.FC<RequestGroupingProps> = ({ report, testCases }) => {
-  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+/** ============== New grouping model ==============
+ * One row per URL. Inside it, buckets by method.
+ */
+type MethodBucket = {
+  method: string;
+  testCases: TestCase[];
+  total: number;
+  passed: number;
+  failed: number;
+  skipped: number;
+  avgDuration: number;
+};
 
-  // Decide source of test cases
+type UrlGroup = {
+  endpoint: string;           // the displayed URL (first seen form)
+  key: string;                // normalized key
+  methods: Record<string, MethodBucket>;
+  total: number;
+  passed: number;
+  failed: number;
+  skipped: number;
+  avgDuration: number;        // across all methods
+};
+
+export const RequestGrouping: React.FC<RequestGroupingProps> = ({ report, testCases }) => {
+  const [expandedUrls, setExpandedUrls] = useState<Set<string>>(new Set());
+
   const sourceTestCases = useMemo<TestCase[]>(() => {
     if (testCases && testCases.length) return testCases;
     return collectAllTestCasesFromReport(report);
   }, [report, testCases]);
 
-  // Group by METHOD + URL
-  const groupedRequests = useMemo(() => {
-    const groups: Record<string, RequestGroup> = {};
+  // Group by URL (NOT by method), then bucket methods inside
+  const urlGroups = useMemo<Record<string, UrlGroup>>(() => {
+    const groups: Record<string, UrlGroup> = {};
+
     for (const tc of sourceTestCases) {
-      const key = `${(tc.method || "").toUpperCase()} ${tc.url}`;
+      const key = normalizeUrl(tc.url || "");
       if (!groups[key]) {
         groups[key] = {
-          endpoint: tc.url,
-          method: (tc.method || "").toUpperCase(),
-          testCases: [],
-          totalTests: 0,
-          passedTests: 0,
-          failedTests: 0,
-          skippedTests: 0,
+          key,
+          endpoint: tc.url, // keep original formatting for display
+          methods: {},
+          total: 0,
+          passed: 0,
+          failed: 0,
+          skipped: 0,
           avgDuration: 0,
         };
       }
+
       const g = groups[key];
-      g.testCases.push(tc);
-      g.totalTests += 1;
-      if (tc.status === "passed") g.passedTests += 1;
-      else if (tc.status === "failed") g.failedTests += 1;
-      else if (tc.status === "skipped") g.skippedTests += 1;
+
+      const method = (tc.method || "").toUpperCase();
+      if (!g.methods[method]) {
+        g.methods[method] = {
+          method,
+          testCases: [],
+          total: 0,
+          passed: 0,
+          failed: 0,
+          skipped: 0,
+          avgDuration: 0,
+        };
+      }
+
+      const mb = g.methods[method];
+      mb.testCases.push(tc);
+      mb.total += 1;
+      if (tc.status === "passed") mb.passed += 1;
+      else if (tc.status === "failed") mb.failed += 1;
+      else if (tc.status === "skipped") mb.skipped += 1;
+
+      // accumulate URL totals
+      g.total += 1;
+      if (tc.status === "passed") g.passed += 1;
+      else if (tc.status === "failed") g.failed += 1;
+      else if (tc.status === "skipped") g.skipped += 1;
     }
 
-    // avg
+    // compute averages
     Object.values(groups).forEach((g) => {
-      const totalDuration = g.testCases.reduce((s, t) => s + (t.duration || 0), 0);
-      g.avgDuration = g.testCases.length ? Math.round(totalDuration / g.testCases.length) : 0;
+      // per method
+      Object.values(g.methods).forEach((mb) => {
+        const dur = mb.testCases.reduce((s, t) => s + (t.duration || 0), 0);
+        mb.avgDuration = mb.total ? Math.round(dur / mb.total) : 0;
+      });
+      // per URL (all tests)
+      const allDur = Object.values(g.methods)
+        .flatMap((mb) => mb.testCases)
+        .reduce((s, t) => s + (t.duration || 0), 0);
+      g.avgDuration = g.total ? Math.round(allDur / g.total) : 0;
     });
 
     return groups;
   }, [sourceTestCases]);
 
-  const toggleGroup = (groupKey: string) => {
-    const copy = new Set(expandedGroups);
-    if (copy.has(groupKey)) copy.delete(groupKey);
-    else copy.add(groupKey);
-    setExpandedGroups(copy);
+  const entries = Object.values(urlGroups);
+
+  const toggleUrl = (key: string) => {
+    const copy = new Set(expandedUrls);
+    if (copy.has(key)) copy.delete(key);
+    else copy.add(key);
+    setExpandedUrls(copy);
   };
 
-  const getSuccessRate = (g: RequestGroup) =>
-    !g.totalTests ? 0 : Math.round((g.passedTests / g.totalTests) * 100);
+  const successPct = (passed: number, total: number) =>
+    total ? Math.round((passed / total) * 100) : 0;
 
-  const entries = Object.entries(groupedRequests);
+  const truncateText = (text: string, maxLength: number) =>
+    !text ? "" : text.length > maxLength ? text.slice(0, maxLength) + "..." : text;
 
   if (!entries.length) {
     return (
       <div className="bg-white rounded-lg shadow-md p-8 text-center">
         <Globe className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-        <p className="text-gray-500">No API requests found in the selected filters</p>
+        <p className="text-gray-500">No API requests found</p>
       </div>
     );
   }
-
-  const truncateText = (text: string, maxLength: number) => {
-    if (!text) return "";
-    return text.length > maxLength ? text.slice(0, maxLength) + "..." : text;
-  };
-
 
   return (
     <div className="space-y-4">
@@ -227,15 +269,16 @@ export const RequestGrouping: React.FC<RequestGroupingProps> = ({ report, testCa
         </h2>
 
         <div className="space-y-4">
-          {entries.map(([groupKey, group]) => {
-            const isExpanded = expandedGroups.has(groupKey);
-            const successRate = getSuccessRate(group);
+          {entries.map((group) => {
+            const isExpanded = expandedUrls.has(group.key);
+            const rate = successPct(group.passed, group.total);
 
             return (
-              <div key={groupKey} className="border border-gray-200 rounded-lg overflow-hidden">
+              <div key={group.key} className="border border-gray-200 rounded-lg overflow-hidden">
+                {/* Row header (one per URL) */}
                 <div
                   className="p-4 bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors"
-                  onClick={() => toggleGroup(groupKey)}
+                  onClick={() => toggleUrl(group.key)}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-4 flex-1">
@@ -245,29 +288,43 @@ export const RequestGrouping: React.FC<RequestGroupingProps> = ({ report, testCa
                         <ChevronUp className="w-5 h-5 text-gray-400" />
                       )}
 
-                      <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium border ${getMethodColor(group.method)}`}>
-                        {group.method}
-                      </span>
+                      {/* Method chips summary */}
+                      {/* <div className="flex items-center gap-2">
+                        {Object.keys(group.methods).map((m) => (
+                          <span
+                            key={m}
+                            className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium border ${getMethodColor(
+                              m
+                            )}`}
+                          >
+                            {m}
+                          </span>
+                        ))}
+                      </div> */}
 
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-gray-900 truncate"> {truncateText(group.endpoint, 60)}</p>
-                        <p className="text-sm text-gray-500">{group.totalTests} test cases</p>
+                        <p className="font-medium text-gray-900 truncate" title={group.endpoint}>
+                          {truncateText(group.endpoint, 70)}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          {group.total} test case{group.total === 1 ? "" : "s"}
+                        </p>
                       </div>
                     </div>
 
                     <div className="flex items-center space-x-6 text-sm">
                       <div className="flex items-center space-x-1 text-green-600">
                         <CheckCircle className="w-4 h-4" />
-                        <span>{group.passedTests}</span>
+                        <span>{group.passed}</span>
                       </div>
                       <div className="flex items-center space-x-1 text-red-600">
                         <XCircle className="w-4 h-4" />
-                        <span>{group.failedTests}</span>
+                        <span>{group.failed}</span>
                       </div>
-                      {group.skippedTests > 0 && (
+                      {group.skipped > 0 && (
                         <div className="flex items-center space-x-1 text-yellow-600">
                           <AlertTriangle className="w-4 h-4" />
-                          <span>{group.skippedTests}</span>
+                          <span>{group.skipped}</span>
                         </div>
                       )}
                       <div className="flex items-center space-x-1 text-gray-500">
@@ -275,28 +332,41 @@ export const RequestGrouping: React.FC<RequestGroupingProps> = ({ report, testCa
                         <span>{group.avgDuration}ms avg</span>
                       </div>
                       <div
-                        className={`font-semibold ${successRate >= 80
-                          ? "text-green-600"
-                          : successRate >= 60
-                            ? "text-yellow-600"
-                            : "text-red-600"
+                        className={`font-semibold ${rate >= 80 ? "text-green-600" : rate >= 60 ? "text-yellow-600" : "text-red-600"
                           }`}
                       >
-                        {successRate}%
+                        {rate}%
                       </div>
                     </div>
                   </div>
                 </div>
 
+                {/* Expanded: per-method sections with TestCaseDetail */}
                 {isExpanded && (
                   <div className="border-t border-gray-200 bg-white">
-                    <div className="p-4">
-                      <div className="space-y-4">
-                        {group.testCases.map((tc) => (
-                          // ⬇️ Uses your external component
-                          <TestCaseDetail key={tc.id} testCase={tc} />
-                        ))}
-                      </div>
+                    <div className="p-4 space-y-6">
+                      {Object.values(group.methods).map((mb) => (
+                        <div key={mb.method} className="space-y-3">
+                          <div className="flex items-center gap-3">
+                            <span
+                              className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium border ${getMethodColor(
+                                mb.method
+                              )}`}
+                            >
+                              {mb.method}
+                            </span>
+                            {/* <span className="text-sm text-gray-500">
+                              {mb.total} test case{mb.total === 1 ? "" : "s"} • {mb.avgDuration}ms avg
+                            </span> */}
+                          </div>
+
+                          <div className="space-y-3">
+                            {mb.testCases.map((tc) => (
+                              <TestCaseDetail key={tc.id} testCase={tc} />
+                            ))}
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 )}

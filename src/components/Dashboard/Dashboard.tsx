@@ -106,9 +106,6 @@ export default function Dashboard() {
           />
 
 
-
-
-
           <StatsCard
             title='Active Schedules'
             value={data?.totalActiveSchedules || 0}
