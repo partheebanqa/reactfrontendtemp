@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState, useRef } from 'react';
 import React from 'react';
+import dayjs from 'dayjs';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -71,7 +72,7 @@ import { Controlled as CodeMirror } from 'react-codemirror2';
 import 'codemirror/lib/codemirror.css';
 import 'codemirror/theme/material.css';
 import 'codemirror/mode/javascript/javascript';
-import "./../RequestBuilder/RequestEditor/whiteorange.css"
+import './../RequestBuilder/RequestEditor/whiteorange.css';
 
 // Define Variable interface here as it's used in the props and functions
 interface Variable {
@@ -211,9 +212,6 @@ export function RequestEditor({
     dynamicOverrides
   );
 
-  console.log('Dynamic Variables:', dynamicStructured);
-  console.log('Store variables:', storeVariables);
-
   const getUsedDynamicVariables = () => {
     const allTextFields = [
       request.url || '',
@@ -290,8 +288,8 @@ export function RequestEditor({
           typeof value === 'number'
             ? 'number'
             : typeof value === 'boolean'
-              ? 'boolean'
-              : 'string',
+            ? 'boolean'
+            : 'string',
       })
     );
 
@@ -413,25 +411,25 @@ export function RequestEditor({
       authApiValue: replaceVariables(request.authApiValue || '', variables),
       authorization: request.authorization
         ? {
-          ...request.authorization,
-          token: replaceVariables(
-            request.authorization.token || '',
-            variables
-          ),
-          username: replaceVariables(
-            request.authorization.username || '',
-            variables
-          ),
-          password: replaceVariables(
-            request.authorization.password || '',
-            variables
-          ),
-          key: replaceVariables(request.authorization.key || '', variables),
-          value: replaceVariables(
-            request.authorization.value || '',
-            variables
-          ),
-        }
+            ...request.authorization,
+            token: replaceVariables(
+              request.authorization.token || '',
+              variables
+            ),
+            username: replaceVariables(
+              request.authorization.username || '',
+              variables
+            ),
+            password: replaceVariables(
+              request.authorization.password || '',
+              variables
+            ),
+            key: replaceVariables(request.authorization.key || '', variables),
+            value: replaceVariables(
+              request.authorization.value || '',
+              variables
+            ),
+          }
         : request.authorization,
     };
   };
@@ -609,39 +607,292 @@ export function RequestEditor({
 
   const regenerateDynamicVariable = (variableName: string) => {
     const dynamicVar = dynamicVariables.find((v) => v.name === variableName);
+    console.log('Regenerating variable:', variableName, dynamicVar);
+
     if (!dynamicVar) return;
 
     const randInt = (min: number, max: number) =>
       Math.floor(Math.random() * (max - min + 1)) + min;
-
     const randString = (len: number) =>
       Array.from({ length: len }, () =>
         Math.random().toString(36).charAt(2)
       ).join('');
+    const randomAlphaNumeric = (length = 10) => {
+      const chars =
+        'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+      return Array.from({ length }, () =>
+        chars.charAt(randInt(0, chars.length - 1))
+      ).join('');
+    };
+    const randomBoolean = () => Math.random() < 0.5;
+    const randomUUID = () =>
+      crypto.randomUUID?.() ??
+      `${randString(8)}-${randString(4)}-${randString(4)}-${randString(
+        4
+      )}-${randString(12)}`;
 
-    const fakeName = () =>
-      ['Alice Johnson', 'Bob Smith', 'Charlie Brown'][
-      Math.floor(Math.random() * 3)
+    const fakeFirstName = () =>
+      [
+        'Alice',
+        'Bob',
+        'Charlie',
+        'Diana',
+        'Ethan',
+        'Fiona',
+        'George',
+        'Hannah',
+      ][randInt(0, 7)];
+    const fakeLastName = () =>
+      ['Johnson', 'Smith', 'Brown', 'Williams', 'Taylor', 'Davis'][
+        randInt(0, 5)
       ];
+    const fakeName = () => `${fakeFirstName()} ${fakeLastName()}`;
+    const fakeUsername = () =>
+      `${fakeFirstName().toLowerCase()}${randInt(10, 9999)}`;
+    const fakePhone = () => `+1${randInt(1000000000, 9999999999)}`;
+    const fakeSSN = () =>
+      `${randInt(100, 999)}-${randInt(10, 99)}-${randInt(1000, 9999)}`;
+    const fakeGender = () => ['Male', 'Female', 'Other'][randInt(0, 2)];
+    const fakeEmail = () => {
+      const domains = ['example.com', 'mail.com', 'test.org', 'demo.net'];
+      return `${randString(6)}@${domains[randInt(0, domains.length - 1)]}`;
+    };
+    const emailWithDomain = (domain = 'example.com') =>
+      `${randString(8)}@${domain}`;
+    const fakePassword = () => {
+      const chars =
+        'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
+      return Array.from({ length: 10 }, () =>
+        chars.charAt(randInt(0, chars.length - 1))
+      ).join('');
+    };
 
-    let newValue: string | number;
+    const randomIPv4 = () =>
+      `${randInt(0, 255)}.${randInt(0, 255)}.${randInt(0, 255)}.${randInt(
+        0,
+        255
+      )}`;
+    const randomURL = () => `https://www.${randString(6)}.com`;
+    const randomDomain = () => `${randString(5)}.com`;
+    const randomPort = () => randInt(1024, 65535);
+
+    const randomLatitude = () => +(Math.random() * 180 - 90).toFixed(6);
+    const randomLongitude = () => +(Math.random() * 360 - 180).toFixed(6);
+    const randomZip = () => randInt(10000, 99999).toString();
+    const randomCountry = () =>
+      ['United States', 'India', 'Canada', 'Australia', 'Germany', 'Japan'][
+        randInt(0, 5)
+      ];
+    const randomState = () =>
+      ['California', 'Texas', 'New York', 'Florida', 'Maharashtra', 'Ontario'][
+        randInt(0, 5)
+      ];
+    const randomCity = () =>
+      ['New York', 'Los Angeles', 'Chicago', 'Mumbai', 'Toronto', 'Berlin'][
+        randInt(0, 5)
+      ];
+    const randomAddress = () =>
+      `${randInt(
+        10,
+        9999
+      )} ${randomCity()} St, ${randomState()}, ${randomCountry()} - ${randomZip()}`;
+
+    const randomYear = () => randInt(1950, new Date().getFullYear());
+    const randomMonth = () =>
+      [
+        'January',
+        'February',
+        'March',
+        'April',
+        'May',
+        'June',
+        'July',
+        'August',
+        'September',
+        'October',
+        'November',
+        'December',
+      ][randInt(0, 11)];
+    const currentDate = (format = 'YYYY-MM-DD') => dayjs().format(format);
+    const currentTimestamp = () => Date.now();
+
+    const futureDate = (years = 1, format = 'YYYY-MM-DD') =>
+      dayjs().add(years, 'year').format(format);
+    const randomDate = (format = 'YYYY-MM-DD') => {
+      const start = dayjs('2000-01-01').toDate().getTime();
+      const end = new Date().getTime();
+      return dayjs(randInt(start, end)).format(format);
+    };
+    const price = (min = 1, max = 1000) => randInt(min, max);
+    const bearerToken = (length = 32) => {
+      try {
+        if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+          const bytes = new Uint8Array(length);
+          crypto.getRandomValues(bytes);
+          return (
+            'Bearer ' +
+            Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('')
+          );
+        }
+      } catch {}
+      return 'Bearer ' + randString(length);
+    };
+
+    const apiKey = (length = 32, prefix = 'ak_') =>
+      `${prefix}${randomAlphaNumeric(length)}`;
+
+    const creditCardNumber = () => {
+      let num = '';
+      for (let i = 0; i < 16; i++) num += randInt(0, 9);
+      return num.replace(/(\d{4})(?=\d)/g, '$1 ');
+    };
+    const creditCardExp = () => {
+      const month = String(randInt(1, 12)).padStart(2, '0');
+      const year = String(
+        randInt(
+          new Date().getFullYear() % 100,
+          (new Date().getFullYear() % 100) + 10
+        )
+      );
+      return `${month}/${year}`;
+    };
+    const creditCardCVV = () => String(randInt(100, 999));
+    const randomCurrency = () =>
+      ['USD', 'INR', 'EUR', 'GBP', 'JPY', 'CAD', 'AUD'][randInt(0, 6)];
+
+    let newValue: string | number | boolean = '';
+
     switch (dynamicVar.generatorId) {
-      case 'randomString':
-        newValue = randString(dynamicVar.parameters?.length || 8);
+      // Identity
+      case 'firstName':
+        newValue = fakeFirstName();
         break;
-      case 'randomInteger':
-        newValue = randInt(
-          dynamicVar.parameters?.min || 0,
-          dynamicVar.parameters?.max || 100
-        );
+      case 'lastName':
+        newValue = fakeLastName();
         break;
       case 'name':
         newValue = fakeName();
         break;
+      case 'gender':
+        newValue = fakeGender();
+        break;
+      case 'username':
+        newValue = fakeUsername();
+        break;
+      case 'phone':
+        newValue = fakePhone();
+        break;
+      case 'ssn':
+        newValue = fakeSSN();
+        break;
+      case 'email':
+        newValue = fakeEmail();
+        break;
+      case 'emailWithDomain':
+        newValue = emailWithDomain(
+          dynamicVar.parameters?.domain ?? 'example.com'
+        );
+        break;
+      case 'password':
+        newValue = fakePassword();
+        break;
+
+      case 'ipv4':
+      case 'random_ip':
+        newValue = randomIPv4();
+        break;
+      case 'url':
+        newValue = randomURL();
+        break;
+      case 'domain':
+        newValue = randomDomain();
+        break;
+      case 'random_port':
+        newValue = randomPort();
+        break;
+      case 'boolean':
+        newValue = randomBoolean();
+        break;
+      case 'uuid':
+      case 'random_uuid':
+        newValue = randomUUID();
+        break;
+
+      case 'api_key':
+        newValue = apiKey(
+          dynamicVar.parameters?.length ?? 32,
+          dynamicVar.parameters?.prefix ?? 'ak_'
+        );
+        break;
+      case 'bearer_token':
+        newValue = bearerToken(dynamicVar.parameters?.length ?? 32);
+        break;
+
+      case 'creditCard':
+        newValue = creditCardCVV();
+        break;
+      case 'creditCardNumber':
+        newValue = creditCardNumber();
+        break;
+      case 'creditCardExp':
+        newValue = creditCardExp();
+        break;
+      case 'currency':
+        newValue = randomCurrency();
+        break;
+
+      case 'timestamp':
+        newValue = currentTimestamp();
+        break;
+      case 'random_email':
+        newValue = fakeEmail();
+        break;
+      case 'futureDate':
+        newValue = futureDate(
+          dynamicVar.parameters?.years ?? 1,
+          dynamicVar.parameters?.format ?? 'YYYY-MM-DD'
+        );
+        break;
+      case 'randomDate':
+        newValue = randomDate(dynamicVar.parameters?.format ?? 'YYYY-MM-DD');
+        break;
+      case 'date':
+        newValue = currentDate(dynamicVar.parameters?.format ?? 'YYYY-MM-DD');
+        break;
+      case 'year':
+        newValue = randomYear();
+        break;
+      case 'month':
+        newValue = randomMonth();
+        break;
+
+      case 'latitude':
+        newValue = randomLatitude();
+        break;
+      case 'longitude':
+        newValue = randomLongitude();
+        break;
+      case 'zip':
+        newValue = randomZip();
+        break;
+      case 'country':
+        newValue = randomCountry();
+        break;
+      case 'state':
+        newValue = randomState();
+        break;
+      case 'city':
+        newValue = randomCity();
+        break;
+      case 'address':
+        newValue = randomAddress();
+        break;
+
       default:
         newValue = '';
     }
 
+    // ---------- Apply ----------
     updateDynamicOverride(variableName, newValue);
   };
 
@@ -1041,7 +1292,7 @@ export function RequestEditor({
       (chain: any) =>
         normalizeString(chain.name) === normalizeString(chainName) &&
         normalizeString(chain.description) ===
-        normalizeString(chainDescription) &&
+          normalizeString(chainDescription) &&
         normalizeBool(chain.isImportant) === normalizeBool(chainEnabled) &&
         chain.environmentId === activeEnvironment?.id
     );
@@ -1309,7 +1560,7 @@ export function RequestEditor({
       processedRequest.body !== request.body ||
       processedRequest.url !== request.url ||
       JSON.stringify(processedRequest.headers) !==
-      JSON.stringify(request.headers) ||
+        JSON.stringify(request.headers) ||
       JSON.stringify(processedRequest.params) !== JSON.stringify(request.params)
     );
   };
@@ -1510,10 +1761,11 @@ export function RequestEditor({
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id as typeof activeTab)}
-                  className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors flex items-center space-x-2 ${activeTab === tab.id
-                    ? 'border-blue-500 text-[#136fb0]'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                    }`}
+                  className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors flex items-center space-x-2 ${
+                    activeTab === tab.id
+                      ? 'border-blue-500 text-[#136fb0]'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
                 >
                   <Icon className='w-4 h-4' />
                   <span>{tab.label}</span>
@@ -1597,10 +1849,11 @@ export function RequestEditor({
                       onClick={() =>
                         updateParam(index, { enabled: !param.enabled })
                       }
-                      className={`p-2 rounded-lg transition-colors ${param.enabled
-                        ? 'text-green-600 hover:bg-green-50'
-                        : 'text-gray-400 hover:bg-gray-50'
-                        }`}
+                      className={`p-2 rounded-lg transition-colors ${
+                        param.enabled
+                          ? 'text-green-600 hover:bg-green-50'
+                          : 'text-gray-400 hover:bg-gray-50'
+                      }`}
                     >
                       {/* toggle visibility icon here */}
                     </button>
@@ -1681,10 +1934,11 @@ export function RequestEditor({
                       onClick={() =>
                         updateHeader(index, { enabled: !header.enabled })
                       }
-                      className={`p-2 rounded-lg transition-colors ${header.enabled
-                        ? 'text-green-600 hover:bg-green-50'
-                        : 'text-gray-400 hover:bg-gray-50'
-                        }`}
+                      className={`p-2 rounded-lg transition-colors ${
+                        header.enabled
+                          ? 'text-green-600 hover:bg-green-50'
+                          : 'text-gray-400 hover:bg-gray-50'
+                      }`}
                     >
                       {/* toggle visibility icon */}
                     </button>
@@ -1848,7 +2102,7 @@ export function RequestEditor({
                   </label>
                   <select
                     value='bearer'
-                    onChange={() => { }}
+                    onChange={() => {}}
                     className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
                     disabled
                   >
@@ -1876,12 +2130,12 @@ export function RequestEditor({
                   {(processedRequest.authorization?.token ||
                     processedRequest.authToken) !==
                     (request.authorization?.token || request.authToken) && (
-                      <div className='mt-1 px-2 py-1 bg-blue-50 border border-blue-200 rounded text-xs font-mono'>
-                        Processed:{' '}
-                        {processedRequest.authorization?.token ||
-                          processedRequest.authToken}
-                      </div>
-                    )}
+                    <div className='mt-1 px-2 py-1 bg-blue-50 border border-blue-200 rounded text-xs font-mono'>
+                      Processed:{' '}
+                      {processedRequest.authorization?.token ||
+                        processedRequest.authToken}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -1935,10 +2189,11 @@ export function RequestEditor({
                             onClick={() =>
                               updateTest(test.id, { enabled: !test.enabled })
                             }
-                            className={`p-1 rounded transition-colors ${test.enabled
-                              ? 'text-green-600 hover:bg-green-50'
-                              : 'text-gray-400 hover:bg-gray-50'
-                              }`}
+                            className={`p-1 rounded transition-colors ${
+                              test.enabled
+                                ? 'text-green-600 hover:bg-green-50'
+                                : 'text-gray-400 hover:bg-gray-50'
+                            }`}
                           >
                             {/* {test.enabled ? (
                               <Eye className='w-4 h-4' />
@@ -2219,21 +2474,21 @@ export function RequestEditor({
             <div className='space-y-2 text-xs'>
               {(processedRequest.authToken !== request.authToken ||
                 processedRequest.authorization?.token !==
-                request.authorization?.token) && (
-                  <div>
-                    <span className='font-medium'>Auth Token:</span>
-                    <div className='font-mono bg-white p-1 rounded border max-w-full overflow-hidden text-ellipsis whitespace-nowrap'>
-                      <span className='text-gray-500'>
-                        {request.authorization?.token || request.authToken}
-                      </span>{' '}
-                      →
-                      <span className='text-blue-600 ml-1'>
-                        {processedRequest.authorization?.token ||
-                          processedRequest.authToken}
-                      </span>
-                    </div>
+                  request.authorization?.token) && (
+                <div>
+                  <span className='font-medium'>Auth Token:</span>
+                  <div className='font-mono bg-white p-1 rounded border max-w-full overflow-hidden text-ellipsis whitespace-nowrap'>
+                    <span className='text-gray-500'>
+                      {request.authorization?.token || request.authToken}
+                    </span>{' '}
+                    →
+                    <span className='text-blue-600 ml-1'>
+                      {processedRequest.authorization?.token ||
+                        processedRequest.authToken}
+                    </span>
                   </div>
-                )}
+                </div>
+              )}
               {processedRequest.url !== request.url && (
                 <div>
                   <span className='font-medium'>URL:</span>
@@ -2283,23 +2538,24 @@ export function RequestEditor({
                 {executionResult.response && (
                   <>
                     <span
-                      className={`px-2 py-1 text-xs font-medium rounded ${executionResult.response.status < 300
-                        ? 'bg-green-100 text-green-800'
-                        : executionResult.response.status < 400
+                      className={`px-2 py-1 text-xs font-medium rounded ${
+                        executionResult.response.status < 300
+                          ? 'bg-green-100 text-green-800'
+                          : executionResult.response.status < 400
                           ? 'bg-yellow-100 text-yellow-800'
                           : 'bg-red-100 text-red-800'
-                        }`}
+                      }`}
                     >
                       {executionResult.response.status}{' '}
                       {executionResult.response.status === 200
                         ? 'OK'
                         : executionResult.response.status === 201
-                          ? 'Created'
-                          : executionResult.response.status === 404
-                            ? 'Not Found'
-                            : executionResult.response.status === 500
-                              ? 'Server Error'
-                              : ''}
+                        ? 'Created'
+                        : executionResult.response.status === 404
+                        ? 'Not Found'
+                        : executionResult.response.status === 500
+                        ? 'Server Error'
+                        : ''}
                     </span>
                     <span className='text-sm text-gray-600'>
                       {executionResult.duration}ms
@@ -2354,10 +2610,11 @@ export function RequestEditor({
                         onClick={() =>
                           setResponseTab(tab.id as typeof responseTab)
                         }
-                        className={`py-3 px-1 border-b-2 font-medium text-sm transition-colors flex items-center space-x-2 ${responseTab === tab.id
-                          ? 'border-blue-500 text-blue-600'
-                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                          }`}
+                        className={`py-3 px-1 border-b-2 font-medium text-sm transition-colors flex items-center space-x-2 ${
+                          responseTab === tab.id
+                            ? 'border-blue-500 text-blue-600'
+                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                        }`}
                       >
                         <span>{tab.label}</span>
                         {tab.count !== null && tab.count > 0 && (
@@ -2416,7 +2673,7 @@ export function RequestEditor({
                   {responseTab === 'cookies' && (
                     <div className='space-y-3'>
                       {executionResult.response.cookies &&
-                        Object.keys(executionResult.response.cookies).length >
+                      Object.keys(executionResult.response.cookies).length >
                         0 ? (
                         Object.entries(executionResult.response.cookies).map(
                           ([name, value]) => (
@@ -2607,21 +2864,21 @@ export function RequestEditor({
           <div className='space-y-2 text-xs'>
             {(processedRequest.authToken !== request.authToken ||
               processedRequest.authorization?.token !==
-              request.authorization?.token) && (
-                <div>
-                  <span className='font-medium'>Auth Token:</span>
-                  <div className='font-mono bg-white p-1 rounded border'>
-                    <span className='text-gray-500'>
-                      {request.authorization?.token || request.authToken}
-                    </span>{' '}
-                    →
-                    <span className='text-blue-600 ml-1'>
-                      {processedRequest.authorization?.token ||
-                        processedRequest.authToken}
-                    </span>
-                  </div>
+                request.authorization?.token) && (
+              <div>
+                <span className='font-medium'>Auth Token:</span>
+                <div className='font-mono bg-white p-1 rounded border'>
+                  <span className='text-gray-500'>
+                    {request.authorization?.token || request.authToken}
+                  </span>{' '}
+                  →
+                  <span className='text-blue-600 ml-1'>
+                    {processedRequest.authorization?.token ||
+                      processedRequest.authToken}
+                  </span>
                 </div>
-              )}
+              </div>
+            )}
             {processedRequest.url !== request.url && (
               <div>
                 <span className='font-medium'>URL:</span>
@@ -2768,7 +3025,7 @@ export function RequestEditor({
             <CardContent className='space-y-4'>
               <div className='flex items-center space-x-4'>
                 <Label>Auth Type:</Label>
-                <Select value='bearer' onValueChange={() => { }} disabled>
+                <Select value='bearer' onValueChange={() => {}} disabled>
                   <SelectTrigger className='w-40'>
                     <SelectValue />
                   </SelectTrigger>

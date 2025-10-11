@@ -20,15 +20,14 @@ import {
   UserPlus,
   Mail,
   Crown,
-  Settings,
   Trash2,
   Search,
-  Filter,
   ChevronLeft,
   ChevronRight,
   X,
   Shield,
   User,
+  UserCog,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useMutation, useQuery } from '@tanstack/react-query';
@@ -45,6 +44,20 @@ import type {
   UpdateRolePayload,
 } from '@/shared/types/manageUser';
 import { prepareInvitePayload } from '@/lib/people-validators';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '../ui/tooltip';
 
 interface TeamMember {
   id: string;
@@ -52,10 +65,12 @@ interface TeamMember {
   email: string;
   role: string;
   roleId?: string;
-  status: 'active' | 'pending' | 'inactive';
+  // status: 'active' | 'pending' | 'inactive';
   lastActive: string;
   workspace: string;
   workspaceList?: string[];
+  workspaceIds?: string[];
+  workspacePairs?: { id: string; name: string }[];
   avatar?: string;
 }
 
@@ -75,9 +90,22 @@ export function PeopleManagement() {
   }>({});
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
-  const [showSuggestions, setShowSuggestions] = useState(false); // add local visibility state for the email suggestions popover
+  const [showSuggestions, setShowSuggestions] = useState(false);
 
-  // Fetch users from backend
+  const [roleDialogOpenFor, setRoleDialogOpenFor] = useState<TeamMember | null>(
+    null
+  );
+  const [roleDialogSelectedRole, setRoleDialogSelectedRole] = useState('');
+  const [roleDialogWorkspaceIds, setRoleDialogWorkspaceIds] = useState<
+    string[]
+  >([]);
+
+  const [removeDialogOpenFor, setRemoveDialogOpenFor] =
+    useState<TeamMember | null>(null);
+  const [removeDialogWorkspaceIds, setRemoveDialogWorkspaceIds] = useState<
+    string[]
+  >([]);
+
   const {
     data: usersData,
     isLoading: isLoadingUsers,
@@ -87,66 +115,79 @@ export function PeopleManagement() {
     queryFn: getUserList,
   });
 
-  console.log('userList:', usersData);
-
   const { data: roles, isLoading: isLoadingRoles } = useQuery({
     queryKey: ['userRoles'],
     queryFn: getUserRoles,
   });
 
-  // Filter and search state
   const [searchTerm, setSearchTerm] = useState('');
   const [filterWorkspace, setFilterWorkspace] = useState('all');
   const [filterRole, setFilterRole] = useState('all');
-  const [filterStatus, setFilterStatus] = useState('all');
   const [userType, setUserType] = useState<'existing' | 'new'>('existing');
 
-  // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(5);
+
+  const displayRoleName = (name?: string) => {
+    const n = (name || '').toLowerCase().trim();
+    return n === 'org admin' ? 'Account Owner' : name || '';
+  };
 
   const members: TeamMember[] = useMemo(() => {
     if (!usersData?.users || !roles?.roles) return [];
 
     return usersData.users.map((user) => {
-      const userRoleName = user.roles[0] || '';
+      const userRoleName =
+        (typeof user?.role === 'string' && user.role) ||
+        (Array.isArray(user?.roles) && user.roles[0]) ||
+        '';
+
       const matchingRole = roles.roles.find(
-        (r) => r.name.toLowerCase() === userRoleName.toLowerCase()
+        (r) => r.name?.toLowerCase() === String(userRoleName).toLowerCase()
       );
 
-      const rawWorkspaceList: string[] =
+      const rawWorkspacePairs: { id: string; name: string }[] =
         Array.isArray(user.workspaces) && user.workspaces.length > 0
           ? user.workspaces
-              .map((w: any) => (w?.name || '').toString().trim())
-              .filter(Boolean)
+              .map((w: any) => ({
+                id: (w?.id || '').toString().trim(),
+                name: (w?.name || '').toString().trim(),
+              }))
+              .filter((w) => w.id && w.name)
           : [];
-      const workspaceList = Array.from(new Set(rawWorkspaceList)); // dedupe names
+
+      const workspaceIds = Array.from(
+        new Set(rawWorkspacePairs.map((w) => w.id))
+      );
+      const workspaceNames = Array.from(
+        new Set(rawWorkspacePairs.map((w) => w.name))
+      );
 
       const workspaceDisplay =
-        workspaceList.length > 0 ? workspaceList.join(', ') : 'No Workspace';
+        workspaceNames.length > 0 ? workspaceNames.join(', ') : 'No Workspace';
 
       return {
         id: user.id,
         name: `${user.firstName} ${user.lastName}`,
         email: user.email,
-        role: userRoleName,
+        role: String(userRoleName),
         roleId: matchingRole?.id,
-        status: 'active' as const,
+        // status: 'active' as const,
         lastActive: user.createdAt,
         workspace: workspaceDisplay,
-        workspaceList,
+        workspaceList: workspaceNames,
+        workspaceIds,
+        workspacePairs: rawWorkspacePairs,
         avatar: undefined,
       };
     });
   }, [usersData, roles]);
 
-  // Backend users for the dropdown (existing users)
   const backendUsers = useMemo(() => {
     if (!usersData?.users) return [];
     return usersData.users;
   }, [usersData]);
 
-  // Get unique workspaces for filtering
   const availableWorkspaces = useMemo(() => {
     const set = new Set<string>();
     members.forEach((m) => {
@@ -159,7 +200,6 @@ export function PeopleManagement() {
     return Array.from(set);
   }, [members]);
 
-  // Suggestions for existing users while typing a new email
   const emailSuggestions = useMemo(() => {
     if (userType !== 'new') return [];
     const q = inviteEmail.trim().toLowerCase();
@@ -174,7 +214,6 @@ export function PeopleManagement() {
       .slice(0, 8);
   }, [userType, inviteEmail, backendUsers]);
 
-  // Filter and search logic
   const filteredMembers = useMemo(() => {
     return members.filter((member) => {
       const matchesSearch =
@@ -188,33 +227,31 @@ export function PeopleManagement() {
 
       const matchesRole = filterRole === 'all' || member.roleId === filterRole;
 
-      const matchesStatus =
-        filterStatus === 'all' || member.status === filterStatus;
-
-      return matchesSearch && matchesWorkspace && matchesRole && matchesStatus;
+      return matchesSearch && matchesWorkspace && matchesRole;
     });
-  }, [members, searchTerm, filterWorkspace, filterRole, filterStatus]);
+  }, [members, searchTerm, filterWorkspace, filterRole]);
 
-  // Pagination logic
   const totalPages = Math.ceil(filteredMembers.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
   const currentMembers = filteredMembers.slice(startIndex, endIndex);
 
-  // Reset to first page when filters change
   useMemo(() => {
     setCurrentPage(1);
-  }, [searchTerm, filterWorkspace, filterRole, filterStatus]);
+  }, [searchTerm, filterWorkspace, filterRole]);
 
   const clearFilters = () => {
     setSearchTerm('');
     setFilterWorkspace('all');
     setFilterRole('all');
-    setFilterStatus('all');
     setCurrentPage(1);
   };
 
-  const { mutate: inviteUser, isPending } = useMutation({
+  const {
+    mutate: inviteUser,
+    mutateAsync: inviteUserAsync,
+    isPending,
+  } = useMutation({
     mutationFn: (payload: AddMemberPayload) => addUser(payload),
     onSuccess: (data) => {
       toast({
@@ -238,7 +275,11 @@ export function PeopleManagement() {
     },
   });
 
-  const { mutate: updateRole, isPending: isUpdatingRole } = useMutation({
+  const {
+    // mutate: updateRole,
+    mutateAsync: updateRoleAsync,
+    isPending: isUpdatingRole,
+  } = useMutation({
     mutationFn: (payload: UpdateRolePayload) => updateUserRole(payload),
     onSuccess: (data) => {
       toast({
@@ -256,7 +297,11 @@ export function PeopleManagement() {
     },
   });
 
-  const { mutate: removeUser, isPending: isRemovingUser } = useMutation({
+  const {
+    // mutate: removeUser,
+    mutateAsync: removeUserAsync,
+    isPending: isRemovingUser,
+  } = useMutation({
     mutationFn: (payload: RemoveUserPayload) =>
       removeUserFromWorkspace(payload),
     onSuccess: (data) => {
@@ -317,22 +362,22 @@ export function PeopleManagement() {
     await inviteUser(payload);
   };
 
-  const handleChangeRole = (member: TeamMember, newRoleId: string) => {
-    const payload: UpdateRolePayload = {
-      userId: member.id,
-      workspaceId: currentWorkspace?.id ?? '',
-      roleIds: [newRoleId],
-    };
-    updateRole(payload);
-  };
+  // const handleChangeRole = (member: TeamMember, newRoleId: string) => {
+  //   const payload: UpdateRolePayload = {
+  //     userId: member.id,
+  //     workspaceId: currentWorkspace?.id ?? '',
+  //     roleId: newRoleId,
+  //   };
+  //   updateRole(payload);
+  // };
 
-  const handleRemoveMember = (member: TeamMember) => {
-    const payload: RemoveUserPayload = {
-      userId: member.id,
-      workspaceId: currentWorkspace?.id ?? '',
-    };
-    removeUser(payload);
-  };
+  // const handleRemoveMember = (member: TeamMember) => {
+  //   const payload: RemoveUserPayload = {
+  //     userId: member.id,
+  //     workspaceId: currentWorkspace?.id ?? '',
+  //   };
+  //   removeUser(payload);
+  // };
 
   const formatLastActive = (dateString: string) => {
     const date = new Date(dateString);
@@ -347,40 +392,10 @@ export function PeopleManagement() {
 
   const getRoleIcon = (role: string) => {
     const r = (role || '').toLowerCase();
-    if (r === 'org admin') return <Crown className='h-4 w-4 text-yellow-600' />;
+    if (r === 'org admin' || r === 'account owner')
+      return <Crown className='h-4 w-4 text-yellow-600' />;
     if (r === 'admin') return <Shield className='h-4 w-4 text-blue-600' />;
     return <User className='h-4 w-4 text-gray-600' />;
-  };
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'active':
-        return (
-          <Badge
-            variant='default'
-            className='text-xs bg-green-100 text-green-800'
-          >
-            Active
-          </Badge>
-        );
-      case 'pending':
-        return (
-          <Badge
-            variant='secondary'
-            className='text-xs bg-yellow-100 text-yellow-800'
-          >
-            Pending
-          </Badge>
-        );
-      case 'inactive':
-        return (
-          <Badge variant='outline' className='text-xs text-gray-600'>
-            Inactive
-          </Badge>
-        );
-      default:
-        return null;
-    }
   };
 
   const emailValid = useMemo(() => !errors.email, [errors.email]);
@@ -408,6 +423,82 @@ export function PeopleManagement() {
     );
   };
 
+  const openRoleDialog = (member: TeamMember) => {
+    setRoleDialogOpenFor(member);
+    setRoleDialogSelectedRole(member.roleId || '');
+    setRoleDialogWorkspaceIds([]);
+  };
+
+  const submitRoleDialog = async () => {
+    if (!roleDialogOpenFor) return;
+    if (!roleDialogSelectedRole || roleDialogWorkspaceIds.length === 0) {
+      toast({
+        title: 'Select role and workspace(s)',
+        description:
+          'Please select at least one workspace and a role to continue.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      await Promise.all(
+        roleDialogWorkspaceIds.map((wid) =>
+          updateRoleAsync({
+            userId: roleDialogOpenFor.id,
+            workspaceId: wid,
+            roleId: roleDialogSelectedRole,
+          })
+        )
+      );
+
+      setRoleDialogOpenFor(null);
+      refetchUsers();
+    } catch (e: any) {
+      // errors are also handled in mutation onError
+    }
+  };
+
+  const openRemoveDialog = (member: TeamMember) => {
+    setRemoveDialogOpenFor(member);
+    setRemoveDialogWorkspaceIds([]);
+  };
+
+  const submitRemoveDialog = async () => {
+    if (!removeDialogOpenFor) return;
+    if (removeDialogWorkspaceIds.length === 0) {
+      toast({
+        title: 'Select workspace(s)',
+        description:
+          'Please select at least one workspace to remove the user from.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      await Promise.all(
+        removeDialogWorkspaceIds.map((wid) =>
+          removeUserAsync({
+            userId: removeDialogOpenFor.id,
+            workspaceId: wid,
+          })
+        )
+      );
+
+      setRemoveDialogOpenFor(null);
+      refetchUsers();
+    } catch (e: any) {
+      // errors are handled by mutation onError
+    }
+  };
+
+  const inviteWorkspaces = useMemo(
+    () =>
+      (workspaces ?? []).filter((w) => w.id !== (currentWorkspace?.id ?? '')),
+    [workspaces, currentWorkspace?.id]
+  );
+
   return (
     <div className='space-y-6'>
       <Card>
@@ -427,8 +518,8 @@ export function PeopleManagement() {
             className='text-sm text-blue-600 hover:underline'
           >
             {userType === 'existing'
-              ? 'Switch to New Member'
-              : 'Switch to Existing Member'}
+              ? 'Invite new member'
+              : 'Invite existing member'}
           </button>
         </CardHeader>
 
@@ -651,11 +742,17 @@ export function PeopleManagement() {
                   <SelectValue placeholder='Select workspace' />
                 </SelectTrigger>
                 <SelectContent>
-                  {workspaces?.map((workspace) => (
-                    <SelectItem key={workspace.id} value={workspace.id}>
-                      {workspace.name}
+                  {inviteWorkspaces.length > 0 ? (
+                    inviteWorkspaces.map((workspace) => (
+                      <SelectItem key={workspace.id} value={workspace.id}>
+                        {workspace.name}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem value='no-other' disabled>
+                      No other workspaces
                     </SelectItem>
-                  ))}
+                  )}
                 </SelectContent>
               </Select>
               {errors.workspace && (
@@ -702,7 +799,7 @@ export function PeopleManagement() {
                   ) : (
                     roles.roles.map((role) => (
                       <SelectItem key={role.id} value={role.id}>
-                        {role.name}
+                        {displayRoleName(role.name)}
                       </SelectItem>
                     ))
                   )}
@@ -734,8 +831,14 @@ export function PeopleManagement() {
         <CardHeader>
           <div className='flex flex-col sm:flex-row sm:items-center justify-between gap-4'>
             <CardTitle>
-              Team Members ({filteredMembers.length} of {members.length})
+              Team Members (
+              {
+                filteredMembers.filter((m) => m.role && m.role.trim() !== '')
+                  .length
+              }{' '}
+              of {members.filter((m) => m.role && m.role.trim() !== '').length})
             </CardTitle>
+
             <div className='flex gap-2'>
               <Button
                 variant='outline'
@@ -744,8 +847,7 @@ export function PeopleManagement() {
                 className={`${
                   searchTerm ||
                   filterWorkspace !== 'all' ||
-                  filterRole !== 'all' ||
-                  filterStatus !== 'all'
+                  filterRole !== 'all'
                     ? 'opacity-100'
                     : 'opacity-0'
                 } transition-opacity`}
@@ -756,29 +858,30 @@ export function PeopleManagement() {
             </div>
           </div>
         </CardHeader>
+
         <CardContent>
           <div className='space-y-4 mb-6'>
-            <div className='flex flex-col sm:flex-row gap-3'>
-              <div className='relative flex-1'>
-                <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400' />
-                <Input
-                  placeholder='Search by name or email...'
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className='pl-10'
-                />
-              </div>
-              <Button
-                variant='outline'
-                size='sm'
-                className='sm:w-auto bg-transparent'
-              >
-                <Filter className='h-4 w-4 mr-2' />
-                Filters
-              </Button>
-            </div>
-
+            {/* Filters Row */}
             <div className='grid grid-cols-1 sm:grid-cols-3 gap-3'>
+              <div>
+                <Label
+                  htmlFor='search'
+                  className='text-xs text-gray-600 mb-1 block'
+                >
+                  Search
+                </Label>
+                <div className='relative'>
+                  <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400' />
+                  <Input
+                    id='search'
+                    placeholder='Search by name or email...'
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className='pl-10'
+                  />
+                </div>
+              </div>
+              {/* Workspace Filter */}
               <div>
                 <Label
                   htmlFor='workspace-filter'
@@ -804,6 +907,7 @@ export function PeopleManagement() {
                 </Select>
               </div>
 
+              {/* Role Filter */}
               <div>
                 <Label
                   htmlFor='role-filter'
@@ -819,35 +923,16 @@ export function PeopleManagement() {
                     <SelectItem value='all'>All roles</SelectItem>
                     {roles?.roles?.map((role) => (
                       <SelectItem key={role.id} value={role.id}>
-                        {role.name}
+                        {displayRoleName(role.name)}
                       </SelectItem>
                     ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label
-                  htmlFor='status-filter'
-                  className='text-xs text-gray-600 mb-1 block'
-                >
-                  Status
-                </Label>
-                <Select value={filterStatus} onValueChange={setFilterStatus}>
-                  <SelectTrigger id='status-filter'>
-                    <SelectValue placeholder='All statuses' />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value='all'>All statuses</SelectItem>
-                    <SelectItem value='active'>Active</SelectItem>
-                    <SelectItem value='pending'>Pending</SelectItem>
-                    <SelectItem value='inactive'>Inactive</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
           </div>
 
+          {/* Members List */}
           {isLoadingUsers ? (
             <div className='text-center py-8 text-gray-500'>
               <Users className='h-12 w-12 mx-auto mb-3 text-gray-300 animate-pulse' />
@@ -868,116 +953,120 @@ export function PeopleManagement() {
                   </Button>
                 </div>
               ) : (
-                currentMembers.map((member) => (
-                  <div
-                    key={member.id}
-                    className='flex flex-col gap-4 p-4 border rounded-lg hover:bg-gray-50 transition-colors'
-                  >
-                    <div className='flex flex-col sm:flex-row sm:items-center justify-between gap-3'>
-                      <div className='flex items-center gap-3 flex-1 min-w-0'>
-                        <Avatar className='h-10 w-10 flex-shrink-0'>
-                          <AvatarImage
-                            src={member.avatar || '/api/placeholder/40/40'}
-                            alt={member.name}
-                          />
-                          <AvatarFallback className='text-sm'>
-                            {member.name
-                              .split(' ')
-                              .map((n) => n[0])
-                              .join('')}
-                          </AvatarFallback>
-                        </Avatar>
+                currentMembers
+                  .filter((member) => member.role && member.role.trim() !== '')
+                  .map((member) => (
+                    <div
+                      key={member.id}
+                      className='flex flex-col gap-4 p-4 border rounded-lg hover:bg-gray-50 transition-colors'
+                    >
+                      <div className='flex flex-col sm:flex-row sm:items-center justify-between gap-3'>
+                        <div className='flex items-center gap-3 flex-1 min-w-0'>
+                          <Avatar className='h-10 w-10 flex-shrink-0'>
+                            <AvatarImage
+                              src={member.avatar || '/api/placeholder/40/40'}
+                              alt={member.name}
+                            />
+                            <AvatarFallback className='text-sm'>
+                              {member.name
+                                .split(' ')
+                                .map((n) => n[0])
+                                .join('')}
+                            </AvatarFallback>
+                          </Avatar>
 
-                        <div className='flex-1 min-w-0'>
-                          <div className='flex flex-wrap items-center gap-2 mb-1'>
-                            <h4 className='font-medium text-gray-900 truncate'>
-                              {member.name}
-                            </h4>
+                          <div className='flex-1 min-w-0'>
+                            <div className='flex flex-wrap items-center gap-2 mb-1'>
+                              <h4 className='font-medium text-gray-900 truncate'>
+                                {member.name}
+                              </h4>
+                              {getRoleIcon(member.role)}
+                              {/* {getStatusBadge(member.status)} */}
+                            </div>
+
+                            <div className='flex items-center gap-1 text-sm text-gray-600 mb-1'>
+                              <Mail className='h-3 w-3' />
+                              <span className='truncate'>{member.email}</span>
+                            </div>
+
+                            <div className='text-xs text-gray-500'>
+                              {renderWorkspaceInline(member.workspaceList)} •
+                              Created : {formatLastActive(member.lastActive)}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className='flex items-center gap-2'>
+                          {member.role !== 'Org Admin' && (
+                            <TooltipProvider>
+                              <div className='flex items-center gap-2'>
+                                {/* Change Role Button */}
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant='outline'
+                                      size='sm'
+                                      onClick={() => openRoleDialog(member)}
+                                      disabled={isUpdatingRole}
+                                      className='text-blue-600 hover:text-blue-700'
+                                    >
+                                      <UserCog className='h-4 w-4' />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Change Role</p>
+                                  </TooltipContent>
+                                </Tooltip>
+
+                                {/* Remove User Button */}
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant='outline'
+                                      size='sm'
+                                      onClick={() => openRemoveDialog(member)}
+                                      disabled={isRemovingUser}
+                                      className='text-red-600 hover:text-red-700'
+                                    >
+                                      <Trash2 className='h-4 w-4' />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Remove User</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </div>
+                            </TooltipProvider>
+                          )}
+
+                          {member.role === 'Org Admin' && (
+                            <Badge variant='outline' className='text-xs'>
+                              Account Owner
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className='sm:hidden grid grid-cols-2 gap-4 pt-3 border-t text-xs'>
+                        <div>
+                          <span className='font-medium text-gray-900'>
+                            Role:
+                          </span>
+                          <div className='flex items-center gap-1 mt-1'>
                             {getRoleIcon(member.role)}
-                            {getStatusBadge(member.status)}
+                            <span className='capitalize'>
+                              {displayRoleName(member.role)}
+                            </span>
                           </div>
-
-                          <div className='flex items-center gap-1 text-sm text-gray-600 mb-1'>
-                            <Mail className='h-3 w-3' />
-                            <span className='truncate'>{member.email}</span>
-                          </div>
-
-                          <div className='text-xs text-gray-500'>
-                            {renderWorkspaceInline(member.workspaceList)} • Last
-                            active: {formatLastActive(member.lastActive)}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className='flex items-center gap-2'>
-                        {member.role !== 'Org Admin' && (
-                          <>
-                            <Select
-                              value={member.roleId}
-                              onValueChange={(newRoleId) =>
-                                handleChangeRole(member, newRoleId)
-                              }
-                              disabled={isUpdatingRole}
-                            >
-                              <SelectTrigger className='w-[140px] h-8 text-xs'>
-                                <Settings className='h-3 w-3 mr-2' />
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {roles?.roles?.map((role) => (
-                                  <SelectItem key={role.id} value={role.id}>
-                                    {role.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-
-                            <Button
-                              variant='outline'
-                              size='sm'
-                              onClick={() => handleRemoveMember(member)}
-                              disabled={isRemovingUser}
-                              className='text-red-600 hover:text-red-700'
-                            >
-                              <Trash2 className='h-3 w-3 sm:h-4 sm:w-4' />
-                              <span className='hidden sm:inline sm:ml-2'>
-                                {isRemovingUser ? 'Removing...' : 'Remove'}
-                              </span>
-                            </Button>
-                          </>
-                        )}
-
-                        {member.role === 'Org Admin' && (
-                          <Badge variant='outline' className='text-xs'>
-                            Account Owner
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className='sm:hidden grid grid-cols-2 gap-4 pt-3 border-t text-xs'>
-                      <div>
-                        <span className='font-medium text-gray-900'>Role:</span>
-                        <div className='flex items-center gap-1 mt-1'>
-                          {getRoleIcon(member.role)}
-                          <span className='capitalize'>{member.role}</span>
-                        </div>
-                      </div>
-                      <div>
-                        <span className='font-medium text-gray-900'>
-                          Status:
-                        </span>
-                        <div className='mt-1'>
-                          {getStatusBadge(member.status)}
                         </div>
                       </div>
                     </div>
-                  </div>
-                ))
+                  ))
               )}
             </div>
           )}
 
+          {/* Pagination */}
           {totalPages > 1 && (
             <div className='flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 pt-4 border-t'>
               <div className='text-sm text-gray-600'>
@@ -1037,13 +1126,11 @@ export function PeopleManagement() {
             <div className='p-4 border rounded-lg'>
               <div className='flex items-center gap-2 mb-3'>
                 <Crown className='h-5 w-5 text-yellow-600' />
-                <h4 className='font-medium'>Owner</h4>
+                <h4 className='font-medium'>{displayRoleName('Org Admin')}</h4>
               </div>
               <ul className='text-sm text-gray-600 space-y-1'>
-                <li>• Full workspace access</li>
-                <li>• Manage all settings</li>
-                <li>• Add/remove members</li>
-                <li>• Delete workspace</li>
+                <li>• All permission of Admin</li>
+                <li>• All permission of user</li>
                 <li>• Billing management</li>
               </ul>
             </div>
@@ -1051,13 +1138,13 @@ export function PeopleManagement() {
             <div className='p-4 border rounded-lg'>
               <div className='flex items-center gap-2 mb-3'>
                 <Shield className='h-5 w-5 text-blue-600' />
-                <h4 className='font-medium'>Admin</h4>
+                <h4 className='font-medium'>{displayRoleName('Admin')}</h4>
               </div>
               <ul className='text-sm text-gray-600 space-y-1'>
-                <li>• Manage test suites</li>
-                <li>• Add/remove members</li>
-                <li>• Configure environments</li>
-                <li>• View all reports</li>
+                <li>• All permission of user</li>
+                <li>• Manage Workspaces</li>
+                <li>• Manage Environments</li>
+                <li>• Manage Members</li>
                 <li>• Manage integrations</li>
               </ul>
             </div>
@@ -1065,13 +1152,15 @@ export function PeopleManagement() {
             <div className='p-4 border rounded-lg'>
               <div className='flex items-center gap-2 mb-3'>
                 <User className='h-5 w-5 text-gray-600' />
-                <h4 className='font-medium'>Member</h4>
+                <h4 className='font-medium'>{displayRoleName('Member')}</h4>
               </div>
               <ul className='text-sm text-gray-600 space-y-1'>
                 <li>• Create test suites</li>
+                <li>• Create request chains</li>
                 <li>• Run tests</li>
-                <li>• View own reports</li>
+                <li>• View, Download and share reports</li>
                 <li>• Use environments</li>
+                <li>• Configure CICD</li>
                 <li>• Basic workspace access</li>
               </ul>
             </div>
@@ -1079,53 +1168,193 @@ export function PeopleManagement() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent Invitations</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className='space-y-3'>
-            <div className='flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg'>
-              <div className='flex-1'>
-                <div className='font-medium text-sm'>
-                  lisa.wang@external.com
-                </div>
-                <div className='text-xs text-gray-600'>
-                  Invited 3 days ago • Pending
-                </div>
-              </div>
-              <div className='flex gap-2'>
-                <Button
-                  variant='outline'
-                  size='sm'
-                  className='text-xs bg-transparent'
-                >
-                  Resend
-                </Button>
-                <Button
-                  variant='outline'
-                  size='sm'
-                  className='text-xs text-red-600 bg-transparent'
-                >
-                  Cancel
-                </Button>
-              </div>
-            </div>
+      {/* Change Role Dialog */}
+      <Dialog
+        open={!!roleDialogOpenFor}
+        onOpenChange={(open) => {
+          if (!open) setRoleDialogOpenFor(null);
+        }}
+      >
+        <DialogContent className='sm:max-w-[425px]'>
+          <DialogHeader>
+            <DialogTitle>Change role</DialogTitle>
+          </DialogHeader>
 
-            <div className='flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 border rounded-lg'>
-              <div className='flex-1'>
-                <div className='font-medium text-sm'>mike.j@company.com</div>
-                <div className='text-xs text-gray-600'>
-                  Invited 1 week ago • Accepted
+          {roleDialogOpenFor ? (
+            <div className='space-y-4'>
+              <div className='text-sm'>
+                <div className='font-medium'>{roleDialogOpenFor.name}</div>
+                <div className='text-muted-foreground'>
+                  {roleDialogOpenFor.email}
                 </div>
               </div>
-              <Badge variant='default' className='text-xs w-fit'>
-                Joined
-              </Badge>
+
+              <div className='space-y-2'>
+                <Label>Apply to workspace</Label>
+                {roleDialogOpenFor.workspacePairs &&
+                roleDialogOpenFor.workspacePairs.length > 0 ? (
+                  <div className='border rounded-md p-3 space-y-2'>
+                    <div className='grid grid-cols-1 gap-2'>
+                      {(roleDialogOpenFor.workspacePairs || []).map((w) => {
+                        const checked = roleDialogWorkspaceIds.includes(w.id);
+                        return (
+                          <label
+                            key={w.id}
+                            className='flex items-center gap-2 cursor-pointer'
+                          >
+                            <Checkbox
+                              checked={checked}
+                              onCheckedChange={(c) => {
+                                setRoleDialogWorkspaceIds((prev) =>
+                                  c
+                                    ? Array.from(new Set([...prev, w.id]))
+                                    : prev.filter((id) => id !== w.id)
+                                );
+                              }}
+                            />
+                            <span className='text-sm'>{w.name}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : (
+                  <div className='text-sm text-muted-foreground'>
+                    This user is not part of any workspace.
+                  </div>
+                )}
+              </div>
+
+              <div className='space-y-2'>
+                <Label>Role</Label>
+                <Select
+                  value={roleDialogSelectedRole}
+                  onValueChange={setRoleDialogSelectedRole}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder='Select role' />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {isLoadingRoles ? (
+                      <SelectItem value='loading' disabled>
+                        Loading roles...
+                      </SelectItem>
+                    ) : !roles?.roles?.length ? (
+                      <SelectItem value='no-roles' disabled>
+                        No roles found
+                      </SelectItem>
+                    ) : (
+                      roles.roles.map((role) => (
+                        <SelectItem key={role.id} value={role.id}>
+                          {displayRoleName(role.name)}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          ) : null}
+
+          <DialogFooter>
+            <Button
+              variant='outline'
+              onClick={() => setRoleDialogOpenFor(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={submitRoleDialog}
+              disabled={
+                isUpdatingRole ||
+                !roleDialogOpenFor ||
+                !roleDialogSelectedRole ||
+                !(roleDialogWorkspaceIds.length > 0)
+              }
+            >
+              {isUpdatingRole ? 'Updating...' : 'Update Role'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Remove Member Dialog */}
+      <Dialog
+        open={!!removeDialogOpenFor}
+        onOpenChange={(open) => {
+          if (!open) setRemoveDialogOpenFor(null);
+        }}
+      >
+        <DialogContent className='sm:max-w-[425px]'>
+          <DialogHeader>
+            <DialogTitle>Remove from workspace(s)</DialogTitle>
+          </DialogHeader>
+
+          {removeDialogOpenFor ? (
+            <div className='space-y-4'>
+              <div className='text-sm'>
+                <div className='font-medium'>{removeDialogOpenFor.name}</div>
+                <div className='text-muted-foreground'>
+                  {removeDialogOpenFor.email}
+                </div>
+              </div>
+
+              <div className='space-y-2'>
+                <Label>Select workspace(s) to remove</Label>
+                {removeDialogOpenFor.workspacePairs &&
+                removeDialogOpenFor.workspacePairs.length > 0 ? (
+                  <div className='border rounded-md p-3 space-y-2'>
+                    <div className='grid grid-cols-1 gap-2'>
+                      {(removeDialogOpenFor.workspacePairs || []).map((w) => {
+                        const checked = removeDialogWorkspaceIds.includes(w.id);
+                        return (
+                          <label key={w.id} className='flex items-center gap-2'>
+                            <Checkbox
+                              checked={checked}
+                              onCheckedChange={(c) => {
+                                setRemoveDialogWorkspaceIds((prev) =>
+                                  c
+                                    ? Array.from(new Set([...prev, w.id]))
+                                    : prev.filter((id) => id !== w.id)
+                                );
+                              }}
+                            />
+                            <span className='text-sm'>{w.name}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : (
+                  <div className='text-sm text-muted-foreground'>
+                    This user is not part of any workspace.
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : null}
+
+          <DialogFooter>
+            <Button
+              variant='outline'
+              onClick={() => setRemoveDialogOpenFor(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant='destructive'
+              onClick={submitRemoveDialog}
+              disabled={
+                isRemovingUser ||
+                !removeDialogOpenFor ||
+                !(removeDialogWorkspaceIds.length > 0)
+              }
+            >
+              {isRemovingUser ? 'Removing...' : 'Remove'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
