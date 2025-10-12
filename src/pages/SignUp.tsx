@@ -196,7 +196,7 @@ export default function SignUp() {
                     id='lastName'
                     type='text'
                     required
-                    placeholder='Doe'
+                    placeholder='Smith'
                     value={formData.lastName}
                     onChange={(e) =>
                       setFormData({

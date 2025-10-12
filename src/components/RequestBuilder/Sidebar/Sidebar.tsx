@@ -29,9 +29,12 @@ import { useRequest } from '@/hooks/useRequest';
 import TooltipContainer from '@/components/ui/tooltip-container';
 import CreateCollectionModel from '../CreateCollectionModel/CreateCollectionModel';
 import AddFolderModal from '../AddFolder/addFolderModel';
+import RenameFolderModal from '../AddFolder/rename-folder-modal';
+import DeleteFolderModal from '../AddFolder/delete-folder-modal';
 import { Input } from '@/components/ui/input';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { useAddFolder } from '@/hooks/use-folder';
+import { renameFolder, deleteFolder } from '@/services/folder.service';
 
 const Sidebar: React.FC = () => {
   const { currentWorkspace } = useWorkspace();
@@ -74,6 +77,8 @@ const Sidebar: React.FC = () => {
   const [requstIndex, setRequestIndex] = useState<number | null>(null);
 
   const [showAddFolderModal, setShowAddFolderModal] = useState(false);
+  const [showRenameFolderModal, setShowRenameFolderModal] = useState(false);
+  const [showDeleteFolderModal, setShowDeleteFolderModal] = useState(false);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(
     new Set()
   );
@@ -644,6 +649,16 @@ const Sidebar: React.FC = () => {
     );
   };
 
+  const openRenameFolderModal = (folder: any) => {
+    setSelectedFolder(folder);
+    setShowRenameFolderModal(true);
+  };
+
+  const openDeleteFolderModal = (folder: any) => {
+    setSelectedFolder(folder);
+    setShowDeleteFolderModal(true);
+  };
+
   return (
     <TooltipProvider>
       <div
@@ -1065,6 +1080,28 @@ const Sidebar: React.FC = () => {
                       <Plus className='h-4 w-4 mr-2' />
                       Add Request
                     </button>
+                    <button
+                      onClick={() => {
+                        openRenameFolderModal(selectedFolder);
+                        setShowMenu(null);
+                        setMenuPosition(null);
+                      }}
+                      className='flex items-center w-full px-4 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
+                    >
+                      <span className='h-4 w-4 mr-2'>✎</span>
+                      Rename Folder
+                    </button>
+                    <button
+                      onClick={() => {
+                        openDeleteFolderModal(selectedFolder);
+                        setShowMenu(null);
+                        setMenuPosition(null);
+                      }}
+                      className='flex items-center w-full px-4 py-2 text-sm text-left text-red-500 hover:bg-gray-100 dark:hover:bg-gray-700'
+                    >
+                      <span className='h-4 w-4 mr-2'>🗑</span>
+                      Delete Folder
+                    </button>
                   </div>
                 )}
             </div>,
@@ -1077,6 +1114,58 @@ const Sidebar: React.FC = () => {
           onClose={() => setShowAddFolderModal(false)}
           onSave={handleSaveFolder}
           loading={addingFolder}
+        />
+        <RenameFolderModal
+          isOpen={showRenameFolderModal}
+          initialName={selectedFolder?.name || ''}
+          onClose={() => setShowRenameFolderModal(false)}
+          onSave={async (name: string) => {
+            if (!selectedFolder || !selectedCollection) return;
+            try {
+              await renameFolder({ folderId: selectedFolder.id, name });
+              await fetchCollectionRequests.mutateAsync(selectedCollection.id);
+              toast({
+                title: 'Folder renamed',
+                description: `Folder is now "${name}"`,
+                variant: 'success',
+              });
+            } catch (err) {
+              console.error('[v0] renameFolder error:', err);
+              toast({
+                title: 'Error',
+                description: 'Failed to rename folder. Please try again.',
+                variant: 'destructive',
+              });
+            } finally {
+              setShowRenameFolderModal(false);
+            }
+          }}
+        />
+        <DeleteFolderModal
+          isOpen={showDeleteFolderModal}
+          folderName={selectedFolder?.name || ''}
+          onClose={() => setShowDeleteFolderModal(false)}
+          onConfirm={async () => {
+            if (!selectedFolder || !selectedCollection) return;
+            try {
+              await deleteFolder(selectedFolder.id);
+              await fetchCollectionRequests.mutateAsync(selectedCollection.id);
+              toast({
+                title: 'Folder deleted',
+                description: 'The folder has been removed.',
+                variant: 'success',
+              });
+            } catch (err) {
+              console.error('[v0] deleteFolder error:', err);
+              toast({
+                title: 'Error',
+                description: 'Failed to delete folder. Please try again.',
+                variant: 'destructive',
+              });
+            } finally {
+              setShowDeleteFolderModal(false);
+            }
+          }}
         />
       </div>
     </TooltipProvider>

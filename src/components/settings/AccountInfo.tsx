@@ -235,7 +235,7 @@ export function AccountInfo() {
                       <FormItem>
                         <FormLabel>Last Name</FormLabel>
                         <FormControl>
-                          <Input placeholder='Doe' {...field} />
+                          <Input placeholder='Smith' {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
