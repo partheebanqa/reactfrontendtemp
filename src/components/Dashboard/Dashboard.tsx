@@ -36,6 +36,7 @@ export default function Dashboard() {
 
   const { currentWorkspace } = useWorkspace();
   const workspaceId = currentWorkspace?.id;
+  const workSpaceName = currentWorkspace?.name;
 
   const [data, setData] = useState<DashboardStats>();
 
@@ -59,7 +60,7 @@ export default function Dashboard() {
   return (
     <div className='min-h-screen bg-slate-50'>
       <BreadCum
-        title="Dashboard"
+        title={`Dashboard  -  ${workSpaceName || 'Workspace'}`}
         subtitle="Monitor your API tests and execution schedules"
         showCreateButton={false}
         showQuickGuide={false}
@@ -76,17 +77,7 @@ export default function Dashboard() {
         {/* Stats Overview */}
         <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-3'>
           <StatsCard
-            title='Total Test Suites'
-            value={data?.totalTestSuites || 0}
-            icon={<div className='text-blue-600'>📊</div>}
-            // change='+12%'
-            // changeType='positive'
-            // description='from last month'
-            iconBgColor='bg-blue-100'
-          />
-
-          <StatsCard
-            title='Total Collections'
+            title='Total Import Collections'
             value={data?.totalCollections || 0}
             icon={<div className='text-green-600'>✅</div>}
             // change='+2.1%'
@@ -96,15 +87,16 @@ export default function Dashboard() {
           />
 
           <StatsCard
-            title='Active Schedules'
-            value={data?.totalActiveSchedules || 0}
-            icon={<div className='text-purple-600'>🕘</div>}
-            // description='Next run in 2h 15m'
-            iconBgColor='bg-purple-100'
+            title='Total Test Suites'
+            value={data?.totalTestSuites || 0}
+            icon={<div className='text-blue-600'>📊</div>}
+            // change='+12%'
+            // changeType='positive'
+            // description='from last month'
+            iconBgColor='bg-blue-100'
           />
-
           <StatsCard
-            title='Total RequestChain'
+            title='Total Request Chains'
             value={data?.totalRequestChains || 0}
             icon={<div className='text-orange-600'>⏱️</div>}
             // change='-0.3s'
@@ -113,16 +105,28 @@ export default function Dashboard() {
             iconBgColor='bg-orange-100'
           />
 
+
+          <StatsCard
+            title='Active Schedules'
+            value={data?.totalActiveSchedules || 0}
+            icon={<div className='text-purple-600'>🕘</div>}
+            // description='Next run in 2h 15m'
+            iconBgColor='bg-purple-100'
+          />
+
+
+
         </div>
 
         {/* Charts and Recent Activity */}
         <div className='grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8'>
-          <ExecutionChart />
+          {/* <ExecutionChart /> */}
           <RecentExecutions data={data?.lastExecutions || []} />
+          <QuickActions />
         </div>
 
         {/* Active Schedules and Quick Actions */}
-        <div className='grid grid-cols-1 lg:grid-cols-4 gap-3'>
+        {/* <div className='grid grid-cols-1 lg:grid-cols-4 gap-3'>
           <div className='lg:col-span-2'>
             <ActiveSchedules />
           </div>
@@ -132,7 +136,7 @@ export default function Dashboard() {
           <div className='space-y-3'>
             <QuickActions />
           </div>
-        </div>
+        </div> */}
       </div>
     </div>
   );
