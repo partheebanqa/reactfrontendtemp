@@ -33,7 +33,6 @@ import 'codemirror/theme/material.css';
 import 'codemirror/mode/javascript/javascript';
 import './whiteorange.css';
 
-// Define Assertion type to fix the undeclared variable error
 type Assertion = {
   id: string;
   category: string;
@@ -104,6 +103,7 @@ const RequestEditor: React.FC = () => {
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [newCollectionName, setNewCollectionName] = useState('');
   const [url, setUrl] = useState('');
+  const [urlAtOpen, setUrlAtOpen] = useState('');
   const [method, setMethod] = useState<RequestMethod>('GET');
   const [params, setParams] = useState<Param[]>([]);
   const [headers, setHeaders] = useState<Header[]>([]);
@@ -113,7 +113,6 @@ const RequestEditor: React.FC = () => {
   const [bodyContent, setBodyContent] = useState('');
   const [formFields, setFormFields] = useState<KeyValuePairWithFile[]>([]);
   const [urlEncodedFields, setUrlEncodedFields] = useState<Param[]>([]);
-  // ✅ FIX: Initialize authType as 'bearer' by default instead of 'none'
   const [authType, setAuthType] = useState<
     'none' | 'basic' | 'bearer' | 'apiKey' | 'oauth1' | 'oauth2'
   >('bearer');
@@ -125,7 +124,6 @@ const RequestEditor: React.FC = () => {
     key: '',
     value: '',
     addTo: 'header' as 'header' | 'query',
-    // OAuth 1.0 fields
     oauth1: {
       consumerKey: '',
       consumerSecret: '',
@@ -137,7 +135,6 @@ const RequestEditor: React.FC = () => {
       nonce: '',
       timestamp: '',
     },
-    // OAuth 2.0 fields
     oauth2: {
       clientId: '',
       clientSecret: '',
@@ -164,11 +161,12 @@ const RequestEditor: React.FC = () => {
     Array<{ id: string; label: string }>
   >([]);
 
+  const [selectedCollectionId, setSelectedCollectionId] = useState<string>('');
+
   const collectionsRef = useRef(collections);
   useEffect(() => {
     collectionsRef.current = collections;
   }, [collections]);
-  // </CHANGE>
 
   const activeCollectionFull =
     collections.find((c) => c.id === activeCollection?.id) ||
@@ -192,19 +190,21 @@ const RequestEditor: React.FC = () => {
     return acc;
   }
 
-  // Load folder tree when Save modal opens or collection changes
+  useEffect(() => {
+    if (showSaveModal) {
+      setSelectedCollectionId(activeCollection?.id || '');
+    }
+  }, [showSaveModal, activeCollection?.id]);
+
   useEffect(() => {
     const loadFolders = async () => {
-      if (!showSaveModal || !activeCollection?.id) return;
+      if (!showSaveModal || !selectedCollectionId) return;
       try {
-        // refresh the selected collection's data (this updates the store internally)
-        await fetchCollectionRequests.mutateAsync(activeCollection.id);
+        await fetchCollectionRequests.mutateAsync(selectedCollectionId);
       } catch (e) {
-        // noop
       } finally {
-        // read the latest folder tree from the ref to avoid using 'collections' as a dependency
         const latest = collectionsRef.current.find(
-          (c) => c.id === activeCollection.id
+          (c) => c.id === selectedCollectionId
         );
         const foldersTree = (latest as any)?.folders || [];
         const options = buildFolderOptions(foldersTree);
@@ -212,17 +212,13 @@ const RequestEditor: React.FC = () => {
       }
     };
     loadFolders();
-    // NOTE: intentionally NOT depending on 'collections' to avoid infinite refetch loops
-  }, [showSaveModal, activeCollection?.id]);
-  // </CHANGE>
+  }, [showSaveModal, selectedCollectionId]);
 
-  // Reset folder when collection changes via dropdown
   useEffect(() => {
     setSelectedFolderId('');
     const foldersTree = (activeCollectionFull as any)?.folders || [];
     const options = buildFolderOptions(foldersTree);
     setFolderOptions(options);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeCollection?.id]);
 
   console.log('url in state:', url);
@@ -286,7 +282,6 @@ const RequestEditor: React.FC = () => {
       );
       setBodyContent(activeRequest.bodyRawContent || '');
 
-      // Initialize form fields from the request
       try {
         if (
           activeRequest.bodyFormData &&
@@ -309,7 +304,6 @@ const RequestEditor: React.FC = () => {
         setFormFields([]);
       }
 
-      // Initialize URL encoded fields from the request
       try {
         if (
           bodyTypeValue === 'x-www-form-urlencoded' &&
@@ -334,7 +328,6 @@ const RequestEditor: React.FC = () => {
       }
 
       setToken(activeRequest.authorization?.token || '');
-      // ✅ FIX: Set authType properly, defaulting to 'bearer' if there's a token
       const requestAuthType = activeRequest.authorizationType as
         | 'none'
         | 'basic'
@@ -343,7 +336,6 @@ const RequestEditor: React.FC = () => {
         | 'oauth1'
         | 'oauth2';
 
-      // If there's a token but no authType specified, assume bearer
       if (activeRequest.authorization?.token && !requestAuthType) {
         setAuthType('bearer');
       } else {
@@ -357,7 +349,6 @@ const RequestEditor: React.FC = () => {
         key: activeRequest.authorization?.key || '',
         value: activeRequest.authorization?.value || '',
         addTo: activeRequest.authorization?.addTo || 'header',
-        // Set default values for OAuth fields
         oauth1: {
           consumerKey: '',
           consumerSecret: '',
@@ -381,7 +372,6 @@ const RequestEditor: React.FC = () => {
         },
       });
 
-      // Load existing assertions from activeRequest if they exist
       if (
         activeRequest.assertions &&
         Array.isArray(activeRequest.assertions) &&
@@ -390,7 +380,6 @@ const RequestEditor: React.FC = () => {
         try {
           const existingAssertions = activeRequest.assertions.map(
             (assertion: any) => {
-              // Transform backend assertion format to frontend format
               return {
                 id: assertion.id || `temp-${Math.random()}`,
                 category: assertion.category || 'general',
@@ -398,9 +387,9 @@ const RequestEditor: React.FC = () => {
                 description: assertion.description || 'Custom assertion',
                 field: assertion.field,
                 operator: assertion.operator || 'equals',
-                expectedValue: assertion.expectedValue, // Handle both formats
+                expectedValue: assertion.expectedValue,
                 enabled:
-                  assertion.enabled !== undefined ? assertion.enabled : true, // Mark as selected
+                  assertion.enabled !== undefined ? assertion.enabled : true,
                 impact: assertion.impact,
                 group: assertion.group || 'custom',
                 priority: assertion.priority,
@@ -417,7 +406,6 @@ const RequestEditor: React.FC = () => {
         setAssertions([]);
       }
 
-      // Set selected folder ID if it exists on the request
       if (activeRequest.folderId) {
         setSelectedFolderId(activeRequest.folderId);
       } else {
@@ -426,7 +414,6 @@ const RequestEditor: React.FC = () => {
     } else {
       handleCreateRequest();
       setAssertions([]);
-      // ✅ FIX: When creating new request, ensure authType is 'bearer'
       setAuthType('bearer');
     }
     setResponseData(null);
@@ -472,12 +459,10 @@ const RequestEditor: React.FC = () => {
     console.log('parsedRequest:', parsedRequest);
 
     try {
-      // Set URL
       if (parsedRequest.url) {
         setUrl(parsedRequest.url);
       }
 
-      // Set method
       if (parsedRequest.method) {
         const supportedMethods: RequestMethod[] = [
           'GET',
@@ -493,7 +478,6 @@ const RequestEditor: React.FC = () => {
         }
       }
 
-      // Set headers
       if (parsedRequest.headers && Array.isArray(parsedRequest.headers)) {
         const formattedHeaders = parsedRequest.headers.map((header: any) => ({
           key: header.key || '',
@@ -503,7 +487,6 @@ const RequestEditor: React.FC = () => {
         setHeaders(formattedHeaders);
       }
 
-      // Set params
       if (parsedRequest.params && Array.isArray(parsedRequest.params)) {
         const formattedParams = parsedRequest.params.map((param: any) => ({
           key: param.key || '',
@@ -513,7 +496,6 @@ const RequestEditor: React.FC = () => {
         setParams(formattedParams);
       }
 
-      // Set body type and content
       if (parsedRequest.bodyType) {
         const allowedBodyTypes = [
           'none',
@@ -536,13 +518,11 @@ const RequestEditor: React.FC = () => {
         }
       }
 
-      // Set body content
       if (parsedRequest.body) {
         let bodyContentToSet = '';
         if (typeof parsedRequest.body === 'string') {
           bodyContentToSet = parsedRequest.body;
         } else if (typeof parsedRequest.body === 'object') {
-          // FIX: undeclared variable `parsedBody`
           let parsedBodyContent = parsedRequest.body;
           if (
             typeof parsedBodyContent === 'object' &&
@@ -559,7 +539,6 @@ const RequestEditor: React.FC = () => {
         setBodyContent(bodyContentToSet);
       }
 
-      // Set authentication
       if (parsedRequest.auth && parsedRequest.auth.type) {
         const authTypeValue = parsedRequest.auth.type.toLowerCase();
 
@@ -595,12 +574,11 @@ const RequestEditor: React.FC = () => {
             }
             break;
           default:
-            setAuthType('bearer'); // ✅ FIX: Default to bearer instead of none
+            setAuthType('bearer');
             break;
         }
       }
 
-      // Handle form data
       if (parsedRequest.bodyType === 'form-data' && parsedRequest.formData) {
         const formDataFields = Object.entries(parsedRequest.formData).map(
           ([key, value]) => ({
@@ -613,7 +591,6 @@ const RequestEditor: React.FC = () => {
         setFormFields(formDataFields);
       }
 
-      // Handle URL encoded fields
       if (
         parsedRequest.bodyType === 'x-www-form-urlencoded' &&
         parsedRequest.body
@@ -630,7 +607,6 @@ const RequestEditor: React.FC = () => {
         }
       }
 
-      // Switch to appropriate tab based on what was imported
       if (
         parsedRequest.auth &&
         parsedRequest.auth.type &&
@@ -692,13 +668,11 @@ const RequestEditor: React.FC = () => {
         throw new Error('please save a request before sending.');
       }
 
-      // 🔹 Decide environmentId
       const environmentId =
         activeEnvironment?.name !== 'No Environment'
           ? activeEnvironment?.id
           : undefined;
 
-      // 🔹 Send request to backend with optional environmentId
       const backendData = await executeCollectionRequest(
         activeRequest.id,
         environmentId
@@ -729,7 +703,6 @@ const RequestEditor: React.FC = () => {
 
         setResponseData(normalizedResponse as any);
 
-        // 🔹 Generate assertions
         const formattedResponse = formatBackendResponse(normalizedResponse);
         const generatedAssertions = generateAssertions(formattedResponse);
 
@@ -742,7 +715,6 @@ const RequestEditor: React.FC = () => {
         setAssertions(mergedAssertions);
       }
     } catch (error: any) {
-      // Show backend error if present
       const backendErrorMessage =
         error?.response?.data?.errorDetails ||
         error?.response?.data?.error ||
@@ -763,17 +735,12 @@ const RequestEditor: React.FC = () => {
     try {
       if (!activeRequest) return;
       if (newName.trim() && activeRequest?.id) {
-        // First update the server
         await renameRequestMutation.mutateAsync({
           requestId: activeRequest.id,
           newName: newName.trim(),
           workspaceId: currentWorkspace?.id || '',
         });
-
-        // The renameRequest action in the store will update both collections and activeRequest
-        // This prevents the race condition where activeRequest gets overwritten
       } else if (newName.trim() && !activeRequest?.id) {
-        // For unsaved requests, just update the local state
         const updatedRequest = {
           ...activeRequest,
           name: newName.trim(),
@@ -795,6 +762,7 @@ const RequestEditor: React.FC = () => {
       return;
     }
 
+    setUrlAtOpen(url);
     setShowSaveModal(true);
   };
 
@@ -943,7 +911,7 @@ const RequestEditor: React.FC = () => {
   const handleConfirmSave = async () => {
     try {
       if (!activeRequest || !currentWorkspace) return;
-      if (!url.trim()) {
+      if (!urlAtOpen.trim()) {
         showError(
           'URL Required',
           'Please enter a URL before saving the request.'
@@ -960,15 +928,12 @@ const RequestEditor: React.FC = () => {
         });
         if (res?.collectionId) {
           createdCollectionId = res.collectionId;
-          const createdCollection = collections.find(
-            (collection) => collection.id === res.collectionId
-          );
-          setActiveCollection(createdCollection || null);
+          setSelectedCollectionId(res.collectionId);
         }
       }
 
       if (
-        !activeCollection &&
+        !selectedCollectionId &&
         (!isCreatingCollection || !newCollectionName.trim())
       ) {
         showError(
@@ -979,35 +944,34 @@ const RequestEditor: React.FC = () => {
       }
 
       let maxOrder = 0;
-      if (activeCollection) {
+      const targetCollectionId = createdCollectionId || selectedCollectionId;
+      if (targetCollectionId) {
         const response = await fetchCollectionRequests.mutateAsync(
-          activeCollection.id
+          targetCollectionId
         );
         if (response && response.length > 0) {
           maxOrder = Math.max(...response.map((req) => req.order || 0));
         }
       }
 
-      // ✅ normalize authorizationType
       let effectiveAuthType = authType;
       if (authData?.token && (!authType || authType === 'none')) {
         effectiveAuthType = 'bearer';
       }
 
-      // Get selected assertions
       const selectedAssertions = Array.isArray(assertions)
         ? assertions.filter((a) => a.enabled).map((a) => a)
         : [];
 
       const requestData = {
         workspaceId: currentWorkspace.id,
-        collectionId: createdCollectionId || activeCollection?.id,
+        collectionId: targetCollectionId,
         ...(selectedFolderId ? { folderId: selectedFolderId } : {}),
         description: '',
         name: activeRequest.name || 'New Request',
         order: maxOrder + 1,
         method,
-        url,
+        url: urlAtOpen,
         bodyType: bodyType === 'json' ? 'raw' : bodyType,
         bodyFormData:
           bodyType === 'form-data'
@@ -1037,7 +1001,7 @@ const RequestEditor: React.FC = () => {
                   }, {} as Record<string, string>)
               ).toString()
             : '',
-        authorizationType: effectiveAuthType, // ✅ fixed here
+        authorizationType: effectiveAuthType,
         authorization: {
           token: authData.token,
           username: effectiveAuthType === 'basic' ? authData.username : '',
@@ -1097,11 +1061,11 @@ const RequestEditor: React.FC = () => {
         const updatedRequest = {
           ...activeRequest,
           id: newId,
-          collectionId: createdCollectionId || activeCollection?.id,
+          collectionId: targetCollectionId,
           ...(selectedFolderId ? ({ folderId: selectedFolderId } as any) : {}),
           name: activeRequest.name || 'New Request',
           method,
-          url,
+          url: urlAtOpen,
           bodyType,
           authorizationType: effectiveAuthType,
           authorization: requestData.authorization,
@@ -1197,7 +1161,6 @@ const RequestEditor: React.FC = () => {
     setHeaders(headers.filter((_, i) => i !== index));
   };
 
-  // Form data field handlers
   const addFormField = () => {
     setFormFields([
       ...formFields,
@@ -1219,7 +1182,6 @@ const RequestEditor: React.FC = () => {
     setFormFields(formFields.filter((_, i) => i !== index));
   };
 
-  // URL encoded field handlers
   const addUrlEncodedField = () => {
     setUrlEncodedFields([
       ...urlEncodedFields,
@@ -1294,7 +1256,6 @@ const RequestEditor: React.FC = () => {
           </div>
         </div>
 
-        {/* Request URL Bar */}
         <div className='border-b border-gray-200 dark:border-gray-700 p-4 flex-shrink-0'>
           <div className='flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-2'>
             <select
@@ -1397,7 +1358,6 @@ const RequestEditor: React.FC = () => {
           )}
         </div>
 
-        {/* Request Tabs */}
         <div className='border-b border-gray-200 dark:border-gray-700 flex-shrink-0'>
           <nav className='flex overflow-x-auto px-4'>
             {[
@@ -1446,7 +1406,6 @@ const RequestEditor: React.FC = () => {
           </nav>
         </div>
 
-        {/* Tab Content - This div now has overflow-auto to enable scrolling */}
         <div className='flex-1 overflow-auto p-4'>
           {activeTab === 'params' && (
             <KeyValueEditor
@@ -1478,7 +1437,6 @@ const RequestEditor: React.FC = () => {
                 <h3 className='text-base sm:text-lg font-medium text-gray-900 dark:text-white'>
                   Request Body
                 </h3>
-                {/* Added Folder dropdown */}
                 {activeCollection && (
                   <select
                     value={selectedFolderId}
@@ -1581,7 +1539,6 @@ const RequestEditor: React.FC = () => {
                 <h3 className='text-base sm:text-lg font-medium text-gray-900 dark:text-white'>
                   Authorization
                 </h3>
-                {/* Locked to Bearer only */}
                 <select
                   value='bearer'
                   disabled
@@ -1591,7 +1548,6 @@ const RequestEditor: React.FC = () => {
                 </select>
               </div>
 
-              {/* Bearer Token only */}
               <div>
                 <Input
                   type='text'
@@ -1686,7 +1642,6 @@ const RequestEditor: React.FC = () => {
           )}
         </div>
 
-        {/* Save Modal */}
         <Modal
           isOpen={showSaveModal}
           onClose={handleCancelSave}
@@ -1702,7 +1657,7 @@ const RequestEditor: React.FC = () => {
               <button
                 onClick={handleConfirmSave}
                 disabled={
-                  !activeCollection &&
+                  !selectedCollectionId &&
                   (!isCreatingCollection || !newCollectionName.trim())
                 }
                 className='px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-md'
@@ -1720,11 +1675,9 @@ const RequestEditor: React.FC = () => {
             {!isCreatingCollection ? (
               <div className='space-y-2'>
                 <select
-                  value={activeCollection?.id || ''}
+                  value={selectedCollectionId}
                   onChange={(e) => {
-                    setActiveCollection(
-                      collections.find((c) => c.id === e.target.value) || null
-                    );
+                    setSelectedCollectionId(e.target.value);
                   }}
                   className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150'
                 >
@@ -1736,7 +1689,7 @@ const RequestEditor: React.FC = () => {
                   ))}
                 </select>
 
-                {activeCollection?.id && (
+                {selectedCollectionId && (
                   <div className='space-y-1'>
                     <label className='block text-sm font-medium text-gray-700 dark:text-gray-300'>
                       Folder (optional)
@@ -1788,13 +1741,13 @@ const RequestEditor: React.FC = () => {
             )}
           </div>
 
-          {!url.trim() && (
+          {!urlAtOpen.trim() && (
             <div className='mt-2 text-red-600 text-sm'>
               URL is required to save a request.
             </div>
           )}
 
-          {!activeCollection &&
+          {!selectedCollectionId &&
             (!isCreatingCollection || !newCollectionName.trim()) && (
               <div className='mt-2 text-red-600 text-sm'>
                 Please select or create a collection.

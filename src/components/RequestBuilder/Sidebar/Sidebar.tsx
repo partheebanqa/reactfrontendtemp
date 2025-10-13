@@ -217,7 +217,12 @@ const Sidebar: React.FC = () => {
         await renameRequestMutation.mutateAsync({
           requestId,
           newName: renameValue,
-          workspaceId: '',
+          workspaceId: currentWorkspace?.id ?? '',
+          ...(selectedFolder?.id
+            ? { folderId: selectedFolder.id }
+            : selectedRequest?.folderId
+            ? { folderId: selectedRequest.folderId }
+            : {}),
         });
         setShowRequestRenameModal(false);
       }
@@ -472,19 +477,68 @@ const Sidebar: React.FC = () => {
     return colors[method as keyof typeof colors] || 'text-gray-600';
   };
 
+  const removeRequestAtIndexFromFolderTree = (
+    folders: any[] = [],
+    folderId: string,
+    index: number
+  ): any[] => {
+    return folders.map((f: any) => {
+      if (f.id === folderId) {
+        return {
+          ...f,
+          requests: (f.requests || []).filter(
+            (_: any, i: number) => i !== index
+          ),
+        };
+      }
+      if (Array.isArray(f.folders) && f.folders.length) {
+        return {
+          ...f,
+          folders: removeRequestAtIndexFromFolderTree(
+            f.folders,
+            folderId,
+            index
+          ),
+        };
+      }
+      return f;
+    });
+  };
+
   const handleDeleteNewRequest = () => {
-    setCollection(
-      collections.map((col) =>
-        col.id === selectedCollection?.id
-          ? {
-              ...col,
-              requests: col.requests.filter(
-                (_, index) => index !== requstIndex
-              ),
-            }
-          : col
-      )
-    );
+    if (selectedCollection == null || requstIndex == null) return;
+
+    if (selectedFolder?.id) {
+      setCollection(
+        collections.map((col) =>
+          col.id === selectedCollection.id
+            ? {
+                ...col,
+                // update nested folders immutably
+                folders: removeRequestAtIndexFromFolderTree(
+                  (col as any).folders || [],
+                  selectedFolder.id,
+                  requstIndex
+                ),
+              }
+            : col
+        )
+      );
+    } else {
+      setCollection(
+        collections.map((col) =>
+          col.id === selectedCollection.id
+            ? {
+                ...col,
+                requests: col.requests.filter(
+                  (_, index) => index !== requstIndex
+                ),
+              }
+            : col
+        )
+      );
+    }
+
     setRequestIndex(null);
   };
 
@@ -611,30 +665,59 @@ const Sidebar: React.FC = () => {
             isOpen ? 'max-h-[1000px]' : 'max-h-0'
           }`}
         >
-          {(folder.requests || []).map((request: CollectionRequest) => (
-            <div
-              key={request.id || `${folder.id}-${request.name}`}
-              className={`flex items-center justify-between p-2 rounded-md cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 ${
-                activeRequest?.id === request.id
-                  ? 'bg-blue-50 dark:bg-blue-900/20'
-                  : ''
-              }`}
-              onClick={() => onClickRequest(request)}
-            >
-              <div className='flex items-center space-x-2 flex-1 min-w-0'>
-                <span
-                  className={`text-xs font-medium ${getMethodColor(
-                    request.method
-                  )} flex-shrink-0`}
+          {(folder.requests || []).map(
+            (request: CollectionRequest, index: number) => (
+              <div
+                key={request.id || `${folder.id}-${request.name}-${index}`}
+                className={`flex items-center justify-between p-2 rounded-md cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 ${
+                  activeRequest?.id === request.id
+                    ? 'bg-blue-50 dark:bg-blue-900/20'
+                    : ''
+                }`}
+              >
+                <div
+                  className='flex items-center space-x-2 flex-1 min-w-0'
+                  onClick={() => onClickRequest(request)}
                 >
-                  {request.method}
-                </span>
-                <span className='text-sm text-gray-900 dark:text-white truncate min-w-0'>
-                  {request.name}
-                </span>
+                  <span
+                    className={`text-xs font-medium ${getMethodColor(
+                      request.method
+                    )} flex-shrink-0`}
+                  >
+                    {request.method}
+                  </span>
+                  <span className='text-sm text-gray-900 dark:text-white truncate min-w-0'>
+                    {request.name}
+                  </span>
+                </div>
+
+                {/* actions menu (same behavior as root-level requests) */}
+                <div className='flex items-center opacity-0 group-hover:opacity-100 transition-opacity relative'>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const rect = (
+                        e.currentTarget as HTMLButtonElement
+                      ).getBoundingClientRect();
+                      setMenuPosition({ top: rect.bottom, left: rect.left });
+                      setSelectedRequest(request);
+                      setSelectedCollection(parentCollection);
+                      setSelectedFolder(folder);
+                      setRequestId(request.id || '');
+                      setRequestIndex(index);
+                      setShowMenu(
+                        `request-${request.id || `${folder.id}-${index}`}`
+                      );
+                    }}
+                    className='p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700'
+                    aria-label='More options'
+                  >
+                    <MoreVertical className='h-3 w-3' />
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          )}
 
           {(folder.folders || []).map((sub: any) => (
             <FolderNodeView

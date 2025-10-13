@@ -178,6 +178,7 @@ export interface CollectionRequest {
   createdBy?: string;
   createdAt?: string;
   updatedAt?: string;
+  folderId?: string;
 }
 
 export interface ChangelogEntry {
