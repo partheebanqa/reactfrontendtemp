@@ -235,7 +235,25 @@ const VariableCreateDialog: React.FC<VariableCreateDialogProps> = ({
 
       <DialogContent className='max-w-2xl max-h-[80vh] overflow-y-auto'>
         <DialogHeader>
-          <DialogTitle>Create Variable</DialogTitle>
+          <DialogTitle className='flex items-center gap-2'>
+            {type === 'static' ? (
+              <>
+                <FileText className='w-5 h-5 text-muted-foreground' />
+                <span>Create Static Variable</span>
+                <span className='text-xs text-muted-foreground ml-2'>
+                  Fixed value that doesn’t change
+                </span>
+              </>
+            ) : (
+              <>
+                <Zap className='w-5 h-5 text-muted-foreground' />
+                <span>Create Dynamic Variable</span>
+                <span className='text-xs text-muted-foreground ml-2'>
+                  Generated at runtime
+                </span>
+              </>
+            )}
+          </DialogTitle>
         </DialogHeader>
 
         <div className='space-y-4'>
@@ -272,8 +290,7 @@ const VariableCreateDialog: React.FC<VariableCreateDialogProps> = ({
           </div>
 
           {/* Type */}
-          {/* Type */}
-          <div className='space-y-1'>
+          {/* <div className='space-y-1'>
             <label className='text-sm font-medium'>Variable Type</label>
             <div className='flex items-center gap-2 p-2 border rounded-md bg-muted/50'>
               {type === 'static' ? (
@@ -296,7 +313,7 @@ const VariableCreateDialog: React.FC<VariableCreateDialogProps> = ({
                 </>
               )}
             </div>
-          </div>
+          </div> */}
 
           {/* Static Variable Value with Secret Toggle */}
           {newVariable.type === 'static' && (

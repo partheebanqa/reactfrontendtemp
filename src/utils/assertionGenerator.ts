@@ -452,7 +452,7 @@ export const generateAssertions = (response: ApiResponse): Assertion[] => {
     description: `Response time is less than ${Math.max(
       response.responseTime * 2,
       5000
-    )}ms`,
+    )} ms`,
     expectedValue: Math.max(response.responseTime * 2, 5000),
     enabled: false,
   });
