@@ -42,14 +42,15 @@ import FAQ from '@/pages/FAQ';
 import ResetPassword from '@/pages/ResetPassword';
 import RequestChainCreate from '@/pages/RequestChainCreate';
 import RequestChainEdit from '@/pages/RequestChainEdit';
+import { Loader } from '@/components/Loader';
 
 export default function Router() {
   const { isAuthenticated, isLoading } = useAuth();
   if (isLoading) {
     return (
-      <div className='min-h-screen flex items-center justify-center'>
-        <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600'></div>
-      </div>
+      <>
+        <Loader message='Loading ' />
+      </>
     );
   }
 

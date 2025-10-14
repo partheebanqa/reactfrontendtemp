@@ -81,6 +81,7 @@ import {
   duplicateSchedule,
 } from '@/services/scheduler.service';
 import { Switch } from '@/components/ui/switch';
+import { Loader } from '../Loader';
 
 interface Schedule {
   scheduleId: string;
@@ -105,6 +106,8 @@ interface ScheduleListProps {
   schedulesLoading: boolean;
   onRefresh: () => void;
   onEdit: (schedule: Schedule) => void;
+
+
 }
 
 export default function ScheduleList({
@@ -191,7 +194,7 @@ export default function ScheduleList({
 
   const getTargetTypeIcon = (target: number) => {
     return target === 1 ? (
-      <Beaker className='h-4 w-4 text-blue-600' />
+      <Beaker className='h-4 w-4 text-[#136fb0]' />
     ) : (
       <GitBranch className='h-4 w-4 text-purple-600' />
     );
@@ -218,9 +221,8 @@ export default function ScheduleList({
         } else if (diffDays === 0) {
           daysLeftText = `Today`;
         } else {
-          daysLeftText = `${Math.abs(diffDays)} day${
-            Math.abs(diffDays) > 1 ? 's' : ''
-          } ago`;
+          daysLeftText = `${Math.abs(diffDays)} day${Math.abs(diffDays) > 1 ? 's' : ''
+            } ago`;
         }
 
         return { dateText, daysLeftText };
@@ -248,52 +250,52 @@ export default function ScheduleList({
   // Filter schedules based on search and filters
   const filteredSchedules = Array.isArray(schedules)
     ? schedules.filter((schedule: Schedule) => {
-        const matchesSearch =
-          schedule.scheduleName
-            ?.toLowerCase()
-            .includes(searchQuery.toLowerCase()) ||
-          schedule.description
-            ?.toLowerCase()
-            .includes(searchQuery.toLowerCase());
+      const matchesSearch =
+        schedule.scheduleName
+          ?.toLowerCase()
+          .includes(searchQuery.toLowerCase()) ||
+        schedule.description
+          ?.toLowerCase()
+          .includes(searchQuery.toLowerCase());
 
-        const matchesType =
-          typeFilter === 'all' ||
-          (typeFilter === 'test-suite' && schedule.target === 1) ||
-          (typeFilter === 'request-chain' && schedule.target === 2);
+      const matchesType =
+        typeFilter === 'all' ||
+        (typeFilter === 'test-suite' && schedule.target === 1) ||
+        (typeFilter === 'request-chain' && schedule.target === 2);
 
-        const matchesExecutionMode =
-          executionModeFilter === 'all' ||
-          (executionModeFilter === 'one-time' && schedule.isOneTime) ||
-          (executionModeFilter === 'recurring' && !schedule.isOneTime);
+      const matchesExecutionMode =
+        executionModeFilter === 'all' ||
+        (executionModeFilter === 'one-time' && schedule.isOneTime) ||
+        (executionModeFilter === 'recurring' && !schedule.isOneTime);
 
-        const scheduleStatus = schedule.isActive ? 'active' : 'disabled';
-        const matchesStatus =
-          statusFilter === 'all' || scheduleStatus === statusFilter;
+      const scheduleStatus = schedule.isActive ? 'active' : 'disabled';
+      const matchesStatus =
+        statusFilter === 'all' || scheduleStatus === statusFilter;
 
-        const matchesDateRange =
-          !dateRange.from ||
-          !dateRange.to ||
-          (schedule.scheduledTime &&
-            new Date(schedule.scheduledTime) >= dateRange.from &&
-            new Date(schedule.scheduledTime) <= dateRange.to);
+      const matchesDateRange =
+        !dateRange.from ||
+        !dateRange.to ||
+        (schedule.scheduledTime &&
+          new Date(schedule.scheduledTime) >= dateRange.from &&
+          new Date(schedule.scheduledTime) <= dateRange.to);
 
-        return (
-          matchesSearch &&
-          matchesType &&
-          matchesExecutionMode &&
-          matchesStatus &&
-          matchesDateRange
-        );
-      })
+      return (
+        matchesSearch &&
+        matchesType &&
+        matchesExecutionMode &&
+        matchesStatus &&
+        matchesDateRange
+      );
+    })
     : [];
 
   // Helper function to get execution mode icon based on backend data
   const getExecutionModeIcon = (isOneTime: boolean, frequencyMode: number) => {
     if (isOneTime) {
-      return <Calendar className='h-4 w-4' />;
+      return <Calendar className='h-4 w-4 text-[#136fb0]' />;
     } else {
       // Recurring schedule based on frequencyMode
-      return <Clock className='h-4 w-4' />;
+      return <Clock className='h-4 w-4 text-red-500' />;
     }
   };
 
@@ -330,9 +332,8 @@ export default function ScheduleList({
     if (schedule.scheduledTime) {
       try {
         const date = new Date(schedule.scheduledTime);
-        return `${format(date, 'MMM dd, yyyy')} at ${format(date, 'HH:mm')} (${
-          schedule.timezone || 'UTC'
-        })`;
+        return `${format(date, 'MMM dd, yyyy')} at ${format(date, 'HH:mm')} (${schedule.timezone || 'UTC'
+          })`;
       } catch (error) {
         return 'Invalid date';
       }
@@ -472,270 +473,272 @@ export default function ScheduleList({
           </TooltipProvider>
         </div>
       </div>
+      {!schedulesLoading ? (
+        filteredSchedules.length === 0 ? (
+          <div className='bg-white rounded-lg border border-slate-200 p-12 text-center'>
+            <Clock className='mx-auto h-12 w-12 text-slate-400' />
+            <h3 className='mt-2 text-sm font-medium text-slate-900'>No schedules</h3>
+            <p className='mt-1 text-sm text-slate-500'>
+              {schedules.length === 0
+                ? 'Get started by creating a new schedule.'
+                : 'No schedules match your current filters.'}
+            </p>
+          </div>
+        ) : (
+          <>
+            <div className='bg-white rounded-lg border border-slate-200 overflow-hidden'>
+              <Table>
+                <TableHeader>
+                  <TableRow className='bg-slate-50'>
+                    <TableHead className='font-semibold text-slate-600 text-sm capitalize tracking-wider'>
+                      Schedule
+                    </TableHead>
+                    <TableHead className='font-semibold text-slate-600 text-sm capitalize tracking-wider'>
+                      Type
+                    </TableHead>
 
-      {/* Schedules Table */}
-      {filteredSchedules.length === 0 ? (
-        <div className='bg-white rounded-lg border border-slate-200 p-12 text-center'>
-          <Clock className='mx-auto h-12 w-12 text-slate-400' />
-          <h3 className='mt-2 text-sm font-medium text-slate-900'>
-            No schedules
-          </h3>
-          <p className='mt-1 text-sm text-slate-500'>
-            {schedules.length === 0
-              ? 'Get started by creating a new schedule.'
-              : 'No schedules match your current filters.'}
-          </p>
-        </div>
-      ) : (
-        <>
-          <div className='bg-white rounded-lg border border-slate-200 overflow-hidden'>
-            <Table>
-              <TableHeader>
-                <TableRow className='bg-slate-50'>
-                  <TableHead className='font-semibold text-slate-600 text-sm capitalize tracking-wider'>
-                    Schedule
-                  </TableHead>
-                  <TableHead className='font-semibold text-slate-600 text-sm capitalize tracking-wider'>
-                    Type
-                  </TableHead>
-
-                  <TableHead className='font-semibold text-slate-600 text-sm capitalize tracking-wider'>
-                    Status
-                  </TableHead>
-                  <TableHead className='font-semibold text-slate-600 text-sm capitalize tracking-wider'>
-                    Mode
-                  </TableHead>
-                  <TableHead className='font-semibold text-slate-600 text-sm capitalize tracking-wider'>
-                    Schedule Time
-                  </TableHead>
-                  <TableHead className='font-semibold text-slate-600 text-sm capitalize tracking-wider'>
-                    Actions
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {paginatedSchedules.map((schedule: Schedule) => (
-                  <TableRow
-                    key={schedule.scheduleId}
-                    className='border-b border-slate-100 hover:bg-slate-50'
-                  >
-                    <TableCell className='py-4'>
-                      <div>
-                        <div className='font-medium text-slate-900'>
-                          {schedule.scheduleName}
-                        </div>
-                        {/* {schedule.description && (
+                    <TableHead className='font-semibold text-slate-600 text-sm capitalize tracking-wider'>
+                      Status
+                    </TableHead>
+                    <TableHead className='font-semibold text-slate-600 text-sm capitalize tracking-wider'>
+                      Mode
+                    </TableHead>
+                    <TableHead className='font-semibold text-slate-600 text-sm capitalize tracking-wider'>
+                      Schedule Time
+                    </TableHead>
+                    <TableHead className='font-semibold text-slate-600 text-sm capitalize tracking-wider'>
+                      Actions
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {paginatedSchedules.map((schedule: Schedule) => (
+                    <TableRow
+                      key={schedule.scheduleId}
+                      className='border-b border-slate-100 hover:bg-slate-50'
+                    >
+                      <TableCell className='py-4'>
+                        <div>
+                          <div className='font-medium text-slate-900'>
+                            {schedule.scheduleName}
+                          </div>
+                          {/* {schedule.description && (
                           <div className='text-sm text-slate-500 mt-1'>
                             {schedule.description}
                           </div>
                         )} */}
-                      </div>
-                    </TableCell>
-                    <TableCell className='py-4'>
-                      <div className='flex items-center gap-2'>
-                        {getTargetTypeIcon(schedule.target)}
-                        <span className='text-sm text-slate-700'>
-                          {getTargetTypeText(schedule.target)}
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell className='py-4'>
-                      <div className='flex items-center gap-2'>
-                        <Switch
-                          checked={schedule.isActive}
-                          onCheckedChange={(checked) => {
-                            updateMutation.mutate({
-                              id: schedule.scheduleId,
-                              data: { isActive: checked },
-                            });
-                          }}
-                        />
-                        <span className='text-sm text-slate-700'>
-                          {schedule.isActive ? 'Active' : 'Disabled'}
-                        </span>
-                      </div>
-                    </TableCell>
-
-                    <TableCell className='py-4'>
-                      <div className='flex items-center gap-2'>
-                        <div className='text-blue-600'>
-                          {getExecutionModeIcon(
-                            schedule.isOneTime,
-                            schedule.frequencyMode
-                          )}
                         </div>
-                        <span className='text-sm text-slate-700'>
-                          {getExecutionModeText(
-                            schedule.isOneTime,
-                            schedule.frequencyMode
-                          )}
-                        </span>
-                      </div>
-                    </TableCell>
+                      </TableCell>
+                      <TableCell className='py-4'>
+                        <div className='flex items-center gap-2'>
+                          {getTargetTypeIcon(schedule.target)}
+                          <span className='text-sm text-slate-700'>
+                            {getTargetTypeText(schedule.target)}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell className='py-4'>
+                        <div className='flex items-center gap-2'>
+                          <Switch
+                            checked={schedule.isActive}
+                            onCheckedChange={(checked) => {
+                              updateMutation.mutate({
+                                id: schedule.scheduleId,
+                                data: { isActive: checked },
+                              });
+                            }}
+                          />
+                          <span className='text-sm text-slate-700'>
+                            {schedule.isActive ? 'Active' : 'Disabled'}
+                          </span>
+                        </div>
+                      </TableCell>
 
-                    <TableCell className='py-4'>
-                      {(() => {
-                        const { dateText, daysLeftText } =
-                          getScheduleDateParts(schedule);
-                        return (
-                          <div>
-                            <div className='text-sm text-slate-600'>
-                              {dateText}
-                            </div>
-                            {daysLeftText && (
-                              <div className='text-xs text-slate-400'>
-                                {daysLeftText}
-                              </div>
+                      <TableCell className='py-4'>
+                        <div className='flex items-center gap-2'>
+                          <div className='text-blue-600'>
+                            {getExecutionModeIcon(
+                              schedule.isOneTime,
+                              schedule.frequencyMode
                             )}
                           </div>
-                        );
-                      })()}
-                    </TableCell>
+                          <span className='text-sm text-slate-700'>
+                            {getExecutionModeText(
+                              schedule.isOneTime,
+                              schedule.frequencyMode
+                            )}
+                          </span>
+                        </div>
+                      </TableCell>
 
-                    <TableCell className='py-4'>
-                      <div className='flex items-center gap-2'>
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant='ghost'
-                                size='sm'
-                                className='h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600'
-                                onClick={() => onEdit(schedule)}
-                              >
-                                <Edit size={16} />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Edit Schedule</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
+                      <TableCell className='py-4'>
+                        {(() => {
+                          const { dateText, daysLeftText } =
+                            getScheduleDateParts(schedule);
+                          return (
+                            <div>
+                              <div className='text-sm text-slate-600'>
+                                {dateText}
+                              </div>
+                              {daysLeftText && (
+                                <div className='text-xs text-slate-400'>
+                                  {daysLeftText}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })()}
+                      </TableCell>
 
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant='ghost'
-                                size='sm'
-                                className='h-8 w-8 p-0 hover:bg-green-50 hover:text-green-600'
-                                onClick={() =>
-                                  cloneMutation.mutate(schedule.scheduleId)
-                                }
-                              >
-                                <Copy size={16} />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Clone Schedule</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-
-                        <AlertDialog>
+                      <TableCell className='py-4'>
+                        <div className='flex items-center gap-2'>
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <AlertDialogTrigger asChild>
-                                  <Button
-                                    variant='ghost'
-                                    size='sm'
-                                    className='h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600'
-                                  >
-                                    <Trash2 size={16} />
-                                  </Button>
-                                </AlertDialogTrigger>
+                                <Button
+                                  variant='ghost'
+                                  size='sm'
+                                  className='h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600'
+                                  onClick={() => onEdit(schedule)}
+                                >
+                                  <Edit size={16} />
+                                </Button>
                               </TooltipTrigger>
                               <TooltipContent>
-                                <p>Delete Schedule</p>
+                                <p>Edit Schedule</p>
                               </TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
 
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>
-                                Delete this schedule?
-                              </AlertDialogTitle>
-                              <AlertDialogDescription>
-                                This will permanently delete{' '}
-                                <span className='font-medium text-red-600'>
-                                  {schedule.name || 'this schedule'}
-                                </span>
-                                . This action cannot be undone.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <Button
-                                // variant='destructive'
-                                onClick={() =>
-                                  deleteMutation.mutate(schedule.scheduleId)
-                                }
-                              >
-                                Delete
-                              </Button>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant='ghost'
+                                  size='sm'
+                                  className='h-8 w-8 p-0 hover:bg-green-50 hover:text-green-600'
+                                  onClick={() =>
+                                    cloneMutation.mutate(schedule.scheduleId)
+                                  }
+                                >
+                                  <Copy size={16} />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Clone Schedule</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
 
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className='flex items-center justify-between px-2'>
-              <div className='text-sm text-slate-700'>
-                Showing {startIndex + 1} to {Math.min(endIndex, totalItems)} of{' '}
-                {totalItems} results
-              </div>
-              <div className='flex items-center space-x-2'>
-                <Button
-                  variant='outline'
-                  size='sm'
-                  onClick={() =>
-                    setCurrentPage((prev) => Math.max(prev - 1, 1))
-                  }
-                  disabled={currentPage === 1}
-                >
-                  <ChevronLeft className='h-4 w-4' />
-                  Previous
-                </Button>
-                <div className='flex items-center space-x-1'>
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                    (page) => (
-                      <Button
-                        key={page}
-                        variant={currentPage === page ? 'default' : 'outline'}
-                        size='sm'
-                        onClick={() => setCurrentPage(page)}
-                        className='w-8 h-8 p-0'
-                      >
-                        {page}
-                      </Button>
-                    )
-                  )}
-                </div>
-                <Button
-                  variant='outline'
-                  size='sm'
-                  onClick={() =>
-                    setCurrentPage((prev) => Math.min(prev + 1, totalPages))
-                  }
-                  disabled={currentPage === totalPages}
-                >
-                  Next
-                  <ChevronRight className='h-4 w-4' />
-                </Button>
-              </div>
+                          <AlertDialog>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <AlertDialogTrigger asChild>
+                                    <Button
+                                      variant='ghost'
+                                      size='sm'
+                                      className='h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600'
+                                    >
+                                      <Trash2 size={16} />
+                                    </Button>
+                                  </AlertDialogTrigger>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Delete Schedule</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>
+                                  Delete this schedule?
+                                </AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  This will permanently delete{' '}
+                                  <span className='font-medium text-red-600'>
+                                    {schedule?.name || 'this schedule'}
+                                  </span>
+                                  . This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <Button
+                                  // variant='destructive'
+                                  onClick={() =>
+                                    deleteMutation.mutate(schedule.scheduleId)
+                                  }
+                                >
+                                  Delete
+                                </Button>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </div>
-          )}
-        </>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className='flex items-center justify-between px-2'>
+                <div className='text-sm text-slate-700'>
+                  Showing {startIndex + 1} to {Math.min(endIndex, totalItems)} of{' '}
+                  {totalItems} results
+                </div>
+                <div className='flex items-center space-x-2'>
+                  <Button
+                    variant='outline'
+                    size='sm'
+                    onClick={() =>
+                      setCurrentPage((prev) => Math.max(prev - 1, 1))
+                    }
+                    disabled={currentPage === 1}
+                  >
+                    <ChevronLeft className='h-4 w-4' />
+                    Previous
+                  </Button>
+                  <div className='flex items-center space-x-1'>
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                      (page) => (
+                        <Button
+                          key={page}
+                          variant={currentPage === page ? 'default' : 'outline'}
+                          size='sm'
+                          onClick={() => setCurrentPage(page)}
+                          className='w-8 h-8 p-0'
+                        >
+                          {page}
+                        </Button>
+                      )
+                    )}
+                  </div>
+                  <Button
+                    variant='outline'
+                    size='sm'
+                    onClick={() =>
+                      setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                    }
+                    disabled={currentPage === totalPages}
+                  >
+                    Next
+                    <ChevronRight className='h-4 w-4' />
+                  </Button>
+                </div>
+              </div>
+            )}
+          </>
+
+        )
+      ) : (
+        <Loader message='Loading Schedules' />
       )}
+
 
       {/* Advanced Filter Dialog */}
       <Dialog open={advancedFilterOpen} onOpenChange={setAdvancedFilterOpen}>
@@ -766,9 +769,8 @@ export default function ScheduleList({
                     <Button
                       id='date'
                       variant='outline'
-                      className={`w-full justify-start text-left font-normal ${
-                        !dateRange.from && 'text-muted-foreground'
-                      }`}
+                      className={`w-full justify-start text-left font-normal ${!dateRange.from && 'text-muted-foreground'
+                        }`}
                     >
                       <CalendarIcon className='mr-2 h-4 w-4' />
                       {dateRange.from ? (

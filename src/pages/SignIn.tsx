@@ -15,6 +15,7 @@ import { Separator } from '@/components/ui/separator';
 import { Eye, EyeOff, Lock, Mail } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
+import { Loader } from '@/components/Loader';
 
 export default function SignIn() {
   const [, setLocation] = useLocation();
@@ -34,9 +35,9 @@ export default function SignIn() {
 
   if (isLoading) {
     return (
-      <div className='min-h-screen flex items-center justify-center'>
-        <div className='text-lg'>Loading...</div>
-      </div>
+      <>
+        <Loader message='Loading ' />
+      </>
     );
   }
 
@@ -45,10 +46,10 @@ export default function SignIn() {
 
     try {
       const loginMutationResult = await loginMutation.mutateAsync(formData);
-      console.log(
-        '🚀 ~ handleSubmit ~ loginMutationResult:',
-        loginMutationResult
-      );
+      // console.log(
+      //   '🚀 ~ handleSubmit ~ loginMutationResult:',
+      //   loginMutationResult
+      // );
       if (loginMutationResult && loginMutationResult.token) {
         setLocation('/request-builder');
       } else {

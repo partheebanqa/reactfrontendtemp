@@ -30,7 +30,7 @@ interface TestAssertion {
 
 const RequestBuilder = () => {
   const { currentWorkspace } = useWorkspace();
-  const { refetch: refetchCollection, setActiveCollection, setActiveRequest ,handleCreateRequest} = useCollection();
+  const { refetch: refetchCollection, setActiveCollection, setActiveRequest, handleCreateRequest } = useCollection();
   const { setResponseData, setRequestData } = useRequest()
   const isMobile = useIsMobile();
   const [isBottomLayout, setIsBottomLayout] = useState(true);
@@ -99,13 +99,13 @@ const RequestBuilder = () => {
 
   // Fetch collection data when workspace changes
   // Fix the useEffect dependency issue
-useEffect(() => {
-  if (currentWorkspace?.id) {
-    refetchCollection();
-    setActiveCollection(null);
-    handleCreateRequest();
-  }
-}, [currentWorkspace?.id]); // Remove refetchCollection from dependencies
+  useEffect(() => {
+    if (currentWorkspace?.id) {
+      refetchCollection();
+      setActiveCollection(null);
+      handleCreateRequest();
+    }
+  }, [currentWorkspace?.id]); // Remove refetchCollection from dependencies
 
 
   // Adjust layout based on mobile/desktop
@@ -121,7 +121,7 @@ useEffect(() => {
   }, [isMobile]);
 
   return (
-    
+
     <div className="flex h-full relative border border-gray-200 bg-background rounded-lg mt-2">
       {/* Sidebar with conditional rendering for mobile */}
       {showSidebar && (
@@ -283,8 +283,8 @@ useEffect(() => {
               toggleSidebar();
             }}
             className={`mx-2 p-2 rounded-md flex flex-col items-center ${activePanel === 'editor' && showSidebar
-                ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
-                : 'text-gray-600 dark:text-gray-400'
+              ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
+              : 'text-gray-600 dark:text-gray-400'
               }`}
           >
             <PanelLeft size={18} />
@@ -297,8 +297,8 @@ useEffect(() => {
               setShowSidebar(false);
             }}
             className={`mx-2 p-2 rounded-md flex flex-col items-center ${activePanel === 'editor' && !showSidebar
-                ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
-                : 'text-gray-600 dark:text-gray-400'
+              ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
+              : 'text-gray-600 dark:text-gray-400'
               }`}
           >
             <svg
@@ -324,8 +324,8 @@ useEffect(() => {
               setShowSidebar(false);
             }}
             className={`mx-2 p-2 rounded-md flex flex-col items-center ${activePanel === 'response'
-                ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
-                : 'text-gray-600 dark:text-gray-400'
+              ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
+              : 'text-gray-600 dark:text-gray-400'
               }`}
           >
             <svg
