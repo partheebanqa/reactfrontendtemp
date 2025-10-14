@@ -35,6 +35,7 @@ import html2canvas from 'html2canvas';
 import { downloadAsHTML, downloadAsPDF, shareReport } from '@/utils/exportUtils';
 import { RequestGrouping } from '../Reports/Components/RequestGrouping';
 import Logo from '../../assests/images/OptraLogo.png';
+import { Loader } from '../Loader';
 
 type RouteParams = {
   type: 'test_suite' | 'request_chain';
@@ -563,12 +564,9 @@ const ExecutionReportPage: React.FC = () => {
       </header>
 
       {isLoading ? (
-        <div className='flex items-center justify-center py-12'>
-          <div className='text-center'>
-            <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4'></div>
-            <p className='text-gray-500'>Loading report...</p>
-          </div>
-        </div>
+        <>
+          <Loader message='Loading Report' />
+        </>
       ) : reportData?.data ? (
         type === 'test_suite' ? (
           renderTestSuiteReport(reportData.data)
