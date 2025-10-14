@@ -292,38 +292,23 @@ export const renameRequest = async ({
   requestId: string;
   newName?: string;
   workspaceId: string;
-  folderId?: string;
+  folderId: string;
 }) => {
   try {
-    let existingFolderId: string | undefined;
-    try {
-      const existingRes = await apiRequest(
-        'GET',
-        `${API_COLLECTION_REQUESTS}/${requestId}`
-      );
-      if (existingRes.ok) {
-        const existing = await existingRes.json();
-        const normalized = formatRequest(existing);
-        existingFolderId = normalized.folderId;
-      }
-    } catch (e) {
-      console.error('Error fetching existing request before rename:', e);
-    }
-
-    const body: any = {
-      workspaceId,
-      ...(newName ? { name: newName } : {}),
-      ...(existingFolderId ? { folderId: existingFolderId } : {}),
-    };
-
     const response = await apiRequest(
       'PUT',
       `${API_COLLECTION_REQUESTS}/${requestId}`,
       {
-        body: JSON.stringify(body),
+        body:
+          newName || folderId
+            ? JSON.stringify({
+                ...(newName ? { name: newName } : {}),
+                workspaceId,
+                ...(folderId ? { folderId } : {}),
+              })
+            : undefined,
       }
     );
-
     if (!response.ok) {
       throw new Error('Failed to rename request');
     }
@@ -334,6 +319,7 @@ export const renameRequest = async ({
     throw error;
   }
 };
+
 export const updateRequest = async ({
   requestId,
   requestData,
