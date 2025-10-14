@@ -510,7 +510,6 @@ const Sidebar: React.FC = () => {
           col.id === selectedCollection.id
             ? {
                 ...col,
-                // update nested folders immutably
                 folders: removeRequestAtIndexFromFolderTree(
                   (col as any).folders || [],
                   selectedFolder.id,
