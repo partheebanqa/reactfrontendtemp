@@ -578,6 +578,7 @@ const Sidebar: React.FC = () => {
 
   const handleOpenAddFolder = (collection: Collection) => {
     setSelectedCollection(collection);
+    setSelectedFolder(null);
     setShowMenu(null);
     setMenuPosition(null);
     setShowAddFolderModal(true);
@@ -589,7 +590,7 @@ const Sidebar: React.FC = () => {
       await addFolder({
         collectionId: selectedCollection.id,
         name: folderName.trim(),
-        order: 0,
+        parentId: selectedFolder?.id,
       });
       await fetchCollectionRequests.mutateAsync(selectedCollection.id);
       toast({

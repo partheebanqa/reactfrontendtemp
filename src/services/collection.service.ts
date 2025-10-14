@@ -106,14 +106,10 @@ export const getCollectionRequests = async (collectionId: string) => {
     }
     const data = await response.json();
 
-    // Expected shape (example):
-    // { folders: [ { ...folder, requests: [...], folders?: [...] } ], requests: [ ...rootRequests ] }
-    // Normalize into our structure and format requests
     const mapFolder = (folder: any): any => ({
       id: folder.Id || folder.id,
       collectionId: folder.CollectionId || folder.collectionId,
       name: folder.Name || folder.name,
-      order: folder.Order || folder.order || 0,
       createdAt: folder.CreatedAt || folder.createdAt,
       updatedAt: folder.UpdatedAt || folder.updatedAt,
       // requests inside this folder
@@ -291,21 +287,43 @@ export const renameRequest = async ({
   requestId,
   newName,
   workspaceId,
+  folderId,
 }: {
   requestId: string;
   newName?: string;
   workspaceId: string;
+  folderId?: string;
 }) => {
   try {
+    let existingFolderId: string | undefined;
+    try {
+      const existingRes = await apiRequest(
+        'GET',
+        `${API_COLLECTION_REQUESTS}/${requestId}`
+      );
+      if (existingRes.ok) {
+        const existing = await existingRes.json();
+        const normalized = formatRequest(existing);
+        existingFolderId = normalized.folderId;
+      }
+    } catch (e) {
+      console.error('Error fetching existing request before rename:', e);
+    }
+
+    const body: any = {
+      workspaceId,
+      ...(newName ? { name: newName } : {}),
+      ...(existingFolderId ? { folderId: existingFolderId } : {}),
+    };
+
     const response = await apiRequest(
       'PUT',
       `${API_COLLECTION_REQUESTS}/${requestId}`,
       {
-        body: newName
-          ? JSON.stringify({ name: newName, workspaceId })
-          : undefined,
+        body: JSON.stringify(body),
       }
     );
+
     if (!response.ok) {
       throw new Error('Failed to rename request');
     }
@@ -316,7 +334,6 @@ export const renameRequest = async ({
     throw error;
   }
 };
-
 export const updateRequest = async ({
   requestId,
   requestData,
@@ -353,7 +370,6 @@ export const formatRequest = (request: any) => {
     description: request.Description || request.description || '',
     method: request.Method || request.method,
     url: request.Url || request.url,
-    order: request.Order || request.order || 0,
     bodyType: request.BodyType || request.bodyType || 'none',
     bodyFormData: request.BodyFormData || request.bodyFormData,
     bodyRawContent: request.BodyRawContent || request.bodyRawContent,

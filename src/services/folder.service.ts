@@ -4,29 +4,30 @@ import { apiRequest } from '@/lib/queryClient';
 export interface AddFolderInput {
   collectionId: string;
   name: string;
-  order?: number;
+  parentId?: string;
 }
 
 export interface Folder {
   id: string;
   collectionId: string;
   name: string;
-  order: number;
   createdAt?: string;
   updatedAt?: string;
+  parentId?: string;
 }
 
 export const addFolder = async ({
   collectionId,
   name,
-  order,
+
+  parentId,
 }: AddFolderInput): Promise<Folder> => {
   try {
     const response = await apiRequest(
       'POST',
       `${API_COLLECTIONS}/${collectionId}/folders`,
       {
-        body: JSON.stringify({ name, order }),
+        body: JSON.stringify({ name, parentId }),
       }
     );
 

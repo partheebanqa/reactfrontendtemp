@@ -777,14 +777,10 @@ const RequestEditor: React.FC = () => {
         return;
       }
 
-      let maxOrder = 0;
       if (activeCollection) {
         const response = await fetchCollectionRequests.mutateAsync(
           activeCollection.id
         );
-        if (response && response.length > 0) {
-          maxOrder = Math.max(...response.map((req) => req.order || 0));
-        }
       }
 
       const selectedAssertions = Array.isArray(assertions)
@@ -810,7 +806,6 @@ const RequestEditor: React.FC = () => {
         workspaceId: currentWorkspace.id,
         description: '',
         name: activeRequest.name || 'New Request',
-        order: maxOrder + 1,
         method: method,
         url: url,
         ...(effectiveFolderId ? { folderId: effectiveFolderId } : {}),
@@ -943,15 +938,11 @@ const RequestEditor: React.FC = () => {
         return;
       }
 
-      let maxOrder = 0;
       const targetCollectionId = createdCollectionId || selectedCollectionId;
       if (targetCollectionId) {
         const response = await fetchCollectionRequests.mutateAsync(
           targetCollectionId
         );
-        if (response && response.length > 0) {
-          maxOrder = Math.max(...response.map((req) => req.order || 0));
-        }
       }
 
       let effectiveAuthType = authType;
@@ -969,7 +960,6 @@ const RequestEditor: React.FC = () => {
         ...(selectedFolderId ? { folderId: selectedFolderId } : {}),
         description: '',
         name: activeRequest.name || 'New Request',
-        order: maxOrder + 1,
         method,
         url: urlAtOpen,
         bodyType: bodyType === 'json' ? 'raw' : bodyType,
