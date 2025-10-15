@@ -62,7 +62,7 @@ const EditableNumber: React.FC<EditableNumberProps> = ({
       <div className='inline-flex items-center gap-1'>
         <input
           ref={inputRef}
-          type='text'
+          type='number'
           value={editValue}
           onChange={(e) => setEditValue(e.target.value)}
           onKeyDown={handleKeyDown}

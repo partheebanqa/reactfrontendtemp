@@ -218,11 +218,7 @@ const Sidebar: React.FC = () => {
           requestId,
           newName: renameValue,
           workspaceId: currentWorkspace?.id ?? '',
-          ...(selectedFolder?.id
-            ? { folderId: selectedFolder.id }
-            : selectedRequest?.folderId
-            ? { folderId: selectedRequest.folderId }
-            : {}),
+          folderId: selectedRequest?.folderId ?? '',
         });
         setShowRequestRenameModal(false);
       }
@@ -514,7 +510,6 @@ const Sidebar: React.FC = () => {
           col.id === selectedCollection.id
             ? {
                 ...col,
-                // update nested folders immutably
                 folders: removeRequestAtIndexFromFolderTree(
                   (col as any).folders || [],
                   selectedFolder.id,
@@ -636,7 +631,7 @@ const Sidebar: React.FC = () => {
     return (
       <div className='ml-3'>
         <div
-          className='flex items-center justify-between p-2 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer group'
+          className='flex items-center justify-between p-[7px] rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer group'
           onClick={() => toggleFolder(folder.id)}
         >
           <div className='flex items-center space-x-2'>
@@ -678,7 +673,7 @@ const Sidebar: React.FC = () => {
             (request: CollectionRequest, index: number) => (
               <div
                 key={request.id || `${folder.id}-${request.name}-${index}`}
-                className={`flex items-center justify-between p-2 rounded-md cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 ${
+                className={`flex items-center justify-between p-[7px] rounded-md cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 ${
                   activeRequest?.id === request.id
                     ? 'bg-blue-50 dark:bg-blue-900/20'
                     : ''
@@ -894,7 +889,7 @@ const Sidebar: React.FC = () => {
                             .map((request, index) => (
                               <div
                                 key={request.id || `root-${index}`}
-                                className={`flex items-center justify-between p-2 rounded-md cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 ${
+                                className={`flex items-center justify-between p-[7px] rounded-md cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 ${
                                   activeRequest?.id === request.id
                                     ? 'bg-blue-50 dark:bg-blue-900/20'
                                     : ''

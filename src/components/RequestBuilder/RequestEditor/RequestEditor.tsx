@@ -783,6 +783,11 @@ const RequestEditor: React.FC = () => {
         );
       }
 
+      let effectiveAuthType = authType;
+      if (authData?.token && (!authType || authType === 'none')) {
+        effectiveAuthType = 'bearer';
+      }
+
       const selectedAssertions = Array.isArray(assertions)
         ? assertions
             .filter((assertion) => assertion.enabled)
@@ -838,16 +843,16 @@ const RequestEditor: React.FC = () => {
                   }, {} as Record<string, string>)
               ).toString()
             : '',
-        authorizationType: authType,
+        authorizationType: effectiveAuthType,
         authorization: {
           token: authData.token,
-          username: authType === 'basic' ? authData.username : '',
-          password: authType === 'basic' ? authData.password : '',
-          key: authType === 'apiKey' ? authData.key : '',
-          value: authType === 'apiKey' ? authData.value : '',
-          addTo: authType === 'apiKey' ? authData.addTo : 'header',
+          username: effectiveAuthType === 'basic' ? authData.username : '',
+          password: effectiveAuthType === 'basic' ? authData.password : '',
+          key: effectiveAuthType === 'apiKey' ? authData.key : '',
+          value: effectiveAuthType === 'apiKey' ? authData.value : '',
+          addTo: effectiveAuthType === 'apiKey' ? authData.addTo : 'header',
           oauth1:
-            authType === 'oauth1'
+            effectiveAuthType === 'oauth1'
               ? {
                   consumerKey: authData.oauth1.consumerKey,
                   consumerSecret: authData.oauth1.consumerSecret,
@@ -861,7 +866,7 @@ const RequestEditor: React.FC = () => {
                 }
               : undefined,
           oauth2:
-            authType === 'oauth2'
+            effectiveAuthType === 'oauth2'
               ? {
                   clientId: authData.oauth2.clientId,
                   clientSecret: authData.oauth2.clientSecret,
@@ -874,8 +879,8 @@ const RequestEditor: React.FC = () => {
                 }
               : undefined,
         },
-        params: params,
-        headers: headers,
+        params,
+        headers,
         assertions: selectedAssertions,
       };
 
@@ -888,6 +893,7 @@ const RequestEditor: React.FC = () => {
         requestId: activeRequest.id,
         requestData,
       });
+
       toast({
         title: 'Request updated successfully!',
         duration: 3000,
@@ -1251,7 +1257,7 @@ const RequestEditor: React.FC = () => {
             <select
               value={method}
               onChange={(e) => setMethod(e.target.value as RequestMethod)}
-              className={`w-full sm:w-auto border rounded-md px-3 py-2 text-sm font-medium hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all duration-150 ${getMethodColor(
+              className={`w-full sm:w-auto border rounded-md pl-3 pr-0 py-2 text-sm font-medium hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all duration-150 ${getMethodColor(
                 method
               )}`}
               style={{
