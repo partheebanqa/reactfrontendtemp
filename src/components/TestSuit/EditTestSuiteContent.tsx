@@ -398,6 +398,9 @@ const EditTestSuiteContent: React.FC = () => {
       title: 'Test cases updated',
       description: `${testCaseIds.length} test cases configured for this request`,
     });
+
+    // Trigger a backend refetch so meta.selectedTests (and related totals) update immediately
+    refetchRequests();
   };
 
   const handleSaveExtractVariables = (
@@ -485,9 +488,18 @@ const EditTestSuiteContent: React.FC = () => {
   const importedRequestIds = requests.map((request) => request.id);
 
   // Calculate total test cases
-  const totalTestCases = requests.reduce(
-    (total, req) => total + (req.selectedTestCases?.length || 0),
-    0
+  const totalTestCases = useMemo(
+    () =>
+      isCreateMode
+        ? requests.reduce(
+            (total, req) => total + (req.selectedTestCases?.length || 0),
+            0
+          )
+        : requests.reduce(
+            (total, req) => total + (req.meta?.selectedTests ?? 0),
+            0
+          ),
+    [requests, isCreateMode]
   );
 
   const importableRequests = useMemo(() => {
