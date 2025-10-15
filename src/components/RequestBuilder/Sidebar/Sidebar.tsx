@@ -584,6 +584,14 @@ const Sidebar: React.FC = () => {
     setShowAddFolderModal(true);
   };
 
+  const handleOpenAddSubFolder = (collection: Collection, folder: any) => {
+    setSelectedCollection(collection);
+    setSelectedFolder(folder);
+    setShowMenu(null);
+    setMenuPosition(null);
+    setShowAddFolderModal(true);
+  };
+
   const handleSaveFolder = async (folderName: string) => {
     if (!selectedCollection) return;
     try {
@@ -1150,6 +1158,22 @@ const Sidebar: React.FC = () => {
                 selectedFolder &&
                 selectedCollection && (
                   <div>
+                    <button
+                      onClick={() => {
+                        handleOpenAddSubFolder(
+                          selectedCollection,
+                          selectedFolder
+                        );
+                        setShowMenu(null);
+                        setMenuPosition(null);
+                      }}
+                      className='flex items-center w-full px-4 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
+                    >
+                      <FolderPlus className='h-4 w-4 mr-2' />
+                      Add Folder
+                    </button>
+
+                    {/* existing folder-level options */}
                     <button
                       onClick={() => {
                         handleCreateRequest(
