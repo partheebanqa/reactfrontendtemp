@@ -63,6 +63,7 @@ export interface Collection {
 }
 
 export interface CollectionsResponse {
+  flatMap(arg0: (collection: any) => any): any;
   collections: Collection[];
 }
 

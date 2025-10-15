@@ -61,7 +61,6 @@ export function useCollection() {
       return; // already loaded
     }
 
-    // Just fetch; merging unsaved requests and setting folders is handled in useCollectionRequestsQuery.onSuccess
     await fetchCollectionRequests.mutateAsync(collectionId);
   };
 
