@@ -35,6 +35,7 @@ import HelpLink from '../HelpModal/HelpLink';
 import { TestSuitePagination } from './TestSuitePagination';
 import BreadCum from '../BreadCum/Breadcum';
 import { useDataManagement } from '@/hooks/useDataManagement';
+import { Loader } from '../Loader';
 
 const TestSuites: React.FC = () => {
   const { toast } = useToast();
@@ -398,10 +399,9 @@ const TestSuites: React.FC = () => {
 
       <div className=''>
         {isFetching ? (
-          <div className='flex justify-center items-center py-12'>
-            <Loader2 className='w-6 h-6 animate-spin text-gray-500' />
-            <span className='ml-2 text-gray-500'>Loading test suites...</span>
-          </div>
+          <>
+            <Loader message='Loading Test Suites' />
+          </>
         ) : paginatedSuites.length === 0 ? (
           <div className='text-center py-12'>
             <p className='text-gray-500'>No test suites found</p>
