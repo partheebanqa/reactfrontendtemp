@@ -1,3 +1,5 @@
+// 'use client';
+
 'use client';
 
 import type React from 'react';
@@ -681,7 +683,10 @@ const Sidebar: React.FC = () => {
               >
                 <div
                   className='flex items-center space-x-2 flex-1 min-w-0'
-                  onClick={() => onClickRequest(request)}
+                  onClick={() => {
+                    setActiveCollection(parentCollection);
+                    onClickRequest(request);
+                  }}
                 >
                   <span
                     className={`text-xs font-medium ${getMethodColor(
@@ -897,7 +902,10 @@ const Sidebar: React.FC = () => {
                               >
                                 <div
                                   className='flex items-center space-x-2 flex-1 min-w-0'
-                                  onClick={() => setActiveRequest(request)}
+                                  onClick={() => {
+                                    setActiveCollection(collection);
+                                    setActiveRequest(request);
+                                  }}
                                 >
                                   <span
                                     className={`text-xs font-medium ${getMethodColor(
@@ -938,7 +946,10 @@ const Sidebar: React.FC = () => {
                               key={folder.id}
                               folder={folder}
                               parentCollection={collection}
-                              onClickRequest={(req) => setActiveRequest(req)}
+                              onClickRequest={(req) => {
+                                setActiveCollection(collection);
+                                setActiveRequest(req);
+                              }}
                             />
                           ))}
                         </div>

@@ -32,6 +32,7 @@ import 'codemirror/lib/codemirror.css';
 import 'codemirror/theme/material.css';
 import 'codemirror/mode/javascript/javascript';
 import './whiteorange.css';
+import { generateRequestBreadcrumb } from '@/lib/requestBreadCrumb';
 
 type Assertion = {
   id: string;
@@ -83,7 +84,7 @@ const RequestEditor: React.FC = () => {
     fetchCollectionRequests,
   } = useCollection();
 
-  console.log('fetchCollectionRequests:', fetchCollectionRequests);
+  console.log('active Collection:', activeCollection);
 
   const { variables, environments, activeEnvironment } = useDataManagement();
   console.log('activeEnvironment:', activeEnvironment);
@@ -160,6 +161,8 @@ const RequestEditor: React.FC = () => {
   const [folderOptions, setFolderOptions] = useState<
     Array<{ id: string; label: string }>
   >([]);
+
+  console.log('selectedFolderId:', selectedFolderId);
 
   const [selectedCollectionId, setSelectedCollectionId] = useState<string>('');
 
@@ -407,6 +410,7 @@ const RequestEditor: React.FC = () => {
       }
 
       if (activeRequest.folderId) {
+        console.log('activeRequest', activeRequest);
         setSelectedFolderId(activeRequest.folderId);
       } else {
         setSelectedFolderId('');
@@ -626,14 +630,12 @@ const RequestEditor: React.FC = () => {
       toast({
         title: 'cURL Imported Successfully',
         description: 'Request has been populated from cURL command',
-        type: 'success',
       });
     } catch (error) {
       console.error('Error importing cURL:', error);
       toast({
         title: 'Import Error',
         description: 'Failed to import cURL command. Please check the format.',
-        type: 'error',
       });
     }
   };
@@ -739,6 +741,7 @@ const RequestEditor: React.FC = () => {
           requestId: activeRequest.id,
           newName: newName.trim(),
           workspaceId: currentWorkspace?.id || '',
+          folderId: '',
         });
       } else if (newName.trim() && !activeRequest?.id) {
         const updatedRequest = {
@@ -897,7 +900,6 @@ const RequestEditor: React.FC = () => {
       toast({
         title: 'Request updated successfully!',
         duration: 3000,
-        type: 'success',
       });
     } catch (error) {
       console.error('Error updating request:', error);
@@ -1240,13 +1242,19 @@ const RequestEditor: React.FC = () => {
       <div className='flex-1 flex flex-col bg-white dark:bg-gray-900 overflow-hidden'>
         <div className='border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex-shrink-0'>
           <div className='flex items-center justify-between'>
-            <div className='flex items-center space-x-3'>
+            <div className='flex flex-col space-y-1'>
+              {/* Breadcrumb display */}
+              <div className='text-xs text-gray-500 dark:text-gray-400'>
+                {generateRequestBreadcrumb(activeRequest, activeCollectionFull)}
+              </div>
+
+              {/* Editable request name */}
               <EditableText
                 value={activeRequest.name || ''}
                 onSave={handleSaveName}
                 placeholder='Request Name'
-                fontSize='lg'
-                fontWeight='semibold'
+                fontSize='base'
+                fontWeight='medium'
               />
             </div>
           </div>
