@@ -87,7 +87,6 @@ const Sidebar: React.FC = () => {
 
   const { mutateAsync: addFolder, loading: addingFolder } = useAddFolder();
 
-  // Clears previous response for instant visual update and prevents stale breadcrumb.
   const selectRequest = (
     req: CollectionRequest,
     parentCollection: Collection
