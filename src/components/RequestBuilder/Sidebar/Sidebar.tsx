@@ -1,9 +1,7 @@
-// 'use client';
-
 'use client';
 
 import type React from 'react';
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect, useMemo, useLayoutEffect } from 'react';
 import ReactDOM from 'react-dom';
 import {
   ChevronDown,
@@ -67,6 +65,7 @@ const Sidebar: React.FC = () => {
   const [menuPosition, setMenuPosition] = useState<{
     top: number;
     left: number;
+    anchorTop?: number;
   } | null>(null);
   const [selectedCollection, setSelectedCollection] =
     useState<Collection | null>(null);
@@ -88,6 +87,18 @@ const Sidebar: React.FC = () => {
 
   const { mutateAsync: addFolder, loading: addingFolder } = useAddFolder();
 
+  // Clears previous response for instant visual update and prevents stale breadcrumb.
+  const selectRequest = (
+    req: CollectionRequest,
+    parentCollection: Collection
+  ) => {
+    try {
+      setResponseData(null);
+    } catch {}
+    setActiveCollection(parentCollection);
+    setActiveRequest(req);
+  };
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
@@ -98,14 +109,50 @@ const Sidebar: React.FC = () => {
     if (showMenu) {
       document.addEventListener('mousedown', handleClickOutside);
     }
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showMenu]);
 
-  const handleCreateCollection = () => {
-    setShowCollectionModal(true);
-  };
+  useLayoutEffect(() => {
+    if (
+      !showMenu ||
+      !menuPosition ||
+      !menuRef.current ||
+      typeof window === 'undefined'
+    )
+      return;
+
+    const vh = window.innerHeight;
+    const vw = window.innerWidth;
+    const menuH = menuRef.current.offsetHeight;
+    const menuW = menuRef.current.offsetWidth;
+
+    let { top, left, anchorTop } = menuPosition;
+    let changed = false;
+
+    // Flip upward if bottom would overflow (8px viewport padding)
+    if (top + menuH > vh - 8 && typeof anchorTop === 'number') {
+      const flippedTop = Math.max(8, anchorTop - menuH);
+      if (flippedTop !== top) {
+        top = flippedTop;
+        changed = true;
+      }
+    }
+
+    // Keep within right edge
+    if (left + menuW > vw - 8) {
+      const clampedLeft = Math.max(8, vw - menuW - 8);
+      if (clampedLeft !== left) {
+        left = clampedLeft;
+        changed = true;
+      }
+    }
+
+    if (changed) {
+      setMenuPosition({ ...menuPosition, top, left });
+    }
+  }, [showMenu, menuPosition]);
+
+  const handleCreateCollection = () => setShowCollectionModal(true);
 
   const handleRenameCollection = (collection: Collection) => {
     setSelectedCollection(collection);
@@ -512,6 +559,7 @@ const Sidebar: React.FC = () => {
           col.id === selectedCollection.id
             ? {
                 ...col,
+                requests: col.requests,
                 folders: removeRequestAtIndexFromFolderTree(
                   (col as any).folders || [],
                   selectedFolder.id,
@@ -571,50 +619,6 @@ const Sidebar: React.FC = () => {
       .filter(Boolean) as typeof collections;
   }, [collections, searchQuery]);
 
-  const contentRef = useRef<HTMLDivElement>(null);
-
-  const handleOpenAddFolder = (collection: Collection) => {
-    setSelectedCollection(collection);
-    setSelectedFolder(null);
-    setShowMenu(null);
-    setMenuPosition(null);
-    setShowAddFolderModal(true);
-  };
-
-  const handleOpenAddSubFolder = (collection: Collection, folder: any) => {
-    setSelectedCollection(collection);
-    setSelectedFolder(folder);
-    setShowMenu(null);
-    setMenuPosition(null);
-    setShowAddFolderModal(true);
-  };
-
-  const handleSaveFolder = async (folderName: string) => {
-    if (!selectedCollection) return;
-    try {
-      await addFolder({
-        collectionId: selectedCollection.id,
-        name: folderName.trim(),
-        parentId: selectedFolder?.id,
-      });
-      await fetchCollectionRequests.mutateAsync(selectedCollection.id);
-      toast({
-        title: 'Folder created',
-        description: `Folder "${folderName.trim()}" has been added.`,
-        variant: 'success',
-      });
-    } catch (error) {
-      console.error('Failed to add folder:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to add folder. Please try again.',
-        variant: 'destructive',
-      });
-    } finally {
-      setShowAddFolderModal(false);
-    }
-  };
-
   const toggleFolder = (id: string) => {
     setExpandedFolders((prev) => {
       const next = new Set(prev);
@@ -624,10 +628,14 @@ const Sidebar: React.FC = () => {
     });
   };
 
+  // Folder tree with parentCollection passed through for breadcrumb correctness.
   const FolderNodeView: React.FC<{
     folder: any;
     parentCollection: Collection;
-    onClickRequest: (req: CollectionRequest) => void;
+    onClickRequest: (
+      req: CollectionRequest,
+      parentCollection: Collection
+    ) => void;
   }> = ({ folder, parentCollection, onClickRequest }) => {
     const isOpen = expandedFolders.has(folder.id);
     return (
@@ -654,7 +662,11 @@ const Sidebar: React.FC = () => {
               onClick={(e) => {
                 e.stopPropagation();
                 const rect = e.currentTarget.getBoundingClientRect();
-                setMenuPosition({ top: rect.bottom, left: rect.left });
+                setMenuPosition({
+                  top: rect.bottom,
+                  left: rect.left,
+                  anchorTop: rect.top,
+                });
                 setSelectedCollection(parentCollection);
                 setSelectedFolder(folder);
                 setShowMenu(`folder-${folder.id}`);
@@ -683,10 +695,7 @@ const Sidebar: React.FC = () => {
               >
                 <div
                   className='flex items-center space-x-2 flex-1 min-w-0'
-                  onClick={() => {
-                    setActiveCollection(parentCollection);
-                    onClickRequest(request);
-                  }}
+                  onClick={() => onClickRequest(request, parentCollection)}
                 >
                   <span
                     className={`text-xs font-medium ${getMethodColor(
@@ -700,7 +709,6 @@ const Sidebar: React.FC = () => {
                   </span>
                 </div>
 
-                {/* actions menu (same behavior as root-level requests) */}
                 <div className='flex items-center opacity-0 group-hover:opacity-100 transition-opacity relative'>
                   <button
                     onClick={(e) => {
@@ -708,7 +716,11 @@ const Sidebar: React.FC = () => {
                       const rect = (
                         e.currentTarget as HTMLButtonElement
                       ).getBoundingClientRect();
-                      setMenuPosition({ top: rect.bottom, left: rect.left });
+                      setMenuPosition({
+                        top: rect.bottom,
+                        left: rect.left,
+                        anchorTop: rect.top,
+                      });
                       setSelectedRequest(request);
                       setSelectedCollection(parentCollection);
                       setSelectedFolder(folder);
@@ -741,21 +753,9 @@ const Sidebar: React.FC = () => {
     );
   };
 
-  const openRenameFolderModal = (folder: any) => {
-    setSelectedFolder(folder);
-    setShowRenameFolderModal(true);
-  };
-
-  const openDeleteFolderModal = (folder: any) => {
-    setSelectedFolder(folder);
-    setShowDeleteFolderModal(true);
-  };
-
   return (
     <TooltipProvider>
-      <div
-        className={`dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 transition-all duration-300 ease-in-out w-full h-full md:w-64 overflow-auto`}
-      >
+      <div className='dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 transition-all duration-300 ease-in-out w-full h-full md:w-64 overflow-auto'>
         <div className='p-1 sm:p-2'>
           <div className='flex items-center justify-between mb-2 border-b border-gray-200 dark:border-gray-700 pb-2'>
             <h2 className='text-base sm:text-lg font-semibold text-gray-900 dark:text-white'>
@@ -806,9 +806,9 @@ const Sidebar: React.FC = () => {
                   <div key={collection.id} className='group'>
                     <div
                       className='flex items-center justify-between p-2 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer group'
-                      onClick={async () => {
+                      onClick={() => {
                         if (isSearching) return;
-                        await toggleExpandedCollection(collection.id);
+                        void toggleExpandedCollection(collection.id);
                       }}
                     >
                       <div className='flex items-center space-x-2'>
@@ -861,11 +861,13 @@ const Sidebar: React.FC = () => {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            const rect =
-                              e.currentTarget.getBoundingClientRect();
+                            const rect = (
+                              e.currentTarget as HTMLButtonElement
+                            ).getBoundingClientRect();
                             setMenuPosition({
                               top: rect.bottom,
                               left: rect.left,
+                              anchorTop: rect.top,
                             });
                             setSelectedCollection(collection);
                             setShowMenu(collection.id);
@@ -902,10 +904,9 @@ const Sidebar: React.FC = () => {
                               >
                                 <div
                                   className='flex items-center space-x-2 flex-1 min-w-0'
-                                  onClick={() => {
-                                    setActiveCollection(collection);
-                                    setActiveRequest(request);
-                                  }}
+                                  onClick={() =>
+                                    selectRequest(request, collection)
+                                  }
                                 >
                                   <span
                                     className={`text-xs font-medium ${getMethodColor(
@@ -922,16 +923,18 @@ const Sidebar: React.FC = () => {
                                   <button
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      const rect =
-                                        e.currentTarget.getBoundingClientRect();
+                                      const rect = (
+                                        e.currentTarget as HTMLButtonElement
+                                      ).getBoundingClientRect();
                                       setMenuPosition({
                                         top: rect.bottom,
                                         left: rect.left,
+                                        anchorTop: rect.top,
                                       });
                                       setSelectedRequest(request);
-                                      setShowMenu(`request-${request.id}`);
+                                      setSelectedCollection(collection);
                                       setRequestId(request.id || '');
-                                      setRequestIndex(index);
+                                      setShowMenu(`request-${request.id}`);
                                     }}
                                     className='p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700'
                                   >
@@ -946,10 +949,9 @@ const Sidebar: React.FC = () => {
                               key={folder.id}
                               folder={folder}
                               parentCollection={collection}
-                              onClickRequest={(req) => {
-                                setActiveCollection(collection);
-                                setActiveRequest(req);
-                              }}
+                              onClickRequest={(req, parentCol) =>
+                                selectRequest(req, parentCol)
+                              }
                             />
                           ))}
                         </div>
@@ -1034,10 +1036,12 @@ const Sidebar: React.FC = () => {
           </div>
         )}
 
-        <ImportModal
-          isOpen={showImportModal}
-          onClose={() => setShowImportModal(false)}
-        />
+        {showImportModal && (
+          <ImportModal
+            isOpen={showImportModal}
+            onClose={() => setShowImportModal(false)}
+          />
+        )}
 
         {showMenu &&
           menuPosition &&
@@ -1056,7 +1060,10 @@ const Sidebar: React.FC = () => {
                   <button
                     onClick={() => {
                       if (selectedCollection && !addingFolder) {
-                        handleOpenAddFolder(selectedCollection);
+                        setSelectedFolder(null);
+                        setShowMenu(null);
+                        setMenuPosition(null);
+                        setShowAddFolderModal(true);
                       }
                     }}
                     disabled={addingFolder}
@@ -1166,12 +1173,9 @@ const Sidebar: React.FC = () => {
                   <div>
                     <button
                       onClick={() => {
-                        handleOpenAddSubFolder(
-                          selectedCollection,
-                          selectedFolder
-                        );
                         setShowMenu(null);
                         setMenuPosition(null);
+                        setShowAddFolderModal(true);
                       }}
                       className='flex items-center w-full px-4 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
                     >
@@ -1179,7 +1183,6 @@ const Sidebar: React.FC = () => {
                       Add Folder
                     </button>
 
-                    {/* existing folder-level options */}
                     <button
                       onClick={() => {
                         handleCreateRequest(
@@ -1196,9 +1199,9 @@ const Sidebar: React.FC = () => {
                     </button>
                     <button
                       onClick={() => {
-                        openRenameFolderModal(selectedFolder);
                         setShowMenu(null);
                         setMenuPosition(null);
+                        setShowRenameFolderModal(true);
                       }}
                       className='flex items-center w-full px-4 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
                     >
@@ -1207,9 +1210,9 @@ const Sidebar: React.FC = () => {
                     </button>
                     <button
                       onClick={() => {
-                        openDeleteFolderModal(selectedFolder);
                         setShowMenu(null);
                         setMenuPosition(null);
+                        setShowDeleteFolderModal(true);
                       }}
                       className='flex items-center w-full px-4 py-2 text-sm text-left text-red-500 hover:bg-gray-100 dark:hover:bg-gray-700'
                     >
@@ -1226,9 +1229,34 @@ const Sidebar: React.FC = () => {
           isOpen={showAddFolderModal}
           collection={selectedCollection}
           onClose={() => setShowAddFolderModal(false)}
-          onSave={handleSaveFolder}
+          onSave={async (folderName: string) => {
+            if (!selectedCollection) return;
+            try {
+              await addFolder({
+                collectionId: selectedCollection.id,
+                name: folderName.trim(),
+                parentId: selectedFolder?.id,
+              });
+              await fetchCollectionRequests.mutateAsync(selectedCollection.id);
+              toast({
+                title: 'Folder created',
+                description: `Folder "${folderName.trim()}" has been added.`,
+                variant: 'success',
+              });
+            } catch (error) {
+              console.error('Failed to add folder:', error);
+              toast({
+                title: 'Error',
+                description: 'Failed to add folder. Please try again.',
+                variant: 'destructive',
+              });
+            } finally {
+              setShowAddFolderModal(false);
+            }
+          }}
           loading={addingFolder}
         />
+
         <RenameFolderModal
           isOpen={showRenameFolderModal}
           initialName={selectedFolder?.name || ''}
@@ -1255,6 +1283,7 @@ const Sidebar: React.FC = () => {
             }
           }}
         />
+
         <DeleteFolderModal
           isOpen={showDeleteFolderModal}
           folderName={selectedFolder?.name || ''}
