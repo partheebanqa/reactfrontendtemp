@@ -1,6 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
+
+import { Checkbox } from '@/components/ui/checkbox';
+import { ChevronDown, ChevronUp, Folder, Check } from 'lucide-react';
+import { MethodBadge } from '@/components/TestSuit/MethodBadge';
+import type { FolderNode } from '@/shared/types/folderNode';
+import { useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -9,11 +15,12 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Search, ChevronDown, ChevronUp, Check, Upload } from 'lucide-react';
-import { MethodBadge } from './MethodBadge';
+import { Search, Upload } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { getCollectionsWithRequests } from '@/services/collection.service';
+import {
+  getCollectionsWithRequests,
+  getCollectionRequests,
+} from '@/services/collection.service';
 import type {
   ExtendedRequest,
   TransformedCollection,
@@ -26,8 +33,187 @@ interface ImportModalProps {
   isOpen: boolean;
   onClose: () => void;
   onImport: (requests: ExtendedRequest[]) => void;
-  importedRequestIds?: string[]; // Already imported request IDs
+  importedRequestIds?: string[];
 }
+
+const buildFolderTreeFromRequests = (
+  requests: ExtendedRequest[]
+): FolderNode => {
+  const root: FolderNode = {
+    id: 'root',
+    name: 'root',
+    type: 'folder', // added type property to root node
+    folders: [],
+    requests: [],
+  };
+
+  requests.forEach((request) => {
+    if (request.folderName) {
+      // Split folder path by "/" to handle nested folders
+      const folderPath = request.folderName.split('/').filter(Boolean);
+      let currentFolder = root;
+
+      folderPath.forEach((folderName) => {
+        let existingFolder = currentFolder.folders?.find(
+          (f) => f.name === folderName
+        );
+
+        if (!existingFolder) {
+          existingFolder = {
+            id: `${currentFolder.id}/${folderName}`,
+            name: folderName,
+            type: 'folder', // added type property to folder nodes
+            folders: [],
+            requests: [],
+          };
+          if (!currentFolder.folders) currentFolder.folders = [];
+          currentFolder.folders.push(existingFolder);
+        }
+
+        currentFolder = existingFolder;
+      });
+
+      if (!currentFolder.requests) currentFolder.requests = [];
+      currentFolder.requests.push(request);
+    } else {
+      // Requests without folder go to root
+      if (!root.requests) root.requests = [];
+      root.requests.push(request);
+    }
+  });
+
+  return root;
+};
+
+const FolderTreeItem: React.FC<{
+  folder: FolderNode;
+  collectionId: string;
+  selectedRequests: string[];
+  importedRequestIds: string[];
+  onSelectRequest: (requestId: string, checked: boolean) => void;
+  expandedFolders: Set<string>;
+  onToggleFolder: (folderId: string) => void;
+  searchQuery: string;
+}> = ({
+  folder,
+  collectionId,
+  selectedRequests,
+  importedRequestIds,
+  onSelectRequest,
+  expandedFolders,
+  onToggleFolder,
+  searchQuery,
+}) => {
+  const isExpanded = expandedFolders.has(folder.id);
+  const hasSubFolders = folder.folders && folder.folders.length > 0;
+  const hasRequests = folder.requests && folder.requests.length > 0;
+
+  // Filter requests based on search query
+  const filteredRequests = folder.requests?.filter((req) =>
+    (req.name ?? '').toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const hasExpandableContent = hasSubFolders || hasRequests;
+  const hasVisibleContent =
+    (filteredRequests && filteredRequests.length > 0) || hasSubFolders;
+
+  if (!hasVisibleContent) return null;
+
+  return (
+    <div className='ml-4'>
+      {/* Folder header */}
+      <div className='flex items-center space-x-2 py-2'>
+        {hasExpandableContent && (
+          <button
+            onClick={() => onToggleFolder(folder.id)}
+            className='p-1 hover:bg-muted rounded'
+          >
+            {isExpanded ? (
+              <ChevronUp className='w-4 h-4' />
+            ) : (
+              <ChevronDown className='w-4 h-4' />
+            )}
+          </button>
+        )}
+        {!hasExpandableContent && <div className='w-6' />}
+        <Folder className='w-4 h-4 text-muted-foreground' />
+        <span className='text-sm font-medium'>{folder.name}</span>
+      </div>
+
+      {/* Folder contents */}
+      {isExpanded && (
+        <div>
+          {/* Requests in this folder */}
+          {filteredRequests && filteredRequests.length > 0 && (
+            <div className='ml-6 space-y-2'>
+              {filteredRequests.map((request) => {
+                const imported = importedRequestIds.includes(request.id);
+                const selected = selectedRequests.includes(request.id);
+
+                return (
+                  <div
+                    key={request.id}
+                    className={`flex items-center space-x-3 p-2 rounded ${
+                      imported ? 'bg-green-50' : 'hover:bg-muted/50'
+                    }`}
+                  >
+                    {imported ? (
+                      <div className='w-4 h-4 rounded bg-green-500 flex items-center justify-center'>
+                        <Check className='w-3 h-3 text-white' />
+                      </div>
+                    ) : (
+                      <Checkbox
+                        checked={selected}
+                        onCheckedChange={(checked) =>
+                          onSelectRequest(request.id, checked as boolean)
+                        }
+                      />
+                    )}
+                    <MethodBadge method={request.method || ''} />
+                    <div className='flex-1 min-w-0'>
+                      <div className='flex items-center space-x-2'>
+                        <h4 className='font-medium text-sm truncate'>
+                          {request.name}
+                        </h4>
+                        {imported && (
+                          <span className='text-xs bg-green-100 text-green-700 px-2 py-1 rounded whitespace-nowrap'>
+                            Already imported
+                          </span>
+                        )}
+                      </div>
+                      <p className='text-xs text-muted-foreground truncate'>
+                        {request.url}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Nested folders */}
+          {folder.folders && folder.folders.length > 0 && (
+            <div>
+              {folder.folders.map((subFolder) => (
+                <FolderTreeItem
+                  key={subFolder.id}
+                  folder={subFolder}
+                  collectionId={collectionId}
+                  selectedRequests={selectedRequests}
+                  importedRequestIds={importedRequestIds}
+                  onSelectRequest={onSelectRequest}
+                  expandedFolders={expandedFolders}
+                  onToggleFolder={onToggleFolder}
+                  searchQuery={searchQuery}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
 
 export const ImportModal: React.FC<ImportModalProps> = ({
   isOpen,
@@ -50,6 +236,15 @@ export const ImportModal: React.FC<ImportModalProps> = ({
     },
     enabled: isOpen && !!workspaceId,
   });
+
+  const [folderTreeData, setFolderTreeData] = useState<Record<string, any>>({});
+  const [loadingFolderTree, setLoadingFolderTree] = useState<
+    Record<string, boolean>
+  >({});
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(
+    new Set()
+  );
+
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('Internal');
   const [selectedRequests, setSelectedRequests] = useState<string[]>([]);
@@ -60,6 +255,11 @@ export const ImportModal: React.FC<ImportModalProps> = ({
   const [externalFileError, setExternalFileError] = useState<string | null>(
     null
   );
+  const [externalFolderTree, setExternalFolderTree] =
+    useState<FolderNode | null>(null);
+  const [externalExpandedFolders, setExternalExpandedFolders] = useState<
+    Set<string>
+  >(new Set());
 
   const collections: TransformedCollection[] = React.useMemo(() => {
     if (!apiData?.collections) return [];
@@ -68,7 +268,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
       .filter(
         (collection) =>
           Array.isArray(collection.requests) && collection.requests.length > 0
-      ) // skip if no requests
+      )
       .map((collection) => ({
         id: collection.collectionId,
         name: collection.collectionName,
@@ -82,11 +282,90 @@ export const ImportModal: React.FC<ImportModalProps> = ({
       }));
   }, [apiData]);
 
-  // React.useEffect(() => {
-  //   if (collections.length > 0 && expandedCollections.length === 0) {
-  //     setExpandedCollections(collections.map((c) => c.id));
-  //   }
-  // }, [collections, expandedCollections.length]);
+  const extractAllRequestsFromFolderTree = (folderTree: any): string[] => {
+    const requestIds: string[] = [];
+
+    const walkFolders = (folders: any[]) => {
+      if (!folders) return;
+
+      folders.forEach((folder) => {
+        if (folder.requests && Array.isArray(folder.requests)) {
+          folder.requests.forEach((req: any) => {
+            requestIds.push(req.id);
+          });
+        }
+        if (folder.folders && Array.isArray(folder.folders)) {
+          walkFolders(folder.folders);
+        }
+      });
+    };
+
+    if (folderTree.requests && Array.isArray(folderTree.requests)) {
+      folderTree.requests.forEach((req: any) => {
+        requestIds.push(req.id);
+      });
+    }
+
+    if (folderTree.folders && Array.isArray(folderTree.folders)) {
+      walkFolders(folderTree.folders);
+    }
+
+    return requestIds;
+  };
+
+  const handleSelectAll = async (collectionId: string) => {
+    if (!folderTreeData[collectionId]) {
+      setLoadingFolderTree((prev) => ({ ...prev, [collectionId]: true }));
+      try {
+        const treeData = await getCollectionRequests(collectionId);
+        setFolderTreeData((prev) => ({ ...prev, [collectionId]: treeData }));
+
+        const allRequestIds = extractAllRequestsFromFolderTree(treeData);
+        const availableRequests = allRequestIds.filter(
+          (id) => !isRequestImported(id)
+        );
+        const allAvailableSelected = availableRequests.every((id) =>
+          selectedRequests.includes(id)
+        );
+
+        if (allAvailableSelected) {
+          setSelectedRequests((prev) =>
+            prev.filter((id) => !availableRequests.includes(id))
+          );
+        } else {
+          const newSelections = availableRequests.filter(
+            (id) => !selectedRequests.includes(id)
+          );
+          setSelectedRequests((prev) => [...prev, ...newSelections]);
+        }
+      } catch (err) {
+        console.error('Error fetching folder tree:', err);
+      } finally {
+        setLoadingFolderTree((prev) => ({ ...prev, [collectionId]: false }));
+      }
+    } else {
+      const allRequestIds = extractAllRequestsFromFolderTree(
+        folderTreeData[collectionId]
+      );
+      const availableRequests = allRequestIds.filter(
+        (id) => !isRequestImported(id)
+      );
+      const allAvailableSelected = availableRequests.every((id) =>
+        selectedRequests.includes(id)
+      );
+
+      if (allAvailableSelected) {
+        setSelectedRequests((prev) =>
+          prev.filter((id) => !availableRequests.includes(id))
+        );
+      } else {
+        const newSelections = availableRequests.filter(
+          (id) => !selectedRequests.includes(id)
+        );
+        setSelectedRequests((prev) => [...prev, ...newSelections]);
+      }
+    }
+  };
 
   const filteredCollections = collections
     .map((collection: TransformedCollection) => {
@@ -106,7 +385,6 @@ export const ImportModal: React.FC<ImportModalProps> = ({
     importedRequestIds.includes(requestId);
 
   const handleSelectRequest = (requestId: string, checked: boolean) => {
-    // Don't allow selecting already imported requests
     if (isRequestImported(requestId)) return;
 
     if (checked) {
@@ -116,39 +394,38 @@ export const ImportModal: React.FC<ImportModalProps> = ({
     }
   };
 
-  const handleSelectAll = (collectionId: string) => {
-    const collection = collections.find((c) => c.id === collectionId);
-    if (!collection) return;
+  const toggleCollection = async (collectionId: string) => {
+    const isCurrentlyExpanded = expandedCollections.includes(collectionId);
 
-    // Only consider non-imported requests for selection
-    const availableRequests = collection.requests.filter(
-      (req) => !isRequestImported(req.id)
-    );
-
-    const allAvailableSelected = availableRequests.every((req) =>
-      selectedRequests.includes(req.id)
-    );
-
-    if (allAvailableSelected) {
-      // Deselect all available requests
-      setSelectedRequests((prev) =>
-        prev.filter((id) => !availableRequests.some((req) => req.id === id))
-      );
-    } else {
-      // Select all available requests
-      const newSelections = availableRequests
-        .filter((req) => !selectedRequests.includes(req.id))
-        .map((req) => req.id);
-      setSelectedRequests((prev) => [...prev, ...newSelections]);
+    if (!isCurrentlyExpanded && !folderTreeData[collectionId]) {
+      setLoadingFolderTree((prev) => ({ ...prev, [collectionId]: true }));
+      try {
+        const treeData = await getCollectionRequests(collectionId);
+        setFolderTreeData((prev) => ({ ...prev, [collectionId]: treeData }));
+      } catch (err) {
+        console.error('Error fetching folder tree:', err);
+      } finally {
+        setLoadingFolderTree((prev) => ({ ...prev, [collectionId]: false }));
+      }
     }
-  };
 
-  const toggleCollection = (collectionId: string) => {
     setExpandedCollections((prev) =>
       prev.includes(collectionId)
         ? prev.filter((id) => id !== collectionId)
         : [...prev, collectionId]
     );
+  };
+
+  const toggleFolder = (folderId: string) => {
+    setExpandedFolders((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(folderId)) {
+        newSet.delete(folderId);
+      } else {
+        newSet.add(folderId);
+      }
+      return newSet;
+    });
   };
 
   const handleImport = () => {
@@ -189,7 +466,6 @@ export const ImportModal: React.FC<ImportModalProps> = ({
             const method = item.request.method;
             const url = item.request.url?.raw || item.request.url;
 
-            // Extract headers
             const headers = item.request.header
               ? item.request.header.map((h: any) => ({
                   id: `header_${Date.now()}_${Math.random()}`,
@@ -199,7 +475,6 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                 }))
               : [];
 
-            // Extract query parameters
             const params = item.request.url?.query
               ? item.request.url.query.map((q: any) => ({
                   id: `param_${Date.now()}_${Math.random()}`,
@@ -209,7 +484,6 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                 }))
               : [];
 
-            // Extract body
             let bodyRawContent = '';
             let bodyType = 'none';
             if (item.request.body) {
@@ -218,7 +492,6 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                 bodyType = 'raw';
               } else if (item.request.body.mode === 'formdata') {
                 bodyType = 'form-data';
-                // Convert form-data to a readable format
                 if (item.request.body.formdata) {
                   bodyRawContent = item.request.body.formdata
                     .map((fd: any) => `${fd.key}: ${fd.value || fd.src || ''}`)
@@ -234,7 +507,6 @@ export const ImportModal: React.FC<ImportModalProps> = ({
               }
             }
 
-            // Extract authorization
             let authorizationType = 'none';
             let authorization: any = {};
             if (item.request.auth) {
@@ -293,11 +565,14 @@ export const ImportModal: React.FC<ImportModalProps> = ({
 
       walkItems(json.item);
       setExternalRequests(requests);
+      const folderTree = buildFolderTreeFromRequests(requests);
+      setExternalFolderTree(folderTree);
       setExternalFileError(null);
     } catch (err: any) {
       console.error(err);
       setExternalFileError('Invalid Postman collection file');
       setExternalRequests([]);
+      setExternalFolderTree(null);
     }
   };
 
@@ -339,7 +614,11 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                   ? error.message
                   : 'An unknown error occurred'}
               </p>
-              <Button variant='outline' onClick={onClose} className='mt-4'>
+              <Button
+                variant='outline'
+                onClick={onClose}
+                className='mt-4 bg-transparent'
+              >
                 Close
               </Button>
             </div>
@@ -348,6 +627,18 @@ export const ImportModal: React.FC<ImportModalProps> = ({
       </Dialog>
     );
   }
+
+  const toggleExternalFolder = (folderId: string) => {
+    setExternalExpandedFolders((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(folderId)) {
+        newSet.delete(folderId);
+      } else {
+        newSet.add(folderId);
+      }
+      return newSet;
+    });
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -398,21 +689,17 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                       const isExpanded = expandedCollections.includes(
                         collection.id
                       );
-                      const availableRequests = collection.requests.filter(
-                        (req) => !isRequestImported(req.id)
-                      );
-                      const allAvailableSelected = availableRequests.every(
-                        (req) => selectedRequests.includes(req.id)
-                      );
-                      const hasAvailableRequests = availableRequests.length > 0;
+                      const isLoadingTree = loadingFolderTree[collection.id];
+                      const treeData = folderTreeData[collection.id];
 
                       return (
                         <div key={collection.id} className='border rounded-lg'>
                           <div className='flex items-center justify-between p-4'>
-                            <div className='flex items-center space-x-3'>
+                            <div className='flex items-center space-x-3 flex-1'>
                               <button
                                 onClick={() => toggleCollection(collection.id)}
                                 className='p-1 hover:bg-muted rounded'
+                                disabled={isLoadingTree}
                               >
                                 {isExpanded ? (
                                   <ChevronUp className='w-4 h-4' />
@@ -440,73 +727,135 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                                 </p>
                               </div>
                             </div>
-                            {hasAvailableRequests && (
-                              <Button
-                                variant='link'
-                                size='sm'
-                                onClick={() => handleSelectAll(collection.id)}
-                                className='text-primary'
-                              >
-                                {allAvailableSelected
-                                  ? 'Deselect All'
-                                  : 'Select All Available'}
-                              </Button>
-                            )}
+                            <Button
+                              variant='link'
+                              size='sm'
+                              onClick={() => handleSelectAll(collection.id)}
+                              disabled={isLoadingTree}
+                              className='text-primary'
+                            >
+                              {isLoadingTree ? (
+                                <>
+                                  <span className='animate-spin mr-2'>⏳</span>
+                                  Loading...
+                                </>
+                              ) : (
+                                'Select All Available'
+                              )}
+                            </Button>
                           </div>
 
                           {isExpanded && (
-                            <div className='border-t'>
-                              {collection.requests.map((request) => {
-                                const imported = isRequestImported(request.id);
-                                const selected = selectedRequests.includes(
-                                  request.id
-                                );
-
-                                return (
-                                  <div
-                                    key={request.id}
-                                    className={`flex items-center space-x-3 p-4 border-b last:border-b-0 ${
-                                      imported
-                                        ? 'bg-green-50 border-green-100'
-                                        : 'hover:bg-muted/50'
-                                    }`}
-                                  >
-                                    {imported ? (
-                                      <div className='w-4 h-4 rounded bg-green-500 flex items-center justify-center'>
-                                        <Check className='w-3 h-3 text-white' />
-                                      </div>
-                                    ) : (
-                                      <Checkbox
-                                        checked={selected}
-                                        onCheckedChange={(checked) =>
-                                          handleSelectRequest(
-                                            request.id,
-                                            checked as boolean
-                                          )
-                                        }
-                                      />
-                                    )}
-                                    <MethodBadge
-                                      method={request.method || ''}
-                                    />
-                                    <div className='flex-1'>
-                                      <div className='flex items-center space-x-2'>
-                                        <h4 className='font-medium'>
-                                          {request.name}
-                                        </h4>
-                                        {imported && (
-                                          <span className='text-xs bg-green-100 text-green-700 px-2 py-1 rounded'>
-                                            Already imported
-                                          </span>
-                                        )}
-                                      </div>
-                                      <p className='text-sm text-muted-foreground'>
-                                        {request.endpoint || request.url}
-                                      </p>
-                                    </div>
+                            <div className='border-t p-4'>
+                              {isLoadingTree ? (
+                                <div className='flex items-center justify-center py-8'>
+                                  <div className='text-center'>
+                                    <div className='animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto mb-2'></div>
+                                    <p className='text-sm text-muted-foreground'>
+                                      Loading folder structure...
+                                    </p>
                                   </div>
-                                );
-                              })}
+                                </div>
+                              ) : treeData ? (
+                                <div className='space-y-2'>
+                                  {treeData.requests &&
+                                    treeData.requests.length > 0 && (
+                                      <div className='space-y-2 mb-4'>
+                                        {treeData.requests
+                                          .filter((req: any) =>
+                                            (req.name ?? '')
+                                              .toLowerCase()
+                                              .includes(
+                                                searchQuery.toLowerCase()
+                                              )
+                                          )
+                                          .map((request: any) => {
+                                            const imported = isRequestImported(
+                                              request.id
+                                            );
+                                            const selected =
+                                              selectedRequests.includes(
+                                                request.id
+                                              );
+
+                                            return (
+                                              <div
+                                                key={request.id}
+                                                className={`flex items-center space-x-3 p-2 rounded ${
+                                                  imported
+                                                    ? 'bg-green-50'
+                                                    : 'hover:bg-muted/50'
+                                                }`}
+                                              >
+                                                {imported ? (
+                                                  <div className='w-4 h-4 rounded bg-green-500 flex items-center justify-center'>
+                                                    <Check className='w-3 h-3 text-white' />
+                                                  </div>
+                                                ) : (
+                                                  <Checkbox
+                                                    checked={selected}
+                                                    onCheckedChange={(
+                                                      checked
+                                                    ) =>
+                                                      handleSelectRequest(
+                                                        request.id,
+                                                        checked as boolean
+                                                      )
+                                                    }
+                                                  />
+                                                )}
+                                                <MethodBadge
+                                                  method={request.method || ''}
+                                                />
+                                                <div className='flex-1 min-w-0'>
+                                                  <div className='flex items-center space-x-2'>
+                                                    <h4 className='font-medium text-sm truncate'>
+                                                      {request.name}
+                                                    </h4>
+                                                    {imported && (
+                                                      <span className='text-xs bg-green-100 text-green-700 px-2 py-1 rounded whitespace-nowrap'>
+                                                        Already imported
+                                                      </span>
+                                                    )}
+                                                  </div>
+                                                  <p className='text-xs text-muted-foreground truncate'>
+                                                    {request.url}
+                                                  </p>
+                                                </div>
+                                              </div>
+                                            );
+                                          })}
+                                      </div>
+                                    )}
+
+                                  {treeData.folders &&
+                                    treeData.folders.length > 0 && (
+                                      <div>
+                                        {treeData.folders.map((folder: any) => (
+                                          <FolderTreeItem
+                                            key={folder.id}
+                                            folder={folder}
+                                            collectionId={collection.id}
+                                            selectedRequests={selectedRequests}
+                                            importedRequestIds={
+                                              importedRequestIds
+                                            }
+                                            onSelectRequest={
+                                              handleSelectRequest
+                                            }
+                                            expandedFolders={expandedFolders}
+                                            onToggleFolder={toggleFolder}
+                                            searchQuery={searchQuery}
+                                          />
+                                        ))}
+                                      </div>
+                                    )}
+                                </div>
+                              ) : (
+                                <p className='text-sm text-muted-foreground'>
+                                  No requests found
+                                </p>
+                              )}
                             </div>
                           )}
                         </div>
@@ -541,7 +890,6 @@ export const ImportModal: React.FC<ImportModalProps> = ({
 
           <TabsContent value='extranal'>
             <div className='flex-1 overflow-hidden flex flex-col'>
-              {/* Upload Area */}
               <div className='mb-4'>
                 {externalRequests.length === 0 ? (
                   <label
@@ -583,7 +931,6 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                 )}
               </div>
 
-              {/* Requests List */}
               <div className='flex-1 overflow-y-auto space-y-4 max-h-[50vh]'>
                 {externalRequests.length === 0 ? (
                   <div className='text-muted-foreground text-center py-12'>
@@ -625,55 +972,93 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                       </Button>
                     </div>
 
-                    {externalRequests.map((request) => {
-                      const imported = isRequestImported(request.id);
-                      const selected = selectedRequests.includes(request.id);
-                      return (
-                        <div
-                          key={request.id}
-                          className={`flex items-center space-x-3 p-4 border-b last:border-b-0 ${
-                            imported
-                              ? 'bg-green-50 border-green-100'
-                              : 'hover:bg-muted/50'
-                          }`}
-                        >
-                          {imported ? (
-                            <div className='w-4 h-4 rounded bg-green-500 flex items-center justify-center'>
-                              <Check className='w-3 h-3 text-white' />
-                            </div>
-                          ) : (
-                            <Checkbox
-                              checked={selected}
-                              onCheckedChange={(checked) =>
-                                handleSelectRequest(
-                                  request.id,
-                                  checked as boolean
-                                )
-                              }
-                            />
-                          )}
-                          <MethodBadge method={request.method || ''} />
-                          <div className='flex-1'>
-                            <div className='flex items-center space-x-2'>
-                              <h4 className='font-medium'>{request.name}</h4>
-                              {imported && (
-                                <span className='text-xs bg-green-100 text-green-700 px-2 py-1 rounded'>
-                                  Already imported
-                                </span>
-                              )}
-                            </div>
-                            <p className='text-sm text-muted-foreground'>
-                              {request.endpoint || request.url}
-                            </p>
+                    <div className='p-4 space-y-2'>
+                      {externalFolderTree?.requests &&
+                        externalFolderTree.requests.length > 0 && (
+                          <div className='space-y-2 mb-4'>
+                            {externalFolderTree.requests
+                              .filter((req: any) =>
+                                (req.name ?? '')
+                                  .toLowerCase()
+                                  .includes(searchQuery.toLowerCase())
+                              )
+                              .map((request: any) => {
+                                const imported = isRequestImported(request.id);
+                                const selected = selectedRequests.includes(
+                                  request.id
+                                );
+
+                                return (
+                                  <div
+                                    key={request.id}
+                                    className={`flex items-center space-x-3 p-2 rounded ${
+                                      imported
+                                        ? 'bg-green-50'
+                                        : 'hover:bg-muted/50'
+                                    }`}
+                                  >
+                                    {imported ? (
+                                      <div className='w-4 h-4 rounded bg-green-500 flex items-center justify-center'>
+                                        <Check className='w-3 h-3 text-white' />
+                                      </div>
+                                    ) : (
+                                      <Checkbox
+                                        checked={selected}
+                                        onCheckedChange={(checked) =>
+                                          handleSelectRequest(
+                                            request.id,
+                                            checked as boolean
+                                          )
+                                        }
+                                      />
+                                    )}
+                                    <MethodBadge
+                                      method={request.method || ''}
+                                    />
+                                    <div className='flex-1 min-w-0'>
+                                      <div className='flex items-center space-x-2'>
+                                        <h4 className='font-medium text-sm truncate'>
+                                          {request.name}
+                                        </h4>
+                                        {imported && (
+                                          <span className='text-xs bg-green-100 text-green-700 px-2 py-1 rounded whitespace-nowrap'>
+                                            Already imported
+                                          </span>
+                                        )}
+                                      </div>
+                                      <p className='text-xs text-muted-foreground truncate'>
+                                        {request.url}
+                                      </p>
+                                    </div>
+                                  </div>
+                                );
+                              })}
                           </div>
-                        </div>
-                      );
-                    })}
+                        )}
+
+                      {externalFolderTree?.folders &&
+                        externalFolderTree.folders.length > 0 && (
+                          <div>
+                            {externalFolderTree.folders.map((folder: any) => (
+                              <FolderTreeItem
+                                key={folder.id}
+                                folder={folder}
+                                collectionId='external'
+                                selectedRequests={selectedRequests}
+                                importedRequestIds={importedRequestIds}
+                                onSelectRequest={handleSelectRequest}
+                                expandedFolders={externalExpandedFolders}
+                                onToggleFolder={toggleExternalFolder}
+                                searchQuery={searchQuery}
+                              />
+                            ))}
+                          </div>
+                        )}
+                    </div>
                   </div>
                 )}
               </div>
 
-              {/* Footer */}
               <div className='flex items-center justify-between pt-4 border-t'>
                 <span className='text-sm text-muted-foreground'>
                   {selectedCount} request{selectedCount !== 1 ? 's' : ''}{' '}
