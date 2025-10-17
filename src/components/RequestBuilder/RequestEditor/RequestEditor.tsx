@@ -33,6 +33,7 @@ import 'codemirror/theme/material.css';
 import 'codemirror/mode/javascript/javascript';
 import './whiteorange.css';
 import { generateRequestBreadcrumb } from '@/lib/requestBreadCrumb';
+import EditableTextWithoutIcon from '@/components/ui/EditableTextWithoutIcon';
 
 type Assertion = {
   id: string;
@@ -110,7 +111,7 @@ const RequestEditor: React.FC = () => {
   const [headers, setHeaders] = useState<Header[]>([]);
   const [bodyType, setBodyType] = useState<
     'none' | 'json' | 'form-data' | 'x-www-form-urlencoded' | 'raw' | 'binary'
-  >('none');
+  >('json');
   const [bodyContent, setBodyContent] = useState('');
   const [formFields, setFormFields] = useState<KeyValuePairWithFile[]>([]);
   const [urlEncodedFields, setUrlEncodedFields] = useState<Param[]>([]);
@@ -1242,18 +1243,16 @@ const RequestEditor: React.FC = () => {
       <div className='flex-1 flex flex-col bg-white dark:bg-gray-900 overflow-hidden'>
         <div className='border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex-shrink-0'>
           <div className='flex items-center justify-between'>
-            <div className='flex flex-col space-y-1'>
-              {/* Breadcrumb display */}
-              <div className='text-xs text-gray-500 dark:text-gray-400'>
-                {generateRequestBreadcrumb(activeRequest, activeCollectionFull)}
-              </div>
-
-              {/* Editable request name */}
-              <EditableText
+            <div className='flex items-center text-sm space-x-1'>
+              <span className='text-gray-500 dark:text-gray-400'>
+                {activeCollectionFull?.name}
+              </span>
+              <span className='text-gray-500 dark:text-gray-400'>/</span>
+              <EditableTextWithoutIcon
                 value={activeRequest.name || ''}
                 onSave={handleSaveName}
                 placeholder='Request Name'
-                fontSize='base'
+                fontSize='sm'
                 fontWeight='medium'
               />
             </div>
@@ -1441,25 +1440,24 @@ const RequestEditor: React.FC = () => {
                 <h3 className='text-base sm:text-lg font-medium text-gray-900 dark:text-white'>
                   Request Body
                 </h3>
-                {activeCollection && (
-                  <select
-                    value={selectedFolderId}
-                    onChange={(e) => setSelectedFolderId(e.target.value)}
-                    className='w-full sm:w-auto border rounded-md px-3 py-2 text-sm font-medium hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all duration-150 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-200'
-                  >
-                    <option value=''>Select Folder</option>
-                    {folderOptions.map((folder) => (
-                      <option key={folder.id} value={folder.id}>
-                        {folder.label}
-                      </option>
-                    ))}
-                  </select>
-                )}
+                <select
+                  value={bodyType}
+                  onChange={(e) => setBodyType(e.target.value as any)}
+                  className='border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-800 text-sm font-medium hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all duration-150'
+                >
+                  <option value='none'>None</option>
+                  <option value='json'>JSON</option>
+                  <option value='form-data'>Form Data</option>
+                  <option value='x-www-form-urlencoded'>URL Encoded</option>
+                  <option value='raw'>Raw</option>
+                  <option value='binary'>Binary</option>
+                </select>
               </div>
 
               {bodyType === 'none' && (
                 <div className='text-gray-500 dark:text-gray-400 text-center p-8'>
-                  This request does not have a body
+                  This request does not have a body. Select a body type from the
+                  dropdown above to add one.
                 </div>
               )}
 

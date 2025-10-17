@@ -1,7 +1,6 @@
 'use client';
 
 import React from 'react';
-
 import { Checkbox } from '@/components/ui/checkbox';
 import { ChevronDown, ChevronUp, Folder, Check } from 'lucide-react';
 import { MethodBadge } from '@/components/TestSuit/MethodBadge';
@@ -26,7 +25,7 @@ import type {
   TransformedCollection,
 } from '@/models/collection.model';
 import { useWorkspace } from '@/hooks/useWorkspace';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useLocation } from 'wouter';
 
 interface ImportModalProps {
@@ -42,14 +41,13 @@ const buildFolderTreeFromRequests = (
   const root: FolderNode = {
     id: 'root',
     name: 'root',
-    type: 'folder', // added type property to root node
+    type: 'folder',
     folders: [],
     requests: [],
   };
 
   requests.forEach((request) => {
     if (request.folderName) {
-      // Split folder path by "/" to handle nested folders
       const folderPath = request.folderName.split('/').filter(Boolean);
       let currentFolder = root;
 
@@ -62,7 +60,7 @@ const buildFolderTreeFromRequests = (
           existingFolder = {
             id: `${currentFolder.id}/${folderName}`,
             name: folderName,
-            type: 'folder', // added type property to folder nodes
+            type: 'folder',
             folders: [],
             requests: [],
           };
@@ -76,7 +74,6 @@ const buildFolderTreeFromRequests = (
       if (!currentFolder.requests) currentFolder.requests = [];
       currentFolder.requests.push(request);
     } else {
-      // Requests without folder go to root
       if (!root.requests) root.requests = [];
       root.requests.push(request);
     }
@@ -108,7 +105,6 @@ const FolderTreeItem: React.FC<{
   const hasSubFolders = folder.folders && folder.folders.length > 0;
   const hasRequests = folder.requests && folder.requests.length > 0;
 
-  // Filter requests based on search query
   const filteredRequests = folder.requests?.filter((req) =>
     (req.name ?? '').toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -120,32 +116,34 @@ const FolderTreeItem: React.FC<{
   if (!hasVisibleContent) return null;
 
   return (
-    <div className='ml-4'>
+    <div className='ml-6'>
       {/* Folder header */}
-      <div className='flex items-center space-x-2 py-2'>
+      <div className='flex items-center gap-3 py-2.5 px-3 bg-muted/30 rounded-md hover:bg-muted/50 transition-colors border-l-2 border-primary/50'>
         {hasExpandableContent && (
           <button
             onClick={() => onToggleFolder(folder.id)}
-            className='p-1 hover:bg-muted rounded'
+            className='p-0.5 hover:bg-background rounded transition-colors'
           >
             {isExpanded ? (
-              <ChevronUp className='w-4 h-4' />
+              <ChevronUp className='w-4 h-4 text-primary' />
             ) : (
-              <ChevronDown className='w-4 h-4' />
+              <ChevronDown className='w-4 h-4 text-primary' />
             )}
           </button>
         )}
-        {!hasExpandableContent && <div className='w-6' />}
-        <Folder className='w-4 h-4 text-muted-foreground' />
-        <span className='text-sm font-medium'>{folder.name}</span>
+        {!hasExpandableContent && <div className='w-5' />}
+        <div className='p-1.5 bg-primary/10 rounded'>
+          <Folder className='w-4 h-4 text-primary' />
+        </div>
+        <span className='font-medium text-foreground'>{folder.name}</span>
       </div>
 
       {/* Folder contents */}
       {isExpanded && (
-        <div>
+        <div className='ml-2'>
           {/* Requests in this folder */}
           {filteredRequests && filteredRequests.length > 0 && (
-            <div className='ml-6 space-y-2'>
+            <div className='ml-8 space-y-1 border-l-2 border-muted pl-4'>
               {filteredRequests.map((request) => {
                 const imported = importedRequestIds.includes(request.id);
                 const selected = selectedRequests.includes(request.id);
@@ -153,12 +151,14 @@ const FolderTreeItem: React.FC<{
                 return (
                   <div
                     key={request.id}
-                    className={`flex items-center space-x-3 p-2 rounded ${
-                      imported ? 'bg-green-50' : 'hover:bg-muted/50'
+                    className={`flex items-center gap-3 p-3 rounded-lg transition-all ${
+                      imported
+                        ? 'bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900'
+                        : 'hover:bg-muted/50 border border-transparent hover:border-border'
                     }`}
                   >
                     {imported ? (
-                      <div className='w-4 h-4 rounded bg-green-500 flex items-center justify-center'>
+                      <div className='w-4 h-4 rounded bg-green-500 flex items-center justify-center flex-shrink-0'>
                         <Check className='w-3 h-3 text-white' />
                       </div>
                     ) : (
@@ -167,21 +167,22 @@ const FolderTreeItem: React.FC<{
                         onCheckedChange={(checked) =>
                           onSelectRequest(request.id, checked as boolean)
                         }
+                        className='flex-shrink-0'
                       />
                     )}
-                    <MethodBadge method={request.method || ''} />
+                    <MethodBadge method={request.method || 'GET'} />
                     <div className='flex-1 min-w-0'>
-                      <div className='flex items-center space-x-2'>
-                        <h4 className='font-medium text-sm truncate'>
+                      <div className='flex items-center gap-2'>
+                        <h4 className='font-medium text-foreground truncate'>
                           {request.name}
                         </h4>
                         {imported && (
-                          <span className='text-xs bg-green-100 text-green-700 px-2 py-1 rounded whitespace-nowrap'>
+                          <span className='text-xs bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 px-2 py-0.5 rounded-full whitespace-nowrap font-medium'>
                             Already imported
                           </span>
                         )}
                       </div>
-                      <p className='text-xs text-muted-foreground truncate'>
+                      <p className='text-sm text-muted-foreground truncate mt-0.5'>
                         {request.url}
                       </p>
                     </div>
@@ -193,7 +194,7 @@ const FolderTreeItem: React.FC<{
 
           {/* Nested folders */}
           {folder.folders && folder.folders.length > 0 && (
-            <div>
+            <div className='mt-1'>
               {folder.folders.map((subFolder) => (
                 <FolderTreeItem
                   key={subFolder.id}
@@ -581,6 +582,18 @@ export const ImportModal: React.FC<ImportModalProps> = ({
     location === '/request-chains/create' ||
     (location.startsWith('/request-chains/') && location.endsWith('/edit'));
 
+  const toggleExternalFolder = (folderId: string) => {
+    setExternalExpandedFolders((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(folderId)) {
+        newSet.delete(folderId);
+      } else {
+        newSet.add(folderId);
+      }
+      return newSet;
+    });
+  };
+
   if (isLoading) {
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
@@ -609,16 +622,12 @@ export const ImportModal: React.FC<ImportModalProps> = ({
           <div className='flex items-center justify-center py-12'>
             <div className='text-center'>
               <p className='text-destructive mb-4'>Error loading collections</p>
-              <p className='text-sm text-muted-foreground'>
+              <p className='text-muted-foreground'>
                 {error instanceof Error
                   ? error.message
                   : 'An unknown error occurred'}
               </p>
-              <Button
-                variant='outline'
-                onClick={onClose}
-                className='mt-4 bg-transparent'
-              >
+              <Button variant='outline' onClick={onClose} className='mt-4'>
                 Close
               </Button>
             </div>
@@ -627,18 +636,6 @@ export const ImportModal: React.FC<ImportModalProps> = ({
       </Dialog>
     );
   }
-
-  const toggleExternalFolder = (folderId: string) => {
-    setExternalExpandedFolders((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(folderId)) {
-        newSet.delete(folderId);
-      } else {
-        newSet.add(folderId);
-      }
-      return newSet;
-    });
-  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -674,7 +671,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                 </div>
               </div>
 
-              <div className='flex-1 overflow-y-auto space-y-4 max-h-[50vh]'>
+              <div className='flex-1 overflow-y-auto space-y-3 max-h-[50vh]'>
                 {filteredCollections.length === 0 ? (
                   <div className='flex flex-col items-center justify-center py-12'>
                     <p className='text-muted-foreground'>
@@ -693,12 +690,15 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                       const treeData = folderTreeData[collection.id];
 
                       return (
-                        <div key={collection.id} className='border rounded-lg'>
-                          <div className='flex items-center justify-between p-4'>
-                            <div className='flex items-center space-x-3 flex-1'>
+                        <div
+                          key={collection.id}
+                          className='border rounded-lg overflow-hidden bg-card'
+                        >
+                          <div className='flex items-center justify-between p-4 bg-muted/30'>
+                            <div className='flex items-center gap-3 flex-1'>
                               <button
                                 onClick={() => toggleCollection(collection.id)}
-                                className='p-1 hover:bg-muted rounded'
+                                className='p-1 hover:bg-muted rounded transition-colors'
                                 disabled={isLoadingTree}
                               >
                                 {isExpanded ? (
@@ -708,10 +708,10 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                                 )}
                               </button>
                               <div>
-                                <h3 className='font-medium'>
+                                <h3 className='font-semibold text-foreground'>
                                   {collection.name}
                                 </h3>
-                                <p className='text-sm text-muted-foreground'>
+                                <p className='text-muted-foreground'>
                                   ({collection.requestCount} requests)
                                   {importedRequestIds.length > 0 && (
                                     <span className='ml-2 text-green-600'>
@@ -732,7 +732,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                               size='sm'
                               onClick={() => handleSelectAll(collection.id)}
                               disabled={isLoadingTree}
-                              className='text-primary'
+                              className='text-blue-600 hover:text-blue-700 font-medium'
                             >
                               {isLoadingTree ? (
                                 <>
@@ -746,21 +746,21 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                           </div>
 
                           {isExpanded && (
-                            <div className='border-t p-4'>
+                            <div className='border-t p-4 bg-card'>
                               {isLoadingTree ? (
                                 <div className='flex items-center justify-center py-8'>
                                   <div className='text-center'>
                                     <div className='animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto mb-2'></div>
-                                    <p className='text-sm text-muted-foreground'>
+                                    <p className='text-muted-foreground'>
                                       Loading folder structure...
                                     </p>
                                   </div>
                                 </div>
                               ) : treeData ? (
-                                <div className='space-y-2'>
+                                <div className='space-y-1'>
                                   {treeData.requests &&
                                     treeData.requests.length > 0 && (
-                                      <div className='space-y-2 mb-4'>
+                                      <div className='space-y-1 mb-4'>
                                         {treeData.requests
                                           .filter((req: any) =>
                                             (req.name ?? '')
@@ -781,14 +781,14 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                                             return (
                                               <div
                                                 key={request.id}
-                                                className={`flex items-center space-x-3 p-2 rounded ${
+                                                className={`flex items-center gap-3 p-3 rounded-lg transition-all ${
                                                   imported
-                                                    ? 'bg-green-50'
-                                                    : 'hover:bg-muted/50'
+                                                    ? 'bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900'
+                                                    : 'hover:bg-muted/50 border border-transparent hover:border-border'
                                                 }`}
                                               >
                                                 {imported ? (
-                                                  <div className='w-4 h-4 rounded bg-green-500 flex items-center justify-center'>
+                                                  <div className='w-4 h-4 rounded bg-green-500 flex items-center justify-center flex-shrink-0'>
                                                     <Check className='w-3 h-3 text-white' />
                                                   </div>
                                                 ) : (
@@ -802,23 +802,26 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                                                         checked as boolean
                                                       )
                                                     }
+                                                    className='flex-shrink-0'
                                                   />
                                                 )}
                                                 <MethodBadge
-                                                  method={request.method || ''}
+                                                  method={
+                                                    request.method || 'GET'
+                                                  }
                                                 />
                                                 <div className='flex-1 min-w-0'>
-                                                  <div className='flex items-center space-x-2'>
-                                                    <h4 className='font-medium text-sm truncate'>
+                                                  <div className='flex items-center gap-2'>
+                                                    <h4 className='font-medium text-foreground truncate'>
                                                       {request.name}
                                                     </h4>
                                                     {imported && (
-                                                      <span className='text-xs bg-green-100 text-green-700 px-2 py-1 rounded whitespace-nowrap'>
+                                                      <span className='text-xs bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 px-2 py-0.5 rounded-full whitespace-nowrap font-medium'>
                                                         Already imported
                                                       </span>
                                                     )}
                                                   </div>
-                                                  <p className='text-xs text-muted-foreground truncate'>
+                                                  <p className='text-sm text-muted-foreground truncate mt-0.5'>
                                                     {request.url}
                                                   </p>
                                                 </div>
@@ -852,7 +855,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                                     )}
                                 </div>
                               ) : (
-                                <p className='text-sm text-muted-foreground'>
+                                <p className='text-muted-foreground text-center py-4'>
                                   No requests found
                                 </p>
                               )}
@@ -865,8 +868,8 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                 )}
               </div>
 
-              <div className='flex items-center justify-between pt-4 border-t'>
-                <span className='text-sm text-muted-foreground'>
+              <div className='flex items-center justify-between pt-4 border-t mt-4'>
+                <span className='text-muted-foreground'>
                   {selectedCount} request{selectedCount !== 1 ? 's' : ''}{' '}
                   selected
                   {importedRequestIds.length > 0 && (
@@ -875,11 +878,15 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                     </span>
                   )}
                 </span>
-                <div className='flex space-x-2'>
+                <div className='flex gap-2'>
                   <Button variant='outline' onClick={onClose}>
                     Cancel
                   </Button>
-                  <Button onClick={handleImport} disabled={selectedCount === 0}>
+                  <Button
+                    onClick={handleImport}
+                    disabled={selectedCount === 0}
+                    className='bg-blue-500 hover:bg-blue-600 text-white'
+                  >
                     Import {selectedCount} Request
                     {selectedCount !== 1 ? 's' : ''}
                   </Button>
@@ -894,22 +901,22 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                 {externalRequests.length === 0 ? (
                   <label
                     htmlFor='externalFileUpload'
-                    className='border-dashed border-2 border-gray-300 rounded-lg p-6 w-full flex flex-col items-center justify-center cursor-pointer hover:bg-gray-100 transition'
+                    className='border-dashed border-2 border-muted-foreground/30 rounded-lg p-8 w-full flex flex-col items-center justify-center cursor-pointer hover:bg-muted/30 transition-colors'
                   >
-                    <Upload className='w-6 h-6 text-gray-500 mb-2' />
-                    <span className='text-sm text-gray-500'>
+                    <Upload className='w-6 h-6 text-muted-foreground mb-2' />
+                    <span className='text-muted-foreground'>
                       Click or drag and drop a Postman collection (.json)
                     </span>
                   </label>
                 ) : (
-                  <div className='flex items-center justify-between px-4 py-3 bg-muted rounded-md border'>
-                    <div className='text-sm text-muted-foreground'>
+                  <div className='flex items-center justify-between px-4 py-3 bg-muted/30 rounded-lg border'>
+                    <div className='text-muted-foreground font-medium'>
                       Loaded {externalRequests.length} request
                       {externalRequests.length !== 1 ? 's' : ''}
                     </div>
                     <label
                       htmlFor='externalFileUpload'
-                      className='text-sm text-primary hover:underline cursor-pointer'
+                      className='text-blue-600 hover:text-blue-700 font-medium cursor-pointer'
                     >
                       Import new file
                     </label>
@@ -925,21 +932,21 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                 />
 
                 {externalFileError && (
-                  <p className='text-sm text-red-500 mt-2'>
+                  <p className='text-red-500 mt-2 font-medium'>
                     {externalFileError}
                   </p>
                 )}
               </div>
 
-              <div className='flex-1 overflow-y-auto space-y-4 max-h-[50vh]'>
+              <div className='flex-1 overflow-y-auto space-y-3 max-h-[50vh]'>
                 {externalRequests.length === 0 ? (
                   <div className='text-muted-foreground text-center py-12'>
                     Upload a Postman collection to view requests.
                   </div>
                 ) : (
-                  <div className='border rounded-lg'>
-                    <div className='flex items-center justify-between p-4 border-b'>
-                      <h3 className='font-medium'>
+                  <div className='border rounded-lg overflow-hidden bg-card'>
+                    <div className='flex items-center justify-between p-4 bg-muted/30 border-b'>
+                      <h3 className='font-semibold'>
                         {externalRequests.length} requests found
                       </h3>
                       <Button
@@ -963,6 +970,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
 
                           setSelectedRequests(newSelections);
                         }}
+                        className='text-blue-600 hover:text-blue-700 font-medium'
                       >
                         {externalRequests.every((r) =>
                           selectedRequests.includes(r.id)
@@ -972,10 +980,10 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                       </Button>
                     </div>
 
-                    <div className='p-4 space-y-2'>
+                    <div className='p-4 space-y-1'>
                       {externalFolderTree?.requests &&
                         externalFolderTree.requests.length > 0 && (
-                          <div className='space-y-2 mb-4'>
+                          <div className='space-y-1 mb-4'>
                             {externalFolderTree.requests
                               .filter((req: any) =>
                                 (req.name ?? '')
@@ -991,14 +999,14 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                                 return (
                                   <div
                                     key={request.id}
-                                    className={`flex items-center space-x-3 p-2 rounded ${
+                                    className={`flex items-center gap-3 p-3 rounded-lg transition-all ${
                                       imported
-                                        ? 'bg-green-50'
-                                        : 'hover:bg-muted/50'
+                                        ? 'bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900'
+                                        : 'hover:bg-muted/50 border border-transparent hover:border-border'
                                     }`}
                                   >
                                     {imported ? (
-                                      <div className='w-4 h-4 rounded bg-green-500 flex items-center justify-center'>
+                                      <div className='w-4 h-4 rounded bg-green-500 flex items-center justify-center flex-shrink-0'>
                                         <Check className='w-3 h-3 text-white' />
                                       </div>
                                     ) : (
@@ -1010,23 +1018,24 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                                             checked as boolean
                                           )
                                         }
+                                        className='flex-shrink-0'
                                       />
                                     )}
                                     <MethodBadge
-                                      method={request.method || ''}
+                                      method={request.method || 'GET'}
                                     />
                                     <div className='flex-1 min-w-0'>
-                                      <div className='flex items-center space-x-2'>
-                                        <h4 className='font-medium text-sm truncate'>
+                                      <div className='flex items-center gap-2'>
+                                        <h4 className='font-medium text-foreground truncate'>
                                           {request.name}
                                         </h4>
                                         {imported && (
-                                          <span className='text-xs bg-green-100 text-green-700 px-2 py-1 rounded whitespace-nowrap'>
+                                          <span className='text-xs bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 px-2 py-0.5 rounded-full whitespace-nowrap font-medium'>
                                             Already imported
                                           </span>
                                         )}
                                       </div>
-                                      <p className='text-xs text-muted-foreground truncate'>
+                                      <p className='text-sm text-muted-foreground truncate mt-0.5'>
                                         {request.url}
                                       </p>
                                     </div>
@@ -1059,8 +1068,8 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                 )}
               </div>
 
-              <div className='flex items-center justify-between pt-4 border-t'>
-                <span className='text-sm text-muted-foreground'>
+              <div className='flex items-center justify-between pt-4 border-t mt-4'>
+                <span className='text-muted-foreground'>
                   {selectedCount} request{selectedCount !== 1 ? 's' : ''}{' '}
                   selected
                   {importedRequestIds.length > 0 && (
@@ -1069,11 +1078,15 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                     </span>
                   )}
                 </span>
-                <div className='flex space-x-2'>
+                <div className='flex gap-2'>
                   <Button variant='outline' onClick={onClose}>
                     Cancel
                   </Button>
-                  <Button onClick={handleImport} disabled={selectedCount === 0}>
+                  <Button
+                    onClick={handleImport}
+                    disabled={selectedCount === 0}
+                    className='bg-blue-500 hover:bg-blue-600 text-white'
+                  >
                     Import {selectedCount} Request
                     {selectedCount !== 1 ? 's' : ''}
                   </Button>

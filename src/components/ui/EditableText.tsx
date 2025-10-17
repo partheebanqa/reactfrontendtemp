@@ -88,7 +88,9 @@ const EditableText: React.FC<EditableTextProps> = ({
         </div>
       ) : (
         <div className='flex items-center space-x-2'>
-          <h2 className={`${fontSizeClass} ${fontWeightClass} text-gray-900 dark:text-white`}>
+          <h2
+            className={`${fontSizeClass} ${fontWeightClass} text-gray-900 dark:text-white`}
+          >
             {value || placeholder}
           </h2>
           <button
