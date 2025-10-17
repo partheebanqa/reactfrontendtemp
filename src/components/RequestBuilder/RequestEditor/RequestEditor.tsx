@@ -15,7 +15,6 @@ import KeyValueEditorWithFileUpload, {
   type KeyValuePairWithFile,
 } from '@/components/ui/KeyValueEditorWithFileUpload';
 import ToggleSwitch from '@/components/ui/ToggleSwitch';
-import EditableText from '@/components/ui/EditableText';
 import Modal from '@/components/ui/Modal';
 import { useDataManagement } from '@/hooks/useDataManagement';
 import { executeCollectionRequest } from '@/services/executeRequest.service';
@@ -32,7 +31,6 @@ import 'codemirror/lib/codemirror.css';
 import 'codemirror/theme/material.css';
 import 'codemirror/mode/javascript/javascript';
 import './whiteorange.css';
-import { generateRequestBreadcrumb } from '@/lib/requestBreadCrumb';
 import EditableTextWithoutIcon from '@/components/ui/EditableTextWithoutIcon';
 
 type Assertion = {
@@ -917,9 +915,9 @@ const RequestEditor: React.FC = () => {
     }
   };
 
-  // UPDATED: Reset isSaving flag on successful save
   const handleConfirmSave = async () => {
     try {
+      setIsSaving(true);
       if (!activeRequest || !currentWorkspace) return;
       if (!urlAtOpen.trim()) {
         showError(
@@ -1056,7 +1054,6 @@ const RequestEditor: React.FC = () => {
       setShowSaveModal(false);
       setNewCollectionName('');
       setIsCreatingCollection(false);
-      setIsSaving(true);
       showSuccess('Request saved successfully!');
 
       if (
@@ -1080,6 +1077,8 @@ const RequestEditor: React.FC = () => {
         };
         setActiveRequest(updatedRequest);
       }
+
+      setIsSaving(false);
     } catch (error) {
       console.error('Error saving request:', error);
       setIsSaving(false); // Reset flag on error
