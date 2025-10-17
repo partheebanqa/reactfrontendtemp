@@ -701,7 +701,7 @@ const EditTestSuiteContent: React.FC = () => {
                     <div className='text-sm text-gray-600 space-y-1'>
                       <div>Imported requests: {requests.length}</div>
                       <div className='font-medium'>
-                        Total test cases: {totalTestCases}
+                        Selected Test Cases: {totalTestCases}
                       </div>
                       {extractVariables.length > 0 && (
                         <div className='text-green-600'>

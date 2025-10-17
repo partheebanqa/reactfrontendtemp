@@ -46,24 +46,8 @@ export function generateRequestBreadcrumb(
   request: Request,
   collection: Collection | null
 ): string {
-  if (!collection) {
-    return request.name || 'Untitled Request';
-  }
-
-  const parts: string[] = [collection.name];
-
-  // If the request has a folderId, find the folder path
-  if (request.folderId && collection.folders) {
-    const folderPath = findFolderById(collection.folders, request.folderId);
-    if (folderPath) {
-      parts.push(...folderPath);
-    }
-  }
-
-  // Add the request name
-  parts.push(request.name || 'Untitled Request');
-
-  return parts.join(' / ');
+  if (!collection) return request.name || 'Untitled Request';
+  return `${collection.name} / ${request.name || 'Untitled Request'}`;
 }
 
 export function generateRequestBreadcrumbWithSeparator(
