@@ -166,6 +166,7 @@ const RequestEditor: React.FC = () => {
   console.log('selectedFolderId:', selectedFolderId);
 
   const [selectedCollectionId, setSelectedCollectionId] = useState<string>('');
+  const [isSaving, setIsSaving] = useState(false); // NEW: Flag to prevent data clearing during save
 
   const collectionsRef = useRef(collections);
   useEffect(() => {
@@ -243,6 +244,8 @@ const RequestEditor: React.FC = () => {
   });
 
   useEffect(() => {
+    if (isSaving) return;
+
     if (activeRequest) {
       setUrl(activeRequest.url || '');
       setMethod((activeRequest.method as RequestMethod) || 'GET');
@@ -416,13 +419,13 @@ const RequestEditor: React.FC = () => {
       } else {
         setSelectedFolderId('');
       }
-    } else {
-      handleCreateRequest();
+    } else if (!isSaving) {
+      // handleCreateRequest();
       setAssertions([]);
       setAuthType('bearer');
     }
     setResponseData(null);
-  }, [activeRequest]);
+  }, [activeRequest, isSaving]); // Added isSaving to dependencies
 
   const formatBackendResponse = (result: any): FormattedResponse => {
     const importantHeaders = [
@@ -756,6 +759,7 @@ const RequestEditor: React.FC = () => {
     }
   };
 
+  // UPDATED: Set isSaving flag when opening save modal
   const handleSaveRequest = () => {
     if (!activeRequest) return;
     if (!url.trim()) {
@@ -766,6 +770,7 @@ const RequestEditor: React.FC = () => {
       return;
     }
 
+    setIsSaving(true); // Prevent data clearing
     setUrlAtOpen(url);
     setShowSaveModal(true);
   };
@@ -912,6 +917,7 @@ const RequestEditor: React.FC = () => {
     }
   };
 
+  // UPDATED: Reset isSaving flag on successful save
   const handleConfirmSave = async () => {
     try {
       if (!activeRequest || !currentWorkspace) return;
@@ -1050,6 +1056,7 @@ const RequestEditor: React.FC = () => {
       setShowSaveModal(false);
       setNewCollectionName('');
       setIsCreatingCollection(false);
+      setIsSaving(true);
       showSuccess('Request saved successfully!');
 
       if (
@@ -1075,6 +1082,7 @@ const RequestEditor: React.FC = () => {
       }
     } catch (error) {
       console.error('Error saving request:', error);
+      setIsSaving(false); // Reset flag on error
       showError('Save Failed', 'An error occurred while saving the request.');
       setError({
         title: 'Save Failed',
@@ -1118,10 +1126,12 @@ const RequestEditor: React.FC = () => {
 
   const previewUrl = buildFinalUrl();
 
+  // UPDATED: Reset isSaving flag on cancel
   const handleCancelSave = () => {
     setShowSaveModal(false);
     setIsCreatingCollection(false);
     setNewCollectionName('');
+    setIsSaving(false); // Reset flag on cancel
   };
 
   const addParam = () => {
