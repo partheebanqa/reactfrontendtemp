@@ -1,12 +1,13 @@
 // src/utils/exportUtilsSameUi.ts
-// Same-UI exporters for HTML and PDF using window.__REPORT_DATA__
-// Requirements: html2canvas and jsPDF already in your project.
+// Export the report with the same UI (Tailwind + Lucide) and Prism code theme.
+// Provides HTML + PDF exporters. Requires: html2canvas, jspdf in your app.
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 
-/* ---------- Types (lightweight) ---------- */
+/* ---------------- Types (trimmed) ---------------- */
 type Status = "passed" | "failed" | "skipped";
 type Severity = "low" | "medium" | "high" | "critical";
+
 type TestCase = {
   id: string;
   name: string;
@@ -23,7 +24,9 @@ type TestCase = {
   response: any;
   statusCode?: number;
 };
+
 type TestGroup = { testCases?: TestCase[] };
+
 type RequestResult = {
   method: string;
   url: string;
@@ -35,7 +38,9 @@ type RequestResult = {
   securityTests?: TestGroup;
   advancedSecurityTests?: TestGroup;
 };
+
 type TestCategory = { apis?: TestCase[] } | undefined;
+
 type TestSuiteData = {
   name: string;
   description: string;
@@ -63,14 +68,25 @@ declare global {
   }
 }
 
-/* ---------- Public API ---------- */
-export const downloadAsHTMLSameUI = (elementId: string, filename: string) => {
+/* ---------------- Public API ---------------- */
+type ExportOpts = {
+  codeTheme?: "dark" | "light"; // Prism theme. default: dark
+};
+
+export const downloadAsHTMLSameUI = (
+  elementId: string,
+  filename: string,
+  opts: ExportOpts = {}
+) => {
   const data = window.__REPORT_DATA__;
   if (!data) {
     alert("Report data not available for export");
     return;
   }
-  const html = buildHTML(data, elementId);
+  const html = buildHTML(data, elementId, {
+    includeButtons: false,
+    codeTheme: opts.codeTheme ?? "dark",
+  });
   const blob = new Blob([html], { type: "text/html" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -85,7 +101,7 @@ export const downloadAsHTMLSameUI = (elementId: string, filename: string) => {
 export const downloadAsPDFSameUI = async (
   elementId: string,
   filename: string,
-  opts: { scale?: number; expandAll?: boolean } = {}
+  opts: ExportOpts & { scale?: number; expandAll?: boolean } = {}
 ) => {
   const data = window.__REPORT_DATA__;
   if (!data) {
@@ -93,37 +109,35 @@ export const downloadAsPDFSameUI = async (
     return;
   }
 
-  // Build the same HTML into an offscreen iframe (same-origin).
-  const html = buildHTML(data, elementId, { includeButtons: false });
+  // Build same HTML in an offscreen iframe (same origin)
+  const html = buildHTML(data, elementId, {
+    includeButtons: false,
+    codeTheme: opts.codeTheme ?? "dark",
+  });
   const iframe = document.createElement("iframe");
   iframe.style.position = "fixed";
   iframe.style.left = "-99999px";
   iframe.style.top = "0";
-  iframe.width = "1200"; // match page width for crisp capture
-  iframe.height = "10"; // small; we'll scroll canvas anyway
+  iframe.width = "1200";
+  iframe.height = "10";
   document.body.appendChild(iframe);
 
-  // Write content and wait for it to settle
   const doc = iframe.contentDocument!;
   doc.open();
   doc.write(html);
   doc.close();
 
   await waitForDOMContentLoaded(iframe);
-  await waitForLucideIcons(iframe); // make sure icons are rendered
+  await waitForLucide(iframe);
+  await waitForPrism(iframe);
 
-  if (opts.expandAll !== false) {
-    // expand all collapsibles before capture for full content in PDF
-    expandAllBlocks(iframe);
-  }
+  if (opts.expandAll !== false) expandAllBlocks(iframe);
 
-  // Capture and paginate
   const scale = opts.scale ?? 2;
-  const captureTarget = doc.body; // full exported body
-  const canvas = await html2canvas(captureTarget, {
+  const canvas = await html2canvas(doc.body, {
     scale,
     backgroundColor: "#ffffff",
-    useCORS: true, // try loading logos/images with CORS if available
+    useCORS: true,
   });
 
   const imgData = canvas.toDataURL("image/png");
@@ -147,17 +161,14 @@ export const downloadAsPDFSameUI = async (
   }
 
   pdf.save(filename);
-
-  // Clean up
   document.body.removeChild(iframe);
 };
 
-/* ---------- Wait helpers ---------- */
+/* ---------------- Wait helpers ---------------- */
 const waitForDOMContentLoaded = (iframe: HTMLIFrameElement) =>
   new Promise<void>((resolve) => {
     const doc = iframe.contentDocument!;
     if (doc.readyState === "complete" || doc.readyState === "interactive") {
-      // extra tick for Tailwind JIT + layout
       setTimeout(resolve, 120);
     } else {
       doc.addEventListener("DOMContentLoaded", () => setTimeout(resolve, 120), {
@@ -166,52 +177,45 @@ const waitForDOMContentLoaded = (iframe: HTMLIFrameElement) =>
     }
   });
 
-const waitForLucideIcons = (iframe: HTMLIFrameElement) =>
+const waitForLucide = (iframe: HTMLIFrameElement) =>
   new Promise<void>((resolve) => {
     const win = iframe.contentWindow as any;
-    if (win && win.lucide && typeof win.lucide.createIcons === "function") {
-      try {
-        win.lucide.createIcons();
-      } catch {}
-      // small delay to ensure SVGs are injected
-      setTimeout(resolve, 80);
-    } else {
-      // lucide not present? still resolve
-      setTimeout(resolve, 80);
-    }
+    try {
+      win?.lucide?.createIcons?.();
+    } catch {}
+    setTimeout(resolve, 100);
+  });
+
+const waitForPrism = (iframe: HTMLIFrameElement) =>
+  new Promise<void>((resolve) => {
+    const win = iframe.contentWindow as any;
+    try {
+      win?.Prism?.highlightAll?.();
+    } catch {}
+    setTimeout(resolve, 140); // give autoloader a tick
   });
 
 const expandAllBlocks = (iframe: HTMLIFrameElement) => {
   const doc = iframe.contentDocument!;
-  // Open URL groups
   doc
     .querySelectorAll<HTMLElement>('[id^="url-"]')
     .forEach((el) => el.classList.remove("hidden"));
-  // Flip their chevrons
   doc
     .querySelectorAll<HTMLElement>('.toggle-icon[data-for^="url-"]')
-    .forEach((i) => {
-      i.setAttribute("data-lucide", "chevron-down");
-    });
-  // Open test case details
+    .forEach((i) => i.setAttribute("data-lucide", "chevron-down"));
   doc
     .querySelectorAll<HTMLElement>('[id^="tc-"]')
     .forEach((el) => el.classList.remove("hidden"));
-  // Flip their chevrons
   doc
     .querySelectorAll<HTMLElement>('.toggle-icon[data-for^="tc-"]')
-    .forEach((i) => {
-      i.setAttribute("data-lucide", "chevron-down");
-    });
+    .forEach((i) => i.setAttribute("data-lucide", "chevron-down"));
   const win = iframe.contentWindow as any;
-  if (win?.lucide?.createIcons) {
-    try {
-      win.lucide.createIcons();
-    } catch {}
-  }
+  try {
+    win?.lucide?.createIcons?.();
+  } catch {}
 };
 
-/* ---------- HTML builder (same UI as page) ---------- */
+/* ---------------- HTML builder (same UI + Prism) ---------------- */
 const escapeHtml = (s: any) =>
   String(s ?? "")
     .replaceAll("&", "&amp;")
@@ -277,18 +281,17 @@ const normalizeUrlKey = (raw: string) => {
 };
 
 const collectTestCases = (data: TestSuiteData): TestCase[] => {
-  // category-style first
-  const cats = ([] as TestCase[])
-    .concat(data.positiveTests?.apis ?? [])
-    .concat(data.negativeTests?.apis ?? [])
-    .concat(data.functionalTests?.apis ?? [])
-    .concat(data.semanticTests?.apis ?? [])
-    .concat(data.edgeCaseTests?.apis ?? [])
-    .concat(data.securityTests?.apis ?? [])
-    .concat(data.advancedSecurityTests?.apis ?? []);
+  const cats: TestCase[] = [
+    ...(data.positiveTests?.apis ?? []),
+    ...(data.negativeTests?.apis ?? []),
+    ...(data.functionalTests?.apis ?? []),
+    ...(data.semanticTests?.apis ?? []),
+    ...(data.edgeCaseTests?.apis ?? []),
+    ...(data.securityTests?.apis ?? []),
+    ...(data.advancedSecurityTests?.apis ?? []),
+  ];
   if (cats.length) return cats;
 
-  // requests-style fallback
   const groups = [
     "positiveTests",
     "negativeTests",
@@ -337,7 +340,7 @@ const groupByUrlThenMethod = (tcs: TestCase[]) => {
   const groups: Record<string, UrlGroup> = {};
   for (const tc of tcs) {
     const key = normalizeUrlKey(tc.url || "");
-    if (!groups[key]) {
+    if (!groups[key])
       groups[key] = {
         key,
         endpoint: tc.url,
@@ -348,7 +351,6 @@ const groupByUrlThenMethod = (tcs: TestCase[]) => {
         skipped: 0,
         avgDuration: 0,
       };
-    }
     const g = groups[key];
     const m = (tc.method || "").toUpperCase();
     if (!g.methods[m])
@@ -369,8 +371,8 @@ const groupByUrlThenMethod = (tcs: TestCase[]) => {
     else if (tc.status === "skipped") mb.skipped++;
     g.total++;
     if (tc.status === "passed") g.passed++;
-    else if ("failed" === tc.status) g.failed++;
-    else if ("skipped" === tc.status) g.skipped++;
+    else if (tc.status === "failed") g.failed++;
+    else if (tc.status === "skipped") g.skipped++;
   }
   Object.values(groups).forEach((g) => {
     Object.values(g.methods).forEach((mb) => {
@@ -483,10 +485,20 @@ const metricCard = (
   </div>
 `;
 
+/* Prism-based code blocks (dark like screenshot) */
+const codePanel = (language: string, code: string) => `
+  <div class="rounded border border-gray-700 bg-gray-800 overflow-hidden">
+    <pre class="m-0 p-4 overflow-x-auto"><code class="language-${language}">${escapeHtml(
+  code
+)}</code></pre>
+  </div>
+`;
+
 const buildTestCaseDetail = (tc: TestCase) => {
   const statusCls = statusChip(tc.status);
   const sevCls = severityChip(tc.severity);
   const blockId = `tc-${tc.id}`;
+
   return `
   <div class="border border-gray-200 rounded-lg mb-4 overflow-hidden">
     <div class="p-4 bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors" data-toggle="${blockId}">
@@ -515,17 +527,21 @@ const buildTestCaseDetail = (tc: TestCase) => {
         </div>
       </div>
     </div>
+
     <div id="${blockId}" class="p-4 border-t border-gray-200 bg-white hidden">
       <div class="space-y-4">
-        <div><h4 class="font-medium text-gray-900 mb-2">Endpoint</h4><pre class="bg-gray-50 p-3 rounded border border-gray-200 overflow-x-auto text-sm">${escapeHtml(
-          `${(tc.method || "").toUpperCase()} ${tc.url}`
-        )}</pre></div>
-        <div><h4 class="font-medium text-gray-900 mb-2">Request cURL</h4><pre class="bg-gray-50 p-3 rounded border border-gray-200 overflow-x-auto text-sm">${escapeHtml(
-          tc.requestCurl
-        )}</pre></div>
-        <div><h4 class="font-medium text-gray-900 mb-2">Response</h4><pre class="bg-gray-50 p-3 rounded border border-gray-200 overflow-x-auto text-sm">${escapeHtml(
-          prettyJsonMaybe(tc.response)
-        )}</pre></div>
+        <div>
+          <h4 class="font-medium text-gray-900 mb-2">Endpoint</h4>
+          ${codePanel("http", `${(tc.method || "").toUpperCase()} ${tc.url}`)}
+        </div>
+        <div>
+          <h4 class="font-medium text-gray-900 mb-2">Request cURL</h4>
+          ${codePanel("bash", tc.requestCurl)}
+        </div>
+        <div>
+          <h4 class="font-medium text-gray-900 mb-2">Response</h4>
+          ${codePanel("json", prettyJsonMaybe(tc.response))}
+        </div>
       </div>
     </div>
   </div>`;
@@ -540,6 +556,7 @@ const buildUrlGroup = (g: ReturnType<typeof groupByUrlThenMethod>[number]) => {
       ? "text-yellow-600"
       : "text-red-600";
   const rowId = `url-${hash(g.key)}`;
+
   const methods = Object.values(g.methods)
     .map(
       (mb) => `
@@ -555,6 +572,7 @@ const buildUrlGroup = (g: ReturnType<typeof groupByUrlThenMethod>[number]) => {
     </div>`
     )
     .join("");
+
   return `
   <div class="border border-gray-200 rounded-lg overflow-hidden">
     <div class="p-4 bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors" data-toggle="${rowId}">
@@ -621,9 +639,9 @@ const hash = (s: string) => {
 const buildHTML = (
   data: TestSuiteData,
   sourceElementId: string,
-  opts: { includeButtons?: boolean } = {}
+  opts: { includeButtons?: boolean; codeTheme: "dark" | "light" }
 ) => {
-  // Try to reuse the on-screen logo if present
+  // reuse on-screen logo if present
   let logoSrc: string | null = null;
   const host = document.getElementById(sourceElementId) || document.body;
   const logo = host?.querySelector(
@@ -632,6 +650,10 @@ const buildHTML = (
   if (logo?.src) logoSrc = logo.src;
 
   const tcs = collectTestCases(data);
+  const prismCss =
+    opts.codeTheme === "dark"
+      ? "https://unpkg.com/prismjs@1/themes/prism-okaidia.css"
+      : "https://unpkg.com/prismjs@1/themes/prism.css";
 
   return `<!doctype html>
 <html>
@@ -641,9 +663,17 @@ const buildHTML = (
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <!-- Tailwind CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Prism (CSS + core + autoloader) -->
+  <link rel="stylesheet" href="${prismCss}">
+  <script src="https://unpkg.com/prismjs@1/components/prism-core.min.js"></script>
+  <script src="https://unpkg.com/prismjs@1/plugins/autoloader/prism-autoloader.min.js"></script>
   <!-- Lucide icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
-  <style>pre{white-space:pre-wrap;word-break:break-word}</style>
+  <style>
+    /* improve code panel spacing and dark surface look (matching your screenshot) */
+    .code-surface { background:#1f2937; color:#e5e7eb; border-color:#374151; }
+    pre { white-space: pre-wrap; word-break: break-word; }
+  </style>
 </head>
 <body class="mx-auto p-1 sm:p-1 bg-[#FAFAFA]">
   <header class="border border-gray-200 bg-white rounded-lg px-6 py-4">
@@ -651,7 +681,7 @@ const buildHTML = (
       <div><h2 class="text-2xl font-semibold text-gray-900">Test Suite Report</h2></div>
       ${
         opts.includeButtons
-          ? `<div class="flex items-center space-x-4"><!-- controls omitted in export --></div>`
+          ? `<div class="flex items-center space-x-4"></div>`
           : ``
       }
     </div>
@@ -685,7 +715,9 @@ const buildHTML = (
     });
 
     document.addEventListener('DOMContentLoaded', function(){
+      // Initialize icons + Prism highlighting
       if (window.lucide) window.lucide.createIcons();
+      if (window.Prism) window.Prism.highlightAll();
     });
   </script>
 </body>
