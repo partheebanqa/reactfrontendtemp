@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useParams } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
 import { executionService } from '@/services/executionService.service';
@@ -36,16 +36,27 @@ import { downloadAsHTML, downloadAsPDF, shareReport } from '@/utils/exportUtils'
 import { RequestGrouping } from '../Reports/Components/RequestGrouping';
 import Logo from '../../assests/images/OptraLogo.png';
 import { Loader } from '../Loader';
+import { downloadAsHTMLSameUI, downloadAsPDFSameUI } from '@/utils/exportUtilsSameUi';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
+
 
 type RouteParams = {
   type: 'test_suite' | 'request_chain';
   entityId: string;
 };
 
+// declare global {
+//   interface Window {
+//     __REPORT_DATA__?: any;
+//   }
+// }
+
 const useQueryParams = () => {
   const search = typeof window !== 'undefined' ? window.location.search : '';
   return React.useMemo(() => new URLSearchParams(search), [search]);
 };
+
+
 
 // ✅ SAFE helper to render "executedAt"
 const safeExecutedAt = (startedQS: string | null): string => {
@@ -147,6 +158,8 @@ const ExecutionReportPage: React.FC = () => {
 
   const reportRef = useRef<HTMLDivElement>(null);
 
+
+
   const { data: reportData, isLoading } = useQuery({
     queryKey: ['execution-report', entityId, type, executionId],
     queryFn: () => {
@@ -158,6 +171,13 @@ const ExecutionReportPage: React.FC = () => {
     enabled: !!entityId && !!type && !!executionId,
   });
 
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (type === 'test_suite' && reportData?.data) {
+      window.__REPORT_DATA__ = reportData.data; // <-- the HTML exporter reads this
+    }
+  }, [type, reportData]);
   // console.log('reportData:', reportData);
 
   const handleDownloadPDF = async (reportName: string) => {
@@ -234,21 +254,36 @@ const ExecutionReportPage: React.FC = () => {
     };
 
 
-    const handleDownloadPDF = () => {
-      downloadAsPDF('report-content', `${data.name}_report.pdf`);
-    };
+    // const handleDownloadPDF = () => {
+    //   downloadAsPDF('report-content', `${data.name}_report.pdf`);
+    // };
 
-    const handleDownloadHTML = () => {
-      downloadAsHTML('report-content', `${data.name}_report.html`);
-    };
+    // const handleDownloadHTML = () => {
+    //   downloadAsHTML('report-content', `${data.name}_report.html`);
+    // };
 
     const handleShare = () => {
       shareReport(data.name);
     };
 
 
+    const handleDownloadPDF = () => {
+      downloadAsPDFSameUI('report-content', `${reportData.data.name}_report.pdf`);
+    };
+
+    // const handleDownloadHTML = () => {
+    //   downloadAsHTML('report-content', `${data.name}_report.html`);
+    // };
+
+    const handleDownloadHTML = () => {
+      downloadAsHTMLSameUI('report-content', `${reportData.data.name}_report.html`);
+    };
+
+
+
+
     return (
-      <div ref={reportRef}>
+      <div ref={reportRef} id="report-content" >
         <div className="border border-gray-200 bg-background rounded-lg px-6 py-3 animate-fade-in mt-3">
           <div className="flex justify-between items-start mb-6">
             <div>
@@ -298,30 +333,51 @@ const ExecutionReportPage: React.FC = () => {
 
 
           <div className="flex items-center gap-4">
-            {/* <button
-              onClick={handleDownloadPDF}
-              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors group"
-              title="Download PDF"
-            >
-              <Download className="w-5 h-5" />
-            </button>
+            <TooltipProvider>
+              {/* Download HTML */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={handleDownloadHTML}
+                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors group"
+                    title="Download HTML"
+                  >
+                    <FileText className="w-5 h-5" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>Download HTML File</TooltipContent>
+              </Tooltip>
 
-            <button
-              onClick={handleDownloadHTML}
-              className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors group"
-              title="Download HTML"
-            >
-              <FileText className="w-5 h-5" />
-            </button> */}
+              {/* Download PDF */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={handleDownloadPDF}
+                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors group"
+                    title="Download PDF"
+                  >
+                    <Download className="w-5 h-5" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>Download PDF File</TooltipContent>
+              </Tooltip>
 
-            {/* <button
-              onClick={handleShare}
-              className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors group"
-              title="Share Report"
-            >
-              <Share2 className="w-5 h-5" />
-            </button> */}
+              {/* Share Report */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={handleShare}
+                    className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors group"
+                    title="Share Report"
+                  >
+                    <Share2 className="w-5 h-5" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>Share Report</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
+
 
         </div>
 
@@ -340,120 +396,7 @@ const ExecutionReportPage: React.FC = () => {
             </div>
           ))}
         </div>
-        {/* <AnalyticsReport
-          title={data.name || 'Test Suite Report'}
-          description={
-            data.description || 'Comprehensive test suite execution report'
-          }
-          successRate={`${data.successRate || 0}%`}
-          meta={{
-            environment,
-            executedAt: safeExecutedAt(started),
-            duration: `${Math.round((data.duration || 0) / 1000)}s`,
-            executedBy: data.executedBy || 'Unknown',
-          }}
-          stats={[
-            {
-              value: data.totalTestCases?.toString() || '0',
-              label: 'Total Tests',
-              bgColor: 'bg-gray-100',
-              textColor: 'text-gray-800',
-            },
-            {
-              value: data.successfulTestCases?.toString() || '0',
-              label: 'Successful',
-              bgColor: 'bg-green-100',
-              textColor: 'text-green-700',
-            },
-            {
-              value: data.failedTestCases?.toString() || '0',
-              label: 'Failed',
-              bgColor: 'bg-red-100',
-              textColor: 'text-red-700',
-            },
-            {
-              value: data.skippedTestCases?.toString() || '0',
-              label: 'Skipped',
-              bgColor: 'bg-yellow-100',
-              textColor: 'text-yellow-700',
-            },
-          ]}
-        /> */}
 
-        {/* <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mt-5'>
-          <TestCategoryCard
-            icon={<CheckCircle className='w-5 h-5 text-green-600' />}
-            title='Positive Tests'
-            total={data.positiveTests?.total || 0}
-            passed={data.positiveTests?.passed || 0}
-            failed={data.positiveTests?.failed || 0}
-            warning={data.positiveTests?.skipped || 0}
-            bgColor='bg-green-50'
-            borderColor='border border-green-200'
-          />
-          <TestCategoryCard
-            icon={<XCircle className='w-5 h-5 text-red-600' />}
-            title='Negative Tests'
-            total={data.negativeTests?.total || 0}
-            passed={data.negativeTests?.passed || 0}
-            failed={data.negativeTests?.failed || 0}
-            warning={data.negativeTests?.skipped || 0}
-            bgColor='bg-red-50'
-            borderColor='border border-red-200'
-          />
-          <TestCategoryCard
-            icon={<FileCode className='w-5 h-5 text-purple-600' />}
-            title='Functional Tests'
-            total={data.functionalTests?.total || 0}
-            passed={data.functionalTests?.passed || 0}
-            failed={data.functionalTests?.failed || 0}
-            warning={data.functionalTests?.skipped || 0}
-            bgColor='bg-purple-50'
-            borderColor='border border-purple-200'
-          />
-          <TestCategoryCard
-            icon={<Eye className='w-5 h-5 text-blue-600' />}
-            title='Semantic Tests'
-            total={data.semanticTests?.total || 0}
-            passed={data.semanticTests?.passed || 0}
-            failed={data.semanticTests?.failed || 0}
-            warning={data.semanticTests?.skipped || 0}
-            bgColor='bg-blue-50'
-            borderColor='border border-blue-200'
-          />
-          <TestCategoryCard
-            icon={<AlertTriangle className='w-5 h-5 text-orange-600' />}
-            title='Edge Case Tests'
-            total={data.edgeCaseTests?.total || 0}
-            passed={data.edgeCaseTests?.passed || 0}
-            failed={data.edgeCaseTests?.failed || 0}
-            warning={data.edgeCaseTests?.skipped || 0}
-            bgColor='bg-orange-50'
-            borderColor='border border-orange-200'
-          />
-          <TestCategoryCard
-            icon={<Shield className='w-5 h-5 text-red-600' />}
-            title='Security Tests'
-            total={data.securityTests?.total || 0}
-            passed={data.securityTests?.passed || 0}
-            failed={data.securityTests?.failed || 0}
-            warning={data.securityTests?.skipped || 0}
-            bgColor='bg-red-50'
-            borderColor='border border-red-200'
-          />
-          <TestCategoryCard
-            icon={<ShieldAlert className='w-5 h-5 text-red-700' />}
-            title='Advanced Security Tests'
-            total={data.advancedSecurityTests?.total || 0}
-            passed={data.advancedSecurityTests?.passed || 0}
-            failed={data.advancedSecurityTests?.failed || 0}
-            warning={data.advancedSecurityTests?.skipped || 0}
-            bgColor='bg-red-100'
-            borderColor='border border-red-300'
-          />
-        </div> */}
-
-        {/* <DetailedTestResults categories={testCategories} /> */}
         <RequestGrouping report={data} />
 
 

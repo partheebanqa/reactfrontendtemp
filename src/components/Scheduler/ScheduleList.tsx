@@ -17,6 +17,7 @@ import {
   ChevronRight,
   RefreshCw,
   Beaker,
+  Pencil,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -99,6 +100,7 @@ interface Schedule {
   nextRunAt: string;
   retryAttempts: number;
   isActive: boolean;
+  targetName?: string;
 }
 
 interface ScheduleListProps {
@@ -205,13 +207,15 @@ export default function ScheduleList({
     if (schedule.scheduledTime) {
       try {
         const date = new Date(schedule.scheduledTime);
-        const dateText = `${format(date, 'MMM dd, yyyy')} at ${format(
-          date,
-          'HH:mm'
-        )} (${schedule.timezone || 'UTC'})`;
+        const now = new Date();
+
+        // 🧠 If one-time → show full date + time
+        // 🕐 Otherwise → show only time (with timezone)
+        const dateText = schedule.isOneTime
+          ? `${format(date, 'MMM dd, yyyy')} at ${format(date, 'HH:mm')} (${schedule.timezone || 'UTC'})`
+          : `${format(date, 'HH:mm')} (${schedule.timezone || 'UTC'})`;
 
         // Calculate days left
-        const now = new Date();
         const diffTime = date.getTime() - now.getTime();
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
@@ -221,8 +225,7 @@ export default function ScheduleList({
         } else if (diffDays === 0) {
           daysLeftText = `Today`;
         } else {
-          daysLeftText = `${Math.abs(diffDays)} day${Math.abs(diffDays) > 1 ? 's' : ''
-            } ago`;
+          daysLeftText = `${Math.abs(diffDays)} day${Math.abs(diffDays) > 1 ? 's' : ''} ago`;
         }
 
         return { dateText, daysLeftText };
@@ -233,11 +236,16 @@ export default function ScheduleList({
 
     if (schedule.nextRunAt) {
       try {
+        const date = new Date(schedule.nextRunAt);
+
+        // 🧠 Recurring schedules show only time
+        const dateText = schedule.isOneTime
+          ? `${format(date, 'MMM dd, yyyy')} at ${format(date, 'HH:mm')} (${schedule.timezone || 'UTC'})`
+          : `${format(date, 'HH:mm')} (${schedule.timezone || 'UTC'})`;
+
         return {
-          dateText: format(new Date(schedule.nextRunAt), 'MMM dd, yyyy HH:mm'),
-          daysLeftText: formatDistanceToNow(new Date(schedule.nextRunAt), {
-            addSuffix: true,
-          }),
+          dateText,
+          daysLeftText: formatDistanceToNow(date, { addSuffix: true }),
         };
       } catch (error) {
         return { dateText: 'Invalid date', daysLeftText: '' };
@@ -246,6 +254,7 @@ export default function ScheduleList({
 
     return { dateText: 'Not scheduled', daysLeftText: '' };
   };
+
 
   // Filter schedules based on search and filters
   const filteredSchedules = Array.isArray(schedules)
@@ -491,7 +500,7 @@ export default function ScheduleList({
                 <TableHeader>
                   <TableRow className='bg-slate-50'>
                     <TableHead className='font-semibold text-slate-600 text-sm capitalize tracking-wider'>
-                      Schedule
+                      Schedule/Target
                     </TableHead>
                     <TableHead className='font-semibold text-slate-600 text-sm capitalize tracking-wider'>
                       Type
@@ -522,6 +531,9 @@ export default function ScheduleList({
                           <div className='font-medium text-slate-900'>
                             {schedule.scheduleName}
                           </div>
+                          <p className='text-sm text-slate-400'>
+                            ({schedule?.targetName})
+                          </p>
                           {/* {schedule.description && (
                           <div className='text-sm text-slate-500 mt-1'>
                             {schedule.description}
@@ -601,7 +613,7 @@ export default function ScheduleList({
                                   className='h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600'
                                   onClick={() => onEdit(schedule)}
                                 >
-                                  <Edit size={16} />
+                                  <Pencil size={16} />
                                 </Button>
                               </TooltipTrigger>
                               <TooltipContent>
