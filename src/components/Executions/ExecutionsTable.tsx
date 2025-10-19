@@ -56,6 +56,9 @@ export const ExecutionsTable = ({
     );
   };
 
+  console.log(executions, "executions");
+
+
   return (
     <Table>
       <TableHeader>
@@ -83,11 +86,15 @@ export const ExecutionsTable = ({
               <TableCell>
                 <div>
                   {execution.testSuite ? (
-                    <p className='font-medium text-[#136fb0] hover:text-primary/80 cursor-pointer'>
+                    <p className='font-medium text-[#136fb0] hover:text-primary/80 cursor-pointer'
+                      onClick={() => setLocation(`/test-suites/${execution?.entityId}/edit`)}
+                    >
                       {execution.testSuite.name}
                     </p>
                   ) : (
-                    <p className='font-medium text-[#136fb0] hover:text-primary/80 cursor-pointer'>
+                    <p className='font-medium text-[#136fb0] hover:text-primary/80 cursor-pointer'
+                      onClick={() => setLocation(`/request-chains/${execution?.entityId}/edit`)}
+                    >
                       {execution.requestChain?.name || 'Request Chain'}
                     </p>
                   )}
