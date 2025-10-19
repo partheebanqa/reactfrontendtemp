@@ -32,6 +32,7 @@ import 'codemirror/theme/material.css';
 import 'codemirror/mode/javascript/javascript';
 import './whiteorange.css';
 import EditableTextWithoutIcon from '@/components/ui/EditableTextWithoutIcon';
+import { JsonVariableSubstitution } from './JsonVariableSubstitution';
 
 type Assertion = {
   id: string;
@@ -83,10 +84,11 @@ const RequestEditor: React.FC = () => {
     fetchCollectionRequests,
   } = useCollection();
 
-  console.log('active Collection:', activeCollection);
+  const { variables, dynamicVariables, environments, activeEnvironment } =
+    useDataManagement();
+  console.log('variables123:', variables);
+  console.log('dynamicVariables:', dynamicVariables);
 
-  const { variables, environments, activeEnvironment } = useDataManagement();
-  console.log('activeEnvironment:', activeEnvironment);
   const { error: showError, success: showSuccess, toast } = useToast();
   const { currentWorkspace } = useWorkspace();
   const [showCurlImport, setShowCurlImport] = useState(false);
@@ -1471,17 +1473,10 @@ const RequestEditor: React.FC = () => {
               )}
 
               {bodyType === 'json' && (
-                <CodeMirror
+                <JsonVariableSubstitution
                   value={bodyContent}
-                  options={{
-                    mode: { name: 'javascript', json: true },
-                    theme: 'whiteorange',
-                    lineNumbers: true,
-                    lineWrapping: true,
-                  }}
-                  onBeforeChange={(editor, data, value) => {
-                    setBodyContent(value);
-                  }}
+                  onChange={setBodyContent}
+                  mode='json'
                 />
               )}
 
@@ -1519,17 +1514,10 @@ const RequestEditor: React.FC = () => {
               )}
 
               {bodyType === 'raw' && (
-                <CodeMirror
+                <JsonVariableSubstitution
                   value={bodyContent}
-                  options={{
-                    mode: { name: 'javascript', json: true },
-                    theme: 'whiteorange',
-                    lineNumbers: true,
-                    lineWrapping: true,
-                  }}
-                  onBeforeChange={(editor, data, value) => {
-                    setBodyContent(value);
-                  }}
+                  onChange={setBodyContent}
+                  mode='raw'
                 />
               )}
 
