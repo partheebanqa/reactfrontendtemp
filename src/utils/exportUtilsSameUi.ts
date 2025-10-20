@@ -150,7 +150,7 @@ export const downloadAsPDFSameUI = async (
   let heightLeft = imgH;
   let position = 0;
 
-  pdf.addImage(imgData, "PNG", 0, position, imgW, imgH);
+  pdf.addImage(imgData, "PNG", 0, 0, imgW, imgH);
   heightLeft -= pageH;
 
   while (heightLeft > 0) {
@@ -239,6 +239,13 @@ const prettyJsonMaybe = (input: any) => {
 };
 const fmtDate = (d: string) => (d ? new Date(d).toLocaleString() : "");
 const fmtDuration = (ms: number) => `${((ms ?? 0) / 1000).toFixed(2)}s`;
+const fmtBytes = (bytes: number) => {
+  if (!bytes) return "0 B";
+  const k = 1024;
+  const sizes = ["B", "KB", "MB", "GB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
+};
 
 const methodChip = (method: string) => {
   const m: Record<string, string> = {
@@ -390,6 +397,351 @@ const groupByUrlThenMethod = (tcs: TestCase[]) => {
 const successPct = (p: number, t: number) =>
   t ? Math.round((p / t) * 100) : 0;
 
+/* ---------------- RequestMetrics (compute + section) ---------------- */
+
+type RequestMetricsShape = {
+  totalRequests: number;
+  uniqueEndpoints: number;
+  averageResponseTime: number;
+  minResponseTime: number;
+  maxResponseTime: number;
+  totalDataTransferred: number;
+  requestsByMethod: Record<string, number>;
+  statusCodeDistribution: Record<string, number>;
+  errorTypes: Record<string, number>;
+  slowestRequests: Array<{
+    id: string;
+    name: string;
+    method: string;
+    url: string;
+    duration: number;
+  }>;
+  fastestRequests: Array<{
+    id: string;
+    name: string;
+    method: string;
+    url: string;
+    duration: number;
+  }>;
+};
+
+const buildRequestMetricsFromCases = (tcs: TestCase[]): RequestMetricsShape => {
+  const totalRequests = tcs.length;
+  const uniqueEndpoints = new Set(tcs.map((t) => normalizeUrlKey(t.url))).size;
+
+  const durations = tcs
+    .map((t) => Number(t.duration || 0))
+    .filter((n) => Number.isFinite(n));
+  const minResponseTime = durations.length ? Math.min(...durations) : 0;
+  const maxResponseTime = durations.length ? Math.max(...durations) : 0;
+  const averageResponseTime = durations.length
+    ? Math.round(durations.reduce((a, b) => a + b, 0) / durations.length)
+    : 0;
+
+  const totalDataTransferred = tcs.reduce(
+    (s, t) => s + Number(t.responseSize || 0),
+    0
+  );
+
+  const requestsByMethod: Record<string, number> = {};
+  tcs.forEach((t) => {
+    const m = (t.method || "").toUpperCase();
+    requestsByMethod[m] = (requestsByMethod[m] || 0) + 1;
+  });
+
+  const statusCodeDistribution: Record<string, number> = {};
+  tcs.forEach((t) => {
+    if (t.statusCode != null) {
+      const key = String(t.statusCode);
+      statusCodeDistribution[key] = (statusCodeDistribution[key] || 0) + 1;
+    }
+  });
+
+  // You can refine this if you have richer error typing in your data
+  const errorTypes: Record<string, number> = {};
+  tcs.forEach((t) => {
+    if (t.status === "failed") {
+      const key = t.category || "Failed";
+      errorTypes[key] = (errorTypes[key] || 0) + 1;
+    }
+  });
+
+  const sortedByDuration = [...tcs].sort(
+    (a, b) => (b.duration || 0) - (a.duration || 0)
+  );
+  const slowestRequests = sortedByDuration.slice(0, 5).map((r) => ({
+    id: r.id,
+    name: r.name,
+    method: r.method,
+    url: r.url,
+    duration: r.duration || 0,
+  }));
+  const fastestRequests = [...tcs]
+    .sort((a, b) => (a.duration || 0) - (b.duration || 0))
+    .slice(0, 5)
+    .map((r) => ({
+      id: r.id,
+      name: r.name,
+      method: r.method,
+      url: r.url,
+      duration: r.duration || 0,
+    }));
+
+  return {
+    totalRequests,
+    uniqueEndpoints,
+    averageResponseTime,
+    minResponseTime,
+    maxResponseTime,
+    totalDataTransferred,
+    requestsByMethod,
+    statusCodeDistribution,
+    errorTypes,
+    slowestRequests,
+    fastestRequests,
+  };
+};
+
+const buildRequestMetricsSection = (m: RequestMetricsShape) => {
+  const methodsHtml = Object.entries(m.requestsByMethod)
+    .map(
+      ([method, count]) => `
+    <div class="flex items-center justify-between">
+      <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium ${methodChip(
+        method
+      )}">${method}</span>
+      <div class="flex items-center space-x-2">
+        <div class="w-20 bg-gray-200 rounded-full h-2">
+          <div class="bg-blue-600 h-2 rounded-full" style="width:${
+            (count / Math.max(m.totalRequests, 1)) * 100
+          }%"></div>
+        </div>
+        <span class="text-sm font-semibold text-gray-900 w-8">${count}</span>
+      </div>
+    </div>`
+    )
+    .join("");
+
+  const statusHtml = Object.entries(m.statusCodeDistribution)
+    .map(
+      ([code, count]) => `
+    <div class="flex items-center justify-between">
+      <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
+        // simple color bucketing
+        parseInt(code, 10) >= 500
+          ? "bg-red-100 text-red-800"
+          : parseInt(code, 10) >= 400
+          ? "bg-yellow-100 text-yellow-800"
+          : parseInt(code, 10) >= 300
+          ? "bg-blue-100 text-blue-800"
+          : "bg-green-100 text-green-800"
+      }">${code}</span>
+      <div class="flex items-center space-x-2">
+        <div class="w-20 bg-gray-200 rounded-full h-2">
+          <div class="bg-blue-600 h-2 rounded-full" style="width:${
+            (count / Math.max(m.totalRequests, 1)) * 100
+          }%"></div>
+        </div>
+        <span class="text-sm font-semibold text-gray-900 w-8">${count}</span>
+      </div>
+    </div>`
+    )
+    .join("");
+
+  const errorTotal = Object.values(m.errorTypes).reduce((a, b) => a + b, 0);
+  const errorHtml =
+    Object.keys(m.errorTypes).length > 0
+      ? `
+      <div class="bg-white rounded-lg shadow-md p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+          <i data-lucide="alert-triangle" class="w-5 h-5 mr-2 text-red-600"></i>
+          Error Types
+        </h3>
+        <div class="space-y-3">
+          ${Object.entries(m.errorTypes)
+            .map(
+              ([err, count]) => `
+            <div class="flex items-center justify-between">
+              <span class="text-sm text-gray-700 truncate flex-1 mr-2">${escapeHtml(
+                err
+              )}</span>
+              <div class="flex items-center space-x-2">
+                <div class="w-16 bg-gray-200 rounded-full h-2">
+                  <div class="bg-red-600 h-2 rounded-full" style="width:${
+                    (count / Math.max(errorTotal, 1)) * 100
+                  }%"></div>
+                </div>
+                <span class="text-sm font-semibold text-gray-900 w-6">${count}</span>
+              </div>
+            </div>`
+            )
+            .join("")}
+        </div>
+      </div>`
+      : "";
+
+  const slowHtml = m.slowestRequests
+    .map(
+      (r, i) => `
+    <div class="flex items-center justify-between p-3 bg-red-50 rounded-lg">
+      <div class="flex-1 min-w-0">
+        <p class="text-sm font-medium text-gray-900 truncate">${escapeHtml(
+          r.name
+        )}</p>
+        <p class="text-xs text-gray-500 truncate">${escapeHtml(
+          r.method
+        )} ${escapeHtml(r.url)}</p>
+      </div>
+      <div class="text-right">
+        <p class="text-sm font-semibold text-red-600">${r.duration}ms</p>
+        <p class="text-xs text-gray-500">#${i + 1}</p>
+      </div>
+    </div>`
+    )
+    .join("");
+
+  const fastHtml = m.fastestRequests
+    .map(
+      (r, i) => `
+    <div class="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+      <div class="flex-1 min-w-0">
+        <p class="text-sm font-medium text-gray-900 truncate">${escapeHtml(
+          r.name
+        )}</p>
+        <p class="text-xs text-gray-500 truncate">${escapeHtml(
+          r.method
+        )} ${escapeHtml(r.url)}</p>
+      </div>
+      <div class="text-right">
+        <p class="text-sm font-semibold text-green-600">${r.duration}ms</p>
+        <p class="text-xs text-gray-500">#${i + 1}</p>
+      </div>
+    </div>`
+    )
+    .join("");
+
+  return `
+  <div class="space-y-6">
+    <!-- Overview -->
+    <div class="bg-white rounded-lg shadow-md p-6">
+      <h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center">
+        <i data-lucide="activity" class="w-6 h-6 mr-2 text-blue-600"></i>
+        Request-Level Metrics
+      </h2>
+
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+        <div class="text-center">
+          <div class="flex items-center justify-center w-12 h-12 bg-blue-100 rounded-full mx-auto mb-2">
+            <i data-lucide="globe" class="w-6 h-6 text-blue-600"></i>
+          </div>
+          <p class="text-2xl font-bold text-gray-900">${m.totalRequests}</p>
+          <p class="text-sm text-gray-500">Total Requests</p>
+        </div>
+
+        <div class="text-center">
+          <div class="flex items-center justify-center w-12 h-12 bg-green-100 rounded-full mx-auto mb-2">
+            <i data-lucide="database" class="w-6 h-6 text-green-600"></i>
+          </div>
+          <p class="text-2xl font-bold text-gray-900">${m.uniqueEndpoints}</p>
+          <p class="text-sm text-gray-500">Unique Endpoints</p>
+        </div>
+
+        <div class="text-center">
+          <div class="flex items-center justify-center w-12 h-12 bg-purple-100 rounded-full mx-auto mb-2">
+            <i data-lucide="clock" class="w-6 h-6 text-purple-600"></i>
+          </div>
+          <p class="text-2xl font-bold text-gray-900">${
+            m.averageResponseTime
+          }ms</p>
+          <p class="text-sm text-gray-500">Avg Response Time</p>
+        </div>
+
+        <div class="text-center">
+          <div class="flex items-center justify-center w-12 h-12 bg-orange-100 rounded-full mx-auto mb-2">
+            <i data-lucide="trending-up" class="w-6 h-6 text-orange-600"></i>
+          </div>
+          <p class="text-2xl font-bold text-gray-900">${fmtBytes(
+            m.totalDataTransferred
+          )}</p>
+          <p class="text-sm text-gray-500">Data Transferred</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Performance Insights -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div class="bg-white rounded-lg shadow-md p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Response Time Range</h3>
+        <div class="space-y-4">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+              <i data-lucide="trending-down" class="w-4 h-4 text-green-600"></i>
+              <span class="text-sm text-gray-600">Fastest</span>
+            </div>
+            <span class="font-semibold text-green-600">${
+              m.minResponseTime
+            }ms</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+              <i data-lucide="clock" class="w-4 h-4 text-blue-600"></i>
+              <span class="text-sm text-gray-600">Average</span>
+            </div>
+            <span class="font-semibold text-blue-600">${
+              m.averageResponseTime
+            }ms</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+              <i data-lucide="trending-up" class="w-4 h-4 text-red-600"></i>
+              <span class="text-sm text-gray-600">Slowest</span>
+            </div>
+            <span class="font-semibold text-red-600">${
+              m.maxResponseTime
+            }ms</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-lg shadow-md p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">HTTP Methods</h3>
+        <div class="space-y-3">${methodsHtml}</div>
+      </div>
+    </div>
+
+    <!-- Status Codes and Error Types -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div class="bg-white rounded-lg shadow-md p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Status Code Distribution</h3>
+        <div class="space-y-3">${statusHtml}</div>
+      </div>
+
+      ${errorHtml}
+    </div>
+
+    <!-- Performance Extremes -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div class="bg-white rounded-lg shadow-md p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+          <i data-lucide="trending-up" class="w-5 h-5 mr-2 text-red-600"></i>
+          Slowest Requests
+        </h3>
+        <div class="space-y-3">${slowHtml}</div>
+      </div>
+
+      <div class="bg-white rounded-lg shadow-md p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+          <i data-lucide="trending-down" class="w-5 h-5 mr-2 text-green-600"></i>
+          Fastest Requests
+        </h3>
+        <div class="space-y-3">${fastHtml}</div>
+      </div>
+    </div>
+  </div>`;
+};
+
+/* ---------------- Existing sections ---------------- */
+
 const buildHeader = (d: TestSuiteData, logoSrc: string | null) => `
   <div class="border border-gray-200 bg-white rounded-lg px-6 py-3 mt-3">
     <div class="flex justify-between items-start mb-6">
@@ -405,7 +757,8 @@ const buildHeader = (d: TestSuiteData, logoSrc: string | null) => `
               logoSrc
             )}" alt="Optraflow logo" style="width:100%;height:50px" />`
           : ""
-      }</div>
+      }
+          </div>
     </div>
     <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mb-3">
       <div class="flex items-center space-x-3">
@@ -650,6 +1003,7 @@ const buildHTML = (
   if (logo?.src) logoSrc = logo.src;
 
   const tcs = collectTestCases(data);
+  const requestMetrics = buildRequestMetricsFromCases(tcs); // <-- NEW
   const prismCss =
     opts.codeTheme === "dark"
       ? "https://unpkg.com/prismjs@1/themes/prism-okaidia.css"
@@ -690,6 +1044,9 @@ const buildHTML = (
   <div class="max-w-7xl mx-auto">
     ${buildHeader(data, logoSrc)}
     ${buildMetricCards(data, tcs)}
+    ${buildRequestMetricsSection(
+      requestMetrics
+    )} <!-- NEW: RequestMetrics UI -->
     ${buildGroupingSection(tcs)}
   </div>
 
