@@ -94,6 +94,8 @@ const RequestEditor: React.FC = () => {
     fetchCollectionRequests,
   } = useCollection();
 
+  console.log('activeRequest123:', activeRequest);
+
   const { variables, dynamicVariables, environments, activeEnvironment } =
     useDataManagement();
   console.log('variables123:', variables);
@@ -1547,7 +1549,7 @@ const RequestEditor: React.FC = () => {
 
               {bodyType === 'json' && (
                 <JsonVariableSubstitution
-                  onChange={(newValue) => setBodyContent(newValue)} // ✅ add this
+                  onChange={(newValue) => setBodyContent(newValue)}
                   value={bodyContent}
                   onVariableSelect={setSelectedVariable}
                   onConfirmSubstitution={handleConfirmSubstitutions}

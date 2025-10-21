@@ -2,9 +2,6 @@
 
 import type React from 'react';
 import { useState, useRef, useEffect, useMemo } from 'react';
-import { Controlled as CodeMirror } from 'react-codemirror2';
-import 'codemirror/lib/codemirror.css';
-import 'codemirror/mode/javascript/javascript';
 
 interface Variable {
   name: string;
@@ -53,7 +50,7 @@ export const JsonVariableSubstitution: React.FC<
     PendingSubstitution[]
   >([]);
   const containerRef = useRef<HTMLDivElement>(null);
-  const codeMirrorRef = useRef<any>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     if (initialVariable) {
@@ -149,6 +146,11 @@ export const JsonVariableSubstitution: React.FC<
     onChange?.(updatedLines.join('\n'));
   };
 
+  const handleClearSavedVariable = () => {
+    setSelectedVariable(null);
+    onVariableSelect?.(null);
+  };
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -162,54 +164,38 @@ export const JsonVariableSubstitution: React.FC<
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const codeMirrorStyle = `
-    .cm-s-postman.CodeMirror {
-      background-color: #ffffff;
-      color: #333333;
-      border: 1px solid #e0e0e0;
-      border-radius: 4px;
-      font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace;
-      font-size: 13px;
-      line-height: 1.5;
-    }
-    .cm-s-postman .CodeMirror-gutters {
-      background-color: #f5f5f5;
-      border-right: 1px solid #e0e0e0;
-    }
-    .cm-s-postman .CodeMirror-linenumber {
-      color: #999999;
-      font-size: 12px;
-    }
-    .cm-s-postman .CodeMirror-cursor {
-      border-left: 1px solid #333333;
-    }
-    .cm-s-postman .cm-string { color: #22863a; }
-    .cm-s-postman .cm-number { color: #005cc5; }
-    .cm-s-postman .cm-atom { color: #005cc5; }
-    .cm-s-postman .cm-keyword { color: #d73a49; }
-    .cm-s-postman .cm-property { color: #24292e; }
-  `;
-
   return (
     <div ref={containerRef} className='relative w-full space-y-3'>
-      <style>{codeMirrorStyle}</style>
+      {selectedVariable && (
+        <div className='bg-green-50 border border-green-200 rounded-md p-3 flex items-center justify-between'>
+          <div className='flex items-center gap-2'>
+            <span className='text-sm font-medium text-green-900'>
+              Variable Set:
+            </span>
+            <span className='px-3 py-1 bg-green-500 text-white text-xs rounded font-mono font-medium'>
+              {selectedVariable.path}: {selectedVariable.name}
+            </span>
+          </div>
+          <button
+            onClick={handleClearSavedVariable}
+            className='px-2 py-1 bg-red-600 hover:bg-red-700 text-white text-xs rounded transition-colors'
+            title='Remove variable'
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       <div className='relative'>
-        <CodeMirror
-          ref={codeMirrorRef}
+        <textarea
+          ref={textareaRef}
           value={value}
-          options={{
-            mode:
-              mode === 'json'
-                ? { name: 'javascript', json: true }
-                : 'javascript',
-            theme: 'postman',
-            lineNumbers: true,
-            lineWrapping: true,
-            readOnly: readOnly,
-          }}
-          onBeforeChange={(editor, data, newValue) => {
-            onChange?.(newValue);
+          onChange={(e) => onChange?.(e.target.value)}
+          readOnly={readOnly}
+          className='w-full h-64 p-4 font-mono text-sm border border-gray-300 rounded-md bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none'
+          style={{
+            fontFamily:
+              "'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace",
           }}
         />
 
@@ -218,6 +204,9 @@ export const JsonVariableSubstitution: React.FC<
             const hasKey = /"[^"]+"\s*:/.test(line);
             const pendingVar = getPendingSubstitution(index);
             const alreadySubstituted = getAlreadySubstitutedVariable(index);
+            const currentPath = extractPathFromLine(index);
+            const isSelectedVariableLine =
+              selectedVariable && selectedVariable.path === currentPath;
 
             return (
               <div
@@ -228,10 +217,25 @@ export const JsonVariableSubstitution: React.FC<
               >
                 {hoveredLine === index && hasKey && (
                   <div className='pointer-events-auto ml-auto mr-2 flex items-center gap-1'>
-                    {!pendingVar && !alreadySubstituted ? (
+                    {isSelectedVariableLine &&
+                    !pendingVar &&
+                    !alreadySubstituted ? (
+                      <>
+                        <span className='px-2 bg-yellow-500 text-yellow-900 text-xs rounded font-mono whitespace-nowrap'>
+                          {selectedVariable.name}
+                        </span>
+                        <button
+                          onClick={handleClearSavedVariable}
+                          className='px-2 bg-red-600 hover:bg-red-700 text-white text-xs rounded transition-colors'
+                          title='Remove variable'
+                        >
+                          ✕
+                        </button>
+                      </>
+                    ) : !pendingVar && !alreadySubstituted ? (
                       <button
                         onClick={() => handleSubstituteClick(index)}
-                        className='px-2  bg-blue-600 hover:bg-blue-700 text-white text-xs rounded whitespace-nowrap transition-colors'
+                        className='px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded whitespace-nowrap transition-colors'
                         title='Substitute variable'
                       >
                         Substitute Variable
