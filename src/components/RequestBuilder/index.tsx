@@ -18,6 +18,7 @@ import { HelpModal } from "@/components/HelpModal/HelpModal";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Button } from "../ui/button";
 import WelcomeImage from "../../assests/images/Welcome.webp"
+import { navigate } from "wouter/use-browser-location";
 interface Header {
   key: string;
   value: string;
@@ -364,10 +365,10 @@ const RequestBuilder = () => {
           </DialogHeader> */}
 
           <DialogDescription asChild>
-            <div className="max-h-[80vh] overflow-y-auto pr-2">
+            <div className="max-h-[88vh] overflow-y-auto pr-2">
               <div className="rounded-xl bg-white">
                 {/* Main content */}
-                <div className="p-6 sm:p-8">
+                <div className="p-2 sm:p-4">
                   <div className="grid gap-3 md:grid-cols-2 md:items-center">
                     {/* LEFT: copy */}
                     <div>
@@ -376,32 +377,52 @@ const RequestBuilder = () => {
                       </h2>
 
                       <p className="text-slate-600 mb-4">
-                        Your workspace “Default workspace” or create one you.
+                        your low-code platform for API testing and automation.
+                        We’ve set up a workspace called “Defaultworkspace” to help you get started quickly.
                       </p>
 
-                      <p className="text-slate-600 mb-4">Within your workspace you can:</p>
+                      <p className="text-slate-600 mb-4">Inside your workspace, you can:</p>
 
                       <ul className="space-y-3 text-slate-700">
                         <li className="flex items-start gap-3">
                           <span className="mt-2 h-2 w-2 rounded-full bg-[#136fb0]" />
-                          <span>Import OpenAPI spec or Postman collections or cURL</span>
+                          <span>Import OpenAPI specs, Postman collections, curl commands — or add APIs manually</span>
                         </li>
                         <li className="flex items-start gap-3">
                           <span className="mt-2 h-2 w-2 rounded-full bg-[#136fb0]" />
-                          <span>Execute API and add assertion for response</span>
+                          <span>Run APIs, add response assertions, and validate schemas
+                          </span>
                         </li>
                         <li className="flex items-start gap-3">
                           <span className="mt-2 h-2 w-2 rounded-full bg-[#136fb0]" />
-                          <span>Add an OpenAI system will generate testcases on your API</span>
+                          <span>Auto-generate test cases for your APIs in the Test Suite</span>
                         </li>
                         <li className="flex items-start gap-3">
                           <span className="mt-2 h-2 w-2 rounded-full bg-[#136fb0]" />
-                          <span>Performing static and dynamic values as well</span>
+                          <span>Create static or dynamic variables using built-in functions</span>
                         </li>
                         <li className="flex items-start gap-3">
                           <span className="mt-2 h-2 w-2 rounded-full bg-[#136fb0]" />
                           <span>
-                            You can execute the job manually or schedule it, or execute via CI/CD integrations
+                            Perform integration testing across workflows using request chains
+                          </span>
+                        </li>
+                        <li className="flex items-start gap-3">
+                          <span className="mt-2 h-2 w-2 rounded-full bg-[#136fb0]" />
+                          <span>
+                            Test APIs across multiple environments effortlessly
+                          </span>
+                        </li>
+                        <li className="flex items-start gap-3">
+                          <span className="mt-2 h-2 w-2 rounded-full bg-[#136fb0]" />
+                          <span>
+                            Run jobs manually, schedule them, or trigger via CI/CD pipelines
+                          </span>
+                        </li>
+                        <li className="flex items-start gap-3">
+                          <span className="mt-2 h-2 w-2 rounded-full bg-[#136fb0]" />
+                          <span>
+                            Receive status updates via email, Slack, or Microsoft Teams
                           </span>
                         </li>
                       </ul>
@@ -409,18 +430,22 @@ const RequestBuilder = () => {
                       <div className="mt-6">
                         <h3 className="text-lg font-semibold text-slate-900 mb-2">What’s next?</h3>
                         <p className="text-slate-600">
-                          You can create a new workspace and start testing and start testing the APIs
+                          Create a new workspace, set up environments, import your APIs — and start testing with confidence
                         </p>
                       </div>
                       <div className="mt-6">
-                        <Button className="bg-[#136fb0] hover:bg-[#136fb0] text-white shadow-sm">
+                        <Button
+                          onClick={() => {
+                            navigate("/dashboard")
+                          }}
+                          className="bg-[#136fb0] hover:bg-[#136fb0] text-white shadow-sm">
                           🔥 Got it, let’s start!
                         </Button>
                       </div>
                     </div>
 
                     {/* RIGHT: illustration (inline SVG) */}
-                    <div className="relative mx-auto w-full max-w-[520px]">
+                    <div className="relative mx-auto w-full max-w-[480px]">
                       <div className="relative rounded-2xl  p-6">
                         <img src={WelcomeImage} />
                       </div>
