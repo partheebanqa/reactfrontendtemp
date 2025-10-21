@@ -171,7 +171,7 @@ export const JsonVariableSubstitution: React.FC<
         <div className='bg-green-50 border border-green-200 rounded-md p-3 flex items-center justify-between'>
           <div className='flex items-center gap-2'>
             <span className='text-sm font-medium text-green-900'>
-              Variable Set:
+              Substituted Variables:
             </span>
             <span className='px-3 py-1 bg-green-500 text-white text-xs rounded font-mono font-medium'>
               {selectedVariable.path}: {selectedVariable.name}
