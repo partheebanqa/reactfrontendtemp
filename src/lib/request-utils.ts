@@ -1021,3 +1021,5 @@ function generateDynamicValueById(id: string, params: any = {}): string {
       return '';
   }
 }
+
+export { generateDynamicValueById };
