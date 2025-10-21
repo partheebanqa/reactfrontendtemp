@@ -191,8 +191,9 @@ export const JsonVariableSubstitution: React.FC<
   `;
 
   return (
-    <div ref={containerRef} className='relative w-full'>
+    <div ref={containerRef} className='relative w-full space-y-3'>
       <style>{codeMirrorStyle}</style>
+
       <div className='relative'>
         <CodeMirror
           ref={codeMirrorRef}
@@ -205,7 +206,7 @@ export const JsonVariableSubstitution: React.FC<
             theme: 'postman',
             lineNumbers: true,
             lineWrapping: true,
-            readOnly: false,
+            readOnly: readOnly,
           }}
           onBeforeChange={(editor, data, newValue) => {
             onChange?.(newValue);
@@ -230,7 +231,7 @@ export const JsonVariableSubstitution: React.FC<
                     {!pendingVar && !alreadySubstituted ? (
                       <button
                         onClick={() => handleSubstituteClick(index)}
-                        className='px-2 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded whitespace-nowrap transition-colors'
+                        className='px-2  bg-blue-600 hover:bg-blue-700 text-white text-xs rounded whitespace-nowrap transition-colors'
                         title='Substitute variable'
                       >
                         Substitute Variable

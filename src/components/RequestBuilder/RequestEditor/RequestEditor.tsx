@@ -1547,6 +1547,7 @@ const RequestEditor: React.FC = () => {
 
               {bodyType === 'json' && (
                 <JsonVariableSubstitution
+                  onChange={(newValue) => setBodyContent(newValue)} // ✅ add this
                   value={bodyContent}
                   onVariableSelect={setSelectedVariable}
                   onConfirmSubstitution={handleConfirmSubstitutions}
@@ -1592,6 +1593,7 @@ const RequestEditor: React.FC = () => {
 
               {bodyType === 'raw' && (
                 <JsonVariableSubstitution
+                  onChange={(newValue) => setBodyContent(newValue)} // ✅ add this
                   value={bodyContent}
                   onVariableSelect={setSelectedVariable}
                   onConfirmSubstitution={handleConfirmSubstitutions}
