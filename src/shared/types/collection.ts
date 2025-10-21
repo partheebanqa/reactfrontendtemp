@@ -175,6 +175,10 @@ export interface CollectionRequest {
   headers?: Header[];
   params?: Param[];
   variables: Record<string, any>;
+  variable: {
+    name: string;
+    path: string;
+  };
   createdBy?: string;
   createdAt?: string;
   updatedAt?: string;

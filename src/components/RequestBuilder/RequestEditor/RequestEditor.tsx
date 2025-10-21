@@ -1,8 +1,8 @@
 'use client';
 
 import type React from 'react';
-import { useState, useEffect, useRef } from 'react';
-import { Play, Save, FolderPlus, Plus, FileTerminal } from 'lucide-react';
+import { useState, useEffect, useRef, useMemo } from 'react';
+import { Play, Save, FolderPlus, Plus, FileTerminal, Info } from 'lucide-react';
 import { useRequest } from '@/hooks/useRequest';
 import { useCollection } from '@/hooks/useCollection';
 import { useWorkspace } from '@/hooks/useWorkspace';
@@ -20,18 +20,24 @@ import { useDataManagement } from '@/hooks/useDataManagement';
 import { executeCollectionRequest } from '@/services/executeRequest.service';
 import { updateRequest } from '@/services/collection.service';
 import { useMutation } from '@tanstack/react-query';
-import { TooltipProvider } from '@/components/ui/tooltip';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
 import { generateAssertions } from '@/utils/assertionGenerator';
 import AssertionManager from './assertionManager';
 import ImportModal from './ImportModal';
 import { Input } from '@/components/ui/input';
-import { Controlled as CodeMirror } from 'react-codemirror2';
 import 'codemirror/lib/codemirror.css';
 import 'codemirror/theme/material.css';
 import 'codemirror/mode/javascript/javascript';
 import './whiteorange.css';
 import EditableTextWithoutIcon from '@/components/ui/EditableTextWithoutIcon';
+import { JsonVariableSubstitution } from './JsonVariableSubstitution';
+import { generateDynamicValueById } from '@/lib/request-utils';
 
 type Assertion = {
   id: string;
@@ -54,6 +60,16 @@ interface FormattedResponse {
   data: any;
   responseTime: number;
   size: number;
+}
+
+interface SelectedVariable {
+  name: string;
+  path: string;
+}
+
+interface PendingSubstitution {
+  lineIndex: number;
+  variableName: string;
 }
 
 const RequestEditor: React.FC = () => {
@@ -83,10 +99,13 @@ const RequestEditor: React.FC = () => {
     fetchCollectionRequests,
   } = useCollection();
 
-  console.log('active Collection:', activeCollection);
+  console.log('activeRequest123:', activeRequest);
 
-  const { variables, environments, activeEnvironment } = useDataManagement();
-  console.log('activeEnvironment:', activeEnvironment);
+  const { variables, dynamicVariables, environments, activeEnvironment } =
+    useDataManagement();
+  console.log('variables123:', variables);
+  console.log('dynamicVariables:', dynamicVariables);
+
   const { error: showError, success: showSuccess, toast } = useToast();
   const { currentWorkspace } = useWorkspace();
   const [showCurlImport, setShowCurlImport] = useState(false);
@@ -117,6 +136,11 @@ const RequestEditor: React.FC = () => {
     'none' | 'basic' | 'bearer' | 'apiKey' | 'oauth1' | 'oauth2'
   >('bearer');
   const [token, setToken] = useState('');
+  const [selectedVariable, setSelectedVariable] =
+    useState<SelectedVariable | null>(null);
+  const [pendingSubstitutions, setPendingSubstitutions] = useState<
+    PendingSubstitution[]
+  >([]);
   const [authData, setAuthData] = useState({
     username: '',
     password: '',
@@ -156,6 +180,38 @@ const RequestEditor: React.FC = () => {
     sslVerification: true,
   });
 
+  const formattedVariables = useMemo(() => {
+    const formatted: Array<{ name: string; value: string }> = [];
+
+    // Process static variables
+    if (Array.isArray(variables)) {
+      variables.forEach((variable: any) => {
+        const name = variable.name || variable.key || '';
+        const value = variable.value || variable.initialValue || '';
+        if (name) {
+          formatted.push({ name, value });
+        }
+      });
+    }
+
+    // Process dynamic variables - generate values using generatorId
+    if (Array.isArray(dynamicVariables)) {
+      dynamicVariables.forEach((variable: any) => {
+        const name = variable.name || '';
+        if (name) {
+          // Generate value using the generatorId and parameters
+          const generatedValue = generateDynamicValueById(
+            variable.generatorId || '',
+            variable.parameters || {}
+          );
+          formatted.push({ name, value: String(generatedValue) });
+        }
+      });
+    }
+
+    return formatted;
+  }, [variables, dynamicVariables]);
+
   const [selectedFolderId, setSelectedFolderId] = useState<string>('');
   const [folderOptions, setFolderOptions] = useState<
     Array<{ id: string; label: string }>
@@ -164,7 +220,7 @@ const RequestEditor: React.FC = () => {
   console.log('selectedFolderId:', selectedFolderId);
 
   const [selectedCollectionId, setSelectedCollectionId] = useState<string>('');
-  const [isSaving, setIsSaving] = useState(false); // NEW: Flag to prevent data clearing during save
+  const [isSaving, setIsSaving] = useState(false);
 
   const collectionsRef = useRef(collections);
   useEffect(() => {
@@ -286,6 +342,7 @@ const RequestEditor: React.FC = () => {
           : 'json'
       );
       setBodyContent(activeRequest.bodyRawContent || '');
+      setPendingSubstitutions([]);
 
       try {
         if (
@@ -417,13 +474,20 @@ const RequestEditor: React.FC = () => {
       } else {
         setSelectedFolderId('');
       }
+
+      if (activeRequest.variable) {
+        setSelectedVariable(activeRequest.variable);
+      } else {
+        setSelectedVariable(null);
+      }
     } else if (!isSaving) {
-      // handleCreateRequest();
       setAssertions([]);
       setAuthType('bearer');
+      setSelectedVariable(null);
+      setPendingSubstitutions([]);
     }
     setResponseData(null);
-  }, [activeRequest, isSaving]); // Added isSaving to dependencies
+  }, [activeRequest, isSaving]);
 
   const formatBackendResponse = (result: any): FormattedResponse => {
     const importantHeaders = [
@@ -757,7 +821,6 @@ const RequestEditor: React.FC = () => {
     }
   };
 
-  // UPDATED: Set isSaving flag when opening save modal
   const handleSaveRequest = () => {
     if (!activeRequest) return;
     if (!url.trim()) {
@@ -768,7 +831,7 @@ const RequestEditor: React.FC = () => {
       return;
     }
 
-    setIsSaving(true); // Prevent data clearing
+    setIsSaving(true);
     setUrlAtOpen(url);
     setShowSaveModal(true);
   };
@@ -814,7 +877,7 @@ const RequestEditor: React.FC = () => {
       const effectiveFolderId =
         activeRequest?.folderId || selectedFolderId || undefined;
 
-      const requestData = {
+      const requestData: any = {
         workspaceId: currentWorkspace.id,
         description: '',
         name: activeRequest.name || 'New Request',
@@ -889,6 +952,7 @@ const RequestEditor: React.FC = () => {
         params,
         headers,
         assertions: selectedAssertions,
+        ...(selectedVariable ? { variable: selectedVariable } : {}),
       };
 
       if (!activeRequest.id) {
@@ -967,7 +1031,7 @@ const RequestEditor: React.FC = () => {
         ? assertions.filter((a) => a.enabled).map((a) => a)
         : [];
 
-      const requestData = {
+      const requestData: any = {
         workspaceId: currentWorkspace.id,
         collectionId: targetCollectionId,
         ...(selectedFolderId ? { folderId: selectedFolderId } : {}),
@@ -1043,6 +1107,7 @@ const RequestEditor: React.FC = () => {
         params,
         headers,
         assertions: selectedAssertions,
+        ...(selectedVariable ? { variable: selectedVariable } : {}),
       };
 
       console.log('requestData to save:', requestData);
@@ -1074,6 +1139,7 @@ const RequestEditor: React.FC = () => {
           authorization: requestData.authorization,
           params,
           headers,
+          ...(selectedVariable ? { variable: selectedVariable } : {}),
         };
         setActiveRequest(updatedRequest);
       }
@@ -1081,7 +1147,7 @@ const RequestEditor: React.FC = () => {
       setIsSaving(false);
     } catch (error) {
       console.error('Error saving request:', error);
-      setIsSaving(false); // Reset flag on error
+      setIsSaving(false);
       showError('Save Failed', 'An error occurred while saving the request.');
       setError({
         title: 'Save Failed',
@@ -1125,12 +1191,11 @@ const RequestEditor: React.FC = () => {
 
   const previewUrl = buildFinalUrl();
 
-  // UPDATED: Reset isSaving flag on cancel
   const handleCancelSave = () => {
     setShowSaveModal(false);
     setIsCreatingCollection(false);
     setNewCollectionName('');
-    setIsSaving(false); // Reset flag on cancel
+    setIsSaving(false);
   };
 
   const addParam = () => {
@@ -1212,6 +1277,23 @@ const RequestEditor: React.FC = () => {
 
   const removeUrlEncodedField = (index: number) => {
     setUrlEncodedFields(urlEncodedFields.filter((_, i) => i !== index));
+  };
+
+  const handleConfirmSubstitutions = (substitutions: PendingSubstitution[]) => {
+    const lines = bodyContent.split('\n');
+    let updatedContent = bodyContent;
+
+    substitutions.forEach((sub) => {
+      if (lines[sub.lineIndex]) {
+        const line = lines[sub.lineIndex];
+        // Add the substitution comment to the line
+        const updatedLine = `${line} // substituted with {{${sub.variableName}}}`;
+        updatedContent = updatedContent.replace(line, updatedLine);
+      }
+    });
+
+    setBodyContent(updatedContent);
+    setPendingSubstitutions([]);
   };
 
   const methods: RequestMethod[] = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'];
@@ -1446,9 +1528,26 @@ const RequestEditor: React.FC = () => {
           {activeTab === 'body' && (
             <div className='space-y-4'>
               <div className='flex items-center justify-between'>
-                <h3 className='text-base sm:text-lg font-medium text-gray-900 dark:text-white'>
-                  Request Body
-                </h3>
+                <TooltipProvider>
+                  <div className='flex items-center gap-2'>
+                    <h3 className='text-base sm:text-lg font-medium text-gray-900 dark:text-white'>
+                      Request Body
+                    </h3>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          type='button'
+                          className='p-1 text-gray-500 hover:text-[rgb(19,111,176)] transition-colors'
+                        >
+                          <Info className='w-4 h-4' />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        Hover a field to substitute a variable
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                </TooltipProvider>
                 <select
                   value={bodyType}
                   onChange={(e) => setBodyType(e.target.value as any)}
@@ -1471,17 +1570,15 @@ const RequestEditor: React.FC = () => {
               )}
 
               {bodyType === 'json' && (
-                <CodeMirror
+                <JsonVariableSubstitution
+                  onChange={(newValue) => setBodyContent(newValue)}
                   value={bodyContent}
-                  options={{
-                    mode: { name: 'javascript', json: true },
-                    theme: 'whiteorange',
-                    lineNumbers: true,
-                    lineWrapping: true,
-                  }}
-                  onBeforeChange={(editor, data, value) => {
-                    setBodyContent(value);
-                  }}
+                  onVariableSelect={setSelectedVariable}
+                  onConfirmSubstitution={handleConfirmSubstitutions}
+                  mode='json'
+                  variables={formattedVariables}
+                  initialVariable={selectedVariable}
+                  readOnly={false}
                 />
               )}
 
@@ -1519,17 +1616,15 @@ const RequestEditor: React.FC = () => {
               )}
 
               {bodyType === 'raw' && (
-                <CodeMirror
+                <JsonVariableSubstitution
+                  onChange={(newValue) => setBodyContent(newValue)} // ✅ add this
                   value={bodyContent}
-                  options={{
-                    mode: { name: 'javascript', json: true },
-                    theme: 'whiteorange',
-                    lineNumbers: true,
-                    lineWrapping: true,
-                  }}
-                  onBeforeChange={(editor, data, value) => {
-                    setBodyContent(value);
-                  }}
+                  onVariableSelect={setSelectedVariable}
+                  onConfirmSubstitution={handleConfirmSubstitutions}
+                  mode='raw'
+                  variables={formattedVariables}
+                  initialVariable={selectedVariable}
+                  readOnly={false}
                 />
               )}
 

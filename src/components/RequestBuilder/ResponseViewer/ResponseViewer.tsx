@@ -13,7 +13,7 @@ import {
 import { useRequest } from '@/hooks/useRequest';
 import JsonViewer from '../RequestEditor/JsonViewer';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { JsonViewer as TexteaJsonViewer } from "@textea/json-viewer";
+import { JsonViewer as TexteaJsonViewer } from '@textea/json-viewer';
 
 interface ResponseViewerProps {
   isBottomLayout: boolean;
@@ -153,8 +153,9 @@ const ResponseViewer = ({ isBottomLayout }: ResponseViewerProps) => {
       {/* Response Tabs & Status */}
       <div className='border-b border-gray-200 dark:border-gray-700 flex-shrink-0'>
         <div
-          className={`items-center justify-between px-4 ${!isBottomLayout ? 'mt-5' : 'flex'
-            }`}
+          className={`items-center justify-between px-4 ${
+            !isBottomLayout ? 'mt-5' : 'flex'
+          }`}
         >
           {/* Top status summary (desktop) */}
           {!isBottomLayout && (
@@ -168,10 +169,11 @@ const ResponseViewer = ({ isBottomLayout }: ResponseViewerProps) => {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
-                className={`py-4 px-2 sm:px-4 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${activeTab === tab.id
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
+                className={`py-4 px-2 sm:px-4 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
+                  activeTab === tab.id
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
                 aria-current={activeTab === tab.id ? 'page' : undefined}
                 tabIndex={0}
                 type='button'
@@ -230,10 +232,11 @@ const ResponseViewer = ({ isBottomLayout }: ResponseViewerProps) => {
                 <div className='flex items-center gap-1 sm:gap-2'>
                   <button
                     onClick={() => setBodyView('pretty')}
-                    className={`px-2 py-1 rounded-md text-xs sm:text-sm flex items-center ${bodyView === 'pretty'
-                      ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-[#136fb0]'
-                      : 'hover:bg-gray-100 dark:hover:bg-gray-800'
-                      }`}
+                    className={`px-2 py-1 rounded-md text-xs sm:text-sm flex items-center ${
+                      bodyView === 'pretty'
+                        ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-[#136fb0]'
+                        : 'hover:bg-gray-100 dark:hover:bg-gray-800'
+                    }`}
                   >
                     <Eye className='h-3 w-3 sm:h-4 sm:w-4 mr-1' />
                     <span className='hidden sm:inline'>Pretty</span>
@@ -241,10 +244,11 @@ const ResponseViewer = ({ isBottomLayout }: ResponseViewerProps) => {
                   </button>
                   <button
                     onClick={() => setBodyView('raw')}
-                    className={`px-2 py-1 rounded-md text-xs sm:text-sm flex items-center ${bodyView === 'raw'
-                      ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
-                      : 'hover:bg-gray-100 dark:hover:bg-gray-800'
-                      }`}
+                    className={`px-2 py-1 rounded-md text-xs sm:text-sm flex items-center ${
+                      bodyView === 'raw'
+                        ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
+                        : 'hover:bg-gray-100 dark:hover:bg-gray-800'
+                    }`}
                   >
                     <Code className='h-3 w-3 sm:h-4 sm:w-4 mr-1' />
                     <span className='hidden sm:inline'>Raw</span>
@@ -252,10 +256,11 @@ const ResponseViewer = ({ isBottomLayout }: ResponseViewerProps) => {
                   </button>
                   <button
                     onClick={() => setBodyView('preview')}
-                    className={`px-2 py-1 rounded-md text-xs sm:text-sm flex items-center ${bodyView === 'preview'
-                      ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
-                      : 'hover:bg-gray-100 dark:hover:bg-gray-800'
-                      }`}
+                    className={`px-2 py-1 rounded-md text-xs sm:text-sm flex items-center ${
+                      bodyView === 'preview'
+                        ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
+                        : 'hover:bg-gray-100 dark:hover:bg-gray-800'
+                    }`}
                   >
                     <span className='hidden sm:inline'>Preview</span>
                     <span className='sm:hidden'>Prev</span>
@@ -296,27 +301,18 @@ const ResponseViewer = ({ isBottomLayout }: ResponseViewerProps) => {
             </div>
 
             <div className='flex-1 p-4 overflow-auto'>
-              {/* <JsonViewer
-                data={filterResponseData(responseData.body, searchQuery)}
-                view={bodyView}
-                isError={
-                  responseData.status === 0 || responseData.status >= 400
-                }
-                searchQuery={searchQuery}
-              /> */}
               <TexteaJsonViewer
                 value={filterResponseData(responseData.body, searchQuery)}
-                theme="dark"
+                theme='dark'
                 rootName={false}
                 defaultInspectDepth={2}
                 displayDataTypes={false}
                 search={searchQuery}
                 style={{
-                  fontFamily: "monospace",
-                  fontSize: "13px",
+                  fontFamily: 'monospace',
+                  fontSize: '13px',
                 }}
               />
-
             </div>
           </div>
         )}
@@ -354,7 +350,7 @@ const ResponseViewer = ({ isBottomLayout }: ResponseViewerProps) => {
         {activeTab === 'test-results' && (
           <div className='p-4 overflow-auto h-full'>
             {responseData.assertionLogs &&
-              responseData.assertionLogs.length > 0 ? (
+            responseData.assertionLogs.length > 0 ? (
               <div className='space-y-6'>
                 {/* Summary Cards */}
                 <div className='grid grid-cols-1 sm:grid-cols-3 gap-4'>
@@ -417,10 +413,11 @@ const ResponseViewer = ({ isBottomLayout }: ResponseViewerProps) => {
                   {responseData.assertionLogs.map((assertion, index) => (
                     <div
                       key={assertion.id}
-                      className={`border rounded-lg p-4 ${assertion.status === 'passed'
-                        ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
-                        : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
-                        }`}
+                      className={`border rounded-lg p-4 ${
+                        assertion.status === 'passed'
+                          ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
+                          : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
+                      }`}
                     >
                       <div className='flex items-start justify-between mb-3'>
                         <div className='flex items-center space-x-2'>
@@ -434,10 +431,11 @@ const ResponseViewer = ({ isBottomLayout }: ResponseViewerProps) => {
                         {/* Description + Category/Group in one line */}
                         <div className='flex flex-1 items-center justify-between ml-2'>
                           <h4
-                            className={`font-medium ${assertion.status === 'passed'
-                              ? 'text-green-800 dark:text-green-300'
-                              : 'text-red-800 dark:text-red-300'
-                              }`}
+                            className={`font-medium ${
+                              assertion.status === 'passed'
+                                ? 'text-green-800 dark:text-green-300'
+                                : 'text-red-800 dark:text-red-300'
+                            }`}
                           >
                             {assertion.description ||
                               `${assertion.type} assertion`}
@@ -446,12 +444,13 @@ const ResponseViewer = ({ isBottomLayout }: ResponseViewerProps) => {
                           {assertion.category && (
                             <div className='flex items-center space-x-2'>
                               <span
-                                className={`px-2 py-1 rounded text-xs font-medium ${assertion.category === 'status'
-                                  ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300'
-                                  : assertion.category === 'security'
+                                className={`px-2 py-1 rounded text-xs font-medium ${
+                                  assertion.category === 'status'
+                                    ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300'
+                                    : assertion.category === 'security'
                                     ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300'
                                     : 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300'
-                                  }`}
+                                }`}
                               >
                                 {assertion.category}
                               </span>
@@ -504,10 +503,11 @@ const ResponseViewer = ({ isBottomLayout }: ResponseViewerProps) => {
             {responseData.schemaValidation ? (
               <div className='space-y-4'>
                 <div
-                  className={`border rounded-lg p-4 ${responseData.schemaValidation.passed
-                    ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
-                    : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
-                    }`}
+                  className={`border rounded-lg p-4 ${
+                    responseData.schemaValidation.passed
+                      ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
+                      : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
+                  }`}
                 >
                   <div className='flex items-center space-x-2'>
                     {responseData.schemaValidation.passed ? (
@@ -517,10 +517,11 @@ const ResponseViewer = ({ isBottomLayout }: ResponseViewerProps) => {
                     )}
                     <div>
                       <h3
-                        className={`font-medium ${responseData.schemaValidation.passed
-                          ? 'text-green-800 dark:text-green-300'
-                          : 'text-red-800 dark:text-red-300'
-                          }`}
+                        className={`font-medium ${
+                          responseData.schemaValidation.passed
+                            ? 'text-green-800 dark:text-green-300'
+                            : 'text-red-800 dark:text-red-300'
+                        }`}
                       >
                         Schema Validation{' '}
                         {responseData.schemaValidation.passed
