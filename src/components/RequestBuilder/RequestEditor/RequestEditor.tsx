@@ -2,7 +2,7 @@
 
 import type React from 'react';
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { Play, Save, FolderPlus, Plus, FileTerminal } from 'lucide-react';
+import { Play, Save, FolderPlus, Plus, FileTerminal, Info } from 'lucide-react';
 import { useRequest } from '@/hooks/useRequest';
 import { useCollection } from '@/hooks/useCollection';
 import { useWorkspace } from '@/hooks/useWorkspace';
@@ -20,7 +20,12 @@ import { useDataManagement } from '@/hooks/useDataManagement';
 import { executeCollectionRequest } from '@/services/executeRequest.service';
 import { updateRequest } from '@/services/collection.service';
 import { useMutation } from '@tanstack/react-query';
-import { TooltipProvider } from '@/components/ui/tooltip';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
 import { generateAssertions } from '@/utils/assertionGenerator';
 import AssertionManager from './assertionManager';
@@ -1523,9 +1528,26 @@ const RequestEditor: React.FC = () => {
           {activeTab === 'body' && (
             <div className='space-y-4'>
               <div className='flex items-center justify-between'>
-                <h3 className='text-base sm:text-lg font-medium text-gray-900 dark:text-white'>
-                  Request Body
-                </h3>
+                <TooltipProvider>
+                  <div className='flex items-center gap-2'>
+                    <h3 className='text-base sm:text-lg font-medium text-gray-900 dark:text-white'>
+                      Request Body
+                    </h3>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          type='button'
+                          className='p-1 text-gray-500 hover:text-[rgb(19,111,176)] transition-colors'
+                        >
+                          <Info className='w-4 h-4' />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        Hover a field to substitute a variable
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                </TooltipProvider>
                 <select
                   value={bodyType}
                   onChange={(e) => setBodyType(e.target.value as any)}

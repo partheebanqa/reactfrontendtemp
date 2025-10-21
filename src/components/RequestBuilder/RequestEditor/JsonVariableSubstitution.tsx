@@ -1,5 +1,6 @@
 'use client';
 
+import { Trash2 } from 'lucide-react';
 import type React from 'react';
 import { useState, useRef, useEffect, useMemo } from 'react';
 
@@ -178,10 +179,10 @@ export const JsonVariableSubstitution: React.FC<
           </div>
           <button
             onClick={handleClearSavedVariable}
-            className='px-2 py-1 bg-red-600 hover:bg-red-700 text-white text-xs rounded transition-colors'
+            className='p-1.5 bg-red-50 hover:bg-red-100 rounded-full transition-colors'
             title='Remove variable'
           >
-            ✕
+            <Trash2 className='w-4 h-4 text-red-600' />
           </button>
         </div>
       )}
@@ -221,49 +222,49 @@ export const JsonVariableSubstitution: React.FC<
                     !pendingVar &&
                     !alreadySubstituted ? (
                       <>
-                        <span className='px-2 bg-yellow-500 text-yellow-900 text-xs rounded font-mono whitespace-nowrap'>
+                        <span className='px-2.5 py-1 bg-yellow-500 text-yellow-900 text-sm rounded font-mono whitespace-nowrap'>
                           {selectedVariable.name}
                         </span>
                         <button
                           onClick={handleClearSavedVariable}
-                          className='px-2 bg-red-600 hover:bg-red-700 text-white text-xs rounded transition-colors'
+                          className='p-1.5 bg-red-50 hover:bg-red-100 rounded-full transition-colors'
                           title='Remove variable'
                         >
-                          ✕
+                          <Trash2 className='w-4 h-4 text-red-600' />
                         </button>
                       </>
                     ) : !pendingVar && !alreadySubstituted ? (
                       <button
                         onClick={() => handleSubstituteClick(index)}
-                        className='px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded whitespace-nowrap transition-colors'
+                        className='px-2.5 py-1 bg-[rgb(19,111,176)] hover:bg-[rgb(15,90,144)] text-white text-[13px] rounded-md transition-colors flex items-center justify-center whitespace-nowrap'
                         title='Substitute variable'
                       >
                         Substitute Variable
                       </button>
                     ) : pendingVar ? (
                       <>
-                        <span className='px-2 bg-yellow-500 text-yellow-900 text-xs rounded font-mono whitespace-nowrap'>
+                        <span className='px-2.5 py-1 bg-yellow-500 text-yellow-900 text-sm rounded font-mono whitespace-nowrap'>
                           {pendingVar}
                         </span>
                         <button
                           onClick={() => handleClearPendingSubstitution(index)}
-                          className='px-2 bg-red-600 hover:bg-red-700 text-white text-xs rounded transition-colors'
+                          className='px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white text-sm rounded whitespace-nowrap transition-colors'
                           title='Remove pending substitution'
                         >
-                          ✕
+                          <Trash2 className='w-4 h-4 text-red-600' />
                         </button>
                       </>
                     ) : alreadySubstituted ? (
                       <>
-                        <span className='px-2 bg-green-500 text-green-900 text-xs rounded font-mono whitespace-nowrap'>
+                        <span className='px-2.5 py-1 bg-green-500 text-green-900 text-sm rounded font-mono whitespace-nowrap'>
                           {alreadySubstituted}
                         </span>
                         <button
                           onClick={() => handleRemoveSubstitution(index)}
-                          className='px-2 bg-red-600 hover:bg-red-700 text-white text-xs rounded transition-colors'
+                          className='px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white text-sm rounded whitespace-nowrap transition-colors'
                           title='Remove substitution'
                         >
-                          ✕
+                          <Trash2 className='w-4 h-4 text-red-600' />
                         </button>
                       </>
                     ) : null}
