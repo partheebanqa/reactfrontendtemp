@@ -35,6 +35,7 @@ import { Input } from '@/components/ui/input';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { useAddFolder } from '@/hooks/use-folder';
 import { renameFolder, deleteFolder } from '@/services/folder.service';
+import { collectionActions } from '@/store/collectionStore';
 
 const Sidebar: React.FC = () => {
   const { currentWorkspace } = useWorkspace();
@@ -96,6 +97,7 @@ const Sidebar: React.FC = () => {
     } catch {}
     setActiveCollection(parentCollection);
     setActiveRequest(req);
+    collectionActions.openRequest(req);
   };
 
   useEffect(() => {
