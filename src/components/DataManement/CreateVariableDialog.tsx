@@ -42,7 +42,7 @@ interface VariableCreateDialogProps {
   newVariable: Variable;
   setNewVariable: React.Dispatch<React.SetStateAction<Variable>>;
   handleCreate: (payload: any) => void;
-  environments: Environment[];
+  // environments?: Environment[];
   type: 'static' | 'dynamic';
 }
 
@@ -52,7 +52,7 @@ const VariableCreateDialog: React.FC<VariableCreateDialogProps> = ({
   newVariable,
   setNewVariable,
   handleCreate,
-  environments,
+  // environments,
   type,
 }) => {
   const { currentWorkspace } = useWorkspace();
@@ -654,7 +654,7 @@ const VariableCreateDialog: React.FC<VariableCreateDialogProps> = ({
                                 />
                                 <span className='text-sm'>
                                   {newVariable.generatorConfig?.[key] ??
-                                  schema.default
+                                    schema.default
                                     ? 'Yes'
                                     : 'No'}
                                 </span>
@@ -744,7 +744,7 @@ const VariableCreateDialog: React.FC<VariableCreateDialogProps> = ({
                                   ([key, schema]: [string, any]) => [
                                     key,
                                     newVariable.generatorConfig?.[key] ??
-                                      schema.default,
+                                    schema.default,
                                   ]
                                 )
                               )),
@@ -756,11 +756,10 @@ const VariableCreateDialog: React.FC<VariableCreateDialogProps> = ({
                         }
                         return 'Invalid generator';
                       } catch (error) {
-                        return `Error: ${
-                          error instanceof Error
-                            ? error.message
-                            : 'Unknown error'
-                        }`;
+                        return `Error: ${error instanceof Error
+                          ? error.message
+                          : 'Unknown error'
+                          }`;
                       }
                     })()}
                   </div>
