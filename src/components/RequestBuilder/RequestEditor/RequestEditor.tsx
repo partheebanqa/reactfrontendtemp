@@ -865,9 +865,7 @@ const RequestEditor: React.FC = () => {
       }
 
       if (activeCollection) {
-        const response = await fetchCollectionRequests.mutateAsync(
-          activeCollection.id
-        );
+        await fetchCollectionRequests.mutateAsync(activeCollection.id);
       }
 
       let effectiveAuthType = authType;
@@ -898,8 +896,8 @@ const RequestEditor: React.FC = () => {
         workspaceId: currentWorkspace.id,
         description: '',
         name: activeRequest.name || 'New Request',
-        method: method,
-        url: url,
+        method,
+        url,
         ...(effectiveFolderId ? { folderId: effectiveFolderId } : {}),
         bodyType: bodyType === 'json' ? 'raw' : bodyType,
         bodyFormData:
@@ -969,8 +967,18 @@ const RequestEditor: React.FC = () => {
         params,
         headers,
         assertions: selectedAssertions,
-        ...(selectedVariable ? { variable: selectedVariable } : {}),
       };
+
+      if (
+        selectedVariable &&
+        selectedVariable.name?.trim() &&
+        selectedVariable.path?.trim()
+      ) {
+        requestData.variable = {
+          name: selectedVariable.name,
+          path: selectedVariable.path,
+        };
+      }
 
       if (!activeRequest.id) {
         showError('Missing ID', 'Cannot update a request without an id.');
