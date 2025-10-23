@@ -286,10 +286,18 @@ export const collectionActions = {
           ? { ...state.activeRequest, name, workspaceId }
           : state.activeRequest;
 
+      const updatedOpenedRequests = state.openedRequests.map((request) => {
+        if (request.id === requestId) {
+          return { ...request, name };
+        }
+        return request;
+      });
+
       return {
         ...state,
         collections: updatedCollections,
         activeRequest: updatedActiveRequest,
+        openedRequests: updatedOpenedRequests,
       };
     });
   },

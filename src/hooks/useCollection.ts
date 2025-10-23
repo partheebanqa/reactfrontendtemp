@@ -170,6 +170,7 @@ export function useCollection() {
     }
 
     setActiveRequest(newRequest);
+    openRequest(newRequest);
   };
 
   useEffect(() => {
