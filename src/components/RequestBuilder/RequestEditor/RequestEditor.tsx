@@ -38,6 +38,8 @@ import './whiteorange.css';
 import EditableTextWithoutIcon from '@/components/ui/EditableTextWithoutIcon';
 import { JsonVariableSubstitution } from './JsonVariableSubstitution';
 import { generateDynamicValueById } from '@/lib/request-utils';
+import RequestTabs from './RequestTabs';
+import { collectionActions } from '@/store/collectionStore';
 
 type Assertion = {
   id: string;
@@ -99,13 +101,8 @@ const RequestEditor: React.FC = () => {
     fetchCollectionRequests,
   } = useCollection();
 
-  console.log('activeRequest123:', activeRequest);
-
   const { variables, dynamicVariables, environments, activeEnvironment } =
     useDataManagement();
-  console.log('variables123:', variables);
-  console.log('dynamicVariables:', dynamicVariables);
-
   const { error: showError, success: showSuccess, toast } = useToast();
   const { currentWorkspace } = useWorkspace();
   const [showCurlImport, setShowCurlImport] = useState(false);
@@ -217,8 +214,6 @@ const RequestEditor: React.FC = () => {
     Array<{ id: string; label: string }>
   >([]);
 
-  console.log('selectedFolderId:', selectedFolderId);
-
   const [selectedCollectionId, setSelectedCollectionId] = useState<string>('');
   const [isSaving, setIsSaving] = useState(false);
 
@@ -279,8 +274,6 @@ const RequestEditor: React.FC = () => {
     const options = buildFolderOptions(foldersTree);
     setFolderOptions(options);
   }, [activeCollection?.id]);
-
-  console.log('url in state:', url);
 
   const updateRequestMutation = useMutation({
     mutationFn: ({
@@ -469,7 +462,6 @@ const RequestEditor: React.FC = () => {
       }
 
       if (activeRequest.folderId) {
-        console.log('activeRequest', activeRequest);
         setSelectedFolderId(activeRequest.folderId);
       } else {
         setSelectedFolderId('');
@@ -526,11 +518,12 @@ const RequestEditor: React.FC = () => {
   };
 
   const handleCurlImport = (parsedRequest: any) => {
-    console.log('parsedRequest:', parsedRequest);
-
     try {
       if (parsedRequest.url) {
         setUrl(parsedRequest.url);
+        if (activeRequest?.id) {
+          collectionActions.markUnsaved(activeRequest.id);
+        }
       }
 
       if (parsedRequest.method) {
@@ -545,6 +538,9 @@ const RequestEditor: React.FC = () => {
           parsedRequest.method.toUpperCase() as RequestMethod;
         if (supportedMethods.includes(requestMethod)) {
           setMethod(requestMethod);
+          if (activeRequest?.id) {
+            collectionActions.markUnsaved(activeRequest.id);
+          }
         }
       }
 
@@ -555,6 +551,9 @@ const RequestEditor: React.FC = () => {
           enabled: header.enabled !== undefined ? header.enabled : true,
         }));
         setHeaders(formattedHeaders);
+        if (activeRequest?.id) {
+          collectionActions.markUnsaved(activeRequest.id);
+        }
       }
 
       if (parsedRequest.params && Array.isArray(parsedRequest.params)) {
@@ -564,6 +563,9 @@ const RequestEditor: React.FC = () => {
           enabled: param.enabled !== undefined ? param.enabled : true,
         }));
         setParams(formattedParams);
+        if (activeRequest?.id) {
+          collectionActions.markUnsaved(activeRequest.id);
+        }
       }
 
       if (parsedRequest.bodyType) {
@@ -585,6 +587,9 @@ const RequestEditor: React.FC = () => {
               | 'raw'
               | 'binary'
           );
+          if (activeRequest?.id) {
+            collectionActions.markUnsaved(activeRequest.id);
+          }
         }
       }
 
@@ -607,6 +612,9 @@ const RequestEditor: React.FC = () => {
           bodyContentToSet = parsedBodyContent;
         }
         setBodyContent(bodyContentToSet);
+        if (activeRequest?.id) {
+          collectionActions.markUnsaved(activeRequest.id);
+        }
       }
 
       if (parsedRequest.auth && parsedRequest.auth.type) {
@@ -647,6 +655,9 @@ const RequestEditor: React.FC = () => {
             setAuthType('bearer');
             break;
         }
+        if (activeRequest?.id) {
+          collectionActions.markUnsaved(activeRequest.id);
+        }
       }
 
       if (parsedRequest.bodyType === 'form-data' && parsedRequest.formData) {
@@ -659,6 +670,9 @@ const RequestEditor: React.FC = () => {
           })
         );
         setFormFields(formDataFields);
+        if (activeRequest?.id) {
+          collectionActions.markUnsaved(activeRequest.id);
+        }
       }
 
       if (
@@ -672,6 +686,9 @@ const RequestEditor: React.FC = () => {
             encodedFields.push({ key, value, enabled: true });
           });
           setUrlEncodedFields(encodedFields);
+          if (activeRequest?.id) {
+            collectionActions.markUnsaved(activeRequest.id);
+          }
         } catch (e) {
           console.error('Error parsing URL encoded body:', e);
         }
@@ -965,6 +982,8 @@ const RequestEditor: React.FC = () => {
         requestData,
       });
 
+      collectionActions.markSaved(activeRequest.id);
+
       toast({
         title: 'Request updated successfully!',
         duration: 3000,
@@ -1110,8 +1129,6 @@ const RequestEditor: React.FC = () => {
         ...(selectedVariable ? { variable: selectedVariable } : {}),
       };
 
-      console.log('requestData to save:', requestData);
-
       const savedRequestResponse = await addRequestMutation.mutateAsync(
         requestData
       );
@@ -1142,6 +1159,7 @@ const RequestEditor: React.FC = () => {
           ...(selectedVariable ? { variable: selectedVariable } : {}),
         };
         setActiveRequest(updatedRequest);
+        collectionActions.markSaved(newId);
       }
 
       setIsSaving(false);
@@ -1200,6 +1218,9 @@ const RequestEditor: React.FC = () => {
 
   const addParam = () => {
     setParams([...params, { key: '', value: '', enabled: true }]);
+    if (activeRequest?.id) {
+      collectionActions.markUnsaved(activeRequest.id);
+    }
   };
 
   const updateParam = (
@@ -1210,14 +1231,23 @@ const RequestEditor: React.FC = () => {
     const newParams = [...params];
     newParams[index] = { ...newParams[index], [field]: value };
     setParams(newParams);
+    if (activeRequest?.id) {
+      collectionActions.markUnsaved(activeRequest.id);
+    }
   };
 
   const removeParam = (index: number) => {
     setParams(params.filter((_, i) => i !== index));
+    if (activeRequest?.id) {
+      collectionActions.markUnsaved(activeRequest.id);
+    }
   };
 
   const addHeader = () => {
     setHeaders([...headers, { key: '', value: '', enabled: true }]);
+    if (activeRequest?.id) {
+      collectionActions.markUnsaved(activeRequest.id);
+    }
   };
 
   const updateHeader = (
@@ -1228,10 +1258,16 @@ const RequestEditor: React.FC = () => {
     const newHeaders = [...headers];
     newHeaders[index] = { ...newHeaders[index], [field]: value };
     setHeaders(newHeaders);
+    if (activeRequest?.id) {
+      collectionActions.markUnsaved(activeRequest.id);
+    }
   };
 
   const removeHeader = (index: number) => {
     setHeaders(headers.filter((_, i) => i !== index));
+    if (activeRequest?.id) {
+      collectionActions.markUnsaved(activeRequest.id);
+    }
   };
 
   const addFormField = () => {
@@ -1239,6 +1275,9 @@ const RequestEditor: React.FC = () => {
       ...formFields,
       { key: '', value: '', enabled: true, type: 'text' },
     ]);
+    if (activeRequest?.id) {
+      collectionActions.markUnsaved(activeRequest.id);
+    }
   };
 
   const updateFormField = (
@@ -1249,10 +1288,16 @@ const RequestEditor: React.FC = () => {
     const newFormFields = [...formFields];
     newFormFields[index] = { ...newFormFields[index], [field]: value };
     setFormFields(newFormFields);
+    if (activeRequest?.id) {
+      collectionActions.markUnsaved(activeRequest.id);
+    }
   };
 
   const removeFormField = (index: number) => {
     setFormFields(formFields.filter((_, i) => i !== index));
+    if (activeRequest?.id) {
+      collectionActions.markUnsaved(activeRequest.id);
+    }
   };
 
   const addUrlEncodedField = () => {
@@ -1260,6 +1305,9 @@ const RequestEditor: React.FC = () => {
       ...urlEncodedFields,
       { key: '', value: '', enabled: true },
     ]);
+    if (activeRequest?.id) {
+      collectionActions.markUnsaved(activeRequest.id);
+    }
   };
 
   const updateUrlEncodedField = (
@@ -1273,10 +1321,16 @@ const RequestEditor: React.FC = () => {
       [field]: value,
     };
     setUrlEncodedFields(newUrlEncodedFields);
+    if (activeRequest?.id) {
+      collectionActions.markUnsaved(activeRequest.id);
+    }
   };
 
   const removeUrlEncodedField = (index: number) => {
     setUrlEncodedFields(urlEncodedFields.filter((_, i) => i !== index));
+    if (activeRequest?.id) {
+      collectionActions.markUnsaved(activeRequest.id);
+    }
   };
 
   const handleConfirmSubstitutions = (substitutions: PendingSubstitution[]) => {
@@ -1286,7 +1340,6 @@ const RequestEditor: React.FC = () => {
     substitutions.forEach((sub) => {
       if (lines[sub.lineIndex]) {
         const line = lines[sub.lineIndex];
-        // Add the substitution comment to the line
         const updatedLine = `${line} // substituted with {{${sub.variableName}}}`;
         updatedContent = updatedContent.replace(line, updatedLine);
       }
@@ -1294,6 +1347,9 @@ const RequestEditor: React.FC = () => {
 
     setBodyContent(updatedContent);
     setPendingSubstitutions([]);
+    if (activeRequest?.id) {
+      collectionActions.markUnsaved(activeRequest.id);
+    }
   };
 
   const methods: RequestMethod[] = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'];
@@ -1332,6 +1388,8 @@ const RequestEditor: React.FC = () => {
   return (
     <TooltipProvider>
       <div className='flex-1 flex flex-col bg-white dark:bg-gray-900 overflow-hidden'>
+        <RequestTabs />
+
         <div className='border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex-shrink-0'>
           <div className='flex items-center justify-between'>
             <div className='flex items-center text-sm space-x-1'>
@@ -1354,7 +1412,12 @@ const RequestEditor: React.FC = () => {
           <div className='flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-2'>
             <select
               value={method}
-              onChange={(e) => setMethod(e.target.value as RequestMethod)}
+              onChange={(e) => {
+                setMethod(e.target.value as RequestMethod);
+                if (activeRequest?.id) {
+                  collectionActions.markUnsaved(activeRequest.id);
+                }
+              }}
               className={`w-full sm:w-auto border rounded-md pl-3 pr-0 py-2 text-sm font-medium hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all duration-150 ${getMethodColor(
                 method
               )}`}
@@ -1376,7 +1439,12 @@ const RequestEditor: React.FC = () => {
             <Input
               type='text'
               value={url}
-              onChange={(e) => setUrl(e.target.value)}
+              onChange={(e) => {
+                setUrl(e.target.value);
+                if (activeRequest?.id) {
+                  collectionActions.markUnsaved(activeRequest.id);
+                }
+              }}
               placeholder='Enter request URL'
             />
 
@@ -1550,7 +1618,12 @@ const RequestEditor: React.FC = () => {
                 </TooltipProvider>
                 <select
                   value={bodyType}
-                  onChange={(e) => setBodyType(e.target.value as any)}
+                  onChange={(e) => {
+                    setBodyType(e.target.value as any);
+                    if (activeRequest?.id) {
+                      collectionActions.markUnsaved(activeRequest.id);
+                    }
+                  }}
                   className='border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-800 text-sm font-medium hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all duration-150'
                 >
                   <option value='none'>None</option>
@@ -1571,7 +1644,12 @@ const RequestEditor: React.FC = () => {
 
               {bodyType === 'json' && (
                 <JsonVariableSubstitution
-                  onChange={(newValue) => setBodyContent(newValue)}
+                  onChange={(newValue) => {
+                    setBodyContent(newValue);
+                    if (activeRequest?.id) {
+                      collectionActions.markUnsaved(activeRequest.id);
+                    }
+                  }}
                   value={bodyContent}
                   onVariableSelect={setSelectedVariable}
                   onConfirmSubstitution={handleConfirmSubstitutions}
@@ -1617,7 +1695,12 @@ const RequestEditor: React.FC = () => {
 
               {bodyType === 'raw' && (
                 <JsonVariableSubstitution
-                  onChange={(newValue) => setBodyContent(newValue)} // ✅ add this
+                  onChange={(newValue) => {
+                    setBodyContent(newValue);
+                    if (activeRequest?.id) {
+                      collectionActions.markUnsaved(activeRequest.id);
+                    }
+                  }}
                   value={bodyContent}
                   onVariableSelect={setSelectedVariable}
                   onConfirmSubstitution={handleConfirmSubstitutions}
@@ -1658,9 +1741,12 @@ const RequestEditor: React.FC = () => {
                 <Input
                   type='text'
                   value={authData.token}
-                  onChange={(e) =>
-                    setAuthData({ ...authData, token: e.target.value })
-                  }
+                  onChange={(e) => {
+                    setAuthData({ ...authData, token: e.target.value });
+                    if (activeRequest?.id) {
+                      collectionActions.markUnsaved(activeRequest.id);
+                    }
+                  }}
                   placeholder='Enter token'
                 />
               </div>

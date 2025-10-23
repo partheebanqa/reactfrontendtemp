@@ -1,7 +1,6 @@
 import { Store, useStore } from '@tanstack/react-store';
 import type { Collection, CollectionRequest } from '@/shared/types/collection';
 
-// Define the shape of our request state
 interface CollectionState {
   responseLayout: 'bottom' | 'right';
   activeRequest: CollectionRequest | null;
@@ -11,11 +10,12 @@ interface CollectionState {
   expandedCollections: Set<string>;
   isLoading: boolean;
   error: string | null;
+  openedRequests: CollectionRequest[];
+  unsavedChanges: Set<string>;
 }
 
-// Initial state for request
 export const initialCollectionState: CollectionState = {
-  responseLayout: 'bottom', // Default layout
+  responseLayout: 'bottom',
   activeCollection: null,
   activeRequest: null,
   collections: [],
@@ -23,16 +23,15 @@ export const initialCollectionState: CollectionState = {
   expandedCollections: new Set(),
   isLoading: false,
   error: null,
+  openedRequests: [],
+  unsavedChanges: new Set(),
 };
 
-// Create the store
 export const collectionStore = new Store<CollectionState>(
   initialCollectionState
 );
 
-// Define actions to update the store
 export const collectionActions = {
-  // Update response layout
   setResponseLayout: (layout: 'bottom' | 'right') => {
     collectionStore.setState((state) => ({
       ...state,
@@ -40,7 +39,6 @@ export const collectionActions = {
     }));
   },
 
-  // Update active collection
   setActiveCollection: (collection: Collection | null) => {
     collectionStore.setState((state) => ({
       ...state,
@@ -55,6 +53,65 @@ export const collectionActions = {
     }));
   },
 
+  openRequest: (request: CollectionRequest) => {
+    collectionStore.setState((state) => {
+      const isAlreadyOpen = state.openedRequests.some(
+        (r) => r.id === request.id
+      );
+      return {
+        ...state,
+        openedRequests: isAlreadyOpen
+          ? state.openedRequests
+          : [...state.openedRequests, request],
+        activeRequest: request,
+      };
+    });
+  },
+
+  closeRequest: (requestId: string) => {
+    collectionStore.setState((state) => {
+      const updatedOpened = state.openedRequests.filter(
+        (r) => r.id !== requestId
+      );
+      const updatedUnsaved = new Set(state.unsavedChanges);
+      updatedUnsaved.delete(requestId);
+
+      let newActiveRequest = state.activeRequest;
+      if (state.activeRequest?.id === requestId) {
+        newActiveRequest = updatedOpened[updatedOpened.length - 1] || null;
+      }
+
+      return {
+        ...state,
+        openedRequests: updatedOpened,
+        unsavedChanges: updatedUnsaved,
+        activeRequest: newActiveRequest,
+      };
+    });
+  },
+
+  markUnsaved: (requestId: string) => {
+    collectionStore.setState((state) => {
+      const updatedUnsaved = new Set(state.unsavedChanges);
+      updatedUnsaved.add(requestId);
+      return {
+        ...state,
+        unsavedChanges: updatedUnsaved,
+      };
+    });
+  },
+
+  markSaved: (requestId: string) => {
+    collectionStore.setState((state) => {
+      const updatedUnsaved = new Set(state.unsavedChanges);
+      updatedUnsaved.delete(requestId);
+      return {
+        ...state,
+        unsavedChanges: updatedUnsaved,
+      };
+    });
+  },
+
   setCollections: (collections: Collection[]) => {
     collectionStore.setState((state) => ({
       ...state,
@@ -62,7 +119,6 @@ export const collectionActions = {
     }));
   },
 
-  // Add a new collection
   addCollection: (collection: Collection) => {
     collectionStore.setState((state) => ({
       ...state,
@@ -85,28 +141,10 @@ export const collectionActions = {
     }));
   },
 
-  // Remove a collection
   removeCollection: (collectionId: string) => {
     collectionStore.setState((state) => ({
       ...state,
       collections: state.collections.filter((c) => c.id !== collectionId),
-    }));
-  },
-
-  // Set loading state
-  setIsLoading: (isLoading: boolean) => {
-    collectionStore.setState((state) => ({
-      ...state,
-      isLoading,
-    }));
-  },
-
-  // Set error
-  setError: (error: string | null) => {
-    collectionStore.setState((state) => ({
-      ...state,
-      error,
-      isLoading: false,
     }));
   },
 
@@ -185,9 +223,7 @@ export const collectionActions = {
 
   deleteRequest: (requestId: string) => {
     collectionStore.setState((state) => {
-      // Find which collection contains this request
       const updatedCollections = state.collections.map((collection) => {
-        // If this collection has the request, filter it out
         if (collection.requests.some((req) => req.id === requestId)) {
           return {
             ...collection,
@@ -197,7 +233,6 @@ export const collectionActions = {
         return collection;
       });
 
-      // If the active request is the one being deleted, set it to null
       const newActiveRequest =
         state.activeRequest?.id === requestId ? null : state.activeRequest;
 
@@ -251,16 +286,38 @@ export const collectionActions = {
           ? { ...state.activeRequest, name, workspaceId }
           : state.activeRequest;
 
+      const updatedOpenedRequests = state.openedRequests.map((request) => {
+        if (request.id === requestId) {
+          return { ...request, name };
+        }
+        return request;
+      });
+
       return {
         ...state,
         collections: updatedCollections,
         activeRequest: updatedActiveRequest,
+        openedRequests: updatedOpenedRequests,
       };
     });
   },
+
+  setIsLoading: (isLoading: boolean) => {
+    collectionStore.setState((state) => ({
+      ...state,
+      isLoading,
+    }));
+  },
+
+  setError: (error: string | null) => {
+    collectionStore.setState((state) => ({
+      ...state,
+      error,
+      isLoading: false,
+    }));
+  },
 };
 
-// Hook to use the collection store
 export const useCollectionStore = () => {
   return useStore(collectionStore);
 };

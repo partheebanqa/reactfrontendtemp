@@ -34,6 +34,8 @@ export function useCollection() {
     responseLayout,
     isCreatingCollection,
     expandedCollections,
+    openedRequests,
+    unsavedChanges,
   } = useCollectionStore();
   const { setResponseData } = useRequest();
 
@@ -49,6 +51,10 @@ export function useCollection() {
   const setIsCreatingCollection = collectionActions.setIsCreatingCollection;
   const deleteRequest = collectionActions.deleteRequest;
   const addRequestToCollection = collectionActions.addRequestToCollection;
+  const openRequest = collectionActions.openRequest;
+  const closeRequest = collectionActions.closeRequest;
+  const markUnsaved = collectionActions.markUnsaved;
+  const markSaved = collectionActions.markSaved;
 
   const toggleExpandedCollection = async (collectionId: string) => {
     if (!collectionId) return;
@@ -164,6 +170,7 @@ export function useCollection() {
     }
 
     setActiveRequest(newRequest);
+    openRequest(newRequest);
   };
 
   useEffect(() => {
@@ -196,6 +203,8 @@ export function useCollection() {
     responseLayout,
     isCreatingCollection,
     expandedCollections,
+    openedRequests,
+    unsavedChanges,
 
     handleCreateRequest,
     setActiveCollection,
@@ -206,6 +215,10 @@ export function useCollection() {
     toggleExpandedCollection,
     deleteRequest,
     addRequestToCollection,
+    openRequest,
+    closeRequest,
+    markUnsaved,
+    markSaved,
     refetch,
 
     fetchCollectionRequests,
