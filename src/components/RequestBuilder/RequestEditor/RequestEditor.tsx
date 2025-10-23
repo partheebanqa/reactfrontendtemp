@@ -2,7 +2,15 @@
 
 import type React from 'react';
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { Play, Save, FolderPlus, Plus, FileTerminal, Info } from 'lucide-react';
+import {
+  Play,
+  Save,
+  FolderPlus,
+  Plus,
+  FileTerminal,
+  Info,
+  HelpCircle,
+} from 'lucide-react';
 import { useRequest } from '@/hooks/useRequest';
 import { useCollection } from '@/hooks/useCollection';
 import { useWorkspace } from '@/hooks/useWorkspace';
@@ -914,7 +922,7 @@ const RequestEditor: React.FC = () => {
                   }
                   return acc;
                 }, {})
-            : [],
+            : {},
         bodyRawContent:
           bodyType === 'raw' || bodyType === 'json'
             ? bodyContent
@@ -1081,7 +1089,7 @@ const RequestEditor: React.FC = () => {
                   }
                   return acc;
                 }, {})
-            : [],
+            : {},
         bodyRawContent:
           bodyType === 'raw' || bodyType === 'json'
             ? bodyContent
@@ -1360,6 +1368,25 @@ const RequestEditor: React.FC = () => {
     }
   };
 
+  const handleBeautifyBody = () => {
+    try {
+      if (bodyType === 'json' || bodyType === 'raw') {
+        const parsed = JSON.parse(bodyContent);
+        const beautified = JSON.stringify(parsed, null, 2);
+        setBodyContent(beautified);
+        if (activeRequest?.id) {
+          collectionActions.markUnsaved(activeRequest.id);
+        }
+        showSuccess('JSON formatted successfully!');
+      }
+    } catch (error) {
+      showError(
+        'Invalid JSON',
+        'Unable to format. Please check your JSON syntax.'
+      );
+    }
+  };
+
   const methods: RequestMethod[] = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'];
 
   const getMethodColor = (method: string) => {
@@ -1615,32 +1642,44 @@ const RequestEditor: React.FC = () => {
                           type='button'
                           className='p-1 text-gray-500 hover:text-[rgb(19,111,176)] transition-colors'
                         >
-                          <Info className='w-4 h-4' />
+                          <HelpCircle className='w-4 h-4' />
                         </button>
                       </TooltipTrigger>
                       <TooltipContent>
-                        Hover a field to substitute a variable
+                        Request body can include both static and dynamic values.
                       </TooltipContent>
                     </Tooltip>
                   </div>
                 </TooltipProvider>
-                <select
-                  value={bodyType}
-                  onChange={(e) => {
-                    setBodyType(e.target.value as any);
-                    if (activeRequest?.id) {
-                      collectionActions.markUnsaved(activeRequest.id);
-                    }
-                  }}
-                  className='border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-800 text-sm font-medium hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all duration-150'
-                >
-                  <option value='none'>None</option>
-                  <option value='json'>JSON</option>
-                  <option value='form-data'>Form Data</option>
-                  <option value='x-www-form-urlencoded'>URL Encoded</option>
-                  <option value='raw'>Raw</option>
-                  <option value='binary'>Binary</option>
-                </select>
+                <div className='flex items-center gap-2'>
+                  {(bodyType === 'json' || bodyType === 'raw') &&
+                    bodyContent.trim() && (
+                      <button
+                        onClick={handleBeautifyBody}
+                        className='px-3 py-2 bg-[rgb(19,111,176)] hover:bg-[rgb(15,90,144)] text-white text-sm rounded-md transition-colors font-medium'
+                        title='Format JSON with proper indentation'
+                      >
+                        Beautify
+                      </button>
+                    )}
+                  <select
+                    value={bodyType}
+                    onChange={(e) => {
+                      setBodyType(e.target.value as any);
+                      if (activeRequest?.id) {
+                        collectionActions.markUnsaved(activeRequest.id);
+                      }
+                    }}
+                    className='border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-800 text-sm font-medium hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all duration-150'
+                  >
+                    <option value='none'>None</option>
+                    <option value='json'>JSON</option>
+                    <option value='form-data'>Form Data</option>
+                    <option value='x-www-form-urlencoded'>URL Encoded</option>
+                    <option value='raw'>Raw</option>
+                    <option value='binary'>Binary</option>
+                  </select>
+                </div>
               </div>
 
               {bodyType === 'none' && (

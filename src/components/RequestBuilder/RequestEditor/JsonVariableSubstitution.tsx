@@ -52,6 +52,7 @@ export const JsonVariableSubstitution: React.FC<
   >([]);
   const containerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [scrollTop, setScrollTop] = useState(0);
 
   useEffect(() => {
     if (initialVariable) {
@@ -152,6 +153,10 @@ export const JsonVariableSubstitution: React.FC<
     onVariableSelect?.(null);
   };
 
+  const handleScroll = (e: React.UIEvent<HTMLTextAreaElement>) => {
+    setScrollTop(e.currentTarget.scrollTop);
+  };
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -187,132 +192,159 @@ export const JsonVariableSubstitution: React.FC<
         </div>
       )}
 
-      <div className='relative'>
-        <textarea
-          ref={textareaRef}
-          value={value}
-          onChange={(e) => onChange?.(e.target.value)}
-          readOnly={readOnly}
-          className='w-full h-64 p-4 font-mono text-sm border border-gray-300 rounded-md bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none'
+      <div className='relative flex border border-gray-300 rounded-md overflow-hidden bg-white focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500'>
+        {/* Line numbers column */}
+        <div
+          className='flex flex-col bg-gray-50 border-r border-gray-300 py-4 px-3 text-right select-none overflow-hidden'
           style={{
-            fontFamily:
-              "'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace",
+            scrollTop: scrollTop,
+            minWidth: '3rem',
           }}
-        />
+        >
+          {lines.map((_, index) => (
+            <div
+              key={index}
+              className='h-6 text-xs font-mono text-gray-500 leading-6'
+            >
+              {index + 1}
+            </div>
+          ))}
+        </div>
 
-        <div className='absolute top-0 right-0 bottom-0 w-48 pointer-events-none'>
-          {lines.map((line, index) => {
-            const hasKey = /"[^"]+"\s*:/.test(line);
-            const pendingVar = getPendingSubstitution(index);
-            const alreadySubstituted = getAlreadySubstitutedVariable(index);
-            const currentPath = extractPathFromLine(index);
-            const isSelectedVariableLine =
-              selectedVariable && selectedVariable.path === currentPath;
+        {/* Textarea with transparent background */}
+        <div className='relative flex-1'>
+          <textarea
+            ref={textareaRef}
+            value={value}
+            onChange={(e) => onChange?.(e.target.value)}
+            onScroll={handleScroll}
+            readOnly={readOnly}
+            className='w-full h-64 p-4 font-mono text-sm bg-white text-gray-900 focus:outline-none resize-none'
+            style={{
+              fontFamily:
+                "'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace",
+            }}
+          />
 
-            return (
-              <div
-                key={index}
-                className='relative h-6 flex items-center pointer-events-auto'
-                onMouseEnter={() => setHoveredLine(index)}
-                onMouseLeave={() => setHoveredLine(null)}
-              >
-                {hoveredLine === index && hasKey && (
-                  <div className='pointer-events-auto ml-auto mr-2 flex items-center gap-1'>
-                    {isSelectedVariableLine &&
-                    !pendingVar &&
-                    !alreadySubstituted ? (
-                      <>
-                        <span className='px-2.5 py-1 bg-yellow-500 text-yellow-900 text-sm rounded font-mono whitespace-nowrap'>
-                          {selectedVariable.name}
-                        </span>
-                        <button
-                          onClick={handleClearSavedVariable}
-                          className='p-1.5 bg-red-50 hover:bg-red-100 rounded-full transition-colors'
-                          title='Remove variable'
-                        >
-                          <Trash2 className='w-4 h-4 text-red-600' />
-                        </button>
-                      </>
-                    ) : !pendingVar && !alreadySubstituted ? (
-                      <button
-                        onClick={() => handleSubstituteClick(index)}
-                        className='px-2.5 py-1 bg-[rgb(19,111,176)] hover:bg-[rgb(15,90,144)] text-white text-[13px] rounded-md transition-colors flex items-center justify-center whitespace-nowrap'
-                        title='Substitute variable'
-                      >
-                        Substitute Variable
-                      </button>
-                    ) : pendingVar ? (
-                      <>
-                        <span className='px-2.5 py-1 bg-yellow-500 text-yellow-900 text-sm rounded font-mono whitespace-nowrap'>
-                          {pendingVar}
-                        </span>
-                        <button
-                          onClick={() => handleClearPendingSubstitution(index)}
-                          className='px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white text-sm rounded whitespace-nowrap transition-colors'
-                          title='Remove pending substitution'
-                        >
-                          <Trash2 className='w-4 h-4 text-red-600' />
-                        </button>
-                      </>
-                    ) : alreadySubstituted ? (
-                      <>
-                        <span className='px-2.5 py-1 bg-green-500 text-green-900 text-sm rounded font-mono whitespace-nowrap'>
-                          {alreadySubstituted}
-                        </span>
-                        <button
-                          onClick={() => handleRemoveSubstitution(index)}
-                          className='px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white text-sm rounded whitespace-nowrap transition-colors'
-                          title='Remove substitution'
-                        >
-                          <Trash2 className='w-4 h-4 text-red-600' />
-                        </button>
-                      </>
-                    ) : null}
-                  </div>
-                )}
+          {/* Variable substitution overlay on the right */}
+          <div className='absolute top-0 right-0 bottom-0 w-48 pointer-events-none'>
+            {lines.map((line, index) => {
+              const hasKey = /"[^"]+"\s*:/.test(line);
+              const pendingVar = getPendingSubstitution(index);
+              const alreadySubstituted = getAlreadySubstitutedVariable(index);
+              const currentPath = extractPathFromLine(index);
+              const isSelectedVariableLine =
+                selectedVariable && selectedVariable.path === currentPath;
 
-                {dropdownLine === index && (
-                  <div className='absolute right-0 top-full mt-1 w-80 bg-white border border-gray-300 rounded shadow-lg z-50 text-sm pointer-events-auto'>
-                    {/* Search bar */}
-                    <div className='p-2 border-b border-gray-200'>
-                      <input
-                        type='text'
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        placeholder='Search variables...'
-                        className='w-full bg-white border border-gray-300 rounded px-2 py-1 text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500'
-                        autoFocus
-                      />
-                    </div>
-
-                    {/* List of variables */}
-                    <div className='max-h-48 overflow-y-auto'>
-                      {filteredVariables.length > 0 ? (
-                        filteredVariables.map((v) => (
-                          <div
-                            key={v.name}
-                            className='flex justify-between items-center px-3 py-2 hover:bg-blue-50 cursor-pointer border-b border-gray-100 last:border-b-0 text-gray-800'
-                            onClick={() => handleVariableSelect(v.name, index)}
+              return (
+                <div
+                  key={index}
+                  className='relative h-6 flex items-center pointer-events-auto'
+                  onMouseEnter={() => setHoveredLine(index)}
+                  onMouseLeave={() => setHoveredLine(null)}
+                >
+                  {hoveredLine === index && hasKey && (
+                    <div className='pointer-events-auto ml-auto mr-2 flex items-center gap-1'>
+                      {isSelectedVariableLine &&
+                      !pendingVar &&
+                      !alreadySubstituted ? (
+                        <>
+                          <span className='px-2.5 py-1 bg-yellow-500 text-yellow-900 text-sm rounded font-mono whitespace-nowrap'>
+                            {selectedVariable.name}
+                          </span>
+                          <button
+                            onClick={handleClearSavedVariable}
+                            className='p-1.5 bg-red-50 hover:bg-red-100 rounded-full transition-colors'
+                            title='Remove variable'
                           >
-                            <span className='font-mono text-gray-800 text-xs font-medium'>
-                              {v.name}
-                            </span>
-                            <span className='text-gray-500 text-xs truncate ml-2 max-w-xs'>
-                              {v.value}
-                            </span>
-                          </div>
-                        ))
-                      ) : (
-                        <div className='px-3 py-2 text-gray-400 text-xs text-center'>
-                          No results found
-                        </div>
-                      )}
+                            <Trash2 className='w-4 h-4 text-red-600' />
+                          </button>
+                        </>
+                      ) : !pendingVar && !alreadySubstituted ? (
+                        <button
+                          onClick={() => handleSubstituteClick(index)}
+                          className='px-2.5 py-1 bg-[rgb(19,111,176)] hover:bg-[rgb(15,90,144)] text-white text-[13px] rounded-md transition-colors flex items-center justify-center whitespace-nowrap'
+                          title='Substitute variable'
+                        >
+                          Substitute Variable
+                        </button>
+                      ) : pendingVar ? (
+                        <>
+                          <span className='px-2.5 py-1 bg-yellow-500 text-yellow-900 text-sm rounded font-mono whitespace-nowrap'>
+                            {pendingVar}
+                          </span>
+                          <button
+                            onClick={() =>
+                              handleClearPendingSubstitution(index)
+                            }
+                            className='px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white text-sm rounded whitespace-nowrap transition-colors'
+                            title='Remove pending substitution'
+                          >
+                            <Trash2 className='w-4 h-4 text-red-600' />
+                          </button>
+                        </>
+                      ) : alreadySubstituted ? (
+                        <>
+                          <span className='px-2.5 py-1 bg-green-500 text-green-900 text-sm rounded font-mono whitespace-nowrap'>
+                            {alreadySubstituted}
+                          </span>
+                          <button
+                            onClick={() => handleRemoveSubstitution(index)}
+                            className='px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white text-sm rounded whitespace-nowrap transition-colors'
+                            title='Remove substitution'
+                          >
+                            <Trash2 className='w-4 h-4 text-red-600' />
+                          </button>
+                        </>
+                      ) : null}
                     </div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
+                  )}
+
+                  {dropdownLine === index && (
+                    <div className='absolute right-0 top-full mt-1 w-80 bg-white border border-gray-300 rounded shadow-lg z-50 text-sm pointer-events-auto'>
+                      {/* Search bar */}
+                      <div className='p-2 border-b border-gray-200'>
+                        <input
+                          type='text'
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                          placeholder='Search variables...'
+                          className='w-full bg-white border border-gray-300 rounded px-2 py-1 text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500'
+                          autoFocus
+                        />
+                      </div>
+
+                      {/* List of variables */}
+                      <div className='max-h-48 overflow-y-auto'>
+                        {filteredVariables.length > 0 ? (
+                          filteredVariables.map((v) => (
+                            <div
+                              key={v.name}
+                              className='flex justify-between items-center px-3 py-2 hover:bg-blue-50 cursor-pointer border-b border-gray-100 last:border-b-0 text-gray-800'
+                              onClick={() =>
+                                handleVariableSelect(v.name, index)
+                              }
+                            >
+                              <span className='font-mono text-gray-800 text-xs font-medium'>
+                                {v.name}
+                              </span>
+                              <span className='text-gray-500 text-xs truncate ml-2 max-w-xs'>
+                                {v.value}
+                              </span>
+                            </div>
+                          ))
+                        ) : (
+                          <div className='px-3 py-2 text-gray-400 text-xs text-center'>
+                            No results found
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
 
