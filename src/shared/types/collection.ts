@@ -175,7 +175,7 @@ export interface CollectionRequest {
   headers?: Header[];
   params?: Param[];
   variables: Record<string, any>;
-  variable: {
+  variable?: {
     name: string;
     path: string;
   };
