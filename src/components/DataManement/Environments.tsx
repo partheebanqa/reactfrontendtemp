@@ -215,8 +215,8 @@ export const Environments: React.FC = () => {
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-200">
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Name</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Current Value</th>
-                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-600 uppercase tracking-wider w-24">Actions</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Value</th>
+                  {/* <th className="px-4 py-2 text-right text-xs font-medium text-gray-600 uppercase tracking-wider w-24">Actions</th> */}
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 bg-white">
@@ -241,7 +241,7 @@ export const Environments: React.FC = () => {
                         )}
                       </div>
                     </td>
-                    <td className="px-4 py-2.5">
+                    {/* <td className="px-4 py-2.5">
                       <div className="flex items-center justify-end gap-1">
                         <button
                           onClick={() => handleEditEnvironment(env)}
@@ -268,7 +268,7 @@ export const Environments: React.FC = () => {
                           )}
                         </button>
                       </div>
-                    </td>
+                    </td> */}
                   </tr>
                 ))}
               </tbody>
