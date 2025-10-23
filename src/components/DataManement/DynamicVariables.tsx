@@ -233,14 +233,14 @@ export function DynamicVariables() {
     <div className="space-y-4">
       {/* top bar (new UI) */}
       <div className="flex items-center justify-between gap-3">
-        <div className="relative flex-1 max-w-xs">
+        <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
           <Input
             type="text"
             placeholder="Search variables..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-9 pr-9 py-1.5 text-sm border border-gray-200 rounded-md"
+            className="w-full pl-9 pr-16 py-1.5 text-sm border border-gray-200 rounded-md"
           />
           {searchTerm && (
             <button

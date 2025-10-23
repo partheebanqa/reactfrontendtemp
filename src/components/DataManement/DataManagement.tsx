@@ -63,7 +63,7 @@ const DataManagement: React.FC = () => {
               </nav>
             </div>
 
-            <div className="p-3">
+            <div className="py-3">
               {variableType === 'static' ? <StaticVariables /> : <DynamicVariables />}
             </div>
           </>
