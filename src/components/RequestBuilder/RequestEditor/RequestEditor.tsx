@@ -1340,7 +1340,6 @@ const RequestEditor: React.FC = () => {
     substitutions.forEach((sub) => {
       if (lines[sub.lineIndex]) {
         const line = lines[sub.lineIndex];
-        // Add the substitution comment to the line
         const updatedLine = `${line} // substituted with {{${sub.variableName}}}`;
         updatedContent = updatedContent.replace(line, updatedLine);
       }
