@@ -74,7 +74,12 @@ export function useCollection() {
     collection?: Collection,
     folderId?: string
   ) => {
+    const requestId = `req_${Date.now()}_${Math.random()
+      .toString(36)
+      .substr(2, 9)}`;
+
     const newRequest: CollectionRequest = {
+      id: requestId,
       name: 'New Request',
       method: 'GET',
       url: '',

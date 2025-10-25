@@ -2,9 +2,10 @@
 
 import type React from 'react';
 import { useState } from 'react';
-import { X } from 'lucide-react';
+import { X, Plus } from 'lucide-react';
 import type { CollectionRequest } from '@/shared/types/collection';
 import { useCollectionStore, collectionActions } from '@/store/collectionStore';
+import { useCollection } from '@/hooks/useCollection';
 
 interface RequestTabsProps {
   onTabChange?: (request: CollectionRequest) => void;
@@ -17,6 +18,7 @@ const RequestTabs: React.FC<RequestTabsProps> = ({
 }) => {
   const { openedRequests, activeRequest, unsavedChanges } =
     useCollectionStore();
+  const { handleCreateRequest, activeCollection } = useCollection();
 
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [pendingCloseRequestId, setPendingCloseRequestId] = useState<
@@ -35,7 +37,7 @@ const RequestTabs: React.FC<RequestTabsProps> = ({
     requestId: string | undefined
   ) => {
     e.stopPropagation();
-    if (!requestId) return;
+    if (requestId === undefined || requestId === null) return;
 
     const hasUnsavedChanges = unsavedChanges.has(requestId);
 
@@ -83,6 +85,12 @@ const RequestTabs: React.FC<RequestTabsProps> = ({
     setPendingCloseRequestId(undefined);
   };
 
+  const handleAddNewRequest = () => {
+    if (activeCollection) {
+      handleCreateRequest(activeCollection);
+    }
+  };
+
   if (openedRequests.length === 0) {
     return null;
   }
@@ -105,7 +113,7 @@ const RequestTabs: React.FC<RequestTabsProps> = ({
                 onClick={() => handleTabClick(request)}
                 className={`
                   flex items-center gap-2 px-3 py-2 cursor-pointer
-                  border-b-2 transition-all duration-200 whitespace-nowrap
+                  border-b-2 transition-all duration-200 whitespace-nowrap group
                   ${
                     isActive
                       ? 'border-red-500 bg-gray-50 dark:bg-gray-800'
@@ -123,7 +131,7 @@ const RequestTabs: React.FC<RequestTabsProps> = ({
 
                 <button
                   onClick={(e) => handleCloseTab(e, request.id)}
-                  className='p-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors flex-shrink-0'
+                  className='p-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors flex-shrink-0 opacity-0 group-hover:opacity-100'
                   aria-label='Close tab'
                 >
                   <X className='w-3 h-3 text-gray-500 dark:text-gray-400' />
@@ -131,6 +139,22 @@ const RequestTabs: React.FC<RequestTabsProps> = ({
               </div>
             );
           })}
+
+          <button
+            onClick={handleAddNewRequest}
+            disabled={!activeCollection}
+            className={`flex items-center gap-1 px-2 py-2 rounded transition-colors ml-1 ${
+              activeCollection
+                ? 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer'
+                : 'text-gray-300 dark:text-gray-600 cursor-not-allowed opacity-50'
+            }`}
+            aria-label='Add new request'
+            title={
+              activeCollection ? 'Add new request' : 'Select a collection first'
+            }
+          >
+            <Plus className='w-4 h-4' />
+          </button>
         </div>
       </div>
 
