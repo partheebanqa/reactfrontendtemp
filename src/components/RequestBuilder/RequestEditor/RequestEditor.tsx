@@ -936,7 +936,7 @@ const RequestEditor: React.FC = () => {
                   }
                   return acc;
                 }, {})
-            : {},
+            : [],
         bodyRawContent:
           bodyType === 'raw' || bodyType === 'json'
             ? bodyContent
@@ -1032,6 +1032,7 @@ const RequestEditor: React.FC = () => {
     try {
       setIsSaving(true);
       if (!activeRequest || !currentWorkspace) return;
+
       if (!urlAtOpen.trim()) {
         showError(
           'URL Required',
@@ -1041,12 +1042,14 @@ const RequestEditor: React.FC = () => {
       }
 
       let createdCollectionId: string | null = null;
+
       if (isCreatingCollection && newCollectionName.trim()) {
         const res = await addCollectionMutation.mutateAsync({
           name: newCollectionName.trim(),
           workspaceId: currentWorkspace.id,
           isImportant: false,
         });
+
         if (res?.collectionId) {
           createdCollectionId = res.collectionId;
           setSelectedCollectionId(res.collectionId);
@@ -1065,10 +1068,9 @@ const RequestEditor: React.FC = () => {
       }
 
       const targetCollectionId = createdCollectionId || selectedCollectionId;
+
       if (targetCollectionId) {
-        const response = await fetchCollectionRequests.mutateAsync(
-          targetCollectionId
-        );
+        await fetchCollectionRequests.mutateAsync(targetCollectionId);
       }
 
       let effectiveAuthType = authType;
@@ -1077,7 +1079,7 @@ const RequestEditor: React.FC = () => {
       }
 
       const selectedAssertions = Array.isArray(assertions)
-        ? assertions.filter((a) => a.enabled).map((a) => a)
+        ? assertions.filter((a) => a.enabled)
         : [];
 
       const requestData: any = {
@@ -1103,7 +1105,7 @@ const RequestEditor: React.FC = () => {
                   }
                   return acc;
                 }, {})
-            : {},
+            : [],
         bodyRawContent:
           bodyType === 'raw' || bodyType === 'json'
             ? bodyContent
@@ -1118,41 +1120,7 @@ const RequestEditor: React.FC = () => {
               ).toString()
             : '',
         authorizationType: effectiveAuthType,
-        authorization: {
-          token: authData.token,
-          username: effectiveAuthType === 'basic' ? authData.username : '',
-          password: effectiveAuthType === 'basic' ? authData.password : '',
-          key: effectiveAuthType === 'apiKey' ? authData.key : '',
-          value: effectiveAuthType === 'apiKey' ? authData.value : '',
-          addTo: effectiveAuthType === 'apiKey' ? authData.addTo : 'header',
-          oauth1:
-            effectiveAuthType === 'oauth1'
-              ? {
-                  consumerKey: authData.oauth1.consumerKey,
-                  consumerSecret: authData.oauth1.consumerSecret,
-                  token: authData.oauth1.token,
-                  tokenSecret: authData.oauth1.tokenSecret,
-                  signatureMethod: authData.oauth1.signatureMethod,
-                  version: '1.0',
-                  realm: authData.oauth1.realm,
-                  nonce: authData.oauth1.nonce,
-                  timestamp: authData.oauth1.timestamp,
-                }
-              : undefined,
-          oauth2:
-            effectiveAuthType === 'oauth2'
-              ? {
-                  clientId: authData.oauth2.clientId,
-                  clientSecret: authData.oauth2.clientSecret,
-                  accessToken: authData.oauth2.accessToken,
-                  tokenType: authData.oauth2.tokenType,
-                  refreshToken: authData.oauth2.refreshToken,
-                  scope: authData.oauth2.scope,
-                  grantType: authData.oauth2.grantType,
-                  redirectUri: authData.oauth2.redirectUri,
-                }
-              : undefined,
-        },
+        authorization: requestDataAuthorization(effectiveAuthType, authData),
         params,
         headers,
         assertions: selectedAssertions,
@@ -1163,16 +1131,13 @@ const RequestEditor: React.FC = () => {
         requestData
       );
 
-      setShowSaveModal(false);
-      setNewCollectionName('');
-      setIsCreatingCollection(false);
-      showSuccess('Request saved successfully!');
-
+      // ✅ Only update state after save success
       if (
         savedRequestResponse &&
         (savedRequestResponse.id || savedRequestResponse.requestId)
       ) {
         const newId = savedRequestResponse.id || savedRequestResponse.requestId;
+
         const updatedRequest = {
           ...activeRequest,
           id: newId,
@@ -1188,21 +1153,69 @@ const RequestEditor: React.FC = () => {
           headers,
           ...(selectedVariable ? { variable: selectedVariable } : {}),
         };
+
         setActiveRequest(updatedRequest);
         collectionActions.markSaved(newId);
+
+        // ✅ ensure state propagate before continuing
+        await new Promise((resolve) => setTimeout(resolve, 0));
       }
 
-      setIsSaving(false);
+      setShowSaveModal(false);
+      setNewCollectionName('');
+      setIsCreatingCollection(false);
+
+      showSuccess('Request saved successfully!');
     } catch (error) {
       console.error('Error saving request:', error);
-      setIsSaving(false);
       showError('Save Failed', 'An error occurred while saving the request.');
       setError({
         title: 'Save Failed',
         description: 'An error occurred while saving the request.',
       });
+    } finally {
+      // ✅ Always executed
+      setIsSaving(false);
     }
   };
+
+  function requestDataAuthorization(type: string, authData: any) {
+    return {
+      token: authData.token,
+      username: type === 'basic' ? authData.username : '',
+      password: type === 'basic' ? authData.password : '',
+      key: type === 'apiKey' ? authData.key : '',
+      value: type === 'apiKey' ? authData.value : '',
+      addTo: type === 'apiKey' ? authData.addTo : 'header',
+      oauth1:
+        type === 'oauth1'
+          ? {
+              consumerKey: authData.oauth1.consumerKey,
+              consumerSecret: authData.oauth1.consumerSecret,
+              token: authData.oauth1.token,
+              tokenSecret: authData.oauth1.tokenSecret,
+              signatureMethod: authData.oauth1.signatureMethod,
+              version: '1.0',
+              realm: authData.oauth1.realm,
+              nonce: authData.oauth1.nonce,
+              timestamp: authData.oauth1.timestamp,
+            }
+          : undefined,
+      oauth2:
+        type === 'oauth2'
+          ? {
+              clientId: authData.oauth2.clientId,
+              clientSecret: authData.oauth2.clientSecret,
+              accessToken: authData.oauth2.accessToken,
+              tokenType: authData.oauth2.tokenType,
+              refreshToken: authData.oauth2.refreshToken,
+              scope: authData.oauth2.scope,
+              grantType: authData.oauth2.grantType,
+              redirectUri: authData.oauth2.redirectUri,
+            }
+          : undefined,
+    };
+  }
 
   const substituteVariables = (text: string): string => {
     let result = text;
