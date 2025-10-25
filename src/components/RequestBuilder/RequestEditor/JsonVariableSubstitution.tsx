@@ -120,6 +120,7 @@ export const JsonVariableSubstitution: React.FC<
     setDropdownLine(null);
   };
 
+  console.log('selectedVariable:', selectedVariable);
   const handleClearPendingSubstitution = (lineIndex: number) => {
     setPendingSubstitutions((prev) =>
       prev.filter((p) => p.lineIndex !== lineIndex)
@@ -157,6 +158,18 @@ export const JsonVariableSubstitution: React.FC<
     setScrollTop(e.currentTarget.scrollTop);
   };
 
+  const renderJsonWithColors = (jsonText: string) => {
+    return jsonText
+      .replace(
+        /("([^"\\]|\\.)*")\s*:/g,
+        '<span style="color: rgb(37 99 235 / var(--tw-text-opacity, 1))">$1</span>:'
+      )
+      .replace(
+        /:\s*("([^"\\]|\\.)*")/g,
+        ': <span style="color: rgb(22 163 74 / var(--tw-text-opacity, 1))">$1</span>'
+      );
+  };
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -172,7 +185,7 @@ export const JsonVariableSubstitution: React.FC<
 
   return (
     <div ref={containerRef} className='relative w-full space-y-3'>
-      {selectedVariable && (
+      {selectedVariable?.path && selectedVariable?.name && (
         <div className='bg-green-50 border border-green-200 rounded-md p-3 flex items-center justify-between'>
           <div className='flex items-center gap-2'>
             <span className='text-sm font-medium text-green-900'>
@@ -184,27 +197,26 @@ export const JsonVariableSubstitution: React.FC<
           </div>
           <button
             onClick={handleClearSavedVariable}
-            className='p-1.5 bg-red-50 hover:bg-red-100 rounded-full transition-colors'
+            className='p-1 bg-destructive/10 hover:bg-destructive/20 rounded transition-colors'
             title='Remove variable'
           >
-            <Trash2 className='w-4 h-4 text-red-600' />
+            <Trash2 className='w-3.5 h-3.5 text-destructive' />
           </button>
         </div>
       )}
 
-      <div className='relative flex border border-gray-300 rounded-md overflow-hidden bg-white focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500'>
+      <div className='relative flex border border-border rounded-md overflow-hidden bg-card focus-within:ring-2 focus-within:ring-ring focus-within:border-ring'>
         {/* Line numbers column */}
         <div
-          className='flex flex-col bg-gray-50 border-r border-gray-300 py-4 px-3 text-right select-none overflow-hidden'
+          className='flex flex-col bg-muted border-r border-border py-2 px-2 text-right select-none overflow-hidden'
           style={{
-            scrollTop: scrollTop,
-            minWidth: '3rem',
+            minWidth: '2.5rem',
           }}
         >
           {lines.map((_, index) => (
             <div
               key={index}
-              className='h-6 text-xs font-mono text-gray-500 leading-6'
+              className='h-6 text-[11px] font-mono text-muted-foreground leading-5'
             >
               {index + 1}
             </div>
@@ -213,21 +225,60 @@ export const JsonVariableSubstitution: React.FC<
 
         {/* Textarea with transparent background */}
         <div className='relative flex-1'>
+          <div
+            className='absolute top-0 left-0 right-0 bottom-0 p-2 pl-3 font-mono text-sm pointer-events-none overflow-hidden leading-6 whitespace-pre-wrap break-words'
+            style={{
+              fontFamily:
+                "'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace",
+              scrollTop: scrollTop,
+            }}
+          >
+            {lines.map((line, index) => (
+              <div key={`highlight-${index}`}>
+                <span
+                  dangerouslySetInnerHTML={{
+                    __html: renderJsonWithColors(line),
+                  }}
+                />
+              </div>
+            ))}
+          </div>
+
           <textarea
             ref={textareaRef}
             value={value}
             onChange={(e) => onChange?.(e.target.value)}
             onScroll={handleScroll}
             readOnly={readOnly}
-            className='w-full h-64 p-4 font-mono text-sm bg-white text-gray-900 focus:outline-none resize-none'
+            className='w-full h-64 p-2 pl-3 font-mono text-sm bg-transparent text-foreground focus:outline-none resize-none leading-6'
             style={{
               fontFamily:
                 "'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace",
+              color: 'transparent',
+              caretColor: 'rgb(var(--foreground))',
             }}
           />
 
+          {/* Hover underline overlay */}
+          <div className='absolute top-0 left-0 right-0 bottom-0 pointer-events-none pt-2'>
+            {lines.map((line, index) => {
+              const hasKey = /"[^"]+"\s*:/.test(line);
+
+              return (
+                <div
+                  key={`underline-${index}`}
+                  className={`h-6 transition-colors ${
+                    hoveredLine === index && hasKey
+                      ? 'border-b-2 border-primary'
+                      : ''
+                  }`}
+                />
+              );
+            })}
+          </div>
+
           {/* Variable substitution overlay on the right */}
-          <div className='absolute top-0 right-0 bottom-0 w-48 pointer-events-none'>
+          <div className='absolute top-0 right-0 bottom-0 w-44 pointer-events-none pt-2'>
             {lines.map((line, index) => {
               const hasKey = /"[^"]+"\s*:/.test(line);
               const pendingVar = getPendingSubstitution(index);
@@ -244,56 +295,56 @@ export const JsonVariableSubstitution: React.FC<
                   onMouseLeave={() => setHoveredLine(null)}
                 >
                   {hoveredLine === index && hasKey && (
-                    <div className='pointer-events-auto ml-auto mr-2 flex items-center gap-1'>
+                    <div className='pointer-events-auto ml-auto mr-1 flex items-center gap-1'>
                       {isSelectedVariableLine &&
                       !pendingVar &&
                       !alreadySubstituted ? (
                         <>
-                          <span className='px-2.5 py-1 bg-yellow-500 text-yellow-900 text-sm rounded font-mono whitespace-nowrap'>
+                          <span className='px-2 py-0.5 bg-green-500 text-white text-[11px] rounded font-mono whitespace-nowrap font-medium'>
                             {selectedVariable.name}
                           </span>
                           <button
                             onClick={handleClearSavedVariable}
-                            className='p-1.5 bg-red-50 hover:bg-red-100 rounded-full transition-colors'
+                            className='p-0.5 bg-destructive/10 hover:bg-destructive/20 rounded transition-colors'
                             title='Remove variable'
                           >
-                            <Trash2 className='w-4 h-4 text-red-600' />
+                            <Trash2 className='w-3 h-3 text-destructive' />
                           </button>
                         </>
                       ) : !pendingVar && !alreadySubstituted ? (
                         <button
                           onClick={() => handleSubstituteClick(index)}
-                          className='px-2.5 py-1 bg-[rgb(19,111,176)] hover:bg-[rgb(15,90,144)] text-white text-[13px] rounded-md transition-colors flex items-center justify-center whitespace-nowrap'
-                          title='Substitute variable'
+                          className='px-2 py-0.5 bg-[rgb(19,111,176)] hover:bg-[rgb(15,90,144)] text-white text-[11px] rounded transition-colors flex items-center justify-center whitespace-nowrap font-medium'
+                          // title='Substitute variable'
                         >
                           Substitute Variable
                         </button>
                       ) : pendingVar ? (
                         <>
-                          <span className='px-2.5 py-1 bg-yellow-500 text-yellow-900 text-sm rounded font-mono whitespace-nowrap'>
+                          <span className='px-2 py-0.5 bg-green-500 text-white text-[11px] rounded font-mono whitespace-nowrap font-medium'>
                             {pendingVar}
                           </span>
                           <button
                             onClick={() =>
                               handleClearPendingSubstitution(index)
                             }
-                            className='px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white text-sm rounded whitespace-nowrap transition-colors'
+                            className='p-0.5 bg-destructive/10 hover:bg-destructive/20 rounded transition-colors'
                             title='Remove pending substitution'
                           >
-                            <Trash2 className='w-4 h-4 text-red-600' />
+                            <Trash2 className='w-3 h-3 text-destructive' />
                           </button>
                         </>
                       ) : alreadySubstituted ? (
                         <>
-                          <span className='px-2.5 py-1 bg-green-500 text-green-900 text-sm rounded font-mono whitespace-nowrap'>
+                          <span className='px-2 py-0.5 bg-success text-success-foreground text-[11px] rounded font-mono whitespace-nowrap font-medium'>
                             {alreadySubstituted}
                           </span>
                           <button
                             onClick={() => handleRemoveSubstitution(index)}
-                            className='px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white text-sm rounded whitespace-nowrap transition-colors'
+                            className='p-0.5 bg-destructive/10 hover:bg-destructive/20 rounded transition-colors'
                             title='Remove substitution'
                           >
-                            <Trash2 className='w-4 h-4 text-red-600' />
+                            <Trash2 className='w-3 h-3 text-destructive' />
                           </button>
                         </>
                       ) : null}
@@ -301,15 +352,15 @@ export const JsonVariableSubstitution: React.FC<
                   )}
 
                   {dropdownLine === index && (
-                    <div className='absolute right-0 top-full mt-1 w-80 bg-white border border-gray-300 rounded shadow-lg z-50 text-sm pointer-events-auto'>
+                    <div className='absolute right-0 top-full mt-1 w-72 bg-popover border border-border rounded-md shadow-lg z-50 text-sm pointer-events-auto'>
                       {/* Search bar */}
-                      <div className='p-2 border-b border-gray-200'>
+                      <div className='p-2 border-b border-border'>
                         <input
                           type='text'
                           value={searchTerm}
                           onChange={(e) => setSearchTerm(e.target.value)}
                           placeholder='Search variables...'
-                          className='w-full bg-white border border-gray-300 rounded px-2 py-1 text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500'
+                          className='w-full bg-background border border-input rounded px-2 py-1 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring'
                           autoFocus
                         />
                       </div>
@@ -320,21 +371,33 @@ export const JsonVariableSubstitution: React.FC<
                           filteredVariables.map((v) => (
                             <div
                               key={v.name}
-                              className='flex justify-between items-center px-3 py-2 hover:bg-blue-50 cursor-pointer border-b border-gray-100 last:border-b-0 text-gray-800'
+                              className='flex justify-between items-center px-3 py-2 hover:bg-accent cursor-pointer border-b border-border last:border-b-0'
                               onClick={() =>
                                 handleVariableSelect(v.name, index)
                               }
                             >
-                              <span className='font-mono text-gray-800 text-xs font-medium'>
+                              <span
+                                className='font-mono text-xs font-medium'
+                                style={{
+                                  color:
+                                    'rgb(37 99 235 / var(--tw-text-opacity, 1))',
+                                }}
+                              >
                                 {v.name}
                               </span>
-                              <span className='text-gray-500 text-xs truncate ml-2 max-w-xs'>
+                              <span
+                                className='text-xs truncate ml-2 max-w-[140px]'
+                                style={{
+                                  color:
+                                    'rgb(22 163 74 / var(--tw-text-opacity, 1))',
+                                }}
+                              >
                                 {v.value}
                               </span>
                             </div>
                           ))
                         ) : (
-                          <div className='px-3 py-2 text-gray-400 text-xs text-center'>
+                          <div className='px-3 py-2 text-muted-foreground text-xs text-center'>
                             No results found
                           </div>
                         )}
@@ -347,23 +410,6 @@ export const JsonVariableSubstitution: React.FC<
           </div>
         </div>
       </div>
-
-      {pendingSubstitutions.length > 0 && (
-        <div className='mt-4 flex gap-2 justify-end'>
-          <button
-            onClick={handleCancelSubstitutions}
-            className='px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 text-sm rounded transition-colors'
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleConfirmSubstitutions}
-            className='px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded transition-colors font-medium'
-          >
-            End ({pendingSubstitutions.length})
-          </button>
-        </div>
-      )}
     </div>
   );
 };

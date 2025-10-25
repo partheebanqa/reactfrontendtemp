@@ -188,23 +188,25 @@ const RequestEditor: React.FC = () => {
   const formattedVariables = useMemo(() => {
     const formatted: Array<{ name: string; value: string }> = [];
 
-    // Process static variables
+    const isValidVar = (name: string) =>
+      name.startsWith('S_') || name.startsWith('D_');
+
+    // Static variables
     if (Array.isArray(variables)) {
       variables.forEach((variable: any) => {
         const name = variable.name || variable.key || '';
         const value = variable.value || variable.initialValue || '';
-        if (name) {
+        if (name && isValidVar(name)) {
           formatted.push({ name, value });
         }
       });
     }
 
-    // Process dynamic variables - generate values using generatorId
+    // Dynamic variables
     if (Array.isArray(dynamicVariables)) {
       dynamicVariables.forEach((variable: any) => {
         const name = variable.name || '';
-        if (name) {
-          // Generate value using the generatorId and parameters
+        if (name && isValidVar(name)) {
           const generatedValue = generateDynamicValueById(
             variable.generatorId || '',
             variable.parameters || {}
@@ -922,7 +924,7 @@ const RequestEditor: React.FC = () => {
                   }
                   return acc;
                 }, {})
-            : {},
+            : [],
         bodyRawContent:
           bodyType === 'raw' || bodyType === 'json'
             ? bodyContent
@@ -1377,7 +1379,7 @@ const RequestEditor: React.FC = () => {
         if (activeRequest?.id) {
           collectionActions.markUnsaved(activeRequest.id);
         }
-        showSuccess('JSON formatted successfully!');
+        // showSuccess('JSON formatted successfully!');
       }
     } catch (error) {
       showError(
