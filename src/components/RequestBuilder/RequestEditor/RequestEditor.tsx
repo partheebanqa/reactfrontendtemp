@@ -8,7 +8,6 @@ import {
   FolderPlus,
   Plus,
   FileTerminal,
-  Info,
   HelpCircle,
 } from 'lucide-react';
 import { useRequest } from '@/hooks/useRequest';
@@ -284,6 +283,19 @@ const RequestEditor: React.FC = () => {
     const options = buildFolderOptions(foldersTree);
     setFolderOptions(options);
   }, [activeCollection?.id]);
+
+  const findFolderName = (folderId: string, folders: any[] = []): string => {
+    for (const folder of folders) {
+      if (folder.id === folderId) {
+        return folder.name || folder.Name || 'Folder';
+      }
+      if (Array.isArray(folder.folders) && folder.folders.length > 0) {
+        const found = findFolderName(folderId, folder.folders);
+        if (found) return found;
+      }
+    }
+    return '';
+  };
 
   const updateRequestMutation = useMutation({
     mutationFn: ({
@@ -924,7 +936,7 @@ const RequestEditor: React.FC = () => {
                   }
                   return acc;
                 }, {})
-            : [],
+            : {},
         bodyRawContent:
           bodyType === 'raw' || bodyType === 'json'
             ? bodyContent
@@ -1425,7 +1437,12 @@ const RequestEditor: React.FC = () => {
   return (
     <TooltipProvider>
       <div className='flex-1 flex flex-col bg-white dark:bg-gray-900 overflow-hidden'>
-        <RequestTabs />
+        <RequestTabs
+          onSaveRequest={async (request) => {
+            // Call handleUpdateRequest when save is triggered from the confirmation dialog
+            await handleUpdateRequest();
+          }}
+        />
 
         <div className='border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex-shrink-0'>
           <div className='flex items-center justify-between'>
@@ -1434,6 +1451,17 @@ const RequestEditor: React.FC = () => {
                 {activeCollectionFull?.name}
               </span>
               <span className='text-gray-500 dark:text-gray-400'>/</span>
+              {activeRequest?.folderId && (
+                <>
+                  <span className='text-gray-500 dark:text-gray-400'>
+                    {findFolderName(
+                      activeRequest.folderId,
+                      (activeCollectionFull as any)?.folders || []
+                    )}
+                  </span>
+                  <span className='text-gray-500 dark:text-gray-400'>/</span>
+                </>
+              )}
               <EditableTextWithoutIcon
                 value={activeRequest.name || ''}
                 onSave={handleSaveName}
