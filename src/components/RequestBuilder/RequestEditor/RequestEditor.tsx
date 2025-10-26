@@ -306,25 +306,6 @@ const RequestEditor: React.FC = () => {
       requestData: any;
     }) => updateRequest({ requestId, requestData }),
     onSuccess: async (data) => {
-      if (activeRequest) {
-        collectionActions.setActiveRequest({
-          ...activeRequest,
-          method: method,
-          url: url,
-          bodyType: bodyType,
-          headers: headers,
-          params: params,
-          authorizationType: authType,
-          authorization: {
-            token: authData.token,
-            username: authData.username,
-            password: authData.password,
-            key: authData.key,
-            value: authData.value,
-            addTo: authData.addTo,
-          },
-        });
-      }
       if (activeCollection?.id) {
         await fetchCollectionRequests.mutateAsync(activeCollection.id);
       }
@@ -1175,7 +1156,6 @@ const RequestEditor: React.FC = () => {
         setActiveRequest(updatedRequest);
         collectionActions.markSaved(newId);
 
-        // ✅ ensure state propagate before continuing
         await new Promise((resolve) => setTimeout(resolve, 0));
       }
 
@@ -1470,7 +1450,6 @@ const RequestEditor: React.FC = () => {
       <div className='flex-1 flex flex-col bg-white dark:bg-gray-900 overflow-hidden'>
         <RequestTabs
           onSaveRequest={async (request) => {
-            // Call handleUpdateRequest when save is triggered from the confirmation dialog
             await handleUpdateRequest();
           }}
         />
@@ -1509,8 +1488,13 @@ const RequestEditor: React.FC = () => {
             <select
               value={method}
               onChange={(e) => {
-                setMethod(e.target.value as RequestMethod);
+                const newMethod = e.target.value as RequestMethod;
+                setMethod(newMethod);
                 if (activeRequest?.id) {
+                  collectionActions.updateOpenedRequest({
+                    ...activeRequest,
+                    method: newMethod,
+                  });
                   collectionActions.markUnsaved(activeRequest.id);
                 }
               }}

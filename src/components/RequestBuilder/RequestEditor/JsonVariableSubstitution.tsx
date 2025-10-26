@@ -204,7 +204,11 @@ export const JsonVariableSubstitution: React.FC<
           {lines.map((_, index) => (
             <div
               key={index}
-              className='h-6 text-[11px] font-mono text-muted-foreground leading-5'
+              className={`h-6 text-[11px] font-mono leading-5 transition-colors ${
+                hoveredLine === index
+                  ? 'text-foreground bg-primary/10 rounded'
+                  : 'text-muted-foreground'
+              }`}
             >
               {index + 1}
             </div>
@@ -236,7 +240,7 @@ export const JsonVariableSubstitution: React.FC<
                   key={`underline-${index}`}
                   className={`h-6 transition-colors ${
                     hoveredLine === index && hasKey
-                      ? 'border-b-2 border-primary'
+                      ? 'border-t border-b border-primary/40'
                       : ''
                   }`}
                 />

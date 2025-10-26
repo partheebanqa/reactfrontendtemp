@@ -161,7 +161,6 @@ const RequestTabs: React.FC<RequestTabsProps> = ({
           );
         })}
 
-        {/* New Request Button */}
         <button
           onClick={() =>
             activeCollection && handleCreateRequest(activeCollection)
