@@ -4,6 +4,17 @@ import { Trash2 } from 'lucide-react';
 import type React from 'react';
 import { useState, useRef, useEffect, useMemo } from 'react';
 
+import { Button } from '@/components/ui/button';
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+} from '@/components/ui/alert-dialog';
+
 interface Variable {
   name: string;
   value: string;
@@ -22,11 +33,11 @@ interface PendingSubstitution {
 interface JsonVariableSubstitutionProps {
   value: string;
   onChange?: (value: string) => void;
-  onVariableSelect?: (variable: SelectedVariable | null) => void;
+  onVariableSelect?: (variables: SelectedVariable[]) => void;
   onConfirmSubstitution?: (substitutions: PendingSubstitution[]) => void;
   mode?: 'json' | 'raw';
   variables?: Variable[];
-  initialVariable?: SelectedVariable | null;
+  initialVariable?: SelectedVariable[];
   readOnly?: boolean;
 }
 
@@ -39,14 +50,15 @@ export const JsonVariableSubstitution: React.FC<
   onConfirmSubstitution,
   mode = 'json',
   variables = [],
-  initialVariable = null,
+  initialVariable = [],
   readOnly = false,
 }) => {
+  const [deleteTargetPath, setDeleteTargetPath] = useState<string | null>(null);
   const [hoveredLine, setHoveredLine] = useState<number | null>(null);
   const [dropdownLine, setDropdownLine] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedVariable, setSelectedVariable] =
-    useState<SelectedVariable | null>(initialVariable);
+  const [selectedVariables, setSelectedVariables] =
+    useState<SelectedVariable[]>(initialVariable);
   const [pendingSubstitutions, setPendingSubstitutions] = useState<
     PendingSubstitution[]
   >([]);
@@ -54,9 +66,15 @@ export const JsonVariableSubstitution: React.FC<
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [scrollTop, setScrollTop] = useState(0);
 
+  // ---- NEW: AlertDialog state for confirmations ----
+  const [confirmState, setConfirmState] = useState<
+    | { open: true; kind: 'saved' | 'line'; path?: string; lineIndex?: number }
+    | { open: false }
+  >({ open: false });
+
   useEffect(() => {
-    if (initialVariable) {
-      setSelectedVariable(initialVariable);
+    if (initialVariable && initialVariable.length > 0) {
+      setSelectedVariables(initialVariable);
     }
   }, [initialVariable]);
 
@@ -94,6 +112,12 @@ export const JsonVariableSubstitution: React.FC<
     return pending ? pending.variableName : null;
   };
 
+  const getSelectedVariableForLine = (lineIndex: number): string | null => {
+    const path = extractPathFromLine(lineIndex);
+    const found = selectedVariables.find((v) => v.path === path);
+    return found ? found.name : null;
+  };
+
   const handleSubstituteClick = (lineIndex: number) => {
     setDropdownLine(dropdownLine === lineIndex ? null : lineIndex);
     setSearchTerm('');
@@ -113,14 +137,19 @@ export const JsonVariableSubstitution: React.FC<
       { lineIndex, variableName: variable },
     ]);
 
-    const selectedVar: SelectedVariable = { name: variable, path };
-    setSelectedVariable(selectedVar);
-    onVariableSelect?.(selectedVar);
+    // Update selected variables array
+    setSelectedVariables((prev) => {
+      // Remove any existing variable with the same path
+      const filtered = prev.filter((v) => v.path !== path);
+      // Add the new variable
+      const updated = [...filtered, { name: variable, path }];
+      onVariableSelect?.(updated);
+      return updated;
+    });
 
     setDropdownLine(null);
   };
 
-  console.log('selectedVariable:', selectedVariable);
   const handleClearPendingSubstitution = (lineIndex: number) => {
     setPendingSubstitutions((prev) =>
       prev.filter((p) => p.lineIndex !== lineIndex)
@@ -149,9 +178,12 @@ export const JsonVariableSubstitution: React.FC<
     onChange?.(updatedLines.join('\n'));
   };
 
-  const handleClearSavedVariable = () => {
-    setSelectedVariable(null);
-    onVariableSelect?.(null);
+  const handleClearSavedVariable = (path: string) => {
+    setSelectedVariables((prev) => {
+      const updated = prev.filter((v) => v.path !== path);
+      onVariableSelect?.(updated);
+      return updated;
+    });
   };
 
   const handleScroll = (e: React.UIEvent<HTMLTextAreaElement>) => {
@@ -171,25 +203,53 @@ export const JsonVariableSubstitution: React.FC<
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // ---- NEW: confirm handlers ----
+  const confirmDeleteSaved = (path: string) =>
+    setConfirmState({ open: true, kind: 'saved', path });
+
+  const confirmDeleteLine = (lineIndex: number) =>
+    setConfirmState({ open: true, kind: 'line', lineIndex });
+
+  const performConfirmedDelete = () => {
+    if (!confirmState.open) return;
+    if (confirmState.kind === 'saved' && confirmState.path) {
+      handleClearSavedVariable(confirmState.path);
+    } else if (
+      confirmState.kind === 'line' &&
+      typeof confirmState.lineIndex === 'number'
+    ) {
+      handleRemoveSubstitution(confirmState.lineIndex);
+    }
+    setConfirmState({ open: false });
+  };
+
   return (
     <div ref={containerRef} className='relative w-full space-y-3'>
-      {selectedVariable?.path && selectedVariable?.name && (
-        <div className='bg-green-50 border border-green-200 rounded-md p-[7px] flex items-center justify-between'>
-          <div className='flex items-center gap-2'>
-            <span className='text-sm font-medium text-green-900'>
+      {selectedVariables.length > 0 && (
+        <div className='bg-green-50 border border-green-200 rounded-md p-[7px] overflow-x-auto'>
+          <div className='flex items-center gap-3 whitespace-nowrap'>
+            <span className='text-sm font-medium text-green-900 flex-shrink-0'>
               Substituted Variables:
             </span>
-            <span className='px-3 py-1 bg-green-500 text-white text-xs rounded font-mono font-medium'>
-              {selectedVariable.path}: {selectedVariable.name}
-            </span>
+
+            {selectedVariables.map((variable, index) => (
+              <div
+                key={`${variable.path}-${index}`}
+                className='flex items-center gap-2 px-3 py-1 bg-green-500 text-white text-xs rounded font-mono font-medium flex-shrink-0'
+              >
+                <span>
+                  {variable.path}: {variable.name}
+                </span>
+                <button
+                  onClick={() => confirmDeleteSaved(variable.path)}
+                  className='p-0.5 bg-white/20 hover:bg-white/30 rounded transition-colors'
+                  title='Remove variable'
+                >
+                  <Trash2 className='w-3 h-3' />
+                </button>
+              </div>
+            ))}
           </div>
-          <button
-            onClick={handleClearSavedVariable}
-            className='p-1 bg-destructive/10 hover:bg-destructive/20 rounded transition-colors'
-            title='Remove variable'
-          >
-            <Trash2 className='w-3.5 h-3.5 text-destructive' />
-          </button>
         </div>
       )}
 
@@ -197,9 +257,7 @@ export const JsonVariableSubstitution: React.FC<
         {/* Line numbers column */}
         <div
           className='flex flex-col bg-muted border-r border-border py-2 px-2 text-right select-none overflow-hidden'
-          style={{
-            minWidth: '2.5rem',
-          }}
+          style={{ minWidth: '2.5rem' }}
         >
           {lines.map((_, index) => (
             <div
@@ -234,7 +292,6 @@ export const JsonVariableSubstitution: React.FC<
           <div className='absolute top-0 left-0 right-0 bottom-0 pointer-events-none pt-2'>
             {lines.map((line, index) => {
               const hasKey = /"[^"]+"\s*:/.test(line);
-
               return (
                 <div
                   key={`underline-${index}`}
@@ -254,9 +311,7 @@ export const JsonVariableSubstitution: React.FC<
               const hasKey = /"[^"]+"\s*:/.test(line);
               const pendingVar = getPendingSubstitution(index);
               const alreadySubstituted = getAlreadySubstitutedVariable(index);
-              const currentPath = extractPathFromLine(index);
-              const isSelectedVariableLine =
-                selectedVariable && selectedVariable.path === currentPath;
+              const selectedVar = getSelectedVariableForLine(index);
 
               return (
                 <div
@@ -267,15 +322,15 @@ export const JsonVariableSubstitution: React.FC<
                 >
                   {hoveredLine === index && hasKey && (
                     <div className='pointer-events-auto ml-auto mr-1 flex items-center gap-1'>
-                      {isSelectedVariableLine &&
-                      !pendingVar &&
-                      !alreadySubstituted ? (
+                      {selectedVar && !pendingVar && !alreadySubstituted ? (
                         <>
                           <span className='px-2 py-0.5 bg-green-500 text-white text-[11px] rounded font-mono whitespace-nowrap font-medium'>
-                            {selectedVariable.name}
+                            {selectedVar}
                           </span>
                           <button
-                            onClick={handleClearSavedVariable}
+                            onClick={() =>
+                              confirmDeleteSaved(extractPathFromLine(index))
+                            }
                             className='p-0.5 bg-destructive/10 hover:bg-destructive/20 rounded transition-colors'
                             title='Remove variable'
                           >
@@ -286,7 +341,6 @@ export const JsonVariableSubstitution: React.FC<
                         <button
                           onClick={() => handleSubstituteClick(index)}
                           className='px-2 py-0.5 bg-[rgb(19,111,176)] hover:bg-[rgb(15,90,144)] text-white text-[11px] rounded transition-colors flex items-center justify-center whitespace-nowrap font-medium'
-                          // title='Substitute variable'
                         >
                           Substitute Variable
                         </button>
@@ -311,7 +365,7 @@ export const JsonVariableSubstitution: React.FC<
                             {alreadySubstituted}
                           </span>
                           <button
-                            onClick={() => handleRemoveSubstitution(index)}
+                            onClick={() => confirmDeleteLine(index)}
                             className='p-0.5 bg-destructive/10 hover:bg-destructive/20 rounded transition-colors'
                             title='Remove substitution'
                           >
@@ -369,6 +423,35 @@ export const JsonVariableSubstitution: React.FC<
           </div>
         </div>
       </div>
+
+      {/* ---- NEW: Single global AlertDialog (controlled) ---- */}
+      <AlertDialog
+        open={confirmState.open}
+        onOpenChange={(open) => {
+          if (!open) setConfirmState({ open: false });
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {confirmState.open && confirmState.kind === 'saved'
+                ? 'Remove substituted variable?'
+                : 'Remove substitution from this line?'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmState.open &&
+              confirmState.kind === 'saved' &&
+              confirmState.path
+                ? `This will remove the variable mapping for "${confirmState.path}". This action cannot be undone.`
+                : 'This will remove the in-line substitution comment. This action cannot be undone.'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <Button onClick={performConfirmedDelete}>Delete</Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

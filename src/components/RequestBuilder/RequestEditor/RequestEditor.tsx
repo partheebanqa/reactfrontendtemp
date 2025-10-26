@@ -140,8 +140,10 @@ const RequestEditor: React.FC = () => {
     'none' | 'basic' | 'bearer' | 'apiKey' | 'oauth1' | 'oauth2'
   >('bearer');
   const [token, setToken] = useState('');
-  const [selectedVariable, setSelectedVariable] =
-    useState<SelectedVariable | null>(null);
+  const [selectedVariable, setSelectedVariable] = useState<SelectedVariable[]>(
+    []
+  );
+
   const [pendingSubstitutions, setPendingSubstitutions] = useState<
     PendingSubstitution[]
   >([]);
@@ -490,14 +492,19 @@ const RequestEditor: React.FC = () => {
       }
 
       if (activeRequest.variable) {
-        setSelectedVariable(activeRequest.variable);
-      } else {
-        setSelectedVariable(null);
+        if (Array.isArray(activeRequest.variable)) {
+          const filteredVariables = activeRequest.variable.filter(
+            (v: any) => v.path || v.name
+          );
+          setSelectedVariable(filteredVariables);
+        } else {
+          setSelectedVariable([]);
+        }
       }
     } else if (!isSaving) {
       setAssertions([]);
       setAuthType('bearer');
-      setSelectedVariable(null);
+      setSelectedVariable([]);
       setPendingSubstitutions([]);
     }
     setResponseData(null);
@@ -990,18 +997,9 @@ const RequestEditor: React.FC = () => {
         headers,
         assertions: selectedAssertions,
       };
-
-      if (
-        selectedVariable &&
-        selectedVariable.name?.trim() &&
-        selectedVariable.path?.trim()
-      ) {
-        requestData.variable = {
-          name: selectedVariable.name,
-          path: selectedVariable.path,
-        };
+      if (selectedVariable && selectedVariable.length > 0) {
+        requestData.variable = selectedVariable;
       }
-
       if (!activeRequest.id) {
         showError('Missing ID', 'Cannot update a request without an id.');
         return;
@@ -1124,7 +1122,9 @@ const RequestEditor: React.FC = () => {
         params,
         headers,
         assertions: selectedAssertions,
-        ...(selectedVariable ? { variable: selectedVariable } : {}),
+        ...(selectedVariable && selectedVariable.length > 0
+          ? { variable: selectedVariable }
+          : {}),
       };
 
       const savedRequestResponse = await addRequestMutation.mutateAsync(
