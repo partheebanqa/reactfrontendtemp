@@ -1,4 +1,4 @@
-'use client';
+'browser';
 
 import type React from 'react';
 import { useState } from 'react';
@@ -6,6 +6,16 @@ import { X, Plus } from 'lucide-react';
 import type { CollectionRequest } from '@/shared/types/collection';
 import { useCollectionStore, collectionActions } from '@/store/collectionStore';
 import { useCollection } from '@/hooks/useCollection';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface RequestTabsProps {
   onTabChange?: (request: CollectionRequest) => void;
@@ -21,10 +31,7 @@ const RequestTabs: React.FC<RequestTabsProps> = ({
   const { handleCreateRequest, activeCollection } = useCollection();
 
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
-  const [pendingCloseRequestId, setPendingCloseRequestId] = useState<
-    string | undefined
-  >(undefined);
-  const [alwaysDiscard, setAlwaysDiscard] = useState(false);
+  const [pendingCloseRequestId, setPendingCloseRequestId] = useState<string>();
   const [isSaving, setIsSaving] = useState(false);
 
   const handleTabClick = (request: CollectionRequest) => {
@@ -32,16 +39,13 @@ const RequestTabs: React.FC<RequestTabsProps> = ({
     onTabChange?.(request);
   };
 
-  const handleCloseTab = (
-    e: React.MouseEvent,
-    requestId: string | undefined
-  ) => {
+  const handleCloseTab = (e: React.MouseEvent, requestId?: string) => {
     e.stopPropagation();
-    if (requestId === undefined || requestId === null) return;
+    if (!requestId) return;
 
     const hasUnsavedChanges = unsavedChanges.has(requestId);
 
-    if (hasUnsavedChanges && !alwaysDiscard) {
+    if (hasUnsavedChanges) {
       setPendingCloseRequestId(requestId);
       setShowConfirmDialog(true);
     } else {
@@ -60,19 +64,14 @@ const RequestTabs: React.FC<RequestTabsProps> = ({
   const handleSaveChanges = async () => {
     if (!pendingCloseRequestId) return;
 
-    const requestToSave = openedRequests.find(
-      (r) => r.id === pendingCloseRequestId
-    );
-    if (!requestToSave) return;
+    const request = openedRequests.find((r) => r.id === pendingCloseRequestId);
+    if (!request) return;
 
     setIsSaving(true);
     try {
-      if (onSaveRequest) {
-        await onSaveRequest(requestToSave);
-      }
-      collectionActions.markSaved(pendingCloseRequestId);
-    } catch (error) {
-      console.error('Failed to save request:', error);
+      await onSaveRequest?.(request);
+      collectionActions.markSaved(request.id);
+      collectionActions.closeRequest(request.id);
     } finally {
       setIsSaving(false);
       setShowConfirmDialog(false);
@@ -85,15 +84,24 @@ const RequestTabs: React.FC<RequestTabsProps> = ({
     setPendingCloseRequestId(undefined);
   };
 
-  const handleAddNewRequest = () => {
-    if (activeCollection) {
-      handleCreateRequest(activeCollection);
+  const methodColor = (method?: string) => {
+    switch ((method || '').toUpperCase()) {
+      case 'GET':
+        return 'text-green-600';
+      case 'POST':
+        return 'text-yellow-600';
+      case 'PUT':
+        return 'text-blue-600';
+      case 'DELETE':
+        return 'text-red-600';
+      case 'PATCH':
+        return 'text-purple-600';
+      default:
+        return 'text-gray-600';
     }
   };
 
-  if (openedRequests.length === 0) {
-    return null;
-  }
+  if (!openedRequests.length) return null;
 
   const requestToClose = openedRequests.find(
     (r) => r.id === pendingCloseRequestId
@@ -101,133 +109,114 @@ const RequestTabs: React.FC<RequestTabsProps> = ({
 
   return (
     <>
-      <div className='border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 overflow-x-auto'>
-        <div className='flex items-center gap-1 px-2 py-0'>
-          {openedRequests.map((request) => {
-            const isActive = activeRequest?.id === request.id;
-            const hasUnsavedChanges = unsavedChanges.has(request.id || '');
+      <div className='flex items-center bg-white border-b border-gray-200 px-4 py-0 overflow-x-auto'>
+        {openedRequests.map((request) => {
+          const isActive = activeRequest?.id === request.id;
+          const hasUnsaved = unsavedChanges.has(request.id);
 
-            return (
-              <div
-                key={request.id}
+          return (
+            <div key={request.id} className='flex items-center'>
+              <button
                 onClick={() => handleTabClick(request)}
                 className={`
-                  flex items-center gap-2 px-3 py-2 cursor-pointer
-                  border-b-2 transition-all duration-200 whitespace-nowrap group
+                  group relative flex items-center gap-2 px-3 py-2
+                  transition-all border-b-2 whitespace-nowrap
                   ${
                     isActive
-                      ? 'border-red-500 bg-gray-50 dark:bg-gray-800'
-                      : 'border-transparent hover:bg-gray-50 dark:hover:bg-gray-800'
+                      ? 'border-blue-600 bg-white'
+                      : 'border-transparent hover:bg-gray-50'
                   }
                 `}
               >
-                {hasUnsavedChanges && (
-                  <div className='w-2 h-2 rounded-full bg-red-500 flex-shrink-0' />
-                )}
+                <span
+                  className={`text-xs font-semibold ${methodColor(
+                    request.method
+                  )}`}
+                >
+                  {(request.method || 'GET').toUpperCase()}
+                </span>
 
-                <span className='text-sm font-medium text-gray-900 dark:text-white truncate max-w-[150px]'>
+                <span
+                  className={`text-sm flex items-center gap-1.5 ${
+                    isActive ? 'text-blue-600 font-medium' : 'text-gray-700'
+                  }`}
+                >
                   {request.name || 'Untitled'}
+                  {hasUnsaved && (
+                    <span className='w-1.5 h-1.5 bg-orange-500 rounded-full'></span>
+                  )}
                 </span>
 
                 <button
                   onClick={(e) => handleCloseTab(e, request.id)}
-                  className='p-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors flex-shrink-0 opacity-0 group-hover:opacity-100'
-                  aria-label='Close tab'
+                  className='ml-1 p-0.5 hover:bg-gray-200 rounded opacity-0 group-hover:opacity-100 transition-colors'
                 >
-                  <X className='w-3 h-3 text-gray-500 dark:text-gray-400' />
+                  <X size={14} className='text-gray-500' />
                 </button>
-              </div>
-            );
-          })}
+              </button>
 
-          <button
-            onClick={handleAddNewRequest}
-            disabled={!activeCollection}
-            className={`flex items-center gap-1 px-2 py-2 rounded transition-colors ml-1 ${
-              activeCollection
-                ? 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer'
-                : 'text-gray-300 dark:text-gray-600 cursor-not-allowed opacity-50'
-            }`}
-            aria-label='Add new request'
-            title={
-              activeCollection ? 'Add new request' : 'Select a collection first'
-            }
-          >
-            <Plus className='w-4 h-4' />
-          </button>
-        </div>
+              {/* Divider */}
+              <div className='h-5 w-px bg-gray-200'></div>
+            </div>
+          );
+        })}
+
+        {/* New Request Button */}
+        <button
+          onClick={() =>
+            activeCollection && handleCreateRequest(activeCollection)
+          }
+          className='p-2 hover:bg-gray-100 rounded transition-colors ml-auto'
+          title='New Request'
+          disabled={!activeCollection}
+        >
+          <Plus size={18} className='text-gray-600' />
+        </button>
       </div>
 
+      {/* Confirmation Modal */}
       {showConfirmDialog && requestToClose && (
-        <div className='fixed inset-0 bg-black/50 flex items-center justify-center z-50'>
-          <div className='bg-white dark:bg-gray-900 rounded-lg shadow-lg w-full max-w-md border border-gray-200 dark:border-gray-700 p-6'>
-            <div className='flex items-center justify-between mb-4'>
-              <h2 className='text-base font-semibold text-gray-900 dark:text-white'>
+        <AlertDialog open={showConfirmDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className='text-base font-semibold'>
                 DO YOU WANT TO SAVE?
-              </h2>
-              <button
-                onClick={handleCancelClose}
-                className='p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors'
-                aria-label='Close dialog'
-              >
-                <X className='w-4 h-4 text-gray-500 dark:text-gray-400' />
-              </button>
-            </div>
+              </AlertDialogTitle>
+              <AlertDialogDescription className='text-sm text-gray-600'>
+                This request <b>{requestToClose.name || 'Untitled'}</b> has
+                unsaved changes. Save these changes to avoid losing your work.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
 
-            <p className='text-sm text-gray-600 dark:text-gray-400 mb-4'>
-              This tab{' '}
-              <span className='font-semibold'>{requestToClose.name}</span> has
-              unsaved changes which will be lost if you choose to close it. Save
-              these changes to avoid losing your work.
-            </p>
-
-            <div className='mb-6 flex items-start gap-3'>
-              <input
-                type='checkbox'
-                id='always-discard'
-                checked={alwaysDiscard}
-                onChange={(e) => setAlwaysDiscard(e.target.checked)}
-                className='mt-1 w-4 h-4 rounded border-gray-300 text-red-600 focus:ring-red-500 cursor-pointer'
-              />
-              <div className='flex-1'>
-                <label
-                  htmlFor='always-discard'
-                  className='text-sm font-medium text-gray-900 dark:text-white cursor-pointer'
-                >
-                  Always discard unsaved changes when closing a tab
-                </label>
-                <p className='text-xs text-gray-500 dark:text-gray-400 mt-1'>
-                  You'll no longer be prompted to save changes when closing a
-                  tab. You can change this anytime from your Settings.
-                </p>
-              </div>
-            </div>
-
-            <div className='flex justify-end gap-3'>
-              <button
+            <AlertDialogFooter>
+              {/* Don’t Save */}
+              <AlertDialogAction
                 onClick={handleDontSave}
                 disabled={isSaving}
-                className='px-4 py-2 text-gray-900 dark:text-white bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium text-sm'
+                className='text-gray-900 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:text-white dark:hover:bg-gray-700'
               >
-                Don't save
-              </button>
-              <button
+                Don’t save
+              </AlertDialogAction>
+
+              {/* Cancel */}
+              <AlertDialogCancel
                 onClick={handleCancelClose}
                 disabled={isSaving}
-                className='px-4 py-2 text-gray-900 dark:text-white bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium text-sm'
               >
                 Cancel
-              </button>
-              <button
+              </AlertDialogCancel>
+
+              {/* Save */}
+              <AlertDialogAction
                 onClick={handleSaveChanges}
                 disabled={isSaving}
-                className='px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium text-sm'
+                className='bg-orange-500 hover:bg-orange-600 text-white'
               >
                 {isSaving ? 'Saving...' : 'Save changes'}
-              </button>
-            </div>
-          </div>
-        </div>
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       )}
     </>
   );

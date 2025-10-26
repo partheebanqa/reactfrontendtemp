@@ -306,6 +306,25 @@ const RequestEditor: React.FC = () => {
       requestData: any;
     }) => updateRequest({ requestId, requestData }),
     onSuccess: async (data) => {
+      if (activeRequest) {
+        collectionActions.setActiveRequest({
+          ...activeRequest,
+          method: method,
+          url: url,
+          bodyType: bodyType,
+          headers: headers,
+          params: params,
+          authorizationType: authType,
+          authorization: {
+            token: authData.token,
+            username: authData.username,
+            password: authData.password,
+            key: authData.key,
+            value: authData.value,
+            addTo: authData.addTo,
+          },
+        });
+      }
       if (activeCollection?.id) {
         await fetchCollectionRequests.mutateAsync(activeCollection.id);
       }
@@ -1131,7 +1150,6 @@ const RequestEditor: React.FC = () => {
         requestData
       );
 
-      // ✅ Only update state after save success
       if (
         savedRequestResponse &&
         (savedRequestResponse.id || savedRequestResponse.requestId)

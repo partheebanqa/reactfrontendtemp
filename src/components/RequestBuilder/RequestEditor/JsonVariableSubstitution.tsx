@@ -158,18 +158,6 @@ export const JsonVariableSubstitution: React.FC<
     setScrollTop(e.currentTarget.scrollTop);
   };
 
-  const renderJsonWithColors = (jsonText: string) => {
-    return jsonText
-      .replace(
-        /("([^"\\]|\\.)*")\s*:/g,
-        '<span style="color: rgb(37 99 235 / var(--tw-text-opacity, 1))">$1</span>:'
-      )
-      .replace(
-        /:\s*("([^"\\]|\\.)*")/g,
-        ': <span style="color: rgb(22 163 74 / var(--tw-text-opacity, 1))">$1</span>'
-      );
-  };
-
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -186,7 +174,7 @@ export const JsonVariableSubstitution: React.FC<
   return (
     <div ref={containerRef} className='relative w-full space-y-3'>
       {selectedVariable?.path && selectedVariable?.name && (
-        <div className='bg-green-50 border border-green-200 rounded-md p-3 flex items-center justify-between'>
+        <div className='bg-green-50 border border-green-200 rounded-md p-[7px] flex items-center justify-between'>
           <div className='flex items-center gap-2'>
             <span className='text-sm font-medium text-green-900'>
               Substituted Variables:
@@ -225,25 +213,6 @@ export const JsonVariableSubstitution: React.FC<
 
         {/* Textarea with transparent background */}
         <div className='relative flex-1'>
-          <div
-            className='absolute top-0 left-0 right-0 bottom-0 p-2 pl-3 font-mono text-sm pointer-events-none overflow-hidden leading-6 whitespace-pre-wrap break-words'
-            style={{
-              fontFamily:
-                "'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace",
-              scrollTop: scrollTop,
-            }}
-          >
-            {lines.map((line, index) => (
-              <div key={`highlight-${index}`}>
-                <span
-                  dangerouslySetInnerHTML={{
-                    __html: renderJsonWithColors(line),
-                  }}
-                />
-              </div>
-            ))}
-          </div>
-
           <textarea
             ref={textareaRef}
             value={value}
@@ -254,8 +223,6 @@ export const JsonVariableSubstitution: React.FC<
             style={{
               fontFamily:
                 "'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace",
-              color: 'transparent',
-              caretColor: 'rgb(var(--foreground))',
             }}
           />
 
@@ -376,22 +343,10 @@ export const JsonVariableSubstitution: React.FC<
                                 handleVariableSelect(v.name, index)
                               }
                             >
-                              <span
-                                className='font-mono text-xs font-medium'
-                                style={{
-                                  color:
-                                    'rgb(37 99 235 / var(--tw-text-opacity, 1))',
-                                }}
-                              >
+                              <span className='font-mono text-foreground text-xs font-medium'>
                                 {v.name}
                               </span>
-                              <span
-                                className='text-xs truncate ml-2 max-w-[140px]'
-                                style={{
-                                  color:
-                                    'rgb(22 163 74 / var(--tw-text-opacity, 1))',
-                                }}
-                              >
+                              <span className='text-muted-foreground text-xs truncate ml-2 max-w-[140px]'>
                                 {v.value}
                               </span>
                             </div>
