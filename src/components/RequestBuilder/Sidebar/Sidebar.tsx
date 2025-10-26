@@ -552,12 +552,12 @@ const Sidebar: React.FC = () => {
   };
 
   const handleDeleteNewRequest = () => {
-    if (selectedCollection == null || requstIndex == null) return;
+    if (requstIndex == null) return;
 
     if (selectedFolder?.id) {
       setCollection(
         collections.map((col) =>
-          col.id === selectedCollection.id
+          col.id === selectedCollection?.id
             ? {
                 ...col,
                 requests: col.requests,
@@ -570,7 +570,7 @@ const Sidebar: React.FC = () => {
             : col
         )
       );
-    } else {
+    } else if (selectedCollection) {
       setCollection(
         collections.map((col) =>
           col.id === selectedCollection.id
@@ -809,6 +809,7 @@ const Sidebar: React.FC = () => {
                       className='flex items-center justify-between p-2 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer group'
                       onClick={() => {
                         if (isSearching) return;
+                        setActiveCollection(collection);
                         void toggleExpandedCollection(collection.id);
                       }}
                     >

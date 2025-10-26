@@ -1,4 +1,6 @@
-'browser';
+'use client';
+
+'use browser';
 
 import type React from 'react';
 import { useState } from 'react';
@@ -41,11 +43,18 @@ const RequestTabs: React.FC<RequestTabsProps> = ({
 
   const handleCloseTab = (e: React.MouseEvent, requestId?: string) => {
     e.stopPropagation();
-    if (!requestId) return;
+
+    const request = openedRequests.find((r) => r.id === requestId);
+
+    // If request doesn't exist or has no real database id, just close it
+    if (!request || !request.id || request.id.startsWith('temp-')) {
+      collectionActions.closeRequest(requestId);
+      return;
+    }
 
     const hasUnsavedChanges = unsavedChanges.has(requestId);
 
-    if (hasUnsavedChanges) {
+    if (hasUnsavedChanges && requestId) {
       setPendingCloseRequestId(requestId);
       setShowConfirmDialog(true);
     } else {
@@ -67,11 +76,22 @@ const RequestTabs: React.FC<RequestTabsProps> = ({
     const request = openedRequests.find((r) => r.id === pendingCloseRequestId);
     if (!request) return;
 
+    // If request has no id, we can't save it - just close it
+    if (!request.id) {
+      collectionActions.closeRequest(pendingCloseRequestId);
+      setShowConfirmDialog(false);
+      setPendingCloseRequestId(undefined);
+      return;
+    }
+
     setIsSaving(true);
     try {
-      await onSaveRequest?.(request);
-      collectionActions.markSaved(request.id);
-      collectionActions.closeRequest(request.id);
+      if (activeCollection) {
+        await onSaveRequest?.(request);
+        collectionActions.markSaved(request.id);
+      }
+      // Remove this line to stay on the same tab
+      // collectionActions.closeRequest(request.id);
     } finally {
       setIsSaving(false);
       setShowConfirmDialog(false);
@@ -161,16 +181,17 @@ const RequestTabs: React.FC<RequestTabsProps> = ({
           );
         })}
 
-        <button
-          onClick={() =>
-            activeCollection && handleCreateRequest(activeCollection)
-          }
-          className='p-2 hover:bg-gray-100 rounded transition-colors ml-auto'
-          title='New Request'
-          disabled={!activeCollection}
-        >
-          <Plus size={18} className='text-gray-600' />
-        </button>
+        {activeCollection && (
+          <button
+            onClick={() =>
+              activeCollection && handleCreateRequest(activeCollection)
+            }
+            className='p-2 hover:bg-gray-100 rounded transition-colors ml-auto'
+            title='New Request'
+          >
+            <Plus size={18} className='text-gray-600' />
+          </button>
+        )}
       </div>
 
       {/* Confirmation Modal */}
@@ -188,13 +209,13 @@ const RequestTabs: React.FC<RequestTabsProps> = ({
             </AlertDialogHeader>
 
             <AlertDialogFooter>
-              {/* Don’t Save */}
+              {/* Don't Save */}
               <AlertDialogAction
                 onClick={handleDontSave}
                 disabled={isSaving}
                 className='text-gray-900 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:text-white dark:hover:bg-gray-700'
               >
-                Don’t save
+                Don't save
               </AlertDialogAction>
 
               {/* Cancel */}

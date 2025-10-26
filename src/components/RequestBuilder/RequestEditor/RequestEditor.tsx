@@ -1448,11 +1448,13 @@ const RequestEditor: React.FC = () => {
   return (
     <TooltipProvider>
       <div className='flex-1 flex flex-col bg-white dark:bg-gray-900 overflow-hidden'>
-        <RequestTabs
-          onSaveRequest={async (request) => {
-            await handleUpdateRequest();
-          }}
-        />
+        {activeCollection && (
+          <RequestTabs
+            onSaveRequest={async (request) => {
+              await handleUpdateRequest();
+            }}
+          />
+        )}
 
         <div className='border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex-shrink-0'>
           <div className='flex items-center justify-between'>
