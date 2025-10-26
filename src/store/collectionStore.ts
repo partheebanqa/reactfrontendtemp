@@ -32,10 +32,16 @@ export const collectionStore = new Store<CollectionState>(
 );
 
 export const collectionActions = {
-  setResponseLayout: (layout: 'bottom' | 'right') => {
+  updateOpenedRequest: (updatedRequest: CollectionRequest) => {
     collectionStore.setState((state) => ({
       ...state,
-      responseLayout: layout,
+      openedRequests: state.openedRequests.map((r) =>
+        r.id === updatedRequest.id ? updatedRequest : r
+      ),
+      activeRequest:
+        state.activeRequest?.id === updatedRequest.id
+          ? updatedRequest
+          : state.activeRequest,
     }));
   },
 

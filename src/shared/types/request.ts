@@ -46,6 +46,7 @@ export interface RequestData {
 }
 
 export interface ResponseData {
+  assertionLogs?: boolean;
   schemaValidation: any;
   status: number;
   statusText: string;

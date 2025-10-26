@@ -305,9 +305,9 @@ const ResponseViewer = ({ isBottomLayout }: ResponseViewerProps) => {
                 value={filterResponseData(responseData.body, searchQuery)}
                 theme='dark'
                 rootName={false}
-                defaultInspectDepth={2}
                 displayDataTypes={false}
                 search={searchQuery}
+                collapseStringsAfterLength={false}
                 style={{
                   fontFamily: 'monospace',
                   fontSize: '13px',

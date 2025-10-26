@@ -230,6 +230,8 @@ export const useImpotCollectionJsonMutation = async (
 
 export const addRequest = async (requestData: any) => {
   try {
+    console.log('addrequest:', requestData);
+
     const response = await apiRequest('POST', API_COLLECTION_REQUESTS, {
       body: JSON.stringify(requestData),
     });

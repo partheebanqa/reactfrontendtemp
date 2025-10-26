@@ -4,6 +4,17 @@ import { Trash2 } from 'lucide-react';
 import type React from 'react';
 import { useState, useRef, useEffect, useMemo } from 'react';
 
+import { Button } from '@/components/ui/button';
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+} from '@/components/ui/alert-dialog';
+
 interface Variable {
   name: string;
   value: string;
@@ -22,11 +33,11 @@ interface PendingSubstitution {
 interface JsonVariableSubstitutionProps {
   value: string;
   onChange?: (value: string) => void;
-  onVariableSelect?: (variable: SelectedVariable | null) => void;
+  onVariableSelect?: (variables: SelectedVariable[]) => void;
   onConfirmSubstitution?: (substitutions: PendingSubstitution[]) => void;
   mode?: 'json' | 'raw';
   variables?: Variable[];
-  initialVariable?: SelectedVariable | null;
+  initialVariable?: SelectedVariable[];
   readOnly?: boolean;
 }
 
@@ -39,23 +50,31 @@ export const JsonVariableSubstitution: React.FC<
   onConfirmSubstitution,
   mode = 'json',
   variables = [],
-  initialVariable = null,
+  initialVariable = [],
   readOnly = false,
 }) => {
+  const [deleteTargetPath, setDeleteTargetPath] = useState<string | null>(null);
   const [hoveredLine, setHoveredLine] = useState<number | null>(null);
   const [dropdownLine, setDropdownLine] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedVariable, setSelectedVariable] =
-    useState<SelectedVariable | null>(initialVariable);
+  const [selectedVariables, setSelectedVariables] =
+    useState<SelectedVariable[]>(initialVariable);
   const [pendingSubstitutions, setPendingSubstitutions] = useState<
     PendingSubstitution[]
   >([]);
   const containerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [scrollTop, setScrollTop] = useState(0);
+
+  // ---- NEW: AlertDialog state for confirmations ----
+  const [confirmState, setConfirmState] = useState<
+    | { open: true; kind: 'saved' | 'line'; path?: string; lineIndex?: number }
+    | { open: false }
+  >({ open: false });
 
   useEffect(() => {
-    if (initialVariable) {
-      setSelectedVariable(initialVariable);
+    if (initialVariable && initialVariable.length > 0) {
+      setSelectedVariables(initialVariable);
     }
   }, [initialVariable]);
 
@@ -93,6 +112,12 @@ export const JsonVariableSubstitution: React.FC<
     return pending ? pending.variableName : null;
   };
 
+  const getSelectedVariableForLine = (lineIndex: number): string | null => {
+    const path = extractPathFromLine(lineIndex);
+    const found = selectedVariables.find((v) => v.path === path);
+    return found ? found.name : null;
+  };
+
   const handleSubstituteClick = (lineIndex: number) => {
     setDropdownLine(dropdownLine === lineIndex ? null : lineIndex);
     setSearchTerm('');
@@ -112,9 +137,15 @@ export const JsonVariableSubstitution: React.FC<
       { lineIndex, variableName: variable },
     ]);
 
-    const selectedVar: SelectedVariable = { name: variable, path };
-    setSelectedVariable(selectedVar);
-    onVariableSelect?.(selectedVar);
+    // Update selected variables array
+    setSelectedVariables((prev) => {
+      // Remove any existing variable with the same path
+      const filtered = prev.filter((v) => v.path !== path);
+      // Add the new variable
+      const updated = [...filtered, { name: variable, path }];
+      onVariableSelect?.(updated);
+      return updated;
+    });
 
     setDropdownLine(null);
   };
@@ -147,9 +178,16 @@ export const JsonVariableSubstitution: React.FC<
     onChange?.(updatedLines.join('\n'));
   };
 
-  const handleClearSavedVariable = () => {
-    setSelectedVariable(null);
-    onVariableSelect?.(null);
+  const handleClearSavedVariable = (path: string) => {
+    setSelectedVariables((prev) => {
+      const updated = prev.filter((v) => v.path !== path);
+      onVariableSelect?.(updated);
+      return updated;
+    });
+  };
+
+  const handleScroll = (e: React.UIEvent<HTMLTextAreaElement>) => {
+    setScrollTop(e.currentTarget.scrollTop);
   };
 
   useEffect(() => {
@@ -165,173 +203,255 @@ export const JsonVariableSubstitution: React.FC<
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // ---- NEW: confirm handlers ----
+  const confirmDeleteSaved = (path: string) =>
+    setConfirmState({ open: true, kind: 'saved', path });
+
+  const confirmDeleteLine = (lineIndex: number) =>
+    setConfirmState({ open: true, kind: 'line', lineIndex });
+
+  const performConfirmedDelete = () => {
+    if (!confirmState.open) return;
+    if (confirmState.kind === 'saved' && confirmState.path) {
+      handleClearSavedVariable(confirmState.path);
+    } else if (
+      confirmState.kind === 'line' &&
+      typeof confirmState.lineIndex === 'number'
+    ) {
+      handleRemoveSubstitution(confirmState.lineIndex);
+    }
+    setConfirmState({ open: false });
+  };
+
   return (
     <div ref={containerRef} className='relative w-full space-y-3'>
-      {selectedVariable && (
-        <div className='bg-green-50 border border-green-200 rounded-md p-3 flex items-center justify-between'>
-          <div className='flex items-center gap-2'>
-            <span className='text-sm font-medium text-green-900'>
+      {selectedVariables.length > 0 && (
+        <div className='bg-green-50 border border-green-200 rounded-md p-[7px] overflow-x-auto'>
+          <div className='flex items-center gap-3 whitespace-nowrap'>
+            <span className='text-sm font-medium text-green-900 flex-shrink-0'>
               Substituted Variables:
             </span>
-            <span className='px-3 py-1 bg-green-500 text-white text-xs rounded font-mono font-medium'>
-              {selectedVariable.path}: {selectedVariable.name}
-            </span>
+
+            {selectedVariables.map((variable, index) => (
+              <div
+                key={`${variable.path}-${index}`}
+                className='flex items-center gap-2 px-3 py-1 bg-green-500 text-white text-xs rounded font-mono font-medium flex-shrink-0'
+              >
+                <span>
+                  {variable.path}: {variable.name}
+                </span>
+                <button
+                  onClick={() => confirmDeleteSaved(variable.path)}
+                  className='p-0.5 bg-white/20 hover:bg-white/30 rounded transition-colors'
+                  title='Remove variable'
+                >
+                  <Trash2 className='w-3 h-3' />
+                </button>
+              </div>
+            ))}
           </div>
-          <button
-            onClick={handleClearSavedVariable}
-            className='p-1.5 bg-red-50 hover:bg-red-100 rounded-full transition-colors'
-            title='Remove variable'
-          >
-            <Trash2 className='w-4 h-4 text-red-600' />
-          </button>
         </div>
       )}
 
-      <div className='relative'>
-        <textarea
-          ref={textareaRef}
-          value={value}
-          onChange={(e) => onChange?.(e.target.value)}
-          readOnly={readOnly}
-          className='w-full h-64 p-4 font-mono text-sm border border-gray-300 rounded-md bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none'
-          style={{
-            fontFamily:
-              "'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace",
-          }}
-        />
+      <div className='relative flex border border-border rounded-md overflow-hidden bg-card focus-within:ring-2 focus-within:ring-ring focus-within:border-ring'>
+        {/* Line numbers column */}
+        <div
+          className='flex flex-col bg-muted border-r border-border py-2 px-2 text-right select-none overflow-hidden'
+          style={{ minWidth: '2.5rem' }}
+        >
+          {lines.map((_, index) => (
+            <div
+              key={index}
+              className={`h-6 text-[11px] font-mono leading-5 transition-colors ${
+                hoveredLine === index
+                  ? 'text-foreground bg-primary/10 rounded'
+                  : 'text-muted-foreground'
+              }`}
+            >
+              {index + 1}
+            </div>
+          ))}
+        </div>
 
-        <div className='absolute top-0 right-0 bottom-0 w-48 pointer-events-none'>
-          {lines.map((line, index) => {
-            const hasKey = /"[^"]+"\s*:/.test(line);
-            const pendingVar = getPendingSubstitution(index);
-            const alreadySubstituted = getAlreadySubstitutedVariable(index);
-            const currentPath = extractPathFromLine(index);
-            const isSelectedVariableLine =
-              selectedVariable && selectedVariable.path === currentPath;
+        {/* Textarea with transparent background */}
+        <div className='relative flex-1'>
+          <textarea
+            ref={textareaRef}
+            value={value}
+            onChange={(e) => onChange?.(e.target.value)}
+            onScroll={handleScroll}
+            readOnly={readOnly}
+            className='w-full h-64 p-2 pl-3 font-mono text-sm bg-transparent text-foreground focus:outline-none resize-none leading-6'
+            style={{
+              fontFamily:
+                "'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace",
+            }}
+          />
 
-            return (
-              <div
-                key={index}
-                className='relative h-6 flex items-center pointer-events-auto'
-                onMouseEnter={() => setHoveredLine(index)}
-                onMouseLeave={() => setHoveredLine(null)}
-              >
-                {hoveredLine === index && hasKey && (
-                  <div className='pointer-events-auto ml-auto mr-2 flex items-center gap-1'>
-                    {isSelectedVariableLine &&
-                    !pendingVar &&
-                    !alreadySubstituted ? (
-                      <>
-                        <span className='px-2.5 py-1 bg-yellow-500 text-yellow-900 text-sm rounded font-mono whitespace-nowrap'>
-                          {selectedVariable.name}
-                        </span>
-                        <button
-                          onClick={handleClearSavedVariable}
-                          className='p-1.5 bg-red-50 hover:bg-red-100 rounded-full transition-colors'
-                          title='Remove variable'
-                        >
-                          <Trash2 className='w-4 h-4 text-red-600' />
-                        </button>
-                      </>
-                    ) : !pendingVar && !alreadySubstituted ? (
-                      <button
-                        onClick={() => handleSubstituteClick(index)}
-                        className='px-2.5 py-1 bg-[rgb(19,111,176)] hover:bg-[rgb(15,90,144)] text-white text-[13px] rounded-md transition-colors flex items-center justify-center whitespace-nowrap'
-                        title='Substitute variable'
-                      >
-                        Substitute Variable
-                      </button>
-                    ) : pendingVar ? (
-                      <>
-                        <span className='px-2.5 py-1 bg-yellow-500 text-yellow-900 text-sm rounded font-mono whitespace-nowrap'>
-                          {pendingVar}
-                        </span>
-                        <button
-                          onClick={() => handleClearPendingSubstitution(index)}
-                          className='px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white text-sm rounded whitespace-nowrap transition-colors'
-                          title='Remove pending substitution'
-                        >
-                          <Trash2 className='w-4 h-4 text-red-600' />
-                        </button>
-                      </>
-                    ) : alreadySubstituted ? (
-                      <>
-                        <span className='px-2.5 py-1 bg-green-500 text-green-900 text-sm rounded font-mono whitespace-nowrap'>
-                          {alreadySubstituted}
-                        </span>
-                        <button
-                          onClick={() => handleRemoveSubstitution(index)}
-                          className='px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white text-sm rounded whitespace-nowrap transition-colors'
-                          title='Remove substitution'
-                        >
-                          <Trash2 className='w-4 h-4 text-red-600' />
-                        </button>
-                      </>
-                    ) : null}
-                  </div>
-                )}
+          {/* Hover underline overlay */}
+          <div className='absolute top-0 left-0 right-0 bottom-0 pointer-events-none pt-2'>
+            {lines.map((line, index) => {
+              const hasKey = /"[^"]+"\s*:/.test(line);
+              return (
+                <div
+                  key={`underline-${index}`}
+                  className={`h-6 transition-colors ${
+                    hoveredLine === index && hasKey
+                      ? 'border-t border-b border-primary/40'
+                      : ''
+                  }`}
+                />
+              );
+            })}
+          </div>
 
-                {dropdownLine === index && (
-                  <div className='absolute right-0 top-full mt-1 w-80 bg-white border border-gray-300 rounded shadow-lg z-50 text-sm pointer-events-auto'>
-                    {/* Search bar */}
-                    <div className='p-2 border-b border-gray-200'>
-                      <input
-                        type='text'
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        placeholder='Search variables...'
-                        className='w-full bg-white border border-gray-300 rounded px-2 py-1 text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500'
-                        autoFocus
-                      />
-                    </div>
+          {/* Variable substitution overlay on the right */}
+          <div className='absolute top-0 right-0 bottom-0 w-44 pointer-events-none pt-2'>
+            {lines.map((line, index) => {
+              const hasKey = /"[^"]+"\s*:/.test(line);
+              const pendingVar = getPendingSubstitution(index);
+              const alreadySubstituted = getAlreadySubstitutedVariable(index);
+              const selectedVar = getSelectedVariableForLine(index);
 
-                    {/* List of variables */}
-                    <div className='max-h-48 overflow-y-auto'>
-                      {filteredVariables.length > 0 ? (
-                        filteredVariables.map((v) => (
-                          <div
-                            key={v.name}
-                            className='flex justify-between items-center px-3 py-2 hover:bg-blue-50 cursor-pointer border-b border-gray-100 last:border-b-0 text-gray-800'
-                            onClick={() => handleVariableSelect(v.name, index)}
+              return (
+                <div
+                  key={index}
+                  className='relative h-6 flex items-center pointer-events-auto'
+                  onMouseEnter={() => setHoveredLine(index)}
+                  onMouseLeave={() => setHoveredLine(null)}
+                >
+                  {hoveredLine === index && hasKey && (
+                    <div className='pointer-events-auto ml-auto mr-1 flex items-center gap-1'>
+                      {selectedVar && !pendingVar && !alreadySubstituted ? (
+                        <>
+                          <span className='px-2 py-0.5 bg-green-500 text-white text-[11px] rounded font-mono whitespace-nowrap font-medium'>
+                            {selectedVar}
+                          </span>
+                          <button
+                            onClick={() =>
+                              confirmDeleteSaved(extractPathFromLine(index))
+                            }
+                            className='p-0.5 bg-destructive/10 hover:bg-destructive/20 rounded transition-colors'
+                            title='Remove variable'
                           >
-                            <span className='font-mono text-gray-800 text-xs font-medium'>
-                              {v.name}
-                            </span>
-                            <span className='text-gray-500 text-xs truncate ml-2 max-w-xs'>
-                              {v.value}
-                            </span>
-                          </div>
-                        ))
-                      ) : (
-                        <div className='px-3 py-2 text-gray-400 text-xs text-center'>
-                          No results found
-                        </div>
-                      )}
+                            <Trash2 className='w-3 h-3 text-destructive' />
+                          </button>
+                        </>
+                      ) : !pendingVar && !alreadySubstituted ? (
+                        <button
+                          onClick={() => handleSubstituteClick(index)}
+                          className='px-2 py-0.5 bg-[rgb(19,111,176)] hover:bg-[rgb(15,90,144)] text-white text-[11px] rounded transition-colors flex items-center justify-center whitespace-nowrap font-medium'
+                        >
+                          Substitute Variable
+                        </button>
+                      ) : pendingVar ? (
+                        <>
+                          <span className='px-2 py-0.5 bg-green-500 text-white text-[11px] rounded font-mono whitespace-nowrap font-medium'>
+                            {pendingVar}
+                          </span>
+                          <button
+                            onClick={() =>
+                              handleClearPendingSubstitution(index)
+                            }
+                            className='p-0.5 bg-destructive/10 hover:bg-destructive/20 rounded transition-colors'
+                            title='Remove pending substitution'
+                          >
+                            <Trash2 className='w-3 h-3 text-destructive' />
+                          </button>
+                        </>
+                      ) : alreadySubstituted ? (
+                        <>
+                          <span className='px-2 py-0.5 bg-success text-success-foreground text-[11px] rounded font-mono whitespace-nowrap font-medium'>
+                            {alreadySubstituted}
+                          </span>
+                          <button
+                            onClick={() => confirmDeleteLine(index)}
+                            className='p-0.5 bg-destructive/10 hover:bg-destructive/20 rounded transition-colors'
+                            title='Remove substitution'
+                          >
+                            <Trash2 className='w-3 h-3 text-destructive' />
+                          </button>
+                        </>
+                      ) : null}
                     </div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
+                  )}
+
+                  {dropdownLine === index && (
+                    <div className='absolute right-0 top-full mt-1 w-72 bg-popover border border-border rounded-md shadow-lg z-50 text-sm pointer-events-auto'>
+                      {/* Search bar */}
+                      <div className='p-2 border-b border-border'>
+                        <input
+                          type='text'
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                          placeholder='Search variables...'
+                          className='w-full bg-background border border-input rounded px-2 py-1 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring'
+                          autoFocus
+                        />
+                      </div>
+
+                      {/* List of variables */}
+                      <div className='max-h-48 overflow-y-auto'>
+                        {filteredVariables.length > 0 ? (
+                          filteredVariables.map((v) => (
+                            <div
+                              key={v.name}
+                              className='flex justify-between items-center px-3 py-2 hover:bg-accent cursor-pointer border-b border-border last:border-b-0'
+                              onClick={() =>
+                                handleVariableSelect(v.name, index)
+                              }
+                            >
+                              <span className='font-mono text-foreground text-xs font-medium'>
+                                {v.name}
+                              </span>
+                              <span className='text-muted-foreground text-xs truncate ml-2 max-w-[140px]'>
+                                {v.value}
+                              </span>
+                            </div>
+                          ))
+                        ) : (
+                          <div className='px-3 py-2 text-muted-foreground text-xs text-center'>
+                            No results found
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
 
-      {pendingSubstitutions.length > 0 && (
-        <div className='mt-4 flex gap-2 justify-end'>
-          <button
-            onClick={handleCancelSubstitutions}
-            className='px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 text-sm rounded transition-colors'
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleConfirmSubstitutions}
-            className='px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded transition-colors font-medium'
-          >
-            End ({pendingSubstitutions.length})
-          </button>
-        </div>
-      )}
+      {/* ---- NEW: Single global AlertDialog (controlled) ---- */}
+      <AlertDialog
+        open={confirmState.open}
+        onOpenChange={(open) => {
+          if (!open) setConfirmState({ open: false });
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {confirmState.open && confirmState.kind === 'saved'
+                ? 'Remove substituted variable?'
+                : 'Remove substitution from this line?'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmState.open &&
+              confirmState.kind === 'saved' &&
+              confirmState.path
+                ? `This will remove the variable mapping for "${confirmState.path}". This action cannot be undone.`
+                : 'This will remove the in-line substitution comment. This action cannot be undone.'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <Button onClick={performConfirmedDelete}>Delete</Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

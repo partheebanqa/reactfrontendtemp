@@ -2,7 +2,14 @@
 
 import type React from 'react';
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { Play, Save, FolderPlus, Plus, FileTerminal, Info } from 'lucide-react';
+import {
+  Play,
+  Save,
+  FolderPlus,
+  Plus,
+  FileTerminal,
+  HelpCircle,
+} from 'lucide-react';
 import { useRequest } from '@/hooks/useRequest';
 import { useCollection } from '@/hooks/useCollection';
 import { useWorkspace } from '@/hooks/useWorkspace';
@@ -133,8 +140,10 @@ const RequestEditor: React.FC = () => {
     'none' | 'basic' | 'bearer' | 'apiKey' | 'oauth1' | 'oauth2'
   >('bearer');
   const [token, setToken] = useState('');
-  const [selectedVariable, setSelectedVariable] =
-    useState<SelectedVariable | null>(null);
+  const [selectedVariable, setSelectedVariable] = useState<SelectedVariable[]>(
+    []
+  );
+
   const [pendingSubstitutions, setPendingSubstitutions] = useState<
     PendingSubstitution[]
   >([]);
@@ -180,23 +189,25 @@ const RequestEditor: React.FC = () => {
   const formattedVariables = useMemo(() => {
     const formatted: Array<{ name: string; value: string }> = [];
 
-    // Process static variables
+    const isValidVar = (name: string) =>
+      name.startsWith('S_') || name.startsWith('D_');
+
+    // Static variables
     if (Array.isArray(variables)) {
       variables.forEach((variable: any) => {
         const name = variable.name || variable.key || '';
         const value = variable.value || variable.initialValue || '';
-        if (name) {
+        if (name && isValidVar(name)) {
           formatted.push({ name, value });
         }
       });
     }
 
-    // Process dynamic variables - generate values using generatorId
+    // Dynamic variables
     if (Array.isArray(dynamicVariables)) {
       dynamicVariables.forEach((variable: any) => {
         const name = variable.name || '';
-        if (name) {
-          // Generate value using the generatorId and parameters
+        if (name && isValidVar(name)) {
           const generatedValue = generateDynamicValueById(
             variable.generatorId || '',
             variable.parameters || {}
@@ -274,6 +285,19 @@ const RequestEditor: React.FC = () => {
     const options = buildFolderOptions(foldersTree);
     setFolderOptions(options);
   }, [activeCollection?.id]);
+
+  const findFolderName = (folderId: string, folders: any[] = []): string => {
+    for (const folder of folders) {
+      if (folder.id === folderId) {
+        return folder.name || folder.Name || 'Folder';
+      }
+      if (Array.isArray(folder.folders) && folder.folders.length > 0) {
+        const found = findFolderName(folderId, folder.folders);
+        if (found) return found;
+      }
+    }
+    return '';
+  };
 
   const updateRequestMutation = useMutation({
     mutationFn: ({
@@ -468,14 +492,19 @@ const RequestEditor: React.FC = () => {
       }
 
       if (activeRequest.variable) {
-        setSelectedVariable(activeRequest.variable);
-      } else {
-        setSelectedVariable(null);
+        if (Array.isArray(activeRequest.variable)) {
+          const filteredVariables = activeRequest.variable.filter(
+            (v: any) => v.path || v.name
+          );
+          setSelectedVariable(filteredVariables);
+        } else {
+          setSelectedVariable([]);
+        }
       }
     } else if (!isSaving) {
       setAssertions([]);
       setAuthType('bearer');
-      setSelectedVariable(null);
+      setSelectedVariable([]);
       setPendingSubstitutions([]);
     }
     setResponseData(null);
@@ -968,18 +997,9 @@ const RequestEditor: React.FC = () => {
         headers,
         assertions: selectedAssertions,
       };
-
-      if (
-        selectedVariable &&
-        selectedVariable.name?.trim() &&
-        selectedVariable.path?.trim()
-      ) {
-        requestData.variable = {
-          name: selectedVariable.name,
-          path: selectedVariable.path,
-        };
+      if (selectedVariable && selectedVariable.length > 0) {
+        requestData.variable = selectedVariable;
       }
-
       if (!activeRequest.id) {
         showError('Missing ID', 'Cannot update a request without an id.');
         return;
@@ -1010,6 +1030,7 @@ const RequestEditor: React.FC = () => {
     try {
       setIsSaving(true);
       if (!activeRequest || !currentWorkspace) return;
+
       if (!urlAtOpen.trim()) {
         showError(
           'URL Required',
@@ -1019,12 +1040,14 @@ const RequestEditor: React.FC = () => {
       }
 
       let createdCollectionId: string | null = null;
+
       if (isCreatingCollection && newCollectionName.trim()) {
         const res = await addCollectionMutation.mutateAsync({
           name: newCollectionName.trim(),
           workspaceId: currentWorkspace.id,
           isImportant: false,
         });
+
         if (res?.collectionId) {
           createdCollectionId = res.collectionId;
           setSelectedCollectionId(res.collectionId);
@@ -1043,10 +1066,9 @@ const RequestEditor: React.FC = () => {
       }
 
       const targetCollectionId = createdCollectionId || selectedCollectionId;
+
       if (targetCollectionId) {
-        const response = await fetchCollectionRequests.mutateAsync(
-          targetCollectionId
-        );
+        await fetchCollectionRequests.mutateAsync(targetCollectionId);
       }
 
       let effectiveAuthType = authType;
@@ -1055,7 +1077,7 @@ const RequestEditor: React.FC = () => {
       }
 
       const selectedAssertions = Array.isArray(assertions)
-        ? assertions.filter((a) => a.enabled).map((a) => a)
+        ? assertions.filter((a) => a.enabled)
         : [];
 
       const requestData: any = {
@@ -1096,61 +1118,25 @@ const RequestEditor: React.FC = () => {
               ).toString()
             : '',
         authorizationType: effectiveAuthType,
-        authorization: {
-          token: authData.token,
-          username: effectiveAuthType === 'basic' ? authData.username : '',
-          password: effectiveAuthType === 'basic' ? authData.password : '',
-          key: effectiveAuthType === 'apiKey' ? authData.key : '',
-          value: effectiveAuthType === 'apiKey' ? authData.value : '',
-          addTo: effectiveAuthType === 'apiKey' ? authData.addTo : 'header',
-          oauth1:
-            effectiveAuthType === 'oauth1'
-              ? {
-                  consumerKey: authData.oauth1.consumerKey,
-                  consumerSecret: authData.oauth1.consumerSecret,
-                  token: authData.oauth1.token,
-                  tokenSecret: authData.oauth1.tokenSecret,
-                  signatureMethod: authData.oauth1.signatureMethod,
-                  version: '1.0',
-                  realm: authData.oauth1.realm,
-                  nonce: authData.oauth1.nonce,
-                  timestamp: authData.oauth1.timestamp,
-                }
-              : undefined,
-          oauth2:
-            effectiveAuthType === 'oauth2'
-              ? {
-                  clientId: authData.oauth2.clientId,
-                  clientSecret: authData.oauth2.clientSecret,
-                  accessToken: authData.oauth2.accessToken,
-                  tokenType: authData.oauth2.tokenType,
-                  refreshToken: authData.oauth2.refreshToken,
-                  scope: authData.oauth2.scope,
-                  grantType: authData.oauth2.grantType,
-                  redirectUri: authData.oauth2.redirectUri,
-                }
-              : undefined,
-        },
+        authorization: requestDataAuthorization(effectiveAuthType, authData),
         params,
         headers,
         assertions: selectedAssertions,
-        ...(selectedVariable ? { variable: selectedVariable } : {}),
+        ...(selectedVariable && selectedVariable.length > 0
+          ? { variable: selectedVariable }
+          : {}),
       };
 
       const savedRequestResponse = await addRequestMutation.mutateAsync(
         requestData
       );
 
-      setShowSaveModal(false);
-      setNewCollectionName('');
-      setIsCreatingCollection(false);
-      showSuccess('Request saved successfully!');
-
       if (
         savedRequestResponse &&
         (savedRequestResponse.id || savedRequestResponse.requestId)
       ) {
         const newId = savedRequestResponse.id || savedRequestResponse.requestId;
+
         const updatedRequest = {
           ...activeRequest,
           id: newId,
@@ -1166,21 +1152,68 @@ const RequestEditor: React.FC = () => {
           headers,
           ...(selectedVariable ? { variable: selectedVariable } : {}),
         };
+
         setActiveRequest(updatedRequest);
         collectionActions.markSaved(newId);
+
+        await new Promise((resolve) => setTimeout(resolve, 0));
       }
 
-      setIsSaving(false);
+      setShowSaveModal(false);
+      setNewCollectionName('');
+      setIsCreatingCollection(false);
+
+      showSuccess('Request saved successfully!');
     } catch (error) {
       console.error('Error saving request:', error);
-      setIsSaving(false);
       showError('Save Failed', 'An error occurred while saving the request.');
       setError({
         title: 'Save Failed',
         description: 'An error occurred while saving the request.',
       });
+    } finally {
+      // ✅ Always executed
+      setIsSaving(false);
     }
   };
+
+  function requestDataAuthorization(type: string, authData: any) {
+    return {
+      token: authData.token,
+      username: type === 'basic' ? authData.username : '',
+      password: type === 'basic' ? authData.password : '',
+      key: type === 'apiKey' ? authData.key : '',
+      value: type === 'apiKey' ? authData.value : '',
+      addTo: type === 'apiKey' ? authData.addTo : 'header',
+      oauth1:
+        type === 'oauth1'
+          ? {
+              consumerKey: authData.oauth1.consumerKey,
+              consumerSecret: authData.oauth1.consumerSecret,
+              token: authData.oauth1.token,
+              tokenSecret: authData.oauth1.tokenSecret,
+              signatureMethod: authData.oauth1.signatureMethod,
+              version: '1.0',
+              realm: authData.oauth1.realm,
+              nonce: authData.oauth1.nonce,
+              timestamp: authData.oauth1.timestamp,
+            }
+          : undefined,
+      oauth2:
+        type === 'oauth2'
+          ? {
+              clientId: authData.oauth2.clientId,
+              clientSecret: authData.oauth2.clientSecret,
+              accessToken: authData.oauth2.accessToken,
+              tokenType: authData.oauth2.tokenType,
+              refreshToken: authData.oauth2.refreshToken,
+              scope: authData.oauth2.scope,
+              grantType: authData.oauth2.grantType,
+              redirectUri: authData.oauth2.redirectUri,
+            }
+          : undefined,
+    };
+  }
 
   const substituteVariables = (text: string): string => {
     let result = text;
@@ -1360,6 +1393,25 @@ const RequestEditor: React.FC = () => {
     }
   };
 
+  const handleBeautifyBody = () => {
+    try {
+      if (bodyType === 'json' || bodyType === 'raw') {
+        const parsed = JSON.parse(bodyContent);
+        const beautified = JSON.stringify(parsed, null, 2);
+        setBodyContent(beautified);
+        if (activeRequest?.id) {
+          collectionActions.markUnsaved(activeRequest.id);
+        }
+        // showSuccess('JSON formatted successfully!');
+      }
+    } catch (error) {
+      showError(
+        'Invalid JSON',
+        'Unable to format. Please check your JSON syntax.'
+      );
+    }
+  };
+
   const methods: RequestMethod[] = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'];
 
   const getMethodColor = (method: string) => {
@@ -1396,7 +1448,14 @@ const RequestEditor: React.FC = () => {
   return (
     <TooltipProvider>
       <div className='flex-1 flex flex-col bg-white dark:bg-gray-900 overflow-hidden'>
-        <RequestTabs />
+        {activeCollection && (
+          <RequestTabs
+            onSaveRequest={async (request) => {
+              await handleUpdateRequest();
+            }}
+            onCurlImport={handleCurlImport}
+          />
+        )}
 
         <div className='border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex-shrink-0'>
           <div className='flex items-center justify-between'>
@@ -1405,6 +1464,17 @@ const RequestEditor: React.FC = () => {
                 {activeCollectionFull?.name}
               </span>
               <span className='text-gray-500 dark:text-gray-400'>/</span>
+              {activeRequest?.folderId && (
+                <>
+                  <span className='text-gray-500 dark:text-gray-400'>
+                    {findFolderName(
+                      activeRequest.folderId,
+                      (activeCollectionFull as any)?.folders || []
+                    )}
+                  </span>
+                  <span className='text-gray-500 dark:text-gray-400'>/</span>
+                </>
+              )}
               <EditableTextWithoutIcon
                 value={activeRequest.name || ''}
                 onSave={handleSaveName}
@@ -1421,8 +1491,13 @@ const RequestEditor: React.FC = () => {
             <select
               value={method}
               onChange={(e) => {
-                setMethod(e.target.value as RequestMethod);
+                const newMethod = e.target.value as RequestMethod;
+                setMethod(newMethod);
                 if (activeRequest?.id) {
+                  collectionActions.updateOpenedRequest({
+                    ...activeRequest,
+                    method: newMethod,
+                  });
                   collectionActions.markUnsaved(activeRequest.id);
                 }
               }}
@@ -1488,28 +1563,6 @@ const RequestEditor: React.FC = () => {
                     <Save className='h-4 w-4 text-[#136fb0]' />
                   </button>
                 )}
-              </TooltipContainer>
-
-              <TooltipContainer text='Import from cURL'>
-                <button
-                  onClick={() => setShowCurlImport(true)}
-                  className='border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 px-3 py-2 rounded-md text-sm font-medium'
-                  title='Import from cURL'
-                >
-                  <FileTerminal className='h-4 w-4 text-[#136fb0]' />
-                </button>
-              </TooltipContainer>
-
-              <TooltipContainer text='New request'>
-                <button
-                  onClick={() => {
-                    handleCreateRequest();
-                  }}
-                  className='border border-gray-300 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800'
-                  title='Create new request'
-                >
-                  <Plus className='h-4 w-4 text-[#136fb0]' />
-                </button>
               </TooltipContainer>
             </div>
           </div>
@@ -1615,32 +1668,44 @@ const RequestEditor: React.FC = () => {
                           type='button'
                           className='p-1 text-gray-500 hover:text-[rgb(19,111,176)] transition-colors'
                         >
-                          <Info className='w-4 h-4' />
+                          <HelpCircle className='w-4 h-4' />
                         </button>
                       </TooltipTrigger>
                       <TooltipContent>
-                        Hover a field to substitute a variable
+                        Request body can include both static and dynamic values.
                       </TooltipContent>
                     </Tooltip>
                   </div>
                 </TooltipProvider>
-                <select
-                  value={bodyType}
-                  onChange={(e) => {
-                    setBodyType(e.target.value as any);
-                    if (activeRequest?.id) {
-                      collectionActions.markUnsaved(activeRequest.id);
-                    }
-                  }}
-                  className='border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-800 text-sm font-medium hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all duration-150'
-                >
-                  <option value='none'>None</option>
-                  <option value='json'>JSON</option>
-                  <option value='form-data'>Form Data</option>
-                  <option value='x-www-form-urlencoded'>URL Encoded</option>
-                  <option value='raw'>Raw</option>
-                  <option value='binary'>Binary</option>
-                </select>
+                <div className='flex items-center gap-2'>
+                  {(bodyType === 'json' || bodyType === 'raw') &&
+                    bodyContent.trim() && (
+                      <button
+                        onClick={handleBeautifyBody}
+                        className='px-3 py-2 bg-[rgb(19,111,176)] hover:bg-[rgb(15,90,144)] text-white text-sm rounded-md transition-colors font-medium'
+                        title='Format JSON with proper indentation'
+                      >
+                        Beautify
+                      </button>
+                    )}
+                  <select
+                    value={bodyType}
+                    onChange={(e) => {
+                      setBodyType(e.target.value as any);
+                      if (activeRequest?.id) {
+                        collectionActions.markUnsaved(activeRequest.id);
+                      }
+                    }}
+                    className='border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-800 text-sm font-medium hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all duration-150'
+                  >
+                    <option value='none'>None</option>
+                    <option value='json'>JSON</option>
+                    <option value='form-data'>Form Data</option>
+                    <option value='x-www-form-urlencoded'>URL Encoded</option>
+                    <option value='raw'>Raw</option>
+                    <option value='binary'>Binary</option>
+                  </select>
+                </div>
               </div>
 
               {bodyType === 'none' && (
