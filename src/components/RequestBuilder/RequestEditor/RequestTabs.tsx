@@ -4,7 +4,7 @@
 
 import type React from 'react';
 import { useState } from 'react';
-import { X, Plus } from 'lucide-react';
+import { X, Plus, FileTerminal } from 'lucide-react';
 import type { CollectionRequest } from '@/shared/types/collection';
 import { useCollectionStore, collectionActions } from '@/store/collectionStore';
 import { useCollection } from '@/hooks/useCollection';
@@ -18,23 +18,29 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import ImportModal from './ImportModal';
+import { useToast } from '@/hooks/useToast';
 
 interface RequestTabsProps {
   onTabChange?: (request: CollectionRequest) => void;
   onSaveRequest?: (request: CollectionRequest) => Promise<void>;
+  onCurlImport?: (parsedRequest: any) => void;
 }
 
 const RequestTabs: React.FC<RequestTabsProps> = ({
   onTabChange,
   onSaveRequest,
+  onCurlImport,
 }) => {
   const { openedRequests, activeRequest, unsavedChanges } =
     useCollectionStore();
   const { handleCreateRequest, activeCollection } = useCollection();
+  const { toast } = useToast();
 
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [pendingCloseRequestId, setPendingCloseRequestId] = useState<string>();
   const [isSaving, setIsSaving] = useState(false);
+  const [showCurlImport, setShowCurlImport] = useState(false);
 
   const handleTabClick = (request: CollectionRequest) => {
     collectionActions.setActiveRequest(request);
@@ -90,8 +96,6 @@ const RequestTabs: React.FC<RequestTabsProps> = ({
         await onSaveRequest?.(request);
         collectionActions.markSaved(request.id);
       }
-      // Remove this line to stay on the same tab
-      // collectionActions.closeRequest(request.id);
     } finally {
       setIsSaving(false);
       setShowConfirmDialog(false);
@@ -102,6 +106,21 @@ const RequestTabs: React.FC<RequestTabsProps> = ({
   const handleCancelClose = () => {
     setShowConfirmDialog(false);
     setPendingCloseRequestId(undefined);
+  };
+
+  const handleCurlImportClick = () => {
+    setShowCurlImport(true);
+  };
+
+  const handleCurlImportSubmit = (parsedRequest: any) => {
+    if (onCurlImport) {
+      onCurlImport(parsedRequest);
+    }
+    setShowCurlImport(false);
+    toast({
+      title: 'cURL Imported Successfully',
+      description: 'Request has been populated from cURL command',
+    });
   };
 
   const methodColor = (method?: string) => {
@@ -181,17 +200,29 @@ const RequestTabs: React.FC<RequestTabsProps> = ({
           );
         })}
 
-        {activeCollection && (
-          <button
-            onClick={() =>
-              activeCollection && handleCreateRequest(activeCollection)
-            }
-            className='p-2 hover:bg-gray-100 rounded transition-colors ml-auto'
-            title='New Request'
-          >
-            <Plus size={18} className='text-gray-600' />
-          </button>
-        )}
+        <div className='flex items-center ml-auto gap-1'>
+          {activeCollection && (
+            <>
+              <button
+                onClick={() =>
+                  activeCollection && handleCreateRequest(activeCollection)
+                }
+                className='p-2 hover:bg-gray-100 rounded transition-colors'
+                title='New Request'
+              >
+                <Plus size={18} className='text-gray-600' />
+              </button>
+
+              <button
+                onClick={handleCurlImportClick}
+                className='p-2 hover:bg-gray-100 rounded transition-colors'
+                title='Import from cURL'
+              >
+                <FileTerminal size={18} className='text-[#136fb0]' />
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Confirmation Modal */}
@@ -238,6 +269,13 @@ const RequestTabs: React.FC<RequestTabsProps> = ({
           </AlertDialogContent>
         </AlertDialog>
       )}
+
+      {/* cURL Import Modal */}
+      <ImportModal
+        isOpen={showCurlImport}
+        onClose={() => setShowCurlImport(false)}
+        onCurlImport={handleCurlImportSubmit}
+      />
     </>
   );
 };

@@ -1453,6 +1453,7 @@ const RequestEditor: React.FC = () => {
             onSaveRequest={async (request) => {
               await handleUpdateRequest();
             }}
+            onCurlImport={handleCurlImport}
           />
         )}
 
@@ -1562,28 +1563,6 @@ const RequestEditor: React.FC = () => {
                     <Save className='h-4 w-4 text-[#136fb0]' />
                   </button>
                 )}
-              </TooltipContainer>
-
-              <TooltipContainer text='Import from cURL'>
-                <button
-                  onClick={() => setShowCurlImport(true)}
-                  className='border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 px-3 py-2 rounded-md text-sm font-medium'
-                  title='Import from cURL'
-                >
-                  <FileTerminal className='h-4 w-4 text-[#136fb0]' />
-                </button>
-              </TooltipContainer>
-
-              <TooltipContainer text='New request'>
-                <button
-                  onClick={() => {
-                    handleCreateRequest();
-                  }}
-                  className='border border-gray-300 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800'
-                  title='Create new request'
-                >
-                  <Plus className='h-4 w-4 text-[#136fb0]' />
-                </button>
               </TooltipContainer>
             </div>
           </div>
