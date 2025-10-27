@@ -228,6 +228,13 @@ export function DynamicVariables() {
     }
   };
 
+  const formatParameters = (parameters?: Record<string, any> | null) => {
+    if (!parameters) return '';
+    return Object.entries(parameters)
+      .map(([key, value]) => `${key}: ${value}`)
+      .join(', ');
+  };
+
   /* ---------------- render ---------------- */
   return (
     <div className="space-y-4">
@@ -278,8 +285,8 @@ export function DynamicVariables() {
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-200">
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Name</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Generator Id</th>
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Generator Name</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Parameters</th>
                   <th className="px-4 py-2 text-right text-xs font-medium text-gray-600 uppercase tracking-wider w-24">Actions</th>
                 </tr>
               </thead>
@@ -298,13 +305,7 @@ export function DynamicVariables() {
                         </button>
                       </div>
                     </td>
-                    <td className="px-4 py-2.5">
-                      <div className="flex items-center gap-2">
-                        <code className="text-sm font-mono text-gray-700 truncate max-w-md">
-                          {(variable.generatorId || "—")}
-                        </code>
-                      </div>
-                    </td>
+
                     <td className="px-4 py-2.5">
                       <div className="flex items-center gap-2">
                         <code className="text-sm font-mono text-gray-700 truncate max-w-md">
@@ -313,6 +314,17 @@ export function DynamicVariables() {
                         </code>
                       </div>
                     </td>
+                    <td className="px-4 py-2.5">
+                      {Object.keys(variable.parameters ?? {}).length > 0 && (
+                        <div className='flex items-center space-x-2'>
+                          <code className='px-2 py-1 rounded text-sm bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300'>
+                            {formatParameters(variable.parameters)}
+                          </code>
+                        </div>
+                      )}
+                    </td>
+
+
                     {/* <td className="px-4 py-2.5">
                       <div className="flex items-center gap-1.5">
                         <code className="text-sm font-mono text-gray-700 truncate max-w-md">
