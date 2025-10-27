@@ -20,6 +20,12 @@ import {
 } from '@/components/ui/alert-dialog';
 import ImportModal from './ImportModal';
 import { useToast } from '@/hooks/useToast';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 interface RequestTabsProps {
   onTabChange?: (request: CollectionRequest) => void;
@@ -176,19 +182,34 @@ const RequestTabs: React.FC<RequestTabsProps> = ({
                     request.method
                   )}`}
                 >
-                  {(request.method || 'GET').toUpperCase()}
+                  {(() => {
+                    const method = (request.method || 'GET').toUpperCase();
+                    if (method === 'DELETE') return 'DEL';
+                    return method;
+                  })()}
                 </span>
 
-                <span
-                  className={`text-sm flex items-center gap-1.5 ${
-                    isActive ? 'text-blue-600 font-medium' : 'text-gray-700'
-                  }`}
-                >
-                  {request.name || 'Untitled'}
-                  {hasUnsaved && (
-                    <span className='w-1.5 h-1.5 bg-orange-500 rounded-full'></span>
-                  )}
-                </span>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span
+                        className={`text-sm flex items-center gap-1.5 max-w-[130px] truncate ${
+                          isActive
+                            ? 'text-blue-600 font-medium'
+                            : 'text-gray-700'
+                        }`}
+                      >
+                        {request.name ? request.name.slice(0, 15) : 'Untitled'}
+                        {hasUnsaved && (
+                          <span className='w-1.5 h-1.5 bg-orange-500 rounded-full'></span>
+                        )}
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent side='bottom'>
+                      <p className='text-sm'>{request.name || 'Untitled'}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
 
                 <button
                   onClick={(e) => handleCloseTab(e, request.id)}

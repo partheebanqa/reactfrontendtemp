@@ -32,7 +32,12 @@ import AddFolderModal from '../AddFolder/addFolderModel';
 import RenameFolderModal from '../AddFolder/rename-folder-modal';
 import DeleteFolderModal from '../AddFolder/delete-folder-modal';
 import { Input } from '@/components/ui/input';
-import { TooltipProvider } from '@/components/ui/tooltip';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { useAddFolder } from '@/hooks/use-folder';
 import { renameFolder, deleteFolder } from '@/services/folder.service';
 import { collectionActions } from '@/store/collectionStore';
@@ -717,9 +722,16 @@ const Sidebar: React.FC = () => {
                   >
                     {request.method}
                   </span>
-                  <span className='text-sm text-gray-900 dark:text-white truncate min-w-0'>
-                    {request.name}
-                  </span>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className='text-sm text-gray-900 dark:text-white truncate min-w-0 max-w-[150px]'>
+                          {request.name}
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent side='top'>{request.name}</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </div>
 
                 <div className='flex items-center opacity-0 group-hover:opacity-100 transition-opacity relative'>
@@ -832,22 +844,26 @@ const Sidebar: React.FC = () => {
                           <ChevronRight className='h-4 w-4 text-gray-500' />
                         )}
                         <Folder className='h-4 w-4 text-orange-500' />
-                        <TooltipContainer text={collection.name}>
-                          <span
-                            className='text-sm font-medium text-gray-900 dark:text-white truncate max-w-[120px] inline-block align-bottom'
-                            style={{
-                              textOverflow: 'ellipsis',
-                              overflow: 'hidden',
-                              whiteSpace: 'nowrap',
-                              verticalAlign: 'bottom',
-                            }}
-                          >
-                            {collection.name}
-                            {collection.name.length > 18 && (
-                              <span>&nbsp;…</span>
-                            )}
-                          </span>
-                        </TooltipContainer>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span
+                                className='text-sm font-medium text-gray-900 dark:text-white truncate max-w-[120px] inline-block align-bottom'
+                                style={{
+                                  textOverflow: 'ellipsis',
+                                  overflow: 'hidden',
+                                  whiteSpace: 'nowrap',
+                                  verticalAlign: 'bottom',
+                                }}
+                              >
+                                {collection.name}
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent side='top'>
+                              {collection.name}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       </div>
 
                       <div className='flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity relative'>
@@ -929,9 +945,18 @@ const Sidebar: React.FC = () => {
                                   >
                                     {request.method}
                                   </span>
-                                  <span className='text-sm text-gray-900 dark:text-white truncate min-w-0'>
-                                    {request.name}
-                                  </span>
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <span className='text-sm text-gray-900 dark:text-white truncate min-w-0 max-w-[150px]'>
+                                          {request.name}
+                                        </span>
+                                      </TooltipTrigger>
+                                      <TooltipContent side='top'>
+                                        {request.name}
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
                                 </div>
                                 <div className='flex items-center opacity-0 group-hover:opacity-100 transition-opacity relative'>
                                   <button
@@ -1313,7 +1338,7 @@ const Sidebar: React.FC = () => {
                 variant: 'success',
               });
             } catch (err) {
-              console.error('[v0] deleteFolder error:', err);
+              console.error('deleteFolder error:', err);
               toast({
                 title: 'Error',
                 description: 'Failed to delete folder. Please try again.',

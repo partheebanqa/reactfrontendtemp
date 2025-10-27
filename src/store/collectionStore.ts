@@ -1,7 +1,9 @@
+'use client';
+
 import { Store, useStore } from '@tanstack/react-store';
 import type { Collection, CollectionRequest } from '@/shared/types/collection';
 
-interface CollectionState {
+export interface CollectionState {
   responseLayout: 'bottom' | 'right';
   activeRequest: CollectionRequest | null;
   activeCollection: Collection | null;
