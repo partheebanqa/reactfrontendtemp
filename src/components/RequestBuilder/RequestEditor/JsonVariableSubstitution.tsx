@@ -186,10 +186,6 @@ export const JsonVariableSubstitution: React.FC<
     });
   };
 
-  const handleScroll = (e: React.UIEvent<HTMLTextAreaElement>) => {
-    setScrollTop(e.currentTarget.scrollTop);
-  };
-
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -279,7 +275,6 @@ export const JsonVariableSubstitution: React.FC<
             ref={textareaRef}
             value={value}
             onChange={(e) => onChange?.(e.target.value)}
-            onScroll={handleScroll}
             readOnly={readOnly}
             className='w-full h-64 p-2 pl-3 font-mono text-sm bg-transparent text-foreground focus:outline-none resize-none leading-6'
             style={{

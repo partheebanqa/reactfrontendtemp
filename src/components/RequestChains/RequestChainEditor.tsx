@@ -340,8 +340,6 @@ export function RequestChainEditor({
     return result;
   };
 
-  // In request-chain-editor-kKhgl.tsx, update processRequestWithVariables function
-
   const processRequestWithVariables = (
     request: APIRequest,
     variables: Variable[]
@@ -367,30 +365,9 @@ export function RequestChainEditor({
       authPassword: replaceVariables(request.authPassword || '', variables),
       authApiKey: replaceVariables(request.authApiKey || '', variables),
       authApiValue: replaceVariables(request.authApiValue || '', variables),
-      authorization: request.authorization
-        ? {
-            ...request.authorization,
-            token: replaceVariables(
-              request.authorization.token || '',
-              variables
-            ),
-            username: replaceVariables(
-              request.authorization.username || '',
-              variables
-            ),
-            password: replaceVariables(
-              request.authorization.password || '',
-              variables
-            ),
-            key: replaceVariables(request.authorization.key || '', variables),
-            value: replaceVariables(
-              request.authorization.value || '',
-              variables
-            ),
-          }
-        : request.authorization,
     };
   };
+
   const getPreviewUrl = (request: APIRequest, variables: Variable[]) => {
     const replacedUrl = replaceVariables(request.url, variables);
     const baseUrl = environmentBaseUrl?.trim();

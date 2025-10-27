@@ -383,6 +383,7 @@ export function RequestEditor({
     });
     return result;
   };
+
   const processRequestWithVariables = (
     request: APIRequest,
     variables: Variable[]

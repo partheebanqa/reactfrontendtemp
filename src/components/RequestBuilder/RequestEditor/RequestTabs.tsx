@@ -25,12 +25,14 @@ interface RequestTabsProps {
   onTabChange?: (request: CollectionRequest) => void;
   onSaveRequest?: (request: CollectionRequest) => Promise<void>;
   onCurlImport?: (parsedRequest: any) => void;
+  onBeforeTabChange?: () => void; // Add this
 }
 
 const RequestTabs: React.FC<RequestTabsProps> = ({
   onTabChange,
   onSaveRequest,
   onCurlImport,
+  onBeforeTabChange,
 }) => {
   const { openedRequests, activeRequest, unsavedChanges } =
     useCollectionStore();
@@ -43,31 +45,27 @@ const RequestTabs: React.FC<RequestTabsProps> = ({
   const [showCurlImport, setShowCurlImport] = useState(false);
 
   const handleTabClick = (request: CollectionRequest) => {
+    onBeforeTabChange?.();
     collectionActions.setActiveRequest(request);
     onTabChange?.(request);
   };
 
-  const handleCloseTab = (e: React.MouseEvent, requestId?: string) => {
+  const handleCloseTab = (
+    e: React.MouseEvent,
+    requestId: string | undefined
+  ) => {
     e.stopPropagation();
-
-    const request = openedRequests.find((r) => r.id === requestId);
-
-    // If request doesn't exist or has no real database id, just close it
-    if (!request || !request.id || request.id.startsWith('temp-')) {
-      collectionActions.closeRequest(requestId);
-      return;
-    }
+    if (requestId === undefined || requestId === null) return;
 
     const hasUnsavedChanges = unsavedChanges.has(requestId);
 
-    if (hasUnsavedChanges && requestId) {
+    if (hasUnsavedChanges) {
       setPendingCloseRequestId(requestId);
       setShowConfirmDialog(true);
     } else {
       collectionActions.closeRequest(requestId);
     }
   };
-
   const handleDontSave = () => {
     if (pendingCloseRequestId) {
       collectionActions.closeRequest(pendingCloseRequestId);
@@ -201,27 +199,29 @@ const RequestTabs: React.FC<RequestTabsProps> = ({
         })}
 
         <div className='flex items-center ml-auto gap-1'>
-          {activeCollection && (
-            <>
-              <button
-                onClick={() =>
-                  activeCollection && handleCreateRequest(activeCollection)
-                }
-                className='p-2 hover:bg-gray-100 rounded transition-colors'
-                title='New Request'
-              >
-                <Plus size={18} className='text-gray-600' />
-              </button>
+          <>
+            <button
+              onClick={() =>
+                activeCollection && handleCreateRequest(activeCollection)
+              }
+              className='p-2 hover:bg-gray-100 rounded transition-colors'
+              title='New Request'
+            >
+              <Plus
+                size={19}
+                strokeWidth={2.5}
+                className='text-[rgb(19,111,176)] hover:text-[rgb(15,90,145)] transition-colors'
+              />
+            </button>
 
-              <button
-                onClick={handleCurlImportClick}
-                className='p-2 hover:bg-gray-100 rounded transition-colors'
-                title='Import from cURL'
-              >
-                <FileTerminal size={18} className='text-[#136fb0]' />
-              </button>
-            </>
-          )}
+            <button
+              onClick={handleCurlImportClick}
+              className='p-2 hover:bg-gray-100 rounded transition-colors'
+              title='Import from cURL'
+            >
+              <FileTerminal size={18} className='text-[#136fb0]' />
+            </button>
+          </>
         </div>
       </div>
 

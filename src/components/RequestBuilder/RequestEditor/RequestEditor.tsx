@@ -314,6 +314,33 @@ const RequestEditor: React.FC = () => {
     },
   });
 
+  const syncCurrentRequestToStore = () => {
+    if (activeRequest?.id && !isSaving) {
+      collectionActions.updateOpenedRequest({
+        ...activeRequest,
+        url,
+        method,
+        params,
+        headers,
+        bodyType,
+        bodyRawContent: bodyContent,
+        bodyFormData:
+          bodyType === 'form-data'
+            ? formFields.reduce((acc: Record<string, any>, field) => {
+                if (field.key) acc[field.key] = field.value;
+                return acc;
+              }, {})
+            : activeRequest.bodyFormData,
+        authorizationType: authType,
+        authorization: authData,
+      });
+    }
+  };
+
+  const isNewRequest = (requestId?: string) => {
+    return !requestId || requestId.startsWith('temp-');
+  };
+
   useEffect(() => {
     if (isSaving) return;
 
@@ -884,7 +911,13 @@ const RequestEditor: React.FC = () => {
 
   const handleUpdateRequest = async () => {
     try {
-      if (!activeRequest || !currentWorkspace) return;
+      if (!activeRequest || activeRequest.id?.startsWith('temp-')) {
+        showError(
+          'Invalid Request',
+          'Cannot update a temporary request. Please save it first.'
+        );
+        return;
+      }
       if (!url.trim()) {
         showError(
           'URL Required',
@@ -1450,8 +1483,13 @@ const RequestEditor: React.FC = () => {
       <div className='flex-1 flex flex-col bg-white dark:bg-gray-900 overflow-hidden'>
         {activeCollection && (
           <RequestTabs
+            onBeforeTabChange={syncCurrentRequestToStore}
             onSaveRequest={async (request) => {
-              await handleUpdateRequest();
+              if (isNewRequest(activeRequest.id)) {
+                handleSaveRequest();
+              } else {
+                await handleUpdateRequest();
+              }
             }}
             onCurlImport={handleCurlImport}
           />
@@ -1546,7 +1584,7 @@ const RequestEditor: React.FC = () => {
                 </span>
               </Button>
               <TooltipContainer text='Save request'>
-                {!activeRequest.id ? (
+                {isNewRequest(activeRequest.id) ? (
                   <button
                     onClick={handleSaveRequest}
                     className='border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 px-3 py-2 rounded-md'
