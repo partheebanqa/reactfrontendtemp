@@ -65,7 +65,7 @@ import {
   getVariablesByPrefix,
   detectAutocompletePrefix,
   calculateAutocompletePosition,
-  type DynamicVariableOverride, // Removed redeclaration of Variable
+  type DynamicVariableOverride,
   type AutocompleteState,
 } from '@/lib/request-utils';
 import { Controlled as CodeMirror } from 'react-codemirror2';
@@ -74,7 +74,6 @@ import 'codemirror/theme/material.css';
 import 'codemirror/mode/javascript/javascript';
 import './../RequestBuilder/RequestEditor/whiteorange.css';
 
-// Define Variable interface here as it's used in the props and functions
 interface Variable {
   id: string;
   name: string;
@@ -109,12 +108,6 @@ interface KeyValuePair {
   enabled: boolean;
   description?: string;
 }
-
-// Removed redeclaration of DynamicVariableOverride
-// interface DynamicVariableOverride {
-//   name: string
-//   value: string | number
-// }
 
 export function RequestEditor({
   request,
@@ -205,7 +198,7 @@ export function RequestEditor({
       password: request.authPassword || '',
       token: request.authToken || '',
     });
-  }, [request.id]); // Only update when request ID changes to avoid infinite loops
+  }, [request.id]);
 
   const dynamicStructured = mapDynamicToStatic(
     dynamicVariables,
@@ -475,12 +468,10 @@ export function RequestEditor({
     const currentValue = input.value;
     const cursorPos = autocompleteState.cursorPosition;
 
-    // Replace D_ or S_ with the selected variable name
     const beforePrefix = currentValue.substring(0, cursorPos - 2);
     const afterCursor = currentValue.substring(cursorPos);
     const newValue = beforePrefix + variable.name + afterCursor;
 
-    // Find which field this input belongs to and update the corresponding state
     const inputName =
       input.getAttribute('name') || input.getAttribute('data-field');
 
@@ -515,12 +506,10 @@ export function RequestEditor({
     } else if (inputName === 'auth-token') {
       setAuth((prev) => ({ ...prev, token: newValue }));
     } else {
-      // Fallback: directly update input value and dispatch event
       input.value = newValue;
       input.dispatchEvent(new Event('input', { bubbles: true }));
     }
 
-    // Set cursor position after the inserted variable name
     const newCursorPos = beforePrefix.length + variable.name.length;
     setTimeout(() => {
       input.setSelectionRange(newCursorPos, newCursorPos);
@@ -574,7 +563,7 @@ export function RequestEditor({
     request,
     parentExtractedVariables,
     chainVariables,
-    url, // Include state variables that affect processed request
+    url,
     body,
     headers,
     params,
@@ -582,7 +571,7 @@ export function RequestEditor({
   ]);
 
   const getPreviewUrl = (variables: Variable[]) => {
-    const replacedUrl = replaceVariables(url, variables); // Use state variable
+    const replacedUrl = replaceVariables(url, variables);
     const baseUrl = environmentBaseUrl?.trim();
     if (!baseUrl) return replacedUrl;
     try {
@@ -763,7 +752,6 @@ export function RequestEditor({
     let newValue: string | number | boolean = '';
 
     switch (dynamicVar.generatorId) {
-      // Identity
       case 'firstName':
         newValue = fakeFirstName();
         break;
@@ -892,7 +880,6 @@ export function RequestEditor({
         newValue = '';
     }
 
-    // ---------- Apply ----------
     updateDynamicOverride(variableName, newValue);
   };
 
@@ -958,11 +945,11 @@ export function RequestEditor({
       extractVariables: request.extractVariables ?? [],
       headers: request.headers ?? [],
       params: request.params ?? [],
-      url: url, // Use state variable for URL
-      body: body, // Use state variable for body
-      authToken: auth.token, // Use state variable for auth token
-      authUsername: auth.username, // Use state variable for auth username
-      authPassword: auth.password, // Use state variable for auth password
+      url: url,
+      body: body,
+      authToken: auth.token,
+      authUsername: auth.username,
+      authPassword: auth.password,
     };
 
     {
@@ -1566,7 +1553,6 @@ export function RequestEditor({
   };
 
   const DynamicVariablesPanel = () => {
-    // Only show if there are used dynamic variables
     if (usedDynamicVariables.length === 0) return null;
 
     return (
@@ -2127,7 +2113,7 @@ export function RequestEditor({
                     className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
                     placeholder='Enter bearer token or use {{tokenVariable}}'
                   />
-                  {(processedRequest.authorization?.token ||
+                  {/* {(processedRequest.authorization?.token ||
                     processedRequest.authToken) !==
                     (request.authorization?.token || request.authToken) && (
                     <div className='mt-1 px-2 py-1 bg-blue-50 border border-blue-200 rounded text-xs font-mono'>
@@ -2135,7 +2121,7 @@ export function RequestEditor({
                       {processedRequest.authorization?.token ||
                         processedRequest.authToken}
                     </div>
-                  )}
+                  )} */}
                 </div>
               </div>
             </div>
