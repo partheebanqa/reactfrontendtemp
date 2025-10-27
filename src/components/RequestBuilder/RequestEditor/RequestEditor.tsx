@@ -1283,8 +1283,6 @@ const RequestEditor: React.FC = () => {
   const handleCancelSave = () => {
     setShowSaveModal(false);
     // setIsCreatingCollection(false);
-    // setNewCollectionName('');
-    // setIsSaving(false);
   };
 
   const addParam = () => {
