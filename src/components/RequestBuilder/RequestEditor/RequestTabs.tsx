@@ -25,7 +25,7 @@ interface RequestTabsProps {
   onTabChange?: (request: CollectionRequest) => void;
   onSaveRequest?: (request: CollectionRequest) => Promise<void>;
   onCurlImport?: (parsedRequest: any) => void;
-  onBeforeTabChange?: () => void; // Add this
+  onBeforeTabChange?: () => void;
 }
 
 const RequestTabs: React.FC<RequestTabsProps> = ({
@@ -66,6 +66,7 @@ const RequestTabs: React.FC<RequestTabsProps> = ({
       collectionActions.closeRequest(requestId);
     }
   };
+
   const handleDontSave = () => {
     if (pendingCloseRequestId) {
       collectionActions.closeRequest(pendingCloseRequestId);
@@ -80,11 +81,15 @@ const RequestTabs: React.FC<RequestTabsProps> = ({
     const request = openedRequests.find((r) => r.id === pendingCloseRequestId);
     if (!request) return;
 
-    // If request has no id, we can't save it - just close it
-    if (!request.id) {
-      collectionActions.closeRequest(pendingCloseRequestId);
-      setShowConfirmDialog(false);
-      setPendingCloseRequestId(undefined);
+    if (request.id?.startsWith('temp-')) {
+      setIsSaving(true);
+      try {
+        await onSaveRequest?.(request);
+      } finally {
+        setIsSaving(false);
+        setShowConfirmDialog(false);
+        setPendingCloseRequestId(undefined);
+      }
       return;
     }
 
@@ -102,6 +107,7 @@ const RequestTabs: React.FC<RequestTabsProps> = ({
   };
 
   const handleCancelClose = () => {
+    onBeforeTabChange?.();
     setShowConfirmDialog(false);
     setPendingCloseRequestId(undefined);
   };

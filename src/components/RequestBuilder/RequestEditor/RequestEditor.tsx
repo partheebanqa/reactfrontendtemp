@@ -2,14 +2,7 @@
 
 import type React from 'react';
 import { useState, useEffect, useRef, useMemo } from 'react';
-import {
-  Play,
-  Save,
-  FolderPlus,
-  Plus,
-  FileTerminal,
-  HelpCircle,
-} from 'lucide-react';
+import { Play, Save, FolderPlus, HelpCircle } from 'lucide-react';
 import { useRequest } from '@/hooks/useRequest';
 import { useCollection } from '@/hooks/useCollection';
 import { useWorkspace } from '@/hooks/useWorkspace';
@@ -876,18 +869,22 @@ const RequestEditor: React.FC = () => {
     try {
       if (!activeRequest) return;
       if (newName.trim() && activeRequest?.id) {
-        await renameRequestMutation.mutateAsync({
-          requestId: activeRequest.id,
-          newName: newName.trim(),
-          workspaceId: currentWorkspace?.id || '',
-          folderId: '',
-        });
-      } else if (newName.trim() && !activeRequest?.id) {
-        const updatedRequest = {
-          ...activeRequest,
-          name: newName.trim(),
-        };
-        setActiveRequest(updatedRequest);
+        const isTempRequest = activeRequest.id.startsWith('temp-');
+
+        if (isTempRequest) {
+          collectionActions.renameRequest(
+            newName.trim(),
+            activeRequest.id,
+            currentWorkspace?.id || ''
+          );
+        } else {
+          await renameRequestMutation.mutateAsync({
+            requestId: activeRequest.id,
+            newName: newName.trim(),
+            workspaceId: currentWorkspace?.id || '',
+            folderId: '',
+          });
+        }
       }
     } catch (error) {
       console.error('Error renaming request:', error);
@@ -1285,9 +1282,9 @@ const RequestEditor: React.FC = () => {
 
   const handleCancelSave = () => {
     setShowSaveModal(false);
-    setIsCreatingCollection(false);
-    setNewCollectionName('');
-    setIsSaving(false);
+    // setIsCreatingCollection(false);
+    // setNewCollectionName('');
+    // setIsSaving(false);
   };
 
   const addParam = () => {

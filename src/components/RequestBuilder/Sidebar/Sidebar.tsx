@@ -264,12 +264,24 @@ const Sidebar: React.FC = () => {
   const saveRenamedRequest = async () => {
     try {
       if (renameValue.trim() && requestId) {
-        await renameRequestMutation.mutateAsync({
-          requestId,
-          newName: renameValue,
-          workspaceId: currentWorkspace?.id ?? '',
-          folderId: selectedRequest?.folderId ?? '',
-        });
+        const isTempRequest = requestId.startsWith('temp-');
+
+        if (isTempRequest) {
+          // For temp requests, update local state immediately without API call
+          collectionActions.renameRequest(
+            renameValue,
+            requestId,
+            currentWorkspace?.id ?? ''
+          );
+        } else {
+          // For saved requests, call the API to persist changes
+          await renameRequestMutation.mutateAsync({
+            requestId,
+            newName: renameValue,
+            workspaceId: currentWorkspace?.id ?? '',
+            folderId: selectedRequest?.folderId ?? '',
+          });
+        }
         setShowRequestRenameModal(false);
       }
     } catch (error) {
