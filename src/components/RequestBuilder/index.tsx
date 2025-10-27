@@ -153,6 +153,15 @@ const RequestBuilder = () => {
     setOpen(false);
   };
 
+
+  useEffect(() => {
+    const hasSeenWelcome = localStorage.getItem("hasSeenWelcome");
+    if (!hasSeenWelcome) {
+      setOpen(true);
+      localStorage.setItem("hasSeenWelcome", "true");
+    }
+  }, []);
+
   return (
     <>
       <div className='flex h-full relative border border-gray-200 bg-background rounded-lg mt-2'>
@@ -198,20 +207,18 @@ const RequestBuilder = () => {
 
           <div
             ref={containerRef}
-            className={`flex-1 flex overflow-hidden ${
-              isBottomLayout ? 'flex-col' : 'flex-row'
-            }`}
+            className={`flex-1 flex overflow-hidden ${isBottomLayout ? 'flex-col' : 'flex-row'
+              }`}
           >
             {/* Request Editor */}
             <div
               className={`
               flex flex-col min-h-0 overflow-hidden
               ${isMobile && activePanel === 'response' ? 'hidden' : ''}
-              ${
-                isBottomLayout
+              ${isBottomLayout
                   ? `h-[${resizePosition}%] min-h-[20%] max-h-[80%]`
                   : `w-[${resizePosition}%] min-w-[20%] max-w-[80%] flex-1`
-              }
+                }
             `}
               style={{
                 height: isBottomLayout ? `${resizePosition}%` : undefined,
@@ -224,49 +231,46 @@ const RequestBuilder = () => {
             {/* Resizer Handle - hidden on mobile when in panel toggle mode */}
             {(!isMobile ||
               (isMobile && isBottomLayout && activePanel === 'editor')) && (
-              <div
-                className={`
+                <div
+                  className={`
                 flex justify-center items-center
                 ${isBottomLayout ? 'cursor-row-resize' : 'cursor-col-resize'}
-                ${
-                  isBottomLayout
-                    ? 'h-[6px] w-full bg-[#136fb0] dark:bg-gray-700 hover:bg-blue-300 dark:hover:bg-blue-800 transition-colors'
-                    : 'w-[6px] h-full bg-[#136fb0] dark:bg-gray-700 hover:bg-blue-300 dark:hover:bg-blue-800 transition-colors'
-                }
+                ${isBottomLayout
+                      ? 'h-[6px] w-full bg-[#136fb0] dark:bg-gray-700 hover:bg-blue-300 dark:hover:bg-blue-800 transition-colors'
+                      : 'w-[6px] h-full bg-[#136fb0] dark:bg-gray-700 hover:bg-blue-300 dark:hover:bg-blue-800 transition-colors'
+                    }
                 ${isMobile ? 'touch-manipulation' : ''}
               `}
-                onMouseDown={handleResizeStart}
-                onTouchStart={(e) => {
-                  // Prevent scrolling on touch devices when resizing
-                  e.preventDefault();
-                  const touch = e.touches[0];
-                  const mouseEvent = new MouseEvent('mousedown', {
-                    clientX: touch.clientX,
-                    clientY: touch.clientY,
-                  });
-                  handleResizeStart(mouseEvent as any);
-                }}
-              >
-                {isBottomLayout ? (
-                  <GripHorizontal className='h-3 w-3 text-white' />
-                ) : (
-                  <GripVertical className='h-3 w-3 text-white' />
-                )}
-              </div>
-            )}
+                  onMouseDown={handleResizeStart}
+                  onTouchStart={(e) => {
+                    // Prevent scrolling on touch devices when resizing
+                    e.preventDefault();
+                    const touch = e.touches[0];
+                    const mouseEvent = new MouseEvent('mousedown', {
+                      clientX: touch.clientX,
+                      clientY: touch.clientY,
+                    });
+                    handleResizeStart(mouseEvent as any);
+                  }}
+                >
+                  {isBottomLayout ? (
+                    <GripHorizontal className='h-3 w-3 text-white' />
+                  ) : (
+                    <GripVertical className='h-3 w-3 text-white' />
+                  )}
+                </div>
+              )}
 
             {/* Response Viewer */}
             <div
               className={`
               flex flex-col min-h-0 overflow-hidden
               ${isMobile && activePanel === 'editor' ? 'hidden' : ''}
-              ${
-                isBottomLayout
+              ${isBottomLayout
                   ? `h-[${100 - resizePosition}%] min-h-[20%] max-h-[80%]`
-                  : `w-[${
-                      100 - resizePosition
-                    }%] min-w-[20%] max-w-[80%] flex-1`
-              }
+                  : `w-[${100 - resizePosition
+                  }%] min-w-[20%] max-w-[80%] flex-1`
+                }
             `}
               style={{
                 height: isBottomLayout ? `${100 - resizePosition}%` : undefined,
@@ -283,9 +287,8 @@ const RequestBuilder = () => {
           <button
             onClick={toggleLayout}
             className='fixed bottom-4 right-4 z-10 p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg'
-            title={`Switch to ${
-              isBottomLayout ? 'side-by-side' : 'top-bottom'
-            } layout`}
+            title={`Switch to ${isBottomLayout ? 'side-by-side' : 'top-bottom'
+              } layout`}
           >
             {isBottomLayout ? (
               <svg
@@ -329,11 +332,10 @@ const RequestBuilder = () => {
                 setActivePanel('editor');
                 toggleSidebar();
               }}
-              className={`mx-2 p-2 rounded-md flex flex-col items-center ${
-                activePanel === 'editor' && showSidebar
-                  ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
-                  : 'text-gray-600 dark:text-gray-400'
-              }`}
+              className={`mx-2 p-2 rounded-md flex flex-col items-center ${activePanel === 'editor' && showSidebar
+                ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
+                : 'text-gray-600 dark:text-gray-400'
+                }`}
             >
               <PanelLeft size={18} />
               <span className='text-xs mt-1'>Collections</span>
@@ -344,11 +346,10 @@ const RequestBuilder = () => {
                 setActivePanel('editor');
                 setShowSidebar(false);
               }}
-              className={`mx-2 p-2 rounded-md flex flex-col items-center ${
-                activePanel === 'editor' && !showSidebar
-                  ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
-                  : 'text-gray-600 dark:text-gray-400'
-              }`}
+              className={`mx-2 p-2 rounded-md flex flex-col items-center ${activePanel === 'editor' && !showSidebar
+                ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
+                : 'text-gray-600 dark:text-gray-400'
+                }`}
             >
               <svg
                 xmlns='http://www.w3.org/2000/svg'
@@ -372,11 +373,10 @@ const RequestBuilder = () => {
                 setActivePanel('response');
                 setShowSidebar(false);
               }}
-              className={`mx-2 p-2 rounded-md flex flex-col items-center ${
-                activePanel === 'response'
-                  ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
-                  : 'text-gray-600 dark:text-gray-400'
-              }`}
+              className={`mx-2 p-2 rounded-md flex flex-col items-center ${activePanel === 'response'
+                ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
+                : 'text-gray-600 dark:text-gray-400'
+                }`}
             >
               <svg
                 xmlns='http://www.w3.org/2000/svg'
@@ -399,12 +399,6 @@ const RequestBuilder = () => {
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className='max-w-5xl'>
-          {/* <DialogHeader className="px-2">
-            <DialogTitle className="text-sm font-semibold tracking-wide text-blue-700">
-              README
-            </DialogTitle>
-          </DialogHeader> */}
-
           <DialogDescription asChild>
             <div className='max-h-[88vh] overflow-y-auto pr-2'>
               <div className='rounded-xl bg-white'>
