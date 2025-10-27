@@ -2,14 +2,7 @@
 
 import type React from 'react';
 import { useState, useEffect, useRef, useMemo } from 'react';
-import {
-  Play,
-  Save,
-  FolderPlus,
-  Plus,
-  FileTerminal,
-  HelpCircle,
-} from 'lucide-react';
+import { Play, Save, FolderPlus, HelpCircle } from 'lucide-react';
 import { useRequest } from '@/hooks/useRequest';
 import { useCollection } from '@/hooks/useCollection';
 import { useWorkspace } from '@/hooks/useWorkspace';
@@ -313,6 +306,33 @@ const RequestEditor: React.FC = () => {
       }
     },
   });
+
+  const syncCurrentRequestToStore = () => {
+    if (activeRequest?.id && !isSaving) {
+      collectionActions.updateOpenedRequest({
+        ...activeRequest,
+        url,
+        method,
+        params,
+        headers,
+        bodyType,
+        bodyRawContent: bodyContent,
+        bodyFormData:
+          bodyType === 'form-data'
+            ? formFields.reduce((acc: Record<string, any>, field) => {
+                if (field.key) acc[field.key] = field.value;
+                return acc;
+              }, {})
+            : activeRequest.bodyFormData,
+        authorizationType: authType,
+        authorization: authData,
+      });
+    }
+  };
+
+  const isNewRequest = (requestId?: string) => {
+    return !requestId || requestId.startsWith('temp-');
+  };
 
   useEffect(() => {
     if (isSaving) return;
@@ -849,18 +869,22 @@ const RequestEditor: React.FC = () => {
     try {
       if (!activeRequest) return;
       if (newName.trim() && activeRequest?.id) {
-        await renameRequestMutation.mutateAsync({
-          requestId: activeRequest.id,
-          newName: newName.trim(),
-          workspaceId: currentWorkspace?.id || '',
-          folderId: '',
-        });
-      } else if (newName.trim() && !activeRequest?.id) {
-        const updatedRequest = {
-          ...activeRequest,
-          name: newName.trim(),
-        };
-        setActiveRequest(updatedRequest);
+        const isTempRequest = activeRequest.id.startsWith('temp-');
+
+        if (isTempRequest) {
+          collectionActions.renameRequest(
+            newName.trim(),
+            activeRequest.id,
+            currentWorkspace?.id || ''
+          );
+        } else {
+          await renameRequestMutation.mutateAsync({
+            requestId: activeRequest.id,
+            newName: newName.trim(),
+            workspaceId: currentWorkspace?.id || '',
+            folderId: '',
+          });
+        }
       }
     } catch (error) {
       console.error('Error renaming request:', error);
@@ -884,7 +908,13 @@ const RequestEditor: React.FC = () => {
 
   const handleUpdateRequest = async () => {
     try {
-      if (!activeRequest || !currentWorkspace) return;
+      if (!activeRequest || activeRequest.id?.startsWith('temp-')) {
+        showError(
+          'Invalid Request',
+          'Cannot update a temporary request. Please save it first.'
+        );
+        return;
+      }
       if (!url.trim()) {
         showError(
           'URL Required',
@@ -1252,9 +1282,7 @@ const RequestEditor: React.FC = () => {
 
   const handleCancelSave = () => {
     setShowSaveModal(false);
-    setIsCreatingCollection(false);
-    setNewCollectionName('');
-    setIsSaving(false);
+    // setIsCreatingCollection(false);
   };
 
   const addParam = () => {
@@ -1450,8 +1478,13 @@ const RequestEditor: React.FC = () => {
       <div className='flex-1 flex flex-col bg-white dark:bg-gray-900 overflow-hidden'>
         {activeCollection && (
           <RequestTabs
+            onBeforeTabChange={syncCurrentRequestToStore}
             onSaveRequest={async (request) => {
-              await handleUpdateRequest();
+              if (isNewRequest(activeRequest.id)) {
+                handleSaveRequest();
+              } else {
+                await handleUpdateRequest();
+              }
             }}
             onCurlImport={handleCurlImport}
           />
@@ -1546,7 +1579,7 @@ const RequestEditor: React.FC = () => {
                 </span>
               </Button>
               <TooltipContainer text='Save request'>
-                {!activeRequest.id ? (
+                {isNewRequest(activeRequest.id) ? (
                   <button
                     onClick={handleSaveRequest}
                     className='border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 px-3 py-2 rounded-md'

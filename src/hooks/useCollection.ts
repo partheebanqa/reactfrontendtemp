@@ -1,25 +1,25 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import {
-  useAddCollectionMutation,
-  useAddRequestMutation,
-  useCollectionQuery,
-  useCollectionRequestsQuery,
-  useDeleteCollectionMutation,
-  useDeleteRequestMutation,
-  useDuplicateRequestMutation,
-  useImpotPostmanCollectionMutation,
-  useRenameCollectionMutation,
-  useRenameRequestMutation,
-  useSetFavouriteCollectionMutation,
-  useUnsetFavouriteCollectionMutation,
-} from '@/store/query/collectionQuery';
 import { collectionActions, useCollectionStore } from '@/store/collectionStore';
 import { useAuth } from './useAuth';
 import { useWorkspace } from './useWorkspace';
 import type { Collection, CollectionRequest } from '@/shared/types/collection';
 import { useRequest } from './useRequest';
+import {
+  useCollectionQuery,
+  useAddCollectionMutation,
+  useRenameCollectionMutation,
+  useSetFavouriteCollectionMutation,
+  useUnsetFavouriteCollectionMutation,
+  useCollectionRequestsQuery,
+  useDeleteCollectionMutation,
+  useImpotPostmanCollectionMutation,
+  useAddRequestMutation,
+  useRenameRequestMutation,
+  useDeleteRequestMutation,
+  useDuplicateRequestMutation,
+} from '@/store/query/collectionQuery';
 
 export function useCollection() {
   const { isAuthenticated } = useAuth();
@@ -74,7 +74,16 @@ export function useCollection() {
     collection?: Collection,
     folderId?: string
   ) => {
+    if (activeRequest && activeRequest.id) {
+      collectionActions.updateOpenedRequest(activeRequest);
+    }
+
+    const generateUniqueRequestId = (): string => {
+      return `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    };
+
     const newRequest: CollectionRequest = {
+      id: generateUniqueRequestId(),
       name: 'New Request',
       method: 'GET',
       url: '',
