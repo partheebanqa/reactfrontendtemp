@@ -1,13 +1,21 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { Search, Plus, Copy, Eye, EyeOff, Pencil, Trash2, X } from "lucide-react";
-import { useDataManagement } from "@/hooks/useDataManagement";
-import { useToast } from "@/hooks/useToast";
-import VariableCreateDialog from "./CreateVariableDialog";
-import EditDynamicVariableDialog from "./EditDynamicVariableDialog";
-import type { DynamicVariable } from "@/shared/types/datamanagement";
-import { Button } from "@/components/ui/button";
-import { Input } from "../ui/input";
-
+import React, { useEffect, useMemo, useState } from 'react';
+import {
+  Search,
+  Plus,
+  Copy,
+  Eye,
+  EyeOff,
+  Pencil,
+  Trash2,
+  X,
+} from 'lucide-react';
+import { useDataManagement } from '@/hooks/useDataManagement';
+import { useToast } from '@/hooks/useToast';
+import VariableCreateDialog from './CreateVariableDialog';
+import EditDynamicVariableDialog from './EditDynamicVariableDialog';
+import type { DynamicVariable } from '@/shared/types/datamanagement';
+import { Button } from '@/components/ui/button';
+import { Input } from '../ui/input';
 
 const debounce = (fn: (...a: any[]) => void, ms = 250) => {
   let t: ReturnType<typeof setTimeout>;
@@ -18,21 +26,33 @@ const debounce = (fn: (...a: any[]) => void, ms = 250) => {
 };
 
 const TableSkeleton: React.FC<{ rows?: number }> = ({ rows = 8 }) => (
-  <div className="border border-gray-200 rounded-lg overflow-hidden">
-    <table className="w-full">
+  <div className='border border-gray-200 rounded-lg overflow-hidden'>
+    <table className='w-full'>
       <thead>
-        <tr className="bg-gray-50 border-b border-gray-200">
-          <th className="px-4 py-2 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Name</th>
-          <th className="px-4 py-2 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Value</th>
-          <th className="px-4 py-2 text-right text-xs font-medium text-gray-600 uppercase tracking-wider w-24">Actions</th>
+        <tr className='bg-gray-50 border-b border-gray-200'>
+          <th className='px-4 py-2 text-left text-xs font-medium text-gray-600 uppercase tracking-wider'>
+            Name
+          </th>
+          <th className='px-4 py-2 text-left text-xs font-medium text-gray-600 uppercase tracking-wider'>
+            Value
+          </th>
+          <th className='px-4 py-2 text-right text-xs font-medium text-gray-600 uppercase tracking-wider w-24'>
+            Actions
+          </th>
         </tr>
       </thead>
-      <tbody className="divide-y divide-gray-200 bg-white">
+      <tbody className='divide-y divide-gray-200 bg-white'>
         {Array.from({ length: rows }).map((_, i) => (
           <tr key={i}>
-            <td className="px-4 py-3"><div className="h-4 w-40 bg-gray-100 rounded animate-pulse" /></td>
-            <td className="px-4 py-3"><div className="h-4 w-80 bg-gray-100 rounded animate-pulse" /></td>
-            <td className="px-4 py-3"><div className="ml-auto h-4 w-20 bg-gray-100 rounded animate-pulse" /></td>
+            <td className='px-4 py-3'>
+              <div className='h-4 w-40 bg-gray-100 rounded animate-pulse' />
+            </td>
+            <td className='px-4 py-3'>
+              <div className='h-4 w-80 bg-gray-100 rounded animate-pulse' />
+            </td>
+            <td className='px-4 py-3'>
+              <div className='ml-auto h-4 w-20 bg-gray-100 rounded animate-pulse' />
+            </td>
           </tr>
         ))}
       </tbody>
@@ -73,18 +93,27 @@ export function DynamicVariables() {
     environments?: { id: string; name: string }[];
     dynamicVariables?: DynamicVariable[];
     isLoading?: boolean;
-    createVariableMutation?: { mutateAsync: (p: Partial<NewVariableForm> & Record<string, any>) => Promise<any> };
-    updateDynamicVariableMutation?: { mutateAsync: (p: { id: string } & Record<string, any>) => Promise<any> };
-    deletedDynamicVariableMutation?: { mutateAsync: (id: string) => Promise<void> };
+    createVariableMutation?: {
+      mutateAsync: (
+        p: Partial<NewVariableForm> & Record<string, any>
+      ) => Promise<any>;
+    };
+    updateDynamicVariableMutation?: {
+      mutateAsync: (p: { id: string } & Record<string, any>) => Promise<any>;
+    };
+    deletedDynamicVariableMutation?: {
+      mutateAsync: (id: string) => Promise<void>;
+    };
   };
 
   // local list for optimistic UX
-  const [localList, setLocalList] = useState<DynamicVariable[]>(dynamicVariables);
+  const [localList, setLocalList] =
+    useState<DynamicVariable[]>(dynamicVariables);
   useEffect(() => setLocalList(dynamicVariables), [dynamicVariables]);
 
   // search (debounced)
-  const [searchTerm, setSearchTerm] = useState("");
-  const [debouncedTerm, setDebouncedTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedTerm, setDebouncedTerm] = useState('');
   useEffect(() => {
     const run = debounce((v: string) => setDebouncedTerm(v), 250);
     run(searchTerm);
@@ -106,18 +135,18 @@ export function DynamicVariables() {
   const [editing, setEditing] = useState<DynamicVariable | null>(null);
 
   const [newVariable, setNewVariable] = useState<NewVariableForm>({
-    id: "",
-    environmentId: "",
-    name: "",
-    description: "",
-    type: "dynamic",
-    initialValue: "",
-    currentValue: "",
-    createdAt: "",
-    updatedAt: "",
+    id: '',
+    environmentId: '',
+    name: '',
+    description: '',
+    type: 'dynamic',
+    initialValue: '',
+    currentValue: '',
+    createdAt: '',
+    updatedAt: '',
     deletedAt: null,
-    value: "",
-    scope: "global",
+    value: '',
+    scope: 'global',
     isGlobal: false,
     isSecret: false,
   });
@@ -131,9 +160,9 @@ export function DynamicVariables() {
     const q = debouncedTerm.trim().toLowerCase();
     if (!q) return localList;
     return localList.filter((v) => {
-      const name = v.name?.toLowerCase() || "";
-      const genName = v.generatorName?.toLowerCase() || "";
-      const genId = v.generatorId?.toLowerCase() || "";
+      const name = v.name?.toLowerCase() || '';
+      const genName = v.generatorName?.toLowerCase() || '';
+      const genId = v.generatorId?.toLowerCase() || '';
       return name.includes(q) || genName.includes(q) || genId.includes(q);
     });
   }, [debouncedTerm, localList]);
@@ -149,10 +178,14 @@ export function DynamicVariables() {
 
   const copyToClipboard = async (text: string) => {
     try {
-      await navigator.clipboard.writeText(text || "");
-      toast({ title: "Copied", description: "Copied to clipboard" });
+      await navigator.clipboard.writeText(text || '');
+      toast({ title: 'Copied', description: 'Copied to clipboard' });
     } catch {
-      toast({ title: "Copy failed", description: "Could not copy.", variant: "destructive" });
+      toast({
+        title: 'Copy failed',
+        description: 'Could not copy.',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -160,25 +193,38 @@ export function DynamicVariables() {
   const handleCreate = async (payload: any) => {
     try {
       let finalName = payload.name;
-      if (payload.type === "static" && !payload.name.startsWith("S_")) {
+      if (payload.type === 'static' && !payload.name.startsWith('S_')) {
         finalName = `S_${payload.name}`;
-      } else if (payload.type !== "static" && !payload.name.startsWith("D_")) {
+      } else if (payload.type !== 'static' && !payload.name.startsWith('D_')) {
         finalName = `D_${payload.name}`;
       }
 
-      if (!createVariableMutation) throw new Error("Create mutation not available");
-      const created = await createVariableMutation.mutateAsync({ ...payload, name: finalName });
+      if (!createVariableMutation)
+        throw new Error('Create mutation not available');
+      const created = await createVariableMutation.mutateAsync({
+        ...payload,
+        name: finalName,
+      });
 
       setLocalList((prev) => [created as any, ...prev]);
-      toast({ title: "Variable Created", description: "Dynamic variable created successfully." });
+      toast({
+        title: 'Variable Created',
+        description: 'Dynamic variable created successfully.',
+      });
 
       setIsCreateOpen(false);
-      setNewVariable((v) => ({ ...v, id: "", name: "", description: "", value: "" }));
+      setNewVariable((v) => ({
+        ...v,
+        id: '',
+        name: '',
+        description: '',
+        value: '',
+      }));
     } catch (error: any) {
       toast({
-        title: "Create failed",
-        description: error?.message || "Could not create dynamic variable",
-        variant: "destructive",
+        title: 'Create failed',
+        description: error?.message || 'Could not create dynamic variable',
+        variant: 'destructive',
       });
     }
   };
@@ -188,22 +234,40 @@ export function DynamicVariables() {
     setIsEditOpen(true);
   };
 
-  const handleDynamicUpdate = async (id: string, patch: Record<string, any>) => {
+  const handleDynamicUpdate = async (
+    id: string,
+    patch: Record<string, any>
+  ) => {
     const prev = localList;
-    setLocalList((list) => list.map((v) => (v.id === id ? { ...v, ...patch, updatedAt: new Date().toISOString() } : v)));
+    setLocalList((list) =>
+      list.map((v) =>
+        v.id === id
+          ? { ...v, ...patch, updatedAt: new Date().toISOString() }
+          : v
+      )
+    );
     try {
-      if (!updateDynamicVariableMutation) throw new Error("Update mutation not available");
-      const saved = await updateDynamicVariableMutation.mutateAsync({ id, ...patch });
-      setLocalList((list) => list.map((v) => (v.id === id ? { ...v, ...saved } : v)));
-      toast({ title: "Updated", description: "Dynamic variable updated successfully." });
+      if (!updateDynamicVariableMutation)
+        throw new Error('Update mutation not available');
+      const saved = await updateDynamicVariableMutation.mutateAsync({
+        id,
+        ...patch,
+      });
+      setLocalList((list) =>
+        list.map((v) => (v.id === id ? { ...v, ...saved } : v))
+      );
+      toast({
+        title: 'Updated',
+        description: 'Dynamic variable updated successfully.',
+      });
       setIsEditOpen(false);
       setEditing(null);
     } catch (error: any) {
       setLocalList(prev);
       toast({
-        title: "Update failed",
-        description: error?.message || "Could not update dynamic variable",
-        variant: "destructive",
+        title: 'Update failed',
+        description: error?.message || 'Could not update dynamic variable',
+        variant: 'destructive',
       });
     }
   };
@@ -215,15 +279,20 @@ export function DynamicVariables() {
     const prev = localList;
     setLocalList((list) => list.filter((v) => v.id !== id));
     try {
-      if (!deletedDynamicVariableMutation) throw new Error("Delete mutation not available");
+      if (!deletedDynamicVariableMutation)
+        throw new Error('Delete mutation not available');
       await deletedDynamicVariableMutation.mutateAsync(id);
-      toast({ title: "Deleted", description: `Dynamic variable "${name ?? id}" deleted.`, variant: "destructive" });
+      toast({
+        title: 'Deleted',
+        description: `Dynamic variable "${name ?? id}" deleted.`,
+        variant: 'destructive',
+      });
     } catch (error: any) {
       setLocalList(prev);
       toast({
-        title: "Delete failed",
-        description: error?.message || "Could not delete dynamic variable",
-        variant: "destructive",
+        title: 'Delete failed',
+        description: error?.message || 'Could not delete dynamic variable',
+        variant: 'destructive',
       });
     }
   };
@@ -237,23 +306,26 @@ export function DynamicVariables() {
 
   /* ---------------- render ---------------- */
   return (
-    <div className="space-y-4">
+    <div className='space-y-4'>
       {/* top bar (new UI) */}
-      <div className="flex items-center justify-between gap-3">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+      <div className='flex items-center justify-between gap-3'>
+        <div className='relative flex-1 max-w-sm'>
+          <Search
+            className='absolute left-3 top-1/2 -translate-y-1/2 text-gray-400'
+            size={16}
+          />
           <Input
-            type="text"
-            placeholder="Search variables..."
+            type='text'
+            placeholder='Search variables...'
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-9 pr-16 py-1.5 text-sm border border-gray-200 rounded-md"
+            className='w-full pl-9 pr-16 py-1.5 text-sm border border-gray-200 rounded-md'
           />
           {searchTerm && (
             <button
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              onClick={() => setSearchTerm("")}
-              aria-label="Clear search"
+              className='absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600'
+              onClick={() => setSearchTerm('')}
+              aria-label='Clear search'
             >
               <X size={16} />
             </button>
@@ -267,7 +339,7 @@ export function DynamicVariables() {
           setNewVariable={setNewVariable}
           handleCreate={handleCreate}
           environments={environments}
-          type="dynamic"
+          type='dynamic'
         />
       </div>
 
@@ -275,46 +347,60 @@ export function DynamicVariables() {
       {isLoading ? (
         <TableSkeleton rows={8} />
       ) : filtered.length === 0 ? (
-        <div className="text-center py-12 text-sm text-gray-500">
-          {debouncedTerm ? "No dynamic variables match your search." : "No dynamic variables yet"}
+        <div className='text-center py-12 text-sm text-gray-500'>
+          {debouncedTerm
+            ? 'No dynamic variables match your search.'
+            : 'No dynamic variables yet'}
         </div>
       ) : (
         <>
-          <div className="border border-gray-200 rounded-lg overflow-hidden">
-            <table className="w-full">
+          <div className='border border-gray-200 rounded-lg overflow-hidden'>
+            <table className='w-full'>
               <thead>
-                <tr className="bg-gray-50 border-b border-gray-200">
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Name</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Generator Name</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Parameters</th>
-                  <th className="px-4 py-2 text-right text-xs font-medium text-gray-600 uppercase tracking-wider w-24">Actions</th>
+                <tr className='bg-gray-50 border-b border-gray-200'>
+                  <th className='px-4 py-2 text-left text-xs font-medium text-gray-600 uppercase tracking-wider'>
+                    Name
+                  </th>
+                  <th className='px-4 py-2 text-left text-xs font-medium text-gray-600 uppercase tracking-wider'>
+                    Generator Name
+                  </th>
+                  <th className='px-4 py-2 text-left text-xs font-medium text-gray-600 uppercase tracking-wider'>
+                    Parameters
+                  </th>
+                  <th className='px-4 py-2 text-right text-xs font-medium text-gray-600 uppercase tracking-wider w-24'>
+                    Actions
+                  </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200 bg-white">
+              <tbody className='divide-y divide-gray-200 bg-white'>
                 {current.map((variable) => (
-                  <tr key={variable.id} className="hover:bg-gray-50 transition-colors group">
-                    <td className="px-4 py-2.5">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-mono font-medium text-gray-900">{variable.name}</span>
+                  <tr
+                    key={variable.id}
+                    className='hover:bg-gray-50 transition-colors group'
+                  >
+                    <td className='px-4 py-2.5'>
+                      <div className='flex items-center gap-2'>
+                        <span className='text-sm font-mono font-medium text-gray-900'>
+                          {variable.name}
+                        </span>
                         <button
                           onClick={() => copyToClipboard(variable.name)}
-                          className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-gray-600 transition-opacity"
-                          title="Copy name"
+                          className='opacity-0 group-hover:opacity-100 text-gray-400 hover:text-gray-600 transition-opacity'
+                          title='Copy name'
                         >
                           <Copy size={13} />
                         </button>
                       </div>
                     </td>
 
-                    <td className="px-4 py-2.5">
-                      <div className="flex items-center gap-2">
-                        <code className="text-sm font-mono text-gray-700 truncate max-w-md">
-
-                          {(variable.generatorName || "—")}
+                    <td className='px-4 py-2.5'>
+                      <div className='flex items-center gap-2'>
+                        <code className='text-sm font-mono text-gray-700 truncate max-w-md'>
+                          {variable.generatorName || '—'}
                         </code>
                       </div>
                     </td>
-                    <td className="px-4 py-2.5">
+                    <td className='px-4 py-2.5'>
                       {Object.keys(variable.parameters ?? {}).length > 0 && (
                         <div className='flex items-center space-x-2'>
                           <code className='px-2 py-1 rounded text-sm bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300'>
@@ -323,7 +409,6 @@ export function DynamicVariables() {
                         </div>
                       )}
                     </td>
-
 
                     {/* <td className="px-4 py-2.5">
                       <div className="flex items-center gap-1.5">
@@ -353,19 +438,21 @@ export function DynamicVariables() {
                         </div>
                       </div>
                     </td> */}
-                    <td className="px-4 py-2.5">
-                      <div className="flex items-center justify-end gap-1">
+                    <td className='px-4 py-2.5'>
+                      <div className='flex items-center justify-end gap-1'>
                         <button
                           onClick={() => handleEdit(variable)}
-                          className="p-1 text-gray-400 hover:text-blue-600 transition-colors"
-                          title="Edit"
+                          className='p-1 text-gray-400 hover:text-blue-600 transition-colors'
+                          title='Edit'
                         >
                           <Pencil size={14} />
                         </button>
                         <button
-                          onClick={() => handleDelete(variable.id, variable.name)}
-                          className="p-1 text-gray-400 hover:text-red-600 transition-colors"
-                          title="Delete"
+                          onClick={() =>
+                            handleDelete(variable.id, variable.name)
+                          }
+                          className='p-1 text-gray-400 hover:text-red-600 transition-colors'
+                          title='Delete'
                         >
                           <Trash2 size={14} />
                         </button>
@@ -379,40 +466,43 @@ export function DynamicVariables() {
 
           {/* footer / pagination */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-between text-xs mt-2">
-              <div className="text-gray-600">
+            <div className='flex items-center justify-between text-xs mt-2'>
+              <div className='text-gray-600'>
                 {filtered.length === 0
-                  ? "0"
-                  : `${start + 1}-${Math.min(start + itemsPerPage, filtered.length)}`}{" "}
+                  ? '0'
+                  : `${start + 1}-${Math.min(
+                      start + itemsPerPage,
+                      filtered.length
+                    )}`}{' '}
                 of {filtered.length}
               </div>
 
-              <div className="flex items-center gap-3">
+              <div className='flex items-center gap-3'>
                 <select
                   value={itemsPerPage}
                   onChange={(e) => {
                     setItemsPerPage(Number(e.target.value));
                     setPage(1);
                   }}
-                  className="px-2 py-1 border border-gray-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  className='px-2 py-1 border border-gray-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500'
                 >
                   <option value={10}>10</option>
                   <option value={25}>25</option>
                   <option value={50}>50</option>
                 </select>
 
-                <div className="flex gap-1">
+                <div className='flex gap-1'>
                   <button
                     onClick={() => setPage((p) => Math.max(p - 1, 1))}
                     disabled={clamped === 1}
-                    className="px-2 py-1 border border-gray-200 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className='px-2 py-1 border border-gray-200 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
                   >
                     Prev
                   </button>
                   <button
                     onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
                     disabled={clamped === totalPages}
-                    className="px-2 py-1 border border-gray-200 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className='px-2 py-1 border border-gray-200 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
                   >
                     Next
                   </button>

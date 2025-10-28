@@ -2,7 +2,7 @@
 
 import type React from 'react';
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { Play, Save, FolderPlus, HelpCircle } from 'lucide-react';
+import { Play, Save, FolderPlus, HelpCircle, Info } from 'lucide-react';
 import { useRequest } from '@/hooks/useRequest';
 import { useCollection } from '@/hooks/useCollection';
 import { useWorkspace } from '@/hooks/useWorkspace';
@@ -116,8 +116,6 @@ const RequestEditor: React.FC = () => {
     | 'settings'
     | 'schemas'
   >('params');
-
-  console.log('activeRequest:', activeRequest);
 
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [newCollectionName, setNewCollectionName] = useState('');
@@ -572,6 +570,8 @@ const RequestEditor: React.FC = () => {
   };
 
   const handleCurlImport = (parsedRequest: any) => {
+    console.log('parsedRequest:', parsedRequest);
+
     try {
       if (parsedRequest.url) {
         setUrl(parsedRequest.url);
@@ -887,7 +887,7 @@ const RequestEditor: React.FC = () => {
             requestId: activeRequest.id,
             newName: newName.trim(),
             workspaceId: currentWorkspace?.id || '',
-            folderId: '',
+            folderId: activeRequest.folderId || '',
           });
         }
       }
@@ -1501,6 +1501,7 @@ const RequestEditor: React.FC = () => {
                   {activeCollectionFull?.name}
                 </span>
                 <span className='text-gray-500 dark:text-gray-400'>/</span>
+
                 {activeRequest?.folderId && (
                   <>
                     <span className='text-gray-500 dark:text-gray-400'>
@@ -1512,13 +1513,30 @@ const RequestEditor: React.FC = () => {
                     <span className='text-gray-500 dark:text-gray-400'>/</span>
                   </>
                 )}
-                <EditableTextWithoutIcon
-                  value={activeRequest.name || ''}
-                  onSave={handleSaveName}
-                  placeholder='Request Name'
-                  fontSize='sm'
-                  fontWeight='medium'
-                />
+
+                <div className='flex items-center gap-1'>
+                  <EditableTextWithoutIcon
+                    value={activeRequest.name || ''}
+                    onSave={handleSaveName}
+                    placeholder='Request Name'
+                    fontSize='sm'
+                    fontWeight='medium'
+                  />
+
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          type='button'
+                          className='p-1 text-gray-500 hover:text-[rgb(19,111,176)] transition-colors'
+                        >
+                          <Info className='w-3.5 h-3.5' />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>Double click to Rename</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
               </div>
             </div>
           </div>
@@ -1898,7 +1916,6 @@ const RequestEditor: React.FC = () => {
                   label='Follow Redirects'
                   description='Automatically follow HTTP redirects'
                 />
-
                 <div>
                   <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
                     Request Timeout (ms)
@@ -1920,7 +1937,6 @@ const RequestEditor: React.FC = () => {
                     out
                   </p>
                 </div>
-
                 <ToggleSwitch
                   id='sslVerification'
                   checked={settings.sslVerification}

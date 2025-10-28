@@ -2103,11 +2103,19 @@ export function RequestEditor({
                   <input
                     type='text'
                     name='auth-token'
+                    autoComplete='off'
+                    autoCorrect='off'
+                    autoCapitalize='off'
+                    spellCheck={false}
                     value={auth.token}
                     onChange={(e) =>
-                      handleInputChange(e, (value) =>
-                        setAuth((prev) => ({ ...prev, token: value }))
-                      )
+                      setAuth((prev) => ({ ...prev, token: e.target.value }))
+                    }
+                    onBlur={(e) =>
+                      setAuth((prev) => ({
+                        ...prev,
+                        token: e.target.value.trim(),
+                      }))
                     }
                     onKeyUp={(e) => handleAutocomplete(e)}
                     className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
