@@ -99,6 +99,7 @@ const RequestEditor: React.FC = () => {
     renameRequestMutation,
     handleCreateRequest,
     fetchCollectionRequests,
+    replaceRequest,
   } = useCollection();
 
   const { variables, dynamicVariables, environments, activeEnvironment } =
@@ -115,6 +116,8 @@ const RequestEditor: React.FC = () => {
     | 'settings'
     | 'schemas'
   >('params');
+
+  console.log('activeRequest:', activeRequest);
 
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [newCollectionName, setNewCollectionName] = useState('');
@@ -520,6 +523,8 @@ const RequestEditor: React.FC = () => {
         } else {
           setSelectedVariable([]);
         }
+      } else {
+        setSelectedVariable([]);
       }
     } else if (!isSaving) {
       setAssertions([]);
@@ -1182,9 +1187,9 @@ const RequestEditor: React.FC = () => {
           headers,
           ...(selectedVariable ? { variable: selectedVariable } : {}),
         };
-
+        const oldRequestId = activeRequest.id;
+        replaceRequest(oldRequestId, updatedRequest);
         setActiveRequest(updatedRequest);
-        collectionActions.markSaved(newId);
 
         await new Promise((resolve) => setTimeout(resolve, 0));
       }
@@ -1476,7 +1481,7 @@ const RequestEditor: React.FC = () => {
   return (
     <TooltipProvider>
       <div className='flex-1 flex flex-col bg-white dark:bg-gray-900 overflow-hidden'>
-        {activeCollection && (
+        <div className='sticky top-0 z-30 bg-white dark:bg-gray-900'>
           <RequestTabs
             onBeforeTabChange={syncCurrentRequestToStore}
             onSaveRequest={async (request) => {
@@ -1488,33 +1493,33 @@ const RequestEditor: React.FC = () => {
             }}
             onCurlImport={handleCurlImport}
           />
-        )}
 
-        <div className='border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex-shrink-0'>
-          <div className='flex items-center justify-between'>
-            <div className='flex items-center text-sm space-x-1'>
-              <span className='text-gray-500 dark:text-gray-400'>
-                {activeCollectionFull?.name}
-              </span>
-              <span className='text-gray-500 dark:text-gray-400'>/</span>
-              {activeRequest?.folderId && (
-                <>
-                  <span className='text-gray-500 dark:text-gray-400'>
-                    {findFolderName(
-                      activeRequest.folderId,
-                      (activeCollectionFull as any)?.folders || []
-                    )}
-                  </span>
-                  <span className='text-gray-500 dark:text-gray-400'>/</span>
-                </>
-              )}
-              <EditableTextWithoutIcon
-                value={activeRequest.name || ''}
-                onSave={handleSaveName}
-                placeholder='Request Name'
-                fontSize='sm'
-                fontWeight='medium'
-              />
+          <div className='border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex-shrink-0'>
+            <div className='flex items-center justify-between'>
+              <div className='flex items-center text-sm space-x-1'>
+                <span className='text-gray-500 dark:text-gray-400'>
+                  {activeCollectionFull?.name}
+                </span>
+                <span className='text-gray-500 dark:text-gray-400'>/</span>
+                {activeRequest?.folderId && (
+                  <>
+                    <span className='text-gray-500 dark:text-gray-400'>
+                      {findFolderName(
+                        activeRequest.folderId,
+                        (activeCollectionFull as any)?.folders || []
+                      )}
+                    </span>
+                    <span className='text-gray-500 dark:text-gray-400'>/</span>
+                  </>
+                )}
+                <EditableTextWithoutIcon
+                  value={activeRequest.name || ''}
+                  onSave={handleSaveName}
+                  placeholder='Request Name'
+                  fontSize='sm'
+                  fontWeight='medium'
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -1559,6 +1564,12 @@ const RequestEditor: React.FC = () => {
                 setUrl(e.target.value);
                 if (activeRequest?.id) {
                   collectionActions.markUnsaved(activeRequest.id);
+                  setTimeout(() => {
+                    collectionActions.updateOpenedRequest({
+                      ...activeRequest,
+                      url: e.target.value,
+                    });
+                  }, 0);
                 }
               }}
               placeholder='Enter request URL'
@@ -1761,7 +1772,7 @@ const RequestEditor: React.FC = () => {
                   onConfirmSubstitution={handleConfirmSubstitutions}
                   mode='json'
                   variables={formattedVariables}
-                  initialVariable={selectedVariable}
+                  initialVariable={activeRequest?.variable || []}
                   readOnly={false}
                 />
               )}
@@ -1812,7 +1823,7 @@ const RequestEditor: React.FC = () => {
                   onConfirmSubstitution={handleConfirmSubstitutions}
                   mode='raw'
                   variables={formattedVariables}
-                  initialVariable={selectedVariable}
+                  initialVariable={activeRequest?.variable || []}
                   readOnly={false}
                 />
               )}

@@ -55,6 +55,7 @@ export function useCollection() {
   const closeRequest = collectionActions.closeRequest;
   const markUnsaved = collectionActions.markUnsaved;
   const markSaved = collectionActions.markSaved;
+  const replaceRequest = collectionActions.replaceRequest;
 
   const toggleExpandedCollection = async (collectionId: string) => {
     if (!collectionId) return;
@@ -228,6 +229,7 @@ export function useCollection() {
     closeRequest,
     markUnsaved,
     markSaved,
+    replaceRequest,
     refetch,
 
     fetchCollectionRequests,

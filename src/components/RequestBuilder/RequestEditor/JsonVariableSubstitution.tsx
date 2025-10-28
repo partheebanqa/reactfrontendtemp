@@ -53,6 +53,8 @@ export const JsonVariableSubstitution: React.FC<
   initialVariable = [],
   readOnly = false,
 }) => {
+  console.log('initialVariable000:', initialVariable);
+
   const [deleteTargetPath, setDeleteTargetPath] = useState<string | null>(null);
   const [hoveredLine, setHoveredLine] = useState<number | null>(null);
   const [dropdownLine, setDropdownLine] = useState<number | null>(null);
@@ -62,15 +64,23 @@ export const JsonVariableSubstitution: React.FC<
   const [pendingSubstitutions, setPendingSubstitutions] = useState<
     PendingSubstitution[]
   >([]);
+
   const containerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const [scrollTop, setScrollTop] = useState(0);
+  const [dropdownAbove, setDropdownAbove] = useState<boolean>(false);
+  const [dropdownPosition, setDropdownPosition] = useState<{
+    top: number;
+    left: number;
+  } | null>(null);
+  const buttonRefs = useRef<Map<number, HTMLButtonElement>>(new Map());
 
-  // ---- NEW: AlertDialog state for confirmations ----
   const [confirmState, setConfirmState] = useState<
     | { open: true; kind: 'saved' | 'line'; path?: string; lineIndex?: number }
     | { open: false }
   >({ open: false });
+
+  console.log('initialVariable:', initialVariable);
+  console.log('variables:', variables);
 
   useEffect(() => {
     if (initialVariable && initialVariable.length > 0) {
@@ -79,6 +89,8 @@ export const JsonVariableSubstitution: React.FC<
   }, [initialVariable]);
 
   const lines = value.split('\n');
+
+  const textareaHeight = lines.length * 24;
 
   const filteredVariables = useMemo(() => {
     if (!searchTerm.trim()) return variables;
@@ -114,34 +126,56 @@ export const JsonVariableSubstitution: React.FC<
 
   const getSelectedVariableForLine = (lineIndex: number): string | null => {
     const path = extractPathFromLine(lineIndex);
-    const found = selectedVariables.find((v) => v.path === path);
+    const found = selectedVariables?.find((v) => v.path === path);
     return found ? found.name : null;
   };
 
   const handleSubstituteClick = (lineIndex: number) => {
-    setDropdownLine(dropdownLine === lineIndex ? null : lineIndex);
+    if (dropdownLine === lineIndex) {
+      setDropdownLine(null);
+      setDropdownPosition(null);
+      return;
+    }
+
+    const button = buttonRefs.current.get(lineIndex);
+    if (button) {
+      const rect = button.getBoundingClientRect();
+      const viewportHeight = window.innerHeight;
+      const spaceBelow = viewportHeight - rect.bottom;
+      const spaceAbove = rect.top;
+
+      const dropdownHeight = 250;
+
+      const shouldShowAbove =
+        spaceBelow < dropdownHeight && spaceAbove > spaceBelow;
+      setDropdownAbove(shouldShowAbove);
+
+      const top = shouldShowAbove ? rect.top - dropdownHeight : rect.bottom + 4;
+
+      setDropdownPosition({
+        top,
+        left: rect.right - 288,
+      });
+    }
+
+    setDropdownLine(lineIndex);
     setSearchTerm('');
   };
 
   const handleVariableSelect = (variable: string, lineIndex: number) => {
     const path = extractPathFromLine(lineIndex);
 
-    // Remove existing pending substitution for this line if any
     setPendingSubstitutions((prev) =>
       prev.filter((p) => p.lineIndex !== lineIndex)
     );
 
-    // Add new pending substitution
     setPendingSubstitutions((prev) => [
       ...prev,
       { lineIndex, variableName: variable },
     ]);
 
-    // Update selected variables array
     setSelectedVariables((prev) => {
-      // Remove any existing variable with the same path
       const filtered = prev.filter((v) => v.path !== path);
-      // Add the new variable
       const updated = [...filtered, { name: variable, path }];
       onVariableSelect?.(updated);
       return updated;
@@ -199,7 +233,6 @@ export const JsonVariableSubstitution: React.FC<
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // ---- NEW: confirm handlers ----
   const confirmDeleteSaved = (path: string) =>
     setConfirmState({ open: true, kind: 'saved', path });
 
@@ -252,13 +285,13 @@ export const JsonVariableSubstitution: React.FC<
       <div className='relative flex border border-border rounded-md overflow-hidden bg-card focus-within:ring-2 focus-within:ring-ring focus-within:border-ring'>
         {/* Line numbers column */}
         <div
-          className='flex flex-col bg-muted border-r border-border py-2 px-2 text-right select-none overflow-hidden'
+          className='flex flex-col bg-muted border-r border-border py-2 px-2 text-right select-none'
           style={{ minWidth: '2.5rem' }}
         >
           {lines.map((_, index) => (
             <div
               key={index}
-              className={`h-6 text-[11px] font-mono leading-5 transition-colors ${
+              className={`h-6 text-[11px] font-mono leading-6 transition-colors ${
                 hoveredLine === index
                   ? 'text-foreground bg-primary/10 rounded'
                   : 'text-muted-foreground'
@@ -269,17 +302,19 @@ export const JsonVariableSubstitution: React.FC<
           ))}
         </div>
 
-        {/* Textarea with transparent background */}
+        {/* Textarea with auto-sizing */}
         <div className='relative flex-1'>
           <textarea
             ref={textareaRef}
             value={value}
             onChange={(e) => onChange?.(e.target.value)}
             readOnly={readOnly}
-            className='w-full h-64 p-2 pl-3 font-mono text-sm bg-transparent text-foreground focus:outline-none resize-none leading-6'
+            className='w-full p-2 pl-3 font-mono text-sm bg-transparent text-foreground focus:outline-none resize-none leading-6'
             style={{
               fontFamily:
                 "'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace",
+              height: `${textareaHeight + 16}px`,
+              overflow: 'hidden',
             }}
           />
 
@@ -334,6 +369,10 @@ export const JsonVariableSubstitution: React.FC<
                         </>
                       ) : !pendingVar && !alreadySubstituted ? (
                         <button
+                          ref={(el) => {
+                            if (el) buttonRefs.current.set(index, el);
+                            else buttonRefs.current.delete(index);
+                          }}
                           onClick={() => handleSubstituteClick(index)}
                           className='px-2 py-0.5 bg-[rgb(19,111,176)] hover:bg-[rgb(15,90,144)] text-white text-[11px] rounded transition-colors flex items-center justify-center whitespace-nowrap font-medium'
                         >
@@ -371,8 +410,15 @@ export const JsonVariableSubstitution: React.FC<
                     </div>
                   )}
 
-                  {dropdownLine === index && (
-                    <div className='absolute right-0 top-full mt-1 w-72 bg-popover border border-border rounded-md shadow-lg z-50 text-sm pointer-events-auto'>
+                  {dropdownLine === index && dropdownPosition && (
+                    <div
+                      className='fixed w-72 bg-popover border border-border rounded-md shadow-lg text-sm pointer-events-auto'
+                      style={{
+                        top: `${dropdownPosition.top}px`,
+                        left: `${dropdownPosition.left}px`,
+                        zIndex: 9999,
+                      }}
+                    >
                       {/* Search bar */}
                       <div className='p-2 border-b border-border'>
                         <input
@@ -419,7 +465,6 @@ export const JsonVariableSubstitution: React.FC<
         </div>
       </div>
 
-      {/* ---- NEW: Single global AlertDialog (controlled) ---- */}
       <AlertDialog
         open={confirmState.open}
         onOpenChange={(open) => {

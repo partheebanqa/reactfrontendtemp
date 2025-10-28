@@ -1,7 +1,9 @@
+'use client';
+
 import { Store, useStore } from '@tanstack/react-store';
 import type { Collection, CollectionRequest } from '@/shared/types/collection';
 
-interface CollectionState {
+export interface CollectionState {
   responseLayout: 'bottom' | 'right';
   activeRequest: CollectionRequest | null;
   activeCollection: Collection | null;
@@ -32,6 +34,27 @@ export const collectionStore = new Store<CollectionState>(
 );
 
 export const collectionActions = {
+  replaceRequest: (oldRequestId: string, newRequest: CollectionRequest) => {
+    collectionStore.setState((state) => {
+      const updatedOpened = state.openedRequests.map((r) =>
+        r.id === oldRequestId ? newRequest : r
+      );
+
+      const updatedUnsaved = new Set(state.unsavedChanges);
+      updatedUnsaved.delete(oldRequestId);
+
+      return {
+        ...state,
+        openedRequests: updatedOpened,
+        unsavedChanges: updatedUnsaved,
+        activeRequest:
+          state.activeRequest?.id === oldRequestId
+            ? newRequest
+            : state.activeRequest,
+      };
+    });
+  },
+
   updateOpenedRequest: (updatedRequest: CollectionRequest) => {
     collectionStore.setState((state) => ({
       ...state,
