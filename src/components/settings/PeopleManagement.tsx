@@ -58,6 +58,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '../ui/tooltip';
+import UserManagement from './UserManagement';
 
 interface TeamMember {
   id: string;
@@ -149,11 +150,11 @@ export function PeopleManagement() {
       const rawWorkspacePairs: { id: string; name: string }[] =
         Array.isArray(user.workspaces) && user.workspaces.length > 0
           ? user.workspaces
-              .map((w: any) => ({
-                id: (w?.id || '').toString().trim(),
-                name: (w?.name || '').toString().trim(),
-              }))
-              .filter((w) => w.id && w.name)
+            .map((w: any) => ({
+              id: (w?.id || '').toString().trim(),
+              name: (w?.name || '').toString().trim(),
+            }))
+            .filter((w) => w.id && w.name)
           : [];
 
       const workspaceIds = Array.from(
@@ -235,6 +236,8 @@ export function PeopleManagement() {
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
   const currentMembers = filteredMembers.slice(startIndex, endIndex);
+
+  console.log(currentMembers, "currentMembers")
 
   useMemo(() => {
     setCurrentPage(1);
@@ -500,7 +503,7 @@ export function PeopleManagement() {
   );
 
   return (
-    <div className='space-y-6'>
+    <div className='space-y-3'>
       <Card>
         <CardHeader className='flex flex-row items-center justify-between'>
           <CardTitle className='flex items-center gap-2'>
@@ -552,11 +555,10 @@ export function PeopleManagement() {
                     aria-describedby={
                       errors.email ? 'invite-email-error' : undefined
                     }
-                    className={`${
-                      errors.email
-                        ? 'border-red-500 focus-visible:ring-red-500'
-                        : ''
-                    }`}
+                    className={`${errors.email
+                      ? 'border-red-500 focus-visible:ring-red-500'
+                      : ''
+                      }`}
                   >
                     <SelectValue placeholder='Select existing member' />
                   </SelectTrigger>
@@ -601,11 +603,10 @@ export function PeopleManagement() {
                     aria-describedby={
                       errors.email ? 'invite-email-error' : undefined
                     }
-                    className={`${
-                      errors.email
-                        ? 'border-red-500 focus-visible:ring-red-500'
-                        : ''
-                    }`}
+                    className={`${errors.email
+                      ? 'border-red-500 focus-visible:ring-red-500'
+                      : ''
+                      }`}
                   />
                   {showSuggestions && emailSuggestions.length > 0 && (
                     <ul
@@ -670,11 +671,10 @@ export function PeopleManagement() {
                 aria-describedby={
                   errors.firstName ? 'first-name-error' : undefined
                 }
-                className={`${
-                  errors.firstName
-                    ? 'border-red-500 focus-visible:ring-red-500'
-                    : ''
-                }`}
+                className={`${errors.firstName
+                  ? 'border-red-500 focus-visible:ring-red-500'
+                  : ''
+                  }`}
               />
               {errors.firstName && (
                 <p id='first-name-error' className='text-xs text-red-600'>
@@ -701,11 +701,10 @@ export function PeopleManagement() {
                 aria-describedby={
                   errors.lastName ? 'last-name-error' : undefined
                 }
-                className={`${
-                  errors.lastName
-                    ? 'border-red-500 focus-visible:ring-red-500'
-                    : ''
-                }`}
+                className={`${errors.lastName
+                  ? 'border-red-500 focus-visible:ring-red-500'
+                  : ''
+                  }`}
               />
               {errors.lastName && (
                 <p id='last-name-error' className='text-xs text-red-600'>
@@ -733,11 +732,10 @@ export function PeopleManagement() {
                   aria-describedby={
                     errors.workspace ? 'workspace-error' : undefined
                   }
-                  className={`${
-                    errors.workspace
-                      ? 'border-red-500 focus-visible:ring-red-500'
-                      : ''
-                  }`}
+                  className={`${errors.workspace
+                    ? 'border-red-500 focus-visible:ring-red-500'
+                    : ''
+                    }`}
                 >
                   <SelectValue placeholder='Select workspace' />
                 </SelectTrigger>
@@ -779,11 +777,10 @@ export function PeopleManagement() {
                   id='role-select'
                   aria-invalid={!!errors.role}
                   aria-describedby={errors.role ? 'role-error' : undefined}
-                  className={`${
-                    errors.role
-                      ? 'border-red-500 focus-visible:ring-red-500'
-                      : ''
-                  }`}
+                  className={`${errors.role
+                    ? 'border-red-500 focus-visible:ring-red-500'
+                    : ''
+                    }`}
                 >
                   <SelectValue placeholder='Select role' />
                 </SelectTrigger>
@@ -827,295 +824,9 @@ export function PeopleManagement() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <div className='flex flex-col sm:flex-row sm:items-center justify-between gap-4'>
-            <CardTitle>
-              Team Members (
-              {
-                filteredMembers.filter((m) => m.role && m.role.trim() !== '')
-                  .length
-              }{' '}
-              of {members.filter((m) => m.role && m.role.trim() !== '').length})
-            </CardTitle>
+      <UserManagement />
 
-            <div className='flex gap-2'>
-              <Button
-                variant='outline'
-                size='sm'
-                onClick={clearFilters}
-                className={`${
-                  searchTerm ||
-                  filterWorkspace !== 'all' ||
-                  filterRole !== 'all'
-                    ? 'opacity-100'
-                    : 'opacity-0'
-                } transition-opacity`}
-              >
-                <X className='h-4 w-4 mr-2' />
-                Clear Filters
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
 
-        <CardContent>
-          <div className='space-y-4 mb-6'>
-            {/* Filters Row */}
-            <div className='grid grid-cols-1 sm:grid-cols-3 gap-3'>
-              <div>
-                <Label
-                  htmlFor='search'
-                  className='text-xs text-gray-600 mb-1 block'
-                >
-                  Search
-                </Label>
-                <div className='relative'>
-                  <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400' />
-                  <Input
-                    id='search'
-                    placeholder='Search by name or email...'
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className='pl-10'
-                  />
-                </div>
-              </div>
-              {/* Workspace Filter */}
-              <div>
-                <Label
-                  htmlFor='workspace-filter'
-                  className='text-xs text-gray-600 mb-1 block'
-                >
-                  Workspace
-                </Label>
-                <Select
-                  value={filterWorkspace}
-                  onValueChange={setFilterWorkspace}
-                >
-                  <SelectTrigger id='workspace-filter'>
-                    <SelectValue placeholder='All workspaces' />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value='all'>All workspaces</SelectItem>
-                    {availableWorkspaces.map((workspace) => (
-                      <SelectItem key={workspace} value={workspace}>
-                        {workspace}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Role Filter */}
-              <div>
-                <Label
-                  htmlFor='role-filter'
-                  className='text-xs text-gray-600 mb-1 block'
-                >
-                  Role
-                </Label>
-                <Select value={filterRole} onValueChange={setFilterRole}>
-                  <SelectTrigger id='role-filter'>
-                    <SelectValue placeholder='All roles' />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value='all'>All roles</SelectItem>
-                    {roles?.roles?.map((role) => (
-                      <SelectItem key={role.id} value={role.id}>
-                        {displayRoleName(role.name)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </div>
-
-          {/* Members List */}
-          {isLoadingUsers ? (
-            <div className='text-center py-8 text-gray-500'>
-              <Users className='h-12 w-12 mx-auto mb-3 text-gray-300 animate-pulse' />
-              <p>Loading team members...</p>
-            </div>
-          ) : (
-            <div className='space-y-4'>
-              {currentMembers.length === 0 ? (
-                <div className='text-center py-8 text-gray-500'>
-                  <Users className='h-12 w-12 mx-auto mb-3 text-gray-300' />
-                  <p>No team members found matching your criteria.</p>
-                  <Button
-                    variant='outline'
-                    onClick={clearFilters}
-                    className='mt-2 bg-transparent'
-                  >
-                    Clear filters
-                  </Button>
-                </div>
-              ) : (
-                currentMembers
-                  .filter((member) => member.role && member.role.trim() !== '')
-                  .map((member) => (
-                    <div
-                      key={member.id}
-                      className='flex flex-col gap-4 p-4 border rounded-lg hover:bg-gray-50 transition-colors'
-                    >
-                      <div className='flex flex-col sm:flex-row sm:items-center justify-between gap-3'>
-                        <div className='flex items-center gap-3 flex-1 min-w-0'>
-                          <Avatar className='h-10 w-10 flex-shrink-0'>
-                            <AvatarImage
-                              src={member.avatar || '/api/placeholder/40/40'}
-                              alt={member.name}
-                            />
-                            <AvatarFallback className='text-sm'>
-                              {member.name
-                                .split(' ')
-                                .map((n) => n[0])
-                                .join('')}
-                            </AvatarFallback>
-                          </Avatar>
-
-                          <div className='flex-1 min-w-0'>
-                            <div className='flex flex-wrap items-center gap-2 mb-1'>
-                              <h4 className='font-medium text-gray-900 truncate'>
-                                {member.name}
-                              </h4>
-                              {getRoleIcon(member.role)}
-                              {/* {getStatusBadge(member.status)} */}
-                            </div>
-
-                            <div className='flex items-center gap-1 text-sm text-gray-600 mb-1'>
-                              <Mail className='h-3 w-3' />
-                              <span className='truncate'>{member.email}</span>
-                            </div>
-
-                            <div className='text-xs text-gray-500'>
-                              {renderWorkspaceInline(member.workspaceList)} •
-                              Created : {formatLastActive(member.lastActive)}
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className='flex items-center gap-2'>
-                          {member.role !== 'Org Admin' && (
-                            <TooltipProvider>
-                              <div className='flex items-center gap-2'>
-                                {/* Change Role Button */}
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Button
-                                      variant='outline'
-                                      size='sm'
-                                      onClick={() => openRoleDialog(member)}
-                                      disabled={isUpdatingRole}
-                                      className='text-blue-600 hover:text-blue-700'
-                                    >
-                                      <UserCog className='h-4 w-4' />
-                                    </Button>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>Change Role</p>
-                                  </TooltipContent>
-                                </Tooltip>
-
-                                {/* Remove User Button */}
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Button
-                                      variant='outline'
-                                      size='sm'
-                                      onClick={() => openRemoveDialog(member)}
-                                      disabled={isRemovingUser}
-                                      className='text-red-600 hover:text-red-700'
-                                    >
-                                      <Trash2 className='h-4 w-4' />
-                                    </Button>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>Remove User</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </div>
-                            </TooltipProvider>
-                          )}
-
-                          {member.role === 'Org Admin' && (
-                            <Badge variant='outline' className='text-xs'>
-                              Account Owner
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className='sm:hidden grid grid-cols-2 gap-4 pt-3 border-t text-xs'>
-                        <div>
-                          <span className='font-medium text-gray-900'>
-                            Role:
-                          </span>
-                          <div className='flex items-center gap-1 mt-1'>
-                            {getRoleIcon(member.role)}
-                            <span className='capitalize'>
-                              {displayRoleName(member.role)}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))
-              )}
-            </div>
-          )}
-
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className='flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 pt-4 border-t'>
-              <div className='text-sm text-gray-600'>
-                Showing {startIndex + 1} to{' '}
-                {Math.min(endIndex, filteredMembers.length)} of{' '}
-                {filteredMembers.length} members
-              </div>
-
-              <div className='flex items-center gap-2'>
-                <Button
-                  variant='outline'
-                  size='sm'
-                  onClick={() => setCurrentPage(currentPage - 1)}
-                  disabled={currentPage === 1}
-                >
-                  <ChevronLeft className='h-4 w-4 mr-1' />
-                  Previous
-                </Button>
-
-                <div className='flex items-center gap-1'>
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                    (page) => (
-                      <Button
-                        key={page}
-                        variant={currentPage === page ? 'default' : 'outline'}
-                        size='sm'
-                        onClick={() => setCurrentPage(page)}
-                        className='w-8 h-8 p-0'
-                      >
-                        {page}
-                      </Button>
-                    )
-                  )}
-                </div>
-
-                <Button
-                  variant='outline'
-                  size='sm'
-                  onClick={() => setCurrentPage(currentPage + 1)}
-                  disabled={currentPage === totalPages}
-                >
-                  Next
-                  <ChevronRight className='h-4 w-4 ml-1' />
-                </Button>
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
 
       <Card>
         <CardHeader>
@@ -1192,7 +903,7 @@ export function PeopleManagement() {
               <div className='space-y-2'>
                 <Label>Apply to workspace</Label>
                 {roleDialogOpenFor.workspacePairs &&
-                roleDialogOpenFor.workspacePairs.length > 0 ? (
+                  roleDialogOpenFor.workspacePairs.length > 0 ? (
                   <div className='border rounded-md p-3 space-y-2'>
                     <div className='grid grid-cols-1 gap-2'>
                       {(roleDialogOpenFor.workspacePairs || []).map((w) => {
@@ -1302,7 +1013,7 @@ export function PeopleManagement() {
               <div className='space-y-2'>
                 <Label>Select workspace(s) to remove</Label>
                 {removeDialogOpenFor.workspacePairs &&
-                removeDialogOpenFor.workspacePairs.length > 0 ? (
+                  removeDialogOpenFor.workspacePairs.length > 0 ? (
                   <div className='border rounded-md p-3 space-y-2'>
                     <div className='grid grid-cols-1 gap-2'>
                       {(removeDialogOpenFor.workspacePairs || []).map((w) => {
