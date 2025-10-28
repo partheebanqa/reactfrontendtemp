@@ -62,10 +62,15 @@ const Sidebar: React.FC = () => {
     renameRequestMutation,
     deleteCollectionMutation,
     handleCreateRequest,
+    openedRequests,
+    closeRequest,
   } = useCollection();
   const { setResponseData } = useRequest();
   const { toast, error: showError } = useToast();
   const [showCollectionModal, setShowCollectionModal] = useState(false);
+  const [selectedCollection, setSelectedCollection] =
+    useState<Collection | null>(null);
+
   const [showImportModal, setShowImportModal] = useState(false);
   const [showMenu, setShowMenu] = useState<string | null>(null);
   const [menuPosition, setMenuPosition] = useState<{
@@ -73,15 +78,14 @@ const Sidebar: React.FC = () => {
     left: number;
     anchorTop?: number;
   } | null>(null);
-  const [selectedCollection, setSelectedCollection] =
-    useState<Collection | null>(null);
+
   const [selectedRequest, setSelectedRequest] =
     useState<CollectionRequest | null>(null);
   const [showRequestRenameModal, setShowRequestRenameModal] = useState(false);
   const [renameValue, setRenameValue] = useState('');
   const [requestId, setRequestId] = useState('');
   const menuRef = useRef<HTMLDivElement>(null);
-  const [requstIndex, setRequestIndex] = useState<number | null>(null);
+  const [requestIndex, setRequestIndex] = useState<number | null>(null);
 
   const [showAddFolderModal, setShowAddFolderModal] = useState(false);
   const [showRenameFolderModal, setShowRenameFolderModal] = useState(false);
@@ -211,6 +215,80 @@ const Sidebar: React.FC = () => {
     }
   };
 
+  const handleDeleteNewRequest = (index: number) => {
+    if (index == null || !selectedRequest?.id) {
+      console.log('[v0] Cannot delete: index or selectedRequest.id missing');
+      return;
+    }
+
+    console.log('[v0] Deleting temp request:', selectedRequest.id);
+    console.log('[v0] selectedCollection:', selectedCollection);
+    console.log('[v0] selectedFolder:', selectedFolder);
+    console.log('[v0] index:', index);
+
+    const remainingRequests = openedRequests.filter(
+      (req) => req.id !== selectedRequest.id
+    );
+    closeRequest(selectedRequest.id);
+
+    if (remainingRequests.length > 0) {
+      const lastRequest = remainingRequests[remainingRequests.length - 1];
+      setActiveRequest(lastRequest);
+    } else {
+      setActiveRequest(null);
+    }
+
+    if (selectedFolder?.id) {
+      console.log('[v0] Deleting from folder:', selectedFolder.id);
+      setCollection(
+        collections.map((col) =>
+          col.id === selectedCollection?.id
+            ? {
+                ...col,
+                requests: col.requests,
+                folders: removeRequestAtIndexFromFolderTree(
+                  (col as any).folders || [],
+                  selectedFolder.id,
+                  index
+                ),
+              }
+            : col
+        )
+      );
+    } else if (selectedCollection) {
+      console.log(
+        '[v0] Deleting from root collection, filtering out index:',
+        index
+      );
+      console.log(
+        '[v0] Current requests count:',
+        selectedCollection.requests?.length
+      );
+
+      const updatedCollections = collections.map((col) =>
+        col.id === selectedCollection.id
+          ? {
+              ...col,
+              requests: col.requests.filter((_, i) => i !== index),
+            }
+          : col
+      );
+
+      console.log(
+        '[v0] Updated requests count:',
+        updatedCollections.find((c) => c.id === selectedCollection.id)?.requests
+          ?.length
+      );
+      setCollection(updatedCollections);
+    } else {
+      console.log('[v0] Neither folder nor collection found!');
+    }
+
+    setRequestIndex(null);
+    setShowMenu(null);
+    setMenuPosition(null);
+  };
+
   const handleDeleteRequest = async (requestId: string) => {
     try {
       await deleteRequestMutation.mutateAsync(requestId);
@@ -227,6 +305,35 @@ const Sidebar: React.FC = () => {
         description: 'Failed to delete the request. Please try again.',
         variant: 'destructive',
       });
+    }
+  };
+
+  const findRequestIndex = (requestId: string): number | null => {
+    if (!selectedCollection) return null;
+
+    if (selectedFolder?.id) {
+      // Find index in folder
+      const findInFolder = (folders: any[]): number | null => {
+        for (const folder of folders) {
+          if (folder.id === selectedFolder.id) {
+            return (
+              folder.requests?.findIndex((r: any) => r.id === requestId) ?? null
+            );
+          }
+          if (Array.isArray(folder.folders)) {
+            const result = findInFolder(folder.folders);
+            if (result !== null) return result;
+          }
+        }
+        return null;
+      };
+      return findInFolder((selectedCollection as any).folders || []);
+    } else {
+      // Find index in root requests
+      return (
+        selectedCollection.requests?.findIndex((r) => r.id === requestId) ??
+        null
+      );
     }
   };
 
@@ -566,43 +673,6 @@ const Sidebar: React.FC = () => {
       }
       return f;
     });
-  };
-
-  const handleDeleteNewRequest = () => {
-    if (requstIndex == null) return;
-
-    if (selectedFolder?.id) {
-      setCollection(
-        collections.map((col) =>
-          col.id === selectedCollection?.id
-            ? {
-                ...col,
-                requests: col.requests,
-                folders: removeRequestAtIndexFromFolderTree(
-                  (col as any).folders || [],
-                  selectedFolder.id,
-                  requstIndex
-                ),
-              }
-            : col
-        )
-      );
-    } else if (selectedCollection) {
-      setCollection(
-        collections.map((col) =>
-          col.id === selectedCollection.id
-            ? {
-                ...col,
-                requests: col.requests.filter(
-                  (_, index) => index !== requstIndex
-                ),
-              }
-            : col
-        )
-      );
-    }
-
-    setRequestIndex(null);
   };
 
   const handleClose = () => {
@@ -1191,10 +1261,43 @@ const Sidebar: React.FC = () => {
                   <button
                     className='flex items-center w-full px-4 py-2 text-sm text-left text-red-500 hover:bg-gray-100 dark:hover:bg-gray-700'
                     onClick={() => {
-                      if (selectedRequest.id) {
+                      console.log(
+                        '[v0] Delete button clicked, selectedRequest:',
+                        selectedRequest
+                      );
+                      const isTempRequest =
+                        selectedRequest?.id?.startsWith('temp-');
+                      console.log('[v0] Is temp request:', isTempRequest);
+
+                      if (isTempRequest) {
+                        const index = findRequestIndex(
+                          selectedRequest.id || ''
+                        );
+                        console.log('[v0] Found request index:', index);
+
+                        if (index !== null) {
+                          handleDeleteNewRequest(index);
+                        } else {
+                          console.log(
+                            '[v0] Could not find request index, using fallback'
+                          );
+                          // Fallback: just close the request without removing from collection
+                          closeRequest(selectedRequest.id || '');
+                          const remainingRequests = openedRequests.filter(
+                            (req) => req.id !== selectedRequest.id
+                          );
+                          if (remainingRequests.length > 0) {
+                            const lastRequest =
+                              remainingRequests[remainingRequests.length - 1];
+                            setActiveRequest(lastRequest);
+                          } else {
+                            setActiveRequest(null);
+                          }
+                        }
+                      } else if (selectedRequest?.id) {
                         handleDeleteRequest(selectedRequest.id);
                       } else {
-                        handleDeleteNewRequest();
+                        console.log('[v0] No request ID found');
                       }
                       setShowMenu(null);
                       setMenuPosition(null);
