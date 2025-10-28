@@ -26,6 +26,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { Button } from '@/components/ui/button';
 
 interface RequestTabsProps {
   onTabChange?: (request: CollectionRequest) => void;
@@ -291,13 +292,13 @@ const RequestTabs: React.FC<RequestTabsProps> = ({
               </AlertDialogCancel>
 
               {/* Save */}
-              <AlertDialogAction
+              <Button
                 onClick={handleSaveChanges}
                 disabled={isSaving}
-                className='bg-orange-500 hover:bg-orange-600 text-white'
+                // className='bg-orange-500 hover:bg-orange-600 text-white'
               >
                 {isSaving ? 'Saving...' : 'Save changes'}
-              </AlertDialogAction>
+              </Button>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
