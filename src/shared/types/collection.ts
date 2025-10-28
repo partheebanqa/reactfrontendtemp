@@ -174,17 +174,17 @@ export interface CollectionRequest {
   };
   headers?: Header[];
   params?: Param[];
-  variables: Record<string, any>;
-  variable?: {
-    name: string;
-    path: string;
-  };
+  variable?: variable[];
   createdBy?: string;
   createdAt?: string;
   updatedAt?: string;
   folderId?: string;
 }
 
+interface variable {
+  name: string;
+  value: string;
+}
 export interface ChangelogEntry {
   id: string;
   action: 'create' | 'update' | 'delete' | 'move';

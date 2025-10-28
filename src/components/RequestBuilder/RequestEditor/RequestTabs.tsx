@@ -158,97 +158,103 @@ const RequestTabs: React.FC<RequestTabsProps> = ({
 
   return (
     <>
-      <div className='flex items-center bg-white border-b border-gray-200 px-4 py-0 overflow-x-auto'>
-        {openedRequests.map((request) => {
-          const isActive = activeRequest?.id === request.id;
-          const hasUnsaved = unsavedChanges.has(request.id);
+      <div className='flex items-center bg-white border-b border-gray-200 px-4 py-0'>
+        {/* Scrollable tab area */}
+        <div className='flex items-center overflow-x-auto'>
+          {openedRequests.map((request) => {
+            const isActive = activeRequest?.id === request.id;
+            const hasUnsaved = unsavedChanges.has(request.id);
 
-          return (
-            <div key={request.id} className='flex items-center'>
-              <button
-                onClick={() => handleTabClick(request)}
-                className={`
-                  group relative flex items-center gap-2 px-3 py-2
-                  transition-all border-b-2 whitespace-nowrap
-                  ${
-                    isActive
-                      ? 'border-blue-600 bg-white'
-                      : 'border-transparent hover:bg-gray-50'
-                  }
-                `}
-              >
-                <span
-                  className={`text-xs font-semibold ${methodColor(
-                    request.method
-                  )}`}
-                >
-                  {(() => {
-                    const method = (request.method || 'GET').toUpperCase();
-                    if (method === 'DELETE') return 'DEL';
-                    return method;
-                  })()}
-                </span>
-
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span
-                        className={`text-sm flex items-center gap-1.5 max-w-[130px] truncate ${
-                          isActive
-                            ? 'text-blue-600 font-medium'
-                            : 'text-gray-700'
-                        }`}
-                      >
-                        {request.name ? request.name.slice(0, 15) : 'Untitled'}
-                        {hasUnsaved && (
-                          <span className='w-1.5 h-1.5 bg-orange-500 rounded-full'></span>
-                        )}
-                      </span>
-                    </TooltipTrigger>
-                    <TooltipContent side='bottom'>
-                      <p className='text-sm'>{request.name || 'Untitled'}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-
+            return (
+              <div key={request.id} className='flex items-center'>
+                {/* === Tab Button === */}
                 <button
-                  onClick={(e) => handleCloseTab(e, request.id)}
-                  className='ml-1 p-0.5 hover:bg-gray-200 rounded opacity-0 group-hover:opacity-100 transition-colors'
+                  onClick={() => handleTabClick(request)}
+                  className={`group relative flex items-center gap-2 px-3 py-2
+              transition-all border-b-2 whitespace-nowrap
+              ${
+                isActive
+                  ? 'border-blue-600 bg-white'
+                  : 'border-transparent hover:bg-gray-50'
+              }`}
                 >
-                  <X size={14} className='text-gray-500' />
+                  {/* Method */}
+                  <span
+                    className={`text-xs font-semibold ${methodColor(
+                      request.method
+                    )}`}
+                  >
+                    {(() => {
+                      const method = (request.method || 'GET').toUpperCase();
+                      if (method === 'DELETE') return 'DEL';
+                      return method;
+                    })()}
+                  </span>
+
+                  {/* Name */}
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span
+                          className={`text-sm flex items-center gap-1.5 max-w-[130px] truncate ${
+                            isActive
+                              ? 'text-blue-600 font-medium'
+                              : 'text-gray-700'
+                          }`}
+                        >
+                          {request.name
+                            ? request.name.slice(0, 15)
+                            : 'Untitled'}
+                          {hasUnsaved && (
+                            <span className='w-1.5 h-1.5 bg-orange-500 rounded-full'></span>
+                          )}
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent side='bottom'>
+                        <p className='text-sm'>{request.name || 'Untitled'}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+
+                  {/* Close Button */}
+                  <button
+                    onClick={(e) => handleCloseTab(e, request.id)}
+                    className='ml-1 p-0.5 hover:bg-gray-200 rounded opacity-0 group-hover:opacity-100 transition-colors'
+                  >
+                    <X size={14} className='text-gray-500' />
+                  </button>
                 </button>
-              </button>
 
-              {/* Divider */}
-              <div className='h-5 w-px bg-gray-200'></div>
-            </div>
-          );
-        })}
+                {/* Divider */}
+                <div className='h-5 w-px bg-gray-200'></div>
+              </div>
+            );
+          })}
+        </div>
 
-        <div className='flex items-center ml-auto gap-1'>
-          <>
-            <button
-              onClick={() =>
-                activeCollection && handleCreateRequest(activeCollection)
-              }
-              className='p-2 hover:bg-gray-100 rounded transition-colors'
-              title='New Request'
-            >
-              <Plus
-                size={19}
-                strokeWidth={2.5}
-                className='text-[rgb(19,111,176)] hover:text-[rgb(15,90,145)] transition-colors'
-              />
-            </button>
+        {/* Sticky Actions */}
+        <div className='flex items-center gap-1 ml-auto sticky right-0 bg-white py-1 px-2'>
+          <button
+            onClick={() =>
+              activeCollection && handleCreateRequest(activeCollection)
+            }
+            className='p-2 hover:bg-gray-100 rounded transition-colors'
+            title='New Request'
+          >
+            <Plus
+              size={19}
+              strokeWidth={2.5}
+              className='text-[rgb(19,111,176)]'
+            />
+          </button>
 
-            <button
-              onClick={handleCurlImportClick}
-              className='p-2 hover:bg-gray-100 rounded transition-colors'
-              title='Import from cURL'
-            >
-              <FileTerminal size={18} className='text-[#136fb0]' />
-            </button>
-          </>
+          <button
+            onClick={handleCurlImportClick}
+            className='p-2 hover:bg-gray-100 rounded transition-colors'
+            title='Import from cURL'
+          >
+            <FileTerminal size={18} className='text-[#136fb0]' />
+          </button>
         </div>
       </div>
 

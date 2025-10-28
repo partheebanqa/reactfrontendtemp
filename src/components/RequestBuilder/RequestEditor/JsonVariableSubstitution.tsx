@@ -53,6 +53,8 @@ export const JsonVariableSubstitution: React.FC<
   initialVariable = [],
   readOnly = false,
 }) => {
+  console.log('initialVariable000:', initialVariable);
+
   const [deleteTargetPath, setDeleteTargetPath] = useState<string | null>(null);
   const [hoveredLine, setHoveredLine] = useState<number | null>(null);
   const [dropdownLine, setDropdownLine] = useState<number | null>(null);
@@ -62,6 +64,7 @@ export const JsonVariableSubstitution: React.FC<
   const [pendingSubstitutions, setPendingSubstitutions] = useState<
     PendingSubstitution[]
   >([]);
+
   const containerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [dropdownAbove, setDropdownAbove] = useState<boolean>(false);
@@ -75,6 +78,9 @@ export const JsonVariableSubstitution: React.FC<
     | { open: true; kind: 'saved' | 'line'; path?: string; lineIndex?: number }
     | { open: false }
   >({ open: false });
+
+  console.log('initialVariable:', initialVariable);
+  console.log('variables:', variables);
 
   useEffect(() => {
     if (initialVariable && initialVariable.length > 0) {
@@ -120,7 +126,7 @@ export const JsonVariableSubstitution: React.FC<
 
   const getSelectedVariableForLine = (lineIndex: number): string | null => {
     const path = extractPathFromLine(lineIndex);
-    const found = selectedVariables.find((v) => v.path === path);
+    const found = selectedVariables?.find((v) => v.path === path);
     return found ? found.name : null;
   };
 

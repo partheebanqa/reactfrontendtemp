@@ -116,6 +116,8 @@ const RequestEditor: React.FC = () => {
     | 'schemas'
   >('params');
 
+  console.log('activeRequest:', activeRequest);
+
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [newCollectionName, setNewCollectionName] = useState('');
   const [url, setUrl] = useState('');
@@ -520,6 +522,8 @@ const RequestEditor: React.FC = () => {
         } else {
           setSelectedVariable([]);
         }
+      } else {
+        setSelectedVariable([]);
       }
     } else if (!isSaving) {
       setAssertions([]);
@@ -1767,7 +1771,7 @@ const RequestEditor: React.FC = () => {
                   onConfirmSubstitution={handleConfirmSubstitutions}
                   mode='json'
                   variables={formattedVariables}
-                  initialVariable={selectedVariable}
+                  initialVariable={activeRequest?.variable || []}
                   readOnly={false}
                 />
               )}
@@ -1818,7 +1822,7 @@ const RequestEditor: React.FC = () => {
                   onConfirmSubstitution={handleConfirmSubstitutions}
                   mode='raw'
                   variables={formattedVariables}
-                  initialVariable={selectedVariable}
+                  initialVariable={activeRequest?.variable || []}
                   readOnly={false}
                 />
               )}
