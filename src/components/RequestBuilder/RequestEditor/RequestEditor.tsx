@@ -99,6 +99,7 @@ const RequestEditor: React.FC = () => {
     renameRequestMutation,
     handleCreateRequest,
     fetchCollectionRequests,
+    replaceRequest,
   } = useCollection();
 
   const { variables, dynamicVariables, environments, activeEnvironment } =
@@ -1186,9 +1187,9 @@ const RequestEditor: React.FC = () => {
           headers,
           ...(selectedVariable ? { variable: selectedVariable } : {}),
         };
-
+        const oldRequestId = activeRequest.id;
+        replaceRequest(oldRequestId, updatedRequest);
         setActiveRequest(updatedRequest);
-        collectionActions.markSaved(newId);
 
         await new Promise((resolve) => setTimeout(resolve, 0));
       }

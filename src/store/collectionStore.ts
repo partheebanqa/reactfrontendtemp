@@ -34,6 +34,27 @@ export const collectionStore = new Store<CollectionState>(
 );
 
 export const collectionActions = {
+  replaceRequest: (oldRequestId: string, newRequest: CollectionRequest) => {
+    collectionStore.setState((state) => {
+      const updatedOpened = state.openedRequests.map((r) =>
+        r.id === oldRequestId ? newRequest : r
+      );
+
+      const updatedUnsaved = new Set(state.unsavedChanges);
+      updatedUnsaved.delete(oldRequestId);
+
+      return {
+        ...state,
+        openedRequests: updatedOpened,
+        unsavedChanges: updatedUnsaved,
+        activeRequest:
+          state.activeRequest?.id === oldRequestId
+            ? newRequest
+            : state.activeRequest,
+      };
+    });
+  },
+
   updateOpenedRequest: (updatedRequest: CollectionRequest) => {
     collectionStore.setState((state) => ({
       ...state,
