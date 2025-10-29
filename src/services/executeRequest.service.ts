@@ -40,10 +40,10 @@ export const buildRequestPayload = (
     let result = text;
     variables.forEach((variable) => {
       const regex = new RegExp(`{{${variable.name}}}`, 'g');
-      result = result.replace(
-        regex,
-        variable.initialValue ?? variable.value ?? ''
+      const varValue = String(
+        variable.value ?? variable.currentValue ?? variable.initialValue ?? ''
       );
+      result = result.replace(regex, varValue);
     });
     return result;
   };
