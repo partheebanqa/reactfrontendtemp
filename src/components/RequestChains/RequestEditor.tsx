@@ -133,6 +133,10 @@ export function RequestEditor({
   const [executionResult, setExecutionResult] = useState<ExecutionLog | null>(
     null
   );
+  const [showVariablesPopup, setShowVariablesPopup] = useState(false);
+  const variablesPopupRef = useRef<HTMLDivElement>(null);
+
+  const [searchText, setSearchText] = useState('');
 
   const { variables: storeVariables, dynamicVariables } =
     useDataManagementStore();
@@ -204,6 +208,20 @@ export function RequestEditor({
     dynamicVariables,
     dynamicOverrides
   );
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        variablesPopupRef.current &&
+        !variablesPopupRef.current.contains(event.target as Node)
+      ) {
+        setShowVariablesPopup(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const getUsedDynamicVariables = () => {
     const allTextFields = [
@@ -302,6 +320,8 @@ export function RequestEditor({
 
     return allVariables;
   };
+
+  console.log('All Available Variables:', getAllAvailableVariables());
 
   const getVariablesByPrefixLocal = (prefix: 'D_' | 'S_'): Variable[] => {
     const allVars = getAllAvailableVariables();
@@ -1740,33 +1760,116 @@ export function RequestEditor({
 
         {/* Tabs */}
         <div className='border-b border-gray-200'>
-          <nav className='flex space-x-8 px-6'>
-            {tabs.map((tab) => {
-              const Icon = tab.icon;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id as typeof activeTab)}
-                  className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors flex items-center space-x-2 ${
-                    activeTab === tab.id
-                      ? 'border-blue-500 text-[#136fb0]'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
+          <div className='flex items-center justify-between px-6 relative'>
+            {/* Tabs */}
+            <nav className='flex space-x-8'>
+              {tabs.map((tab) => {
+                const Icon = tab.icon;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id as typeof activeTab)}
+                    className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors flex items-center space-x-2 ${
+                      activeTab === tab.id
+                        ? 'border-blue-500 text-[#136fb0]'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    <Icon className='w-4 h-4' />
+                    <span>{tab.label}</span>
+                    {tab.id === 'tests' &&
+                      request.testScripts &&
+                      request.testScripts.length > 0 && (
+                        <span className='ml-1 px-2 py-1 text-xs bg-blue-100 text-blue-600 rounded-full'>
+                          {request.testScripts.length}
+                        </span>
+                      )}
+                  </button>
+                );
+              })}
+            </nav>
+
+            {/* Wrap popup + button in relative container */}
+            <div className='relative'>
+              {showVariablesPopup && (
+                <div
+                  ref={variablesPopupRef}
+                  className='absolute right-0 top-10 bg-white shadow-lg rounded-lg z-50 w-80 border border-gray-200'
                 >
-                  <Icon className='w-4 h-4' />
-                  <span>{tab.label}</span>
-                  {tab.id === 'tests' &&
-                    request.testScripts &&
-                    request.testScripts.length > 0 && (
-                      <span className='ml-1 px-2 py-1 text-xs bg-blue-100 text-blue-600 rounded-full'>
-                        {request.testScripts.length}
-                      </span>
-                    )}
-                </button>
-              );
-            })}
-          </nav>
+                  {/* Search */}
+                  <div className='p-2 border-b'>
+                    <input
+                      type='text'
+                      className='w-full px-3 py-1.5 rounded-md border border-gray-300 
+                focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm'
+                      placeholder='Search variables...'
+                      autoComplete='off'
+                      autoCorrect='off'
+                      spellCheck={false}
+                      value={searchText}
+                      onChange={(e) => setSearchText(e.target.value)}
+                    />
+                  </div>
+
+                  {/* List */}
+                  <div className='max-h-60 overflow-y-auto'>
+                    {getAllAvailableVariables()
+                      .filter(
+                        (item) =>
+                          (item.name.startsWith('S_') ||
+                            item.name.startsWith('D_')) &&
+                          item.name
+                            .toLowerCase()
+                            .includes(searchText.toLowerCase())
+                      )
+                      .map((item) => (
+                        <div
+                          key={item.id}
+                          className='w-full flex justify-between items-center px-3 py-2 
+                    text-sm border-b border-gray-100 hover:bg-blue-50 transition-colors'
+                          onClick={() => setShowVariablesPopup(false)}
+                        >
+                          <span className='text-gray-800 font-mono'>
+                            {item.name}
+                          </span>
+
+                          <div className='flex items-center space-x-2'>
+                            <span className='text-gray-500 truncate max-w-[120px]'>
+                              {item?.currentValue}
+                            </span>
+
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigator.clipboard.writeText(
+                                  `{{${item.name}}}`
+                                );
+                                setShowVariablesPopup(false);
+                              }}
+                              className='p-1 hover:text-blue-600 transition-colors'
+                              title='Copy variable'
+                            >
+                              <Copy className='w-4 h-4' />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Variables button */}
+              <Button
+                onClick={() => setShowVariablesPopup((prev) => !prev)}
+                // className='py-2 px-3 font-medium text-sm text-gray-600
+                // hover:text-[#136fb0] transition-colors'
+              >
+                Available Variables
+              </Button>
+            </div>
+          </div>
         </div>
+
         {/* Tab Content */}
         <div className='p-2'>
           {activeTab === 'params' && (

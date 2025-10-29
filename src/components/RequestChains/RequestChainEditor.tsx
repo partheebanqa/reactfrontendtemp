@@ -1743,7 +1743,7 @@ export function RequestChainEditor({
                                       : ''
                                   }`}
                                 >
-                                  <CardContent className='p-4'>
+                                  <CardContent className='p-2'>
                                     <div className='flex items-center'>
                                       <div className='flex items-center space-x-3'>
                                         <TooltipProvider>

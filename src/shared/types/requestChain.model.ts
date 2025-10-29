@@ -69,6 +69,7 @@ export interface APIRequest {
 }
 
 export interface Variable {
+  currentValue: string | undefined;
   initialValue?: string;
   id?: string;
   name: string;
