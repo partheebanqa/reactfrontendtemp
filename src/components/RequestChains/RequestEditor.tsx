@@ -41,6 +41,7 @@ import {
   XCircle,
   Shuffle,
   Edit3,
+  Info,
 } from 'lucide-react';
 import type {
   APIRequest,
@@ -73,6 +74,13 @@ import 'codemirror/lib/codemirror.css';
 import 'codemirror/theme/material.css';
 import 'codemirror/mode/javascript/javascript';
 import './../RequestBuilder/RequestEditor/whiteorange.css';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '../ui/tooltip';
+import { VariableHelpDialog } from './HelpTextDialougs/variablesUseDialogues';
 
 interface Variable {
   id: string;
@@ -126,6 +134,8 @@ export function RequestEditor({
   chainVariables = [],
 }: RequestEditorProps) {
   const [isJsonOpen, setIsJsonOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
+
   const [activeTab, setActiveTab] = useState<
     'params' | 'headers' | 'body' | 'auth' | 'settings'
   >('params');
@@ -1859,16 +1869,29 @@ export function RequestEditor({
               )}
 
               {/* Variables button */}
-              <Button
-                onClick={() => setShowVariablesPopup((prev) => !prev)}
-                // className='py-2 px-3 font-medium text-sm text-gray-600
-                // hover:text-[#136fb0] transition-colors'
-              >
-                Available Variables
-              </Button>
+              <div className='flex items-center gap-2'>
+                <Button onClick={() => setShowVariablesPopup((prev) => !prev)}>
+                  Variables
+                </Button>
+
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info
+                        size={16}
+                        strokeWidth={1.5}
+                        onClick={() => setHelpOpen(true)}
+                      />
+                    </TooltipTrigger>
+                    <TooltipContent>How to use variables</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
             </div>
           </div>
         </div>
+
+        <VariableHelpDialog open={helpOpen} onOpenChange={setHelpOpen} />
 
         {/* Tab Content */}
         <div className='p-2'>
