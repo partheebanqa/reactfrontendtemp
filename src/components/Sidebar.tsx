@@ -63,22 +63,71 @@ type MenuItem = {
 };
 
 const menuItems: MenuItem[] = [
-  { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard, feature: 'dashboard' },
-  { label: 'Request Builder', path: '/request-builder', icon: Settings, feature: 'request_builder' },
-  { label: 'Test Suites', path: '/test-suites', icon: Layers, feature: 'test_suites' },
-  { label: 'Request Chains', path: '/request-chains', icon: Link2, feature: 'request_chains' },
-  { label: 'Data Management', path: '/data-management', icon: Database, feature: 'test_suites' },
-  { label: 'Scheduler', path: '/scheduler', icon: CalendarClock, feature: 'scheduler' },
-  { label: 'CI/CD Integration', path: '/cicd-configuration', icon: Workflow, feature: 'cicd_integrations' },
+  {
+    label: 'Dashboard',
+    path: '/dashboard',
+    icon: LayoutDashboard,
+    feature: 'dashboard',
+  },
+  {
+    label: 'Request Builder',
+    path: '/request-builder',
+    icon: Settings,
+    feature: 'request_builder',
+  },
+  {
+    label: 'Test Suites',
+    path: '/test-suites',
+    icon: Layers,
+    feature: 'test_suites',
+  },
+  {
+    label: 'Request Chains',
+    path: '/request-chains',
+    icon: Link2,
+    feature: 'request_chains',
+  },
+  {
+    label: 'Data Management',
+    path: '/data-management',
+    icon: Database,
+    feature: 'test_suites',
+  },
+  {
+    label: 'Scheduler',
+    path: '/scheduler',
+    icon: CalendarClock,
+    feature: 'scheduler',
+  },
+  {
+    label: 'CI/CD Integration',
+    path: '/cicd-configuration',
+    icon: Workflow,
+    feature: 'cicd_integrations',
+  },
   // { label: 'Reports', icon: FileText, feature: 'reports' },
-  { label: 'Executions', path: '/executions', icon: ChartColumn, feature: 'executions' },
+  {
+    label: 'Executions',
+    path: '/executions',
+    icon: ChartColumn,
+    feature: 'executions',
+  },
   { label: 'FAQ', path: '/faq', icon: HelpCircle, feature: 'faqs' },
-
 ];
 
 const utilsItems: MenuItem[] = [
-  { label: 'Swagger Parser', path: '/swagger-parser', icon: Zap, feature: 'swagger_parser' },
-  { label: 'JSON Parser', path: '/json-parser', icon: Code, feature: 'json_parser' },
+  {
+    label: 'Swagger Parser',
+    path: '/swagger-parser',
+    icon: Zap,
+    feature: 'swagger_parser',
+  },
+  {
+    label: 'JSON Parser',
+    path: '/json-parser',
+    icon: Code,
+    feature: 'json_parser',
+  },
 ];
 
 const PRO_FEATURES = new Set<FeatureKey>(['executions']);
@@ -97,7 +146,10 @@ const Sidebar: React.FC = () => {
   const isEnterprisePlan = currentPlan?.PlanName === 'Enterprise';
   const isTrialPlan = currentPlan?.IsTrial === true;
 
-  const NavItem: React.FC<{ item: MenuItem; isActive: boolean }> = ({ item, isActive }) => {
+  const NavItem: React.FC<{ item: MenuItem; isActive: boolean }> = ({
+    item,
+    isActive,
+  }) => {
     const isPro = PRO_FEATURES.has(item.feature);
     const lockedByFeatureGate = isPro ? !hasFeatureAccess(item.feature) : false;
 
@@ -108,23 +160,33 @@ const Sidebar: React.FC = () => {
       if (isMobile) setCollapsed(true);
     }, [isMobile]);
 
-    const isEnterpriseOnlyFeature = item.feature === 'cicd_integrations' || item.feature === 'reports';
-    const isDisabled = !isTrialPlan && isEnterpriseOnlyFeature && !isEnterprisePlan;
+    const isEnterpriseOnlyFeature =
+      item.feature === 'cicd_integrations' || item.feature === 'reports';
+    const isDisabled =
+      !isTrialPlan && isEnterpriseOnlyFeature && !isEnterprisePlan;
 
     const showEnterpriseBadge = !isTrialPlan && isEnterpriseOnlyFeature;
 
     const Content = (
       <Button
         variant={isActive ? 'active' : 'ghost'}
-        className={`w-full ${collapsed ? 'p-3 justify-center' : 'justify-start'} relative 
-        ${(lockedByFeatureGate || item.upcoming || isDisabled) ? 'opacity-50 cursor-not-allowed' : ''
-          } text-[15px]`}
+        className={`w-full ${
+          collapsed ? 'p-4 justify-center' : 'justify-start'
+        } relative 
+        ${
+          lockedByFeatureGate || item.upcoming || isDisabled
+            ? 'opacity-50 cursor-not-allowed'
+            : ''
+        } text-[15px]`}
         disabled={lockedByFeatureGate || item.upcoming || isDisabled}
       >
-        <Icon className="w-10 h-10" />
+        <Icon className='w-10 h-10' />
         {!collapsed && (
-          <span className="flex-1 text-left">
-            {item.label}{' '} <span className='text-[#ff0000] text-[11px]'>{showEnterpriseBadge && '(Enterprise)'}{' '}</span>
+          <span className='flex-1 text-left'>
+            {item.label}{' '}
+            <span className='text-[#ff0000] text-[11px]'>
+              {showEnterpriseBadge && '(Enterprise)'}{' '}
+            </span>
             {/* {showEnterpriseBadge && (
               <Badge variant="secondary" className="ml-2">
                 Enterprise
@@ -133,52 +195,100 @@ const Sidebar: React.FC = () => {
           </span>
         )}
         {!collapsed && lockedByFeatureGate && isPro && (
-          <Crown className="w-4 h-4 text-yellow-500 ml-2" />
+          <Crown className='w-4 h-4 text-yellow-500 ml-2' />
         )}
       </Button>
     );
 
-    if (item.upcoming || lockedByFeatureGate || isDisabled) return <div className="w-full">{Content}</div>;
+    if (item.upcoming || lockedByFeatureGate || isDisabled)
+      return <div className='w-full'>{Content}</div>;
 
     return <Link href={item.path!}>{Content}</Link>;
   };
 
   return (
     <>
-      <aside className={`hidden md:flex ${collapsed ? 'w-16' : 'w-64'} bg-white flex-col border-r transition-all duration-300 h-full`}>
-        <div className={`${collapsed ? 'p-3' : 'p-2'} border-b flex justify-around items-center relative`}>
+      <aside
+        className={`hidden md:flex ${
+          collapsed ? 'w-16' : 'w-64'
+        } bg-white flex-col border-r transition-all duration-300 h-full`}
+      >
+        <div
+          className={`${
+            collapsed ? 'p-3' : 'p-2'
+          } border-b flex justify-around items-center relative`}
+        >
           {collapsed ? (
             <div className='w-8 h-8 flex items-center justify-center mx-auto'>
-              <img src={Logo} alt='Optraflow logo' className='w-8 h-8 rounded' />
+              <img
+                src={Logo}
+                alt='Optraflow logo'
+                className='w-8 h-8 rounded'
+              />
             </div>
           ) : (
             <div className='flex items-center space-x-3'>
               <Link to='/' className='flex items-center space-x-2'>
-                <img src={LogoFull} alt='Optraflow' style={{ width: '100%', height: '50px' }} />
+                <img
+                  src={LogoFull}
+                  alt='Optraflow'
+                  style={{ width: '100%', height: '50px' }}
+                />
               </Link>
             </div>
           )}
 
-          <Button variant='ghost' size='sm' onClick={() => setCollapsed(!collapsed)} className={`p-1 ${collapsed ? 'absolute left-[50px] top-1/2 transform -translate-y-1/2 bg-[#136fb0] rounded-full h-auto hover:bg-[#1e7bbf]' : ''}`}>
-            {collapsed ? <ChevronsRight size={10} color='white' /> : <ChevronsLeft size={16} />}
+          <Button
+            variant='ghost'
+            size='sm'
+            onClick={() => setCollapsed(!collapsed)}
+            className={`p-1 ${
+              collapsed
+                ? 'absolute left-[50px] top-1/2 transform -translate-y-1/2 bg-[#136fb0] rounded-full h-auto hover:bg-[#1e7bbf]'
+                : ''
+            }`}
+          >
+            {collapsed ? (
+              <ChevronsRight size={10} color='white' />
+            ) : (
+              <ChevronsLeft size={16} />
+            )}
           </Button>
         </div>
 
         <div className='flex-1 flex flex-col'>
-          <nav className={`flex-1 ${collapsed ? 'px-2' : 'px-4'} py-2 space-y-2 overflow-y-auto`}>
+          <nav
+            className={`flex-1 ${
+              collapsed ? 'px-2' : 'px-4'
+            } py-2 space-y-2 overflow-y-auto`}
+          >
             <div className='space-y-1'>
               {menuItems.map((item) => (
-                <NavItem key={item.label} item={item} isActive={location === item.path} />
+                <NavItem
+                  key={item.label}
+                  item={item}
+                  isActive={location === item.path}
+                />
               ))}
 
               {!collapsed ? (
                 <div className='w-full'>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button variant='ghost' className='w-full justify-start relative group' onClick={() => setUtilsExpanded(!utilsExpanded)}>
+                      <Button
+                        variant='ghost'
+                        className='w-full justify-start relative group'
+                        onClick={() => setUtilsExpanded(!utilsExpanded)}
+                      >
                         <Wrench className='w-4 h-4 mr-3' />
-                        <span className='flex-1 text-left text-md'>Utilities</span>
-                        {utilsExpanded ? <ChevronDown className='w-4 h-4' /> : <ChevronRight className='w-4 h-4' />}
+                        <span className='flex-1 text-left text-md'>
+                          Utilities
+                        </span>
+                        {utilsExpanded ? (
+                          <ChevronDown className='w-4 h-4' />
+                        ) : (
+                          <ChevronRight className='w-4 h-4' />
+                        )}
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>Utilities</TooltipContent>
@@ -187,14 +297,22 @@ const Sidebar: React.FC = () => {
                   {utilsExpanded && (
                     <div className='pl-3 space-y-1 mt-1'>
                       {utilsItems.map((item) => (
-                        <NavItem key={item.path} item={item} isActive={location === item.path} />
+                        <NavItem
+                          key={item.path}
+                          item={item}
+                          isActive={location === item.path}
+                        />
                       ))}
                     </div>
                   )}
                 </div>
               ) : (
                 utilsItems.map((item) => (
-                  <NavItem key={item.path} item={item} isActive={location === item.path} />
+                  <NavItem
+                    key={item.path}
+                    item={item}
+                    isActive={location === item.path}
+                  />
                 ))
               )}
             </div>
@@ -205,7 +323,12 @@ const Sidebar: React.FC = () => {
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button variant='outline' size='icon' className='w-full h-10' onClick={() => setShowHelpModal(true)}>
+                    <Button
+                      variant='outline'
+                      size='icon'
+                      className='w-full h-10'
+                      onClick={() => setShowHelpModal(true)}
+                    >
                       <HelpCircle className='h-5 w-5' />
                     </Button>
                   </TooltipTrigger>
@@ -213,7 +336,11 @@ const Sidebar: React.FC = () => {
                 </Tooltip>
               </TooltipProvider>
             ) : (
-              <Button variant='outline' className='w-full justify-start' onClick={() => setShowHelpModal(true)}>
+              <Button
+                variant='outline'
+                className='w-full justify-start'
+                onClick={() => setShowHelpModal(true)}
+              >
                 <HelpCircle className='mr-2 h-4 w-4' />
                 Help & Support
               </Button>
@@ -221,7 +348,10 @@ const Sidebar: React.FC = () => {
           </div>
         </div>
 
-        <HelpModal isOpen={showHelpModal} onClose={() => setShowHelpModal(false)} />
+        <HelpModal
+          isOpen={showHelpModal}
+          onClose={() => setShowHelpModal(false)}
+        />
       </aside>
 
       <div className='block md:hidden'>
@@ -229,25 +359,46 @@ const Sidebar: React.FC = () => {
           <div className='flex items-center space-x-2'>
             <span className='text-lg font-semibold'>Optraflow</span>
           </div>
-          <button onClick={() => setCollapsed(!collapsed)} className='lg:hidden'>
+          <button
+            onClick={() => setCollapsed(!collapsed)}
+            className='lg:hidden'
+          >
             <X className='h-6 w-6' />
           </button>
         </div>
 
-        <nav className={`flex-1 ${collapsed ? 'px-2' : 'px-4'} py-6 space-y-2 overflow-y-auto`}>
+        <nav
+          className={`flex-1 ${
+            collapsed ? 'px-2' : 'px-4'
+          } py-6 space-y-2 overflow-y-auto`}
+        >
           <div className='space-y-1'>
             {menuItems.map((item) => (
-              <NavItem key={item.label} item={item} isActive={location === item.path} />
+              <NavItem
+                key={item.label}
+                item={item}
+                isActive={location === item.path}
+              />
             ))}
 
             {!collapsed ? (
               <div className='w-full'>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button variant='ghost' className='w-full justify-start relative group' onClick={() => setUtilsExpanded(!utilsExpanded)}>
+                    <Button
+                      variant='ghost'
+                      className='w-full justify-start relative group'
+                      onClick={() => setUtilsExpanded(!utilsExpanded)}
+                    >
                       <Wrench className='w-4 h-4 mr-3' />
-                      <span className='flex-1 text-left text-md'>Utilities</span>
-                      {utilsExpanded ? <ChevronDown className='w-4 h-4' /> : <ChevronRight className='w-4 h-4' />}
+                      <span className='flex-1 text-left text-md'>
+                        Utilities
+                      </span>
+                      {utilsExpanded ? (
+                        <ChevronDown className='w-4 h-4' />
+                      ) : (
+                        <ChevronRight className='w-4 h-4' />
+                      )}
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>Utilities</TooltipContent>
@@ -256,14 +407,22 @@ const Sidebar: React.FC = () => {
                 {utilsExpanded && (
                   <div className='pl-3 space-y-1 mt-1'>
                     {utilsItems.map((item) => (
-                      <NavItem key={item.path} item={item} isActive={location === item.path} />
+                      <NavItem
+                        key={item.path}
+                        item={item}
+                        isActive={location === item.path}
+                      />
                     ))}
                   </div>
                 )}
               </div>
             ) : (
               utilsItems.map((item) => (
-                <NavItem key={item.path} item={item} isActive={location === item.path} />
+                <NavItem
+                  key={item.path}
+                  item={item}
+                  isActive={location === item.path}
+                />
               ))
             )}
           </div>

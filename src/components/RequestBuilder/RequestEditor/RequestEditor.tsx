@@ -1672,7 +1672,7 @@ const RequestEditor: React.FC = () => {
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
                 className={`
-                  py-4 px-2 sm:px-4 border-b-2 font-medium text-sm transition-colors whitespace-nowrap
+                    pt-4 pb-2 px-2 sm:px-4 border-b-2 font-medium text-sm transition-colors whitespace-nowrap
                   ${
                     activeTab === tab.id
                       ? 'border-[#136fb0] text-[#136fb0]'
