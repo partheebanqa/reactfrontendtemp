@@ -220,7 +220,7 @@ const RequestTabs: React.FC<RequestTabsProps> = ({
                   {/* Close Button */}
                   <button
                     onClick={(e) => handleCloseTab(e, request.id)}
-                    className='ml-1 p-0.5 hover:bg-gray-200 rounded opacity-0 group-hover:opacity-100 transition-colors'
+                    className='p-0.5 hover:bg-gray-200 rounded opacity-0 group-hover:opacity-100 transition-colors'
                   >
                     <X size={14} className='text-gray-500' />
                   </button>

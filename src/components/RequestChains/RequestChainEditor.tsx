@@ -544,6 +544,8 @@ export function RequestChainEditor({
     payload.request.url = previewUrl;
 
     try {
+      console.log('payload111:', payload);
+
       const backendData = await executeRequest(payload);
       const result = backendData?.data?.responses?.[0];
       if (!result) throw new Error('No response from executor');

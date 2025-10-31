@@ -42,6 +42,7 @@ import {
   Shuffle,
   Edit3,
   Info,
+  HelpCircle,
 } from 'lucide-react';
 import type {
   APIRequest,
@@ -330,8 +331,6 @@ export function RequestEditor({
 
     return allVariables;
   };
-
-  console.log('All Available Variables:', getAllAvailableVariables());
 
   const getVariablesByPrefixLocal = (prefix: 'D_' | 'S_'): Variable[] => {
     const allVars = getAllAvailableVariables();
@@ -1027,6 +1026,9 @@ export function RequestEditor({
     setIsExecuting(true);
     try {
       const startTime = Date.now();
+      (safeRequest as any).headers = (safeRequest.headers ?? []).filter(
+        (h) => h.key?.trim() && h.value?.trim()
+      );
       const payload = buildRequestPayload(safeRequest, allVariables);
       const previewUrl = getPreviewUrl(allVariables);
       payload.request.url = previewUrl;
@@ -1093,6 +1095,7 @@ export function RequestEditor({
         variant: log.status === 'success' ? 'default' : 'destructive',
       });
     } catch (error) {
+      console.log('error888:', error);
       const endTime = Date.now();
       const errorLog: ExecutionLog = {
         id: Date.now().toString(),
@@ -1779,7 +1782,7 @@ export function RequestEditor({
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id as typeof activeTab)}
-                    className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors flex items-center space-x-2 ${
+                    className={`pt-4 pb-2 px-1 border-b-2 font-medium text-sm transition-colors flex items-center space-x-2 ${
                       activeTab === tab.id
                         ? 'border-blue-500 text-[#136fb0]'
                         : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -1877,7 +1880,7 @@ export function RequestEditor({
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Info
+                      <HelpCircle
                         size={16}
                         strokeWidth={1.5}
                         onClick={() => setHelpOpen(true)}
