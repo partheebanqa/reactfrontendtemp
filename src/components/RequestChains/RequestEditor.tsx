@@ -1884,6 +1884,7 @@ export function RequestEditor({
                         size={16}
                         strokeWidth={1.5}
                         onClick={() => setHelpOpen(true)}
+                        className='cursor-pointer'
                       />
                     </TooltipTrigger>
                     <TooltipContent>How to use variables</TooltipContent>
