@@ -1178,7 +1178,7 @@ const Sidebar: React.FC = () => {
                       }
                     }}
                     disabled={addingFolder}
-                    className='flex items-center w-full px-4 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50'
+                    className='flex items-center w-full px-4 py-2 text-sm text-gray-900 dark:text-white text-left hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50'
                   >
                     <FolderPlus className='h-4 w-4 mr-2' />
                     Add Folder
@@ -1191,11 +1191,14 @@ const Sidebar: React.FC = () => {
                       setShowMenu(null);
                       setMenuPosition(null);
                     }}
-                    className='flex items-center w-full px-4 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
+                    className='flex items-center w-full px-4 py-2 text-sm text-gray-900 dark:text-white text-left hover:bg-gray-100 dark:hover:bg-gray-700'
                   >
                     <Plus className='h-4 w-4 mr-2' />
                     Add Request
                   </button>
+
+                  <div className='border-t border-gray-200 dark:border-gray-700 my-1'></div>
+
                   <button
                     onClick={async () => {
                       console.log(
@@ -1203,30 +1206,23 @@ const Sidebar: React.FC = () => {
                         selectedCollection?.id
                       );
                       if (selectedCollection) {
-                        // Fetch collection requests first to ensure we have all data
-                        console.log('[v0] Fetching collection requests...');
                         await fetchCollectionRequests.mutateAsync(
                           selectedCollection.id
                         );
-                        console.log(
-                          '[v0] Collection requests fetched, opening sanitize test runner...'
-                        );
-                        // Open the sanitize test runner UI
                         collectionActions.openSanitizeTestRunner(
                           selectedCollection.id
                         );
-                        console.log('[v0] Sanitize test runner opened');
-                      } else {
-                        console.log('[v0] No collection selected!');
                       }
                       setShowMenu(null);
                       setMenuPosition(null);
                     }}
-                    className='flex items-center w-full px-4 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
+                    className='flex items-center w-full px-4 py-2 text-sm text-gray-900 dark:text-white text-left hover:bg-gray-100 dark:hover:bg-gray-700'
                   >
                     <FlaskConical className='h-4 w-4 mr-2' />
-                    Sanitize test
+                    Sanitize Test
                   </button>
+
+                  <div className='border-t border-gray-200 dark:border-gray-700 my-1'></div>
 
                   <button
                     onClick={() => {
@@ -1235,35 +1231,22 @@ const Sidebar: React.FC = () => {
                       setShowMenu(null);
                       setMenuPosition(null);
                     }}
-                    className='flex items-center w-full px-4 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
+                    className='flex items-center w-full px-4 py-2 text-sm text-gray-900 dark:text-white text-left hover:bg-gray-100 dark:hover:bg-gray-700'
                   >
                     <Edit className='h-4 w-4 mr-2' />
                     Rename
                   </button>
+
                   <button
-                    className='flex items-center w-full px-4 py-2 text-sm text-left text-red-500 hover:bg-gray-100 dark:hover:bg-gray-700'
                     onClick={() => {
                       handleDeleteCollection();
                       setShowMenu(null);
                       setMenuPosition(null);
                     }}
+                    className='flex items-center w-full px-4 py-2 text-sm text-red-500 dark:text-red-400 text-left hover:bg-gray-100 dark:hover:bg-gray-700'
                   >
                     <Trash2 className='h-4 w-4 mr-2' />
                     Delete
-                  </button>
-                  <div className='border-t border-gray-200 dark:border-gray-700 my-1'></div>
-                  <button
-                    className='flex items-center w-full px-4 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (selectedCollection)
-                        handleExportCollection(selectedCollection);
-                      setShowMenu(null);
-                      setMenuPosition(null);
-                    }}
-                  >
-                    <FileJson2 className='h-4 w-4 mr-2' />
-                    Export
                   </button>
                 </div>
               )}
