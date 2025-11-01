@@ -19,12 +19,11 @@ import { workspaceStore } from '../workspaceStore';
 import type { CollectionRequest } from '@/shared/types/collection';
 import { queryClient } from '@/lib/queryClient';
 
-// Query to fetch collection data with current workspace context
 export const useCollectionQuery = (enabled = true) => {
   const currentWorkspace = workspaceStore.state.currentWorkspace;
   return useQuery({
     queryKey: ['/collections', currentWorkspace?.id],
-    enabled: enabled && !!currentWorkspace?.id, // Only enable if we have a workspace
+    enabled: enabled && !!currentWorkspace?.id,
     queryFn: async () => {
       if (!currentWorkspace?.id) {
         throw new Error('No active workspace selected');
@@ -50,8 +49,8 @@ export const useCollectionQuery = (enabled = true) => {
       }
     },
     refetchInterval: false,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 10 * 60 * 1000, // 10 minutes cache time
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 };
 
@@ -74,7 +73,6 @@ export const useRenameCollectionMutation = () => {
   return useMutation({
     mutationFn: renameCollection,
     onSuccess: (data, variables) => {
-      console.log('🚀 ~ useRenameCollectionMutation ~ data:', data);
       collectionActions.renameCollection(variables.id, variables.name);
     },
   });
@@ -124,7 +122,6 @@ export const useUnsetFavouriteCollectionMutation = () => {
 };
 
 export const useCollectionRequestsQuery = () => {
-  // helper to flatten nested folders into a single request array (preserves order field)
   const flattenFolderTree = (folders: any[]): any[] => {
     const all: any[] = [];
     const walk = (nodes: any[]) => {
@@ -144,7 +141,6 @@ export const useCollectionRequestsQuery = () => {
   return useMutation({
     mutationFn: getCollectionRequests,
     onSuccess: (payload, collectionId) => {
-      // payload is { folders: FolderNode[], requests: CollectionRequest[] }
       const rootRequests = Array.isArray(payload?.requests)
         ? payload.requests
         : [];
@@ -157,12 +153,10 @@ export const useCollectionRequestsQuery = () => {
       const updatedCollection = collectionStore.state.collections.map(
         (collection) => {
           if (collection.id === collectionId) {
-            // Keep unsaved local requests
             const unsavedRequests = collection.requests.filter(
               (req) => !req.id
             );
 
-            // If there were unsaved requests, set the activeRequest's order to end
             if (unsavedRequests.length > 0) {
               const collectionRequest = collectionStore.state
                 .activeRequest as CollectionRequest;
@@ -172,7 +166,6 @@ export const useCollectionRequestsQuery = () => {
               });
             }
 
-            // Merge unsaved into the end, giving them incremental order
             const mergedRequests = [
               ...fetchedAll,
               ...unsavedRequests.map((req, idx) => ({
@@ -181,12 +174,9 @@ export const useCollectionRequestsQuery = () => {
               })),
             ];
 
-            // Save both flattened list and the folder tree on the collection
             return {
               ...collection,
-              // flattened list for existing consumers (RequestEditor, etc.)
               requests: mergedRequests,
-              // keep the folder tree for UI
               folders: payload?.folders || [],
               hasFetchedRequests: true,
             };
@@ -197,7 +187,6 @@ export const useCollectionRequestsQuery = () => {
 
       collectionActions.setCollections(updatedCollection);
 
-      // Return flattened list to keep backward compatibility with callers
       return fetchedAll;
     },
   });
@@ -268,7 +257,6 @@ export const useDeleteCollectionMutation = () => {
   return useMutation({
     mutationFn: deleteCollection,
     onSuccess: (data, variables) => {
-      console.log('🚀 ~ useDeleteCollectionMutation ~ variables:', variables);
       collectionActions.deleteCollection(variables);
     },
     onError: (error) => {
