@@ -555,7 +555,7 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
               isRunning || requests.filter((r) => r.isSelected).length === 0
             }
           >
-            {isRunning ? 'Running...' : 'Run optra'}
+            {isRunning ? 'Running...' : `Run ${collection.name}`}
           </Button>
         </div>
       </div>
