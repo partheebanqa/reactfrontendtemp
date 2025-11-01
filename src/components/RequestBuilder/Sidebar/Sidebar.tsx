@@ -19,11 +19,12 @@ import {
   Copy,
   FileJson2,
   Search,
+  FlaskConical,
 } from 'lucide-react';
 import { useCollection } from '@/hooks/useCollection';
 import { useWorkspace } from '@/hooks/useWorkspace';
 import type { Collection, CollectionRequest } from '@/shared/types/collection';
-import { useToast } from '@/hooks/useToast';
+import { useToast } from '@/hooks/use-toast';
 import ImportModal from '../ImportModal';
 import { useRequest } from '@/hooks/useRequest';
 import TooltipContainer from '@/components/ui/tooltip-container';
@@ -62,6 +63,7 @@ const Sidebar: React.FC = () => {
     renameRequestMutation,
     deleteCollectionMutation,
     handleCreateRequest,
+    handleOpenAllCollectionRequests,
     openedRequests,
     closeRequest,
   } = useCollection();
@@ -1194,6 +1196,38 @@ const Sidebar: React.FC = () => {
                     <Plus className='h-4 w-4 mr-2' />
                     Add Request
                   </button>
+                  <button
+                    onClick={async () => {
+                      console.log(
+                        '[v0] Sanitize test clicked for collection:',
+                        selectedCollection?.id
+                      );
+                      if (selectedCollection) {
+                        // Fetch collection requests first to ensure we have all data
+                        console.log('[v0] Fetching collection requests...');
+                        await fetchCollectionRequests.mutateAsync(
+                          selectedCollection.id
+                        );
+                        console.log(
+                          '[v0] Collection requests fetched, opening sanitize test runner...'
+                        );
+                        // Open the sanitize test runner UI
+                        collectionActions.openSanitizeTestRunner(
+                          selectedCollection.id
+                        );
+                        console.log('[v0] Sanitize test runner opened');
+                      } else {
+                        console.log('[v0] No collection selected!');
+                      }
+                      setShowMenu(null);
+                      setMenuPosition(null);
+                    }}
+                    className='flex items-center w-full px-4 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
+                  >
+                    <FlaskConical className='h-4 w-4 mr-2' />
+                    Sanitize test
+                  </button>
+
                   <button
                     onClick={() => {
                       if (selectedCollection)

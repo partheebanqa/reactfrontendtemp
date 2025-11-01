@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { collectionActions, useCollectionStore } from '@/store/collectionStore';
-import { useAuth } from './useAuth';
 import { useWorkspace } from './useWorkspace';
 import type { Collection, CollectionRequest } from '@/shared/types/collection';
 import { useRequest } from './useRequest';
@@ -22,7 +21,6 @@ import {
 } from '@/store/query/collectionQuery';
 
 export function useCollection() {
-  const { isAuthenticated } = useAuth();
   const { currentWorkspace } = useWorkspace();
   const [shouldFetchCollections, setShouldFetchCollections] = useState(true);
   const {
@@ -69,6 +67,23 @@ export function useCollection() {
     }
 
     await fetchCollectionRequests.mutateAsync(collectionId);
+  };
+
+  const handleOpenAllCollectionRequests = async (collection: Collection) => {
+    if (!collection) return;
+
+    // Ensure the collection is expanded and requests are fetched
+    if (!expandedCollections.has(collection.id)) {
+      await toggleExpandedCollection(collection.id);
+    }
+
+    // Ensure requests are loaded
+    if (!collection.hasFetchedRequests) {
+      await fetchCollectionRequests.mutateAsync(collection.id);
+    }
+
+    // Open all requests from the collection
+    collectionActions.openAllCollectionRequests(collection.id);
   };
 
   const handleCreateRequest = async (
@@ -189,7 +204,7 @@ export function useCollection() {
     } else {
       setShouldFetchCollections(false);
     }
-  }, [isAuthenticated, collections.length]);
+  }, [collections.length]);
 
   const addCollectionMutation = useAddCollectionMutation();
   const renameCollectionMutation = useRenameCollectionMutation();
@@ -217,6 +232,7 @@ export function useCollection() {
     unsavedChanges,
 
     handleCreateRequest,
+    handleOpenAllCollectionRequests,
     setActiveCollection,
     setActiveRequest,
     setResponseLayout,

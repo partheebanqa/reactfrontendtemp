@@ -112,19 +112,16 @@ export const getCollectionRequests = async (collectionId: string) => {
       name: folder.Name || folder.name,
       createdAt: folder.CreatedAt || folder.createdAt,
       updatedAt: folder.UpdatedAt || folder.updatedAt,
-      // requests inside this folder
       requests: (folder.Requests || folder.requests || []).map((r: any) =>
         formatRequest(r)
       ),
-      // nested folders (if present)
       folders: (folder.Folders || folder.folders || []).map(mapFolder),
     });
-
     const normalized = {
       folders: (data?.Folders || data?.folders || []).map(mapFolder),
       requests: (data?.Requests || data?.requests || []).map((r: any) =>
         formatRequest(r)
-      ), // root-level requests (no folderId)
+      ),
     };
 
     return normalized;
