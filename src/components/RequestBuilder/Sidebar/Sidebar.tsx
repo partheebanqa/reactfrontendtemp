@@ -17,7 +17,6 @@ import {
   X,
   Save,
   Copy,
-  FileJson2,
   Search,
   FlaskConical,
 } from 'lucide-react';
@@ -109,6 +108,7 @@ const Sidebar: React.FC = () => {
     setActiveCollection(parentCollection);
     setActiveRequest(req);
     collectionActions.openRequest(req);
+    collectionActions.closeSanitizeTestRunner();
   };
 
   useEffect(() => {
@@ -1188,6 +1188,7 @@ const Sidebar: React.FC = () => {
                     onClick={() => {
                       if (selectedCollection)
                         handleCreateRequest(selectedCollection);
+                      collectionActions.closeSanitizeTestRunner();
                       setShowMenu(null);
                       setMenuPosition(null);
                     }}
@@ -1348,6 +1349,7 @@ const Sidebar: React.FC = () => {
                           selectedCollection,
                           selectedFolder.id
                         );
+                        collectionActions.closeSanitizeTestRunner();
                         setShowMenu(null);
                         setMenuPosition(null);
                       }}

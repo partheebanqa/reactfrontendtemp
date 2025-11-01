@@ -24,7 +24,7 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
-  DragEndEvent,
+  type DragEndEvent,
 } from '@dnd-kit/core';
 import {
   arrayMove,
@@ -61,7 +61,9 @@ const SortableRequestItem: React.FC<SortableRequestItemProps> = ({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: request.id || `request-${index}` });
+  } = useSortable({
+    id: request.id || `request-${index}`,
+  });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -189,7 +191,7 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
         isLoading: false,
       }))
     );
-  }, [collection.id, collection.requests, collection.folders]);
+  }, [collection]);
 
   const handleClose = () => {
     collectionActions.closeSanitizeTestRunner();
