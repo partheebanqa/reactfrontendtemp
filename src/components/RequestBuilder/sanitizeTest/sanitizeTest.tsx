@@ -2,10 +2,13 @@
 
 import type React from 'react';
 import { useState, useEffect, useMemo } from 'react';
-import { Loader2, X } from 'lucide-react';
+import { Loader2, X, Download, Share2, Search } from 'lucide-react';
+import { jsPDF } from 'jspdf';
+import { toast } from '@/hooks/use-toast';
 import { collectionActions } from '@/store/collectionStore';
 import type { Collection, CollectionRequest } from '@/shared/types/collection';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -34,6 +37,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 
 interface SortableRequestItemProps {
   request: RequestWithStatus;
@@ -101,9 +105,6 @@ const SortableRequestItem: React.FC<SortableRequestItemProps> = ({
       <span className='flex-1 text-sm text-gray-900 dark:text-white'>
         {request.name}
       </span>
-      {/* {request.authorizationType !== 'none' && (
-        <span className='text-xs text-gray-500'>Auth</span>
-      )} */}
       {getStatusBadge(request.status, request.responseTime, request.isLoading)}
     </div>
   );
@@ -131,6 +132,7 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
   const { activeEnvironment, environments } = useDataManagement();
   const { currentWorkspace } = useWorkspace();
   const workspaceId = currentWorkspace?.id;
+  const [searchQuery, setSearchQuery] = useState('');
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -138,6 +140,15 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
       coordinateGetter: sortableKeyboardCoordinates,
     })
   );
+
+  const filteredRequests = useMemo(() => {
+    if (!searchQuery.trim()) {
+      return requests;
+    }
+    return requests.filter((req) =>
+      req.name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [requests, searchQuery]);
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
@@ -191,7 +202,10 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
         isLoading: false,
       }))
     );
-  }, [collection]);
+
+    // Reset search query when collection changes
+    setSearchQuery('');
+  }, [collection.id, collection.requests, collection.folders]);
 
   const handleClose = () => {
     collectionActions.closeSanitizeTestRunner();
@@ -450,179 +464,333 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
     };
   }, [requests]);
 
+  const handleDownloadPDF = () => {
+    const doc = new jsPDF();
+
+    // Set title
+    doc.setFontSize(18);
+    doc.text(`Test Summary: ${collection.name}`, 20, 20);
+
+    // Add date
+    doc.setFontSize(10);
+    doc.text(`Generated: ${new Date().toLocaleString()}`, 20, 30);
+
+    // Add summary data
+    doc.setFontSize(12);
+    let yPos = 45;
+
+    const summaryData = [
+      { label: 'Total Executed', value: summary.totalExecuted.toString() },
+      { label: 'Passed', value: summary.pass.toString() },
+      { label: 'Failed', value: summary.fail.toString() },
+      { label: 'Skipped', value: summary.skipped.toString() },
+      { label: 'Auth APIs', value: summary.authApis.toString() },
+      {
+        label: 'Max Response Time',
+        value:
+          summary.maxResponseTime > 0 ? `${summary.maxResponseTime}ms` : 'N/A',
+      },
+      {
+        label: 'Max Payload Size',
+        value:
+          summary.maxPayloadSize > 0 ? `${summary.maxPayloadSize}KB` : 'N/A',
+      },
+    ];
+
+    summaryData.forEach((item) => {
+      doc.text(`${item.label}:`, 20, yPos);
+      doc.text(item.value, 100, yPos);
+      yPos += 10;
+    });
+
+    // Save the PDF
+    doc.save(`${collection.name}-test-summary.pdf`);
+
+    toast({
+      title: 'PDF Downloaded',
+      description: 'Test summary has been downloaded successfully.',
+    });
+  };
+
+  const handleShare = async () => {
+    const summaryText = `
+Test Summary: ${collection.name}
+Generated: ${new Date().toLocaleString()}
+
+Total Executed: ${summary.totalExecuted}
+Passed: ${summary.pass}
+Failed: ${summary.fail}
+Skipped: ${summary.skipped}
+Auth APIs: ${summary.authApis}
+Max Response Time: ${
+      summary.maxResponseTime > 0 ? `${summary.maxResponseTime}ms` : 'N/A'
+    }
+Max Payload Size: ${
+      summary.maxPayloadSize > 0 ? `${summary.maxPayloadSize}KB` : 'N/A'
+    }
+    `.trim();
+
+    // Try Web Share API first
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `Test Summary: ${collection.name}`,
+          text: summaryText,
+        });
+        toast({
+          title: 'Shared Successfully',
+          description: 'Test summary has been shared.',
+        });
+      } catch (error) {
+        if ((error as Error).name !== 'AbortError') {
+          console.error('Error sharing:', error);
+        }
+      }
+    } else {
+      // Fallback to clipboard
+      try {
+        await navigator.clipboard.writeText(summaryText);
+        toast({
+          title: 'Copied to Clipboard',
+          description: 'Test summary has been copied to your clipboard.',
+        });
+      } catch (error) {
+        console.error('Error copying to clipboard:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to copy summary to clipboard.',
+          variant: 'destructive',
+        });
+      }
+    }
+  };
+
   return (
-    <div className='h-full bg-white dark:bg-gray-900 flex'>
-      <div className='flex-1 flex flex-col border-r border-gray-200 dark:border-gray-700'>
-        <div className='border-b border-gray-200 dark:border-gray-700 p-3 flex items-center justify-between'>
-          <h2 className='text-gray-500 text-sm'>
-            Quick Test :
-            <span className='text-lg font-semibold text-gray-900 dark:text-white ml-1'>
-              {collection.name}
-            </span>
-          </h2>
+    <div className='h-full bg-white dark:bg-gray-900'>
+      <PanelGroup direction='horizontal'>
+        <Panel defaultSize={65} minSize={30}>
+          <div className='h-full flex flex-col'>
+            <div className='border-b border-gray-200 dark:border-gray-700 p-3 flex items-center justify-between'>
+              <h2 className='text-gray-500 text-sm'>
+                Quick Test :
+                <span className='text-lg font-semibold text-gray-900 dark:text-white ml-1'>
+                  {collection.name}
+                </span>
+              </h2>
 
-          <div className='flex items-center gap-3'>
-            <Select
-              value={
-                selectedEnvironment
-                  ? JSON.stringify(selectedEnvironment)
-                  : 'No Environment'
-              }
-              onValueChange={(value) => {
-                if (value === 'No Environment') {
-                  setSelectedEnvironment(null);
-                } else {
-                  const envObject = JSON.parse(value);
-                  setSelectedEnvironment(envObject);
-                }
-              }}
-            >
-              <SelectTrigger className='w-[160px]'>
-                <SelectValue placeholder='Select environment' />
-              </SelectTrigger>
+              <div className='flex items-center gap-3'>
+                <Select
+                  value={
+                    selectedEnvironment
+                      ? JSON.stringify(selectedEnvironment)
+                      : 'No Environment'
+                  }
+                  onValueChange={(value) => {
+                    if (value === 'No Environment') {
+                      setSelectedEnvironment(null);
+                    } else {
+                      const envObject = JSON.parse(value);
+                      setSelectedEnvironment(envObject);
+                    }
+                  }}
+                >
+                  <SelectTrigger className='w-[160px]'>
+                    <SelectValue placeholder='Select environment' />
+                  </SelectTrigger>
 
-              <SelectContent>
-                <SelectItem value='No Environment'>No Environment</SelectItem>
-                {environments &&
-                  environments.length > 0 &&
-                  environments
-                    .filter((env) => env.name !== 'No Environment')
-                    .map((env) => (
-                      <SelectItem key={env.id} value={JSON.stringify(env)}>
-                        {env.name}
-                      </SelectItem>
+                  <SelectContent>
+                    <SelectItem value='No Environment'>
+                      No Environment
+                    </SelectItem>
+                    {environments &&
+                      environments.length > 0 &&
+                      environments
+                        .filter((env) => env.name !== 'No Environment')
+                        .map((env) => (
+                          <SelectItem key={env.id} value={JSON.stringify(env)}>
+                            {env.name}
+                          </SelectItem>
+                        ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className='p-3 border-b border-gray-200 dark:border-gray-700'>
+              <div className='relative'>
+                <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400' />
+                <Input
+                  type='text'
+                  placeholder='Search requests by name...'
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className='pl-10'
+                />
+              </div>
+            </div>
+
+            <div className='flex-1 overflow-auto'>
+              <div className='p-3'>
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleDragEnd}
+                >
+                  <SortableContext
+                    items={requests.map((r, i) => r.id || `request-${i}`)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    {filteredRequests.map((request, index) => (
+                      <SortableRequestItem
+                        key={request.id || `request-${index}`}
+                        request={request}
+                        index={requests.findIndex((r) => r.id === request.id)} // ensure toggle affects correct item
+                        onToggle={() =>
+                          handleToggleRequest(
+                            requests.findIndex((r) => r.id === request.id)
+                          )
+                        }
+                        getMethodColor={getMethodColor}
+                        getStatusBadge={getStatusBadge}
+                      />
                     ))}
-              </SelectContent>
-            </Select>
+                  </SortableContext>
+                </DndContext>
+              </div>
+            </div>
 
+            <div className='border-t border-gray-200 dark:border-gray-700 p-3 flex items-center justify-between'>
+              <div className='flex items-center gap-4'>
+                <button
+                  onClick={handleDeselectAll}
+                  className='text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'
+                >
+                  Deselect All
+                </button>
+                <button
+                  onClick={handleSelectAll}
+                  className='text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'
+                >
+                  Select All
+                </button>
+                <span className='text-gray-300'>|</span>
+                <button
+                  onClick={handleReset}
+                  className='text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'
+                >
+                  Reset
+                </button>
+              </div>
+              <Button
+                onClick={handleRunTests}
+                disabled={
+                  isRunning || requests.filter((r) => r.isSelected).length === 0
+                }
+              >
+                {isRunning ? 'Running...' : `Run ${collection.name}`}
+              </Button>
+            </div>
+          </div>
+        </Panel>
+
+        <PanelResizeHandle className='w-1 bg-gray-200 dark:bg-gray-700 hover:bg-blue-500 hover:dark:bg-blue-500 transition-colors cursor-col-resize' />
+
+        <Panel defaultSize={35} minSize={20}>
+          <div className='h-full bg-gray-50 dark:bg-gray-800 p-6 overflow-auto relative'>
             <button
               onClick={handleClose}
-              className='p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md'
+              className='absolute top-4 right-4 p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-md'
             >
               <X className='w-5 h-5' />
             </button>
-          </div>
-        </div>
 
-        <div className='flex-1 overflow-auto'>
-          <div className='p-3'>
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragEnd={handleDragEnd}
-            >
-              <SortableContext
-                items={requests.map((r, i) => r.id || `request-${i}`)}
-                strategy={verticalListSortingStrategy}
-              >
-                {requests.map((request, index) => (
-                  <SortableRequestItem
-                    key={request.id || `request-${index}`}
-                    request={request}
-                    index={index}
-                    onToggle={() => handleToggleRequest(index)}
-                    getMethodColor={getMethodColor}
-                    getStatusBadge={getStatusBadge}
-                  />
-                ))}
-              </SortableContext>
-            </DndContext>
-          </div>
-        </div>
+            <div className='mb-6'>
+              <h3 className='text-lg font-semibold text-gray-900 dark:text-white mb-4'>
+                Quick test summary for ({collection.name})
+              </h3>
 
-        <div className='border-t border-gray-200 dark:border-gray-700 p-3 flex items-center justify-between'>
-          <div className='flex items-center gap-4'>
-            <button
-              onClick={handleDeselectAll}
-              className='text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'
-            >
-              Deselect All
-            </button>
-            <button
-              onClick={handleSelectAll}
-              className='text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'
-            >
-              Select All
-            </button>
-            <span className='text-gray-300'>|</span>
-            <button
-              onClick={handleReset}
-              className='text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'
-            >
-              Reset
-            </button>
-          </div>
-          <Button
-            onClick={handleRunTests}
-            disabled={
-              isRunning || requests.filter((r) => r.isSelected).length === 0
-            }
-          >
-            {isRunning ? 'Running...' : `Run ${collection.name}`}
-          </Button>
-        </div>
-      </div>
+              <div className='flex items-center gap-2'>
+                <Button
+                  variant='outline'
+                  size='sm'
+                  onClick={handleDownloadPDF}
+                  disabled={summary.totalExecuted === 0}
+                  className='flex items-center gap-2'
+                >
+                  <Download className='w-4 h-4' />
+                  Download PDF
+                </Button>
+                <Button
+                  variant='outline'
+                  size='sm'
+                  onClick={handleShare}
+                  disabled={summary.totalExecuted === 0}
+                  className='flex items-center gap-2'
+                >
+                  <Share2 className='w-4 h-4' />
+                  Share
+                </Button>
+              </div>
+            </div>
 
-      <div className='w-80 bg-gray-50 dark:bg-gray-800 p-6'>
-        <h3 className='text-lg font-semibold text-gray-900 dark:text-white mb-6'>
-          Quick test summary for ({collection.name})
-        </h3>
+            <div className='space-y-4'>
+              <div className='flex items-center text-sm text-gray-600 dark:text-gray-400 mb-1'>
+                Total:
+                <span className='ml-1 font-semibold text-gray-900 dark:text-white'>
+                  {summary.totalExecuted}
+                </span>
+              </div>
 
-        <div className='space-y-4'>
-          <div className='flex items-center text-sm text-gray-600 dark:text-gray-400 mb-1'>
-            Total:
-            <span className='ml-1 font-semibold text-gray-900 dark:text-white'>
-              {summary.totalExecuted}
-            </span>
-          </div>
+              <div className='flex items-center text-sm text-gray-600 dark:text-gray-400 mb-1'>
+                Pass:
+                <span className='ml-1 font-semibold text-green-600 text-base'>
+                  {summary.pass}
+                </span>
+              </div>
 
-          <div className='flex items-center text-sm text-gray-600 dark:text-gray-400 mb-1'>
-            Pass:
-            <span className='ml-1 font-semibold text-green-600 text-base'>
-              {summary.pass}
-            </span>
-          </div>
+              <div className='flex items-center text-sm text-gray-600 dark:text-gray-400 mb-1'>
+                Fail:
+                <span className='ml-1 font-semibold text-red-600 text-base'>
+                  {summary.fail}
+                </span>
+              </div>
 
-          <div className='flex items-center text-sm text-gray-600 dark:text-gray-400 mb-1'>
-            Fail:
-            <span className='ml-1 font-semibold text-red-600 text-base'>
-              {summary.fail}
-            </span>
-          </div>
+              <div className='flex items-center text-sm text-gray-600 dark:text-gray-400 mb-1'>
+                Skipped:
+                <span className='ml-1 font-semibold text-gray-900 dark:text-white text-base'>
+                  {summary.skipped}
+                </span>
+              </div>
 
-          <div className='flex items-center text-sm text-gray-600 dark:text-gray-400 mb-1'>
-            Skipped:
-            <span className='ml-1 font-semibold text-gray-900 dark:text-white text-base'>
-              {summary.skipped}
-            </span>
-          </div>
+              <div className='pt-4 border-t border-gray-200 dark:border-gray-700'>
+                <div className='flex items-center text-sm text-gray-600 dark:text-gray-400 mb-1'>
+                  Auth API's:
+                  <span className='ml-1 font-medium text-gray-900 dark:text-white text-base'>
+                    {summary.authApis}
+                  </span>
+                </div>
+              </div>
 
-          <div className='pt-4 border-t border-gray-200 dark:border-gray-700'>
-            <div className='flex items-center text-sm text-gray-600 dark:text-gray-400 mb-1'>
-              Auth API's:
-              <span className='ml-1 font-medium text-gray-900 dark:text-white text-base'>
-                {summary.authApis}
-              </span>
+              <div className='flex items-center text-sm text-gray-600 dark:text-gray-400 mb-1'>
+                Max response time:
+                <span className='ml-1 font-medium text-gray-900 dark:text-white text-base'>
+                  {summary.maxResponseTime > 0
+                    ? `${summary.maxResponseTime}ms`
+                    : ''}
+                </span>
+              </div>
+
+              <div className='flex items-center text-sm text-gray-600 dark:text-gray-400 mb-1'>
+                Max payload size:
+                <span className='ml-1 font-medium text-gray-900 dark:text-white text-base'>
+                  {summary.maxPayloadSize > 0
+                    ? `${summary.maxPayloadSize}KB`
+                    : ''}
+                </span>
+              </div>
             </div>
           </div>
-
-          <div className='flex items-center text-sm text-gray-600 dark:text-gray-400 mb-1'>
-            Max response time:
-            <span className='ml-1 font-medium text-gray-900 dark:text-white text-base'>
-              {summary.maxResponseTime > 0
-                ? `${summary.maxResponseTime}ms`
-                : ''}
-            </span>
-          </div>
-
-          <div className='flex items-center text-sm text-gray-600 dark:text-gray-400 mb-1'>
-            Max payload size:
-            <span className='ml-1 font-medium text-gray-900 dark:text-white text-base'>
-              {summary.maxPayloadSize > 0 ? `${summary.maxPayloadSize}KB` : ''}
-            </span>
-          </div>
-        </div>
-      </div>
+        </Panel>
+      </PanelGroup>
     </div>
   );
 };
