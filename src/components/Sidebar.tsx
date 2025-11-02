@@ -200,10 +200,28 @@ const Sidebar: React.FC = () => {
       </Button>
     );
 
-    if (item.upcoming || lockedByFeatureGate || isDisabled)
-      return <div className='w-full'>{Content}</div>;
+    if (collapsed) {
+      return (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              {item.upcoming || lockedByFeatureGate || isDisabled ? (
+                <div className='w-full'>{Content}</div>
+              ) : (
+                <Link href={item.path!}>{Content}</Link>
+              )}
+            </TooltipTrigger>
+            <TooltipContent side='right'>{item.label}</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      );
+    }
 
-    return <Link href={item.path!}>{Content}</Link>;
+    return item.upcoming || lockedByFeatureGate || isDisabled ? (
+      <div className='w-full'>{Content}</div>
+    ) : (
+      <Link href={item.path!}>{Content}</Link>
+    );
   };
 
   return (
@@ -273,26 +291,19 @@ const Sidebar: React.FC = () => {
 
               {!collapsed ? (
                 <div className='w-full'>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant='ghost'
-                        className='w-full justify-start relative group'
-                        onClick={() => setUtilsExpanded(!utilsExpanded)}
-                      >
-                        <Wrench className='w-4 h-4 mr-3' />
-                        <span className='flex-1 text-left text-md'>
-                          Utilities
-                        </span>
-                        {utilsExpanded ? (
-                          <ChevronDown className='w-4 h-4' />
-                        ) : (
-                          <ChevronRight className='w-4 h-4' />
-                        )}
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Utilities</TooltipContent>
-                  </Tooltip>
+                  <Button
+                    variant='ghost'
+                    className='w-full justify-start relative group'
+                    onClick={() => setUtilsExpanded(!utilsExpanded)}
+                  >
+                    <Wrench className='w-4 h-4 mr-3' />
+                    <span className='flex-1 text-left text-md'>Utilities</span>
+                    {utilsExpanded ? (
+                      <ChevronDown className='w-4 h-4' />
+                    ) : (
+                      <ChevronRight className='w-4 h-4' />
+                    )}
+                  </Button>
 
                   {utilsExpanded && (
                     <div className='pl-3 space-y-1 mt-1'>

@@ -691,9 +691,7 @@ Max Payload Size: ${
             </div>
           </div>
         </Panel>
-
         <PanelResizeHandle className='w-1 bg-gray-200 dark:bg-gray-700 hover:bg-blue-500 hover:dark:bg-blue-500 transition-colors cursor-col-resize' />
-
         <Panel defaultSize={35} minSize={20}>
           <div className='h-full bg-gray-50 dark:bg-gray-800 p-6 overflow-auto relative'>
             <button
@@ -731,6 +729,9 @@ Max Payload Size: ${
                 </Button>
               </div>
             </div>
+
+            {/* 🔹 Added divider line here */}
+            <div className='border-t border-gray-200 dark:border-gray-700 my-4'></div>
 
             <div className='space-y-4'>
               <div className='flex items-center text-sm text-gray-600 dark:text-gray-400 mb-1'>
