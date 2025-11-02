@@ -19,6 +19,7 @@ import {
   Copy,
   Search,
   FlaskConical,
+  Zap,
 } from 'lucide-react';
 import { useCollection } from '@/hooks/useCollection';
 import { useWorkspace } from '@/hooks/useWorkspace';
@@ -1202,10 +1203,6 @@ const Sidebar: React.FC = () => {
 
                   <button
                     onClick={async () => {
-                      console.log(
-                        '[v0] Sanitize test clicked for collection:',
-                        selectedCollection?.id
-                      );
                       if (selectedCollection) {
                         await fetchCollectionRequests.mutateAsync(
                           selectedCollection.id
@@ -1219,8 +1216,8 @@ const Sidebar: React.FC = () => {
                     }}
                     className='flex items-center w-full px-4 py-2 text-sm text-gray-900 dark:text-white text-left hover:bg-gray-100 dark:hover:bg-gray-700'
                   >
-                    <FlaskConical className='h-4 w-4 mr-2' />
-                    Sanitize Test
+                    <Zap className='h-4 w-4 mr-2' />
+                    Quick Test
                   </button>
 
                   <div className='border-t border-gray-200 dark:border-gray-700 my-1'></div>

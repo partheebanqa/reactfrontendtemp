@@ -89,10 +89,10 @@ const SortableRequestItem: React.FC<SortableRequestItemProps> = ({
         type='checkbox'
         checked={request.isSelected}
         onChange={onToggle}
-        className='w-4 h-4 rounded border-gray-300'
+        className='w-3 h-3 rounded border-gray-300'
       />
       <span
-        className={`px-2 py-1 text-xs font-semibold rounded ${getMethodColor(
+        className={`py-1 text-xs font-semibold rounded ${getMethodColor(
           request.method
         )}`}
       >
@@ -101,9 +101,9 @@ const SortableRequestItem: React.FC<SortableRequestItemProps> = ({
       <span className='flex-1 text-sm text-gray-900 dark:text-white'>
         {request.name}
       </span>
-      {request.authorizationType !== 'none' && (
+      {/* {request.authorizationType !== 'none' && (
         <span className='text-xs text-gray-500'>Auth</span>
-      )}
+      )} */}
       {getStatusBadge(request.status, request.responseTime, request.isLoading)}
     </div>
   );
@@ -335,15 +335,15 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
 
   const getMethodColor = (method: string) => {
     const colors = {
-      GET: 'text-green-600 bg-green-100',
-      POST: 'text-orange-600 bg-orange-100',
-      PUT: 'text-blue-600 bg-blue-100',
-      DELETE: 'text-red-600 bg-red-100',
-      PATCH: 'text-purple-600 bg-purple-100',
-      HEAD: 'text-gray-600 bg-gray-100',
-      OPTIONS: 'text-gray-600 bg-gray-100',
+      GET: 'text-green-600',
+      POST: 'text-orange-600',
+      PUT: 'text-blue-600',
+      DELETE: 'text-red-600',
+      PATCH: 'text-purple-600',
+      HEAD: 'text-gray-600',
+      OPTIONS: 'text-gray-600',
     };
-    return colors[method as keyof typeof colors] || 'text-gray-600 bg-gray-100';
+    return colors[method as keyof typeof colors] || 'text-gray-600';
   };
 
   const getStatusBadge = (
@@ -384,7 +384,7 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
                 <path d='M5 13l4 4L19 7'></path>
               </svg>
             </div>
-            <span className='px-2 py-0.5 bg-blue-500 text-white text-xs rounded-full font-medium'>
+            <span className='px-1 py-0.5 bg-blue-500 text-white text-xs rounded-full font-medium'>
               {status}
             </span>
           </div>
@@ -404,7 +404,7 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
                 <path d='M6 18L18 6M6 6l12 12'></path>
               </svg>
             </div>
-            <span className='px-2 py-0.5 bg-red-500 text-white text-xs rounded-full font-medium'>
+            <span className='px-1 py-0.5 bg-red-500 text-white text-xs rounded-full font-medium'>
               {status}
             </span>
           </div>
@@ -417,27 +417,30 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
   };
 
   const summary = useMemo(() => {
-    const total = requests.length;
-    const pass = requests.filter(
+    const executedRequests = requests.filter((r) => r.status !== undefined);
+    const totalExecuted = executedRequests.length;
+
+    const pass = executedRequests.filter(
       (r) => r.status && r.status >= 200 && r.status < 300
     ).length;
-    const fail = requests.filter((r) => r.status && r.status >= 400).length;
+    const fail = executedRequests.filter(
+      (r) => r.status && r.status >= 400
+    ).length;
     const skipped = requests.filter((r) => !r.isSelected).length;
     const authApis = requests.filter(
       (r) => r.authorizationType !== 'none'
     ).length;
     const maxResponseTime = Math.max(
-      ...requests.map((r) => r.responseTime || 0),
+      ...executedRequests.map((r) => r.responseTime || 0),
       0
     );
-
     const maxPayloadSize = Math.max(
-      ...requests.map((r) => Number(r.responsePayloadSizeKB) || 0),
+      ...executedRequests.map((r) => Number(r.responsePayloadSizeKB) || 0),
       0
     );
 
     return {
-      total,
+      totalExecuted,
       pass,
       fail,
       skipped,
@@ -450,9 +453,9 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
   return (
     <div className='h-full bg-white dark:bg-gray-900 flex'>
       <div className='flex-1 flex flex-col border-r border-gray-200 dark:border-gray-700'>
-        <div className='border-b border-gray-200 dark:border-gray-700 p-4 flex items-center justify-between'>
+        <div className='border-b border-gray-200 dark:border-gray-700 p-3 flex items-center justify-between'>
           <h2 className='text-gray-500 text-sm'>
-            Quick sanity :
+            Quick Test :
             <span className='text-lg font-semibold text-gray-900 dark:text-white ml-1'>
               {collection.name}
             </span>
@@ -474,7 +477,7 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
                 }
               }}
             >
-              <SelectTrigger className='w-[220px]'>
+              <SelectTrigger className='w-[160px]'>
                 <SelectValue placeholder='Select environment' />
               </SelectTrigger>
 
@@ -502,7 +505,7 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
         </div>
 
         <div className='flex-1 overflow-auto'>
-          <div className='p-4'>
+          <div className='p-3'>
             <DndContext
               sensors={sensors}
               collisionDetection={closestCenter}
@@ -527,7 +530,7 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
           </div>
         </div>
 
-        <div className='border-t border-gray-200 dark:border-gray-700 p-4 flex items-center justify-between'>
+        <div className='border-t border-gray-200 dark:border-gray-700 p-3 flex items-center justify-between'>
           <div className='flex items-center gap-4'>
             <button
               onClick={handleDeselectAll}
@@ -562,14 +565,14 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
 
       <div className='w-80 bg-gray-50 dark:bg-gray-800 p-6'>
         <h3 className='text-lg font-semibold text-gray-900 dark:text-white mb-6'>
-          Quick sanity summary for ({collection.name})
+          Quick test summary for ({collection.name})
         </h3>
 
         <div className='space-y-4'>
           <div className='flex items-center text-sm text-gray-600 dark:text-gray-400 mb-1'>
             Total:
             <span className='ml-1 font-semibold text-gray-900 dark:text-white'>
-              {summary.total}
+              {summary.totalExecuted}
             </span>
           </div>
 
@@ -608,14 +611,14 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
             <span className='ml-1 font-medium text-gray-900 dark:text-white text-base'>
               {summary.maxResponseTime > 0
                 ? `${summary.maxResponseTime}ms`
-                : '-'}
+                : ''}
             </span>
           </div>
 
           <div className='flex items-center text-sm text-gray-600 dark:text-gray-400 mb-1'>
             Max payload size:
             <span className='ml-1 font-medium text-gray-900 dark:text-white text-base'>
-              {summary.maxPayloadSize > 0 ? `${summary.maxPayloadSize}KB` : '-'}
+              {summary.maxPayloadSize > 0 ? `${summary.maxPayloadSize}KB` : ''}
             </span>
           </div>
         </div>
