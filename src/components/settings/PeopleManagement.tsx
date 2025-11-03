@@ -150,11 +150,11 @@ export function PeopleManagement() {
       const rawWorkspacePairs: { id: string; name: string }[] =
         Array.isArray(user.workspaces) && user.workspaces.length > 0
           ? user.workspaces
-            .map((w: any) => ({
-              id: (w?.id || '').toString().trim(),
-              name: (w?.name || '').toString().trim(),
-            }))
-            .filter((w) => w.id && w.name)
+              .map((w: any) => ({
+                id: (w?.id || '').toString().trim(),
+                name: (w?.name || '').toString().trim(),
+              }))
+              .filter((w) => w.id && w.name)
           : [];
 
       const workspaceIds = Array.from(
@@ -236,8 +236,6 @@ export function PeopleManagement() {
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
   const currentMembers = filteredMembers.slice(startIndex, endIndex);
-
-  console.log(currentMembers, "currentMembers")
 
   useMemo(() => {
     setCurrentPage(1);
@@ -555,10 +553,11 @@ export function PeopleManagement() {
                     aria-describedby={
                       errors.email ? 'invite-email-error' : undefined
                     }
-                    className={`${errors.email
-                      ? 'border-red-500 focus-visible:ring-red-500'
-                      : ''
-                      }`}
+                    className={`${
+                      errors.email
+                        ? 'border-red-500 focus-visible:ring-red-500'
+                        : ''
+                    }`}
                   >
                     <SelectValue placeholder='Select existing member' />
                   </SelectTrigger>
@@ -603,10 +602,11 @@ export function PeopleManagement() {
                     aria-describedby={
                       errors.email ? 'invite-email-error' : undefined
                     }
-                    className={`${errors.email
-                      ? 'border-red-500 focus-visible:ring-red-500'
-                      : ''
-                      }`}
+                    className={`${
+                      errors.email
+                        ? 'border-red-500 focus-visible:ring-red-500'
+                        : ''
+                    }`}
                   />
                   {showSuggestions && emailSuggestions.length > 0 && (
                     <ul
@@ -671,10 +671,11 @@ export function PeopleManagement() {
                 aria-describedby={
                   errors.firstName ? 'first-name-error' : undefined
                 }
-                className={`${errors.firstName
-                  ? 'border-red-500 focus-visible:ring-red-500'
-                  : ''
-                  }`}
+                className={`${
+                  errors.firstName
+                    ? 'border-red-500 focus-visible:ring-red-500'
+                    : ''
+                }`}
               />
               {errors.firstName && (
                 <p id='first-name-error' className='text-xs text-red-600'>
@@ -701,10 +702,11 @@ export function PeopleManagement() {
                 aria-describedby={
                   errors.lastName ? 'last-name-error' : undefined
                 }
-                className={`${errors.lastName
-                  ? 'border-red-500 focus-visible:ring-red-500'
-                  : ''
-                  }`}
+                className={`${
+                  errors.lastName
+                    ? 'border-red-500 focus-visible:ring-red-500'
+                    : ''
+                }`}
               />
               {errors.lastName && (
                 <p id='last-name-error' className='text-xs text-red-600'>
@@ -732,10 +734,11 @@ export function PeopleManagement() {
                   aria-describedby={
                     errors.workspace ? 'workspace-error' : undefined
                   }
-                  className={`${errors.workspace
-                    ? 'border-red-500 focus-visible:ring-red-500'
-                    : ''
-                    }`}
+                  className={`${
+                    errors.workspace
+                      ? 'border-red-500 focus-visible:ring-red-500'
+                      : ''
+                  }`}
                 >
                   <SelectValue placeholder='Select workspace' />
                 </SelectTrigger>
@@ -777,10 +780,11 @@ export function PeopleManagement() {
                   id='role-select'
                   aria-invalid={!!errors.role}
                   aria-describedby={errors.role ? 'role-error' : undefined}
-                  className={`${errors.role
-                    ? 'border-red-500 focus-visible:ring-red-500'
-                    : ''
-                    }`}
+                  className={`${
+                    errors.role
+                      ? 'border-red-500 focus-visible:ring-red-500'
+                      : ''
+                  }`}
                 >
                   <SelectValue placeholder='Select role' />
                 </SelectTrigger>
@@ -825,9 +829,6 @@ export function PeopleManagement() {
       </Card>
 
       <UserManagement />
-
-
-
       <Card>
         <CardHeader>
           <CardTitle>Roles & Permissions</CardTitle>
@@ -903,7 +904,7 @@ export function PeopleManagement() {
               <div className='space-y-2'>
                 <Label>Apply to workspace</Label>
                 {roleDialogOpenFor.workspacePairs &&
-                  roleDialogOpenFor.workspacePairs.length > 0 ? (
+                roleDialogOpenFor.workspacePairs.length > 0 ? (
                   <div className='border rounded-md p-3 space-y-2'>
                     <div className='grid grid-cols-1 gap-2'>
                       {(roleDialogOpenFor.workspacePairs || []).map((w) => {
@@ -1013,7 +1014,7 @@ export function PeopleManagement() {
               <div className='space-y-2'>
                 <Label>Select workspace(s) to remove</Label>
                 {removeDialogOpenFor.workspacePairs &&
-                  removeDialogOpenFor.workspacePairs.length > 0 ? (
+                removeDialogOpenFor.workspacePairs.length > 0 ? (
                   <div className='border rounded-md p-3 space-y-2'>
                     <div className='grid grid-cols-1 gap-2'>
                       {(removeDialogOpenFor.workspacePairs || []).map((w) => {

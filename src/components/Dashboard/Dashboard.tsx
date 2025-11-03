@@ -1,4 +1,3 @@
-
 import { LayoutDashboard } from 'lucide-react';
 import StatsCard from './StatsCard';
 import ExecutionChart from './ExecutionChart';
@@ -10,12 +9,16 @@ import BreadCum from '../BreadCum/Breadcum';
 import { getDashboard } from '@/services/dashboard.service';
 import { useWorkspace } from '@/hooks/useWorkspace';
 import { useEffect, useState } from 'react';
-import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter } from '../ui/dialog';
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+} from '../ui/dialog';
 import { Button } from '../ui/button';
 import { navigate } from 'wouter/use-browser-location';
 import WelcomeImage from '../../assests/images/Welcome.webp';
-
-
 
 export interface DashboardStats {
   totalTestSuites: number;
@@ -33,11 +36,7 @@ export interface Execution {
   status: 'running' | 'completed' | 'failed' | string;
 }
 
-
-
 export default function Dashboard() {
-
-
   const { currentWorkspace } = useWorkspace();
   const workspaceId = currentWorkspace?.id;
   const workSpaceName = currentWorkspace?.name;
@@ -46,14 +45,13 @@ export default function Dashboard() {
 
   const fetchDashboard = async () => {
     try {
-      const response = await getDashboard(workspaceId || "");
-      setData(response)
+      const response = await getDashboard(workspaceId || '');
+      setData(response);
       // console.log(response, "res")
     } catch (err) {
-      console.log(err, "err");
+      console.log(err, 'err');
     }
   };
-
 
   useEffect(() => {
     if (workspaceId) {
@@ -61,31 +59,28 @@ export default function Dashboard() {
     }
   }, [workspaceId]);
 
-
   const [open, setOpen] = useState(false);
 
-
   useEffect(() => {
-    const hasSeenWelcome = localStorage.getItem("hasSeenWelcome");
+    const hasSeenWelcome = localStorage.getItem('hasSeenWelcome');
     if (!hasSeenWelcome) {
       setOpen(true);
-      localStorage.setItem("hasSeenWelcome", "true");
+      localStorage.setItem('hasSeenWelcome', 'true');
     }
   }, []);
-
 
   return (
     <div className='min-h-screen bg-slate-50'>
       <BreadCum
         title={`Dashboard  -  ${workSpaceName || 'Workspace'}`}
-        subtitle="Monitor your API tests and execution schedules"
+        subtitle='Monitor your API tests and execution schedules'
         showCreateButton={false}
         showQuickGuide={false}
-        buttonTitle="Run Execution"
-        onClickCreateNew={() => console.log("Create execution")}
+        buttonTitle='Run Execution'
+        onClickCreateNew={() => console.log('Create execution')}
         icon={LayoutDashboard}
-        iconBgClass="bg-blue-100"
-        iconColor="#136fb0"
+        iconBgClass='bg-blue-100'
+        iconColor='#136fb0'
         iconSize={40}
       />
 
@@ -122,7 +117,6 @@ export default function Dashboard() {
             iconBgColor='bg-orange-100'
           />
 
-
           <StatsCard
             title='Active Schedules'
             value={data?.totalActiveSchedules || 0}
@@ -130,9 +124,6 @@ export default function Dashboard() {
             // description='Next run in 2h 15m'
             iconBgColor='bg-purple-100'
           />
-
-
-
         </div>
 
         {/* Charts and Recent Activity */}

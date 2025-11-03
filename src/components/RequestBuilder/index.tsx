@@ -312,20 +312,25 @@ const RequestBuilder = () => {
           <DialogDescription asChild>
             <div className='max-h-[88vh] overflow-y-auto pr-2'>
               <div className='rounded-xl bg-white'>
+                {/* Main content */}
                 <div className='p-2 sm:p-4'>
                   <div className='grid gap-3 md:grid-cols-2 md:items-center'>
+                    {/* LEFT: copy */}
                     <div>
                       <h2 className='text-2xl sm:text-3xl font-bold text-slate-900 mb-4'>
                         Welcome to Optraflow.com
                       </h2>
+
                       <p className='text-slate-600 mb-4'>
                         your low-code platform for API testing and automation.
                         We’ve set up a workspace called “Defaultworkspace” to
                         help you get started quickly.
                       </p>
+
                       <p className='text-slate-600 mb-4'>
                         Inside your workspace, you can:
                       </p>
+
                       <ul className='space-y-3 text-slate-700'>
                         <li className='flex items-start gap-3'>
                           <span className='mt-2 h-2 w-2 rounded-full bg-[#136fb0]' />
@@ -348,23 +353,73 @@ const RequestBuilder = () => {
                             Suite
                           </span>
                         </li>
+                        <li className='flex items-start gap-3'>
+                          <span className='mt-2 h-2 w-2 rounded-full bg-[#136fb0]' />
+                          <span>
+                            Create static or dynamic variables using built-in
+                            functions
+                          </span>
+                        </li>
+                        <li className='flex items-start gap-3'>
+                          <span className='mt-2 h-2 w-2 rounded-full bg-[#136fb0]' />
+                          <span>
+                            Perform integration testing across workflows using
+                            request chains
+                          </span>
+                        </li>
+                        <li className='flex items-start gap-3'>
+                          <span className='mt-2 h-2 w-2 rounded-full bg-[#136fb0]' />
+                          <span>
+                            Test APIs across multiple environments effortlessly
+                          </span>
+                        </li>
+                        <li className='flex items-start gap-3'>
+                          <span className='mt-2 h-2 w-2 rounded-full bg-[#136fb0]' />
+                          <span>
+                            Run jobs manually, schedule them, or trigger via
+                            CI/CD pipelines
+                          </span>
+                        </li>
+                        <li className='flex items-start gap-3'>
+                          <span className='mt-2 h-2 w-2 rounded-full bg-[#136fb0]' />
+                          <span>
+                            Receive status updates via email, Slack, or
+                            Microsoft Teams
+                          </span>
+                        </li>
                       </ul>
+
+                      <div className='mt-6'>
+                        <h3 className='text-lg font-semibold text-slate-900 mb-2'>
+                          What’s next?
+                        </h3>
+                        <p className='text-slate-600'>
+                          Create a new workspace, set up environments, import
+                          your APIs — and start testing with confidence
+                        </p>
+                      </div>
                       <div className='mt-6'>
                         <Button
-                          onClick={() => navigate('/dashboard')}
+                          onClick={() => {
+                            navigate('/dashboard');
+                          }}
                           className='bg-[#136fb0] hover:bg-[#136fb0] text-white shadow-sm'
                         >
                           🔥 Got it, let’s start!
                         </Button>
                       </div>
                     </div>
+
+                    {/* RIGHT: illustration (inline SVG) */}
                     <div className='relative mx-auto w-full max-w-[480px]'>
-                      <div className='relative rounded-2xl p-6'>
-                        <img src={WelcomeImage || '/placeholder.svg'} />
+                      <div className='relative rounded-2xl  p-6'>
+                        <img src={WelcomeImage} />
                       </div>
                     </div>
                   </div>
                 </div>
+
+                {/* Footer CTA */}
                 <div className='px-6 sm:px-8 pb-6'>
                   <DialogFooter className='justify-center'>
                     <DialogClose asChild></DialogClose>
