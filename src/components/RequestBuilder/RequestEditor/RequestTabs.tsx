@@ -1,12 +1,11 @@
 'use client';
 
-'use browser';
-
 import type React from 'react';
 import { useState } from 'react';
 import { X, Plus, FileTerminal } from 'lucide-react';
 import type { CollectionRequest } from '@/shared/types/collection';
 import { useCollectionStore, collectionActions } from '@/store/collectionStore';
+import { useWorkspace } from '@/hooks/useWorkspace';
 import { useCollection } from '@/hooks/useCollection';
 import {
   AlertDialog,
@@ -27,6 +26,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
+import CreateCollectionModal from '../CreateCollectionModel/CreateCollectionModel';
 
 interface RequestTabsProps {
   onTabChange?: (request: CollectionRequest) => void;
@@ -41,15 +41,22 @@ const RequestTabs: React.FC<RequestTabsProps> = ({
   onCurlImport,
   onBeforeTabChange,
 }) => {
+  const { currentWorkspace } = useWorkspace();
   const { openedRequests, activeRequest, unsavedChanges } =
     useCollectionStore();
-  const { handleCreateRequest, activeCollection } = useCollection();
+  const {
+    handleCreateRequest,
+    activeCollection,
+    addCollectionMutation,
+    collections,
+  } = useCollection();
   const { toast } = useToast();
 
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [pendingCloseRequestId, setPendingCloseRequestId] = useState<string>();
   const [isSaving, setIsSaving] = useState(false);
   const [showCurlImport, setShowCurlImport] = useState(false);
+  const [showCollectionModal, setShowCollectionModal] = useState(false);
 
   const handleTabClick = (request: CollectionRequest) => {
     onBeforeTabChange?.();
@@ -102,7 +109,7 @@ const RequestTabs: React.FC<RequestTabsProps> = ({
 
     setIsSaving(true);
     try {
-      if (activeCollection) {
+      if (activeCollection && request.id) {
         await onSaveRequest?.(request);
         collectionActions.markSaved(request.id);
       }
@@ -151,6 +158,38 @@ const RequestTabs: React.FC<RequestTabsProps> = ({
     }
   };
 
+  const handleCreateNewRequest = async () => {
+    if (!activeCollection && collections.length === 0) {
+      setShowCollectionModal(true);
+    } else {
+      handleCreateRequest(activeCollection || undefined);
+    }
+  };
+
+  const handleSaveCollection = async (collectionName: string) => {
+    try {
+      const newCollection = await addCollectionMutation.mutateAsync({
+        name: collectionName,
+        workspaceId: currentWorkspace?.id || '',
+        isImportant: false,
+      });
+      if (newCollection) {
+        await handleCreateRequest(newCollection);
+        toast({
+          title: 'Collection Created',
+          description: 'New collection and request have been created',
+        });
+        setShowCollectionModal(false);
+      }
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to create collection',
+        variant: 'destructive',
+      });
+    }
+  };
+
   if (!openedRequests.length) return null;
 
   const requestToClose = openedRequests.find(
@@ -164,8 +203,9 @@ const RequestTabs: React.FC<RequestTabsProps> = ({
         <div className='flex items-center overflow-x-auto'>
           {openedRequests.map((request) => {
             const isActive = activeRequest?.id === request.id;
-            const hasUnsaved = unsavedChanges.has(request.id);
-
+            const hasUnsaved = request.id
+              ? unsavedChanges.has(request.id)
+              : false;
             return (
               <div key={request.id} className='flex items-center'>
                 {/* === Tab Button === */}
@@ -236,9 +276,7 @@ const RequestTabs: React.FC<RequestTabsProps> = ({
         {/* Sticky Actions */}
         <div className='flex items-center gap-1 ml-auto sticky right-0 bg-white py-1 px-2'>
           <button
-            onClick={() =>
-              activeCollection && handleCreateRequest(activeCollection)
-            }
+            onClick={handleCreateNewRequest}
             className='p-2 hover:bg-gray-100 rounded transition-colors'
             title='New Request'
           >
@@ -302,6 +340,14 @@ const RequestTabs: React.FC<RequestTabsProps> = ({
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+      )}
+
+      {showCollectionModal && (
+        <CreateCollectionModal
+          handleClose={() => setShowCollectionModal(false)}
+          handleSaveCollection={handleSaveCollection}
+          selectedCollection={null}
+        />
       )}
 
       {/* cURL Import Modal */}

@@ -143,6 +143,14 @@ const Sidebar: React.FC = () => {
   const [collapsed, setCollapsed] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
 
+  useEffect(() => {
+    if (location === '/request-builder') {
+      setCollapsed(true);
+    } else {
+      setCollapsed(false);
+    }
+  }, [location]);
+
   const isEnterprisePlan = currentPlan?.PlanName === 'Enterprise';
   const isTrialPlan = currentPlan?.IsTrial === true;
 

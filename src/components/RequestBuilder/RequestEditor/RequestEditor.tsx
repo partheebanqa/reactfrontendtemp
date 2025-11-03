@@ -97,7 +97,7 @@ const RequestEditor: React.FC = () => {
     addCollectionMutation,
     addRequestMutation,
     renameRequestMutation,
-    handleCreateRequest,
+    handleCreateRequest: onCreateRequest,
     fetchCollectionRequests,
     replaceRequest,
   } = useCollection();
@@ -1479,8 +1479,14 @@ const RequestEditor: React.FC = () => {
           <p className='text-gray-500 dark:text-gray-400 mb-4'>
             No request selected
           </p>
-          <p className='text-sm text-gray-400'>
-            Select a request from the sidebar or create a new one
+          <p className='text-sm text-gray-400 mb-6'>
+            Select a request from the sidebar or{' '}
+            <button
+              onClick={(e: React.MouseEvent) => onCreateRequest()}
+              className='text-blue-600 hover:text-blue-700 font-medium underline focus:outline-none'
+            >
+              Create Request
+            </button>
           </p>
         </div>
       </div>

@@ -639,20 +639,29 @@ Max Payload Size: ${
                     items={requests.map((r, i) => r.id || `request-${i}`)}
                     strategy={verticalListSortingStrategy}
                   >
-                    {filteredRequests.map((request, index) => (
-                      <SortableRequestItem
-                        key={request.id || `request-${index}`}
-                        request={request}
-                        index={requests.findIndex((r) => r.id === request.id)} // ensure toggle affects correct item
-                        onToggle={() =>
-                          handleToggleRequest(
-                            requests.findIndex((r) => r.id === request.id)
-                          )
-                        }
-                        getMethodColor={getMethodColor}
-                        getStatusBadge={getStatusBadge}
-                      />
-                    ))}
+                    {filteredRequests.map((request, index) => {
+                      const displayIndex = index;
+
+                      return (
+                        <SortableRequestItem
+                          key={request.id || `request-${displayIndex}`}
+                          request={request}
+                          index={displayIndex}
+                          onToggle={() => {
+                            setRequests((prev) =>
+                              prev.map((r, i) =>
+                                r.id === request.id ||
+                                (!r.id && !request.id && i === displayIndex)
+                                  ? { ...r, isSelected: !r.isSelected }
+                                  : r
+                              )
+                            );
+                          }}
+                          getMethodColor={getMethodColor}
+                          getStatusBadge={getStatusBadge}
+                        />
+                      );
+                    })}
                   </SortableContext>
                 </DndContext>
               </div>
