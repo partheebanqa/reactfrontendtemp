@@ -27,15 +27,22 @@ export const loginApi = async (credentials: {
   email: string;
   password: string;
 }) => {
-  try {
-    const response = await apiRequest('POST', API_LOGIN, {
-      body: JSON.stringify(credentials),
-    });
-    const data = await response.json();
-    return data as ILoginResponse;
-  } catch (error) {
-    throw error;
+  const response = await apiRequest('POST', API_LOGIN, {
+    body: JSON.stringify(credentials),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData?.error || 'Login failed. Please try again.');
   }
+
+  const data = await response.json();
+
+  if (data?.error) {
+    throw new Error(data.error);
+  }
+
+  return data as ILoginResponse;
 };
 
 export const logoutApi = async () => {

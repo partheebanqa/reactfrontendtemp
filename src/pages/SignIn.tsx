@@ -46,21 +46,17 @@ export default function SignIn() {
 
     try {
       const loginMutationResult = await loginMutation.mutateAsync(formData);
-      // console.log(
-      //   '🚀 ~ handleSubmit ~ loginMutationResult:',
-      //   loginMutationResult
-      // );
-      if (loginMutationResult && loginMutationResult.token) {
+      console.log('loginMutationResult:', loginMutationResult);
+
+      if (loginMutationResult?.token) {
         setLocation('/request-builder');
-      } else {
-        errorToast('Login failed: No authentication token received');
       }
     } catch (error) {
-      if (error instanceof Error) {
-        errorToast(error.message);
-      } else {
-        errorToast('An unexpected error occurred during login');
-      }
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'An unexpected error occurred during login';
+      errorToast(message);
     }
   };
 

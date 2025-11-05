@@ -1,4 +1,5 @@
-export interface ILoginResponse{
+export interface ILoginResponse {
+  error(error: any): unknown;
   token: string;
   message?: string;
 }

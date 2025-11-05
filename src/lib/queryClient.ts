@@ -43,40 +43,29 @@ export async function apiRequest(
       };
     }
 
-    // Create fetch options - don't modify the Content-Type header if it's multipart/form-data
-    // The browser will automatically set the correct boundary
     const isMultipartFormData =
       options?.headers?.['content-type']?.includes('multipart/form-data') ||
       options?.headers?.['Content-Type']?.includes('multipart/form-data');
 
-    let fetchOptions: RequestInit = {
-      method,
-      headers: {},
+    const headers: Record<string, string> = {
+      ...(options?.headers || {}),
     };
 
-    // Handle body based on content type
-    if (options?.body) {
-      // For multipart/form-data, don't stringify the body and let the browser handle it
-      if (isMultipartFormData) {
-        fetchOptions.body = options.body;
-
-        // For multipart/form-data, don't set the Content-Type header manually
-        // The browser will set it with the correct boundary
-        const headers = { ...options?.headers };
-        if (headers['content-type']?.includes('multipart/form-data')) {
-          delete headers['content-type'];
-        }
-        if (headers['Content-Type']?.includes('multipart/form-data')) {
-          delete headers['Content-Type'];
-        }
-        fetchOptions.headers = headers;
-      } else {
-        fetchOptions.body = options.body;
-        fetchOptions.headers = { ...options?.headers };
-      }
-    } else {
-      fetchOptions.headers = { ...options?.headers };
+    if (!isMultipartFormData && options?.body && !headers['Content-Type']) {
+      headers['Content-Type'] = 'application/json';
     }
+
+    const body =
+      options?.body && !isMultipartFormData && typeof options.body !== 'string'
+        ? JSON.stringify(options.body)
+        : options?.body;
+
+    const fetchOptions: RequestInit = {
+      method,
+      headers,
+      body,
+      credentials: 'include',
+    };
 
     const res = await fetch(url, fetchOptions);
 
@@ -85,10 +74,10 @@ export async function apiRequest(
       authActions.clearAuth();
     }
 
-    // Only throw for non-auth related errors to prevent login issues
     if (url !== API_LOGIN && !res.ok) {
       await throwIfResNotOk(res);
     }
+
     return res;
   } catch (error) {
     throw error;
@@ -124,7 +113,7 @@ export const getQueryFn: <T>(options: {
       if (unauthorizedBehavior === 'throw') {
         throw error;
       }
-      return null; // Return null for 401 errors if configured to do so
+      return null;
     }
   };
 
