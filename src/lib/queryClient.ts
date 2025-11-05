@@ -22,52 +22,44 @@ interface IRequestOptions {
 export async function apiRequest(
   method: string,
   url: string,
-  options?: IRequestOptions
+  options: IRequestOptions = {}
 ): Promise<Response> {
   try {
-    // if (!validateCSPCompliance(url)) {
-    //   throw new Error(
-    //     `URL ${url} does not comply with Content Security Policy directives`
-    //   );
-    // }
-
     const cachedUserData = getEncryptedCookie(USER_COOKIE_NAME);
 
-    if (cachedUserData && cachedUserData.token) {
-      options = {
-        ...options,
-        headers: {
-          ...options?.headers,
-          Authorization: `Bearer ${cachedUserData.token}`,
-        },
-      };
+    const headers: Record<string, string> = {
+      ...(options.headers || {}),
+    };
+
+    if (cachedUserData?.token) {
+      headers['Authorization'] = `Bearer ${cachedUserData.token}`;
     }
 
     const isMultipartFormData =
-      options?.headers?.['content-type']?.includes('multipart/form-data') ||
-      options?.headers?.['Content-Type']?.includes('multipart/form-data');
+      headers['Content-Type']?.includes('multipart/form-data') ||
+      headers['content-type']?.includes('multipart/form-data');
 
-    const headers: Record<string, string> = {
-      ...(options?.headers || {}),
-    };
-
-    if (!isMultipartFormData && options?.body && !headers['Content-Type']) {
+    if (!isMultipartFormData && !headers['Content-Type']) {
       headers['Content-Type'] = 'application/json';
     }
 
-    const body =
-      options?.body && !isMultipartFormData && typeof options.body !== 'string'
-        ? JSON.stringify(options.body)
-        : options?.body;
+    let body: BodyInit | undefined;
+    if (options.body) {
+      if (isMultipartFormData) {
+        body = options.body;
+      } else if (typeof options.body === 'string') {
+        body = options.body;
+      } else {
+        body = JSON.stringify(options.body);
+      }
+    }
 
-    const fetchOptions: RequestInit = {
+    const res = await fetch(url, {
       method,
       headers,
       body,
       credentials: 'include',
-    };
-
-    const res = await fetch(url, fetchOptions);
+    });
 
     if (res.status === 401) {
       removeCookie(USER_COOKIE_NAME);
@@ -75,11 +67,15 @@ export async function apiRequest(
     }
 
     if (url !== API_LOGIN && !res.ok) {
-      await throwIfResNotOk(res);
+      const errorData = await res.json().catch(() => ({}));
+      throw new Error(
+        errorData?.error || errorData?.message || 'Request failed'
+      );
     }
 
     return res;
   } catch (error) {
+    console.error('apiRequest error:', error);
     throw error;
   }
 }
