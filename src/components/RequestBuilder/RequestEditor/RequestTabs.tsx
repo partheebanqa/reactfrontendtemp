@@ -47,6 +47,7 @@ const RequestTabs: React.FC<RequestTabsProps> = ({
   const {
     handleCreateRequest,
     activeCollection,
+    setActiveCollection,
     addCollectionMutation,
     collections,
   } = useCollection();
@@ -60,6 +61,16 @@ const RequestTabs: React.FC<RequestTabsProps> = ({
 
   const handleTabClick = (request: CollectionRequest) => {
     onBeforeTabChange?.();
+
+    if (request.collectionId) {
+      const requestCollection = collections.find(
+        (col) => col.id === request.collectionId
+      );
+      if (requestCollection) {
+        setActiveCollection(requestCollection);
+      }
+    }
+
     collectionActions.setActiveRequest(request);
     onTabChange?.(request);
   };
