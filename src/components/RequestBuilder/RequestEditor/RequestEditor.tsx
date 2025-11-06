@@ -74,6 +74,50 @@ interface PendingSubstitution {
   variableName: string;
 }
 
+type BodyType =
+  | 'none'
+  | 'json'
+  | 'form-data'
+  | 'x-www-form-urlencoded'
+  | 'raw'
+  | 'binary';
+
+const methodsWithBody = ['POST', 'PUT', 'PATCH', 'DELETE'];
+const getDefaultHeaders = (method: RequestMethod): Header[] => {
+  if (methodsWithBody.includes(method)) {
+    return [{ key: 'Content-Type', value: 'application/json', enabled: true }];
+  }
+  return [];
+};
+
+const generateBoundary = (): string => {
+  return '----WebKitFormBoundary' + Math.random().toString(36).substr(2, 16);
+};
+
+const getContentTypeForBodyType = (
+  bodyType:
+    | 'none'
+    | 'json'
+    | 'form-data'
+    | 'x-www-form-urlencoded'
+    | 'raw'
+    | 'binary'
+): string => {
+  if (bodyType === 'form-data') {
+    return `multipart/form-data; boundary=${generateBoundary()}`;
+  }
+  if (bodyType === 'x-www-form-urlencoded') {
+    return 'application/x-www-form-urlencoded';
+  }
+  if (bodyType === 'json') {
+    return 'application/json';
+  }
+  if (bodyType === 'raw') {
+    return 'text/plain';
+  }
+  return 'application/json';
+};
+
 const RequestEditor: React.FC = () => {
   const {
     isLoading,
@@ -124,9 +168,8 @@ const RequestEditor: React.FC = () => {
   const [method, setMethod] = useState<RequestMethod>('GET');
   const [params, setParams] = useState<Param[]>([]);
   const [headers, setHeaders] = useState<Header[]>([]);
-  const [bodyType, setBodyType] = useState<
-    'none' | 'json' | 'form-data' | 'x-www-form-urlencoded' | 'raw' | 'binary'
-  >('json');
+
+  const [bodyType, setBodyType] = useState<BodyType>('json');
   const [bodyContent, setBodyContent] = useState('');
   const [formFields, setFormFields] = useState<KeyValuePairWithFile[]>([]);
   const [urlEncodedFields, setUrlEncodedFields] = useState<Param[]>([]);
@@ -351,13 +394,34 @@ const RequestEditor: React.FC = () => {
               enabled: h.enabled !== undefined ? !!h.enabled : true,
             };
           });
-          setHeaders(formattedHeaders);
+
+          // Only add default Content-Type for methods with body
+          const defaultHeaders = methodsWithBody.includes(
+            activeRequest.method as RequestMethod
+          )
+            ? [
+                {
+                  key: 'Content-Type',
+                  value: 'application/json',
+                  enabled: true,
+                },
+              ]
+            : [];
+
+          const filteredHeaders = formattedHeaders.filter(
+            (h: Header) =>
+              h.key !== 'Postman-Token' &&
+              h.key !== 'User-Agent' &&
+              !defaultHeaders.find((dh) => dh.key === h.key)
+          );
+
+          setHeaders([...defaultHeaders, ...filteredHeaders]);
         } catch (error) {
           console.error('Error formatting headers:', error);
-          setHeaders([]);
+          setHeaders(getDefaultHeaders(activeRequest.method as RequestMethod));
         }
       } else {
-        setHeaders([]);
+        setHeaders(getDefaultHeaders(activeRequest.method as RequestMethod));
       }
       const allowedBodyTypes = [
         'none',
@@ -370,13 +434,7 @@ const RequestEditor: React.FC = () => {
       const bodyTypeValue = activeRequest.bodyType || 'none';
       setBodyType(
         allowedBodyTypes.includes(bodyTypeValue)
-          ? (bodyTypeValue as
-              | 'none'
-              | 'json'
-              | 'form-data'
-              | 'x-www-form-urlencoded'
-              | 'raw'
-              | 'binary')
+          ? (bodyTypeValue as BodyType)
           : 'json'
       );
       setBodyContent(activeRequest.bodyRawContent || '');
@@ -632,15 +690,7 @@ const RequestEditor: React.FC = () => {
           'binary',
         ];
         if (allowedBodyTypes.includes(parsedRequest.bodyType)) {
-          setBodyType(
-            parsedRequest.bodyType as
-              | 'none'
-              | 'json'
-              | 'form-data'
-              | 'x-www-form-urlencoded'
-              | 'raw'
-              | 'binary'
-          );
+          setBodyType(parsedRequest.bodyType as BodyType);
           if (activeRequest?.id) {
             collectionActions.markUnsaved(activeRequest.id);
           }
@@ -1038,7 +1088,7 @@ const RequestEditor: React.FC = () => {
               : undefined,
         },
         params,
-        headers,
+        headers: headers.filter((h) => h.enabled),
         assertions: selectedAssertions,
       };
       if (selectedVariable && selectedVariable.length > 0) {
@@ -1472,6 +1522,113 @@ const RequestEditor: React.FC = () => {
     );
   };
 
+  const handleMethodChange = (newMethod: RequestMethod) => {
+    setMethod(newMethod);
+
+    const hasContentTypeHeader = headers.some((h) => h.key === 'Content-Type');
+    if (methodsWithBody.includes(newMethod) && !hasContentTypeHeader) {
+      setHeaders([
+        { key: 'Content-Type', value: 'application/json', enabled: true },
+        ...headers,
+      ]);
+    } else if (!methodsWithBody.includes(newMethod) && hasContentTypeHeader) {
+      setHeaders(headers.filter((h) => h.key !== 'Content-Type'));
+    }
+  };
+
+  const handleBodyTypeChange = (newBodyType: BodyType) => {
+    setBodyType(newBodyType);
+
+    if (newBodyType !== 'none') {
+      const contentTypeValue = getContentTypeForBodyType(newBodyType);
+      const contentTypeHeaderIndex = headers.findIndex(
+        (h) => h.key.toLowerCase() === 'content-type'
+      );
+
+      if (contentTypeHeaderIndex !== -1) {
+        const updatedHeaders = [...headers];
+        updatedHeaders[contentTypeHeaderIndex] = {
+          ...updatedHeaders[contentTypeHeaderIndex],
+          value: contentTypeValue,
+        };
+        setHeaders(updatedHeaders);
+      } else if (methodsWithBody.includes(method)) {
+        // Add Content-Type header if it doesn't exist
+        setHeaders([
+          {
+            key: 'Content-Type',
+            value: contentTypeValue,
+            enabled: true,
+          },
+          ...headers,
+        ]);
+      }
+    }
+  };
+
+  // const handleSendRequest = async () => {
+  //   if (!url) {
+  //     alert('Please enter a URL');
+  //     return;
+  //   }
+
+  //   setIsLoading(true);
+  //   try {
+  //     // Simulate API call
+  //     console.log('Sending request:', {
+  //       method,
+  //       url,
+  //       headers: headers.filter((h) => h.enabled),
+  //       params: params.filter((p) => p.enabled),
+  //       bodyType,
+  //       body: bodyContent,
+  //     });
+
+  //     await new Promise((resolve) => setTimeout(resolve, 1000));
+  //     alert('Request sent successfully!');
+  //   } catch (error) {
+  //     alert('Error sending request');
+  //   } finally {
+  //     setIsLoading(false);
+  //   }
+  // };
+
+  // const addHeader = () => {
+  //   setHeaders([...headers, { key: '', value: '', enabled: true }]);
+  // };
+
+  // const removeHeader = (index: number) => {
+  //   setHeaders(headers.filter((_, i) => i !== index));
+  // };
+
+  // const updateHeader = (
+  //   index: number,
+  //   field: 'key' | 'value' | 'enabled',
+  //   value: string | boolean
+  // ) => {
+  //   const newHeaders = [...headers];
+  //   newHeaders[index] = { ...newHeaders[index], [field]: value };
+  //   setHeaders(newHeaders);
+  // };
+
+  // const addParam = () => {
+  //   setParams([...params, { key: '', value: '', enabled: true }]);
+  // };
+
+  // const removeParam = (index: number) => {
+  //   setParams(params.filter((_, i) => i !== index));
+  // };
+
+  // const updateParam = (
+  //   index: number,
+  //   field: 'key' | 'value' | 'enabled',
+  //   value: string | boolean
+  // ) => {
+  //   const newParams = [...params];
+  //   newParams[index] = { ...newParams[index], [field]: value };
+  //   setParams(newParams);
+  // };
+
   if (!activeRequest) {
     return (
       <div className='flex-1 flex items-center justify-center bg-gray-50 dark:bg-gray-900 p-4'>
@@ -1564,6 +1721,29 @@ const RequestEditor: React.FC = () => {
               onChange={(e) => {
                 const newMethod = e.target.value as RequestMethod;
                 setMethod(newMethod);
+
+                const hasContentTypeHeader = headers.some(
+                  (h) => h.key === 'Content-Type'
+                );
+                if (
+                  methodsWithBody.includes(newMethod) &&
+                  !hasContentTypeHeader
+                ) {
+                  setHeaders([
+                    {
+                      key: 'Content-Type',
+                      value: 'application/json',
+                      enabled: true,
+                    },
+                    ...headers,
+                  ]);
+                } else if (
+                  !methodsWithBody.includes(newMethod) &&
+                  hasContentTypeHeader
+                ) {
+                  setHeaders(headers.filter((h) => h.key !== 'Content-Type'));
+                }
+
                 if (activeRequest?.id) {
                   collectionActions.updateOpenedRequest({
                     ...activeRequest,
@@ -1768,7 +1948,35 @@ const RequestEditor: React.FC = () => {
                   <select
                     value={bodyType}
                     onChange={(e) => {
-                      setBodyType(e.target.value as any);
+                      const newBodyType = e.target.value as BodyType;
+                      setBodyType(newBodyType);
+
+                      if (newBodyType !== 'none') {
+                        const contentTypeValue =
+                          getContentTypeForBodyType(newBodyType);
+                        const contentTypeHeaderIndex = headers.findIndex(
+                          (h) => h.key.toLowerCase() === 'content-type'
+                        );
+
+                        if (contentTypeHeaderIndex !== -1) {
+                          const updatedHeaders = [...headers];
+                          updatedHeaders[contentTypeHeaderIndex] = {
+                            ...updatedHeaders[contentTypeHeaderIndex],
+                            value: contentTypeValue,
+                          };
+                          setHeaders(updatedHeaders);
+                        } else if (methodsWithBody.includes(method)) {
+                          setHeaders([
+                            {
+                              key: 'Content-Type',
+                              value: contentTypeValue,
+                              enabled: true,
+                            },
+                            ...headers,
+                          ]);
+                        }
+                      }
+
                       if (activeRequest?.id) {
                         collectionActions.markUnsaved(activeRequest.id);
                       }
