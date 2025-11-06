@@ -1,12 +1,11 @@
 'use client';
 
-'use browser';
-
 import type React from 'react';
 import { useState } from 'react';
 import { X, Plus, FileTerminal } from 'lucide-react';
 import type { CollectionRequest } from '@/shared/types/collection';
 import { useCollectionStore, collectionActions } from '@/store/collectionStore';
+import { useWorkspace } from '@/hooks/useWorkspace';
 import { useCollection } from '@/hooks/useCollection';
 import {
   AlertDialog,
@@ -20,6 +19,14 @@ import {
 } from '@/components/ui/alert-dialog';
 import ImportModal from './ImportModal';
 import { useToast } from '@/hooks/useToast';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import { Button } from '@/components/ui/button';
+import CreateCollectionModal from '../CreateCollectionModel/CreateCollectionModel';
 
 interface RequestTabsProps {
   onTabChange?: (request: CollectionRequest) => void;
@@ -34,15 +41,22 @@ const RequestTabs: React.FC<RequestTabsProps> = ({
   onCurlImport,
   onBeforeTabChange,
 }) => {
+  const { currentWorkspace } = useWorkspace();
   const { openedRequests, activeRequest, unsavedChanges } =
     useCollectionStore();
-  const { handleCreateRequest, activeCollection } = useCollection();
+  const {
+    handleCreateRequest,
+    activeCollection,
+    addCollectionMutation,
+    collections,
+  } = useCollection();
   const { toast } = useToast();
 
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [pendingCloseRequestId, setPendingCloseRequestId] = useState<string>();
   const [isSaving, setIsSaving] = useState(false);
   const [showCurlImport, setShowCurlImport] = useState(false);
+  const [showCollectionModal, setShowCollectionModal] = useState(false);
 
   const handleTabClick = (request: CollectionRequest) => {
     onBeforeTabChange?.();
@@ -95,7 +109,7 @@ const RequestTabs: React.FC<RequestTabsProps> = ({
 
     setIsSaving(true);
     try {
-      if (activeCollection) {
+      if (activeCollection && request.id) {
         await onSaveRequest?.(request);
         collectionActions.markSaved(request.id);
       }
@@ -144,6 +158,38 @@ const RequestTabs: React.FC<RequestTabsProps> = ({
     }
   };
 
+  const handleCreateNewRequest = async () => {
+    if (!activeCollection && collections.length === 0) {
+      setShowCollectionModal(true);
+    } else {
+      handleCreateRequest(activeCollection || undefined);
+    }
+  };
+
+  const handleSaveCollection = async (collectionName: string) => {
+    try {
+      const newCollection = await addCollectionMutation.mutateAsync({
+        name: collectionName,
+        workspaceId: currentWorkspace?.id || '',
+        isImportant: false,
+      });
+      if (newCollection) {
+        await handleCreateRequest(newCollection);
+        toast({
+          title: 'Collection Created',
+          description: 'New collection and request have been created',
+        });
+        setShowCollectionModal(false);
+      }
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to create collection',
+        variant: 'destructive',
+      });
+    }
+  };
+
   if (!openedRequests.length) return null;
 
   const requestToClose = openedRequests.find(
@@ -152,82 +198,102 @@ const RequestTabs: React.FC<RequestTabsProps> = ({
 
   return (
     <>
-      <div className='flex items-center bg-white border-b border-gray-200 px-4 py-0 overflow-x-auto'>
-        {openedRequests.map((request) => {
-          const isActive = activeRequest?.id === request.id;
-          const hasUnsaved = unsavedChanges.has(request.id);
-
-          return (
-            <div key={request.id} className='flex items-center'>
-              <button
-                onClick={() => handleTabClick(request)}
-                className={`
-                  group relative flex items-center gap-2 px-3 py-2
-                  transition-all border-b-2 whitespace-nowrap
-                  ${
-                    isActive
-                      ? 'border-blue-600 bg-white'
-                      : 'border-transparent hover:bg-gray-50'
-                  }
-                `}
-              >
-                <span
-                  className={`text-xs font-semibold ${methodColor(
-                    request.method
-                  )}`}
-                >
-                  {(request.method || 'GET').toUpperCase()}
-                </span>
-
-                <span
-                  className={`text-sm flex items-center gap-1.5 ${
-                    isActive ? 'text-blue-600 font-medium' : 'text-gray-700'
-                  }`}
-                >
-                  {request.name || 'Untitled'}
-                  {hasUnsaved && (
-                    <span className='w-1.5 h-1.5 bg-orange-500 rounded-full'></span>
-                  )}
-                </span>
-
+      <div className='flex items-center bg-white border-b border-gray-200 px-4 py-0'>
+        {/* Scrollable tab area */}
+        <div className='flex items-center overflow-x-auto'>
+          {openedRequests.map((request) => {
+            const isActive = activeRequest?.id === request.id;
+            const hasUnsaved = request.id
+              ? unsavedChanges.has(request.id)
+              : false;
+            return (
+              <div key={request.id} className='flex items-center'>
+                {/* === Tab Button === */}
                 <button
-                  onClick={(e) => handleCloseTab(e, request.id)}
-                  className='ml-1 p-0.5 hover:bg-gray-200 rounded opacity-0 group-hover:opacity-100 transition-colors'
+                  onClick={() => handleTabClick(request)}
+                  className={`group relative flex items-center gap-2 px-3 py-2
+              transition-all border-b-2 whitespace-nowrap
+              ${
+                isActive
+                  ? 'border-blue-600 bg-white'
+                  : 'border-transparent hover:bg-gray-50'
+              }`}
                 >
-                  <X size={14} className='text-gray-500' />
+                  {/* Method */}
+                  <span
+                    className={`text-xs font-semibold ${methodColor(
+                      request.method
+                    )}`}
+                  >
+                    {(() => {
+                      const method = (request.method || 'GET').toUpperCase();
+                      if (method === 'DELETE') return 'DEL';
+                      return method;
+                    })()}
+                  </span>
+
+                  {/* Name */}
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span
+                          className={`text-sm flex items-center gap-1.5 max-w-[130px] truncate ${
+                            isActive
+                              ? 'text-blue-600 font-medium'
+                              : 'text-gray-700'
+                          }`}
+                        >
+                          {request.name
+                            ? request.name.slice(0, 15)
+                            : 'Untitled'}
+                          {hasUnsaved && (
+                            <span className='w-1.5 h-1.5 bg-orange-500 rounded-full'></span>
+                          )}
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent side='bottom'>
+                        <p className='text-sm'>{request.name || 'Untitled'}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+
+                  {/* Close Button */}
+                  <button
+                    onClick={(e) => handleCloseTab(e, request.id)}
+                    className='p-0.5 hover:bg-gray-200 rounded opacity-0 group-hover:opacity-100 transition-colors'
+                  >
+                    <X size={14} className='text-gray-500' />
+                  </button>
                 </button>
-              </button>
 
-              {/* Divider */}
-              <div className='h-5 w-px bg-gray-200'></div>
-            </div>
-          );
-        })}
+                {/* Divider */}
+                <div className='h-5 w-px bg-gray-200'></div>
+              </div>
+            );
+          })}
+        </div>
 
-        <div className='flex items-center ml-auto gap-1'>
-          <>
-            <button
-              onClick={() =>
-                activeCollection && handleCreateRequest(activeCollection)
-              }
-              className='p-2 hover:bg-gray-100 rounded transition-colors'
-              title='New Request'
-            >
-              <Plus
-                size={19}
-                strokeWidth={2.5}
-                className='text-[rgb(19,111,176)] hover:text-[rgb(15,90,145)] transition-colors'
-              />
-            </button>
+        {/* Sticky Actions */}
+        <div className='flex items-center gap-1 ml-auto sticky right-0 bg-white py-1 px-2'>
+          <button
+            onClick={handleCreateNewRequest}
+            className='p-2 hover:bg-gray-100 rounded transition-colors'
+            title='New Request'
+          >
+            <Plus
+              size={19}
+              strokeWidth={2.5}
+              className='text-[rgb(19,111,176)]'
+            />
+          </button>
 
-            <button
-              onClick={handleCurlImportClick}
-              className='p-2 hover:bg-gray-100 rounded transition-colors'
-              title='Import from cURL'
-            >
-              <FileTerminal size={18} className='text-[#136fb0]' />
-            </button>
-          </>
+          <button
+            onClick={handleCurlImportClick}
+            className='p-2 hover:bg-gray-100 rounded transition-colors'
+            title='Import from cURL'
+          >
+            <FileTerminal size={18} className='text-[#136fb0]' />
+          </button>
         </div>
       </div>
 
@@ -264,16 +330,24 @@ const RequestTabs: React.FC<RequestTabsProps> = ({
               </AlertDialogCancel>
 
               {/* Save */}
-              <AlertDialogAction
+              <Button
                 onClick={handleSaveChanges}
                 disabled={isSaving}
-                className='bg-orange-500 hover:bg-orange-600 text-white'
+                // className='bg-orange-500 hover:bg-orange-600 text-white'
               >
                 {isSaving ? 'Saving...' : 'Save changes'}
-              </AlertDialogAction>
+              </Button>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+      )}
+
+      {showCollectionModal && (
+        <CreateCollectionModal
+          handleClose={() => setShowCollectionModal(false)}
+          handleSaveCollection={handleSaveCollection}
+          selectedCollection={null}
+        />
       )}
 
       {/* cURL Import Modal */}

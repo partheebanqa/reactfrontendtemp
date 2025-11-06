@@ -381,7 +381,6 @@ export function RequestChainEditor({
     }
   };
 
-  // Create a function to get all available variables for a request at runtime
   const getAllVariablesForRequestAtRuntime = (
     requestIndex: number,
     currentExecutionExtractedVars: Record<string, any>
@@ -390,7 +389,6 @@ export function RequestChainEditor({
       activeEnvironment?.id
     );
 
-    // Get extracted variables from all previous requests in CURRENT execution
     const previouslyExtractedVars: Variable[] = [];
     Object.entries(currentExecutionExtractedVars).forEach(([name, value]) => {
       if (!previouslyExtractedVars.some((v) => v.name === name)) {
@@ -426,13 +424,11 @@ export function RequestChainEditor({
     ];
   };
 
-  // Create a function to get all available variables for a request
   const getAllVariablesForRequest = (requestIndex: number): Variable[] => {
     const environmentVars = getExtractVariablesByEnvironment(
       activeEnvironment?.id
     );
 
-    // Get extracted variables from all previous requests
     const previouslyExtractedVars: Variable[] = [];
     for (let i = 0; i < requestIndex; i++) {
       const reqId = formData.chainRequests?.[i]?.id;
@@ -458,7 +454,6 @@ export function RequestChainEditor({
       }
     }
 
-    // Also include global extracted variables
     const globalExtractedVars: Variable[] = Object.entries(
       extractedVariables
     ).map(([name, value]) => ({
@@ -549,6 +544,8 @@ export function RequestChainEditor({
     payload.request.url = previewUrl;
 
     try {
+      console.log('payload111:', payload);
+
       const backendData = await executeRequest(payload);
       const result = backendData?.data?.responses?.[0];
       if (!result) throw new Error('No response from executor');
@@ -656,11 +653,10 @@ export function RequestChainEditor({
 
     const allLogs: ExecutionLog[] = [];
 
-    // Get initial base variables (globals + chain variables + environment variables + store variables + dynamic variables)
     const baseVariables = [
       ...globalVariables,
       ...storeVariables,
-      ...dynamicStructured, // Include dynamic variables with current values/overrides
+      ...dynamicStructured,
       ...(formData.variables || []),
       ...getExtractVariablesByEnvironment(activeEnvironment?.id).filter(
         (ev) =>
@@ -671,7 +667,6 @@ export function RequestChainEditor({
       ),
     ];
 
-    // Track extracted variables throughout the execution
     const allExtractedVarsInCurrentExecution: Record<string, any> = {};
     const variablesByRequest: Record<string, Record<string, any>> = {};
 
@@ -694,7 +689,6 @@ export function RequestChainEditor({
           if (existingLog) {
             log = existingLog;
           } else {
-            // Create the complete variable set for this request including all extracted vars so far
             const currentAvailableVariables =
               getAllVariablesForRequestAtRuntime(
                 i,
@@ -1751,7 +1745,7 @@ export function RequestChainEditor({
                                       : ''
                                   }`}
                                 >
-                                  <CardContent className='p-4'>
+                                  <CardContent className='p-2'>
                                     <div className='flex items-center'>
                                       <div className='flex items-center space-x-3'>
                                         <TooltipProvider>

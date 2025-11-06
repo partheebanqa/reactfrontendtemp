@@ -79,7 +79,11 @@ export default function Header({ isDrawerOpen, toggleDrawer }: HeaderProps) {
     await logoutClientSide();
   };
 
-  const hiddenPaths = ['/request-chains/create', '/test-suites/create', '/executions'];
+  const hiddenPaths = [
+    '/request-chains/create',
+    '/test-suites/create',
+    '/executions',
+  ];
 
   const shouldHideEnvironment =
     hiddenPaths.includes(location) ||
@@ -121,7 +125,8 @@ export default function Header({ isDrawerOpen, toggleDrawer }: HeaderProps) {
       return true;
     } catch (error) {
       console.error(
-        `Error ${workspaceModalState.mode === 'add' ? 'creating' : 'updating'
+        `Error ${
+          workspaceModalState.mode === 'add' ? 'creating' : 'updating'
         } workspace:`,
         error
       );
@@ -166,7 +171,7 @@ export default function Header({ isDrawerOpen, toggleDrawer }: HeaderProps) {
   };
 
   return (
-    <header className='border-b bg-white dark:bg-gray-900 px-2 sm:px-6 py-2 sm:py-4'>
+    <header className='border-b bg-white dark:bg-gray-900 px-2 sm:px-6 pt-2 sm:pt-4 pb-[0.875rem] sm:pb-[0.875rem]'>
       <div className='flex items-center justify-between gap-4 sm:gap-6  mx-auto'>
         <div className='md:hidden flex items-center'>
           <Button

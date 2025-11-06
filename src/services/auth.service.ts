@@ -27,25 +27,42 @@ export const loginApi = async (credentials: {
   email: string;
   password: string;
 }) => {
-  try {
-    const response = await apiRequest('POST', API_LOGIN, {
-      body: JSON.stringify(credentials),
-    });
-    const data = await response.json();
-    return data as ILoginResponse;
-  } catch (error) {
-    throw error;
+  const response = await apiRequest('POST', API_LOGIN, {
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(credentials),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData?.error || 'Login failed. Please try again.');
   }
+
+  const data = await response.json();
+
+  if (data?.error) {
+    throw new Error(data.error);
+  }
+
+  return data as ILoginResponse;
 };
 
 export const logoutApi = async () => {
   try {
-    const response = await apiRequest('POST', API_LOGOUT);
+    const response = await apiRequest('POST', API_LOGOUT, {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
     if (!response.ok) {
       throw new Error(`Logout failed with status: ${response.status}`);
     }
+
     return response.json();
-  } catch (error) {
+  } catch (error: unknown) {
+    console.error('Error during logout:', error);
     throw error;
   }
 };
@@ -53,6 +70,9 @@ export const logoutApi = async () => {
 export const registerApi = async (userData: SingUpForm) => {
   try {
     const response = await apiRequest('POST', API_REGISTER, {
+      headers: {
+        'Content-Type': 'application/json',
+      },
       body: JSON.stringify(userData),
     });
 
@@ -74,6 +94,9 @@ export const changePasswordApi = async (passwordData: {
   newPassword: string;
 }) => {
   const response = await apiRequest('POST', API_PASSWORD_CHANGE, {
+    headers: {
+      'Content-Type': 'application/json',
+    },
     body: JSON.stringify(passwordData),
   });
   if (!response.ok) {
@@ -84,6 +107,9 @@ export const changePasswordApi = async (passwordData: {
 
 export const forgotPasswordApi = async (email: string) => {
   const response = await apiRequest('POST', API_FORGOT_PASSWORD, {
+    headers: {
+      'Content-Type': 'application/json',
+    },
     body: JSON.stringify({ email }),
   });
   if (!response.ok) {
@@ -129,6 +155,9 @@ export const updateProfileApi = async (
   }
 ): Promise<{ user: User; message?: string }> => {
   const response = await apiRequest('PUT', API_PROFILE, {
+    headers: {
+      'Content-Type': 'application/json',
+    },
     body: JSON.stringify(profileData),
   });
 

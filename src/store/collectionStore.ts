@@ -1,7 +1,9 @@
+'use client';
+
 import { Store, useStore } from '@tanstack/react-store';
 import type { Collection, CollectionRequest } from '@/shared/types/collection';
 
-interface CollectionState {
+export interface CollectionState {
   responseLayout: 'bottom' | 'right';
   activeRequest: CollectionRequest | null;
   activeCollection: Collection | null;
@@ -12,6 +14,10 @@ interface CollectionState {
   error: string | null;
   openedRequests: CollectionRequest[];
   unsavedChanges: Set<string>;
+  sanitizeTestRunner: {
+    isOpen: boolean;
+    collectionId: string | null;
+  };
 }
 
 export const initialCollectionState: CollectionState = {
@@ -25,6 +31,10 @@ export const initialCollectionState: CollectionState = {
   error: null,
   openedRequests: [],
   unsavedChanges: new Set(),
+  sanitizeTestRunner: {
+    isOpen: false,
+    collectionId: null,
+  },
 };
 
 export const collectionStore = new Store<CollectionState>(
@@ -32,6 +42,27 @@ export const collectionStore = new Store<CollectionState>(
 );
 
 export const collectionActions = {
+  replaceRequest: (oldRequestId: string, newRequest: CollectionRequest) => {
+    collectionStore.setState((state) => {
+      const updatedOpened = state.openedRequests.map((r) =>
+        r.id === oldRequestId ? newRequest : r
+      );
+
+      const updatedUnsaved = new Set(state.unsavedChanges);
+      updatedUnsaved.delete(oldRequestId);
+
+      return {
+        ...state,
+        openedRequests: updatedOpened,
+        unsavedChanges: updatedUnsaved,
+        activeRequest:
+          state.activeRequest?.id === oldRequestId
+            ? newRequest
+            : state.activeRequest,
+      };
+    });
+  },
+
   updateOpenedRequest: (updatedRequest: CollectionRequest) => {
     collectionStore.setState((state) => ({
       ...state,
@@ -92,6 +123,65 @@ export const collectionActions = {
         openedRequests: updatedOpened,
         unsavedChanges: updatedUnsaved,
         activeRequest: newActiveRequest,
+      };
+    });
+  },
+
+  openMultipleRequests: (requests: CollectionRequest[]) => {
+    collectionStore.setState((state) => {
+      const openedIds = new Set(state.openedRequests.map((r) => r.id));
+      const newRequests = requests.filter((r) => !openedIds.has(r.id));
+      const updatedOpenedRequests = [...state.openedRequests, ...newRequests];
+      const newActiveRequest = state.activeRequest || requests[0] || null;
+
+      return {
+        ...state,
+        openedRequests: updatedOpenedRequests,
+        activeRequest: newActiveRequest,
+      };
+    });
+  },
+
+  openAllCollectionRequests: (collectionId: string) => {
+    collectionStore.setState((state) => {
+      const collection = state.collections.find((c) => c.id === collectionId);
+      if (!collection) return state;
+
+      const getAllRequests = (
+        requests: CollectionRequest[] = [],
+        folders: any[] = []
+      ): CollectionRequest[] => {
+        let allRequests = [...requests];
+        folders.forEach((folder) => {
+          if (folder.requests) {
+            allRequests = [...allRequests, ...folder.requests];
+          }
+          if (folder.folders) {
+            allRequests = [
+              ...allRequests,
+              ...getAllRequests([], folder.folders),
+            ];
+          }
+        });
+        return allRequests;
+      };
+
+      const allRequests = getAllRequests(
+        collection.requests || [],
+        (collection as any).folders || []
+      );
+
+      if (allRequests.length === 0) return state;
+
+      const openedIds = new Set(state.openedRequests.map((r) => r.id));
+      const newRequests = allRequests.filter((r) => !openedIds.has(r.id));
+      const updatedOpenedRequests = [...state.openedRequests, ...newRequests];
+
+      return {
+        ...state,
+        openedRequests: updatedOpenedRequests,
+        activeRequest: allRequests[0],
+        activeCollection: collection,
       };
     });
   },
@@ -320,6 +410,42 @@ export const collectionActions = {
       ...state,
       error,
       isLoading: false,
+    }));
+  },
+
+  openSanitizeTestRunner: (collectionId: string) => {
+    console.log(
+      '[v0] openSanitizeTestRunner called with collectionId:',
+      collectionId
+    );
+    collectionStore.setState((state) => {
+      console.log(
+        '[v0] Current sanitizeTestRunner state:',
+        state.sanitizeTestRunner
+      );
+      const newState = {
+        ...state,
+        sanitizeTestRunner: {
+          isOpen: true,
+          collectionId,
+        },
+      };
+      console.log(
+        '[v0] New sanitizeTestRunner state:',
+        newState.sanitizeTestRunner
+      );
+      return newState;
+    });
+  },
+
+  closeSanitizeTestRunner: () => {
+    console.log('[v0] closeSanitizeTestRunner called');
+    collectionStore.setState((state) => ({
+      ...state,
+      sanitizeTestRunner: {
+        isOpen: false,
+        collectionId: null,
+      },
     }));
   },
 };

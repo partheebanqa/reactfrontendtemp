@@ -57,13 +57,27 @@ export const createEnvironment = async (environment: {
   defaultVariables?: any[];
   workspaceId: string;
 }): Promise<ResponseEnvironment> => {
-  const response = await apiRequest('POST', API_ENVIRONMENT, {
-    body: JSON.stringify(environment),
-  });
-  if (!response.ok) {
+  try {
+    const response = await apiRequest('POST', API_ENVIRONMENT, {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(environment),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to create environment: ${response.statusText}`);
+    }
+
+    const data: ResponseEnvironment = await response.json();
+    return data;
+  } catch (error: unknown) {
+    console.error('Error creating environment:', error);
+    if (error instanceof Error) {
+      throw new Error(error.message || 'Failed to create environment');
+    }
     throw new Error('Failed to create environment');
   }
-  return response.json();
 };
 
 export const updateEnvironment = async (environment): Promise<Environment> => {
@@ -71,6 +85,9 @@ export const updateEnvironment = async (environment): Promise<Environment> => {
     'PUT',
     `${API_ENVIRONMENT}/${environment.id}`,
     {
+      headers: {
+        'Content-Type': 'application/json',
+      },
       body: JSON.stringify(environment),
     }
   );
@@ -89,25 +106,39 @@ export const deleteEnvironment = async (environmentId: string) => {
 };
 
 export const createVariable = async (variable: any): Promise<any> => {
-  const url =
-    variable.type === 'static'
-      ? `${API_VARIABLES}`
-      : `${API_VARIABLES_NEW}/dynamic`;
+  try {
+    const url =
+      variable.type === 'static'
+        ? `${API_VARIABLES}`
+        : `${API_VARIABLES_NEW}/dynamic`;
 
-  const response = await apiRequest('POST', url, {
-    body: JSON.stringify(variable),
-  });
+    const response = await apiRequest('POST', url, {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(variable),
+    });
 
-  if (!response.ok) {
+    if (!response.ok) {
+      throw new Error(`Failed to create variable: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error: unknown) {
+    console.error('Error creating variable:', error);
+    if (error instanceof Error) {
+      throw new Error(error.message || 'Failed to create variable');
+    }
     throw new Error('Failed to create variable');
   }
-
-  return response.json();
 };
 
 export const updateVariable = async (variable: any): Promise<any> => {
-  // Replace with your actual variable type
   const response = await apiRequest('PUT', `${API_VARIABLES}/${variable.id}`, {
+    headers: {
+      'Content-Type': 'application/json',
+    },
     body: JSON.stringify(variable),
   });
   if (!response.ok) {
@@ -121,6 +152,9 @@ export const updateDynamicVariable = async (variable: any): Promise<any> => {
     'PUT',
     `${API_VARIABLES_NEW}/dynamic/${variable.id}`,
     {
+      headers: {
+        'Content-Type': 'application/json',
+      },
       body: JSON.stringify(variable),
     }
   );

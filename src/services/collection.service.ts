@@ -34,6 +34,9 @@ export const fetchCollectionList = async (workspaceId: string) => {
 export const addCollection = async (collection: CreateCollection) => {
   try {
     const response = await apiRequest('POST', API_COLLECTIONS, {
+      headers: {
+        'Content-Type': 'application/json',
+      },
       body: JSON.stringify(collection),
     });
     if (!response.ok) {
@@ -56,10 +59,12 @@ export const setFavouriteCollection = async ({
   try {
     const response = await apiRequest(
       'PUT',
-      `${API_COLLECTIONS}/${collectionId}/mark-important`
-      // {
-      //   body: JSON.stringify({ IsImportant }),
-      // }
+      `${API_COLLECTIONS}/${collectionId}/mark-important`,
+      {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }
     );
     if (!response.ok) {
       throw new Error('Failed to update collection');
@@ -74,7 +79,12 @@ export const setFavouriteCollection = async ({
 export const unsetFavouriteCollection = async (collectionId: string) => {
   const response = await apiRequest(
     'PUT',
-    `${API_COLLECTIONS}/${collectionId}/mark-not-important`
+    `${API_COLLECTIONS}/${collectionId}/mark-not-important`,
+    {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    }
   );
   return response;
 };
@@ -112,19 +122,16 @@ export const getCollectionRequests = async (collectionId: string) => {
       name: folder.Name || folder.name,
       createdAt: folder.CreatedAt || folder.createdAt,
       updatedAt: folder.UpdatedAt || folder.updatedAt,
-      // requests inside this folder
       requests: (folder.Requests || folder.requests || []).map((r: any) =>
         formatRequest(r)
       ),
-      // nested folders (if present)
       folders: (folder.Folders || folder.folders || []).map(mapFolder),
     });
-
     const normalized = {
       folders: (data?.Folders || data?.folders || []).map(mapFolder),
       requests: (data?.Requests || data?.requests || []).map((r: any) =>
         formatRequest(r)
-      ), // root-level requests (no folderId)
+      ),
     };
 
     return normalized;
@@ -142,6 +149,9 @@ export const renameCollection = async ({
 }) => {
   try {
     const response = await apiRequest('PUT', `${API_COLLECTIONS}/${id}`, {
+      headers: {
+        'Content-Type': 'application/json',
+      },
       body: JSON.stringify({ name: name }),
     });
     if (!response.ok) {
@@ -172,31 +182,23 @@ export const importCollectionFile = async (
   importCollection: ImportCollection
 ) => {
   try {
-    // If input method is file, use FormData to properly handle file uploads
     if (importCollection.inputMethod === 'file' && importCollection.file) {
       const formData = new FormData();
 
-      // Add all fields to the form data
       formData.append('name', importCollection.name || '');
       formData.append('workspaceId', importCollection.workspaceId);
       formData.append('inputMethod', importCollection.inputMethod);
       formData.append('specificationType', importCollection.specificationType);
       formData.append('file', importCollection.file);
 
-      // For completeness, include these if provided
       if (importCollection.url) formData.append('url', importCollection.url);
 
       const response = await apiRequest('POST', API_COLLECTION_IMPORT, {
         body: formData,
-        headers: {
-          // Let the browser set the correct content-type with boundary
-          // "content-type": "multipart/form-data; boundary=X-INSOMNIA-BOUNDARY",
-        },
       });
 
       return response;
     } else {
-      // For raw or URL imports, use JSON payload
       const response = await apiRequest('POST', API_COLLECTION_IMPORT, {
         body: JSON.stringify(importCollection),
         headers: {
@@ -230,9 +232,10 @@ export const useImpotCollectionJsonMutation = async (
 
 export const addRequest = async (requestData: any) => {
   try {
-    console.log('addrequest:', requestData);
-
     const response = await apiRequest('POST', API_COLLECTION_REQUESTS, {
+      headers: {
+        'Content-Type': 'application/json',
+      },
       body: JSON.stringify(requestData),
     });
 
@@ -272,14 +275,21 @@ export const duplicateRequest = async ({
   try {
     const response = await apiRequest(
       'POST',
-      `${API_COLLECTION_REQUESTS}/${requestId}/duplicate`
+      `${API_COLLECTION_REQUESTS}/${requestId}/duplicate`,
+      {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }
     );
+
     if (!response.ok) {
       throw new Error('Failed to duplicate request');
     }
+
     const data = await response.json();
     return formatRequest(data);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error duplicating request:', error);
     throw error;
   }
@@ -301,6 +311,9 @@ export const renameRequest = async ({
       'PUT',
       `${API_COLLECTION_REQUESTS}/${requestId}`,
       {
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body:
           newName || folderId
             ? JSON.stringify({
@@ -334,6 +347,9 @@ export const updateRequest = async ({
       'PUT',
       `${API_COLLECTION_REQUESTS}/${requestId}`,
       {
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify(requestData),
       }
     );
@@ -366,8 +382,7 @@ export const formatRequest = (request: any) => {
     authorization: request.Authorization || request.authorization || {},
     headers: request.Headers || request.headers || [],
     params: request.Params || request.params || [],
-    variables: request.Variables || request.variables || {},
-    variable: request.Variable || request.variable || {},
+    variable: request.Variable || request.variable || [],
     assertions: request.Assertions || request.assertions || [],
     createdBy: request.CreatedBy || request.createdBy,
     createdAt: request.CreatedAt || request.createdAt,

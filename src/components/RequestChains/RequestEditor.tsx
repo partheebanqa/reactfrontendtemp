@@ -41,6 +41,8 @@ import {
   XCircle,
   Shuffle,
   Edit3,
+  Info,
+  HelpCircle,
 } from 'lucide-react';
 import type {
   APIRequest,
@@ -65,7 +67,7 @@ import {
   getVariablesByPrefix,
   detectAutocompletePrefix,
   calculateAutocompletePosition,
-  type DynamicVariableOverride, // Removed redeclaration of Variable
+  type DynamicVariableOverride,
   type AutocompleteState,
 } from '@/lib/request-utils';
 import { Controlled as CodeMirror } from 'react-codemirror2';
@@ -73,8 +75,14 @@ import 'codemirror/lib/codemirror.css';
 import 'codemirror/theme/material.css';
 import 'codemirror/mode/javascript/javascript';
 import './../RequestBuilder/RequestEditor/whiteorange.css';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '../ui/tooltip';
+import { VariableHelpDialog } from './HelpTextDialougs/variablesUseDialogues';
 
-// Define Variable interface here as it's used in the props and functions
 interface Variable {
   id: string;
   name: string;
@@ -110,12 +118,6 @@ interface KeyValuePair {
   description?: string;
 }
 
-// Removed redeclaration of DynamicVariableOverride
-// interface DynamicVariableOverride {
-//   name: string
-//   value: string | number
-// }
-
 export function RequestEditor({
   request,
   onUpdate,
@@ -133,6 +135,8 @@ export function RequestEditor({
   chainVariables = [],
 }: RequestEditorProps) {
   const [isJsonOpen, setIsJsonOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
+
   const [activeTab, setActiveTab] = useState<
     'params' | 'headers' | 'body' | 'auth' | 'settings'
   >('params');
@@ -140,6 +144,10 @@ export function RequestEditor({
   const [executionResult, setExecutionResult] = useState<ExecutionLog | null>(
     null
   );
+  const [showVariablesPopup, setShowVariablesPopup] = useState(false);
+  const variablesPopupRef = useRef<HTMLDivElement>(null);
+
+  const [searchText, setSearchText] = useState('');
 
   const { variables: storeVariables, dynamicVariables } =
     useDataManagementStore();
@@ -220,17 +228,26 @@ export function RequestEditor({
       password: request.authPassword || '',
       token: request.authToken || '',
     });
-
-    if (!request.bodyType || request.bodyType === 'none') {
-      onUpdate({ bodyType: 'raw' });
-    }
-    // </CHANGE>
   }, [request.id]); // Only update when request ID changes to avoid infinite loops
 
   const dynamicStructured = mapDynamicToStatic(
     dynamicVariables,
     dynamicOverrides
   );
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        variablesPopupRef.current &&
+        !variablesPopupRef.current.contains(event.target as Node)
+      ) {
+        setShowVariablesPopup(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const getUsedDynamicVariables = () => {
     const allTextFields = [
@@ -495,12 +512,10 @@ export function RequestEditor({
     const currentValue = input.value;
     const cursorPos = autocompleteState.cursorPosition;
 
-    // Replace D_ or S_ with the selected variable name
     const beforePrefix = currentValue.substring(0, cursorPos - 2);
     const afterCursor = currentValue.substring(cursorPos);
     const newValue = beforePrefix + variable.name + afterCursor;
 
-    // Find which field this input belongs to and update the corresponding state
     const inputName =
       input.getAttribute('name') || input.getAttribute('data-field');
 
@@ -535,12 +550,10 @@ export function RequestEditor({
     } else if (inputName === 'auth-token') {
       setAuth((prev) => ({ ...prev, token: newValue }));
     } else {
-      // Fallback: directly update input value and dispatch event
       input.value = newValue;
       input.dispatchEvent(new Event('input', { bubbles: true }));
     }
 
-    // Set cursor position after the inserted variable name
     const newCursorPos = beforePrefix.length + variable.name.length;
     setTimeout(() => {
       input.setSelectionRange(newCursorPos, newCursorPos);
@@ -594,7 +607,7 @@ export function RequestEditor({
     request,
     parentExtractedVariables,
     chainVariables,
-    url, // Include state variables that affect processed request
+    url,
     body,
     headers,
     params,
@@ -602,7 +615,7 @@ export function RequestEditor({
   ]);
 
   const getPreviewUrl = (variables: Variable[]) => {
-    const replacedUrl = replaceVariables(url, variables); // Use state variable
+    const replacedUrl = replaceVariables(url, variables);
     const baseUrl = environmentBaseUrl?.trim();
     if (!baseUrl) return replacedUrl;
     try {
@@ -783,7 +796,6 @@ export function RequestEditor({
     let newValue: string | number | boolean = '';
 
     switch (dynamicVar.generatorId) {
-      // Identity
       case 'firstName':
         newValue = fakeFirstName();
         break;
@@ -912,7 +924,6 @@ export function RequestEditor({
         newValue = '';
     }
 
-    // ---------- Apply ----------
     updateDynamicOverride(variableName, newValue);
   };
 
@@ -978,11 +989,11 @@ export function RequestEditor({
       extractVariables: request.extractVariables ?? [],
       headers: request.headers ?? [],
       params: request.params ?? [],
-      url: url, // Use state variable for URL
-      body: body, // Use state variable for body
-      authToken: auth.token, // Use state variable for auth token
-      authUsername: auth.username, // Use state variable for auth username
-      authPassword: auth.password, // Use state variable for auth password
+      url: url,
+      body: body,
+      authToken: auth.token,
+      authUsername: auth.username,
+      authPassword: auth.password,
     };
 
     {
@@ -1030,6 +1041,9 @@ export function RequestEditor({
     setIsExecuting(true);
     try {
       const startTime = Date.now();
+      (safeRequest as any).headers = (safeRequest.headers ?? []).filter(
+        (h) => h.key?.trim() && h.value?.trim()
+      );
       const payload = buildRequestPayload(safeRequest, allVariables);
       const previewUrl = getPreviewUrl(allVariables);
       payload.request.url = previewUrl;
@@ -1096,6 +1110,7 @@ export function RequestEditor({
         variant: log.status === 'success' ? 'default' : 'destructive',
       });
     } catch (error) {
+      console.log('error888:', error);
       const endTime = Date.now();
       const errorLog: ExecutionLog = {
         id: Date.now().toString(),
@@ -1586,7 +1601,6 @@ export function RequestEditor({
   };
 
   const DynamicVariablesPanel = () => {
-    // Only show if there are used dynamic variables
     if (usedDynamicVariables.length === 0) return null;
 
     return (
@@ -1774,33 +1788,130 @@ export function RequestEditor({
 
         {/* Tabs */}
         <div className='border-b border-gray-200'>
-          <nav className='flex space-x-8 px-6'>
-            {tabs.map((tab) => {
-              const Icon = tab.icon;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id as typeof activeTab)}
-                  className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors flex items-center space-x-2 ${
-                    activeTab === tab.id
-                      ? 'border-blue-500 text-[#136fb0]'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
+          <div className='flex items-center justify-between px-6 relative'>
+            {/* Tabs */}
+            <nav className='flex space-x-8'>
+              {tabs.map((tab) => {
+                const Icon = tab.icon;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id as typeof activeTab)}
+                    className={`pt-4 pb-2 px-1 border-b-2 font-medium text-sm transition-colors flex items-center space-x-2 ${
+                      activeTab === tab.id
+                        ? 'border-blue-500 text-[#136fb0]'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    <Icon className='w-4 h-4' />
+                    <span>{tab.label}</span>
+                    {tab.id === 'tests' &&
+                      request.testScripts &&
+                      request.testScripts.length > 0 && (
+                        <span className='ml-1 px-2 py-1 text-xs bg-blue-100 text-blue-600 rounded-full'>
+                          {request.testScripts.length}
+                        </span>
+                      )}
+                  </button>
+                );
+              })}
+            </nav>
+
+            {/* Wrap popup + button in relative container */}
+            <div className='relative'>
+              {showVariablesPopup && (
+                <div
+                  ref={variablesPopupRef}
+                  className='absolute right-0 top-10 bg-white shadow-lg rounded-lg z-50 w-80 border border-gray-200'
                 >
-                  <Icon className='w-4 h-4' />
-                  <span>{tab.label}</span>
-                  {tab.id === 'tests' &&
-                    request.testScripts &&
-                    request.testScripts.length > 0 && (
-                      <span className='ml-1 px-2 py-1 text-xs bg-blue-100 text-blue-600 rounded-full'>
-                        {request.testScripts.length}
-                      </span>
-                    )}
-                </button>
-              );
-            })}
-          </nav>
+                  {/* Search */}
+                  <div className='p-2 border-b'>
+                    <input
+                      type='text'
+                      className='w-full px-3 py-1.5 rounded-md border border-gray-300 
+                focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm'
+                      placeholder='Search variables...'
+                      autoComplete='off'
+                      autoCorrect='off'
+                      spellCheck={false}
+                      value={searchText}
+                      onChange={(e) => setSearchText(e.target.value)}
+                    />
+                  </div>
+
+                  {/* List */}
+                  <div className='max-h-60 overflow-y-auto'>
+                    {getAllAvailableVariables()
+                      .filter(
+                        (item) =>
+                          (item.name.startsWith('S_') ||
+                            item.name.startsWith('D_')) &&
+                          item.name
+                            .toLowerCase()
+                            .includes(searchText.toLowerCase())
+                      )
+                      .map((item) => (
+                        <div
+                          key={item.id}
+                          className='w-full flex justify-between items-center px-3 py-2 
+                    text-sm border-b border-gray-100 hover:bg-blue-50 transition-colors'
+                          onClick={() => setShowVariablesPopup(false)}
+                        >
+                          <span className='text-gray-800 font-mono'>
+                            {item.name}
+                          </span>
+
+                          <div className='flex items-center space-x-2'>
+                            <span className='text-gray-500 truncate max-w-[120px]'>
+                              {item?.currentValue}
+                            </span>
+
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigator.clipboard.writeText(
+                                  `{{${item.name}}}`
+                                );
+                                setShowVariablesPopup(false);
+                              }}
+                              className='p-1 hover:text-blue-600 transition-colors'
+                              title='Copy variable'
+                            >
+                              <Copy className='w-4 h-4' />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Variables button */}
+              <div className='flex items-center gap-2'>
+                <Button onClick={() => setShowVariablesPopup((prev) => !prev)}>
+                  Variables
+                </Button>
+
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <HelpCircle
+                        size={16}
+                        strokeWidth={1.5}
+                        onClick={() => setHelpOpen(true)}
+                        className='cursor-pointer'
+                      />
+                    </TooltipTrigger>
+                    <TooltipContent>How to use variables</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+            </div>
+          </div>
         </div>
+
+        <VariableHelpDialog open={helpOpen} onOpenChange={setHelpOpen} />
+
         {/* Tab Content */}
         <div className='p-2'>
           {activeTab === 'params' && (
@@ -2137,25 +2248,24 @@ export function RequestEditor({
                   <input
                     type='text'
                     name='auth-token'
+                    autoComplete='off'
+                    autoCorrect='off'
+                    autoCapitalize='off'
+                    spellCheck={false}
                     value={auth.token}
                     onChange={(e) =>
-                      handleInputChange(e, (value) =>
-                        setAuth((prev) => ({ ...prev, token: value }))
-                      )
+                      setAuth((prev) => ({ ...prev, token: e.target.value }))
+                    }
+                    onBlur={(e) =>
+                      setAuth((prev) => ({
+                        ...prev,
+                        token: e.target.value.trim(),
+                      }))
                     }
                     onKeyUp={(e) => handleAutocomplete(e)}
                     className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
                     placeholder='Enter bearer token or use {{tokenVariable}}'
                   />
-                  {(processedRequest.authorization?.token ||
-                    processedRequest.authToken) !==
-                    (request.authorization?.token || request.authToken) && (
-                    <div className='mt-1 px-2 py-1 bg-blue-50 border border-blue-200 rounded text-xs font-mono'>
-                      Processed:{' '}
-                      {processedRequest.authorization?.token ||
-                        processedRequest.authToken}
-                    </div>
-                  )}
                 </div>
               </div>
             </div>

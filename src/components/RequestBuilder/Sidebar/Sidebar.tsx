@@ -17,13 +17,14 @@ import {
   X,
   Save,
   Copy,
-  FileJson2,
   Search,
+  FlaskConical,
+  Zap,
 } from 'lucide-react';
 import { useCollection } from '@/hooks/useCollection';
 import { useWorkspace } from '@/hooks/useWorkspace';
 import type { Collection, CollectionRequest } from '@/shared/types/collection';
-import { useToast } from '@/hooks/useToast';
+import { useToast } from '@/hooks/use-toast';
 import ImportModal from '../ImportModal';
 import { useRequest } from '@/hooks/useRequest';
 import TooltipContainer from '@/components/ui/tooltip-container';
@@ -32,7 +33,12 @@ import AddFolderModal from '../AddFolder/addFolderModel';
 import RenameFolderModal from '../AddFolder/rename-folder-modal';
 import DeleteFolderModal from '../AddFolder/delete-folder-modal';
 import { Input } from '@/components/ui/input';
-import { TooltipProvider } from '@/components/ui/tooltip';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { useAddFolder } from '@/hooks/use-folder';
 import { renameFolder, deleteFolder } from '@/services/folder.service';
 import { collectionActions } from '@/store/collectionStore';
@@ -57,10 +63,16 @@ const Sidebar: React.FC = () => {
     renameRequestMutation,
     deleteCollectionMutation,
     handleCreateRequest,
+    handleOpenAllCollectionRequests,
+    openedRequests,
+    closeRequest,
   } = useCollection();
   const { setResponseData } = useRequest();
   const { toast, error: showError } = useToast();
   const [showCollectionModal, setShowCollectionModal] = useState(false);
+  const [selectedCollection, setSelectedCollection] =
+    useState<Collection | null>(null);
+
   const [showImportModal, setShowImportModal] = useState(false);
   const [showMenu, setShowMenu] = useState<string | null>(null);
   const [menuPosition, setMenuPosition] = useState<{
@@ -68,15 +80,14 @@ const Sidebar: React.FC = () => {
     left: number;
     anchorTop?: number;
   } | null>(null);
-  const [selectedCollection, setSelectedCollection] =
-    useState<Collection | null>(null);
+
   const [selectedRequest, setSelectedRequest] =
     useState<CollectionRequest | null>(null);
   const [showRequestRenameModal, setShowRequestRenameModal] = useState(false);
   const [renameValue, setRenameValue] = useState('');
   const [requestId, setRequestId] = useState('');
   const menuRef = useRef<HTMLDivElement>(null);
-  const [requstIndex, setRequestIndex] = useState<number | null>(null);
+  const [requestIndex, setRequestIndex] = useState<number | null>(null);
 
   const [showAddFolderModal, setShowAddFolderModal] = useState(false);
   const [showRenameFolderModal, setShowRenameFolderModal] = useState(false);
@@ -98,6 +109,7 @@ const Sidebar: React.FC = () => {
     setActiveCollection(parentCollection);
     setActiveRequest(req);
     collectionActions.openRequest(req);
+    collectionActions.closeSanitizeTestRunner();
   };
 
   useEffect(() => {
@@ -209,6 +221,80 @@ const Sidebar: React.FC = () => {
     }
   };
 
+  const handleDeleteNewRequest = (index: number) => {
+    if (index == null || !selectedRequest?.id) {
+      console.log('[v0] Cannot delete: index or selectedRequest.id missing');
+      return;
+    }
+
+    console.log('[v0] Deleting temp request:', selectedRequest.id);
+    console.log('[v0] selectedCollection:', selectedCollection);
+    console.log('[v0] selectedFolder:', selectedFolder);
+    console.log('[v0] index:', index);
+
+    const remainingRequests = openedRequests.filter(
+      (req) => req.id !== selectedRequest.id
+    );
+    closeRequest(selectedRequest.id);
+
+    if (remainingRequests.length > 0) {
+      const lastRequest = remainingRequests[remainingRequests.length - 1];
+      setActiveRequest(lastRequest);
+    } else {
+      setActiveRequest(null);
+    }
+
+    if (selectedFolder?.id) {
+      console.log('[v0] Deleting from folder:', selectedFolder.id);
+      setCollection(
+        collections.map((col) =>
+          col.id === selectedCollection?.id
+            ? {
+                ...col,
+                requests: col.requests,
+                folders: removeRequestAtIndexFromFolderTree(
+                  (col as any).folders || [],
+                  selectedFolder.id,
+                  index
+                ),
+              }
+            : col
+        )
+      );
+    } else if (selectedCollection) {
+      console.log(
+        '[v0] Deleting from root collection, filtering out index:',
+        index
+      );
+      console.log(
+        '[v0] Current requests count:',
+        selectedCollection.requests?.length
+      );
+
+      const updatedCollections = collections.map((col) =>
+        col.id === selectedCollection.id
+          ? {
+              ...col,
+              requests: col.requests.filter((_, i) => i !== index),
+            }
+          : col
+      );
+
+      console.log(
+        '[v0] Updated requests count:',
+        updatedCollections.find((c) => c.id === selectedCollection.id)?.requests
+          ?.length
+      );
+      setCollection(updatedCollections);
+    } else {
+      console.log('[v0] Neither folder nor collection found!');
+    }
+
+    setRequestIndex(null);
+    setShowMenu(null);
+    setMenuPosition(null);
+  };
+
   const handleDeleteRequest = async (requestId: string) => {
     try {
       await deleteRequestMutation.mutateAsync(requestId);
@@ -225,6 +311,35 @@ const Sidebar: React.FC = () => {
         description: 'Failed to delete the request. Please try again.',
         variant: 'destructive',
       });
+    }
+  };
+
+  const findRequestIndex = (requestId: string): number | null => {
+    if (!selectedCollection) return null;
+
+    if (selectedFolder?.id) {
+      // Find index in folder
+      const findInFolder = (folders: any[]): number | null => {
+        for (const folder of folders) {
+          if (folder.id === selectedFolder.id) {
+            return (
+              folder.requests?.findIndex((r: any) => r.id === requestId) ?? null
+            );
+          }
+          if (Array.isArray(folder.folders)) {
+            const result = findInFolder(folder.folders);
+            if (result !== null) return result;
+          }
+        }
+        return null;
+      };
+      return findInFolder((selectedCollection as any).folders || []);
+    } else {
+      // Find index in root requests
+      return (
+        selectedCollection.requests?.findIndex((r) => r.id === requestId) ??
+        null
+      );
     }
   };
 
@@ -566,43 +681,6 @@ const Sidebar: React.FC = () => {
     });
   };
 
-  const handleDeleteNewRequest = () => {
-    if (requstIndex == null) return;
-
-    if (selectedFolder?.id) {
-      setCollection(
-        collections.map((col) =>
-          col.id === selectedCollection?.id
-            ? {
-                ...col,
-                requests: col.requests,
-                folders: removeRequestAtIndexFromFolderTree(
-                  (col as any).folders || [],
-                  selectedFolder.id,
-                  requstIndex
-                ),
-              }
-            : col
-        )
-      );
-    } else if (selectedCollection) {
-      setCollection(
-        collections.map((col) =>
-          col.id === selectedCollection.id
-            ? {
-                ...col,
-                requests: col.requests.filter(
-                  (_, index) => index !== requstIndex
-                ),
-              }
-            : col
-        )
-      );
-    }
-
-    setRequestIndex(null);
-  };
-
   const handleClose = () => {
     setShowCollectionModal(false);
     setSelectedCollection(null);
@@ -720,9 +798,16 @@ const Sidebar: React.FC = () => {
                   >
                     {request.method}
                   </span>
-                  <span className='text-sm text-gray-900 dark:text-white truncate min-w-0'>
-                    {request.name}
-                  </span>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className='text-sm text-gray-900 dark:text-white truncate min-w-0 max-w-[150px]'>
+                          {request.name}
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent side='top'>{request.name}</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </div>
 
                 <div className='flex items-center opacity-0 group-hover:opacity-100 transition-opacity relative'>
@@ -835,22 +920,26 @@ const Sidebar: React.FC = () => {
                           <ChevronRight className='h-4 w-4 text-gray-500' />
                         )}
                         <Folder className='h-4 w-4 text-orange-500' />
-                        <TooltipContainer text={collection.name}>
-                          <span
-                            className='text-sm font-medium text-gray-900 dark:text-white truncate max-w-[120px] inline-block align-bottom'
-                            style={{
-                              textOverflow: 'ellipsis',
-                              overflow: 'hidden',
-                              whiteSpace: 'nowrap',
-                              verticalAlign: 'bottom',
-                            }}
-                          >
-                            {collection.name}
-                            {collection.name.length > 18 && (
-                              <span>&nbsp;…</span>
-                            )}
-                          </span>
-                        </TooltipContainer>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span
+                                className='text-sm font-medium text-gray-900 dark:text-white truncate max-w-[120px] inline-block align-bottom'
+                                style={{
+                                  textOverflow: 'ellipsis',
+                                  overflow: 'hidden',
+                                  whiteSpace: 'nowrap',
+                                  verticalAlign: 'bottom',
+                                }}
+                              >
+                                {collection.name}
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent side='top'>
+                              {collection.name}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       </div>
 
                       <div className='flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity relative'>
@@ -932,9 +1021,18 @@ const Sidebar: React.FC = () => {
                                   >
                                     {request.method}
                                   </span>
-                                  <span className='text-sm text-gray-900 dark:text-white truncate min-w-0'>
-                                    {request.name}
-                                  </span>
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <span className='text-sm text-gray-900 dark:text-white truncate min-w-0 max-w-[150px]'>
+                                          {request.name}
+                                        </span>
+                                      </TooltipTrigger>
+                                      <TooltipContent side='top'>
+                                        {request.name}
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
                                 </div>
                                 <div className='flex items-center opacity-0 group-hover:opacity-100 transition-opacity relative'>
                                   <button
@@ -1084,7 +1182,7 @@ const Sidebar: React.FC = () => {
                       }
                     }}
                     disabled={addingFolder}
-                    className='flex items-center w-full px-4 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50'
+                    className='flex items-center w-full px-4 py-2 text-sm text-gray-900 dark:text-white text-left hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50'
                   >
                     <FolderPlus className='h-4 w-4 mr-2' />
                     Add Folder
@@ -1094,14 +1192,39 @@ const Sidebar: React.FC = () => {
                     onClick={() => {
                       if (selectedCollection)
                         handleCreateRequest(selectedCollection);
+                      collectionActions.closeSanitizeTestRunner();
                       setShowMenu(null);
                       setMenuPosition(null);
                     }}
-                    className='flex items-center w-full px-4 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
+                    className='flex items-center w-full px-4 py-2 text-sm text-gray-900 dark:text-white text-left hover:bg-gray-100 dark:hover:bg-gray-700'
                   >
                     <Plus className='h-4 w-4 mr-2' />
                     Add Request
                   </button>
+
+                  <div className='border-t border-gray-200 dark:border-gray-700 my-1'></div>
+
+                  <button
+                    onClick={async () => {
+                      if (selectedCollection) {
+                        await fetchCollectionRequests.mutateAsync(
+                          selectedCollection.id
+                        );
+                        collectionActions.openSanitizeTestRunner(
+                          selectedCollection.id
+                        );
+                      }
+                      setShowMenu(null);
+                      setMenuPosition(null);
+                    }}
+                    className='flex items-center w-full px-4 py-2 text-sm text-gray-900 dark:text-white text-left hover:bg-gray-100 dark:hover:bg-gray-700'
+                  >
+                    <Zap className='h-4 w-4 mr-2' />
+                    Quick Test
+                  </button>
+
+                  <div className='border-t border-gray-200 dark:border-gray-700 my-1'></div>
+
                   <button
                     onClick={() => {
                       if (selectedCollection)
@@ -1109,35 +1232,22 @@ const Sidebar: React.FC = () => {
                       setShowMenu(null);
                       setMenuPosition(null);
                     }}
-                    className='flex items-center w-full px-4 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
+                    className='flex items-center w-full px-4 py-2 text-sm text-gray-900 dark:text-white text-left hover:bg-gray-100 dark:hover:bg-gray-700'
                   >
                     <Edit className='h-4 w-4 mr-2' />
                     Rename
                   </button>
+
                   <button
-                    className='flex items-center w-full px-4 py-2 text-sm text-left text-red-500 hover:bg-gray-100 dark:hover:bg-gray-700'
                     onClick={() => {
                       handleDeleteCollection();
                       setShowMenu(null);
                       setMenuPosition(null);
                     }}
+                    className='flex items-center w-full px-4 py-2 text-sm text-red-500 dark:text-red-400 text-left hover:bg-gray-100 dark:hover:bg-gray-700'
                   >
                     <Trash2 className='h-4 w-4 mr-2' />
                     Delete
-                  </button>
-                  <div className='border-t border-gray-200 dark:border-gray-700 my-1'></div>
-                  <button
-                    className='flex items-center w-full px-4 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (selectedCollection)
-                        handleExportCollection(selectedCollection);
-                      setShowMenu(null);
-                      setMenuPosition(null);
-                    }}
-                  >
-                    <FileJson2 className='h-4 w-4 mr-2' />
-                    Export
                   </button>
                 </div>
               )}
@@ -1169,10 +1279,43 @@ const Sidebar: React.FC = () => {
                   <button
                     className='flex items-center w-full px-4 py-2 text-sm text-left text-red-500 hover:bg-gray-100 dark:hover:bg-gray-700'
                     onClick={() => {
-                      if (selectedRequest.id) {
+                      console.log(
+                        '[v0] Delete button clicked, selectedRequest:',
+                        selectedRequest
+                      );
+                      const isTempRequest =
+                        selectedRequest?.id?.startsWith('temp-');
+                      console.log('[v0] Is temp request:', isTempRequest);
+
+                      if (isTempRequest) {
+                        const index = findRequestIndex(
+                          selectedRequest.id || ''
+                        );
+                        console.log('[v0] Found request index:', index);
+
+                        if (index !== null) {
+                          handleDeleteNewRequest(index);
+                        } else {
+                          console.log(
+                            '[v0] Could not find request index, using fallback'
+                          );
+                          // Fallback: just close the request without removing from collection
+                          closeRequest(selectedRequest.id || '');
+                          const remainingRequests = openedRequests.filter(
+                            (req) => req.id !== selectedRequest.id
+                          );
+                          if (remainingRequests.length > 0) {
+                            const lastRequest =
+                              remainingRequests[remainingRequests.length - 1];
+                            setActiveRequest(lastRequest);
+                          } else {
+                            setActiveRequest(null);
+                          }
+                        }
+                      } else if (selectedRequest?.id) {
                         handleDeleteRequest(selectedRequest.id);
                       } else {
-                        handleDeleteNewRequest();
+                        console.log('[v0] No request ID found');
                       }
                       setShowMenu(null);
                       setMenuPosition(null);
@@ -1206,6 +1349,7 @@ const Sidebar: React.FC = () => {
                           selectedCollection,
                           selectedFolder.id
                         );
+                        collectionActions.closeSanitizeTestRunner();
                         setShowMenu(null);
                         setMenuPosition(null);
                       }}
@@ -1316,7 +1460,7 @@ const Sidebar: React.FC = () => {
                 variant: 'success',
               });
             } catch (err) {
-              console.error('[v0] deleteFolder error:', err);
+              console.error('deleteFolder error:', err);
               toast({
                 title: 'Error',
                 description: 'Failed to delete folder. Please try again.',
