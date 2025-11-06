@@ -1,10 +1,6 @@
-import { API_REPORTS } from "@/config/apiRoutes";
-import { ENV } from "@/config/env";
-import { apiRequest } from "@/lib/queryClient";
-
-
-
-
+import { API_REPORTS } from '@/config/apiRoutes';
+import { ENV } from '@/config/env';
+import { apiRequest } from '@/lib/queryClient';
 
 export const getWorkSpaceToken = async (workspaceId: string) => {
   const response = await apiRequest(
@@ -25,10 +21,10 @@ export const createWorkSpaceToken = async (workspaceId: string) => {
       'POST',
       `${ENV.API_BASE_URL}/${workspaceId}/api-key`,
       {
-        body: JSON.stringify({ workspaceId }), 
         headers: {
           'Content-Type': 'application/json',
         },
+        body: JSON.stringify({ workspaceId }),
       }
     );
 
@@ -36,8 +32,13 @@ export const createWorkSpaceToken = async (workspaceId: string) => {
       throw new Error(`Failed to execute request: ${response.statusText}`);
     }
 
-    return await response.json();
-  } catch (error: any) {
-    throw new Error(error.message || 'Failed to execute request');
+    const data = await response.json();
+    return data;
+  } catch (error: unknown) {
+    console.error('Error creating workspace token:', error);
+    if (error instanceof Error) {
+      throw new Error(error.message || 'Failed to execute request');
+    }
+    throw new Error('Failed to execute request');
   }
 };

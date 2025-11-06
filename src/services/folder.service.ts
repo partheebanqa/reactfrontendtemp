@@ -19,7 +19,6 @@ export interface Folder {
 export const addFolder = async ({
   collectionId,
   name,
-
   parentId,
 }: AddFolderInput): Promise<Folder> => {
   try {
@@ -27,18 +26,25 @@ export const addFolder = async ({
       'POST',
       `${API_COLLECTIONS}/${collectionId}/folders`,
       {
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({ name, parentId }),
       }
     );
 
     if (!response.ok) {
-      throw new Error('Failed to add folder');
+      throw new Error(`Failed to add folder: ${response.statusText}`);
     }
 
-    return await response.json();
-  } catch (error) {
+    const data: Folder = await response.json();
+    return data;
+  } catch (error: unknown) {
     console.error('Error adding folder:', error);
-    throw error;
+    if (error instanceof Error) {
+      throw new Error(error.message || 'Failed to add folder');
+    }
+    throw new Error('Failed to add folder');
   }
 };
 
@@ -54,6 +60,9 @@ export const renameFolder = async ({
       'PUT',
       `${API_COLLECTIONS}/folders/${folderId}`,
       {
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({ name }),
       }
     );

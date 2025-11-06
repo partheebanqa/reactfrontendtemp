@@ -22,60 +22,75 @@ interface IRequestOptions {
 export async function apiRequest(
   method: string,
   url: string,
-  options: IRequestOptions = {}
+  options?: IRequestOptions
 ): Promise<Response> {
   try {
+    // if (!validateCSPCompliance(url)) {
+    //   throw new Error(
+    //     `URL ${url} does not comply with Content Security Policy directives`
+    //   );
+    // }
+
     const cachedUserData = getEncryptedCookie(USER_COOKIE_NAME);
 
-    const headers: Record<string, string> = {
-      ...(options.headers || {}),
+    if (cachedUserData && cachedUserData.token) {
+      options = {
+        ...options,
+        headers: {
+          ...options?.headers,
+          Authorization: `Bearer ${cachedUserData.token}`,
+        },
+      };
+    }
+
+    // Create fetch options - don't modify the Content-Type header if it's multipart/form-data
+    // The browser will automatically set the correct boundary
+    const isMultipartFormData =
+      options?.headers?.['content-type']?.includes('multipart/form-data') ||
+      options?.headers?.['Content-Type']?.includes('multipart/form-data');
+
+    let fetchOptions: RequestInit = {
+      method,
+      headers: {},
     };
 
-    if (cachedUserData?.token) {
-      headers['Authorization'] = `Bearer ${cachedUserData.token}`;
-    }
-
-    const isMultipartFormData =
-      headers['Content-Type']?.includes('multipart/form-data') ||
-      headers['content-type']?.includes('multipart/form-data');
-
-    if (!isMultipartFormData && !headers['Content-Type']) {
-      headers['Content-Type'] = 'application/json';
-    }
-
-    let body: BodyInit | undefined;
-    if (options.body) {
+    // Handle body based on content type
+    if (options?.body) {
+      // For multipart/form-data, don't stringify the body and let the browser handle it
       if (isMultipartFormData) {
-        body = options.body;
-      } else if (typeof options.body === 'string') {
-        body = options.body;
+        fetchOptions.body = options.body;
+
+        // For multipart/form-data, don't set the Content-Type header manually
+        // The browser will set it with the correct boundary
+        const headers = { ...options?.headers };
+        if (headers['content-type']?.includes('multipart/form-data')) {
+          delete headers['content-type'];
+        }
+        if (headers['Content-Type']?.includes('multipart/form-data')) {
+          delete headers['Content-Type'];
+        }
+        fetchOptions.headers = headers;
       } else {
-        body = JSON.stringify(options.body);
+        fetchOptions.body = options.body;
+        fetchOptions.headers = { ...options?.headers };
       }
+    } else {
+      fetchOptions.headers = { ...options?.headers };
     }
 
-    const res = await fetch(url, {
-      method,
-      headers,
-      body,
-      credentials: 'include',
-    });
+    const res = await fetch(url, fetchOptions);
 
     if (res.status === 401) {
       removeCookie(USER_COOKIE_NAME);
       authActions.clearAuth();
     }
 
+    // Only throw for non-auth related errors to prevent login issues
     if (url !== API_LOGIN && !res.ok) {
-      const errorData = await res.json().catch(() => ({}));
-      throw new Error(
-        errorData?.error || errorData?.message || 'Request failed'
-      );
+      await throwIfResNotOk(res);
     }
-
     return res;
   } catch (error) {
-    console.error('apiRequest error:', error);
     throw error;
   }
 }
@@ -109,7 +124,7 @@ export const getQueryFn: <T>(options: {
       if (unauthorizedBehavior === 'throw') {
         throw error;
       }
-      return null;
+      return null; // Return null for 401 errors if configured to do so
     }
   };
 
