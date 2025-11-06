@@ -63,18 +63,26 @@ export const setPrimarySchema = async (varData: {
   try {
     const response = await apiRequest(
       'POST',
-      `${API_REQUEST}/${varData.requestId}/schema/${varData.schemaId}/primary`
+      `${API_REQUEST}/${varData.requestId}/schema/${varData.schemaId}/primary`,
+      {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }
     );
 
     if (!response.ok) {
-      throw new Error('Failed to set primary schema');
+      throw new Error(`Failed to set primary schema: ${response.statusText}`);
     }
 
     const data = await response.json();
     return data;
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error setting primary schema:', error);
-    throw error;
+    if (error instanceof Error) {
+      throw new Error(error.message || 'Failed to set primary schema');
+    }
+    throw new Error('Failed to set primary schema');
   }
 };
 

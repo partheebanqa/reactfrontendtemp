@@ -234,14 +234,23 @@ export const duplicateRequestChainById = async (
   try {
     const response = await apiRequest(
       'POST',
-      `${API_REQUEST_CHAIN}/${chainId}/duplicate`
+      `${API_REQUEST_CHAIN}/${chainId}/duplicate`,
+      {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }
     );
 
     if (!response.ok) {
-      throw new Error(`Failed to fetch request chain with ID: ${chainId}`);
+      throw new Error(`Failed to duplicate request chain with ID: ${chainId}`);
     }
-  } catch (error: any) {
-    throw new Error(error.message || 'Failed to delete test suite');
+  } catch (error: unknown) {
+    console.error('Error duplicating request chain:', error);
+    if (error instanceof Error) {
+      throw new Error(error.message || 'Failed to duplicate request chain');
+    }
+    throw new Error('Failed to duplicate request chain');
   }
 };
 

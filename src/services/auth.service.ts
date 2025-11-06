@@ -28,6 +28,9 @@ export const loginApi = async (credentials: {
   password: string;
 }) => {
   const response = await apiRequest('POST', API_LOGIN, {
+    headers: {
+      'Content-Type': 'application/json',
+    },
     body: JSON.stringify(credentials),
   });
 
@@ -47,12 +50,19 @@ export const loginApi = async (credentials: {
 
 export const logoutApi = async () => {
   try {
-    const response = await apiRequest('POST', API_LOGOUT);
+    const response = await apiRequest('POST', API_LOGOUT, {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
     if (!response.ok) {
       throw new Error(`Logout failed with status: ${response.status}`);
     }
+
     return response.json();
-  } catch (error) {
+  } catch (error: unknown) {
+    console.error('Error during logout:', error);
     throw error;
   }
 };
@@ -60,6 +70,9 @@ export const logoutApi = async () => {
 export const registerApi = async (userData: SingUpForm) => {
   try {
     const response = await apiRequest('POST', API_REGISTER, {
+      headers: {
+        'Content-Type': 'application/json',
+      },
       body: JSON.stringify(userData),
     });
 
@@ -81,6 +94,9 @@ export const changePasswordApi = async (passwordData: {
   newPassword: string;
 }) => {
   const response = await apiRequest('POST', API_PASSWORD_CHANGE, {
+    headers: {
+      'Content-Type': 'application/json',
+    },
     body: JSON.stringify(passwordData),
   });
   if (!response.ok) {
@@ -91,6 +107,9 @@ export const changePasswordApi = async (passwordData: {
 
 export const forgotPasswordApi = async (email: string) => {
   const response = await apiRequest('POST', API_FORGOT_PASSWORD, {
+    headers: {
+      'Content-Type': 'application/json',
+    },
     body: JSON.stringify({ email }),
   });
   if (!response.ok) {
@@ -136,6 +155,9 @@ export const updateProfileApi = async (
   }
 ): Promise<{ user: User; message?: string }> => {
   const response = await apiRequest('PUT', API_PROFILE, {
+    headers: {
+      'Content-Type': 'application/json',
+    },
     body: JSON.stringify(profileData),
   });
 
