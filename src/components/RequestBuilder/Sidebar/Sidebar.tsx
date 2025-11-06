@@ -153,7 +153,10 @@ const Sidebar: React.FC = () => {
     }
   }, [showMenu, menuPosition]);
 
-  const handleCreateCollection = () => setShowCollectionModal(true);
+  const handleCreateCollection = () => {
+    setSelectedCollection(null);
+    setShowCollectionModal(true);
+  };
 
   const handleRenameCollection = (collection: Collection) => {
     setSelectedCollection(collection);
