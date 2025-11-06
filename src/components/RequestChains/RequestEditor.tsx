@@ -206,14 +206,29 @@ export function RequestEditor({
   useEffect(() => {
     setUrl(request.url || '');
     setBody(request.body || '');
-    setHeaders(request.headers || []);
+
+    const requestHeaders = request.headers || [];
+    const hasContentType = requestHeaders.some(
+      (h) => h.key.toLowerCase() === 'content-type'
+    );
+
+    if (!hasContentType) {
+      setHeaders([
+        ...requestHeaders,
+        { key: 'Content-Type', value: 'application/json', enabled: true },
+      ]);
+    } else {
+      setHeaders(requestHeaders);
+    }
+    // </CHANGE>
+
     setParams(request.params || []);
     setAuth({
       username: request.authUsername || '',
       password: request.authPassword || '',
       token: request.authToken || '',
     });
-  }, [request.id]);
+  }, [request.id]); // Only update when request ID changes to avoid infinite loops
 
   const dynamicStructured = mapDynamicToStatic(
     dynamicVariables,
@@ -1634,7 +1649,7 @@ export function RequestEditor({
                     size='sm'
                     onClick={() => regenerateDynamicVariable(originalName)}
                     className='h-8 w-8 p-0 text-purple-600 hover:bg-purple-100'
-                    title='Regenerate random value'
+                    title='Regenerate value'
                   >
                     <Shuffle className='w-3 h-3' />
                   </Button>
