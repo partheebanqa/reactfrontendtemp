@@ -220,7 +220,7 @@ const RequestBuilder = () => {
                       isBottomLayout ? 'cursor-row-resize' : 'cursor-col-resize'
                     } ${
                       isBottomLayout
-                        ? 'h-[3px] w-full bg-[#136fb0] dark:bg-gray-700 hover:bg-blue-300 dark:hover:bg-blue-800 transition-colors'
+                        ? 'h-[6px] w-full bg-[#136fb0] dark:bg-gray-700 hover:bg-blue-300 dark:hover:bg-blue-800 transition-colors'
                         : 'w-[6px] h-full bg-[#136fb0] dark:bg-gray-700 hover:bg-blue-300 dark:hover:bg-blue-800 transition-colors'
                     } ${isMobile ? 'touch-manipulation' : ''}`}
                     onMouseDown={handleResizeStart}

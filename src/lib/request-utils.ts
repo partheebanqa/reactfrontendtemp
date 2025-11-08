@@ -1,6 +1,7 @@
 import type {
   APIRequest,
   ExecutionLog,
+  KeyValuePair,
 } from '@/shared/types/requestChain.model';
 
 export const getExtractVariablesByEnvironment = (environmentId?: string) => {
@@ -1021,5 +1022,52 @@ function generateDynamicValueById(id: string, params: any = {}): string {
       return '';
   }
 }
+
+// Helper function to parse URL parameters
+export const parseUrlParams = (url: string): KeyValuePair[] => {
+  try {
+    const urlObj = new URL(
+      url.startsWith('http') ? url : `https://example.com${url}`
+    );
+    const params: KeyValuePair[] = [];
+    urlObj.searchParams.forEach((value, key) => {
+      params.push({
+        id: `temp_${Date.now()}_${Math.random()}`,
+        key,
+        value,
+        enabled: true,
+      });
+    });
+    return params;
+  } catch (e) {
+    return [];
+  }
+};
+
+// Helper function to build URL with params
+export const buildUrlWithParams = (
+  baseUrl: string,
+  params: KeyValuePair[]
+): string => {
+  try {
+    // Remove existing query params from baseUrl
+    const urlParts = baseUrl.split('?');
+    const cleanUrl = urlParts[0];
+
+    // Build new query string from params
+    const enabledParams = params.filter((p) => p.enabled && p.key.trim());
+    if (enabledParams.length === 0) {
+      return cleanUrl;
+    }
+
+    const queryString = enabledParams
+      .map((p) => `${encodeURIComponent(p.key)}=${encodeURIComponent(p.value)}`)
+      .join('&');
+
+    return `${cleanUrl}?${queryString}`;
+  } catch (e) {
+    return baseUrl;
+  }
+};
 
 export { generateDynamicValueById };

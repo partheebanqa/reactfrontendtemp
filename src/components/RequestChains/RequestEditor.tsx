@@ -69,6 +69,8 @@ import {
   calculateAutocompletePosition,
   type DynamicVariableOverride,
   type AutocompleteState,
+  parseUrlParams,
+  buildUrlWithParams,
 } from '@/lib/request-utils';
 import { Controlled as CodeMirror } from 'react-codemirror2';
 import 'codemirror/lib/codemirror.css';
@@ -134,6 +136,8 @@ export function RequestEditor({
   extractedVariables: parentExtractedVariables = {},
   chainVariables = [],
 }: RequestEditorProps) {
+  const isSyncingRef = useRef(false);
+  const isInitialMount = useRef(true);
   const [isJsonOpen, setIsJsonOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
 
@@ -180,7 +184,9 @@ export function RequestEditor({
   });
 
   useEffect(() => {
-    onUpdate({ url });
+    if (!isSyncingRef.current) {
+      onUpdate({ url });
+    }
   }, [url]);
 
   useEffect(() => {
@@ -188,11 +194,15 @@ export function RequestEditor({
   }, [body]);
 
   useEffect(() => {
-    onUpdate({ headers });
+    if (!isSyncingRef.current) {
+      onUpdate({ headers });
+    }
   }, [headers]);
 
   useEffect(() => {
-    onUpdate({ params });
+    if (!isSyncingRef.current) {
+      onUpdate({ params });
+    }
   }, [params]);
 
   useEffect(() => {
@@ -230,6 +240,19 @@ export function RequestEditor({
     });
   }, [request.id]); // Only update when request ID changes to avoid infinite loops
 
+  useEffect(() => {
+    if (isSyncingRef.current || !url.includes('?')) return;
+
+    isSyncingRef.current = true;
+    const parsedParams = parseUrlParams(url);
+    if (parsedParams.length > 0) {
+      setParams(parsedParams);
+    }
+    setTimeout(() => {
+      isSyncingRef.current = false;
+    }, 100);
+  }, [url]);
+
   const dynamicStructured = mapDynamicToStatic(
     dynamicVariables,
     dynamicOverrides
@@ -248,6 +271,22 @@ export function RequestEditor({
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    if (isSyncingRef.current || isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+
+    isSyncingRef.current = true;
+    const newUrl = buildUrlWithParams(url, params);
+    if (newUrl !== url) {
+      setUrl(newUrl);
+    }
+    setTimeout(() => {
+      isSyncingRef.current = false;
+    }, 100);
+  }, [params]);
 
   const getUsedDynamicVariables = () => {
     const allTextFields = [
@@ -1722,6 +1761,37 @@ export function RequestEditor({
       </div>
     );
   };
+
+  // Sync URL -> Params (when pasting URL with query params)
+  useEffect(() => {
+    if (isSyncingRef.current || !url.includes('?')) return;
+
+    isSyncingRef.current = true;
+    const parsedParams = parseUrlParams(url);
+    if (parsedParams.length > 0) {
+      setParams(parsedParams);
+    }
+    setTimeout(() => {
+      isSyncingRef.current = false;
+    }, 100);
+  }, [url]);
+
+  // Sync Params -> URL (when editing params table)
+  useEffect(() => {
+    if (isSyncingRef.current || isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+
+    isSyncingRef.current = true;
+    const newUrl = buildUrlWithParams(url, params);
+    if (newUrl !== url) {
+      setUrl(newUrl);
+    }
+    setTimeout(() => {
+      isSyncingRef.current = false;
+    }, 100);
+  }, [params]);
 
   if (compact) {
     return (
