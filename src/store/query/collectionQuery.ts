@@ -14,6 +14,7 @@ import {
   renameRequest,
   setFavouriteCollection,
   unsetFavouriteCollection,
+  updateRequest,
 } from '@/services/collection.service';
 import { workspaceStore } from '../workspaceStore';
 import type { CollectionRequest } from '@/shared/types/collection';
@@ -247,6 +248,16 @@ export const useRenameRequestMutation = () => {
         variables.workspaceId || ''
       );
     },
+    onError: (error) => {
+      throw error;
+    },
+  });
+};
+
+export const useUpdateRequestMutation = () => {
+  return useMutation({
+    mutationFn: updateRequest,
+    onSuccess: (data, variables) => {},
     onError: (error) => {
       throw error;
     },

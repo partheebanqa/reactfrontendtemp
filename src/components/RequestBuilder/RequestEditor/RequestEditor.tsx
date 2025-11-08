@@ -17,7 +17,11 @@ import KeyValueEditorWithFileUpload, {
 import ToggleSwitch from '@/components/ui/ToggleSwitch';
 import Modal from '@/components/ui/Modal';
 import { useDataManagement } from '@/hooks/useDataManagement';
-import { executeCollectionRequest } from '@/services/executeRequest.service';
+import {
+  executeCollectionRequest,
+  executeRequest,
+  buildRequestPayload,
+} from '@/services/executeRequest.service';
 import { updateRequest } from '@/services/collection.service';
 import { useMutation } from '@tanstack/react-query';
 import {
@@ -39,7 +43,7 @@ import EditableTextWithoutIcon from '@/components/ui/EditableTextWithoutIcon';
 import { JsonVariableSubstitution } from './JsonVariableSubstitution';
 import { generateDynamicValueById } from '@/lib/request-utils';
 import RequestTabs from './RequestTabs';
-import { collectionActions } from '@/store/collectionStore';
+import { collectionActions, useCollectionStore } from '@/store/collectionStore';
 
 type Assertion = {
   id: string;
@@ -145,6 +149,10 @@ const RequestEditor: React.FC = () => {
     fetchCollectionRequests,
     replaceRequest,
   } = useCollection();
+
+  const isExtractingRef = useRef(false);
+
+  const { unsavedChanges } = useCollectionStore();
 
   const { variables, dynamicVariables, environments, activeEnvironment } =
     useDataManagement();
@@ -379,6 +387,34 @@ const RequestEditor: React.FC = () => {
   };
 
   useEffect(() => {
+    if (isExtractingRef.current) return;
+    if (isSaving) return;
+
+    const enabledParams = params.filter((p) => p.enabled && p.key);
+
+    if (!url) return;
+
+    const baseUrl = url.split('?')[0];
+
+    if (enabledParams.length > 0) {
+      const queryString = enabledParams
+        .map(
+          (p) => `${encodeURIComponent(p.key)}=${encodeURIComponent(p.value)}`
+        )
+        .join('&');
+      const newUrl = `${baseUrl}?${queryString}`;
+
+      if (newUrl !== url) {
+        setUrl(newUrl);
+      }
+    } else {
+      if (url.includes('?') && params.length === 0) {
+        setUrl(baseUrl);
+      }
+    }
+  }, [params, isSaving, url]);
+
+  useEffect(() => {
     if (isSaving) return;
 
     if (activeRequest) {
@@ -395,7 +431,6 @@ const RequestEditor: React.FC = () => {
             };
           });
 
-          // Only add default Content-Type for methods with body
           const defaultHeaders = methodsWithBody.includes(
             activeRequest.method as RequestMethod
           )
@@ -618,7 +653,7 @@ const RequestEditor: React.FC = () => {
     }
 
     return {
-      status: result.statusCode,
+      status: result.status ?? result.statusCode,
       statusText: '',
       headers: filteredHeaders,
       data: parsedBody,
@@ -834,40 +869,108 @@ const RequestEditor: React.FC = () => {
     const newUrl = buildFinalUrl();
 
     try {
-      let requestFormData: FormData | undefined;
-      if (bodyType === 'form-data') {
-        const fileFields = formFields.filter(
-          (f) => f.enabled && f.type === 'file' && f.value instanceof File
+      const hasUnsavedChanges = activeRequest.id
+        ? unsavedChanges.has(activeRequest.id)
+        : false;
+
+      let backendData;
+
+      if (hasUnsavedChanges || activeRequest.id?.startsWith('temp-')) {
+        console.log(
+          '[v0] Request is unsaved, calling executeRequest with current body'
         );
-        if (fileFields.length > 0) {
-          requestFormData = new FormData();
-          formFields
-            .filter((f) => f.enabled)
-            .forEach((field) => {
-              if (field.type === 'file' && field.value instanceof File) {
-                requestFormData!.append(field.key, field.value, field.fileName);
-              } else {
-                requestFormData!.append(field.key, String(field.value));
-              }
-            });
+
+        const currentRequest = {
+          id: activeRequest.id,
+          name: activeRequest.name || 'Untitled Request',
+          method: method,
+          url: newUrl,
+          order: activeRequest.order || 0,
+          headers: headers,
+          params: params,
+          body: bodyContent,
+          bodyRawContent: bodyContent,
+          bodyType: bodyType,
+          bodyFormData:
+            bodyType === 'form-data'
+              ? Object.fromEntries(
+                  formFields
+                    .filter((f) => f.enabled)
+                    .map((f) => [
+                      f.key,
+                      f.type === 'file' ? f.value : String(f.value),
+                    ])
+                )
+              : null,
+          authorizationType: authType,
+          authToken: authType === 'bearer' ? authData.token : undefined,
+          authorization:
+            authType === 'bearer' ? { token: authData.token } : undefined,
+          authUsername: authType === 'basic' ? authData.username : undefined,
+          authPassword: authType === 'basic' ? authData.password : undefined,
+          authApiKey: authType === 'apiKey' ? authData.key : undefined,
+          authApiValue: authType === 'apiKey' ? authData.value : undefined,
+          authApiLocation: authType === 'apiKey' ? authData.addTo : undefined,
+          timeout: settings.timeout,
+          retries: 0,
+          extractVariables: [],
+          enabled: true,
+        };
+
+        const payload = buildRequestPayload(
+          currentRequest as any,
+          formattedVariables.map((v) => ({
+            name: v.name,
+            value: v.value,
+            type: 'string',
+            currentValue: v.value,
+          })),
+          currentWorkspace?.id
+        );
+
+        backendData = await executeRequest(payload);
+      } else {
+        if (!activeRequest?.id) {
+          throw new Error('please save a request before sending.');
         }
+
+        const environmentId =
+          activeEnvironment?.name !== 'No Environment'
+            ? activeEnvironment?.id
+            : undefined;
+
+        backendData = await executeCollectionRequest(
+          activeRequest.id,
+          environmentId
+        );
       }
 
-      if (!activeRequest?.id) {
-        throw new Error('please save a request before sending.');
+      let backendBody;
+      let statusCode;
+      let responseHeaders;
+      let metrics;
+      let assertionLogs: never[];
+      let schemaValidation;
+
+      if (
+        backendData?.data?.responses &&
+        Array.isArray(backendData.data.responses)
+      ) {
+        const firstResponse = backendData.data.responses[0];
+        backendBody = firstResponse.body;
+        statusCode = firstResponse.status ?? firstResponse.statusCode;
+        responseHeaders = firstResponse.headers;
+        metrics = firstResponse.metrics;
+        assertionLogs = [];
+        schemaValidation = null;
+      } else {
+        backendBody = backendData?.data?.body;
+        statusCode = backendData?.data?.statusCode;
+        responseHeaders = backendData?.data?.headers;
+        metrics = backendData?.data?.metrics;
+        assertionLogs = backendData?.data?.assertionLogs || [];
+        schemaValidation = backendData?.data?.schemaValidation || null;
       }
-
-      const environmentId =
-        activeEnvironment?.name !== 'No Environment'
-          ? activeEnvironment?.id
-          : undefined;
-
-      const backendData = await executeCollectionRequest(
-        activeRequest.id,
-        environmentId
-      );
-
-      const backendBody = backendData?.data?.body;
 
       if (backendBody) {
         let parsedBody: any = backendBody;
@@ -880,14 +983,14 @@ const RequestEditor: React.FC = () => {
         }
 
         const normalizedResponse = {
-          status: backendData?.data?.statusCode ?? 200,
-          statusCode: backendData?.data?.statusCode ?? 200,
-          headers: backendData?.data?.headers ?? {},
+          status: statusCode ?? 200,
+          statusCode: statusCode ?? 200,
+          headers: responseHeaders ?? {},
           body: parsedBody,
           rawBody: backendBody,
-          metrics: backendData?.data?.metrics ?? {},
-          assertionLogs: backendData?.data?.assertionLogs || [],
-          schemaValidation: backendData?.data?.schemaValidation || null,
+          metrics: metrics ?? {},
+          assertionLogs: assertionLogs,
+          schemaValidation: schemaValidation,
         };
 
         setResponseData(normalizedResponse as any);
@@ -1266,7 +1369,6 @@ const RequestEditor: React.FC = () => {
         description: 'An error occurred while saving the request.',
       });
     } finally {
-      // ✅ Always executed
       setIsSaving(false);
     }
   };
@@ -1317,6 +1419,7 @@ const RequestEditor: React.FC = () => {
     });
     return result;
   };
+
   const buildFinalUrl = (): string => {
     if (!url) return '';
     let finalUrl = url;
@@ -1346,7 +1449,6 @@ const RequestEditor: React.FC = () => {
 
   const handleCancelSave = () => {
     setShowSaveModal(false);
-    // setIsCreatingCollection(false);
   };
 
   const addParam = () => {
@@ -1364,6 +1466,7 @@ const RequestEditor: React.FC = () => {
     const newParams = [...params];
     newParams[index] = { ...newParams[index], [field]: value };
     setParams(newParams);
+
     if (activeRequest?.id) {
       collectionActions.markUnsaved(activeRequest.id);
     }
@@ -1436,7 +1539,11 @@ const RequestEditor: React.FC = () => {
   const addUrlEncodedField = () => {
     setUrlEncodedFields([
       ...urlEncodedFields,
-      { key: '', value: '', enabled: true },
+      {
+        key: '',
+        value: '',
+        enabled: true,
+      },
     ]);
     if (activeRequest?.id) {
       collectionActions.markUnsaved(activeRequest.id);
@@ -1494,7 +1601,6 @@ const RequestEditor: React.FC = () => {
         if (activeRequest?.id) {
           collectionActions.markUnsaved(activeRequest.id);
         }
-        // showSuccess('JSON formatted successfully!');
       }
     } catch (error) {
       showError(
@@ -1553,7 +1659,6 @@ const RequestEditor: React.FC = () => {
         };
         setHeaders(updatedHeaders);
       } else if (methodsWithBody.includes(method)) {
-        // Add Content-Type header if it doesn't exist
         setHeaders([
           {
             key: 'Content-Type',
@@ -1565,69 +1670,6 @@ const RequestEditor: React.FC = () => {
       }
     }
   };
-
-  // const handleSendRequest = async () => {
-  //   if (!url) {
-  //     alert('Please enter a URL');
-  //     return;
-  //   }
-
-  //   setIsLoading(true);
-  //   try {
-  //     // Simulate API call
-  //     console.log('Sending request:', {
-  //       method,
-  //       url,
-  //       headers: headers.filter((h) => h.enabled),
-  //       params: params.filter((p) => p.enabled),
-  //       bodyType,
-  //       body: bodyContent,
-  //     });
-
-  //     await new Promise((resolve) => setTimeout(resolve, 1000));
-  //     alert('Request sent successfully!');
-  //   } catch (error) {
-  //     alert('Error sending request');
-  //   } finally {
-  //     setIsLoading(false);
-  //   }
-  // };
-
-  // const addHeader = () => {
-  //   setHeaders([...headers, { key: '', value: '', enabled: true }]);
-  // };
-
-  // const removeHeader = (index: number) => {
-  //   setHeaders(headers.filter((_, i) => i !== index));
-  // };
-
-  // const updateHeader = (
-  //   index: number,
-  //   field: 'key' | 'value' | 'enabled',
-  //   value: string | boolean
-  // ) => {
-  //   const newHeaders = [...headers];
-  //   newHeaders[index] = { ...newHeaders[index], [field]: value };
-  //   setHeaders(newHeaders);
-  // };
-
-  // const addParam = () => {
-  //   setParams([...params, { key: '', value: '', enabled: true }]);
-  // };
-
-  // const removeParam = (index: number) => {
-  //   setParams(params.filter((_, i) => i !== index));
-  // };
-
-  // const updateParam = (
-  //   index: number,
-  //   field: 'key' | 'value' | 'enabled',
-  //   value: string | boolean
-  // ) => {
-  //   const newParams = [...params];
-  //   newParams[index] = { ...newParams[index], [field]: value };
-  //   setParams(newParams);
-  // };
 
   if (!activeRequest) {
     return (
@@ -1774,16 +1816,60 @@ const RequestEditor: React.FC = () => {
               type='text'
               value={url}
               onChange={(e) => {
-                setUrl(e.target.value);
+                const newUrl = e.target.value;
+
+                isExtractingRef.current = true;
+
+                setUrl(newUrl);
+
                 if (activeRequest?.id) {
                   collectionActions.markUnsaved(activeRequest.id);
-                  setTimeout(() => {
-                    collectionActions.updateOpenedRequest({
-                      ...activeRequest,
-                      url: e.target.value,
-                    });
-                  }, 0);
+                  collectionActions.updateOpenedRequest({
+                    ...activeRequest,
+                    url: newUrl,
+                  });
                 }
+
+                setTimeout(() => {
+                  try {
+                    const urlObj = new URL(newUrl);
+                    const searchParams = urlObj.searchParams;
+
+                    const extractedParams: Param[] = [];
+                    searchParams.forEach((value, key) => {
+                      extractedParams.push({ key, value, enabled: true });
+                    });
+
+                    setParams(extractedParams);
+                    if (activeRequest?.id) {
+                      collectionActions.markUnsaved(activeRequest.id);
+                    }
+                  } catch (error) {
+                    const queryIndex = newUrl.indexOf('?');
+                    if (queryIndex !== -1) {
+                      const queryString = newUrl.substring(queryIndex + 1);
+                      const searchParams = new URLSearchParams(queryString);
+                      const extractedParams: Param[] = [];
+
+                      searchParams.forEach((value, key) => {
+                        extractedParams.push({ key, value, enabled: true });
+                      });
+
+                      setParams(extractedParams);
+                      if (activeRequest?.id) {
+                        collectionActions.markUnsaved(activeRequest.id);
+                      }
+                    } else {
+                      if (!newUrl.includes('?')) {
+                        setParams([]);
+                      }
+                    }
+                  }
+
+                  setTimeout(() => {
+                    isExtractingRef.current = false;
+                  }, 150);
+                }, 0);
               }}
               placeholder='Enter request URL'
             />

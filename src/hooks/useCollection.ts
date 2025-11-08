@@ -15,6 +15,7 @@ import {
   useDeleteCollectionMutation,
   useImpotPostmanCollectionMutation,
   useAddRequestMutation,
+  useUpdateRequestMutation,
   useRenameRequestMutation,
   useDeleteRequestMutation,
   useDuplicateRequestMutation,
@@ -215,6 +216,8 @@ export function useCollection() {
   const deleteCollectionMutation = useDeleteCollectionMutation();
   const importCollectionMutation = useImpotPostmanCollectionMutation();
   const addRequestMutation = useAddRequestMutation();
+  const updateRequestMutation = useUpdateRequestMutation();
+
   const renameRequestMutation = useRenameRequestMutation();
   const deleteRequestMutation = useDeleteRequestMutation();
   const duplicateRequestMutation = useDuplicateRequestMutation();
@@ -253,6 +256,7 @@ export function useCollection() {
     addCollectionMutation,
     importCollectionMutation,
     addRequestMutation,
+    updateRequestMutation,
     renameRequestMutation,
     duplicateRequestMutation,
     setFavouriteCollectionMutation,
