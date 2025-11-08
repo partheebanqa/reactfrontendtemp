@@ -53,8 +53,6 @@ export const JsonVariableSubstitution: React.FC<
   initialVariable = [],
   readOnly = false,
 }) => {
-  console.log('initialVariable000:', initialVariable);
-
   const [deleteTargetPath, setDeleteTargetPath] = useState<string | null>(null);
   const [hoveredLine, setHoveredLine] = useState<number | null>(null);
   const [dropdownLine, setDropdownLine] = useState<number | null>(null);
@@ -78,9 +76,6 @@ export const JsonVariableSubstitution: React.FC<
     | { open: true; kind: 'saved' | 'line'; path?: string; lineIndex?: number }
     | { open: false }
   >({ open: false });
-
-  console.log('initialVariable:', initialVariable);
-  console.log('variables:', variables);
 
   useEffect(() => {
     if (initialVariable && initialVariable.length > 0) {
@@ -165,15 +160,6 @@ export const JsonVariableSubstitution: React.FC<
   const handleVariableSelect = (variable: string, lineIndex: number) => {
     const path = extractPathFromLine(lineIndex);
 
-    setPendingSubstitutions((prev) =>
-      prev.filter((p) => p.lineIndex !== lineIndex)
-    );
-
-    setPendingSubstitutions((prev) => [
-      ...prev,
-      { lineIndex, variableName: variable },
-    ]);
-
     setSelectedVariables((prev) => {
       const filtered = prev.filter((v) => v.path !== path);
       const updated = [...filtered, { name: variable, path }];
@@ -192,6 +178,27 @@ export const JsonVariableSubstitution: React.FC<
 
   const handleConfirmSubstitutions = () => {
     if (pendingSubstitutions.length > 0) {
+      pendingSubstitutions.forEach((sub) => {
+        const path = extractPathFromLine(sub.lineIndex);
+        setSelectedVariables((prev) => {
+          const filtered = prev.filter((v) => v.path !== path);
+          return [...filtered, { name: sub.variableName, path }];
+        });
+      });
+
+      const updatedVars = pendingSubstitutions.map((sub) => ({
+        name: sub.variableName,
+        path: extractPathFromLine(sub.lineIndex),
+      }));
+
+      setSelectedVariables((prev) => {
+        const allPaths = new Set(prev.map((v) => v.path));
+        const newVars = updatedVars.filter((v) => !allPaths.has(v.path));
+        const updated = [...prev, ...newVars];
+        onVariableSelect?.(updated);
+        return updated;
+      });
+
       onConfirmSubstitution?.(pendingSubstitutions);
       setPendingSubstitutions([]);
     }
@@ -339,7 +346,6 @@ export const JsonVariableSubstitution: React.FC<
           <div className='absolute top-0 right-0 bottom-0 w-44 pointer-events-none pt-2'>
             {lines.map((line, index) => {
               const hasKey = /"[^"]+"\s*:/.test(line);
-              const pendingVar = getPendingSubstitution(index);
               const alreadySubstituted = getAlreadySubstitutedVariable(index);
               const selectedVar = getSelectedVariableForLine(index);
 
@@ -352,7 +358,7 @@ export const JsonVariableSubstitution: React.FC<
                 >
                   {hoveredLine === index && hasKey && (
                     <div className='pointer-events-auto ml-auto mr-1 flex items-center gap-1'>
-                      {selectedVar && !pendingVar && !alreadySubstituted ? (
+                      {selectedVar && !alreadySubstituted ? (
                         <>
                           <span className='px-2 py-0.5 bg-green-500 text-white text-[11px] rounded font-mono whitespace-nowrap font-medium'>
                             {selectedVar}
@@ -367,7 +373,7 @@ export const JsonVariableSubstitution: React.FC<
                             <Trash2 className='w-3 h-3 text-destructive' />
                           </button>
                         </>
-                      ) : !pendingVar && !alreadySubstituted ? (
+                      ) : !alreadySubstituted ? (
                         <button
                           ref={(el) => {
                             if (el) buttonRefs.current.set(index, el);
@@ -378,21 +384,6 @@ export const JsonVariableSubstitution: React.FC<
                         >
                           Substitute Variable
                         </button>
-                      ) : pendingVar ? (
-                        <>
-                          <span className='px-2 py-0.5 bg-green-500 text-white text-[11px] rounded font-mono whitespace-nowrap font-medium'>
-                            {pendingVar}
-                          </span>
-                          <button
-                            onClick={() =>
-                              handleClearPendingSubstitution(index)
-                            }
-                            className='p-0.5 bg-destructive/10 hover:bg-destructive/20 rounded transition-colors'
-                            title='Remove pending substitution'
-                          >
-                            <Trash2 className='w-3 h-3 text-destructive' />
-                          </button>
-                        </>
                       ) : alreadySubstituted ? (
                         <>
                           <span className='px-2 py-0.5 bg-success text-success-foreground text-[11px] rounded font-mono whitespace-nowrap font-medium'>

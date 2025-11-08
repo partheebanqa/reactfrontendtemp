@@ -14,16 +14,12 @@ export const executeRequest = async (
   payload: ExecuteRequestPayload
 ): Promise<ExecutionResponse> => {
   try {
-    const response = await apiRequestWithErrorDetails(
-      'POST',
-      `${API_EXECUTOR}/request`,
-      {
-        body: JSON.stringify(payload),
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      }
-    );
+    const response = await apiRequest('POST', `${API_EXECUTOR}/request`, {
+      body: JSON.stringify(payload),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
 
     if (!response.ok) {
       throw new Error(`Failed to execute request: ${response.statusText}`);
