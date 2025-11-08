@@ -1,24 +1,21 @@
-import { KeyValuePair } from "@/shared/types/collection";
+import { KeyValuePair } from '@/shared/types/collection';
 
-/**
- * Creates a URL with query parameters
- * @param url Base URL
- * @param params Key-value pairs for query parameters
- * @returns Complete URL with query parameters
- */
-export function createUrlWithParams(url: string, params: Record<string, string>): string {
+export function createUrlWithParams(
+  url: string,
+  params: Record<string, string>
+): string {
   if (!url) return '';
   if (!params || Object.keys(params).length === 0) return url;
 
   try {
     const urlObj = new URL(url.startsWith('http') ? url : `http://${url}`);
-    
+
     Object.entries(params).forEach(([key, value]) => {
       if (key && value) {
         urlObj.searchParams.append(key, value);
       }
     });
-    
+
     return urlObj.toString();
   } catch (error) {
     console.error('Error creating URL with params:', error);
@@ -26,12 +23,7 @@ export function createUrlWithParams(url: string, params: Record<string, string>)
   }
 }
 
-/**
- * Prepares the request body based on method and content
- * @param options Request options
- * @returns Request body or undefined
- */
-export function prepareRequestBody(options: { 
+export function prepareRequestBody(options: {
   method: string;
   body: string;
   isGraphQL?: boolean;
@@ -39,21 +31,21 @@ export function prepareRequestBody(options: {
   graphQLVariables?: string;
 }): string | undefined {
   const { method, body, isGraphQL, graphQLQuery, graphQLVariables } = options;
-  
+
   if (method === 'GET') return undefined;
-  
+
   if (isGraphQL) {
     try {
       return JSON.stringify({
         query: graphQLQuery || '',
-        variables: graphQLVariables ? JSON.parse(graphQLVariables) : {}
+        variables: graphQLVariables ? JSON.parse(graphQLVariables) : {},
       });
     } catch (error) {
       console.error('Error preparing GraphQL body:', error);
       return JSON.stringify({ query: graphQLQuery || '' });
     }
   }
-  
+
   return body || undefined;
 }
 
@@ -74,21 +66,23 @@ export function prepareRequestOptions(
   const options: RequestInit = {
     method,
     headers: {
-      ...headers
-    }
+      ...headers,
+    },
   };
 
   if (body && method !== 'GET') {
     options.body = body;
-    
+
     // Set content type for JSON if not already set
     if (!headers['Content-Type'] && !isGraphQL) {
-      (options.headers as Record<string, string>)['Content-Type'] = 'application/json';
+      (options.headers as Record<string, string>)['Content-Type'] =
+        'application/json';
     }
-    
+
     // Set content type for GraphQL if needed
     if (isGraphQL && !headers['Content-Type']) {
-      (options.headers as Record<string, string>)['Content-Type'] = 'application/json';
+      (options.headers as Record<string, string>)['Content-Type'] =
+        'application/json';
     }
   }
 
@@ -109,11 +103,11 @@ export async function fetchWithTimeout(
 ): Promise<Response> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeout);
-  
+
   try {
     const response = await fetch(url, {
       ...options,
-      signal: controller.signal
+      signal: controller.signal,
     });
     clearTimeout(timeoutId);
     return response;
