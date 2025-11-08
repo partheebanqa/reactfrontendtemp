@@ -70,7 +70,7 @@ interface FormattedResponse {
 
 interface SelectedVariable {
   name: string;
-  path: string;
+  path?: string; // Path can be optional for placeholder substitution
 }
 
 interface PendingSubstitution {
@@ -371,11 +371,8 @@ const RequestEditor: React.FC = () => {
         bodyRawContent: bodyContent,
         bodyFormData:
           bodyType === 'form-data'
-            ? formFields.reduce((acc: Record<string, any>, field) => {
-                if (field.key) acc[field.key] = field.value;
-                return acc;
-              }, {})
-            : activeRequest.bodyFormData,
+            ? activeRequest.bodyFormData // Keep existing form data structure if body type is form-data
+            : undefined, // Reset if not form-data
         authorizationType: authType,
         authorization: authData,
       });
@@ -876,9 +873,61 @@ const RequestEditor: React.FC = () => {
       let backendData;
 
       if (hasUnsavedChanges || activeRequest.id?.startsWith('temp-')) {
-        console.log(
-          '[v0] Request is unsaved, calling executeRequest with current body'
-        );
+        let substitutedBodyContent = bodyContent;
+
+        // </CHANGE> Apply path-based variable substitutions for JSON body
+        if (
+          selectedVariable &&
+          selectedVariable.length > 0 &&
+          (bodyType === 'raw' || bodyType === 'json')
+        ) {
+          try {
+            const parsedBody = JSON.parse(bodyContent);
+
+            // Replace each path with the variable's actual value
+            selectedVariable.forEach((varItem) => {
+              const variable = formattedVariables.find(
+                (v) => v.name === varItem.name
+              );
+              if (variable && varItem.path) {
+                // Update the value at the specific path
+                if (parsedBody && typeof parsedBody === 'object') {
+                  parsedBody[varItem.path] = variable.value;
+                }
+              }
+            });
+
+            substitutedBodyContent = JSON.stringify(parsedBody, null, 2);
+          } catch (e) {
+            // If JSON parsing fails, fall back to placeholder-based substitution
+            selectedVariable.forEach((varItem) => {
+              const variable = formattedVariables.find(
+                (v) => v.name === varItem.name
+              );
+              if (variable) {
+                const regex = new RegExp(`{{${variable.name}}}`, 'g');
+                substitutedBodyContent = substitutedBodyContent.replace(
+                  regex,
+                  variable.value
+                );
+              }
+            });
+          }
+        } else if (selectedVariable && selectedVariable.length > 0) {
+          // Fallback for non-JSON/RAW body types or if JSON parsing fails
+          selectedVariable.forEach((varItem) => {
+            const variable = formattedVariables.find(
+              (v) => v.name === varItem.name
+            );
+            if (variable) {
+              const regex = new RegExp(`{{${variable.name}}}`, 'g');
+              substitutedBodyContent = substitutedBodyContent.replace(
+                regex,
+                variable.value
+              );
+            }
+          });
+        }
 
         const currentRequest = {
           id: activeRequest.id,
@@ -888,9 +937,9 @@ const RequestEditor: React.FC = () => {
           order: activeRequest.order || 0,
           headers: headers,
           params: params,
-          body: bodyContent,
-          bodyRawContent: bodyContent,
-          bodyType: bodyType,
+          body: substitutedBodyContent,
+          bodyRawContent: substitutedBodyContent,
+          bodyType: bodyType === 'json' ? 'raw' : bodyType,
           bodyFormData:
             bodyType === 'form-data'
               ? Object.fromEntries(
@@ -1671,6 +1720,13 @@ const RequestEditor: React.FC = () => {
     }
   };
 
+  const handleVariableSelect = (variables: SelectedVariable[]) => {
+    setSelectedVariable(variables);
+    if (activeRequest) {
+      collectionActions.markUnsaved(activeRequest.id);
+    }
+  };
+
   if (!activeRequest) {
     return (
       <div className='flex-1 flex items-center justify-center bg-gray-50 dark:bg-gray-900 p-4'>
@@ -2095,7 +2151,7 @@ const RequestEditor: React.FC = () => {
                     }
                   }}
                   value={bodyContent}
-                  onVariableSelect={setSelectedVariable}
+                  onVariableSelect={handleVariableSelect}
                   onConfirmSubstitution={handleConfirmSubstitutions}
                   mode='json'
                   variables={formattedVariables}
@@ -2146,7 +2202,7 @@ const RequestEditor: React.FC = () => {
                     }
                   }}
                   value={bodyContent}
-                  onVariableSelect={setSelectedVariable}
+                  onVariableSelect={handleVariableSelect}
                   onConfirmSubstitution={handleConfirmSubstitutions}
                   mode='raw'
                   variables={formattedVariables}

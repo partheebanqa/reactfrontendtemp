@@ -104,12 +104,6 @@ export const getQueryFn: <T>(options: {
     try {
       const url = queryKey[0] as string;
 
-      // if (!validateCSPCompliance(url)) {
-      //   throw new Error(
-      //     `URL ${url} does not comply with Content Security Policy directives`
-      //   );
-      // }
-
       const res = await apiRequest('GET', url);
 
       if (res.status === 401) {
