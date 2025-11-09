@@ -549,7 +549,7 @@ export function RequestExecutor({
             }
           } else {
             console.log(
-              '[v0] No extraction variables found or invalid response body'
+              'No extraction variables found or invalid response body'
             );
           }
 
