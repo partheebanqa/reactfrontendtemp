@@ -20,6 +20,7 @@ import {
   FileJson2,
   Search,
   Move,
+  Zap,
 } from 'lucide-react';
 import { useCollection } from '@/hooks/useCollection';
 import { useWorkspace } from '@/hooks/useWorkspace';
@@ -1686,6 +1687,30 @@ const Sidebar: React.FC = () => {
                       <Plus className='h-4 w-4 mr-2' />
                       Add Request
                     </button>
+
+                    <div className='border-t border-gray-200 dark:border-gray-700 my-1'></div>
+
+                    <button
+                      onClick={async () => {
+                        if (selectedCollection) {
+                          await fetchCollectionRequests.mutateAsync(
+                            selectedCollection.id
+                          );
+                          collectionActions.openSanitizeTestRunner(
+                            selectedCollection.id
+                          );
+                        }
+                        setShowMenu(null);
+                        setMenuPosition(null);
+                      }}
+                      className='flex items-center w-full px-4 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
+                    >
+                      <Zap className='h-4 w-4 mr-2' />
+                      Quick Test
+                    </button>
+
+                    <div className='border-t border-gray-200 dark:border-gray-700 my-1'></div>
+
                     <button
                       onClick={() => {
                         if (selectedCollection)
@@ -1709,7 +1734,7 @@ const Sidebar: React.FC = () => {
                       <Trash2 className='h-4 w-4 mr-2' />
                       Delete
                     </button>
-                    <div className='border-t border-gray-200 dark:border-gray-700 my-1'></div>
+                    {/* <div className='border-t border-gray-200 dark:border-gray-700 my-1'></div>
                     <button
                       className='flex items-center w-full px-4 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
                       onClick={(e) => {
@@ -1722,7 +1747,7 @@ const Sidebar: React.FC = () => {
                     >
                       <FileJson2 className='h-4 w-4 mr-2' />
                       Export
-                    </button>
+                    </button> */}
                   </div>
                 )}
 
