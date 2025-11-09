@@ -70,7 +70,7 @@ interface FormattedResponse {
 
 interface SelectedVariable {
   name: string;
-  path?: string; // Path can be optional for placeholder substitution
+  path?: string;
 }
 
 interface PendingSubstitution {

@@ -414,15 +414,7 @@ export const collectionActions = {
   },
 
   openSanitizeTestRunner: (collectionId: string) => {
-    console.log(
-      '[v0] openSanitizeTestRunner called with collectionId:',
-      collectionId
-    );
     collectionStore.setState((state) => {
-      console.log(
-        '[v0] Current sanitizeTestRunner state:',
-        state.sanitizeTestRunner
-      );
       const newState = {
         ...state,
         sanitizeTestRunner: {
@@ -430,16 +422,12 @@ export const collectionActions = {
           collectionId,
         },
       };
-      console.log(
-        '[v0] New sanitizeTestRunner state:',
-        newState.sanitizeTestRunner
-      );
+
       return newState;
     });
   },
 
   closeSanitizeTestRunner: () => {
-    console.log('[v0] closeSanitizeTestRunner called');
     collectionStore.setState((state) => ({
       ...state,
       sanitizeTestRunner: {

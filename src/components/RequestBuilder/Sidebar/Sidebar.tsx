@@ -238,7 +238,7 @@ const Sidebar: React.FC = () => {
   //   e.dataTransfer.effectAllowed = 'move';
   //   e.dataTransfer.setData('application/json', dragData);
 
-  //   console.log('[v0] Dragging:', type, data.name);
+  //   console.log('Dragging:', type, data.name);
   // };
 
   // const handleDragOver = (e: React.DragEvent) => {
@@ -284,7 +284,7 @@ const Sidebar: React.FC = () => {
   //   e.preventDefault();
   //   e.stopPropagation();
 
-  //   console.log('[v0] handleDrop called for:', {
+  //   console.log('handleDrop called for:', {
   //     targetCollectionId,
   //     targetFolderId,
   //   });
@@ -294,7 +294,7 @@ const Sidebar: React.FC = () => {
 
   //   const dataStr = e.dataTransfer.getData('application/json');
   //   if (!dataStr) {
-  //     console.log('[v0] No drag data found');
+  //     console.log('No drag data found');
   //     return;
   //   }
 
@@ -308,7 +308,7 @@ const Sidebar: React.FC = () => {
   //   try {
   //     draggedItem = JSON.parse(dataStr);
   //   } catch {
-  //     console.log('[v0] Failed to parse drag data');
+  //     console.log('Failed to parse drag data');
   //     return;
   //   }
 
@@ -318,7 +318,7 @@ const Sidebar: React.FC = () => {
   //     draggedItem.sourceCollectionId === targetCollectionId &&
   //     draggedItem.sourceFolderId === targetFolderId
   //   ) {
-  //     console.log('[v0] Same location, skipping');
+  //     console.log('Same location, skipping');
   //     return;
   //   }
 
@@ -330,7 +330,7 @@ const Sidebar: React.FC = () => {
   //         folderId: targetFolderId || null,
   //       };
 
-  //       console.log('[v0] Moving request with data:', requestData);
+  //       console.log('Moving request with data:', requestData);
 
   //       await updateRequestMutation.mutateAsync({
   //         requestId: draggedItem.data.id,
@@ -413,19 +413,13 @@ const Sidebar: React.FC = () => {
         targetCollectionId = targetCollection.id;
         targetFolderId = undefined;
       } else {
-        console.warn('[v0] Could not determine drop target', {
+        console.warn('Could not determine drop target', {
           over,
           overData,
         });
         return;
       }
     }
-
-    console.log('[v0] Move operation:', {
-      activeType: activeData.type,
-      targetCollectionId,
-      targetFolderId,
-    });
 
     try {
       if (activeData.type === 'request') {
@@ -466,7 +460,7 @@ const Sidebar: React.FC = () => {
       //     payload.bodyFormData = [];
       //   }
 
-      //   console.log('[v0] Folder move payload:', payload);
+      //   console.log('Folder move payload:', payload);
 
       //   const response = await fetch(
       //     `/api/folders/${activeData.folder.id}/move`,
@@ -680,13 +674,6 @@ const Sidebar: React.FC = () => {
         payload.folderId = targetFolderId;
       }
 
-      console.log(
-        '[v0] Move request payload:',
-        payload,
-        'Request:',
-        selectedRequest
-      );
-
       await moveRequest({
         requestId: selectedRequest.id,
         ...payload,
@@ -731,7 +718,7 @@ const Sidebar: React.FC = () => {
   //       payload.folderId = targetFolderId;
   //     }
 
-  //     console.log('[v0] Move folder payload:', payload);
+  //     console.log('Move folder payload:', payload);
 
   //     await moveFolder({
   //       folderId: selectedFolder.id,
@@ -1916,7 +1903,7 @@ const Sidebar: React.FC = () => {
                   variant: 'success',
                 });
               } catch (err) {
-                console.error('[v0] renameFolder error:', err);
+                console.error('renameFolder error:', err);
                 toast({
                   title: 'Error',
                   description: 'Failed to rename folder. Please try again.',
@@ -1945,7 +1932,7 @@ const Sidebar: React.FC = () => {
                   variant: 'success',
                 });
               } catch (err) {
-                console.error('[v0] deleteFolder error:', err);
+                console.error('deleteFolder error:', err);
                 toast({
                   title: 'Error',
                   description: 'Failed to delete folder. Please try again.',
