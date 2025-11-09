@@ -42,8 +42,25 @@ import {
 } from '@/components/ui/tooltip';
 import { useAddFolder } from '@/hooks/use-folder';
 import { renameFolder, deleteFolder } from '@/services/folder.service';
-import { moveRequest, moveFolder } from '@/services/movetomove.service';
+import { moveRequest } from '@/services/movetomove.service';
 import { collectionActions } from '@/store/collectionStore';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragOverlay,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import SortableRequest from './sortable-request';
+import SortableFolder from './sortable-folder';
+import SortableCollection from './sortable-collection';
 
 const Sidebar: React.FC = () => {
   const { currentWorkspace } = useWorkspace();
@@ -106,18 +123,32 @@ const Sidebar: React.FC = () => {
   );
   const [moveItemName, setMoveItemName] = useState('');
 
-  const [draggedItem, setDraggedItem] = useState<{
-    type: 'request' | 'folder';
-    data: any;
-    sourceCollectionId: string;
-    sourceFolderId?: string;
-  } | null>(null);
-  const [dropTarget, setDropTarget] = useState<{
-    collectionId: string;
-    folderId?: string;
-  } | null>(null);
+  // Removed unused states: draggedItem, dropTarget
+  // const [draggedItem, setDraggedItem] = useState<{
+  //   type: 'request' | 'folder';
+  //   data: any;
+  //   sourceCollectionId: string;
+  //   sourceFolderId?: string;
+  // } | null>(null);
+  // const [dropTarget, setDropTarget] = useState<{
+  //   collectionId: string;
+  //   folderId?: string;
+  // } | null>(null);
 
   const { mutateAsync: addFolder, loading: addingFolder } = useAddFolder();
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const [activeDragItem, setActiveDragItem] = useState<any>(null);
 
   const selectRequest = (
     req: CollectionRequest,
@@ -162,7 +193,6 @@ const Sidebar: React.FC = () => {
     let { top, left, anchorTop } = menuPosition;
     let changed = false;
 
-    // Flip upward if bottom would overflow (8px viewport padding)
     if (top + menuH > vh - 8 && typeof anchorTop === 'number') {
       const flippedTop = Math.max(8, anchorTop - menuH);
       if (flippedTop !== top) {
@@ -171,7 +201,6 @@ const Sidebar: React.FC = () => {
       }
     }
 
-    // Keep within right edge
     if (left + menuW > vw - 8) {
       const clampedLeft = Math.max(8, vw - menuW - 8);
       if (clampedLeft !== left) {
@@ -185,164 +214,289 @@ const Sidebar: React.FC = () => {
     }
   }, [showMenu, menuPosition]);
 
-  const handleDragStart = (
-    e: React.DragEvent,
-    type: 'request' | 'folder',
-    data: any,
-    sourceCollectionId: string,
-    sourceFolderId?: string
-  ) => {
-    const target = e.target as HTMLElement;
-    if (target.tagName === 'BUTTON' || target.closest('button')) {
-      e.preventDefault();
-      return;
+  // Removed old drag and drop handlers
+  // const handleDragStart = (
+  //   e: React.DragEvent,
+  //   type: 'request' | 'folder',
+  //   data: any,
+  //   sourceCollectionId: string,
+  //   sourceFolderId?: string
+  // ) => {
+  //   const target = e.target as HTMLElement;
+  //   if (target.tagName === 'BUTTON' || target.closest('button')) {
+  //     e.preventDefault();
+  //     return;
+  //   }
+
+  //   const dragData = JSON.stringify({
+  //     type,
+  //     data,
+  //     sourceCollectionId,
+  //     sourceFolderId,
+  //   });
+  //   e.dataTransfer.effectAllowed = 'move';
+  //   e.dataTransfer.setData('application/json', dragData);
+
+  //   console.log('[v0] Dragging:', type, data.name);
+  // };
+
+  // const handleDragOver = (e: React.DragEvent) => {
+  //   e.preventDefault();
+  //   e.stopPropagation();
+  //   e.dataTransfer.dropEffect = 'move';
+  // };
+
+  // const handleDragEnter = (
+  //   e: React.DragEvent,
+  //   collectionId: string,
+  //   folderId?: string
+  // ) => {
+  //   e.preventDefault();
+  //   e.stopPropagation();
+  //   setDropTarget({ collectionId, folderId });
+  // };
+
+  // const handleDragLeave = (e: React.DragEvent) => {
+  //   e.preventDefault();
+  //   e.stopPropagation();
+  //   const relatedTarget = e.relatedTarget as HTMLElement;
+  //   const currentTarget = e.currentTarget as HTMLElement;
+
+  //   // Check if we're moving to a child element
+  //   if (relatedTarget && currentTarget.contains(relatedTarget)) {
+  //     return;
+  //   }
+
+  //   setDropTarget(null);
+  // };
+
+  // const handleDragEnd = () => {
+  //   setDropTarget(null);
+  //   setDraggedItem(null);
+  // };
+
+  // const handleDrop = async (
+  //   e: React.DragEvent,
+  //   targetCollectionId: string,
+  //   targetFolderId?: string
+  // ) => {
+  //   e.preventDefault();
+  //   e.stopPropagation();
+
+  //   console.log('[v0] handleDrop called for:', {
+  //     targetCollectionId,
+  //     targetFolderId,
+  //   });
+
+  //   // Clear drop target immediately
+  //   setDropTarget(null);
+
+  //   const dataStr = e.dataTransfer.getData('application/json');
+  //   if (!dataStr) {
+  //     console.log('[v0] No drag data found');
+  //     return;
+  //   }
+
+  //   let draggedItem: {
+  //     type: 'request' | 'folder';
+  //     data: any;
+  //     sourceCollectionId: string;
+  //     sourceFolderId?: string;
+  //   };
+
+  //   try {
+  //     draggedItem = JSON.parse(dataStr);
+  //   } catch {
+  //     console.log('[v0] Failed to parse drag data');
+  //     return;
+  //   }
+
+  //   if (!draggedItem) return;
+
+  //   if (
+  //     draggedItem.sourceCollectionId === targetCollectionId &&
+  //     draggedItem.sourceFolderId === targetFolderId
+  //   ) {
+  //     console.log('[v0] Same location, skipping');
+  //     return;
+  //   }
+
+  //   try {
+  //     if (draggedItem.type === 'request') {
+  //       const requestData: any = {
+  //         ...draggedItem.data,
+  //         collectionId: targetCollectionId,
+  //         folderId: targetFolderId || null,
+  //       };
+
+  //       console.log('[v0] Moving request with data:', requestData);
+
+  //       await updateRequestMutation.mutateAsync({
+  //         requestId: draggedItem.data.id,
+  //         requestData,
+  //       });
+
+  //       toast({
+  //         title: 'Request moved',
+  //         description: `"${draggedItem.data.name}" has been moved successfully`,
+  //         variant: 'success',
+  //       });
+  //     } else if (draggedItem.type === 'folder') {
+  //       const response = await fetch(
+  //         `/api/folders/${draggedItem.data.id}/move`,
+  //         {
+  //           method: 'PATCH',
+  //           headers: { 'Content-Type': 'application/json' },
+  //           body: JSON.stringify({
+  //             targetCollectionId,
+  //             targetFolderId: targetFolderId || null,
+  //           }),
+  //         }
+  //       );
+
+  //       if (!response.ok) throw new Error('Failed to move folder');
+
+  //       toast({
+  //         title: 'Folder moved',
+  //         description: `"${draggedItem.data.name}" has been moved successfully`,
+  //         variant: 'success',
+  //       });
+  //     }
+
+  //     // Refresh both source and target collections
+  //     await fetchCollectionRequests.mutateAsync(draggedItem.sourceCollectionId);
+  //     if (targetCollectionId !== draggedItem.sourceCollectionId) {
+  //       await fetchCollectionRequests.mutateAsync(targetCollectionId);
+  //     }
+  //   } catch (error) {
+  //     console.error('Failed to move item:', error);
+  //     toast({
+  //       title: 'Error',
+  //       description: `Failed to move ${draggedItem.type}. Please try again.`,
+  //       variant: 'destructive',
+  //     });
+  //   }
+  // };
+
+  const handleDndDragStart = (event: any) => {
+    const { active } = event;
+    setActiveDragItem(active.data.current);
+  };
+
+  const handleDndDragEnd = async (event: any) => {
+    const { active, over } = event;
+    setActiveDragItem(null);
+
+    if (!over || active.id === over.id) return;
+
+    const activeData = active.data.current;
+    const overData = over.data.current;
+
+    if (!activeData) return;
+
+    let targetCollectionId: string;
+    let targetFolderId: string | undefined;
+
+    if (overData?.type === 'collection') {
+      targetCollectionId = overData.collection.id;
+      targetFolderId = undefined;
+    } else if (overData?.type === 'folder') {
+      targetCollectionId = overData.collectionId;
+      targetFolderId = overData.folder.id;
+    } else if (overData?.type === 'request') {
+      targetCollectionId = overData.collectionId;
+      targetFolderId = overData.request.folderId || undefined;
+    } else {
+      const targetCollection = collections.find((c) => c.id === over.id);
+      if (targetCollection) {
+        targetCollectionId = targetCollection.id;
+        targetFolderId = undefined;
+      } else {
+        console.warn('[v0] Could not determine drop target', {
+          over,
+          overData,
+        });
+        return;
+      }
     }
 
-    const dragData = JSON.stringify({
-      type,
-      data,
-      sourceCollectionId,
-      sourceFolderId,
-    });
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('application/json', dragData);
-
-    console.log('[v0] Dragging:', type, data.name);
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    e.dataTransfer.dropEffect = 'move';
-  };
-
-  const handleDragEnter = (
-    e: React.DragEvent,
-    collectionId: string,
-    folderId?: string
-  ) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDropTarget({ collectionId, folderId });
-  };
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    const relatedTarget = e.relatedTarget as HTMLElement;
-    const currentTarget = e.currentTarget as HTMLElement;
-
-    // Check if we're moving to a child element
-    if (relatedTarget && currentTarget.contains(relatedTarget)) {
-      return;
-    }
-
-    setDropTarget(null);
-  };
-
-  const handleDragEnd = () => {
-    setDropTarget(null);
-    setDraggedItem(null);
-  };
-
-  const handleDrop = async (
-    e: React.DragEvent,
-    targetCollectionId: string,
-    targetFolderId?: string
-  ) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    console.log('[v0] handleDrop called for:', {
+    console.log('[v0] Move operation:', {
+      activeType: activeData.type,
       targetCollectionId,
       targetFolderId,
     });
 
-    // Clear drop target immediately
-    setDropTarget(null);
-
-    const dataStr = e.dataTransfer.getData('application/json');
-    if (!dataStr) {
-      console.log('[v0] No drag data found');
-      return;
-    }
-
-    let draggedItem: {
-      type: 'request' | 'folder';
-      data: any;
-      sourceCollectionId: string;
-      sourceFolderId?: string;
-    };
-
     try {
-      draggedItem = JSON.parse(dataStr);
-    } catch {
-      console.log('[v0] Failed to parse drag data');
-      return;
-    }
+      if (activeData.type === 'request') {
+        const { createdBy, createdAt, updatedAt, ...cleanRequest } =
+          activeData.request;
 
-    if (!draggedItem) return;
-
-    if (
-      draggedItem.sourceCollectionId === targetCollectionId &&
-      draggedItem.sourceFolderId === targetFolderId
-    ) {
-      console.log('[v0] Same location, skipping');
-      return;
-    }
-
-    try {
-      if (draggedItem.type === 'request') {
         const requestData: any = {
-          ...draggedItem.data,
+          ...cleanRequest,
+          workspaceId: currentWorkspace?.id ?? '',
           collectionId: targetCollectionId,
-          folderId: targetFolderId || null,
+          folderId: targetFolderId || undefined,
+          bodyFormData: targetFolderId ? undefined : [],
         };
 
-        console.log('[v0] Moving request with data:', requestData);
-
         await updateRequestMutation.mutateAsync({
-          requestId: draggedItem.data.id,
+          requestId: activeData.request.id,
           requestData,
         });
 
         toast({
           title: 'Request moved',
-          description: `"${draggedItem.data.name}" has been moved successfully`,
-          variant: 'success',
-        });
-      } else if (draggedItem.type === 'folder') {
-        const response = await fetch(
-          `/api/folders/${draggedItem.data.id}/move`,
-          {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              targetCollectionId,
-              targetFolderId: targetFolderId || null,
-            }),
-          }
-        );
-
-        if (!response.ok) throw new Error('Failed to move folder');
-
-        toast({
-          title: 'Folder moved',
-          description: `"${draggedItem.data.name}" has been moved successfully`,
+          description: `"${activeData.request.name}" has been moved successfully`,
           variant: 'success',
         });
       }
+      // else if (activeData.type === 'folder') {
+      //   const { createdBy, createdAt, updatedAt, ...cleanFolder } =
+      //     activeData.folder;
 
-      // Refresh both source and target collections
-      await fetchCollectionRequests.mutateAsync(draggedItem.sourceCollectionId);
-      if (targetCollectionId !== draggedItem.sourceCollectionId) {
+      //   const payload: any = {
+      //     collectionId: targetCollectionId,
+      //     ...cleanFolder,
+      //   };
+
+      //   if (targetFolderId) {
+      //     payload.folderId = targetFolderId;
+      //   } else {
+      //     payload.bodyFormData = [];
+      //   }
+
+      //   console.log('[v0] Folder move payload:', payload);
+
+      //   const response = await fetch(
+      //     `/api/folders/${activeData.folder.id}/move`,
+      //     {
+      //       method: 'PATCH',
+      //       headers: { 'Content-Type': 'application/json' },
+      //       body: JSON.stringify(payload),
+      //     }
+      //   );
+
+      //   if (!response.ok) throw new Error('Failed to move folder');
+
+      //   toast({
+      //     title: 'Folder moved',
+      //     description: `"${activeData.folder.name}" has been moved successfully`,
+      //     variant: 'success',
+      //   });
+      // }
+
+      // Refresh collections
+      if (activeData.collectionId) {
+        await fetchCollectionRequests.mutateAsync(activeData.collectionId);
+      }
+      if (targetCollectionId !== activeData.collectionId) {
         await fetchCollectionRequests.mutateAsync(targetCollectionId);
       }
     } catch (error) {
       console.error('Failed to move item:', error);
       toast({
         title: 'Error',
-        description: `Failed to move ${draggedItem.type}. Please try again.`,
+        description: `Failed to move ${activeData.type}. Please try again.`,
         variant: 'destructive',
       });
     }
@@ -517,13 +671,26 @@ const Sidebar: React.FC = () => {
     if (!selectedRequest?.id) return;
 
     try {
+      const payload: any = {
+        collectionId: targetCollectionId,
+      };
+
+      if (targetFolderId) {
+        payload.folderId = targetFolderId;
+      }
+
+      console.log(
+        '[v0] Move request payload:',
+        payload,
+        'Request:',
+        selectedRequest
+      );
+
       await moveRequest({
         requestId: selectedRequest.id,
-        targetCollectionId,
-        targetFolderId,
+        ...payload,
       });
 
-      // Refresh both source and target collections
       if (selectedCollection?.id) {
         await fetchCollectionRequests.mutateAsync(selectedCollection.id);
       }
@@ -548,43 +715,51 @@ const Sidebar: React.FC = () => {
     }
   };
 
-  const handleMoveFolder = async (
-    targetCollectionId: string,
-    targetFolderId?: string
-  ) => {
-    if (!selectedFolder?.id) return;
+  // const handleMoveFolder = async (
+  //   targetCollectionId: string,
+  //   targetFolderId?: string
+  // ) => {
+  //   if (!selectedFolder?.id) return;
 
-    try {
-      await moveFolder({
-        folderId: selectedFolder.id,
-        targetCollectionId,
-        targetFolderId,
-      });
+  //   try {
+  //     const payload: any = {
+  //       collectionId: targetCollectionId,
+  //     };
 
-      // Refresh both source and target collections
-      if (selectedCollection?.id) {
-        await fetchCollectionRequests.mutateAsync(selectedCollection.id);
-      }
-      if (targetCollectionId !== selectedCollection?.id) {
-        await fetchCollectionRequests.mutateAsync(targetCollectionId);
-      }
+  //     if (targetFolderId) {
+  //       payload.folderId = targetFolderId;
+  //     }
 
-      toast({
-        title: 'Folder moved',
-        description: `Folder has been moved successfully`,
-        variant: 'success',
-      });
+  //     console.log('[v0] Move folder payload:', payload);
 
-      setShowMoveModal(false);
-    } catch (error) {
-      console.error('Failed to move folder:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to move the folder. Please try again.',
-        variant: 'destructive',
-      });
-    }
-  };
+  //     await moveFolder({
+  //       folderId: selectedFolder.id,
+  //       ...payload,
+  //     });
+
+  //     if (selectedCollection?.id) {
+  //       await fetchCollectionRequests.mutateAsync(selectedCollection.id);
+  //     }
+  //     if (targetCollectionId !== selectedCollection?.id) {
+  //       await fetchCollectionRequests.mutateAsync(targetCollectionId);
+  //     }
+
+  //     toast({
+  //       title: 'Folder moved',
+  //       description: `Folder has been moved successfully`,
+  //       variant: 'success',
+  //     });
+
+  //     setShowMoveModal(false);
+  //   } catch (error) {
+  //     console.error('Failed to move folder:', error);
+  //     toast({
+  //       title: 'Error',
+  //       description: 'Failed to move the folder. Please try again.',
+  //       variant: 'destructive',
+  //     });
+  //   }
+  // };
 
   const handleOpenMoveRequestModal = () => {
     if (selectedRequest) {
@@ -596,15 +771,15 @@ const Sidebar: React.FC = () => {
     }
   };
 
-  const handleOpenMoveFolderModal = () => {
-    if (selectedFolder) {
-      setMoveItemType('folder');
-      setMoveItemName(selectedFolder.name || 'Untitled Folder');
-      setShowMoveModal(true);
-      setShowMenu(null);
-      setMenuPosition(null);
-    }
-  };
+  // const handleOpenMoveFolderModal = () => {
+  //   if (selectedFolder) {
+  //     setMoveItemType('folder');
+  //     setMoveItemName(selectedFolder.name || 'Untitled Folder');
+  //     setShowMoveModal(true);
+  //     setShowMenu(null);
+  //     setMenuPosition(null);
+  //   }
+  // };
 
   const handleExportCollection = async (collection: Collection) => {
     try {
@@ -935,7 +1110,6 @@ const Sidebar: React.FC = () => {
     });
   };
 
-  // Folder tree with parentCollection passed through for breadcrumb correctness.
   const FolderNodeView: React.FC<{
     folder: any;
     parentCollection: Collection;
@@ -943,58 +1117,29 @@ const Sidebar: React.FC = () => {
       req: CollectionRequest,
       parentCollection: Collection
     ) => void;
-  }> = ({ folder, parentCollection, onClickRequest }) => {
+    depth?: number;
+  }> = ({ folder, parentCollection, onClickRequest, depth = 0 }) => {
     const isOpen = expandedFolders.has(folder.id);
-    const isDropTarget =
-      dropTarget?.collectionId === parentCollection.id &&
-      dropTarget?.folderId === folder.id;
+
+    // Get all sortable item IDs for this folder
+    const sortableIds = [
+      folder.id,
+      ...(folder.requests || []).map(
+        (r: CollectionRequest) => r.id || `temp-${r.name}`
+      ),
+      ...(folder.folders || []).map((f: any) => f.id),
+    ];
 
     return (
       <div className='ml-3'>
-        <div
-          onDragOver={(e) => {
-            e.stopPropagation();
-            handleDragOver(e);
-          }}
-          onDragEnter={(e) => {
-            e.stopPropagation();
-            handleDragEnter(e, parentCollection.id, folder.id);
-          }}
-          onDragLeave={(e) => {
-            e.stopPropagation();
-            handleDragLeave(e);
-          }}
-          onDrop={(e) => {
-            e.stopPropagation();
-            console.log('[v0] Folder drop triggered for:', folder.name);
-            handleDrop(e, parentCollection.id, folder.id);
-          }}
-          className={`rounded-md transition-all ${
-            isDropTarget
-              ? 'bg-blue-100 dark:bg-blue-900/40 border-2 border-blue-400 border-dashed'
-              : ''
-          }`}
+        <SortableFolder
+          folder={folder}
+          depth={depth}
+          collectionId={parentCollection.id}
         >
-          <div
-            draggable={true}
-            onDragStart={(e) => {
-              e.stopPropagation();
-              handleDragStart(
-                e,
-                'folder',
-                folder,
-                parentCollection.id,
-                folder.parentId
-              );
-            }}
-            onDragEnd={(e) => {
-              e.stopPropagation();
-              handleDragEnd();
-            }}
-            className='flex items-center justify-between p-[7px] rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer group'
-          >
+          <div className='flex items-center justify-between p-[7px] rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer group transition-all'>
             <div
-              className='flex items-center space-x-2'
+              className='flex items-center space-x-2 flex-1'
               onClick={() => toggleFolder(folder.id)}
             >
               {isOpen ? (
@@ -1010,7 +1155,6 @@ const Sidebar: React.FC = () => {
 
             <div className='opacity-0 group-hover:opacity-100 transition-opacity'>
               <button
-                draggable={false}
                 onMouseDown={(e) => e.stopPropagation()}
                 className='p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700'
                 onClick={(e) => {
@@ -1031,110 +1175,106 @@ const Sidebar: React.FC = () => {
               </button>
             </div>
           </div>
-        </div>
+        </SortableFolder>
 
         <div
           className={`ml-4 transition-all ${
             isOpen ? 'max-h-[1000px]' : 'max-h-0 overflow-hidden'
           }`}
         >
-          {(folder.requests || []).map(
-            (request: CollectionRequest, index: number) => {
-              return (
-                <div
-                  key={request.id || `${folder.id}-${request.name}-${index}`}
-                  draggable={true}
-                  onDragStart={(e) => {
-                    e.stopPropagation();
-                    handleDragStart(
-                      e,
-                      'request',
-                      request,
-                      parentCollection.id,
-                      folder.id
-                    );
-                  }}
-                  onDragEnd={(e) => {
-                    e.stopPropagation();
-                    handleDragEnd();
-                  }}
-                  className={`group flex items-center justify-between p-[7px] rounded-md cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 ${
-                    activeRequest?.id === request.id
-                      ? 'bg-blue-50 dark:bg-blue-900/20'
-                      : ''
-                  }`}
-                >
-                  <div
-                    className='flex items-center space-x-2 flex-1 min-w-0'
-                    onClick={(e) => {
-                      if (!e.defaultPrevented) {
-                        onClickRequest(request, parentCollection);
-                      }
-                    }}
+          <SortableContext
+            items={sortableIds}
+            strategy={verticalListSortingStrategy}
+          >
+            {(folder.requests || []).map(
+              (request: CollectionRequest, index: number) => {
+                return (
+                  <SortableRequest
+                    key={request.id || `${folder.id}-${request.name}-${index}`}
+                    request={request}
+                    depth={depth + 1}
+                    collectionId={parentCollection.id}
                   >
-                    <span
-                      className={`text-xs font-medium ${getMethodColor(
-                        request.method
-                      )} flex-shrink-0`}
+                    <div
+                      className={`group flex items-center justify-between p-[7px] rounded-md cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 ${
+                        activeRequest?.id === request.id
+                          ? 'bg-blue-50 dark:bg-blue-900/20'
+                          : ''
+                      }`}
                     >
-                      {request.method}
-                    </span>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <span className='text-sm text-gray-900 dark:text-white truncate min-w-0 max-w-[150px]'>
-                            {request.name}
-                          </span>
-                        </TooltipTrigger>
-                        <TooltipContent side='top'>
-                          {request.name}
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </div>
+                      <div
+                        className='flex items-center space-x-2 flex-1 min-w-0'
+                        onClick={(e) => {
+                          if (!e.defaultPrevented) {
+                            onClickRequest(request, parentCollection);
+                          }
+                        }}
+                      >
+                        <span
+                          className={`text-xs font-medium ${getMethodColor(
+                            request.method
+                          )} flex-shrink-0`}
+                        >
+                          {request.method}
+                        </span>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className='text-sm text-gray-900 dark:text-white truncate min-w-0 max-w-[150px]'>
+                                {request.name}
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent side='top'>
+                              {request.name}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
 
-                  <div className='flex items-center opacity-0 group-hover:opacity-100 transition-opacity relative'>
-                    <button
-                      draggable={false}
-                      onMouseDown={(e) => e.stopPropagation()}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        const rect = (
-                          e.currentTarget as HTMLButtonElement
-                        ).getBoundingClientRect();
-                        setMenuPosition({
-                          top: rect.bottom,
-                          left: rect.left,
-                          anchorTop: rect.top,
-                        });
-                        setSelectedRequest(request);
-                        setSelectedCollection(parentCollection);
-                        setSelectedFolder(folder);
-                        setRequestId(request.id || '');
-                        setRequestIndex(index);
-                        setShowMenu(
-                          `request-${request.id || `${folder.id}-${index}`}`
-                        );
-                      }}
-                      className='p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700'
-                      aria-label='More options'
-                    >
-                      <MoreVertical className='h-3 w-3' />
-                    </button>
-                  </div>
-                </div>
-              );
-            }
-          )}
+                      <div className='flex items-center opacity-0 group-hover:opacity-100 transition-opacity relative'>
+                        <button
+                          onMouseDown={(e) => e.stopPropagation()}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const rect = (
+                              e.currentTarget as HTMLButtonElement
+                            ).getBoundingClientRect();
+                            setMenuPosition({
+                              top: rect.bottom,
+                              left: rect.left,
+                              anchorTop: rect.top,
+                            });
+                            setSelectedRequest(request);
+                            setSelectedCollection(parentCollection);
+                            setSelectedFolder(folder);
+                            setRequestId(request.id || '');
+                            setRequestIndex(index);
+                            setShowMenu(
+                              `request-${request.id || `${folder.id}-${index}`}`
+                            );
+                          }}
+                          className='p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700'
+                          aria-label='More options'
+                        >
+                          <MoreVertical className='h-3 w-3' />
+                        </button>
+                      </div>
+                    </div>
+                  </SortableRequest>
+                );
+              }
+            )}
 
-          {(folder.folders || []).map((sub: any) => (
-            <FolderNodeView
-              key={sub.id}
-              folder={sub}
-              parentCollection={parentCollection}
-              onClickRequest={onClickRequest}
-            />
-          ))}
+            {(folder.folders || []).map((sub: any) => (
+              <FolderNodeView
+                key={sub.id}
+                folder={sub}
+                parentCollection={parentCollection}
+                onClickRequest={onClickRequest}
+                depth={depth + 1}
+              />
+            ))}
+          </SortableContext>
         </div>
       </div>
     );
@@ -1142,486 +1282,393 @@ const Sidebar: React.FC = () => {
 
   return (
     <TooltipProvider>
-      <div className='dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 transition-all duration-300 ease-in-out w-full h-full md:w-64 overflow-auto'>
-        <div className='p-1 sm:p-2'>
-          <div className='flex items-center justify-between mb-2 border-b border-gray-200 dark:border-gray-700 pb-2'>
-            <h2 className='text-base sm:text-lg font-semibold text-gray-900 dark:text-white'>
-              Collections
-            </h2>
-            <div className='flex items-center space-x-1'>
-              <TooltipContainer text='Create collection'>
-                <button
-                  onClick={handleCreateCollection}
-                  className='border border-gray-300 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800'
-                >
-                  <FolderPlus className='text-[#136fb0]' size={23} />
-                </button>
-              </TooltipContainer>
-              <TooltipContainer text='Import collection'>
-                <button
-                  onClick={() => setShowImportModal(true)}
-                  className='border border-gray-300 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800'
-                  aria-label='Import collection'
-                  title='Import from Existing Collection'
-                >
-                  <Upload className='text-[#136fb0]' size={23} />
-                </button>
-              </TooltipContainer>
-            </div>
-          </div>
-
-          <div className='text-center mb-2'>
-            <div className='mx-auto relative'>
-              <Search
-                className='absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400'
-                size={20}
-              />
-              <Input
-                placeholder='Search Collections...'
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className='pl-10 text-base'
-              />
-            </div>
-          </div>
-
-          <div>
-            {filteredCollections.length > 0 ? (
-              filteredCollections.map((collection) => {
-                const expanded = isCollectionExpanded(collection.id);
-                const isCollectionDropTarget =
-                  dropTarget?.collectionId === collection.id &&
-                  !dropTarget?.folderId;
-
-                return (
-                  <div key={collection.id} className='group'>
-                    <div
-                      onDragOver={handleDragOver}
-                      onDragEnter={(e) => handleDragEnter(e, collection.id)}
-                      onDragLeave={handleDragLeave}
-                      onDrop={(e) => handleDrop(e, collection.id)}
-                      className={`rounded-md ${
-                        isCollectionDropTarget
-                          ? 'bg-blue-100 dark:bg-blue-900/40 border-2 border-blue-400 border-dashed'
-                          : ''
-                      }`}
-                    >
-                      <div
-                        className='flex items-center justify-between p-2 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer group'
-                        onClick={() => {
-                          if (isSearching) return;
-                          setActiveCollection(collection);
-                          void toggleExpandedCollection(collection.id);
-                        }}
-                      >
-                        <div className='flex items-center space-x-2'>
-                          {expanded ? (
-                            <ChevronDown className='h-4 w-4 text-gray-500' />
-                          ) : (
-                            <ChevronRight className='h-4 w-4 text-gray-500' />
-                          )}
-                          <Folder className='h-4 w-4 text-orange-500' />
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <span
-                                  className='text-sm font-medium text-gray-900 dark:text-white truncate max-w-[120px] inline-block align-bottom'
-                                  style={{
-                                    textOverflow: 'ellipsis',
-                                    overflow: 'hidden',
-                                    whiteSpace: 'nowrap',
-                                    verticalAlign: 'bottom',
-                                  }}
-                                >
-                                  {collection.name}
-                                </span>
-                              </TooltipTrigger>
-                              <TooltipContent side='top'>
-                                {collection.name}
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        </div>
-
-                        <div className='flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity relative'>
-                          <TooltipContainer
-                            text={
-                              collection.isImportant ? 'Unfavorite' : 'Favorite'
-                            }
-                            children={
-                              <button
-                                className='p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700'
-                                onClick={() =>
-                                  handleFavoriteCollection(collection)
-                                }
-                              >
-                                <Star
-                                  className={`h-4 w-4 ${
-                                    collection.isImportant
-                                      ? 'fill-yellow-400 text-yellow-500'
-                                      : ''
-                                  }`}
-                                />
-                              </button>
-                            }
-                          />
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              const rect = (
-                                e.currentTarget as HTMLButtonElement
-                              ).getBoundingClientRect();
-                              setMenuPosition({
-                                top: rect.bottom,
-                                left: rect.left,
-                                anchorTop: rect.top,
-                              });
-                              setSelectedCollection(collection);
-                              setShowMenu(collection.id);
-                            }}
-                            className='p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700'
-                            aria-label='More options'
-                          >
-                            <MoreVertical className='h-3 w-3' />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div
-                      className={`ml-4 sm:ml-6 overflow-hidden ${
-                        expanded
-                          ? isSearching
-                            ? 'max-h-none'
-                            : 'max-h-[1000px]'
-                          : 'max-h-0'
-                      }`}
-                    >
-                      {expanded && (
-                        <div className='overflow-y-auto max-h-[600px]'>
-                          {collection.requests
-                            .filter((r: any) => !r.folderId)
-                            .map((request, index) => (
-                              <div
-                                key={request.id || `root-${index}`}
-                                draggable={true}
-                                onDragStart={(e) => {
-                                  const target = e.target as HTMLElement;
-                                  if (
-                                    target.tagName === 'BUTTON' ||
-                                    target.closest('button')
-                                  ) {
-                                    e.preventDefault();
-                                    return;
-                                  }
-                                  handleDragStart(
-                                    e,
-                                    'request',
-                                    request,
-                                    collection.id
-                                  );
-                                }}
-                                onDragEnd={handleDragEnd}
-                                className={`flex items-center justify-between p-[7px] rounded-md cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 ${
-                                  activeRequest?.id === request.id
-                                    ? 'bg-blue-50 dark:bg-blue-900/20'
-                                    : ''
-                                }`}
-                              >
-                                <div
-                                  className='flex items-center space-x-2 flex-1 min-w-0'
-                                  onClick={() =>
-                                    selectRequest(request, collection)
-                                  }
-                                >
-                                  <span
-                                    className={`text-xs font-medium ${getMethodColor(
-                                      request.method
-                                    )} flex-shrink-0`}
-                                  >
-                                    {request.method}
-                                  </span>
-                                  <TooltipProvider>
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <span className='text-sm text-gray-900 dark:text-white truncate min-w-0 max-w-[150px]'>
-                                          {request.name}
-                                        </span>
-                                      </TooltipTrigger>
-                                      <TooltipContent side='top'>
-                                        {request.name}
-                                      </TooltipContent>
-                                    </Tooltip>
-                                  </TooltipProvider>
-                                </div>
-                                <div className='flex items-center opacity-0 group-hover:opacity-100 transition-opacity relative'>
-                                  <button
-                                    draggable={false}
-                                    onMouseDown={(e) => e.stopPropagation()}
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      const rect = (
-                                        e.currentTarget as HTMLButtonElement
-                                      ).getBoundingClientRect();
-                                      setMenuPosition({
-                                        top: rect.bottom,
-                                        left: rect.left,
-                                        anchorTop: rect.top,
-                                      });
-                                      setSelectedRequest(request);
-                                      setSelectedCollection(collection);
-                                      setRequestId(request.id || '');
-                                      setShowMenu(`request-${request.id}`);
-                                    }}
-                                    className='p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700'
-                                  >
-                                    <MoreVertical className='h-3 w-3' />
-                                  </button>
-                                </div>
-                              </div>
-                            ))}
-
-                          {(collection as any).folders?.map((folder: any) => (
-                            <FolderNodeView
-                              key={folder.id}
-                              folder={folder}
-                              parentCollection={collection}
-                              onClickRequest={(req, parentCol) =>
-                                selectRequest(req, parentCol)
-                              }
-                            />
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })
-            ) : (
-              <div className='text-center py-2 px-2'>
-                <p className='text-gray-500 mb-3 text-sm'>No collections yet</p>
-                <div className='space-y-2'>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragStart={handleDndDragStart}
+        onDragEnd={handleDndDragEnd}
+      >
+        <div className='dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 transition-all duration-300 ease-in-out w-full h-full md:w-64 overflow-auto'>
+          <div className='p-1 sm:p-2'>
+            <div className='flex items-center justify-between mb-2 border-b border-gray-200 dark:border-gray-700 pb-2'>
+              <h2 className='text-base sm:text-lg font-semibold text-gray-900 dark:text-white'>
+                Collections
+              </h2>
+              <div className='flex items-center space-x-1'>
+                <TooltipContainer text='Create collection'>
                   <button
                     onClick={handleCreateCollection}
-                    className='flex items-center justify-center w-full px-2 py-1.5 text-sm text-blue-600 border border-blue-600 rounded-md hover:bg-blue-50'
+                    className='border border-gray-300 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800'
                   >
-                    <Plus className='h-3 w-3 mr-1.5' /> Create Collection
+                    <FolderPlus className='text-[#136fb0]' size={23} />
                   </button>
+                </TooltipContainer>
+                <TooltipContainer text='Import collection'>
                   <button
                     onClick={() => setShowImportModal(true)}
-                    className='flex items-center justify-center w-full px-2 py-1.5 text-sm text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50'
+                    className='border border-gray-300 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800'
+                    aria-label='Import collection'
+                    title='Import from Existing Collection'
                   >
-                    <Upload className='h-3 w-3 mr-1.5' /> Import Collection
+                    <Upload className='text-[#136fb0]' size={23} />
                   </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {showCollectionModal && (
-          <CreateCollectionModel
-            handleClose={handleClose}
-            handleSaveCollection={handleSaveCollection}
-            selectedCollection={selectedCollection}
-          />
-        )}
-
-        {showRequestRenameModal && (
-          <div className='fixed inset-0 bg-black/50 flex items-center justify-center z-50'>
-            <div className='bg-white dark:bg-gray-900 rounded-lg shadow-lg w-full max-w-md border border-gray-200 dark:border-gray-700'>
-              <div className='flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700'>
-                <h2 className='text-xl font-semibold'>Rename Request</h2>
-                <button
-                  onClick={() => setShowRequestRenameModal(false)}
-                  className='text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
-                >
-                  <X size={20} />
-                </button>
-              </div>
-
-              <div className='p-4 space-y-4'>
-                <div>
-                  <label className='block text-sm font-medium mb-1'>Name</label>
-                  <input
-                    type='text'
-                    value={renameValue}
-                    onChange={(e) => setRenameValue(e.target.value)}
-                    className='w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800'
-                    placeholder='Request name'
-                  />
-                </div>
-              </div>
-
-              <div className='flex justify-end gap-2 p-4 border-t border-gray-200 dark:border-gray-700'>
-                <button
-                  onClick={() => setShowRequestRenameModal(false)}
-                  className='px-4 py-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={saveRenamedRequest}
-                  disabled={!renameValue.trim()}
-                  className='px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2'
-                >
-                  <Save size={16} />
-                  Save
-                </button>
+                </TooltipContainer>
               </div>
             </div>
+
+            <div className='text-center mb-2'>
+              <div className='mx-auto relative'>
+                <Search
+                  className='absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400'
+                  size={20}
+                />
+                <Input
+                  placeholder='Search Collections...'
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className='pl-10 text-base'
+                />
+              </div>
+            </div>
+
+            <div>
+              {filteredCollections.length > 0 ? (
+                <SortableContext
+                  items={filteredCollections.map((c) => c.id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  {filteredCollections.map((collection) => {
+                    const expanded = isCollectionExpanded(collection.id);
+
+                    // Get all sortable IDs for this collection
+                    const collectionSortableIds = [
+                      ...collection.requests
+                        .filter((r: any) => !r.folderId)
+                        .map((r) => r.id || `temp-${r.name}`),
+                      ...((collection as any).folders || []).map(
+                        (f: any) => f.id
+                      ),
+                    ];
+
+                    return (
+                      <SortableCollection
+                        key={collection.id}
+                        collection={collection}
+                      >
+                        <div className='group'>
+                          <div className='rounded-md'>
+                            <div
+                              className='flex items-center justify-between p-2 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer group'
+                              onDoubleClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                              }}
+                              onClick={() => {
+                                if (isSearching) return;
+                                setActiveCollection(collection);
+                                void toggleExpandedCollection(collection.id);
+                              }}
+                            >
+                              <div className='flex items-center space-x-2'>
+                                {expanded ? (
+                                  <ChevronDown className='h-4 w-4 text-gray-500' />
+                                ) : (
+                                  <ChevronRight className='h-4 w-4 text-gray-500' />
+                                )}
+                                <Folder className='h-4 w-4 text-orange-500' />
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <span
+                                        className='text-sm font-medium text-gray-900 dark:text-white truncate max-w-[120px] inline-block align-bottom'
+                                        style={{
+                                          textOverflow: 'ellipsis',
+                                          overflow: 'hidden',
+                                          whiteSpace: 'nowrap',
+                                          verticalAlign: 'bottom',
+                                        }}
+                                      >
+                                        {collection.name}
+                                      </span>
+                                    </TooltipTrigger>
+                                    <TooltipContent side='top'>
+                                      {collection.name}
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              </div>
+
+                              <div className='flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity relative'>
+                                <TooltipContainer
+                                  text={
+                                    collection.isImportant
+                                      ? 'Unfavorite'
+                                      : 'Favorite'
+                                  }
+                                  children={
+                                    <button
+                                      className='p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700'
+                                      onClick={() =>
+                                        handleFavoriteCollection(collection)
+                                      }
+                                    >
+                                      <Star
+                                        className={`h-4 w-4 ${
+                                          collection.isImportant
+                                            ? 'fill-yellow-400 text-yellow-500'
+                                            : ''
+                                        }`}
+                                      />
+                                    </button>
+                                  }
+                                />
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    const rect = (
+                                      e.currentTarget as HTMLButtonElement
+                                    ).getBoundingClientRect();
+                                    setMenuPosition({
+                                      top: rect.bottom,
+                                      left: rect.left,
+                                      anchorTop: rect.top,
+                                    });
+                                    setSelectedCollection(collection);
+                                    setShowMenu(collection.id);
+                                  }}
+                                  className='p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700'
+                                  aria-label='More options'
+                                >
+                                  <MoreVertical className='h-3 w-3' />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div
+                            className={`ml-4 sm:ml-6 overflow-hidden ${
+                              expanded
+                                ? isSearching
+                                  ? 'max-h-none'
+                                  : 'max-h-[1000px]'
+                                : 'max-h-0'
+                            }`}
+                          >
+                            {expanded && (
+                              <div className='overflow-y-auto max-h-[600px]'>
+                                <SortableContext
+                                  items={collectionSortableIds}
+                                  strategy={verticalListSortingStrategy}
+                                >
+                                  {collection.requests
+                                    .filter((r: any) => !r.folderId)
+                                    .map((request, index) => (
+                                      <SortableRequest
+                                        key={request.id || `root-${index}`}
+                                        request={request}
+                                        depth={0}
+                                        collectionId={collection.id}
+                                      >
+                                        <div
+                                          className={`flex items-center justify-between p-[7px] rounded-md cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 ${
+                                            activeRequest?.id === request.id
+                                              ? 'bg-blue-50 dark:bg-blue-900/20'
+                                              : ''
+                                          }`}
+                                        >
+                                          <div
+                                            className='flex items-center space-x-2 flex-1 min-w-0'
+                                            onClick={() =>
+                                              selectRequest(request, collection)
+                                            }
+                                          >
+                                            <span
+                                              className={`text-xs font-medium ${getMethodColor(
+                                                request.method
+                                              )} flex-shrink-0`}
+                                            >
+                                              {request.method}
+                                            </span>
+                                            <TooltipProvider>
+                                              <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                  <span className='text-sm text-gray-900 dark:text-white truncate min-w-0 max-w-[150px]'>
+                                                    {request.name}
+                                                  </span>
+                                                </TooltipTrigger>
+                                                <TooltipContent side='top'>
+                                                  {request.name}
+                                                </TooltipContent>
+                                              </Tooltip>
+                                            </TooltipProvider>
+                                          </div>
+                                          <div className='flex items-center opacity-0 group-hover:opacity-100 transition-opacity relative'>
+                                            <button
+                                              draggable={false}
+                                              onMouseDown={(e) =>
+                                                e.stopPropagation()
+                                              }
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                const rect = (
+                                                  e.currentTarget as HTMLButtonElement
+                                                ).getBoundingClientRect();
+                                                setMenuPosition({
+                                                  top: rect.bottom,
+                                                  left: rect.left,
+                                                  anchorTop: rect.top,
+                                                });
+                                                setSelectedRequest(request);
+                                                setSelectedCollection(
+                                                  collection
+                                                );
+                                                setRequestId(request.id || '');
+                                                setShowMenu(
+                                                  `request-${request.id}`
+                                                );
+                                              }}
+                                              className='p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700'
+                                            >
+                                              <MoreVertical className='h-3 w-3' />
+                                            </button>
+                                          </div>
+                                        </div>
+                                      </SortableRequest>
+                                    ))}
+
+                                  {(collection as any).folders?.map(
+                                    (folder: any) => (
+                                      <FolderNodeView
+                                        key={folder.id}
+                                        folder={folder}
+                                        parentCollection={collection}
+                                        onClickRequest={(req, parentCol) =>
+                                          selectRequest(req, parentCol)
+                                        }
+                                      />
+                                    )
+                                  )}
+                                </SortableContext>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </SortableCollection>
+                    );
+                  })}
+                </SortableContext>
+              ) : (
+                <div className='text-center py-2 px-2'>
+                  <p className='text-gray-500 mb-3 text-sm'>
+                    No collections yet
+                  </p>
+                  <div className='space-y-2'>
+                    <button
+                      onClick={handleCreateCollection}
+                      className='flex items-center justify-center w-full px-2 py-1.5 text-sm text-blue-600 border border-blue-600 rounded-md hover:bg-blue-50'
+                    >
+                      <Plus className='h-3 w-3 mr-1.5' /> Create Collection
+                    </button>
+                    <button
+                      onClick={() => setShowImportModal(true)}
+                      className='flex items-center justify-center w-full px-2 py-1.5 text-sm text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50'
+                    >
+                      <Upload className='h-3 w-3 mr-1.5' /> Import Collection
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
-        )}
 
-        {showImportModal && (
-          <ImportModal
-            isOpen={showImportModal}
-            onClose={() => setShowImportModal(false)}
-          />
-        )}
+          {showCollectionModal && (
+            <CreateCollectionModel
+              handleClose={handleClose}
+              handleSaveCollection={handleSaveCollection}
+              selectedCollection={selectedCollection}
+            />
+          )}
 
-        {showMenu &&
-          menuPosition &&
-          typeof document !== 'undefined' &&
-          ReactDOM.createPortal(
-            <div
-              ref={menuRef}
-              className='fixed z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg py-1 min-w-[180px]'
-              style={{
-                top: `${menuPosition.top}px`,
-                left: `${menuPosition.left}px`,
-              }}
-            >
-              {showMenu === selectedCollection?.id && (
-                <div>
+          {showRequestRenameModal && (
+            <div className='fixed inset-0 bg-black/50 flex items-center justify-center z-50'>
+              <div className='bg-white dark:bg-gray-900 rounded-lg shadow-lg w-full max-w-md border border-gray-200 dark:border-gray-700'>
+                <div className='flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700'>
+                  <h2 className='text-xl font-semibold'>Rename Request</h2>
                   <button
-                    onClick={() => {
-                      if (selectedCollection && !addingFolder) {
-                        setSelectedFolder(null);
-                        setShowMenu(null);
-                        setMenuPosition(null);
-                        setShowAddFolderModal(true);
-                      }
-                    }}
-                    disabled={addingFolder}
-                    className='flex items-center w-full px-4 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50'
+                    onClick={() => setShowRequestRenameModal(false)}
+                    className='text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
                   >
-                    <FolderPlus className='h-4 w-4 mr-2' />
-                    Add Folder
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      if (selectedCollection)
-                        handleCreateRequest(selectedCollection);
-                      setShowMenu(null);
-                      setMenuPosition(null);
-                    }}
-                    className='flex items-center w-full px-4 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
-                  >
-                    <Plus className='h-4 w-4 mr-2' />
-                    Add Request
-                  </button>
-                  <button
-                    onClick={() => {
-                      if (selectedCollection)
-                        handleRenameCollection(selectedCollection);
-                      setShowMenu(null);
-                      setMenuPosition(null);
-                    }}
-                    className='flex items-center w-full px-4 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
-                  >
-                    <Edit className='h-4 w-4 mr-2' />
-                    Rename
-                  </button>
-                  <button
-                    className='flex items-center w-full px-4 py-2 text-sm text-left text-red-500 hover:bg-gray-100 dark:hover:bg-gray-700'
-                    onClick={() => {
-                      handleDeleteCollection();
-                      setShowMenu(null);
-                      setMenuPosition(null);
-                    }}
-                  >
-                    <Trash2 className='h-4 w-4 mr-2' />
-                    Delete
-                  </button>
-                  <div className='border-t border-gray-200 dark:border-gray-700 my-1'></div>
-                  <button
-                    className='flex items-center w-full px-4 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (selectedCollection)
-                        handleExportCollection(selectedCollection);
-                      setShowMenu(null);
-                      setMenuPosition(null);
-                    }}
-                  >
-                    <FileJson2 className='h-4 w-4 mr-2' />
-                    Export
+                    <X size={20} />
                   </button>
                 </div>
-              )}
 
-              {showMenu.startsWith('request-') && selectedRequest && (
-                <div>
+                <div className='p-4 space-y-4'>
+                  <div>
+                    <label className='block text-sm font-medium mb-1'>
+                      Name
+                    </label>
+                    <input
+                      type='text'
+                      value={renameValue}
+                      onChange={(e) => setRenameValue(e.target.value)}
+                      className='w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800'
+                      placeholder='Request name'
+                    />
+                  </div>
+                </div>
+
+                <div className='flex justify-end gap-2 p-4 border-t border-gray-200 dark:border-gray-700'>
                   <button
-                    onClick={() => {
-                      handleRenameRequest(selectedRequest);
-                      setShowMenu(null);
-                      setMenuPosition(null);
-                    }}
-                    className='flex items-center w-full px-4 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
+                    onClick={() => setShowRequestRenameModal(false)}
+                    className='px-4 py-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
                   >
-                    <Edit className='h-4 w-4 mr-2' />
-                    Rename
+                    Cancel
                   </button>
                   <button
-                    onClick={() => {
-                      handleDuplicateRequest(selectedRequest);
-                      setShowMenu(null);
-                      setMenuPosition(null);
-                    }}
-                    className='flex items-center w-full px-4 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
+                    onClick={saveRenamedRequest}
+                    disabled={!renameValue.trim()}
+                    className='px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2'
                   >
-                    <Copy className='h-4 w-4 mr-2' />
-                    Duplicate
-                  </button>
-                  <button
-                    onClick={handleOpenMoveRequestModal}
-                    className='flex items-center w-full px-4 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
-                  >
-                    <Move className='h-4 w-4 mr-2' />
-                    Move to
-                  </button>
-                  <button
-                    className='flex items-center w-full px-4 py-2 text-sm text-left text-red-500 hover:bg-gray-100 dark:hover:bg-gray-700'
-                    onClick={() => {
-                      if (selectedRequest.id) {
-                        handleDeleteRequest(selectedRequest.id);
-                      } else {
-                        handleDeleteNewRequest();
-                      }
-                      setShowMenu(null);
-                      setMenuPosition(null);
-                    }}
-                  >
-                    <Trash2 className='h-4 w-4 mr-2' />
-                    Delete
+                    <Save size={16} />
+                    Save
                   </button>
                 </div>
-              )}
+              </div>
+            </div>
+          )}
 
-              {showMenu.startsWith('folder-') &&
-                selectedFolder &&
-                selectedCollection && (
+          {showImportModal && (
+            <ImportModal
+              isOpen={showImportModal}
+              onClose={() => setShowImportModal(false)}
+            />
+          )}
+
+          {showMenu &&
+            menuPosition &&
+            typeof document !== 'undefined' &&
+            ReactDOM.createPortal(
+              <div
+                ref={menuRef}
+                className='fixed z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg py-1 min-w-[180px]'
+                style={{
+                  top: `${menuPosition.top}px`,
+                  left: `${menuPosition.left}px`,
+                }}
+              >
+                {showMenu === selectedCollection?.id && (
                   <div>
                     <button
                       onClick={() => {
-                        setShowMenu(null);
-                        setMenuPosition(null);
-                        setShowAddFolderModal(true);
+                        if (selectedCollection && !addingFolder) {
+                          setSelectedFolder(null);
+                          setShowMenu(null);
+                          setMenuPosition(null);
+                          setShowAddFolderModal(true);
+                        }
                       }}
-                      className='flex items-center w-full px-4 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
+                      disabled={addingFolder}
+                      className='flex items-center w-full px-4 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50'
                     >
                       <FolderPlus className='h-4 w-4 mr-2' />
                       Add Folder
@@ -1629,10 +1676,8 @@ const Sidebar: React.FC = () => {
 
                     <button
                       onClick={() => {
-                        handleCreateRequest(
-                          selectedCollection,
-                          selectedFolder.id
-                        );
+                        if (selectedCollection)
+                          handleCreateRequest(selectedCollection);
                         setShowMenu(null);
                         setMenuPosition(null);
                       }}
@@ -1643,137 +1688,285 @@ const Sidebar: React.FC = () => {
                     </button>
                     <button
                       onClick={() => {
+                        if (selectedCollection)
+                          handleRenameCollection(selectedCollection);
                         setShowMenu(null);
                         setMenuPosition(null);
-                        setShowRenameFolderModal(true);
                       }}
                       className='flex items-center w-full px-4 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
                     >
                       <Edit className='h-4 w-4 mr-2' />
-                      Rename Folder
+                      Rename
                     </button>
                     <button
-                      onClick={handleOpenMoveFolderModal}
+                      className='flex items-center w-full px-4 py-2 text-sm text-left text-red-500 hover:bg-gray-100 dark:hover:bg-gray-700'
+                      onClick={() => {
+                        handleDeleteCollection();
+                        setShowMenu(null);
+                        setMenuPosition(null);
+                      }}
+                    >
+                      <Trash2 className='h-4 w-4 mr-2' />
+                      Delete
+                    </button>
+                    <div className='border-t border-gray-200 dark:border-gray-700 my-1'></div>
+                    <button
+                      className='flex items-center w-full px-4 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (selectedCollection)
+                          handleExportCollection(selectedCollection);
+                        setShowMenu(null);
+                        setMenuPosition(null);
+                      }}
+                    >
+                      <FileJson2 className='h-4 w-4 mr-2' />
+                      Export
+                    </button>
+                  </div>
+                )}
+
+                {showMenu.startsWith('request-') && selectedRequest && (
+                  <div>
+                    <button
+                      onClick={() => {
+                        handleRenameRequest(selectedRequest);
+                        setShowMenu(null);
+                        setMenuPosition(null);
+                      }}
+                      className='flex items-center w-full px-4 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
+                    >
+                      <Edit className='h-4 w-4 mr-2' />
+                      Rename
+                    </button>
+                    <button
+                      onClick={() => {
+                        handleDuplicateRequest(selectedRequest);
+                        setShowMenu(null);
+                        setMenuPosition(null);
+                      }}
+                      className='flex items-center w-full px-4 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
+                    >
+                      <Copy className='h-4 w-4 mr-2' />
+                      Duplicate
+                    </button>
+                    <button
+                      onClick={handleOpenMoveRequestModal}
                       className='flex items-center w-full px-4 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
                     >
                       <Move className='h-4 w-4 mr-2' />
                       Move to
                     </button>
                     <button
+                      className='flex items-center w-full px-4 py-2 text-sm text-left text-red-500 hover:bg-gray-100 dark:hover:bg-gray-700'
                       onClick={() => {
+                        if (selectedRequest.id) {
+                          handleDeleteRequest(selectedRequest.id);
+                        } else {
+                          handleDeleteNewRequest();
+                        }
                         setShowMenu(null);
                         setMenuPosition(null);
-                        setShowDeleteFolderModal(true);
                       }}
-                      className='flex items-center w-full px-4 py-2 text-sm text-left text-red-500 hover:bg-gray-100 dark:hover:bg-gray-700'
                     >
                       <Trash2 className='h-4 w-4 mr-2' />
-                      Delete Folder
+                      Delete
                     </button>
                   </div>
                 )}
-            </div>,
-            document.body
-          )}
 
-        <AddFolderModal
-          isOpen={showAddFolderModal}
-          collection={selectedCollection}
-          onClose={() => setShowAddFolderModal(false)}
-          onSave={async (folderName: string) => {
-            if (!selectedCollection) return;
-            try {
-              await addFolder({
-                collectionId: selectedCollection.id,
-                name: folderName.trim(),
-                parentId: selectedFolder?.id,
-              });
-              await fetchCollectionRequests.mutateAsync(selectedCollection.id);
-              toast({
-                title: 'Folder created',
-                description: `Folder "${folderName.trim()}" has been added.`,
-                variant: 'success',
-              });
-            } catch (error) {
-              console.error('Failed to add folder:', error);
-              toast({
-                title: 'Error',
-                description: 'Failed to add folder. Please try again.',
-                variant: 'destructive',
-              });
-            } finally {
-              setShowAddFolderModal(false);
-            }
-          }}
-          loading={addingFolder}
-        />
+                {showMenu.startsWith('folder-') &&
+                  selectedFolder &&
+                  selectedCollection && (
+                    <div>
+                      <button
+                        onClick={() => {
+                          setShowMenu(null);
+                          setMenuPosition(null);
+                          setShowAddFolderModal(true);
+                        }}
+                        className='flex items-center w-full px-4 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
+                      >
+                        <FolderPlus className='h-4 w-4 mr-2' />
+                        Add Folder
+                      </button>
 
-        <RenameFolderModal
-          isOpen={showRenameFolderModal}
-          initialName={selectedFolder?.name || ''}
-          onClose={() => setShowRenameFolderModal(false)}
-          onSave={async (name: string) => {
-            if (!selectedFolder || !selectedCollection) return;
-            try {
-              await renameFolder({ folderId: selectedFolder.id, name });
-              await fetchCollectionRequests.mutateAsync(selectedCollection.id);
-              toast({
-                title: 'Folder renamed',
-                description: `Folder is now "${name}"`,
-                variant: 'success',
-              });
-            } catch (err) {
-              console.error('[v0] renameFolder error:', err);
-              toast({
-                title: 'Error',
-                description: 'Failed to rename folder. Please try again.',
-                variant: 'destructive',
-              });
-            } finally {
-              setShowRenameFolderModal(false);
-            }
-          }}
-        />
+                      <button
+                        onClick={() => {
+                          handleCreateRequest(
+                            selectedCollection,
+                            selectedFolder.id
+                          );
+                          setShowMenu(null);
+                          setMenuPosition(null);
+                        }}
+                        className='flex items-center w-full px-4 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
+                      >
+                        <Plus className='h-4 w-4 mr-2' />
+                        Add Request
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowMenu(null);
+                          setMenuPosition(null);
+                          setShowRenameFolderModal(true);
+                        }}
+                        className='flex items-center w-full px-4 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
+                      >
+                        <Edit className='h-4 w-4 mr-2' />
+                        Rename Folder
+                      </button>
+                      {/* <button
+                        onClick={handleOpenMoveFolderModal}
+                        className='flex items-center w-full px-4 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
+                      >
+                        <Move className='h-4 w-4 mr-2' />
+                        Move to
+                      </button> */}
+                      <button
+                        onClick={() => {
+                          setShowMenu(null);
+                          setMenuPosition(null);
+                          setShowDeleteFolderModal(true);
+                        }}
+                        className='flex items-center w-full px-4 py-2 text-sm text-left text-red-500 hover:bg-gray-100 dark:hover:bg-gray-700'
+                      >
+                        <Trash2 className='h-4 w-4 mr-2' />
+                        Delete Folder
+                      </button>
+                    </div>
+                  )}
+              </div>,
+              document.body
+            )}
 
-        <DeleteFolderModal
-          isOpen={showDeleteFolderModal}
-          folderName={selectedFolder?.name || ''}
-          onClose={() => setShowDeleteFolderModal(false)}
-          onConfirm={async () => {
-            if (!selectedFolder || !selectedCollection) return;
-            try {
-              await deleteFolder(selectedFolder.id);
-              await fetchCollectionRequests.mutateAsync(selectedCollection.id);
-              toast({
-                title: 'Folder deleted',
-                description: 'The folder has been removed.',
-                variant: 'success',
-              });
-            } catch (err) {
-              console.error('[v0] deleteFolder error:', err);
-              toast({
-                title: 'Error',
-                description: 'Failed to delete folder. Please try again.',
-                variant: 'destructive',
-              });
-            } finally {
-              setShowDeleteFolderModal(false);
-            }
-          }}
-        />
-        <MoveToModal
-          isOpen={showMoveModal}
-          onClose={() => setShowMoveModal(false)}
-          onMove={
-            moveItemType === 'request' ? handleMoveRequest : handleMoveFolder
-          }
-          collections={collections}
-          currentCollectionId={selectedCollection?.id || ''}
-          currentFolderId={selectedFolder?.id}
-          itemType={moveItemType}
-          itemName={moveItemName}
-        />
-      </div>
+          <AddFolderModal
+            isOpen={showAddFolderModal}
+            collection={selectedCollection}
+            onClose={() => setShowAddFolderModal(false)}
+            onSave={async (folderName: string) => {
+              if (!selectedCollection) return;
+              try {
+                await addFolder({
+                  collectionId: selectedCollection.id,
+                  name: folderName.trim(),
+                  parentId: selectedFolder?.id,
+                });
+                await fetchCollectionRequests.mutateAsync(
+                  selectedCollection.id
+                );
+                toast({
+                  title: 'Folder created',
+                  description: `Folder "${folderName.trim()}" has been added.`,
+                  variant: 'success',
+                });
+              } catch (error) {
+                console.error('Failed to add folder:', error);
+                toast({
+                  title: 'Error',
+                  description: 'Failed to add folder. Please try again.',
+                  variant: 'destructive',
+                });
+              } finally {
+                setShowAddFolderModal(false);
+              }
+            }}
+            loading={addingFolder}
+          />
+
+          <RenameFolderModal
+            isOpen={showRenameFolderModal}
+            initialName={selectedFolder?.name || ''}
+            onClose={() => setShowRenameFolderModal(false)}
+            onSave={async (name: string) => {
+              if (!selectedFolder || !selectedCollection) return;
+              try {
+                await renameFolder({ folderId: selectedFolder.id, name });
+                await fetchCollectionRequests.mutateAsync(
+                  selectedCollection.id
+                );
+                toast({
+                  title: 'Folder renamed',
+                  description: `Folder is now "${name}"`,
+                  variant: 'success',
+                });
+              } catch (err) {
+                console.error('[v0] renameFolder error:', err);
+                toast({
+                  title: 'Error',
+                  description: 'Failed to rename folder. Please try again.',
+                  variant: 'destructive',
+                });
+              } finally {
+                setShowRenameFolderModal(false);
+              }
+            }}
+          />
+
+          <DeleteFolderModal
+            isOpen={showDeleteFolderModal}
+            folderName={selectedFolder?.name || ''}
+            onClose={() => setShowDeleteFolderModal(false)}
+            onConfirm={async () => {
+              if (!selectedFolder || !selectedCollection) return;
+              try {
+                await deleteFolder(selectedFolder.id);
+                await fetchCollectionRequests.mutateAsync(
+                  selectedCollection.id
+                );
+                toast({
+                  title: 'Folder deleted',
+                  description: 'The folder has been removed.',
+                  variant: 'success',
+                });
+              } catch (err) {
+                console.error('[v0] deleteFolder error:', err);
+                toast({
+                  title: 'Error',
+                  description: 'Failed to delete folder. Please try again.',
+                  variant: 'destructive',
+                });
+              } finally {
+                setShowDeleteFolderModal(false);
+              }
+            }}
+          />
+          <MoveToModal
+            isOpen={showMoveModal}
+            onClose={() => setShowMoveModal(false)}
+            onMove={handleMoveRequest}
+            collections={collections}
+            currentCollectionId={selectedCollection?.id || ''}
+            currentFolderId={selectedFolder?.id}
+            itemType={moveItemType}
+            itemName={moveItemName}
+          />
+        </div>
+
+        <DragOverlay>
+          {activeDragItem ? (
+            <div className='bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md p-2 shadow-lg opacity-90'>
+              {activeDragItem.type === 'request' ? (
+                <div className='flex items-center space-x-2'>
+                  <span
+                    className={`text-xs font-medium ${getMethodColor(
+                      activeDragItem.request.method
+                    )}`}
+                  >
+                    {activeDragItem.request.method}
+                  </span>
+                  <span className='text-sm'>{activeDragItem.request.name}</span>
+                </div>
+              ) : (
+                <div className='flex items-center space-x-2'>
+                  <Folder className='h-4 w-4 text-orange-500' />
+                  <span className='text-sm'>{activeDragItem.folder.name}</span>
+                </div>
+              )}
+            </div>
+          ) : null}
+        </DragOverlay>
+      </DndContext>
     </TooltipProvider>
   );
 };
