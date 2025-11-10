@@ -1104,8 +1104,6 @@ const Sidebar: React.FC = () => {
     depth?: number;
   }> = ({ folder, parentCollection, onClickRequest, depth = 0 }) => {
     const isOpen = expandedFolders.has(folder.id);
-
-    // Get all sortable item IDs for this folder
     const sortableIds = [
       folder.id,
       ...(folder.requests || []).map(
