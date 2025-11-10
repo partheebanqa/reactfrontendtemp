@@ -250,7 +250,7 @@ const ResponseViewer = () => {
         className='group hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors rounded'
         style={{ marginLeft: `${node.level * 20}px` }}
       >
-        <div className='flex items-center py-1.5 px-2'>
+        <div className='flex items-center px-2'>
           <div className='flex items-center flex-1 min-w-0'>
             {hasChildren && (
               <button
@@ -598,7 +598,7 @@ const ResponseViewer = () => {
                         )}
                       </button>
                     </div>
-                    <div className='bg-gray-50 dark:bg-gray-900 px-2 py-1.5 rounded border text-xs font-mono overflow-x-auto text-gray-700 dark:text-gray-300'>
+                    <div className='bg-gray-50 dark:bg-gray-900 px-2 rounded border text-xs font-mono overflow-x-auto text-gray-700 dark:text-gray-300'>
                       {typeof value === 'object'
                         ? JSON.stringify(value)
                         : String(value)}

@@ -582,10 +582,6 @@ const Sidebar: React.FC = () => {
       return;
     }
     try {
-      toast({
-        title: 'Duplicating request',
-        description: 'Creating a copy of the request...',
-      });
       const duplicatedRequest = await duplicateRequestMutation.mutateAsync({
         requestId: request.id,
       });
@@ -1108,8 +1104,6 @@ const Sidebar: React.FC = () => {
     depth?: number;
   }> = ({ folder, parentCollection, onClickRequest, depth = 0 }) => {
     const isOpen = expandedFolders.has(folder.id);
-
-    // Get all sortable item IDs for this folder
     const sortableIds = [
       folder.id,
       ...(folder.requests || []).map(
@@ -1125,7 +1119,7 @@ const Sidebar: React.FC = () => {
           depth={depth}
           collectionId={parentCollection.id}
         >
-          <div className='flex items-center justify-between p-[7px] rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer group transition-all'>
+          <div className='flex items-center justify-between p-[6px] rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer group transition-all'>
             <div
               className='flex items-center space-x-2 flex-1'
               onClick={() => toggleFolder(folder.id)}
@@ -1184,7 +1178,7 @@ const Sidebar: React.FC = () => {
                     collectionId={parentCollection.id}
                   >
                     <div
-                      className={`group flex items-center justify-between p-[7px] rounded-md cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 ${
+                      className={`group flex items-center justify-between p-[6px] rounded-md cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 ${
                         activeRequest?.id === request.id
                           ? 'bg-blue-50 dark:bg-blue-900/20'
                           : ''
@@ -1458,7 +1452,7 @@ const Sidebar: React.FC = () => {
                                         collectionId={collection.id}
                                       >
                                         <div
-                                          className={`flex items-center justify-between p-[7px] rounded-md cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 ${
+                                          className={`flex items-center justify-between p-[6px] rounded-md cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 ${
                                             activeRequest?.id === request.id
                                               ? 'bg-blue-50 dark:bg-blue-900/20'
                                               : ''
@@ -1546,7 +1540,7 @@ const Sidebar: React.FC = () => {
                   })}
                 </SortableContext>
               ) : (
-                <div className='text-center py-2 px-2'>
+                <div className='text-center py-1 px-2'>
                   <p className='text-gray-500 mb-3 text-sm'>
                     No collections yet
                   </p>
@@ -1599,7 +1593,7 @@ const Sidebar: React.FC = () => {
                       type='text'
                       value={renameValue}
                       onChange={(e) => setRenameValue(e.target.value)}
-                      className='w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800'
+                      className='w-full px-3 py-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800'
                       placeholder='Request name'
                     />
                   </div>
@@ -1608,14 +1602,14 @@ const Sidebar: React.FC = () => {
                 <div className='flex justify-end gap-2 p-4 border-t border-gray-200 dark:border-gray-700'>
                   <button
                     onClick={() => setShowRequestRenameModal(false)}
-                    className='px-4 py-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+                    className='px-4 py-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
                   >
                     Cancel
                   </button>
                   <button
                     onClick={saveRenamedRequest}
                     disabled={!renameValue.trim()}
-                    className='px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2'
+                    className='px-4 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2'
                   >
                     <Save size={16} />
                     Save
@@ -1656,7 +1650,7 @@ const Sidebar: React.FC = () => {
                         }
                       }}
                       disabled={addingFolder}
-                      className='flex items-center w-full px-4 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50'
+                      className='flex items-center w-full px-4 py-1 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50'
                     >
                       <FolderPlus className='h-4 w-4 mr-2' />
                       Add Folder
@@ -1669,7 +1663,7 @@ const Sidebar: React.FC = () => {
                         setShowMenu(null);
                         setMenuPosition(null);
                       }}
-                      className='flex items-center w-full px-4 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
+                      className='flex items-center w-full px-4 py-1 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
                     >
                       <Plus className='h-4 w-4 mr-2' />
                       Add Request
@@ -1690,7 +1684,7 @@ const Sidebar: React.FC = () => {
                         setShowMenu(null);
                         setMenuPosition(null);
                       }}
-                      className='flex items-center w-full px-4 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
+                      className='flex items-center w-full px-4 py-1 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
                     >
                       <Zap className='h-4 w-4 mr-2' />
                       Quick Test
@@ -1705,13 +1699,13 @@ const Sidebar: React.FC = () => {
                         setShowMenu(null);
                         setMenuPosition(null);
                       }}
-                      className='flex items-center w-full px-4 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
+                      className='flex items-center w-full px-4 py-1 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
                     >
                       <Edit className='h-4 w-4 mr-2' />
                       Rename
                     </button>
                     <button
-                      className='flex items-center w-full px-4 py-2 text-sm text-left text-red-500 hover:bg-gray-100 dark:hover:bg-gray-700'
+                      className='flex items-center w-full px-4 py-1 text-sm text-left text-red-500 hover:bg-gray-100 dark:hover:bg-gray-700'
                       onClick={() => {
                         handleDeleteCollection();
                         setShowMenu(null);
@@ -1723,7 +1717,7 @@ const Sidebar: React.FC = () => {
                     </button>
                     {/* <div className='border-t border-gray-200 dark:border-gray-700 my-1'></div>
                     <button
-                      className='flex items-center w-full px-4 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
+                      className='flex items-center w-full px-4 py-1 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
                       onClick={(e) => {
                         e.stopPropagation();
                         if (selectedCollection)
@@ -1746,7 +1740,7 @@ const Sidebar: React.FC = () => {
                         setShowMenu(null);
                         setMenuPosition(null);
                       }}
-                      className='flex items-center w-full px-4 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
+                      className='flex items-center w-full px-4 py-1 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
                     >
                       <Edit className='h-4 w-4 mr-2' />
                       Rename
@@ -1757,20 +1751,20 @@ const Sidebar: React.FC = () => {
                         setShowMenu(null);
                         setMenuPosition(null);
                       }}
-                      className='flex items-center w-full px-4 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
+                      className='flex items-center w-full px-4 py-1 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
                     >
                       <Copy className='h-4 w-4 mr-2' />
                       Duplicate
                     </button>
-                    <button
+                    {/* <button
                       onClick={handleOpenMoveRequestModal}
-                      className='flex items-center w-full px-4 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
+                      className='flex items-center w-full px-4 py-1 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
                     >
                       <Move className='h-4 w-4 mr-2' />
                       Move to
-                    </button>
+                    </button> */}
                     <button
-                      className='flex items-center w-full px-4 py-2 text-sm text-left text-red-500 hover:bg-gray-100 dark:hover:bg-gray-700'
+                      className='flex items-center w-full px-4 py-1 text-sm text-left text-red-500 hover:bg-gray-100 dark:hover:bg-gray-700'
                       onClick={() => {
                         if (selectedRequest.id) {
                           handleDeleteRequest(selectedRequest.id);
@@ -1797,7 +1791,7 @@ const Sidebar: React.FC = () => {
                           setMenuPosition(null);
                           setShowAddFolderModal(true);
                         }}
-                        className='flex items-center w-full px-4 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
+                        className='flex items-center w-full px-4 py-1 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
                       >
                         <FolderPlus className='h-4 w-4 mr-2' />
                         Add Folder
@@ -1812,25 +1806,27 @@ const Sidebar: React.FC = () => {
                           setShowMenu(null);
                           setMenuPosition(null);
                         }}
-                        className='flex items-center w-full px-4 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
+                        className='flex items-center w-full px-4 py-1 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
                       >
                         <Plus className='h-4 w-4 mr-2' />
                         Add Request
                       </button>
+                      <div className='border-t border-gray-200 dark:border-gray-700 my-1'></div>
+
                       <button
                         onClick={() => {
                           setShowMenu(null);
                           setMenuPosition(null);
                           setShowRenameFolderModal(true);
                         }}
-                        className='flex items-center w-full px-4 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
+                        className='flex items-center w-full px-4 py-1 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
                       >
                         <Edit className='h-4 w-4 mr-2' />
                         Rename Folder
                       </button>
                       {/* <button
                         onClick={handleOpenMoveFolderModal}
-                        className='flex items-center w-full px-4 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
+                        className='flex items-center w-full px-4 py-1 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
                       >
                         <Move className='h-4 w-4 mr-2' />
                         Move to
@@ -1841,7 +1837,7 @@ const Sidebar: React.FC = () => {
                           setMenuPosition(null);
                           setShowDeleteFolderModal(true);
                         }}
-                        className='flex items-center w-full px-4 py-2 text-sm text-left text-red-500 hover:bg-gray-100 dark:hover:bg-gray-700'
+                        className='flex items-center w-full px-4 py-1 text-sm text-left text-red-500 hover:bg-gray-100 dark:hover:bg-gray-700'
                       >
                         <Trash2 className='h-4 w-4 mr-2' />
                         Delete Folder
