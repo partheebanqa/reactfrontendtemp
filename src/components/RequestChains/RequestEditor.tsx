@@ -41,7 +41,6 @@ import {
   XCircle,
   Shuffle,
   Edit3,
-  Info,
   HelpCircle,
 } from 'lucide-react';
 import type {
@@ -79,8 +78,8 @@ import 'codemirror/mode/javascript/javascript';
 import './../RequestBuilder/RequestEditor/whiteorange.css';
 import {
   Tooltip,
-  TooltipContent,
   TooltipProvider,
+  TooltipContent,
   TooltipTrigger,
 } from '../ui/tooltip';
 import { VariableHelpDialog } from './HelpTextDialougs/variablesUseDialogues';
@@ -175,13 +174,38 @@ export function RequestEditor({
   // State for individual fields to manage updates
   const [url, setUrl] = useState(request.url || '');
   const [body, setBody] = useState(request.body || '');
-  const [headers, setHeaders] = useState<KeyValuePair[]>(request.headers || []);
+  const [headers, setHeaders] = useState<KeyValuePair[]>(() => {
+    const requestHeaders = request.headers || [];
+    const hasContentType = requestHeaders.some(
+      (h) => h.key.toLowerCase() === 'content-type'
+    );
+
+    if (!hasContentType) {
+      return [
+        ...requestHeaders,
+        { key: 'Content-Type', value: 'application/json', enabled: true },
+      ];
+    }
+    return requestHeaders;
+  });
   const [params, setParams] = useState<KeyValuePair[]>(request.params || []);
   const [auth, setAuth] = useState({
     username: request.authUsername || '',
     password: request.authPassword || '',
     token: request.authToken || '',
   });
+
+  useEffect(() => {
+    onUpdate({
+      url,
+      body,
+      headers,
+      params,
+      authUsername: auth.username,
+      authPassword: auth.password,
+      authToken: auth.token,
+    });
+  }, []);
 
   useEffect(() => {
     if (!isSyncingRef.current) {
@@ -214,31 +238,17 @@ export function RequestEditor({
   }, [auth]);
 
   useEffect(() => {
+    isSyncingRef.current = true;
     setUrl(request.url || '');
     setBody(request.body || '');
-
-    const requestHeaders = request.headers || [];
-    const hasContentType = requestHeaders.some(
-      (h) => h.key.toLowerCase() === 'content-type'
-    );
-
-    if (!hasContentType) {
-      setHeaders([
-        ...requestHeaders,
-        { key: 'Content-Type', value: 'application/json', enabled: true },
-      ]);
-    } else {
-      setHeaders(requestHeaders);
-    }
-    // </CHANGE>
-
     setParams(request.params || []);
     setAuth({
       username: request.authUsername || '',
       password: request.authPassword || '',
       token: request.authToken || '',
     });
-  }, [request.id]); // Only update when request ID changes to avoid infinite loops
+    isSyncingRef.current = false;
+  }, [request]);
 
   useEffect(() => {
     if (isSyncingRef.current || !url.includes('?')) return;
@@ -730,7 +740,7 @@ export function RequestEditor({
       return `${randString(6)}@${domains[randInt(0, domains.length - 1)]}`;
     };
     const emailWithDomain = (domain = 'example.com') =>
-      `${randString(8)}@${domain}`;
+      `${randString(6)}@${domain}`;
     const fakePassword = () => {
       const chars =
         'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
@@ -1026,8 +1036,8 @@ export function RequestEditor({
     const safeRequest = {
       ...request,
       extractVariables: request.extractVariables ?? [],
-      headers: request.headers ?? [],
-      params: request.params ?? [],
+      headers: headers, // Use local headers state that includes defaults
+      params: params, // Use local params state
       url: url,
       body: body,
       authToken: auth.token,
@@ -1268,13 +1278,11 @@ export function RequestEditor({
     ]);
   };
 
-  const updateParam = (
-    index: number,
-    updates: Partial<{ key: string; value: string; enabled: boolean }>
-  ) => {
-    setParams((prev) =>
-      prev.map((param, i) => (i === index ? { ...param, ...updates } : param))
-    );
+  const updateParam = (index: number, updates: Partial<KeyValuePair>) => {
+    const newParams = [...params];
+    newParams[index] = { ...newParams[index], ...updates };
+    setParams(newParams);
+    onUpdate({ params: newParams });
   };
 
   const removeParam = (index: number) => {
@@ -1459,15 +1467,11 @@ export function RequestEditor({
     ]);
   };
 
-  const updateHeader = (
-    index: number,
-    updates: Partial<{ key: string; value: string; enabled: boolean }>
-  ) => {
-    setHeaders((prev) =>
-      prev.map((header, i) =>
-        i === index ? { ...header, ...updates } : header
-      )
-    );
+  const updateHeader = (index: number, updates: Partial<KeyValuePair>) => {
+    const newHeaders = [...headers];
+    newHeaders[index] = { ...newHeaders[index], ...updates };
+    setHeaders(newHeaders);
+    onUpdate({ headers: newHeaders });
   };
 
   const removeHeader = (index: number) => {
@@ -2093,12 +2097,7 @@ export function RequestEditor({
                       value={header.key}
                       onChange={(e) =>
                         handleInputChange(e, (value) => {
-                          const newHeaders = [...headers];
-                          newHeaders[index] = {
-                            ...newHeaders[index],
-                            key: value,
-                          };
-                          setHeaders(newHeaders);
+                          updateHeader(index, { key: value });
                         })
                       }
                       onKeyUp={(e) => handleAutocomplete(e)}
@@ -2111,12 +2110,7 @@ export function RequestEditor({
                       value={header.value}
                       onChange={(e) =>
                         handleInputChange(e, (value) => {
-                          const newHeaders = [...headers];
-                          newHeaders[index] = {
-                            ...newHeaders[index],
-                            value: value,
-                          };
-                          setHeaders(newHeaders);
+                          updateHeader(index, { value: value });
                         })
                       }
                       onKeyUp={(e) => handleAutocomplete(e)}
