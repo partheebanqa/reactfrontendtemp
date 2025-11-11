@@ -660,8 +660,6 @@ const RequestEditor: React.FC = () => {
   };
 
   const handleCurlImport = (parsedRequest: any) => {
-    console.log('parsedRequest:', parsedRequest);
-
     try {
       if (parsedRequest.url) {
         setUrl(parsedRequest.url);

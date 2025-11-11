@@ -2,11 +2,22 @@
 
 import type React from 'react';
 import { useState, useEffect, useMemo } from 'react';
-import { Loader2, X, Download, Share2, Search } from 'lucide-react';
+import {
+  Loader2,
+  X,
+  Download,
+  Share2,
+  Search,
+  Globe,
+  Clock,
+  Zap,
+  TrendingUp,
+  AlertTriangle,
+} from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import { toast } from '@/hooks/use-toast';
 import { collectionActions } from '@/store/collectionStore';
-import type { Collection, CollectionRequest } from '@/shared/types/collection';
+
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -16,9 +27,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useDataManagement } from '@/hooks/useDataManagement';
-import { executeRequest } from '@/services/executeRequest.service';
-import { useWorkspace } from '@/hooks/useWorkspace';
 import { GripVertical } from 'lucide-react';
 import {
   DndContext,
@@ -36,8 +44,36 @@ import {
   useSortable,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
+import { executeRequest } from '@/services/executeRequest.service';
+
 import { CSS } from '@dnd-kit/utilities';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
+import { insightsService } from '@/services/insights.service';
+import type { TestResult, TestMetrics } from '@/shared/types/testInsights';
+import { InsightCard } from './InsightCard';
+import { PerformanceCard } from './PerformanceCard';
+import { useWorkspace } from '@/hooks/useWorkspace';
+
+interface CollectionRequest {
+  id?: string;
+  name: string;
+  method: string;
+  url: string;
+  bodyType?: string;
+  bodyRawContent?: string;
+  bodyFormData?: any[];
+  authorizationType?: string;
+  authorization?: any;
+  headers?: any[];
+  params?: any[];
+}
+
+interface Collection {
+  id: string;
+  name: string;
+  requests?: CollectionRequest[];
+  folders?: any[];
+}
 
 interface SortableRequestItemProps {
   request: RequestWithStatus;
@@ -79,21 +115,21 @@ const SortableRequestItem: React.FC<SortableRequestItemProps> = ({
     <div
       ref={setNodeRef}
       style={style}
-      className='flex items-center gap-3 py-2 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50'
+      className='flex items-center gap-3 py-2 border-b border-border hover:bg-muted/50'
     >
       <button
-        className='cursor-grab active:cursor-grabbing p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors'
+        className='cursor-grab active:cursor-grabbing p-1 hover:bg-muted rounded transition-colors'
         {...attributes}
         {...listeners}
       >
-        <GripVertical className='w-4 h-4 text-gray-400' />
+        <GripVertical className='w-4 h-4 text-muted-foreground' />
       </button>
-      <span className='text-sm text-gray-500 w-2'>{index + 1}</span>
+      <span className='text-sm text-muted-foreground w-2'>{index + 1}</span>
       <input
         type='checkbox'
         checked={request.isSelected}
         onChange={onToggle}
-        className='w-3 h-3 rounded border-gray-300'
+        className='w-3 h-3 rounded border-border'
       />
       <span
         className={`py-1 text-xs font-semibold rounded ${getMethodColor(
@@ -102,9 +138,7 @@ const SortableRequestItem: React.FC<SortableRequestItemProps> = ({
       >
         {request.method}
       </span>
-      <span className='flex-1 text-sm text-gray-900 dark:text-white'>
-        {request.name}
-      </span>
+      <span className='flex-1 text-sm text-foreground'>{request.name}</span>
       {getStatusBadge(request.status, request.responseTime, request.isLoading)}
     </div>
   );
@@ -121,18 +155,25 @@ interface RequestWithStatus extends CollectionRequest {
 
 interface SanitizeTestRunnerProps {
   collection: Collection;
+  onClose: () => void;
+  workspaceId?: string;
+  environments?: any[];
+  activeEnvironment?: any;
 }
 
 export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
   collection,
+
+  workspaceId,
+  environments = [],
+  activeEnvironment,
 }) => {
+  const { currentWorkspace } = useWorkspace();
   const [requests, setRequests] = useState<RequestWithStatus[]>([]);
   const [selectedEnvironment, setSelectedEnvironment] = useState<any>(null);
   const [isRunning, setIsRunning] = useState(false);
-  const { activeEnvironment, environments } = useDataManagement();
-  const { currentWorkspace } = useWorkspace();
-  const workspaceId = currentWorkspace?.id;
   const [searchQuery, setSearchQuery] = useState('');
+  const [startTime, setStartTime] = useState<Date | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -168,7 +209,6 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
   };
 
   useEffect(() => {
-    // Reset everything when collection changes
     const getAllRequests = (
       requests: CollectionRequest[] = [],
       folders: any[] = []
@@ -190,7 +230,6 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
       (collection as any).folders || []
     );
 
-    // Always create fresh request objects with reset state
     setRequests(
       allRequests.map((req) => ({
         ...req,
@@ -203,14 +242,11 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
       }))
     );
 
-    // Reset search query when collection changes
     setSearchQuery('');
   }, [collection.id, collection.requests, collection.folders]);
-
   const handleClose = () => {
     collectionActions.closeSanitizeTestRunner();
   };
-
   const handleSelectAll = () => {
     setRequests((prev) => prev.map((req) => ({ ...req, isSelected: true })));
   };
@@ -231,25 +267,17 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
         isLoading: false,
       }))
     );
-  };
-
-  const handleToggleRequest = (index: number) => {
-    setRequests((prev) =>
-      prev.map((req, i) =>
-        i === index ? { ...req, isSelected: !req.isSelected } : req
-      )
-    );
+    setStartTime(null);
   };
 
   const handleRunTests = async () => {
     setIsRunning(true);
+    setStartTime(new Date());
 
     const selectedRequests = requests.filter((r) => r.isSelected);
 
     try {
-      // Execute requests sequentially using for...of loop
       for (const req of selectedRequests) {
-        // Set loading state for current request
         setRequests((prev) =>
           prev.map((r) => (r.id === req.id ? { ...r, isLoading: true } : r))
         );
@@ -276,7 +304,7 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
 
         const payload = {
           request: {
-            workspaceId: workspaceId,
+            workspaceId: currentWorkspace.id,
             name: req.name,
             method: req.method,
             url: finalUrl,
@@ -296,6 +324,8 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
         ).toFixed(2);
 
         try {
+          console.log('payload:', payload);
+
           const result = await executeRequest(payload);
           const endTime = Date.now();
 
@@ -371,7 +401,7 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
           <div className='w-6 h-6 flex items-center justify-center rounded-full bg-primary text-primary-foreground animate-pulse'>
             <Loader2 className='w-4 h-4 animate-spin' />
           </div>
-          <span className='text-sm text-gray-600'>Loading...</span>
+          <span className='text-sm text-muted-foreground'>Loading...</span>
         </div>
       );
     }
@@ -424,16 +454,39 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
           </div>
         )}
         {responseTime && (
-          <span className='text-sm text-gray-600'>{responseTime}ms</span>
+          <span className='text-sm text-muted-foreground'>
+            {responseTime}ms
+          </span>
         )}
       </div>
     );
   };
 
-  const summary = useMemo(() => {
+  // Calculate metrics and insights
+  const { metrics, testResults, insights } = useMemo(() => {
     const executedRequests = requests.filter((r) => r.status !== undefined);
-    const totalExecuted = executedRequests.length;
 
+    // Convert to TestResult format for insights
+    const testResults: TestResult[] = executedRequests.map((r) => ({
+      id: r.id || r.name,
+      name: r.name,
+      method: r.method,
+      status:
+        r.status && r.status >= 200 && r.status < 300
+          ? 'passed'
+          : r.status
+          ? 'failed'
+          : 'skipped',
+      statusCode: r.status || 0,
+      responseTime: r.responseTime || 0,
+      payloadSize: Number(r.responsePayloadSizeKB || 0) * 1024,
+      timestamp: new Date().toISOString(),
+      hasAuthHeader: r.authorizationType !== 'none',
+      requestHeaders: {},
+      responseHeaders: {},
+    }));
+
+    const totalExecuted = executedRequests.length;
     const pass = executedRequests.filter(
       (r) => r.status && r.status >= 200 && r.status < 300
     ).length;
@@ -444,56 +497,83 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
     const authApis = requests.filter(
       (r) => r.authorizationType !== 'none'
     ).length;
-    const maxResponseTime = Math.max(
-      ...executedRequests.map((r) => r.responseTime || 0),
-      0
+
+    const responseTimes = executedRequests
+      .map((r) => r.responseTime || 0)
+      .filter((t) => t > 0);
+
+    const maxResponseTime =
+      responseTimes.length > 0 ? Math.max(...responseTimes) : 0;
+    const minResponseTime =
+      responseTimes.length > 0 ? Math.min(...responseTimes) : 0;
+
+    const slowest = executedRequests.find(
+      (r) => r.responseTime === maxResponseTime
     );
-    const maxPayloadSize = Math.max(
-      ...executedRequests.map((r) => Number(r.responsePayloadSizeKB) || 0),
-      0
+    const fastest = executedRequests.find(
+      (r) => r.responseTime === minResponseTime
     );
 
-    return {
-      totalExecuted,
-      pass,
-      fail,
+    // Calculate most failed status code
+    const failedRequests = executedRequests.filter(
+      (r) => r.status && r.status >= 400
+    );
+    const statusCodeCounts = failedRequests.reduce((acc, r) => {
+      if (r.status) {
+        acc[r.status] = (acc[r.status] || 0) + 1;
+      }
+      return acc;
+    }, {} as Record<number, number>);
+
+    const mostFailedEntry = Object.entries(statusCodeCounts).sort(
+      ([, a], [, b]) => b - a
+    )[0];
+
+    const metrics: TestMetrics = {
+      total: requests.length,
+      passed: pass,
+      failed: fail,
       skipped,
-      authApis,
+      authAPIs: authApis,
       maxResponseTime,
-      maxPayloadSize,
+      minResponseTime,
+      slowestAPI: slowest?.name || 'N/A',
+      fastestAPI: fastest?.name || 'N/A',
+      totalExecutionTime: responseTimes.reduce((a, b) => a + b, 0),
+      mostFailedStatusCode: mostFailedEntry
+        ? { code: parseInt(mostFailedEntry[0]), count: mostFailedEntry[1] }
+        : undefined,
     };
+
+    const insights =
+      testResults.length > 0
+        ? insightsService.generateInsights(testResults, metrics)
+        : [];
+
+    return { metrics, testResults, insights };
   }, [requests]);
 
   const handleDownloadPDF = () => {
     const doc = new jsPDF();
 
-    // Set title
     doc.setFontSize(18);
-    doc.text(`Test Summary: ${collection.name}`, 20, 20);
-
-    // Add date
-    doc.setFontSize(10);
-    doc.text(`Generated: ${new Date().toLocaleString()}`, 20, 30);
-
-    // Add summary data
+    doc.text(`Test Summary`, 20, 20);
     doc.setFontSize(12);
-    let yPos = 45;
+    doc.text(collection.name, 20, 30);
+    doc.setFontSize(10);
+    doc.text(`Generated: ${new Date().toLocaleString()}`, 20, 40);
 
+    let yPos = 55;
     const summaryData = [
-      { label: 'Total Executed', value: summary.totalExecuted.toString() },
-      { label: 'Passed', value: summary.pass.toString() },
-      { label: 'Failed', value: summary.fail.toString() },
-      { label: 'Skipped', value: summary.skipped.toString() },
-      { label: 'Auth APIs', value: summary.authApis.toString() },
+      { label: 'Total', value: metrics.total.toString() },
+      { label: 'Passed', value: metrics.passed.toString() },
+      { label: 'Failed', value: metrics.failed.toString() },
+      { label: 'Skipped', value: metrics.skipped.toString() },
+      { label: 'Auth APIs', value: metrics.authAPIs.toString() },
       {
         label: 'Max Response Time',
         value:
-          summary.maxResponseTime > 0 ? `${summary.maxResponseTime}ms` : 'N/A',
-      },
-      {
-        label: 'Max Payload Size',
-        value:
-          summary.maxPayloadSize > 0 ? `${summary.maxPayloadSize}KB` : 'N/A',
+          metrics.maxResponseTime > 0 ? `${metrics.maxResponseTime}ms` : 'N/A',
       },
     ];
 
@@ -503,7 +583,6 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
       yPos += 10;
     });
 
-    // Save the PDF
     doc.save(`${collection.name}-test-summary.pdf`);
 
     toast({
@@ -517,20 +596,16 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
 Test Summary: ${collection.name}
 Generated: ${new Date().toLocaleString()}
 
-Total Executed: ${summary.totalExecuted}
-Passed: ${summary.pass}
-Failed: ${summary.fail}
-Skipped: ${summary.skipped}
-Auth APIs: ${summary.authApis}
+Total: ${metrics.total}
+Passed: ${metrics.passed}
+Failed: ${metrics.failed}
+Skipped: ${metrics.skipped}
+Auth APIs: ${metrics.authAPIs}
 Max Response Time: ${
-      summary.maxResponseTime > 0 ? `${summary.maxResponseTime}ms` : 'N/A'
-    }
-Max Payload Size: ${
-      summary.maxPayloadSize > 0 ? `${summary.maxPayloadSize}KB` : 'N/A'
+      metrics.maxResponseTime > 0 ? `${metrics.maxResponseTime}ms` : 'N/A'
     }
     `.trim();
 
-    // Try Web Share API first
     if (navigator.share) {
       try {
         await navigator.share({
@@ -547,7 +622,6 @@ Max Payload Size: ${
         }
       }
     } else {
-      // Fallback to clipboard
       try {
         await navigator.clipboard.writeText(summaryText);
         toast({
@@ -566,14 +640,14 @@ Max Payload Size: ${
   };
 
   return (
-    <div className='h-full bg-white dark:bg-gray-900'>
+    <div className='h-full bg-background'>
       <PanelGroup direction='horizontal'>
         <Panel defaultSize={65} minSize={30}>
           <div className='h-full flex flex-col'>
-            <div className='border-b border-gray-200 dark:border-gray-700 p-3 flex items-center justify-between'>
-              <h2 className='text-gray-500 text-sm'>
+            <div className='border-b border-border p-3 flex items-center justify-between'>
+              <h2 className='text-muted-foreground text-sm'>
                 Quick Test :
-                <span className='text-lg font-semibold text-gray-900 dark:text-white ml-1'>
+                <span className='text-lg font-semibold text-foreground ml-1'>
                   {collection.name}
                 </span>
               </h2>
@@ -615,9 +689,9 @@ Max Payload Size: ${
                 </Select>
               </div>
             </div>
-            <div className='p-3 border-b border-gray-200 dark:border-gray-700'>
+            <div className='p-3 border-b border-border'>
               <div className='relative'>
-                <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400' />
+                <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground' />
                 <Input
                   type='text'
                   placeholder='Search requests by name...'
@@ -667,24 +741,24 @@ Max Payload Size: ${
               </div>
             </div>
 
-            <div className='border-t border-gray-200 dark:border-gray-700 p-3 flex items-center justify-between'>
+            <div className='border-t border-border p-3 flex items-center justify-between'>
               <div className='flex items-center gap-4'>
                 <button
                   onClick={handleDeselectAll}
-                  className='text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'
+                  className='text-sm text-muted-foreground hover:text-foreground'
                 >
                   Deselect All
                 </button>
                 <button
                   onClick={handleSelectAll}
-                  className='text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'
+                  className='text-sm text-muted-foreground hover:text-foreground'
                 >
                   Select All
                 </button>
-                <span className='text-gray-300'>|</span>
+                <span className='text-muted-foreground'>|</span>
                 <button
                   onClick={handleReset}
-                  className='text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'
+                  className='text-sm text-muted-foreground hover:text-foreground'
                 >
                   Reset
                 </button>
@@ -700,37 +774,59 @@ Max Payload Size: ${
             </div>
           </div>
         </Panel>
-        <PanelResizeHandle className='w-1 bg-gray-200 dark:bg-gray-700 hover:bg-blue-500 hover:dark:bg-blue-500 transition-colors cursor-col-resize' />
+        <PanelResizeHandle className='w-1 bg-border hover:bg-primary transition-colors cursor-col-resize' />
         <Panel defaultSize={35} minSize={20}>
-          <div className='h-full bg-gray-50 dark:bg-gray-800 p-6 overflow-auto relative'>
-            <button
-              onClick={handleClose}
-              className='absolute top-4 right-4 p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-md'
-            >
-              <X className='w-5 h-5' />
-            </button>
-
-            <div className='mb-6'>
-              <h3 className='text-lg font-semibold text-gray-900 dark:text-white mb-4'>
-                Quick test summary for ({collection.name})
-              </h3>
+          <div className='h-full bg-muted/30 overflow-auto relative'>
+            <div className='sticky top-0 bg-background border-b border-border p-4 z-10'>
+              <div className='flex items-start justify-between mb-3'>
+                <div className='flex-1'>
+                  <h3 className='text-lg font-semibold text-foreground'>
+                    Test Summary
+                  </h3>
+                  <p className='text-sm font-medium text-foreground mt-1'>
+                    {collection.name}
+                  </p>
+                  <div className='flex items-center gap-3 mt-2 text-xs text-muted-foreground'>
+                    <div className='flex items-center gap-1'>
+                      <Globe className='w-3 h-3' />
+                      <span>
+                        {selectedEnvironment?.name || 'No Environment'}
+                      </span>
+                    </div>
+                    <div className='flex items-center gap-1'>
+                      <Clock className='w-3 h-3' />
+                      <span>
+                        {startTime
+                          ? startTime.toLocaleString()
+                          : new Date().toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <button
+                  onClick={handleClose}
+                  className='p-2 hover:bg-muted rounded-md'
+                >
+                  <X className='w-5 h-5' />
+                </button>
+              </div>
 
               <div className='flex items-center gap-2'>
                 <Button
                   variant='outline'
                   size='sm'
                   onClick={handleDownloadPDF}
-                  disabled={summary.totalExecuted === 0}
+                  disabled={metrics.passed === 0 && metrics.failed === 0}
                   className='flex items-center gap-2'
                 >
                   <Download className='w-4 h-4' />
-                  Download PDF
+                  Export
                 </Button>
                 <Button
                   variant='outline'
                   size='sm'
                   onClick={handleShare}
-                  disabled={summary.totalExecuted === 0}
+                  disabled={metrics.passed === 0 && metrics.failed === 0}
                   className='flex items-center gap-2'
                 >
                   <Share2 className='w-4 h-4' />
@@ -739,63 +835,94 @@ Max Payload Size: ${
               </div>
             </div>
 
-            {/* 🔹 Added divider line here */}
-            <div className='border-t border-gray-200 dark:border-gray-700 my-4'></div>
-
-            <div className='space-y-4'>
-              <div className='flex items-center text-sm text-gray-600 dark:text-gray-400 mb-1'>
-                Total:
-                <span className='ml-1 font-semibold text-gray-900 dark:text-white'>
-                  {summary.totalExecuted}
-                </span>
+            <div className='p-4 space-y-6'>
+              {/* Stats Cards */}
+              <div className='grid grid-cols-2 gap-3'>
+                <MetricBadge label='Total' value={metrics.total} />
+                <MetricBadge
+                  label='Passed'
+                  value={metrics.passed}
+                  color='green'
+                />
+                <MetricBadge
+                  label='Failed'
+                  value={metrics.failed}
+                  color='red'
+                />
+                <MetricBadge
+                  label='Skipped'
+                  value={metrics.skipped}
+                  color='gray'
+                />
               </div>
 
-              <div className='flex items-center text-sm text-gray-600 dark:text-gray-400 mb-1'>
-                Pass:
-                <span className='ml-1 font-semibold text-green-600 text-base'>
-                  {summary.pass}
-                </span>
-              </div>
-
-              <div className='flex items-center text-sm text-gray-600 dark:text-gray-400 mb-1'>
-                Fail:
-                <span className='ml-1 font-semibold text-red-600 text-base'>
-                  {summary.fail}
-                </span>
-              </div>
-
-              <div className='flex items-center text-sm text-gray-600 dark:text-gray-400 mb-1'>
-                Skipped:
-                <span className='ml-1 font-semibold text-gray-900 dark:text-white text-base'>
-                  {summary.skipped}
-                </span>
-              </div>
-
-              <div className='pt-4 border-t border-gray-200 dark:border-gray-700'>
-                <div className='flex items-center text-sm text-gray-600 dark:text-gray-400 mb-1'>
-                  Auth API's:
-                  <span className='ml-1 font-medium text-gray-900 dark:text-white text-base'>
-                    {summary.authApis}
-                  </span>
+              {/* Test Distribution */}
+              {(metrics.passed > 0 || metrics.failed > 0) && (
+                <div>
+                  <h3 className='text-sm font-semibold text-foreground mb-3'>
+                    Test Distribution
+                  </h3>
+                  <StatusChart metrics={metrics} />
                 </div>
-              </div>
+              )}
 
-              <div className='flex items-center text-sm text-gray-600 dark:text-gray-400 mb-1'>
-                Max response time:
-                <span className='ml-1 font-medium text-gray-900 dark:text-white text-base'>
-                  {summary.maxResponseTime > 0
-                    ? `${summary.maxResponseTime}ms`
-                    : ''}
-                </span>
-              </div>
+              {/* Performance Insights */}
+              {(metrics.passed > 0 || metrics.failed > 0) && (
+                <div>
+                  <h3 className='text-sm font-semibold text-foreground mb-3'>
+                    Performance Insights
+                  </h3>
+                  <div className='grid grid-cols-1 gap-3'>
+                    <PerformanceCard
+                      title='Fastest API'
+                      value={metrics.fastestAPI}
+                      subtitle={`${metrics.minResponseTime}ms`}
+                      variant='fastest'
+                    />
+                    <PerformanceCard
+                      title='Slowest API'
+                      value={metrics.slowestAPI}
+                      subtitle={`${metrics.maxResponseTime}ms`}
+                      variant='slowest'
+                    />
+                    {metrics.mostFailedStatusCode && (
+                      <PerformanceCard
+                        title='Most Failed Status'
+                        value={metrics.mostFailedStatusCode.code.toString()}
+                        subtitle={`${metrics.mostFailedStatusCode.count} times`}
+                        variant='failed'
+                      />
+                    )}
+                    <PerformanceCard
+                      title='Total Execution Time'
+                      value={`${metrics.totalExecutionTime}ms`}
+                      variant='time'
+                    />
+                  </div>
+                </div>
+              )}
 
-              <div className='flex items-center text-sm text-gray-600 dark:text-gray-400 mb-1'>
-                Max payload size:
-                <span className='ml-1 font-medium text-gray-900 dark:text-white text-base'>
-                  {summary.maxPayloadSize > 0
-                    ? `${summary.maxPayloadSize}KB`
-                    : ''}
-                </span>
+              {/* Smart Insights */}
+              {insights.length > 0 && (
+                <div>
+                  <h3 className='text-sm font-semibold text-foreground mb-3'>
+                    Smart Insights
+                  </h3>
+                  <div className='space-y-3'>
+                    {insights.map((insight, index) => (
+                      <InsightCard
+                        key={index}
+                        type={insight.type}
+                        message={insight.message}
+                        severity={insight.severity}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className='pt-4 text-xs text-muted-foreground text-center border-t border-border'>
+                Exported on {new Date().toLocaleString()}
               </div>
             </div>
           </div>
@@ -804,3 +931,75 @@ Max Payload Size: ${
     </div>
   );
 };
+
+function MetricBadge({
+  label,
+  value,
+  color = 'gray',
+}: {
+  label: string;
+  value: number;
+  color?: 'gray' | 'green' | 'red';
+}) {
+  const colors = {
+    gray: 'bg-muted border-border text-foreground',
+    green:
+      'bg-green-50 border-green-200 text-green-700 dark:bg-green-900/20 dark:border-green-800 dark:text-green-300',
+    red: 'bg-red-50 border-red-200 text-red-700 dark:bg-red-900/20 dark:border-red-800 dark:text-red-300',
+  };
+
+  return (
+    <div className={`${colors[color]} rounded-lg p-4 border text-center`}>
+      <div className='text-xs font-medium opacity-75 mb-1'>{label}</div>
+      <div className='text-2xl font-semibold'>{value}</div>
+    </div>
+  );
+}
+
+function StatusChart({ metrics }: { metrics: TestMetrics }) {
+  const total = metrics.passed + metrics.failed || 1;
+  const passPercent = (metrics.passed / total) * 100;
+  const failPercent = (metrics.failed / total) * 100;
+
+  return (
+    <div className='space-y-3'>
+      <div className='flex gap-1 h-10 rounded-lg overflow-hidden'>
+        {passPercent > 0 && (
+          <div
+            style={{ width: `${passPercent}%` }}
+            className='bg-green-500 flex items-center justify-center text-white text-sm font-medium'
+          >
+            {metrics.passed > 0 && metrics.passed}
+          </div>
+        )}
+        {failPercent > 0 && (
+          <div
+            style={{ width: `${failPercent}%` }}
+            className='bg-red-500 flex items-center justify-center text-white text-sm font-medium'
+          >
+            {metrics.failed > 0 && metrics.failed}
+          </div>
+        )}
+      </div>
+
+      <div className='flex items-center justify-center gap-4 text-xs'>
+        <div className='flex items-center gap-1.5'>
+          <div className='w-3 h-3 rounded-sm bg-green-500'></div>
+          <span className='text-muted-foreground'>Pass ({metrics.passed})</span>
+        </div>
+        <div className='flex items-center gap-1.5'>
+          <div className='w-3 h-3 rounded-sm bg-red-500'></div>
+          <span className='text-muted-foreground'>Fail ({metrics.failed})</span>
+        </div>
+        {metrics.skipped > 0 && (
+          <div className='flex items-center gap-1.5'>
+            <div className='w-3 h-3 rounded-sm bg-gray-400'></div>
+            <span className='text-muted-foreground'>
+              Skip ({metrics.skipped})
+            </span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
