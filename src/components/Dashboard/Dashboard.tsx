@@ -162,8 +162,9 @@ export default function Dashboard() {
 
                       <p className='text-slate-600 mb-4'>
                         your low-code platform for API testing and automation.
-                        We’ve set up a workspace called “Defaultworkspace” to
-                        help you get started quickly.
+                        We’ve set up a workspace called
+                        <strong>“Defaultworkspace”</strong> to help you get
+                        started quickly.
                       </p>
 
                       <p className='text-slate-600 mb-4'>

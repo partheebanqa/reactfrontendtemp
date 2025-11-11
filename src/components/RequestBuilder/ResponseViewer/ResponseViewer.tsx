@@ -31,6 +31,9 @@ interface JsonNode {
 
 const ResponseViewer = () => {
   const { responseData } = useRequest();
+
+  console.log('responseData123:', responseData);
+
   const [activeTab, setActiveTab] = useState<
     'body' | 'headers' | 'cookies' | 'test-results' | 'schema'
   >('body');
@@ -53,11 +56,11 @@ const ResponseViewer = () => {
   const [copiedItem, setCopiedItem] = useState<string>('');
 
   const getStatusColor = (status: number) => {
-    if (status >= 200 && status < 300) return 'text-green-600';
-    if (status >= 300 && status < 400) return 'text-yellow-600';
+    if (status >= 200 && status < 300) return 'text-success';
+    if (status >= 300 && status < 400) return 'text-warning';
     if (status >= 400 && status < 500) return 'text-orange-600';
-    if (status >= 500) return 'text-red-600';
-    return 'text-gray-600';
+    if (status >= 500) return 'text-destructive';
+    return 'text-muted-foreground';
   };
 
   const formatBytes = (bytes: number) => {
@@ -247,7 +250,7 @@ const ResponseViewer = () => {
     return (
       <div
         key={node.path}
-        className='group hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors rounded'
+        className='group hover:bg-accent transition-colors rounded'
         style={{ marginLeft: `${node.level * 20}px` }}
       >
         <div className='flex items-center px-2'>
@@ -255,22 +258,22 @@ const ResponseViewer = () => {
             {hasChildren && (
               <button
                 onClick={() => toggleNode(node.path)}
-                className='p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded mr-1 flex-shrink-0'
+                className='p-1 hover:bg-muted rounded mr-1 flex-shrink-0'
                 aria-label={isExpanded ? 'Collapse' : 'Expand'}
               >
                 {isExpanded ? (
-                  <ChevronDown className='w-3 h-3 text-gray-500' />
+                  <ChevronDown className='w-3 h-3 text-muted-foreground' />
                 ) : (
-                  <ChevronRight className='w-3 h-3 text-gray-500' />
+                  <ChevronRight className='w-3 h-3 text-muted-foreground' />
                 )}
               </button>
             )}
             {!hasChildren && <div className='w-5' />}
-            <span className='text-blue-600 dark:text-blue-400 font-medium mr-2 text-sm flex-shrink-0'>
+            <span className='text-primary font-medium mr-2 text-sm flex-shrink-0'>
               {node.key}:
             </span>
             {hasChildren ? (
-              <span className='text-gray-500 text-sm'>
+              <span className='text-muted-foreground text-sm'>
                 {node.type === 'array'
                   ? `[${Array.isArray(node.value) ? node.value.length : 0}]`
                   : `{${Object.keys(node.value || {}).length}}`}
@@ -279,12 +282,12 @@ const ResponseViewer = () => {
               <span
                 className={`text-sm font-mono truncate ${
                   node.type === 'string'
-                    ? 'text-green-600 dark:text-green-400'
+                    ? 'text-success'
                     : node.type === 'number'
                     ? 'text-purple-600 dark:text-purple-400'
                     : node.type === 'boolean'
                     ? 'text-orange-600 dark:text-orange-400'
-                    : 'text-gray-600 dark:text-gray-400'
+                    : 'text-muted-foreground'
                 }`}
               >
                 {node.type === 'string'
@@ -299,17 +302,17 @@ const ResponseViewer = () => {
                 onClick={() =>
                   handleCopy(String(node.value), `copy-${node.path}`)
                 }
-                className='p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded'
+                className='p-1 text-muted-foreground hover:text-foreground rounded'
                 title='Copy value'
               >
                 {copiedItem === `copy-${node.path}` ? (
-                  <CheckCircle className='w-3 h-3 text-green-600' />
+                  <CheckCircle className='w-3 h-3 text-success' />
                 ) : (
                   <Copy className='w-3 h-3' />
                 )}
               </button>
               {isAlreadyExtracted ? (
-                <div className='flex items-center space-x-1 px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded text-xs whitespace-nowrap'>
+                <div className='flex items-center space-x-1 px-2 py-1 bg-success/10 text-success rounded text-xs whitespace-nowrap'>
                   <CheckCircle className='w-3 h-3' />
                   <span>Extracted</span>
                 </div>
@@ -318,7 +321,7 @@ const ResponseViewer = () => {
                   onClick={() =>
                     handleExtractClick('response_body', node.path, node.value)
                   }
-                  className='px-2 py-1 bg-[#136fb0] text-white rounded text-xs hover:bg-blue-700 transition-colors whitespace-nowrap flex items-center'
+                  className='px-2 py-1 bg-primary text-primary-foreground rounded text-xs hover:bg-primary/90 transition-colors whitespace-nowrap flex items-center'
                   title='Extract as variable'
                 >
                   <Plus className='w-3 h-3 mr-1' />
@@ -340,22 +343,20 @@ const ResponseViewer = () => {
   const renderJsonTree = () => {
     try {
       const visibleNodes = jsonNodes.filter((node) => {
-        // Root level nodes are always considered for rendering
         if (node.level === 0) return true;
-        // Check if parent is expanded
         return expandedNodes.has(node.parentPath);
       });
 
       return (
-        <div className='space-y-1 bg-white dark:bg-gray-900 p-4 rounded-lg border border-gray-200 dark:border-gray-700'>
+        <div className='space-y-1 bg-card p-2 rounded-lg border border-border'>
           {visibleNodes.map((node) => renderJsonValue(node))}
         </div>
       );
     } catch (error) {
-      console.error('[v0] JSON parsing error:', error);
+      console.error('JSON parsing error:', error);
       return (
-        <div className='p-4 bg-gray-50 dark:bg-gray-800 rounded border'>
-          <p className='text-gray-600 dark:text-gray-400 text-sm'>
+        <div className='p-2 bg-muted rounded border'>
+          <p className='text-muted-foreground text-sm'>
             Unable to parse response
           </p>
         </div>
@@ -364,39 +365,39 @@ const ResponseViewer = () => {
   };
 
   const renderHeadersTab = () => (
-    <div className='space-y-2'>
+    <div>
       {Object.entries(responseData.headers).map(([key, value]) => {
         const isAlreadyExtracted = isValueExtracted(value);
         return (
           <div
             key={key}
-            className='group flex items-center justify-between p-3 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 bg-white dark:bg-gray-900'
+            className='group flex items-center justify-between p-3 border border-border rounded-lg hover:bg-accent bg-card'
           >
             <div className='flex-1 min-w-0 mr-4'>
               <div className='flex items-center space-x-2'>
-                <Hash className='w-4 h-4 text-gray-400 flex-shrink-0' />
-                <span className='font-medium text-gray-900 dark:text-white text-sm'>
+                <Hash className='w-4 h-4 text-muted-foreground flex-shrink-0' />
+                <span className='font-medium text-foreground text-sm'>
                   {key}
                 </span>
               </div>
-              <p className='text-sm text-gray-600 dark:text-gray-400 font-mono mt-1 break-all'>
+              <p className='text-sm text-muted-foreground font-mono mt-1 break-all'>
                 {value}
               </p>
             </div>
             <div className='flex items-center space-x-2 flex-shrink-0'>
               <button
                 onClick={() => handleCopy(value, `header-${key}`)}
-                className='p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded'
+                className='p-1 text-muted-foreground hover:text-foreground rounded'
                 title='Copy value'
               >
                 {copiedItem === `header-${key}` ? (
-                  <CheckCircle className='w-4 h-4 text-green-600' />
+                  <CheckCircle className='w-4 h-4 text-success' />
                 ) : (
                   <Copy className='w-4 h-4' />
                 )}
               </button>
               {isAlreadyExtracted ? (
-                <div className='flex items-center space-x-1 px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded text-xs whitespace-nowrap'>
+                <div className='flex items-center space-x-1 px-2 py-1 bg-success/10 text-success rounded text-xs whitespace-nowrap'>
                   <CheckCircle className='w-3 h-3' />
                   <span>Extracted</span>
                 </div>
@@ -405,7 +406,7 @@ const ResponseViewer = () => {
                   onClick={() =>
                     handleExtractClick('response_header', key, value)
                   }
-                  className='px-3 py-1 bg-[#136fb0] text-white rounded text-sm hover:bg-blue-700 transition-colors whitespace-nowrap flex items-center'
+                  className='px-3 py-1 bg-primary text-primary-foreground rounded text-sm hover:bg-primary/90 transition-colors whitespace-nowrap flex items-center'
                 >
                   <Plus className='w-4 h-4 mr-1' />
                   Extract
@@ -429,14 +430,14 @@ const ResponseViewer = () => {
         </span>
       </div>
       <div className='flex items-center space-x-1'>
-        <Clock className='h-4 w-4 text-gray-500' />
-        <span className='font-medium text-gray-900 dark:text-white'>
+        <Clock className='h-4 w-4 text-muted-foreground' />
+        <span className='font-medium text-foreground'>
           {responseData.metrics?.responseTime || 0}ms
         </span>
       </div>
       <div className='flex items-center space-x-1'>
-        <HardDrive className='h-4 w-4 text-gray-500' />
-        <span className='font-medium text-gray-900 dark:text-white'>
+        <HardDrive className='h-4 w-4 text-muted-foreground' />
+        <span className='font-medium text-foreground'>
           {calculateResponseSize(responseData.body)}
         </span>
       </div>
@@ -458,12 +459,10 @@ const ResponseViewer = () => {
 
   if (!responseData) {
     return (
-      <div className='flex-1 flex items-center justify-center bg-gray-50 dark:bg-gray-900 p-4'>
+      <div className='flex-1 flex items-center justify-center bg-background p-2'>
         <div className='text-center'>
-          <p className='text-gray-500 dark:text-gray-400 mb-4'>
-            No response yet
-          </p>
-          <p className='text-sm text-gray-400'>
+          <p className='text-muted-foreground mb-4'>No response yet</p>
+          <p className='text-sm text-muted-foreground'>
             Send a request to see the response here
           </p>
         </div>
@@ -472,15 +471,61 @@ const ResponseViewer = () => {
   }
 
   return (
-    <div className='flex-1 flex flex-col bg-gray-50 dark:bg-gray-900 min-h-0 overflow-hidden'>
+    <div className='flex-1 flex flex-col bg-background min-h-0 overflow-hidden'>
       {/* Header with tabs and status */}
-      <div className='bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex-shrink-0'>
-        <div className='flex items-center justify-between px-4 py-3'>
-          <StatusSummary />
+      <div className='bg-card border-b border-border flex-shrink-0'>
+        {/* Tabs and Status on same row */}
+        <div className='flex items-center justify-between border-b border-border'>
+          <nav className='flex space-x-8 px-4'>
+            {tabs.map((tab) => {
+              const Icon = tab.icon;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id as any)}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors flex items-center space-x-2 ${
+                    activeTab === tab.id
+                      ? 'border-primary text-primary'
+                      : 'border-transparent text-muted-foreground hover:text-foreground hover:border-muted'
+                  }`}
+                >
+                  {Icon && <Icon className='w-4 h-4' />}
+                  <span>{tab.label}</span>
+                  {tab.count !== undefined && tab.count > 0 && (
+                    <span className='ml-1 bg-muted text-muted-foreground rounded-full px-2 py-0.5 text-xs'>
+                      {tab.count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </nav>
+
+          <div className='px-4'>
+            <StatusSummary />
+          </div>
+        </div>
+
+        {/* View toggles and action buttons */}
+        <div className='flex items-center justify-between px-4 py-1'>
+          <div className='flex items-center space-x-4'>
+            <button className='flex items-center space-x-2 text-sm font-medium text-primary'>
+              <CheckCircle className='w-4 h-4' />
+              <span>Pretty</span>
+            </button>
+            <button className='flex items-center space-x-2 text-sm font-medium text-muted-foreground hover:text-foreground'>
+              <Code className='w-4 h-4' />
+              <span>Raw</span>
+            </button>
+            <button className='flex items-center space-x-2 text-sm font-medium text-muted-foreground hover:text-foreground'>
+              <span>Preview</span>
+            </button>
+          </div>
+
           <div className='flex items-center space-x-2'>
             <button
               onClick={() => setShowSearch(!showSearch)}
-              className='p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500'
+              className='p-2 rounded-md hover:bg-accent text-muted-foreground'
               title='Search in response'
             >
               <Search className='h-4 w-4' />
@@ -492,18 +537,18 @@ const ResponseViewer = () => {
                   'full-response'
                 )
               }
-              className='p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500'
+              className='p-2 rounded-md hover:bg-accent text-muted-foreground'
               title='Copy response'
             >
               {copiedItem === 'full-response' ? (
-                <CheckCircle className='h-4 w-4 text-green-600' />
+                <CheckCircle className='h-4 w-4 text-success' />
               ) : (
                 <Copy className='h-4 w-4' />
               )}
             </button>
             <button
               onClick={downloadResponse}
-              className='p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500'
+              className='p-2 rounded-md hover:bg-accent text-muted-foreground'
               title='Download response'
             >
               <Download className='h-4 w-4' />
@@ -511,42 +556,17 @@ const ResponseViewer = () => {
           </div>
         </div>
 
-        <nav className='flex space-x-8 px-4 border-b border-gray-200 dark:border-gray-700'>
-          {tabs.map((tab) => {
-            const Icon = tab.icon;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
-                className={`py-3 px-1 border-b-2 font-medium text-sm transition-colors flex items-center space-x-2 ${
-                  activeTab === tab.id
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                {Icon && <Icon className='w-4 h-4' />}
-                <span>{tab.label}</span>
-                {tab.count !== undefined && tab.count > 0 && (
-                  <span className='ml-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-full px-2 py-0.5 text-xs'>
-                    {tab.count}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </nav>
-
         {showSearch && (
-          <div className='px-4 py-3 border-b border-gray-200 dark:border-gray-700'>
+          <div className='px-4 py-2 border-b border-border'>
             <div className='flex items-center space-x-2'>
               <div className='flex-1 relative'>
-                <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400' />
+                <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground' />
                 <input
                   type='text'
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder='Search in response...'
-                  className='w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:text-white text-sm'
+                  className='w-full pl-10 pr-4 py-2 border border-input rounded-md focus:ring-2 focus:ring-ring focus:border-transparent bg-background text-foreground text-sm'
                   autoFocus
                 />
               </div>
@@ -555,7 +575,7 @@ const ResponseViewer = () => {
                   setShowSearch(false);
                   setSearchQuery('');
                 }}
-                className='p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500'
+                className='p-2 rounded-md hover:bg-accent text-muted-foreground'
               >
                 <X className='h-4 w-4' />
               </button>
@@ -565,9 +585,9 @@ const ResponseViewer = () => {
       </div>
 
       {Object.keys(extractedVariables).length > 0 && (
-        <div className='bg-green-50 dark:bg-green-900/20 border-b border-green-200 dark:border-green-800 px-4 py-3 flex-shrink-0'>
+        <div className='bg-success/10 border-b border-success/20 px-4 py-2 flex-shrink-0'>
           <div className='flex items-center justify-between mb-2'>
-            <h4 className='font-medium text-green-900 dark:text-green-300 flex items-center space-x-2'>
+            <h4 className='font-medium text-success flex items-center space-x-2'>
               <CheckCircle className='w-4 h-4' />
               <span>
                 Extracted Variables ({Object.keys(extractedVariables).length})
@@ -578,36 +598,34 @@ const ResponseViewer = () => {
             {Object.entries(extractedVariables).map(([name, value]) => (
               <div
                 key={name}
-                className='bg-white dark:bg-gray-800 border border-green-200 dark:border-green-700 rounded-lg p-2.5'
+                className='bg-card border border-success/20 rounded-lg p-2.5'
               >
                 <div className='flex items-start gap-2'>
-                  {/* Left side: variable name and value stacked */}
                   <div className='flex-1 min-w-0'>
                     <div className='flex items-center gap-1.5 mb-1'>
-                      <span className='font-medium text-gray-900 dark:text-white text-sm truncate'>
+                      <span className='font-medium text-foreground text-sm truncate'>
                         {name}:
                       </span>
                       <button
                         onClick={() => handleCopy(name, `var-${name}`)}
-                        className='p-1 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded flex-shrink-0'
+                        className='p-1 text-primary hover:bg-primary/10 rounded flex-shrink-0'
                       >
                         {copiedItem === `var-${name}` ? (
-                          <CheckCircle className='w-3 h-3 text-green-600' />
+                          <CheckCircle className='w-3 h-3 text-success' />
                         ) : (
                           <Copy className='w-3 h-3' />
                         )}
                       </button>
                     </div>
-                    <div className='bg-gray-50 dark:bg-gray-900 px-2 rounded border text-xs font-mono overflow-x-auto text-gray-700 dark:text-gray-300'>
+                    <div className='bg-muted px-2 rounded border text-xs font-mono overflow-x-auto text-muted-foreground'>
                       {typeof value === 'object'
                         ? JSON.stringify(value)
                         : String(value)}
                     </div>
                   </div>
-                  {/* Right side: delete button */}
                   <button
                     onClick={() => removeExtraction(name)}
-                    className='p-1 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded flex-shrink-0'
+                    className='p-1 text-destructive hover:bg-destructive/10 rounded flex-shrink-0'
                     title='Remove extraction'
                   >
                     <Trash2 className='w-3 h-3' />
@@ -620,17 +638,17 @@ const ResponseViewer = () => {
       )}
 
       {/* Content */}
-      <div className='flex-1 overflow-auto p-4'>
+      <div className='flex-1 overflow-auto p-2'>
         {activeTab === 'body' && (
-          <div className='space-y-4'>
+          <div>
             <div className='flex items-center justify-between mb-2'>
-              <div className='flex items-center space-x-2'>
-                <h3 className='text-sm font-medium text-gray-700 dark:text-gray-300'>
+              {/* <div className='flex items-center space-x-2'>
+                <h3 className='text-sm font-medium text-foreground'>
                   Response Body
                 </h3>
                 <div className='relative group'>
-                  <Info className='w-4 h-4 text-gray-400 cursor-help' />
-                  <div className='absolute left-0 bottom-full mb-2 w-64 p-3 text-xs text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50'>
+                  <Info className='w-4 h-4 text-muted-foreground cursor-help' />
+                  <div className='absolute left-0 bottom-full mb-2 w-64 p-3 text-xs text-foreground bg-popover border border-border rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50'>
                     <p className='font-medium mb-1'>
                       How to extract variables:
                     </p>
@@ -642,7 +660,7 @@ const ResponseViewer = () => {
                     </ul>
                   </div>
                 </div>
-              </div>
+              </div> */}
             </div>
             {renderJsonTree()}
           </div>
@@ -651,33 +669,33 @@ const ResponseViewer = () => {
         {activeTab === 'headers' && renderHeadersTab()}
 
         {activeTab === 'cookies' && (
-          <div className='text-center py-8 text-gray-500'>
-            <Cookie className='w-12 h-12 text-gray-300 mx-auto mb-3' />
+          <div className='text-center py-8 text-muted-foreground'>
+            <Cookie className='w-12 h-12 text-muted mx-auto mb-3' />
             <p>No cookies found in response</p>
           </div>
         )}
 
         {activeTab === 'test-results' && responseData.assertionLogs && (
-          <div className='space-y-4'>
+          <div>
             {responseData.assertionLogs.map((assertion) => (
               <div
                 key={assertion.id}
-                className={`border rounded-lg p-4 ${
+                className={`border rounded-lg p-2 ${
                   assertion.status === 'passed'
-                    ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
-                    : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
+                    ? 'bg-success/10 border-success/20'
+                    : 'bg-destructive/10 border-destructive/20'
                 }`}
               >
                 <div className='flex items-center space-x-2'>
                   {assertion.status === 'passed' ? (
-                    <CheckCircle className='h-5 w-5 text-green-600' />
+                    <CheckCircle className='h-5 w-5 text-success' />
                   ) : (
-                    <X className='h-5 w-5 text-red-600' />
+                    <X className='h-5 w-5 text-destructive' />
                   )}
                   <h4 className='font-medium'>{assertion.description}</h4>
                 </div>
                 {assertion.errorMessage && (
-                  <p className='mt-2 text-sm text-red-700 dark:text-red-300'>
+                  <p className='mt-2 text-sm text-destructive'>
                     {assertion.errorMessage}
                   </p>
                 )}
@@ -687,71 +705,146 @@ const ResponseViewer = () => {
         )}
 
         {activeTab === 'schema' && (
-          <div className='text-center py-8 text-gray-500'>
-            <Code className='w-12 h-12 text-gray-300 mx-auto mb-3' />
-            <p>No schema validation configured</p>
+          <div className='p-4 overflow-auto h-full'>
+            {responseData.schemaValidation ? (
+              <div className='space-y-4'>
+                <div
+                  className={`border rounded-lg p-4 ${
+                    responseData.schemaValidation.passed
+                      ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
+                      : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
+                  }`}
+                >
+                  <div className='flex items-center space-x-2'>
+                    {responseData.schemaValidation.passed ? (
+                      <CheckCircle className='h-5 w-5 text-green-600 flex-shrink-0' />
+                    ) : (
+                      <X className='h-5 w-5 text-red-600 flex-shrink-0' />
+                    )}
+                    <div>
+                      <h3
+                        className={`font-medium ${
+                          responseData.schemaValidation.passed
+                            ? 'text-green-800 dark:text-green-300'
+                            : 'text-red-800 dark:text-red-300'
+                        }`}
+                      >
+                        Schema Validation{' '}
+                        {responseData.schemaValidation.passed
+                          ? 'Passed'
+                          : 'Failed'}
+                      </h3>
+                      <p className='text-sm text-gray-600 dark:text-gray-400 mt-1'>
+                        Schema: {responseData.schemaValidation.name}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {!responseData.schemaValidation.passed &&
+                  responseData.schemaValidation.results?.length > 0 && (
+                    <div className='border rounded-lg p-4 bg-white dark:bg-gray-900'>
+                      <h4 className='font-medium text-sm mb-3 text-red-700 dark:text-red-400'>
+                        Validation Errors:
+                      </h4>
+                      <ul className='space-y-2 text-sm'>
+                        {responseData.schemaValidation.results.map(
+                          (issue: any, idx: number) => (
+                            <li
+                              key={idx}
+                              className='flex flex-col border-l-2 border-red-400 pl-2'
+                            >
+                              <span className='font-medium text-gray-800 dark:text-gray-200'>
+                                {issue.field}
+                              </span>
+                              <span className='text-gray-600 dark:text-gray-400'>
+                                {issue.description}
+                              </span>
+                              {issue.value !== undefined &&
+                                issue.value !== null && (
+                                  <span className='text-xs text-gray-400'>
+                                    Value: {String(issue.value)}
+                                  </span>
+                                )}
+                            </li>
+                          )
+                        )}
+                      </ul>
+                    </div>
+                  )}
+              </div>
+            ) : (
+              <div className='text-center py-8'>
+                <div className='text-gray-500 dark:text-gray-400 mb-2'>
+                  No schema validation results
+                </div>
+                <div className='text-sm text-gray-400'>
+                  Schema validation will appear here when available
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
 
       {/* Extraction Modal */}
       {extractionModal && (
-        <div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4'>
-          <div className='bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-hidden flex flex-col'>
-            <div className='p-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0'>
-              <h3 className='text-lg font-semibold text-gray-900 dark:text-white'>
+        <div className='fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2'>
+          <div className='bg-card rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-hidden flex flex-col border border-border'>
+            <div className='p-2 border-b border-border flex-shrink-0'>
+              <h3 className='text-lg font-semibold text-foreground'>
                 Extract Variable
               </h3>
-              <p className='text-sm text-gray-500 dark:text-gray-400 mt-1'>
+              <p className='text-sm text-muted-foreground mt-1'>
                 Configure how to extract and store this value
               </p>
             </div>
-            <div className='p-4 space-y-3 overflow-y-auto flex-1'>
+            <div className='p-2 space-y-3 overflow-y-auto flex-1'>
               <div>
-                <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1'>
+                <label className='block text-sm font-medium text-foreground mb-1'>
                   Variable Name
                 </label>
                 <input
                   type='text'
                   value={variableName}
                   onChange={(e) => setVariableName(e.target.value)}
-                  className='w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+                  className='w-full px-3 py-2 border border-input rounded-lg bg-background text-foreground font-mono text-sm focus:ring-2 focus:ring-ring focus:border-transparent'
                   placeholder='variable_name'
                   autoFocus
                 />
-                <p className='text-xs text-gray-500 dark:text-gray-400 mt-1'>
+                <p className='text-xs text-muted-foreground mt-1'>
                   Only letters, numbers, and underscores. Will be prefixed with
                   "E_"
                 </p>
               </div>
               <div>
-                <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1'>
+                <label className='block text-sm font-medium text-foreground mb-1'>
                   Source
                 </label>
                 <input
                   type='text'
                   value={extractionModal.source.replace(/_/g, ' ')}
                   readOnly
-                  className='w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-900 font-mono text-sm capitalize'
+                  className='w-full px-3 py-2 border border-input rounded-lg bg-muted font-mono text-sm capitalize'
                 />
               </div>
               <div>
-                <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1'>
+                <label className='block text-sm font-medium text-foreground mb-1'>
                   Path
                 </label>
                 <input
                   type='text'
                   value={extractionModal.path}
                   readOnly
-                  className='w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-900 font-mono text-sm'
+                  className='w-full px-3 py-2 border border-input rounded-lg bg-muted font-mono text-sm'
                 />
               </div>
               <div>
-                <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1'>
+                <label className='block text-sm font-medium text-foreground mb-1'>
                   Preview Value
                 </label>
-                <div className='p-3 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 overflow-x-auto max-h-40'>
-                  <code className='text-sm text-gray-900 dark:text-white whitespace-pre-wrap break-all'>
+                <div className='p-3 bg-muted rounded-lg border border-border overflow-x-auto max-h-40'>
+                  <code className='text-sm text-foreground whitespace-pre-wrap break-all'>
                     {typeof extractionModal.value === 'object'
                       ? JSON.stringify(extractionModal.value, null, 2)
                       : String(extractionModal.value)}
@@ -759,20 +852,20 @@ const ResponseViewer = () => {
                 </div>
               </div>
             </div>
-            <div className='flex items-center justify-end space-x-3 p-4 border-t border-gray-200 dark:border-gray-700 flex-shrink-0'>
+            <div className='flex items-center justify-end space-x-3 p-2 border-t border-border flex-shrink-0'>
               <button
                 onClick={() => {
                   setExtractionModal(null);
                   setVariableName('');
                 }}
-                className='px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-700 dark:text-gray-300'
+                className='px-4 py-2 border border-input rounded-lg hover:bg-accent transition-colors text-foreground'
               >
                 Cancel
               </button>
               <button
                 onClick={confirmExtraction}
                 disabled={!variableName.trim()}
-                className='px-4 py-2 bg-[#136fb0] text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors'
+                className='px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:bg-muted disabled:cursor-not-allowed transition-colors'
               >
                 Extract Variable
               </button>

@@ -521,7 +521,7 @@ export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
           authorization: authToken ? { token: authToken } : undefined,
           headers: headers
             .filter((h) => h.enabled && h.key)
-            .map(({ key, value }) => ({ key, value })),
+            .map(({ key, value }) => ({ key, value, enabled: true })),
           params: params
             .filter((p) => p.enabled && p.key)
             .map(({ key, value }) => ({ key, value })),

@@ -246,11 +246,13 @@ const Sidebar: React.FC = () => {
         >
           {collapsed ? (
             <div className='w-8 h-8 flex items-center justify-center mx-auto'>
-              <img
-                src={Logo}
-                alt='Optraflow logo'
-                className='w-8 h-8 rounded'
-              />
+              <Link to='/' className='flex items-center space-x-2'>
+                <img
+                  src={Logo}
+                  alt='Optraflow logo'
+                  className='w-8 h-8 rounded'
+                />
+              </Link>
             </div>
           ) : (
             <div className='flex items-center space-x-3'>

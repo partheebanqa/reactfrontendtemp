@@ -494,12 +494,7 @@ export function PeopleManagement() {
     }
   };
 
-  const inviteWorkspaces = useMemo(
-    () =>
-      (workspaces ?? []).filter((w) => w.id !== (currentWorkspace?.id ?? '')),
-    [workspaces, currentWorkspace?.id]
-  );
-
+  const inviteWorkspaces = useMemo(() => workspaces ?? [], [workspaces]);
   return (
     <div className='space-y-3'>
       <Card>
