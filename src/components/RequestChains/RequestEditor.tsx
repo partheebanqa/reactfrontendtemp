@@ -78,8 +78,8 @@ import 'codemirror/mode/javascript/javascript';
 import './../RequestBuilder/RequestEditor/whiteorange.css';
 import {
   Tooltip,
-  TooltipProvider,
   TooltipContent,
+  TooltipProvider,
   TooltipTrigger,
 } from '../ui/tooltip';
 import { VariableHelpDialog } from './HelpTextDialougs/variablesUseDialogues';
@@ -174,20 +174,7 @@ export function RequestEditor({
   // State for individual fields to manage updates
   const [url, setUrl] = useState(request.url || '');
   const [body, setBody] = useState(request.body || '');
-  const [headers, setHeaders] = useState<KeyValuePair[]>(() => {
-    const requestHeaders = request.headers || [];
-    const hasContentType = requestHeaders.some(
-      (h) => h.key.toLowerCase() === 'content-type'
-    );
-
-    if (!hasContentType) {
-      return [
-        ...requestHeaders,
-        { key: 'Content-Type', value: 'application/json', enabled: true },
-      ];
-    }
-    return requestHeaders;
-  });
+  const [headers, setHeaders] = useState<KeyValuePair[]>(request.headers || []);
   const [params, setParams] = useState<KeyValuePair[]>(request.params || []);
   const [auth, setAuth] = useState({
     username: request.authUsername || '',
@@ -196,25 +183,15 @@ export function RequestEditor({
   });
 
   useEffect(() => {
-    onUpdate({
-      url,
-      body,
-      headers,
-      params,
-      authUsername: auth.username,
-      authPassword: auth.password,
-      authToken: auth.token,
-    });
-  }, []);
-
-  useEffect(() => {
     if (!isSyncingRef.current) {
       onUpdate({ url });
     }
   }, [url]);
 
   useEffect(() => {
-    onUpdate({ body });
+    if (!isSyncingRef.current) {
+      onUpdate({ body });
+    }
   }, [body]);
 
   useEffect(() => {
@@ -238,17 +215,31 @@ export function RequestEditor({
   }, [auth]);
 
   useEffect(() => {
-    isSyncingRef.current = true;
     setUrl(request.url || '');
     setBody(request.body || '');
+
+    const requestHeaders = request.headers || [];
+    const hasContentType = requestHeaders.some(
+      (h) => h.key.toLowerCase() === 'content-type'
+    );
+
+    if (!hasContentType) {
+      setHeaders([
+        ...requestHeaders,
+        { key: 'Content-Type', value: 'application/json', enabled: true },
+      ]);
+    } else {
+      setHeaders(requestHeaders);
+    }
+    // </CHANGE>
+
     setParams(request.params || []);
     setAuth({
       username: request.authUsername || '',
       password: request.authPassword || '',
       token: request.authToken || '',
     });
-    isSyncingRef.current = false;
-  }, [request]);
+  }, [request.id]); // Only update when request ID changes to avoid infinite loops
 
   useEffect(() => {
     if (isSyncingRef.current || !url.includes('?')) return;
@@ -740,7 +731,7 @@ export function RequestEditor({
       return `${randString(6)}@${domains[randInt(0, domains.length - 1)]}`;
     };
     const emailWithDomain = (domain = 'example.com') =>
-      `${randString(6)}@${domain}`;
+      `${randString(8)}@${domain}`;
     const fakePassword = () => {
       const chars =
         'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
@@ -1036,8 +1027,8 @@ export function RequestEditor({
     const safeRequest = {
       ...request,
       extractVariables: request.extractVariables ?? [],
-      headers: headers, // Use local headers state that includes defaults
-      params: params, // Use local params state
+      headers: request.headers ?? [],
+      params: request.params ?? [],
       url: url,
       body: body,
       authToken: auth.token,
@@ -1278,11 +1269,13 @@ export function RequestEditor({
     ]);
   };
 
-  const updateParam = (index: number, updates: Partial<KeyValuePair>) => {
-    const newParams = [...params];
-    newParams[index] = { ...newParams[index], ...updates };
-    setParams(newParams);
-    onUpdate({ params: newParams });
+  const updateParam = (
+    index: number,
+    updates: Partial<{ key: string; value: string; enabled: boolean }>
+  ) => {
+    setParams((prev) =>
+      prev.map((param, i) => (i === index ? { ...param, ...updates } : param))
+    );
   };
 
   const removeParam = (index: number) => {
@@ -1467,11 +1460,15 @@ export function RequestEditor({
     ]);
   };
 
-  const updateHeader = (index: number, updates: Partial<KeyValuePair>) => {
-    const newHeaders = [...headers];
-    newHeaders[index] = { ...newHeaders[index], ...updates };
-    setHeaders(newHeaders);
-    onUpdate({ headers: newHeaders });
+  const updateHeader = (
+    index: number,
+    updates: Partial<{ key: string; value: string; enabled: boolean }>
+  ) => {
+    setHeaders((prev) =>
+      prev.map((header, i) =>
+        i === index ? { ...header, ...updates } : header
+      )
+    );
   };
 
   const removeHeader = (index: number) => {
@@ -1902,7 +1899,7 @@ export function RequestEditor({
                   <div className='p-2 border-b'>
                     <input
                       type='text'
-                      className='w-full px-3 py-1.5 rounded-md border border-gray-300 
+                      className='w-full px-3 py-1.5 rounded-md border border-gray-300
                 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm'
                       placeholder='Search variables...'
                       autoComplete='off'
@@ -1927,7 +1924,7 @@ export function RequestEditor({
                       .map((item) => (
                         <div
                           key={item.id}
-                          className='w-full flex justify-between items-center px-3 py-2 
+                          className='w-full flex justify-between items-center px-3 py-2
                     text-sm border-b border-gray-100 hover:bg-blue-50 transition-colors'
                           onClick={() => setShowVariablesPopup(false)}
                         >
@@ -2097,7 +2094,12 @@ export function RequestEditor({
                       value={header.key}
                       onChange={(e) =>
                         handleInputChange(e, (value) => {
-                          updateHeader(index, { key: value });
+                          const newHeaders = [...headers];
+                          newHeaders[index] = {
+                            ...newHeaders[index],
+                            key: value,
+                          };
+                          setHeaders(newHeaders);
                         })
                       }
                       onKeyUp={(e) => handleAutocomplete(e)}
@@ -2110,7 +2112,12 @@ export function RequestEditor({
                       value={header.value}
                       onChange={(e) =>
                         handleInputChange(e, (value) => {
-                          updateHeader(index, { value: value });
+                          const newHeaders = [...headers];
+                          newHeaders[index] = {
+                            ...newHeaders[index],
+                            value: value,
+                          };
+                          setHeaders(newHeaders);
                         })
                       }
                       onKeyUp={(e) => handleAutocomplete(e)}

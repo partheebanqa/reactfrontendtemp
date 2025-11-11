@@ -162,7 +162,7 @@ export default function Dashboard() {
 
                       <p className='text-slate-600 mb-4'>
                         your low-code platform for API testing and automation.
-                        We’ve set up a workspace called
+                        We’ve set up a workspace called{' '}
                         <strong>“Defaultworkspace”</strong> to help you get
                         started quickly.
                       </p>
@@ -241,11 +241,11 @@ export default function Dashboard() {
                       <div className='mt-6'>
                         <Button
                           onClick={() => {
-                            navigate('/dashboard');
+                            setOpen(false);
                           }}
                           className='bg-[#136fb0] hover:bg-[#136fb0] text-white shadow-sm'
                         >
-                          🔥 Got it, let’s start!
+                          Start testing
                         </Button>
                       </div>
                     </div>

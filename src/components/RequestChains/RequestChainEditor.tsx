@@ -1027,14 +1027,7 @@ export function RequestChainEditor({
       name: 'New Request',
       method: 'GET',
       url: '',
-      headers: [
-        {
-          id: `header_${Date.now()}`,
-          key: 'Content-Type',
-          value: 'application/json',
-          enabled: true,
-        },
-      ],
+      headers: [],
       params: [],
       bodyType: 'raw',
       timeout: 5000,
@@ -1044,7 +1037,6 @@ export function RequestChainEditor({
       testScripts: [],
       enabled: true,
       authorizationType: 'none',
-      body: '',
     };
     setFormData({
       ...formData,

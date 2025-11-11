@@ -300,11 +300,13 @@ export const renameRequest = async ({
   newName,
   workspaceId,
   folderId,
+  collectionId,
 }: {
   requestId: string;
   newName?: string;
   workspaceId: string;
   folderId: string;
+  collectionId: string;
 }) => {
   try {
     const response = await apiRequest(

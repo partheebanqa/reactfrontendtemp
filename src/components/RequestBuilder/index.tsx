@@ -402,7 +402,7 @@ const RequestBuilder = () => {
                       <div className='mt-6'>
                         <Button
                           onClick={() => {
-                            navigate('/request-builder');
+                            setOpen(false);
                           }}
                           className='bg-[#136fb0] hover:bg-[#136fb0] text-white shadow-sm'
                         >

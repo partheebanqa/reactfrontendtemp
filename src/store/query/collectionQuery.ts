@@ -239,14 +239,12 @@ export const useAddRequestMutation = () => {
 };
 
 export const useRenameRequestMutation = () => {
+  const fetchCollectionRequests = useCollectionRequestsQuery();
   return useMutation({
     mutationFn: renameRequest,
-    onSuccess: (data, variables) => {
-      collectionActions.renameRequest(
-        variables?.newName || '',
-        variables.requestId,
-        variables.workspaceId || ''
-      );
+    onSuccess: async (data, variables) => {
+      fetchCollectionRequests.mutateAsync(variables.collectionId);
+      return data;
     },
     onError: (error) => {
       throw error;

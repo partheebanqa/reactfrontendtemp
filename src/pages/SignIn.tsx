@@ -29,7 +29,7 @@ export default function SignIn() {
 
   // Redirect if user is already authenticated
   if (isAuthenticated && !isLoading) {
-    setLocation('/request-builder');
+    setLocation('/dashboard');
     return null;
   }
 
@@ -49,7 +49,7 @@ export default function SignIn() {
       console.log('loginMutationResult:', loginMutationResult);
 
       if (loginMutationResult?.token) {
-        setLocation('/request-builder');
+        setLocation('/dashboard');
       }
     } catch (error) {
       const message =
