@@ -1063,7 +1063,6 @@ const RequestEditor: React.FC = () => {
       toast({
         title: 'Error',
         description: backendErrorMessage,
-        type: 'error',
       });
     } finally {
       setLoading(false);
@@ -1088,6 +1087,7 @@ const RequestEditor: React.FC = () => {
             newName: newName.trim(),
             workspaceId: currentWorkspace?.id || '',
             folderId: activeRequest.folderId || '',
+            collectionId: activeCollection?.id || '',
           });
         }
       }

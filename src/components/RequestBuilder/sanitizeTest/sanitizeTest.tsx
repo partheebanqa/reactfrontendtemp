@@ -838,7 +838,10 @@ Max Response Time: ${
             <div className='p-4 space-y-6'>
               {/* Stats Cards */}
               <div className='grid grid-cols-2 gap-3'>
-                <MetricBadge label='Total' value={metrics.total} />
+                <MetricBadge
+                  label='Total Executed'
+                  value={metrics.passed + metrics.failed}
+                />
                 <MetricBadge
                   label='Passed'
                   value={metrics.passed}
