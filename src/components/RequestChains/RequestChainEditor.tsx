@@ -275,7 +275,11 @@ export function RequestChainEditor({
                         e.stopPropagation();
                         e.preventDefault();
                         const newValue = e.target.value;
+
                         updateDynamicOverride(variable.name, newValue);
+                      }}
+                      onFocus={(e) => {
+                        console.log('Focused on:', variable.name);
                       }}
                       className='h-8 text-sm'
                       placeholder='Enter value'
@@ -1464,7 +1468,9 @@ export function RequestChainEditor({
         <div className='p-2 text-xs text-gray-500 border-b'>
           {autocompleteState.prefix === 'D_'
             ? 'Dynamic Variables'
-            : 'Static Variables'}
+            : autocompleteState.prefix === 'S_'
+            ? 'Static Variables'
+            : 'Variables'}
         </div>
         {autocompleteState.suggestions.map((variable) => (
           <button
