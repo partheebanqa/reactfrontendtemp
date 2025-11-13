@@ -83,6 +83,7 @@ import {
   detectAutocompletePrefix,
   calculateAutocompletePosition,
   type AutocompleteState,
+  generateDynamicValueById,
 } from '@/lib/request-utils';
 import { ResponseExplorer } from './ResponseExplorer';
 import BreadCum from '../BreadCum/Breadcum';
@@ -115,6 +116,38 @@ export function RequestChainEditor({
   const [dynamicOverrides, setDynamicOverrides] = useState<
     DynamicVariableOverride[]
   >([]);
+
+  useEffect(() => {
+    if (dynamicVariables.length > 0) {
+      setDynamicOverrides((prevOverrides) => {
+        const updatedOverrides = [...prevOverrides];
+
+        // Check each dynamic variable and add override if missing
+        dynamicVariables.forEach((d) => {
+          const hasOverride = updatedOverrides.some((o) => o.name === d.name);
+          if (!hasOverride) {
+            const generated = generateDynamicValueById(
+              d.generatorId,
+              d.parameters
+            );
+            updatedOverrides.push({
+              name: d.name,
+              value: String(generated),
+            });
+          }
+        });
+
+        // Remove overrides for variables that no longer exist
+        return updatedOverrides.filter((override) =>
+          dynamicVariables.some((d) => d.name === override.name)
+        );
+      });
+    } else {
+      // Clear overrides if no dynamic variables
+      setDynamicOverrides([]);
+    }
+  }, [dynamicVariables]);
+
   const [showDynamicEditor, setShowDynamicEditor] = useState(false);
 
   const [globalVariables, setGlobalVariables] = useState<Variable[]>([
@@ -228,7 +261,12 @@ export function RequestChainEditor({
   };
 
   const regenerateDynamicVariableLocal = (name: string) => {
-    const newValue = `${Math.random().toString(36).substring(2, 15)}`;
+    const dynamicVar = dynamicVariables.find((d) => d.name === name);
+    if (!dynamicVar) return;
+    const newValue = `${generateDynamicValueById(
+      dynamicVar.generatorId,
+      dynamicVar.parameters
+    )}`;
     updateDynamicOverride(name, newValue);
   };
 
@@ -1542,6 +1580,8 @@ export function RequestChainEditor({
               }
               extractedVariables={extractedVariables}
               chainVariables={formData.variables || []}
+              dynamicVariableOverrides={dynamicOverrides}
+              onRegenerateDynamicVariable={regenerateDynamicVariableLocal}
             />
           </div>
         </div>
@@ -1997,6 +2037,12 @@ export function RequestChainEditor({
                                           }
                                           chainVariables={
                                             formData.variables || []
+                                          }
+                                          dynamicVariableOverrides={
+                                            dynamicOverrides
+                                          }
+                                          onRegenerateDynamicVariable={
+                                            regenerateDynamicVariableLocal
                                           }
                                         />
 
