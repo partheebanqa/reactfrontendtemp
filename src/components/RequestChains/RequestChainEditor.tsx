@@ -1,5 +1,7 @@
 'use client';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
+import { TooltipContent } from '@/components/ui/tooltip';
+
 import type React from 'react';
 
 import {
@@ -39,7 +41,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast'; // Assuming useToast is the correct hook
 import type {
   RequestChain,
   APIRequest,
@@ -58,7 +60,6 @@ import {
 } from '@/services/requestChain.service';
 import {
   Tooltip,
-  TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
@@ -77,7 +78,6 @@ import {
   getExecutionLogForRequest,
   copyToClipboard,
   mapDynamicToStatic,
-  regenerateDynamicVariable,
   getVariablesByPrefix,
   getUsedDynamicVariablesFromRequests,
   detectAutocompletePrefix,
@@ -204,41 +204,32 @@ export function RequestChainEditor({
     }
   );
 
-  const dynamicStructured = mapDynamicToStatic(
-    dynamicVariables,
-    dynamicOverrides
+  const dynamicStructured = useMemo(
+    () => mapDynamicToStatic(dynamicVariables, dynamicOverrides),
+    [dynamicVariables, dynamicOverrides]
   );
 
-  const getUsedDynamicVariables = () => {
+  const usedDynamicVariables = useMemo(() => {
     return getUsedDynamicVariablesFromRequests(
       formData.chainRequests || [],
       dynamicStructured
     );
-  };
+  }, [formData.chainRequests, dynamicStructured]);
 
-  const usedDynamicVariables = getUsedDynamicVariables();
-
-  const updateDynamicOverride = (name: string, value: string | number) => {
+  const updateDynamicOverride = (name: string, value: string) => {
     setDynamicOverrides((prev) => {
       const existing = prev.find((o) => o.name === name);
       if (existing) {
-        return prev.map((o) => (o.name === name ? { ...o, value } : o));
+        return prev.map((o) => (o.name === name ? { name, value } : { ...o }));
       } else {
         return [...prev, { name, value }];
       }
     });
   };
 
-  const regenerateDynamicVariableLocal = (variableName: string) => {
-    const dynamicVar = dynamicVariables.find((v) => v.name === variableName);
-    if (!dynamicVar) return;
-
-    const newValue = regenerateDynamicVariable(dynamicVar);
-
-    setDynamicOverrides((prev) => [
-      ...prev.filter((o) => o.name !== variableName),
-      { name: variableName, value: newValue },
-    ]);
+  const regenerateDynamicVariableLocal = (name: string) => {
+    const newValue = `${Math.random().toString(36).substring(2, 15)}`;
+    updateDynamicOverride(name, newValue);
   };
 
   // Dynamic Variables Panel Component
@@ -268,28 +259,35 @@ export function RequestChainEditor({
         {showDynamicEditor ? (
           <div className='space-y-3'>
             {usedDynamicVariables.map((variable) => {
-              const originalName = variable.name.replace('', '');
               const currentOverride = dynamicOverrides.find(
-                (o) => o.name === originalName
+                (o) => o.name === variable.name
               );
+              const displayValue =
+                currentOverride?.value ?? variable.value ?? '';
 
               return (
                 <div key={variable.id} className='flex items-center gap-3'>
                   <div className='flex items-center gap-2 flex-1'>
                     <span className='text-xs font-mono text-purple-700 min-w-0'>{`{{${variable.name}}}`}</span>
                     <Input
-                      value={String(currentOverride?.value || variable.value)}
-                      onChange={(e) =>
-                        updateDynamicOverride(originalName, e.target.value)
-                      }
+                      value={String(displayValue)}
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        const newValue = e.target.value;
+                        updateDynamicOverride(variable.name, newValue);
+                      }}
                       className='h-8 text-sm'
                       placeholder='Enter value'
+                      data-dynamic-variable={variable.name}
                     />
                   </div>
                   <Button
                     variant='ghost'
                     size='sm'
-                    onClick={() => regenerateDynamicVariableLocal(originalName)}
+                    onClick={() =>
+                      regenerateDynamicVariableLocal(variable.name)
+                    }
                     className='h-8 w-8 p-0 text-purple-600 hover:bg-purple-100'
                     title='Regenerate random value'
                   >
@@ -302,17 +300,24 @@ export function RequestChainEditor({
         ) : (
           <div className='flex flex-wrap gap-2'>
             {usedDynamicVariables.map((variable) => {
-              const originalName = variable.name.replace('', '');
+              const currentOverride = dynamicOverrides.find(
+                (o) => o.name === variable.name
+              );
+              const displayValue =
+                currentOverride?.value ?? variable.value ?? '';
+
               return (
                 <div
                   key={variable.id}
                   className='flex items-center gap-1 px-2 py-1 bg-purple-100 text-purple-800 rounded border border-purple-200'
                 >
                   <span className='text-xs font-mono'>
-                    {`{{${variable.name}}}`} = {String(variable.value)}
+                    {`{{${variable.name}}}`} = {String(displayValue)}
                   </span>
                   <button
-                    onClick={() => regenerateDynamicVariableLocal(originalName)}
+                    onClick={() =>
+                      regenerateDynamicVariableLocal(variable.name)
+                    }
                     className='ml-1 p-0.5 hover:bg-purple-200 rounded transition-colors'
                     title='Regenerate value'
                   >

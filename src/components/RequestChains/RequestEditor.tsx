@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import React from 'react';
 import dayjs from 'dayjs';
 
@@ -254,9 +254,9 @@ export function RequestEditor({
     }, 100);
   }, [url]);
 
-  const dynamicStructured = mapDynamicToStatic(
-    dynamicVariables,
-    dynamicOverrides
+  const dynamicStructured = useMemo(
+    () => mapDynamicToStatic(dynamicVariables, dynamicOverrides),
+    [dynamicVariables, dynamicOverrides]
   );
 
   useEffect(() => {
@@ -289,7 +289,7 @@ export function RequestEditor({
     }, 100);
   }, [params]);
 
-  const getUsedDynamicVariables = () => {
+  const usedDynamicVariables = useMemo(() => {
     const allTextFields = [
       request.url || '',
       request.body || '',
@@ -318,9 +318,19 @@ export function RequestEditor({
     return dynamicStructured.filter((variable) =>
       usedVariableNames.includes(variable.name)
     );
-  };
-
-  const usedDynamicVariables = getUsedDynamicVariables();
+  }, [
+    request.url,
+    request.body,
+    request.headers,
+    request.params,
+    request.authToken,
+    request.authUsername,
+    request.authPassword,
+    request.authApiKey,
+    request.authApiValue,
+    request.authorization,
+    dynamicStructured,
+  ]);
 
   const [showResponse, setShowResponse] = useState(false);
   const [extractedVariables, setExtractedVariables] = useState<
@@ -671,9 +681,11 @@ export function RequestEditor({
     setDynamicOverrides((prev) => {
       const existing = prev.find((o) => o.name === name);
       if (existing) {
-        return prev.map((o) => (o.name === name ? { ...o, value } : o));
+        return prev.map((o) =>
+          o.name === name ? { name, value: String(value) } : { ...o }
+        );
       } else {
-        return [...prev, { name, value }];
+        return [...prev, { name, value: String(value) }];
       }
     });
   };
@@ -1666,28 +1678,31 @@ export function RequestEditor({
         {showDynamicEditor ? (
           <div className='space-y-3'>
             {usedDynamicVariables.map((variable) => {
-              const originalName = variable.name.replace('', '');
               const currentOverride = dynamicOverrides.find(
-                (o) => o.name === originalName
+                (o) => o.name === variable.name
               );
-
+              const displayValue =
+                currentOverride?.value ?? variable.value ?? '';
               return (
                 <div key={variable.id} className='flex items-center gap-3'>
                   <div className='flex items-center gap-2 flex-1'>
                     <span className='text-xs font-mono text-purple-700 min-w-0'>{`{{${variable.name}}}`}</span>
                     <Input
-                      value={String(currentOverride?.value || variable.value)}
-                      onChange={(e) =>
-                        updateDynamicOverride(originalName, e.target.value)
-                      }
+                      value={String(displayValue)}
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        const newValue = e.target.value;
+                        updateDynamicOverride(variable.name, newValue);
+                      }}
                       className='h-8 text-sm'
                       placeholder='Enter value'
+                      data-dynamic-variable={variable.name}
                     />
                   </div>
                   <Button
                     variant='ghost'
                     size='sm'
-                    onClick={() => regenerateDynamicVariable(originalName)}
+                    onClick={() => regenerateDynamicVariable(variable.name)}
                     className='h-8 w-8 p-0 text-purple-600 hover:bg-purple-100'
                     title='Regenerate value'
                   >
@@ -1700,17 +1715,22 @@ export function RequestEditor({
         ) : (
           <div className='flex flex-wrap gap-2'>
             {usedDynamicVariables.map((variable) => {
-              const originalName = variable.name.replace('', '');
+              const currentOverride = dynamicOverrides.find(
+                (o) => o.name === variable.name
+              );
+              const displayValue =
+                currentOverride?.value ?? variable.value ?? '';
+
               return (
                 <div
                   key={variable.id}
                   className='flex items-center gap-1 px-2 py-1 bg-purple-100 text-purple-800 rounded border border-purple-200'
                 >
                   <span className='text-xs font-mono'>
-                    {`{{${variable.name}}}`} = {String(variable.value)}
+                    {`{{${variable.name}}}`} = {String(displayValue)}
                   </span>
                   <button
-                    onClick={() => regenerateDynamicVariable(originalName)}
+                    onClick={() => regenerateDynamicVariable(variable.name)}
                     className='ml-1 p-0.5 hover:bg-purple-200 rounded transition-colors'
                     title='Regenerate value'
                   >
@@ -1915,8 +1935,8 @@ export function RequestEditor({
                     {getAllAvailableVariables()
                       .filter(
                         (item) =>
-                          (item.name.startsWith('S_') ||
-                            item.name.startsWith('D_')) &&
+                          (item.name.startsWith('D_') ||
+                            item.name.startsWith('S_')) &&
                           item.name
                             .toLowerCase()
                             .includes(searchText.toLowerCase())
