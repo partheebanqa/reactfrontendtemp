@@ -233,7 +233,8 @@ export const replaceVariablesInText = (
   let result = text;
   variables.forEach((variable) => {
     const varName = variable.name || variable.variableName;
-    const varValue = variable.value || variable.initialValue || '';
+    const varValue =
+      variable.currentValue || variable.value || variable.initialValue || '';
     if (varName) {
       const regex = new RegExp(`{{${varName}}}`, 'g');
       result = result.replace(regex, varValue);
@@ -330,27 +331,8 @@ export const mapDynamicToStatic = (
 ) => {
   return dynamicVariables.map((d) => {
     const override = overrides.find((o) => o.name === d.name);
-    if (override) {
-      return {
-        id: d.id,
-        environmentId: null,
-        name: `${d.name}`,
-        description: '',
-        type: 'dynamic',
-        initialValue: '',
-        currentValue: override.value,
-        createdAt: d.createdAt,
-        updatedAt: d.updatedAt,
-        deletedAt: d.deletedAt,
-        value: override.value,
-        scope: 'environment',
-        isGlobal: false,
-        isSecret: false,
-        isDynamic: true,
-      };
-    }
 
-    const generated = generateDynamicValueById(d.generatorId, d.parameters);
+    const valueToUse = override ? override.value : '';
 
     return {
       id: d.id,
@@ -358,12 +340,12 @@ export const mapDynamicToStatic = (
       name: `${d.name}`,
       description: '',
       type: 'dynamic',
-      initialValue: '',
-      currentValue: String(generated),
+      initialValue: valueToUse,
+      currentValue: valueToUse,
       createdAt: d.createdAt,
       updatedAt: d.updatedAt,
       deletedAt: d.deletedAt,
-      value: String(generated),
+      value: valueToUse,
       scope: 'environment',
       isGlobal: false,
       isSecret: false,
@@ -548,7 +530,7 @@ function generateDynamicValueById(id: string, params: any = {}): string {
   ];
 
   switch (id) {
-    // basic / date
+    // basic / date\
     case 'timestamp':
       return String(Date.now());
     case 'iso_date':
@@ -606,7 +588,7 @@ function generateDynamicValueById(id: string, params: any = {}): string {
       return `${local}@${domain}`;
     }
     case 'randomDate': {
-      // format: 'YYYY-MM-DD' | 'ISO' | other (locale)
+      // format: 'YYYY-MM-DD' | 'ISO' | other (locale)\
       const format = params?.format ?? 'YYYY-MM-DD';
       const start = new Date(2020, 0, 1);
       const end = new Date();

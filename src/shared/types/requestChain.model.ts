@@ -240,6 +240,7 @@ export interface ExecutionResponse {
     headers: {};
     statusCode: number;
     responses: Array<{
+      status: number;
       statusCode: number;
       headers: Record<string, string>;
       body: any;
