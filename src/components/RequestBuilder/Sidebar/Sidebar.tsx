@@ -413,7 +413,26 @@ const Sidebar: React.FC = () => {
             collectionId: selectedRequest?.collectionId ?? '',
           });
         }
+
+        if (activeRequest?.id === requestId) {
+          setActiveRequest({
+            ...activeRequest,
+            name: renameValue.trim(),
+          });
+
+          collectionActions.updateOpenedRequest({
+            ...activeRequest,
+            name: renameValue.trim(),
+          });
+        }
+
         setShowRequestRenameModal(false);
+
+        toast({
+          title: 'Request renamed',
+          description: `Request renamed to "${renameValue.trim()}"`,
+          variant: 'success',
+        });
       }
     } catch (error) {
       console.error('Failed to rename request:', error);
