@@ -237,7 +237,6 @@ const RequestEditor: React.FC = () => {
     const isValidVar = (name: string) =>
       name.startsWith('S_') || name.startsWith('D_');
 
-    // Static variables
     if (Array.isArray(variables)) {
       variables.forEach((variable: any) => {
         const name = variable.name || variable.key || '';
@@ -248,7 +247,6 @@ const RequestEditor: React.FC = () => {
       });
     }
 
-    // Dynamic variables
     if (Array.isArray(dynamicVariables)) {
       dynamicVariables.forEach((variable: any) => {
         const name = variable.name || '';
@@ -272,6 +270,8 @@ const RequestEditor: React.FC = () => {
 
   const [selectedCollectionId, setSelectedCollectionId] = useState<string>('');
   const [isSaving, setIsSaving] = useState(false);
+
+  const [loadedRequestId, setLoadedRequestId] = useState<string | undefined>();
 
   const collectionsRef = useRef(collections);
   useEffect(() => {
@@ -370,9 +370,7 @@ const RequestEditor: React.FC = () => {
         bodyType,
         bodyRawContent: bodyContent,
         bodyFormData:
-          bodyType === 'form-data'
-            ? activeRequest.bodyFormData // Keep existing form data structure if body type is form-data
-            : undefined, // Reset if not form-data
+          bodyType === 'form-data' ? activeRequest.bodyFormData : undefined,
         authorizationType: authType,
         authorization: authData,
       });
@@ -414,10 +412,13 @@ const RequestEditor: React.FC = () => {
   useEffect(() => {
     if (isSaving) return;
 
-    if (activeRequest) {
+    if (activeRequest && activeRequest.id !== loadedRequestId) {
+      setLoadedRequestId(activeRequest.id);
+
       setUrl(activeRequest.url || '');
       setMethod((activeRequest.method as RequestMethod) || 'GET');
       setParams(activeRequest.params || []);
+
       if (activeRequest.headers && Array.isArray(activeRequest.headers)) {
         try {
           const formattedHeaders = activeRequest.headers.map((h: any) => {
@@ -455,6 +456,7 @@ const RequestEditor: React.FC = () => {
       } else {
         setHeaders(getDefaultHeaders(activeRequest.method as RequestMethod));
       }
+
       const allowedBodyTypes = [
         'none',
         'json',
@@ -614,14 +616,15 @@ const RequestEditor: React.FC = () => {
       } else {
         setSelectedVariable([]);
       }
-    } else if (!isSaving) {
+    } else if (!isSaving && !activeRequest) {
+      setLoadedRequestId(undefined);
       setAssertions([]);
       setAuthType('bearer');
       setSelectedVariable([]);
       setPendingSubstitutions([]);
     }
     setResponseData(null);
-  }, [activeRequest, isSaving]);
+  }, [activeRequest?.id, isSaving]);
 
   const formatBackendResponse = (result: any): FormattedResponse => {
     const importantHeaders = [
@@ -644,9 +647,7 @@ const RequestEditor: React.FC = () => {
     if (typeof result.body === 'string') {
       try {
         parsedBody = JSON.parse(result.body);
-      } catch {
-        parsedBody = result.body;
-      }
+      } catch {}
     }
 
     return {
@@ -861,6 +862,7 @@ const RequestEditor: React.FC = () => {
     if (!activeRequest) return;
     clearError();
     setLoading(true);
+
     const newUrl = buildFinalUrl();
 
     try {
@@ -870,10 +872,23 @@ const RequestEditor: React.FC = () => {
 
       let backendData;
 
+      let effectiveAuthType = authType;
+
+      if (
+        authData?.token &&
+        authData.token.trim() !== '' &&
+        (!authType || authType === 'none')
+      ) {
+        effectiveAuthType = 'bearer';
+      }
+
+      if (!authData?.token || authData.token.trim() === '') {
+        effectiveAuthType = 'none';
+      }
+
       if (hasUnsavedChanges || activeRequest.id?.startsWith('temp-')) {
         let substitutedBodyContent = bodyContent;
 
-        // </CHANGE> Apply path-based variable substitutions for JSON body
         if (
           selectedVariable &&
           selectedVariable.length > 0 &&
@@ -882,22 +897,17 @@ const RequestEditor: React.FC = () => {
           try {
             const parsedBody = JSON.parse(bodyContent);
 
-            // Replace each path with the variable's actual value
             selectedVariable.forEach((varItem) => {
               const variable = formattedVariables.find(
                 (v) => v.name === varItem.name
               );
               if (variable && varItem.path) {
-                // Update the value at the specific path
-                if (parsedBody && typeof parsedBody === 'object') {
-                  parsedBody[varItem.path] = variable.value;
-                }
+                parsedBody[varItem.path] = variable.value;
               }
             });
 
             substitutedBodyContent = JSON.stringify(parsedBody, null, 2);
-          } catch (e) {
-            // If JSON parsing fails, fall back to placeholder-based substitution
+          } catch {
             selectedVariable.forEach((varItem) => {
               const variable = formattedVariables.find(
                 (v) => v.name === varItem.name
@@ -912,7 +922,6 @@ const RequestEditor: React.FC = () => {
             });
           }
         } else if (selectedVariable && selectedVariable.length > 0) {
-          // Fallback for non-JSON/RAW body types or if JSON parsing fails
           selectedVariable.forEach((varItem) => {
             const variable = formattedVariables.find(
               (v) => v.name === varItem.name
@@ -930,34 +939,32 @@ const RequestEditor: React.FC = () => {
         const currentRequest = {
           id: activeRequest.id,
           name: activeRequest.name || 'Untitled Request',
-          method: method,
+          method,
           url: newUrl,
           order: activeRequest.order || 0,
-          headers: headers,
-          params: params,
+          headers,
+          params,
           body: substitutedBodyContent,
           bodyRawContent: substitutedBodyContent,
           bodyType: bodyType === 'json' ? 'raw' : bodyType,
-          bodyFormData:
-            bodyType === 'form-data'
-              ? Object.fromEntries(
-                  formFields
-                    .filter((f) => f.enabled)
-                    .map((f) => [
-                      f.key,
-                      f.type === 'file' ? f.value : String(f.value),
-                    ])
-                )
-              : null,
-          authorizationType: authType,
-          authToken: authType === 'bearer' ? authData.token : undefined,
+
+          authorizationType: effectiveAuthType,
           authorization:
-            authType === 'bearer' ? { token: authData.token } : undefined,
-          authUsername: authType === 'basic' ? authData.username : undefined,
-          authPassword: authType === 'basic' ? authData.password : undefined,
-          authApiKey: authType === 'apiKey' ? authData.key : undefined,
-          authApiValue: authType === 'apiKey' ? authData.value : undefined,
-          authApiLocation: authType === 'apiKey' ? authData.addTo : undefined,
+            effectiveAuthType === 'bearer'
+              ? { token: authData.token }
+              : effectiveAuthType === 'basic'
+              ? {
+                  username: authData.username,
+                  password: authData.password,
+                }
+              : effectiveAuthType === 'apiKey'
+              ? {
+                  key: authData.key,
+                  value: authData.value,
+                  addTo: authData.addTo,
+                }
+              : undefined,
+
           timeout: settings.timeout,
           retries: 0,
           extractVariables: [],
@@ -965,7 +972,7 @@ const RequestEditor: React.FC = () => {
         };
 
         const payload = buildRequestPayload(
-          currentRequest as any,
+          currentRequest,
           formattedVariables.map((v) => ({
             name: v.name,
             value: v.value,
@@ -996,7 +1003,7 @@ const RequestEditor: React.FC = () => {
       let statusCode;
       let responseHeaders;
       let metrics;
-      let assertionLogs: never[];
+      let assertionLogs;
       let schemaValidation;
 
       if (
@@ -1020,13 +1027,12 @@ const RequestEditor: React.FC = () => {
       }
 
       if (backendBody) {
-        let parsedBody: any = backendBody;
+        let parsedBody = backendBody;
+
         if (typeof backendBody === 'string') {
           try {
             parsedBody = JSON.parse(backendBody);
-          } catch {
-            parsedBody = backendBody;
-          }
+          } catch {}
         }
 
         const normalizedResponse = {
@@ -1036,24 +1042,25 @@ const RequestEditor: React.FC = () => {
           body: parsedBody,
           rawBody: backendBody,
           metrics: metrics ?? {},
-          assertionLogs: assertionLogs,
-          schemaValidation: schemaValidation,
+          assertionLogs,
+          schemaValidation,
         };
 
-        setResponseData(normalizedResponse as any);
+        setResponseData(normalizedResponse);
 
         const formattedResponse = formatBackendResponse(normalizedResponse);
         const generatedAssertions = generateAssertions(formattedResponse);
 
         const existingAssertions = Array.isArray(assertions) ? assertions : [];
         const existingIds = new Set(existingAssertions.map((a) => a.id));
+
         const newAssertions = generatedAssertions.filter(
-          (newAssertion) => !existingIds.has(newAssertion.id)
+          (a) => !existingIds.has(a.id)
         );
-        const mergedAssertions = [...existingAssertions, ...newAssertions];
-        setAssertions(mergedAssertions);
+
+        setAssertions([...existingAssertions, ...newAssertions]);
       }
-    } catch (error: any) {
+    } catch (error) {
       const backendErrorMessage =
         error?.response?.data?.errorDetails ||
         error?.response?.data?.error ||
@@ -1072,27 +1079,25 @@ const RequestEditor: React.FC = () => {
   const handleSaveName = async (newName: string) => {
     try {
       if (!activeRequest) return;
-      if (newName.trim() && activeRequest?.id) {
-        const isTempRequest = activeRequest.id.startsWith('temp-');
+      if (!newName.trim()) return;
 
-        if (isTempRequest) {
-          collectionActions.renameRequest(
-            newName.trim(),
-            activeRequest.id,
-            currentWorkspace?.id || ''
-          );
-        } else {
-          await renameRequestMutation.mutateAsync({
-            requestId: activeRequest.id,
-            newName: newName.trim(),
-            workspaceId: currentWorkspace?.id || '',
-            folderId: activeRequest.folderId || '',
-            collectionId: activeCollection?.id || '',
-          });
-        }
+      const isTempRequest = activeRequest.id?.startsWith('temp-');
+
+      if (isTempRequest) {
+        collectionActions.renameRequest(
+          newName.trim(),
+          activeRequest.id,
+          currentWorkspace?.id || ''
+        );
+      } else {
+        await handleUpdateRequest(newName.trim());
       }
     } catch (error) {
       console.error('Error renaming request:', error);
+      showError(
+        'Rename Failed',
+        'An error occurred while renaming the request.'
+      );
     }
   };
 
@@ -1111,7 +1116,7 @@ const RequestEditor: React.FC = () => {
     setShowSaveModal(true);
   };
 
-  const handleUpdateRequest = async () => {
+  const handleUpdateRequest = async (overrideName?: string) => {
     try {
       if (!activeRequest || activeRequest.id?.startsWith('temp-')) {
         showError(
@@ -1168,7 +1173,7 @@ const RequestEditor: React.FC = () => {
       const requestData: any = {
         workspaceId: currentWorkspace.id,
         description: '',
-        name: activeRequest.name || 'New Request',
+        name: overrideName || activeRequest.name || 'New Request',
         method,
         url,
         ...(effectiveFolderId ? { folderId: effectiveFolderId } : {}),
@@ -1254,10 +1259,23 @@ const RequestEditor: React.FC = () => {
         requestData,
       });
 
+      if (overrideName) {
+        setActiveRequest({
+          ...activeRequest,
+          name: overrideName,
+        });
+        collectionActions.updateOpenedRequest({
+          ...activeRequest,
+          name: overrideName,
+        });
+      }
+
       collectionActions.markSaved(activeRequest.id);
 
       toast({
-        title: 'Request updated successfully!',
+        title: overrideName
+          ? 'Request renamed successfully!'
+          : 'Request updated successfully!',
         duration: 3000,
       });
     } catch (error) {
