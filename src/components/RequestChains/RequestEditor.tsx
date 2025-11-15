@@ -148,13 +148,7 @@ export function RequestEditor({
   const [helpOpen, setHelpOpen] = useState(false);
 
   const [activeTab, setActiveTab] = useState<
-    | 'params'
-    | 'headers'
-    | 'body'
-    | 'auth'
-    | 'settings'
-    | 'tests'
-    | 'conditional'
+    'params' | 'headers' | 'body' | 'auth' | 'settings'
   >('params');
   const [isExecuting, setIsExecuting] = useState(false);
   const [executionResult, setExecutionResult] = useState<ExecutionLog | null>(
@@ -1025,9 +1019,7 @@ export function RequestEditor({
     { id: 'headers', label: 'Headers', icon: Code },
     { id: 'body', label: 'Body', icon: FileText },
     { id: 'auth', label: 'Auth', icon: Shield },
-    { id: 'tests', label: 'Tests', icon: TestTube },
     { id: 'settings', label: 'Settings', icon: Settings },
-    { id: 'conditional', label: 'Conditional', icon: GitBranch },
   ];
 
   const formatResponseBody = (body: string, contentType?: string) => {
@@ -1442,7 +1434,7 @@ export function RequestEditor({
               Dynamic Variables ({usedDynamicVariables.length})
             </h4>
           </div>
-          <Button
+          {/* <Button
             variant='outline'
             size='sm'
             onClick={() => setShowDynamicEditor(!showDynamicEditor)}
@@ -1450,7 +1442,7 @@ export function RequestEditor({
           >
             <Edit3 className='w-3 h-3 mr-1' />
             {showDynamicEditor ? 'Hide Editor' : 'Edit Values'}
-          </Button>
+          </Button> */}
         </div>
 
         {showDynamicEditor ? (
@@ -1838,13 +1830,7 @@ export function RequestEditor({
                       className='flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm'
                       placeholder='Value (use {{variableName}} or {{dynamicVar}} for variables)'
                     />
-                    {/* Show processed value if different */}
-                    {processedRequest.params?.[index]?.value !== param.value &&
-                      processedRequest.params?.[index]?.value && (
-                        <div className='flex-1 px-2 py-1 bg-blue-50 border border-blue-200 rounded text-xs font-mono'>
-                          → {processedRequest.params[index]?.value}
-                        </div>
-                      )}
+
                     <button
                       onClick={() =>
                         updateParam(index, { enabled: !param.enabled })
@@ -2141,213 +2127,6 @@ export function RequestEditor({
             </div>
           )}
 
-          {activeTab === 'tests' && (
-            <div className='space-y-4'>
-              <div className='flex items-center justify-between'>
-                <h3 className='text-lg font-medium text-gray-900'>
-                  Test Scripts
-                </h3>
-                <div className='flex space-x-2'>
-                  <button
-                    onClick={() => addTest('responseTime')}
-                    className='flex items-center space-x-2 px-3 py-1 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors'
-                  >
-                    <Clock className='w-4 h-4' />
-                    <span>Response Time</span>
-                  </button>
-                  <button
-                    onClick={() => addTest('status')}
-                    className='flex items-center space-x-2 px-3 py-1 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors'
-                  >
-                    <CheckCircle className='w-4 h-4' />
-                    <span>Status Code</span>
-                  </button>
-                  <button
-                    onClick={() => addTest('jsonContent')}
-                    className='flex items-center space-x-2 px-3 py-1 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors'
-                  >
-                    <Code className='w-4 h-4' />
-                    <span>JSON Content</span>
-                  </button>
-                </div>
-              </div>
-              {initialRequest.testScripts &&
-              initialRequest.testScripts.length > 0 ? (
-                <div className='space-y-3'>
-                  {initialRequest.testScripts.map((test) => (
-                    <div
-                      key={test.id}
-                      className='border border-gray-200 rounded-lg p-4'
-                    >
-                      <div className='flex items-center justify-between mb-3'>
-                        <h4 className='font-medium text-gray-900'>
-                          {test.type === 'status' && 'Status Code Test'}
-                          {test.type === 'responseTime' && 'Response Time Test'}
-                          {test.type === 'jsonContent' && 'JSON Content Test'}
-                        </h4>
-                        <div className='flex items-center space-x-2'>
-                          <button
-                            onClick={() =>
-                              updateTest(test.id, { enabled: !test.enabled })
-                            }
-                            className={`p-1 rounded transition-colors ${
-                              test.enabled
-                                ? 'text-green-600 hover:bg-green-50'
-                                : 'text-gray-400 hover:bg-gray-50'
-                            }`}
-                          >
-                            {/* {test.enabled ? (
-                              <Eye className='w-4 h-4' />
-                            ) : (
-                              <EyeOff className='w-4 h-4' />
-                            )} */}
-                          </button>
-                          <button
-                            onClick={() => removeTest(test.id)}
-                            className='p-1 text-red-600 hover:bg-red-50 rounded transition-colors'
-                          >
-                            <Trash2 className='w-4 h-4' />
-                          </button>
-                        </div>
-                      </div>
-                      <div className='grid grid-cols-1 md:grid-cols-3 gap-3 text-sm'>
-                        {test.type === 'status' && (
-                          <>
-                            <div>
-                              <span className='text-gray-600'>
-                                Status code should be
-                              </span>
-                            </div>
-                            <select
-                              value={test.operator}
-                              onChange={(e) =>
-                                updateTest(test.id, {
-                                  operator: e.target.value,
-                                })
-                              }
-                              className='px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-                            >
-                              <option value='equal'>equal</option>
-                              <option value='notEqual'>not equal</option>
-                              <option value='greaterThan'>greater than</option>
-                              <option value='lessThan'>less than</option>
-                            </select>
-                            <select
-                              value={test.expectedValue}
-                              onChange={(e) =>
-                                updateTest(test.id, {
-                                  expectedValue: e.target.value,
-                                })
-                              }
-                              className='px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-                            >
-                              <option value='200'>200 (OK)</option>
-                              <option value='201'>201 (Created)</option>
-                              <option value='204'>204 (No Content)</option>
-                              <option value='400'>400 (Bad Request)</option>
-                              <option value='401'>401 (Unauthorized)</option>
-                              <option value='404'>404 (Not Found)</option>
-                              <option value='500'>500 (Server Error)</option>
-                            </select>
-                          </>
-                        )}
-                        {test.type === 'responseTime' && (
-                          <>
-                            <div>
-                              <span className='text-gray-600'>
-                                Response time should be
-                              </span>
-                            </div>
-                            <select
-                              value={test.operator}
-                              onChange={(e) =>
-                                updateTest(test.id, {
-                                  operator: e.target.value,
-                                })
-                              }
-                              className='px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-                            >
-                              <option value='lessThan'>less than</option>
-                              <option value='greaterThan'>greater than</option>
-                              <option value='equal'>equal to</option>
-                            </select>
-                            <div className='flex items-center space-x-1'>
-                              <input
-                                type='number'
-                                value={test.expectedValue}
-                                onChange={(e) =>
-                                  updateTest(test.id, {
-                                    expectedValue: e.target.value,
-                                  })
-                                }
-                                className='flex-1 px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-                                placeholder='200'
-                              />
-                              <span className='text-gray-500'>ms</span>
-                            </div>
-                          </>
-                        )}
-                        {test.type === 'jsonContent' && (
-                          <>
-                            <div className='flex items-center space-x-2'>
-                              <span className='text-gray-600'>
-                                JSON value at path
-                              </span>
-                              <input
-                                type='text'
-                                value={test.jsonPath || ''}
-                                onChange={(e) =>
-                                  updateTest(test.id, {
-                                    jsonPath: e.target.value,
-                                  })
-                                }
-                                className='flex-1 px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono'
-                                placeholder='$.property'
-                              />
-                            </div>
-                            <select
-                              value={test.operator}
-                              onChange={(e) =>
-                                updateTest(test.id, {
-                                  operator: e.target.value,
-                                })
-                              }
-                              className='px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-                            >
-                              <option value='contain'>contain</option>
-                              <option value='equal'>equal</option>
-                              <option value='notEqual'>not equal</option>
-                              <option value='exist'>exist</option>
-                              <option value='notExist'>not exist</option>
-                            </select>
-                            <input
-                              type='text'
-                              value={test.expectedValue}
-                              onChange={(e) =>
-                                updateTest(test.id, {
-                                  expectedValue: e.target.value,
-                                })
-                              }
-                              className='px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-                              placeholder='expected value'
-                            />
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className='text-center py-8 text-gray-500'>
-                  <TestTube className='w-12 h-12 text-gray-300 mx-auto mb-3' />
-                  <p className='mb-4'>
-                    No tests added. Click one of the buttons above to add a
-                    test.
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
           {activeTab === 'settings' && (
             <div className='space-y-4'>
               <h3 className='text-lg font-medium text-gray-900'>
@@ -2924,17 +2703,9 @@ export function RequestEditor({
             <Key className='w-4 h-4' />
             Auth
           </TabsTrigger>
-          <TabsTrigger value='tests' className='gap-2'>
-            <TestTube className='w-4 h-4' />
-            Tests
-          </TabsTrigger>
           <TabsTrigger value='settings' className='gap-2'>
             <Settings className='w-4 h-4' />
             Settings
-          </TabsTrigger>
-          <TabsTrigger value='conditional' className='gap-2'>
-            <GitBranch className='w-4 h-4' />
-            Conditional
           </TabsTrigger>
         </TabsList>
         <TabsContent value='params' className='space-y-4'>
@@ -3058,31 +2829,6 @@ export function RequestEditor({
           </Card>
         </TabsContent>
 
-        <TabsContent value='tests' className='space-y-4'>
-          <Card>
-            <CardHeader>
-              <CardTitle>Test Scripts</CardTitle>
-            </CardHeader>
-            <CardContent className='space-y-4'>
-              <div className='space-y-2'>
-                <Label>Pre-request Script</Label>
-                <Textarea
-                  placeholder='// This script will be executed before the request'
-                  rows={6}
-                  className='font-mono'
-                />
-              </div>
-              <div className='space-y-2'>
-                <Label>Test Script</Label>
-                <Textarea
-                  placeholder='// Write your test assertions here'
-                  rows={8}
-                  className='font-mono'
-                />
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
         <TabsContent value='settings' className='space-y-6'>
           <div>
             <h3 className='text-lg font-semibold mb-4'>Request Settings</h3>
@@ -3166,30 +2912,6 @@ export function RequestEditor({
               <Label>Enable this request</Label>
             </div>
           </div>
-        </TabsContent>
-        <TabsContent value='conditional' className='space-y-4'>
-          <Card>
-            <CardHeader>
-              <CardTitle>Conditional Logic</CardTitle>
-            </CardHeader>
-            <CardContent className='space-y-4'>
-              <div className='space-y-2'>
-                <Label>Run this request only if:</Label>
-                <Textarea
-                  placeholder='// JavaScript condition that returns true/false// Example: response.status === 200 && response.data.success'
-                  rows={4}
-                  className='font-mono'
-                />
-              </div>
-              <div className='space-y-2'>
-                <Label>Variable Conditions</Label>
-                <div className='text-sm text-muted-foreground'>
-                  Set conditions based on extracted variables from previous
-                  requests
-                </div>
-              </div>
-            </CardContent>
-          </Card>
         </TabsContent>
       </Tabs>
       {onSave && (
