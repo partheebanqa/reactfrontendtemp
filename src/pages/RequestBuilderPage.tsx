@@ -1,7 +1,7 @@
-import React, { useState } from "react";
-import RequestBuilder from "@/components/RequestBuilder";
-import { ChartColumn, Settings } from "lucide-react";
-import BreadCum from "@/components/BreadCum/Breadcum";
+import React, { useState } from 'react';
+import RequestBuilder from '@/components/RequestBuilder';
+import { ChartColumn, Settings } from 'lucide-react';
+import BreadCum from '@/components/BreadCum/Breadcum';
 
 interface Header {
   key: string;
@@ -18,7 +18,7 @@ interface TestAssertion {
 const RequestBuilderPage: React.FC = () => {
   return (
     <>
-      <BreadCum
+      {/* <BreadCum
         title="Request Builder"
         subtitle="Get execution results of test suite and request chain"
         showCreateButton={false}
@@ -94,11 +94,9 @@ const RequestBuilderPage: React.FC = () => {
             </ul>
           </div>
         }
-      />
-
+      /> */}
 
       <RequestBuilder />
-
     </>
   );
 };

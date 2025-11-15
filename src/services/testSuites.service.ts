@@ -116,13 +116,25 @@ export const duplicateTestSuite = async (id: string): Promise<TestSuite> => {
   try {
     const response = await apiRequest(
       'POST',
-      `${API_TEST_SUITES}/${id}/duplicate`
+      `${API_TEST_SUITES}/${id}/duplicate`,
+      {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }
     );
+
     if (!response.ok) {
-      throw new Error('Failed to duplicate test suite');
+      throw new Error(`Failed to duplicate test suite: ${response.statusText}`);
     }
-    return await response.json();
-  } catch (error: any) {
-    throw new Error(error.message || 'Failed to duplicate test suite');
+
+    const data: TestSuite = await response.json();
+    return data;
+  } catch (error: unknown) {
+    console.error('Error duplicating test suite:', error);
+    if (error instanceof Error) {
+      throw new Error(error.message || 'Failed to duplicate test suite');
+    }
+    throw new Error('Failed to duplicate test suite');
   }
 };

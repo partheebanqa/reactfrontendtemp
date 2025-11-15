@@ -8,6 +8,7 @@ import {
   ExecutionResponse,
   ExecutionRequestChainPayload,
 } from '@/shared/types/requestChain.model';
+import { apiRequestWithErrorDetails } from '@/lib/queryClientWithErrorDetail';
 
 export const executeRequest = async (
   payload: ExecuteRequestPayload
@@ -33,29 +34,56 @@ export const executeRequest = async (
 export const buildRequestPayload = (
   request: APIRequest,
   variables: Variable[],
-  workspaceId: string = '01415fe5-b282-4295-a386-267ece622c7b'
+  workspaceId = '01415fe5-b282-4295-a386-267ece622c7b'
 ): ExecuteRequestPayload => {
   const replaceVariables = (text: string | undefined): string => {
     if (!text) return '';
     let result = text;
     variables.forEach((variable) => {
       const regex = new RegExp(`{{${variable.name}}}`, 'g');
-      result = result.replace(
-        regex,
-        variable.initialValue ?? variable.value ?? ''
+      const varValue = String(
+        variable.value ?? variable.currentValue ?? variable.initialValue ?? ''
       );
+      result = result.replace(regex, varValue);
     });
     return result;
   };
 
-  // Get the token from either authToken field or authorization.token field
   const getAuthToken = (): string => {
     if (request.authorizationType === 'bearer') {
-      // Check authorization.token first, then fallback to authToken
-      const token = request.authorization?.token || request.authToken || '';
-      return replaceVariables(token);
+      // Always replace variables — prevents using stale old token
+      const rawToken = request.authToken ?? request.authorization?.token ?? '';
+
+      return replaceVariables(rawToken);
     }
     return '';
+  };
+
+  const buildAuthorization = () => {
+    if (request.authorizationType === 'bearer') {
+      return { token: getAuthToken() };
+    } else if (request.authorizationType === 'basic') {
+      return {
+        username: replaceVariables(
+          request.authUsername || request.authorization?.username || ''
+        ),
+        password: replaceVariables(
+          request.authPassword || request.authorization?.password || ''
+        ),
+      };
+    } else if (request.authorizationType === 'apikey') {
+      return {
+        key: replaceVariables(
+          request.authApiKey || request.authorization?.key || ''
+        ),
+        value: replaceVariables(
+          request.authApiValue || request.authorization?.value || ''
+        ),
+        addTo:
+          request.authApiLocation || request.authorization?.addTo || 'header',
+      };
+    }
+    return undefined;
   };
 
   return {
@@ -68,22 +96,10 @@ export const buildRequestPayload = (
       bodyType: request.bodyType,
       bodyFormData: request.bodyFormData ?? null,
       bodyRawContent: replaceVariables(request.body),
+
       authorizationType: request.authorizationType,
-      authorization:
-        request.authorizationType === 'bearer'
-          ? { token: getAuthToken() }
-          : request.authorizationType === 'basic'
-          ? {
-              username: replaceVariables(request.authUsername || ''),
-              password: replaceVariables(request.authPassword || ''),
-            }
-          : request.authorizationType === 'apikey'
-          ? {
-              key: replaceVariables(request.authApiKey || ''),
-              value: replaceVariables(request.authApiValue || ''),
-              addTo: request.authApiLocation || 'header',
-            }
-          : undefined,
+      authorization: buildAuthorization(),
+
       headers: (request.headers || [])
         .filter((h) => h.enabled)
         .map((h) => ({
@@ -91,6 +107,7 @@ export const buildRequestPayload = (
           value: replaceVariables(h.value),
           enabled: true,
         })),
+
       params: (request.params || [])
         .filter((p) => p.enabled)
         .map((p) => ({

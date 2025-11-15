@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import type { Variable, Environment } from '@/shared/types/datamanagement';
+import type { Variable } from '@/shared/types/datamanagement';
 import {
   Calendar,
   Code2,
@@ -42,7 +42,6 @@ interface VariableCreateDialogProps {
   newVariable: Variable;
   setNewVariable: React.Dispatch<React.SetStateAction<Variable>>;
   handleCreate: (payload: any) => void;
-  environments: Environment[];
   type: 'static' | 'dynamic';
 }
 
@@ -52,7 +51,6 @@ const VariableCreateDialog: React.FC<VariableCreateDialogProps> = ({
   newVariable,
   setNewVariable,
   handleCreate,
-  environments,
   type,
 }) => {
   const { currentWorkspace } = useWorkspace();
@@ -74,6 +72,21 @@ const VariableCreateDialog: React.FC<VariableCreateDialogProps> = ({
     }
   }, [open, type, setNewVariable]);
 
+  const resetForm = () => {
+    setNewVariable({
+      name: '',
+      description: '',
+      type: type,
+      initialValue: '',
+      currentValue: '',
+      generatorFunction: '',
+      generatorConfig: {},
+      isSecret: false,
+      environmentId: '',
+    } as Variable);
+    setErrors({});
+  };
+
   const validateForm = (): boolean => {
     const newErrors: {
       name?: string;
@@ -90,11 +103,6 @@ const VariableCreateDialog: React.FC<VariableCreateDialogProps> = ({
       newErrors.name =
         'Variable name can only contain uppercase letters, numbers, and underscores';
     }
-
-    // Validate environment
-    // if (!newVariable.environmentId) {
-    //   newErrors.environmentId = 'Please select an environment';
-    // }
 
     // Validate type (should already be set by default, but just in case)
     if (!newVariable.type) {
@@ -114,7 +122,6 @@ const VariableCreateDialog: React.FC<VariableCreateDialogProps> = ({
   const handleSubmit = () => {
     if (validateForm()) {
       const payload: any = {
-        // environmentId: newVariable.environmentId,
         workspaceId: currentWorkspace?.id,
         name: newVariable.name,
         description: newVariable.description,
@@ -224,6 +231,10 @@ const VariableCreateDialog: React.FC<VariableCreateDialogProps> = ({
       console.log('Creating variable with payload:', payload);
 
       handleCreate(payload);
+
+      // Reset form and close dialog after successful creation
+      resetForm();
+      setOpen(false);
     }
   };
 
@@ -235,11 +246,28 @@ const VariableCreateDialog: React.FC<VariableCreateDialogProps> = ({
 
       <DialogContent className='max-w-2xl max-h-[80vh] overflow-y-auto'>
         <DialogHeader>
-          <DialogTitle>Create Variable</DialogTitle>
+          <DialogTitle className='flex items-center gap-2'>
+            {type === 'static' ? (
+              <>
+                <FileText className='w-5 h-5 text-muted-foreground' />
+                <span>Create Static Variable</span>
+                <span className='text-xs text-muted-foreground ml-2'>
+                  Fixed value that doesn't change
+                </span>
+              </>
+            ) : (
+              <>
+                <Zap className='w-5 h-5 text-muted-foreground' />
+                <span>Create Dynamic Variable</span>
+                <span className='text-xs text-muted-foreground ml-2'>
+                  Generated at runtime
+                </span>
+              </>
+            )}
+          </DialogTitle>
         </DialogHeader>
 
         <div className='space-y-4'>
-          {/* Variable Name */}
           <div className='space-y-1'>
             <label className='text-sm font-medium'>Variable Name</label>
             <Input
@@ -253,7 +281,6 @@ const VariableCreateDialog: React.FC<VariableCreateDialogProps> = ({
                     .toUpperCase()
                     .replace(/[^A-Z0-9_]/g, '_'),
                 }));
-                // Clear error when user types
                 if (errors.name) {
                   setErrors((prev) => ({ ...prev, name: undefined }));
                 }
@@ -271,34 +298,6 @@ const VariableCreateDialog: React.FC<VariableCreateDialogProps> = ({
             )}
           </div>
 
-          {/* Type */}
-          {/* Type */}
-          <div className='space-y-1'>
-            <label className='text-sm font-medium'>Variable Type</label>
-            <div className='flex items-center gap-2 p-2 border rounded-md bg-muted/50'>
-              {type === 'static' ? (
-                <>
-                  <FileText className='w-4 h-4 text-muted-foreground' />
-                  <span className='text-sm font-medium'>Static Variable -</span>
-                  <span className='text-xs text-muted-foreground ml-2'>
-                    Fixed value that doesn't change
-                  </span>
-                </>
-              ) : (
-                <>
-                  <Zap className='w-4 h-4 text-muted-foreground' />
-                  <span className='text-sm font-medium'>
-                    Dynamic Variable -
-                  </span>
-                  <span className='text-xs text-muted-foreground ml-2'>
-                    Generated at runtime
-                  </span>
-                </>
-              )}
-            </div>
-          </div>
-
-          {/* Static Variable Value with Secret Toggle */}
           {newVariable.type === 'static' && (
             <div className='space-y-3'>
               <div>
@@ -362,7 +361,6 @@ const VariableCreateDialog: React.FC<VariableCreateDialogProps> = ({
             </div>
           )}
 
-          {/* Dynamic Variable Generator */}
           {newVariable.type === 'dynamic' && (
             <div className='space-y-4'>
               <div>
@@ -375,7 +373,7 @@ const VariableCreateDialog: React.FC<VariableCreateDialogProps> = ({
                     setNewVariable((prev) => ({
                       ...prev,
                       generatorFunction: value,
-                      generatorConfig: {}, // Reset config when changing generator
+                      generatorConfig: {},
                     }))
                   }
                 >
@@ -383,7 +381,6 @@ const VariableCreateDialog: React.FC<VariableCreateDialogProps> = ({
                     <SelectValue placeholder='Choose a generator function' />
                   </SelectTrigger>
                   <SelectContent className='max-h-[300px]'>
-                    {/* Group by category */}
                     <div className='px-2 py-1.5 text-xs font-semibold text-muted-foreground'>
                       Custom Generators
                     </div>
@@ -596,8 +593,6 @@ const VariableCreateDialog: React.FC<VariableCreateDialogProps> = ({
                   </SelectContent>
                 </Select>
               </div>
-
-              {/* Generator Configuration */}
               {newVariable.generatorFunction &&
                 (() => {
                   const generator = getGenerator(newVariable.generatorFunction);
@@ -657,10 +652,8 @@ const VariableCreateDialog: React.FC<VariableCreateDialogProps> = ({
                                   let value: any = e.target.value;
 
                                   if (schema.type === 'number') {
-                                    // Parse as number and validate against min/max
                                     const numValue = Number.parseFloat(value);
                                     if (!isNaN(numValue)) {
-                                      // Apply min/max constraints if they exist
                                       if (
                                         schema.min !== undefined &&
                                         numValue < schema.min
@@ -675,7 +668,6 @@ const VariableCreateDialog: React.FC<VariableCreateDialogProps> = ({
                                         value = numValue;
                                       }
                                     } else {
-                                      // If invalid number, use default or current value
                                       value =
                                         newVariable.generatorConfig?.[key] ??
                                         schema.default;
@@ -707,7 +699,6 @@ const VariableCreateDialog: React.FC<VariableCreateDialogProps> = ({
                   ) : null;
                 })()}
 
-              {/* Preview */}
               {newVariable.generatorFunction && (
                 <div className='p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg'>
                   <div className='text-xs font-medium text-blue-700 dark:text-blue-300 mb-1'>
@@ -758,7 +749,6 @@ const VariableCreateDialog: React.FC<VariableCreateDialogProps> = ({
             </div>
           )}
 
-          {/* Description */}
           <div className='space-y-1'>
             <label className='text-sm font-medium'>
               Description (optional)
@@ -779,8 +769,8 @@ const VariableCreateDialog: React.FC<VariableCreateDialogProps> = ({
             <Button
               variant='outline'
               onClick={() => {
+                resetForm();
                 setOpen(false);
-                setErrors({});
               }}
             >
               Cancel

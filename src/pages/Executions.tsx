@@ -18,6 +18,7 @@ import { ExecutionDetailsDialog } from '@/components/Executions/ExecutionDetails
 import { MappedExecution, SavedFilter } from '@/shared/types/execution';
 import { useWorkspace } from '@/hooks/useWorkspace';
 import BreadCum from '@/components/BreadCum/Breadcum';
+import { Loader } from '@/components/Loader';
 
 const Executions = () => {
   // Pagination state
@@ -126,7 +127,7 @@ const Executions = () => {
       if (
         environmentFilter !== 'all' &&
         (execution.environment ?? '').toLowerCase() !==
-          environmentFilter.toLowerCase()
+        environmentFilter.toLowerCase()
       ) {
         return false;
       }
@@ -334,7 +335,47 @@ const Executions = () => {
         iconBgClass='bg-blue-100'
         iconColor='#136fb0'
         iconSize={40}
+        quickGuideTitle='🚀 Guided Onboarding: Executions & Reports'
+        quickGuideContent={
+          <div>
+            <p className='mb-4 text-base font-medium mt-4'>
+              Optraflow allows you to track the executions of Test Suites and Request Chains triggered via Manual Execution, CI/CD pipelines, or Scheduled Runs — and verify their reports.
+            </p>
+
+            <ul className='list-none pl-5 space-y-4 text-sm leading-relaxed'>
+              <li>
+                🟩 <b className='text-[#000000]'>Step 1: Filter Executions</b> – Narrow down execution results based on various filters.
+                <span className='block mt-1'>
+                  <ul className='list-disc pl-6 mt-2 space-y-1'>
+                    <li><b>Environment:</b> Select the target environment</li>
+                    <li><b>Type:</b> Choose between Test Suite or Request Chain</li>
+                    <li><b>Quick Filters:</b> Last 24 hours, Last week, Failed only</li>
+                    <li><b>Advanced Filters:</b></li>
+                    <ul className='list-[circle] pl-6 mt-1 space-y-1'>
+                      <li>By date range</li>
+                      <li>By execution status</li>
+                      <li>By trigger type (Manual, CI/CD, Scheduled)</li>
+                      <li>By duration range</li>
+                    </ul>
+                  </ul>
+                </span>
+              </li>
+
+              <li>
+                🟨 <b className='text-[#000000]'>Step 2: View Execution Reports</b> – Click the 👁️ Eye icon next to any execution to view its detailed report.
+                <span className='block mt-1'>
+                  Report formats differ for Test Suites and Request Chains to reflect their unique execution flows.
+                </span>
+                <span className='block mt-2 text-gray-600'>
+                  💡 <i>Tip:</i> If you don’t see expected executions, ensure the correct workspace is selected.
+                  Use the <b>Workspace Switcher</b> at the top-left (next to the Optraflow logo) to toggle between workspaces.
+                </span>
+              </li>
+            </ul>
+          </div>
+        }
       />
+
 
       <ExecutionsFilters
         searchQuery={searchQuery}
@@ -368,12 +409,9 @@ const Executions = () => {
 
       <div className='bg-card rounded-lg shadow-sm border border-border'>
         {isLoading ? (
-          <div className='flex items-center justify-center py-12'>
-            <div className='text-center'>
-              <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4'></div>
-              <p className='text-muted-foreground'>Loading executions...</p>
-            </div>
-          </div>
+          <>
+            <Loader message='Loading Executions' />
+          </>
         ) : (
           <>
             <ExecutionsTable

@@ -55,6 +55,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { RequestChainPreviewDialog } from './RequestChainPreview';
+import { Loader } from '../Loader';
 
 interface RequestChainsListProps {
   chains: RequestChain[];
@@ -234,7 +235,7 @@ export function RequestChainsList({
     <div className='space-y-3'>
       <BreadCum
         title='Request Chains'
-        subtitle='Manage your API automation workflows'
+        subtitle='Test complex user flows from login to checkout in automated sequences'
         buttonTitle='Create Request Chain'
         onClickQuickGuide={() => console.log('Exporting...')}
         onClickCreateNew={onCreateChain}
@@ -487,7 +488,13 @@ export function RequestChainsList({
       </div>
 
       {/* Chains List */}
-      {loading && <LoadingSkeleton />}
+      {loading && (
+        <>
+          <>
+            <Loader message='Loading Request Chains' />
+          </>
+        </>
+      )}
 
       {!loading && paginatedChains.length > 0 && (
         <>

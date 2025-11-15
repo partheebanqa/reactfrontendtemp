@@ -69,6 +69,7 @@ export interface APIRequest {
 }
 
 export interface Variable {
+  currentValue: string | undefined;
   initialValue?: string;
   id?: string;
   name: string;
@@ -239,6 +240,7 @@ export interface ExecutionResponse {
     headers: {};
     statusCode: number;
     responses: Array<{
+      status: number;
       statusCode: number;
       headers: Record<string, string>;
       body: any;

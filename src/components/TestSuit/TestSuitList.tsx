@@ -35,6 +35,7 @@ import HelpLink from '../HelpModal/HelpLink';
 import { TestSuitePagination } from './TestSuitePagination';
 import BreadCum from '../BreadCum/Breadcum';
 import { useDataManagement } from '@/hooks/useDataManagement';
+import { Loader } from '../Loader';
 
 const TestSuites: React.FC = () => {
   const { toast } = useToast();
@@ -228,98 +229,137 @@ const TestSuites: React.FC = () => {
   return (
     <div className='space-y-3'>
       <BreadCum
-        title="Test Suites"
-        subtitle="Manage your API automation workflows"
-        buttonTitle="Create Test suite"
-        onClickQuickGuide={() => console.log("Exporting...")}
+        title='Test Suites'
+        subtitle='Test every angle: functional correctness, performance, security flaws, and edge cases in one unified workflow'
+        buttonTitle='Create Test suite'
+        onClickQuickGuide={() => console.log('Exporting...')}
         onClickCreateNew={handleCreateSuite}
         icon={Layers}
-        iconBgClass="bg-green-100"
-        iconColor="#0f766e"
+        iconBgClass='bg-green-100'
+        iconColor='#0f766e'
         iconSize={36}
-        quickGuideTitle="🚀 Guided Onboarding Flow: Working with Test Suites"
+        quickGuideTitle='🚀 Guided Onboarding Flow: Working with Test Suites'
         quickGuideContent={
           <div>
-            <p className="mb-4 text-base font-medium mt-4">Here’s how to get started:</p>
-            <ul className="list-none pl-5 space-y-4 text-sm leading-relaxed">
+            <p className='mb-4 text-base font-medium mt-4'>
+              Here’s how to get started:
+            </p>
+            <ul className='list-none pl-5 space-y-4 text-sm leading-relaxed'>
               <li>
-                🟩 <b className='text-[#000000]'>Step 1: Create a Test Suite</b> – Location: “Create Suite” button.
-                <span className="block mt-1">
-                  Give your test suite a name and description. Choose the target environment where the suite should run. This sets the context for all included requests.
+                🟩 <b className='text-[#000000]'>Step 1: Create a Test Suite</b>{' '}
+                – Location: “Create Suite” button.
+                <span className='block mt-1'>
+                  Give your test suite a name and description. Choose the target
+                  environment where the suite should run. This sets the context
+                  for all included requests.
                 </span>
               </li>
 
               <li>
-                🟨 <b className='text-[#000000]'>Step 2: Add Requests to the Suite</b> – Location: Request selection panel.
-                <span className="block mt-1">
-                  Pick requests from your imported APIs to include in the suite. These will be used to generate test cases automatically.
+                🟨{' '}
+                <b className='text-[#000000]'>
+                  Step 2: Add Requests to the Suite
+                </b>{' '}
+                – Location: Request selection panel.
+                <span className='block mt-1'>
+                  Pick requests from your imported APIs to include in the suite.
+                  These will be used to generate test cases automatically.
                 </span>
               </li>
 
               <li>
-                🟦 <b className='text-[#000000]'>Step 3: Save the Suite</b> – Location: Save button.
-                <span className="block mt-1">
-                  Once you’ve added requests, save the suite to initiate test case generation. Optraflow will handle the rest.
+                🟦 <b className='text-[#000000]'>Step 3: Save the Suite</b> –
+                Location: Save button.
+                <span className='block mt-1'>
+                  Once you’ve added requests, save the suite to initiate test
+                  case generation. Optraflow will handle the rest.
                 </span>
               </li>
 
               <li>
-                🟪 <b className='text-[#000000]'>Step 4: Monitor Test Case Generation</b> – Location: Test Suite List → Status column.
-                <span className="block mt-1">
-                  Check the status column to see if test cases are ‘Generated’ or ‘In Progress’. Use the refresh icon to update the status in real time.
+                🟪{' '}
+                <b className='text-[#000000]'>
+                  Step 4: Monitor Test Case Generation
+                </b>{' '}
+                – Location: Test Suite List → Status column.
+                <span className='block mt-1'>
+                  Check the status column to see if test cases are ‘Generated’
+                  or ‘In Progress’. Use the refresh icon to update the status in
+                  real time.
                 </span>
               </li>
 
               <li>
-                🟧 <b className='text-[#000000]'>Step 5: Edit the Test Suite</b> – Location: Edit icon in suite list.
-                <span className="block mt-1">
-                  Click ‘Edit’ to modify the suite. For each request, you’ll see a <i>Select Test Case</i> icon—this lets you choose which test cases to execute.
+                🟧 <b className='text-[#000000]'>Step 5: Edit the Test Suite</b>{' '}
+                – Location: Edit icon in suite list.
+                <span className='block mt-1'>
+                  Click ‘Edit’ to modify the suite. For each request, you’ll see
+                  a <i>Select Test Case</i> icon—this lets you choose which test
+                  cases to execute.
                 </span>
               </li>
 
               <li>
-                🟥 <b className='text-[#000000]'>Step 5.1: Add a Pre-Request API</b> – Location: “Capture Auth” icon in the suite editor.
-                <span className="block mt-1">
-                  Add a pre-request API to fetch authorization tokens before executing your test cases:
+                🟥{' '}
+                <b className='text-[#000000]'>
+                  Step 5.1: Add a Pre-Request API
+                </b>{' '}
+                – Location: “Capture Auth” icon in the suite editor.
+                <span className='block mt-1'>
+                  Add a pre-request API to fetch authorization tokens before
+                  executing your test cases:
                 </span>
-                <ul className="list-disc pl-6 mt-2 space-y-1">
+                <ul className='list-disc pl-6 mt-2 space-y-1'>
                   <li>Click the Capture Auth icon</li>
                   <li>Execute the API using the Send button</li>
-                  <li>In the response section, hover over the response and click Extract</li>
+                  <li>
+                    In the response section, hover over the response and click
+                    Extract
+                  </li>
                   <li>Select the variable to extract (e.g., token)</li>
                   <li>Click Save Variable to store it</li>
                 </ul>
-                <i className="block mt-2 text-gray-600">
-                  Note: Test suite execution will start with the pre-request API execution, capture the token and use it for all test cases.
+                <i className='block mt-2 text-gray-600'>
+                  Note: Test suite execution will start with the pre-request API
+                  execution, capture the token and use it for all test cases.
                 </i>
               </li>
 
               <li>
-                🟫 <b className='text-[#000000]'>Step 6: Assign Test Cases</b> – Location: Select Test Case icon.
-                <span className="block mt-1">
-                  Choose the test cases you want to run for each request. Repeat this for all included requests, then save the suite.
+                🟫 <b className='text-[#000000]'>Step 6: Assign Test Cases</b> –
+                Location: Select Test Case icon.
+                <span className='block mt-1'>
+                  Choose the test cases you want to run for each request. Repeat
+                  this for all included requests, then save the suite.
                 </span>
               </li>
 
               <li>
-                🟨 <b className='text-[#000000]'>Step 7: Execute the Suite</b> – Location: Run button (in edit view or list view).
-                <span className="block mt-1">
-                  You can execute the test suite from either the edit view or directly from the suite list. This will trigger all assigned test cases.
+                🟨 <b className='text-[#000000]'>Step 7: Execute the Suite</b> –
+                Location: Run button (in edit view or list view).
+                <span className='block mt-1'>
+                  You can execute the test suite from either the edit view or
+                  directly from the suite list. This will trigger all assigned
+                  test cases.
                 </span>
               </li>
 
               <li>
-                ✅ <b className='text-[#000000]'>Final Step: View Execution Results</b> – Location: Executions page.
-                <span className="block mt-1">
-                  Head to the Executions page to review detailed logs, status codes, assertion results, and schema validations for each test case.
+                ✅{' '}
+                <b className='text-[#000000]'>
+                  Final Step: View Execution Results
+                </b>{' '}
+                – Location: Executions page.
+                <span className='block mt-1'>
+                  Head to the Executions page to review detailed logs, status
+                  codes, assertion results, and schema validations for each test
+                  case.
                 </span>
               </li>
             </ul>
           </div>
         }
-
       />
-
 
       <div className='flex flex-col justify-between lg:flex-row gap-4'>
         <div className='relative flex-1'>
@@ -398,10 +438,9 @@ const TestSuites: React.FC = () => {
 
       <div className=''>
         {isFetching ? (
-          <div className='flex justify-center items-center py-12'>
-            <Loader2 className='w-6 h-6 animate-spin text-gray-500' />
-            <span className='ml-2 text-gray-500'>Loading test suites...</span>
-          </div>
+          <>
+            <Loader message='Loading Test Suites' />
+          </>
         ) : paginatedSuites.length === 0 ? (
           <div className='text-center py-12'>
             <p className='text-gray-500'>No test suites found</p>

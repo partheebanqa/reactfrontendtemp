@@ -1,6 +1,7 @@
 import type {
   APIRequest,
   ExecutionLog,
+  KeyValuePair,
 } from '@/shared/types/requestChain.model';
 
 export const getExtractVariablesByEnvironment = (environmentId?: string) => {
@@ -232,7 +233,8 @@ export const replaceVariablesInText = (
   let result = text;
   variables.forEach((variable) => {
     const varName = variable.name || variable.variableName;
-    const varValue = variable.value || variable.initialValue || '';
+    const varValue =
+      variable.currentValue || variable.value || variable.initialValue || '';
     if (varName) {
       const regex = new RegExp(`{{${varName}}}`, 'g');
       result = result.replace(regex, varValue);
@@ -329,27 +331,8 @@ export const mapDynamicToStatic = (
 ) => {
   return dynamicVariables.map((d) => {
     const override = overrides.find((o) => o.name === d.name);
-    if (override) {
-      return {
-        id: d.id,
-        environmentId: null,
-        name: `${d.name}`,
-        description: '',
-        type: 'dynamic',
-        initialValue: '',
-        currentValue: override.value,
-        createdAt: d.createdAt,
-        updatedAt: d.updatedAt,
-        deletedAt: d.deletedAt,
-        value: override.value,
-        scope: 'environment',
-        isGlobal: false,
-        isSecret: false,
-        isDynamic: true,
-      };
-    }
 
-    const generated = generateDynamicValueById(d.generatorId, d.parameters);
+    const valueToUse = override ? override.value : '';
 
     return {
       id: d.id,
@@ -357,12 +340,12 @@ export const mapDynamicToStatic = (
       name: `${d.name}`,
       description: '',
       type: 'dynamic',
-      initialValue: '',
-      currentValue: String(generated),
+      initialValue: valueToUse,
+      currentValue: valueToUse,
       createdAt: d.createdAt,
       updatedAt: d.updatedAt,
       deletedAt: d.deletedAt,
-      value: String(generated),
+      value: valueToUse,
       scope: 'environment',
       isGlobal: false,
       isSecret: false,
@@ -547,7 +530,7 @@ function generateDynamicValueById(id: string, params: any = {}): string {
   ];
 
   switch (id) {
-    // basic / date
+    // basic / date\
     case 'timestamp':
       return String(Date.now());
     case 'iso_date':
@@ -605,7 +588,7 @@ function generateDynamicValueById(id: string, params: any = {}): string {
       return `${local}@${domain}`;
     }
     case 'randomDate': {
-      // format: 'YYYY-MM-DD' | 'ISO' | other (locale)
+      // format: 'YYYY-MM-DD' | 'ISO' | other (locale)\
       const format = params?.format ?? 'YYYY-MM-DD';
       const start = new Date(2020, 0, 1);
       const end = new Date();
@@ -1021,3 +1004,52 @@ function generateDynamicValueById(id: string, params: any = {}): string {
       return '';
   }
 }
+
+// Helper function to parse URL parameters
+export const parseUrlParams = (url: string): KeyValuePair[] => {
+  try {
+    const urlObj = new URL(
+      url.startsWith('http') ? url : `https://example.com${url}`
+    );
+    const params: KeyValuePair[] = [];
+    urlObj.searchParams.forEach((value, key) => {
+      params.push({
+        id: `temp_${Date.now()}_${Math.random()}`,
+        key,
+        value,
+        enabled: true,
+      });
+    });
+    return params;
+  } catch (e) {
+    return [];
+  }
+};
+
+// Helper function to build URL with params
+export const buildUrlWithParams = (
+  baseUrl: string,
+  params: KeyValuePair[]
+): string => {
+  try {
+    // Remove existing query params from baseUrl
+    const urlParts = baseUrl.split('?');
+    const cleanUrl = urlParts[0];
+
+    // Build new query string from params
+    const enabledParams = params.filter((p) => p.enabled && p.key.trim());
+    if (enabledParams.length === 0) {
+      return cleanUrl;
+    }
+
+    const queryString = enabledParams
+      .map((p) => `${encodeURIComponent(p.key)}=${encodeURIComponent(p.value)}`)
+      .join('&');
+
+    return `${cleanUrl}?${queryString}`;
+  } catch (e) {
+    return baseUrl;
+  }
+};
+
+export { generateDynamicValueById };

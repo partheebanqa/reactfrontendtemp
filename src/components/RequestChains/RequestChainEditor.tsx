@@ -1,5 +1,7 @@
 'use client';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
+import { TooltipContent } from '@/components/ui/tooltip';
+
 import type React from 'react';
 
 import {
@@ -39,7 +41,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast'; // Assuming useToast is the correct hook
 import type {
   RequestChain,
   APIRequest,
@@ -58,7 +60,6 @@ import {
 } from '@/services/requestChain.service';
 import {
   Tooltip,
-  TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
@@ -77,12 +78,12 @@ import {
   getExecutionLogForRequest,
   copyToClipboard,
   mapDynamicToStatic,
-  regenerateDynamicVariable,
   getVariablesByPrefix,
   getUsedDynamicVariablesFromRequests,
   detectAutocompletePrefix,
   calculateAutocompletePosition,
   type AutocompleteState,
+  generateDynamicValueById,
 } from '@/lib/request-utils';
 import { ResponseExplorer } from './ResponseExplorer';
 import BreadCum from '../BreadCum/Breadcum';
@@ -115,6 +116,38 @@ export function RequestChainEditor({
   const [dynamicOverrides, setDynamicOverrides] = useState<
     DynamicVariableOverride[]
   >([]);
+
+  useEffect(() => {
+    if (dynamicVariables.length > 0) {
+      setDynamicOverrides((prevOverrides) => {
+        const updatedOverrides = [...prevOverrides];
+
+        // Check each dynamic variable and add override if missing
+        dynamicVariables.forEach((d) => {
+          const hasOverride = updatedOverrides.some((o) => o.name === d.name);
+          if (!hasOverride) {
+            const generated = generateDynamicValueById(
+              d.generatorId,
+              d.parameters
+            );
+            updatedOverrides.push({
+              name: d.name,
+              value: String(generated),
+            });
+          }
+        });
+
+        // Remove overrides for variables that no longer exist
+        return updatedOverrides.filter((override) =>
+          dynamicVariables.some((d) => d.name === override.name)
+        );
+      });
+    } else {
+      // Clear overrides if no dynamic variables
+      setDynamicOverrides([]);
+    }
+  }, [dynamicVariables]);
+
   const [showDynamicEditor, setShowDynamicEditor] = useState(false);
 
   const [globalVariables, setGlobalVariables] = useState<Variable[]>([
@@ -204,41 +237,37 @@ export function RequestChainEditor({
     }
   );
 
-  const dynamicStructured = mapDynamicToStatic(
-    dynamicVariables,
-    dynamicOverrides
+  const dynamicStructured = useMemo(
+    () => mapDynamicToStatic(dynamicVariables, dynamicOverrides),
+    [dynamicVariables, dynamicOverrides]
   );
 
-  const getUsedDynamicVariables = () => {
+  const usedDynamicVariables = useMemo(() => {
     return getUsedDynamicVariablesFromRequests(
       formData.chainRequests || [],
       dynamicStructured
     );
-  };
+  }, [formData.chainRequests, dynamicStructured]);
 
-  const usedDynamicVariables = getUsedDynamicVariables();
-
-  const updateDynamicOverride = (name: string, value: string | number) => {
+  const updateDynamicOverride = (name: string, value: string) => {
     setDynamicOverrides((prev) => {
       const existing = prev.find((o) => o.name === name);
       if (existing) {
-        return prev.map((o) => (o.name === name ? { ...o, value } : o));
+        return prev.map((o) => (o.name === name ? { name, value } : { ...o }));
       } else {
         return [...prev, { name, value }];
       }
     });
   };
 
-  const regenerateDynamicVariableLocal = (variableName: string) => {
-    const dynamicVar = dynamicVariables.find((v) => v.name === variableName);
+  const regenerateDynamicVariableLocal = (name: string) => {
+    const dynamicVar = dynamicVariables.find((d) => d.name === name);
     if (!dynamicVar) return;
-
-    const newValue = regenerateDynamicVariable(dynamicVar);
-
-    setDynamicOverrides((prev) => [
-      ...prev.filter((o) => o.name !== variableName),
-      { name: variableName, value: newValue },
-    ]);
+    const newValue = `${generateDynamicValueById(
+      dynamicVar.generatorId,
+      dynamicVar.parameters
+    )}`;
+    updateDynamicOverride(name, newValue);
   };
 
   // Dynamic Variables Panel Component
@@ -268,28 +297,39 @@ export function RequestChainEditor({
         {showDynamicEditor ? (
           <div className='space-y-3'>
             {usedDynamicVariables.map((variable) => {
-              const originalName = variable.name.replace('', '');
               const currentOverride = dynamicOverrides.find(
-                (o) => o.name === originalName
+                (o) => o.name === variable.name
               );
+              const displayValue =
+                currentOverride?.value ?? variable.value ?? '';
 
               return (
                 <div key={variable.id} className='flex items-center gap-3'>
                   <div className='flex items-center gap-2 flex-1'>
                     <span className='text-xs font-mono text-purple-700 min-w-0'>{`{{${variable.name}}}`}</span>
                     <Input
-                      value={String(currentOverride?.value || variable.value)}
-                      onChange={(e) =>
-                        updateDynamicOverride(originalName, e.target.value)
-                      }
+                      value={String(displayValue)}
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        const newValue = e.target.value;
+
+                        updateDynamicOverride(variable.name, newValue);
+                      }}
+                      onFocus={(e) => {
+                        console.log('Focused on:', variable.name);
+                      }}
                       className='h-8 text-sm'
                       placeholder='Enter value'
+                      data-dynamic-variable={variable.name}
                     />
                   </div>
                   <Button
                     variant='ghost'
                     size='sm'
-                    onClick={() => regenerateDynamicVariableLocal(originalName)}
+                    onClick={() =>
+                      regenerateDynamicVariableLocal(variable.name)
+                    }
                     className='h-8 w-8 p-0 text-purple-600 hover:bg-purple-100'
                     title='Regenerate random value'
                   >
@@ -302,17 +342,24 @@ export function RequestChainEditor({
         ) : (
           <div className='flex flex-wrap gap-2'>
             {usedDynamicVariables.map((variable) => {
-              const originalName = variable.name.replace('', '');
+              const currentOverride = dynamicOverrides.find(
+                (o) => o.name === variable.name
+              );
+              const displayValue =
+                currentOverride?.value ?? variable.value ?? '';
+
               return (
                 <div
                   key={variable.id}
                   className='flex items-center gap-1 px-2 py-1 bg-purple-100 text-purple-800 rounded border border-purple-200'
                 >
                   <span className='text-xs font-mono'>
-                    {`{{${variable.name}}}`} = {String(variable.value)}
+                    {`{{${variable.name}}}`} = {String(displayValue)}
                   </span>
                   <button
-                    onClick={() => regenerateDynamicVariableLocal(originalName)}
+                    onClick={() =>
+                      regenerateDynamicVariableLocal(variable.name)
+                    }
                     className='ml-1 p-0.5 hover:bg-purple-200 rounded transition-colors'
                     title='Regenerate value'
                   >
@@ -367,6 +414,7 @@ export function RequestChainEditor({
       authApiValue: replaceVariables(request.authApiValue || '', variables),
     };
   };
+
   const getPreviewUrl = (request: APIRequest, variables: Variable[]) => {
     const replacedUrl = replaceVariables(request.url, variables);
     const baseUrl = environmentBaseUrl?.trim();
@@ -380,7 +428,6 @@ export function RequestChainEditor({
     }
   };
 
-  // Create a function to get all available variables for a request at runtime
   const getAllVariablesForRequestAtRuntime = (
     requestIndex: number,
     currentExecutionExtractedVars: Record<string, any>
@@ -389,7 +436,6 @@ export function RequestChainEditor({
       activeEnvironment?.id
     );
 
-    // Get extracted variables from all previous requests in CURRENT execution
     const previouslyExtractedVars: Variable[] = [];
     Object.entries(currentExecutionExtractedVars).forEach(([name, value]) => {
       if (!previouslyExtractedVars.some((v) => v.name === name)) {
@@ -425,13 +471,11 @@ export function RequestChainEditor({
     ];
   };
 
-  // Create a function to get all available variables for a request
   const getAllVariablesForRequest = (requestIndex: number): Variable[] => {
     const environmentVars = getExtractVariablesByEnvironment(
       activeEnvironment?.id
     );
 
-    // Get extracted variables from all previous requests
     const previouslyExtractedVars: Variable[] = [];
     for (let i = 0; i < requestIndex; i++) {
       const reqId = formData.chainRequests?.[i]?.id;
@@ -457,7 +501,6 @@ export function RequestChainEditor({
       }
     }
 
-    // Also include global extracted variables
     const globalExtractedVars: Variable[] = Object.entries(
       extractedVariables
     ).map(([name, value]) => ({
@@ -548,6 +591,8 @@ export function RequestChainEditor({
     payload.request.url = previewUrl;
 
     try {
+      console.log('payload111:', payload);
+
       const backendData = await executeRequest(payload);
       const result = backendData?.data?.responses?.[0];
       if (!result) throw new Error('No response from executor');
@@ -655,11 +700,10 @@ export function RequestChainEditor({
 
     const allLogs: ExecutionLog[] = [];
 
-    // Get initial base variables (globals + chain variables + environment variables + store variables + dynamic variables)
     const baseVariables = [
       ...globalVariables,
       ...storeVariables,
-      ...dynamicStructured, // Include dynamic variables with current values/overrides
+      ...dynamicStructured,
       ...(formData.variables || []),
       ...getExtractVariablesByEnvironment(activeEnvironment?.id).filter(
         (ev) =>
@@ -670,7 +714,6 @@ export function RequestChainEditor({
       ),
     ];
 
-    // Track extracted variables throughout the execution
     const allExtractedVarsInCurrentExecution: Record<string, any> = {};
     const variablesByRequest: Record<string, Record<string, any>> = {};
 
@@ -693,7 +736,6 @@ export function RequestChainEditor({
           if (existingLog) {
             log = existingLog;
           } else {
-            // Create the complete variable set for this request including all extracted vars so far
             const currentAvailableVariables =
               getAllVariablesForRequestAtRuntime(
                 i,
@@ -1034,7 +1076,7 @@ export function RequestChainEditor({
       url: '',
       headers: [],
       params: [],
-      bodyType: 'none',
+      bodyType: 'raw',
       timeout: 5000,
       retries: 0,
       errorHandling: 'stop',
@@ -1464,7 +1506,9 @@ export function RequestChainEditor({
         <div className='p-2 text-xs text-gray-500 border-b'>
           {autocompleteState.prefix === 'D_'
             ? 'Dynamic Variables'
-            : 'Static Variables'}
+            : autocompleteState.prefix === 'S_'
+            ? 'Static Variables'
+            : 'Variables'}
         </div>
         {autocompleteState.suggestions.map((variable) => (
           <button
@@ -1536,6 +1580,8 @@ export function RequestChainEditor({
               }
               extractedVariables={extractedVariables}
               chainVariables={formData.variables || []}
+              dynamicVariableOverrides={dynamicOverrides}
+              onRegenerateDynamicVariable={regenerateDynamicVariableLocal}
             />
           </div>
         </div>
@@ -1750,7 +1796,7 @@ export function RequestChainEditor({
                                       : ''
                                   }`}
                                 >
-                                  <CardContent className='p-4'>
+                                  <CardContent className='p-2'>
                                     <div className='flex items-center'>
                                       <div className='flex items-center space-x-3'>
                                         <TooltipProvider>
@@ -1991,6 +2037,12 @@ export function RequestChainEditor({
                                           }
                                           chainVariables={
                                             formData.variables || []
+                                          }
+                                          dynamicVariableOverrides={
+                                            dynamicOverrides
+                                          }
+                                          onRegenerateDynamicVariable={
+                                            regenerateDynamicVariableLocal
                                           }
                                         />
 

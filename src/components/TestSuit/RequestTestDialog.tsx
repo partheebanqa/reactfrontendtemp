@@ -81,11 +81,25 @@ export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
   const [url, setUrl] = useState(request.url);
   const [showToken, setShowToken] = useState(false);
   const [method, setMethod] = useState(request.method);
-  const [headers, setHeaders] = useState<RequestHeader[]>(
-    request?.headers?.length && request.headers.length > 0
-      ? request.headers
-      : [{ key: '', value: '', enabled: true }]
-  );
+  const [headers, setHeaders] = useState<RequestHeader[]>(() => {
+    const existingHeaders =
+      request?.headers?.length && request.headers.length > 0
+        ? request.headers
+        : [{ key: '', value: '', enabled: true }];
+
+    const hasContentType = existingHeaders.some(
+      (h) => h.key.toLowerCase() === 'content-type'
+    );
+
+    if (!hasContentType) {
+      return [
+        { key: 'Content-Type', value: 'application/json', enabled: true },
+        ...existingHeaders,
+      ];
+    }
+
+    return existingHeaders;
+  });
   const [params, setParams] = useState<RequestParam[]>(
     request?.params?.length
       ? request.params
@@ -299,7 +313,6 @@ export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
       );
     }
 
-    // Handle objects
     if (typeof value === 'object' && value !== null) {
       const entries = Object.entries(value);
       return (
@@ -357,7 +370,6 @@ export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
       );
     }
 
-    // Handle primitive values
     return (
       <div
         key={currentPath}
@@ -490,7 +502,7 @@ export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
     setIsLoading(true);
     setResponse('');
     setResponseHeaders({});
-    setExpandedPaths(new Set()); // Reset expanded paths on new request
+    setExpandedPaths(new Set());
 
     try {
       const finalBodyType = bodyType ?? 'raw';
@@ -507,16 +519,16 @@ export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
           bodyRawContent: finalBodyType === 'raw' ? body : undefined,
           authorizationType: authType,
           authorization: authToken ? { token: authToken } : undefined,
-          headers: headers.filter((h) => h.enabled && h.key),
-          params: params.filter((p) => p.enabled && p.key),
+          headers: headers
+            .filter((h) => h.enabled && h.key)
+            .map(({ key, value }) => ({ key, value, enabled: true })),
+          params: params
+            .filter((p) => p.enabled && p.key)
+            .map(({ key, value }) => ({ key, value })),
         },
       };
 
-      console.log('requestPayload123:', requestPayload);
-
       const json = (await executeRequest(requestPayload)) as any;
-
-      console.log('backendResponse', json);
 
       const firstResponse = json?.data?.responses?.[0];
 
@@ -524,7 +536,7 @@ export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
       try {
         parsedBody = JSON.parse(firstResponse.body);
       } catch {
-        // leave as raw string if not JSON
+        console.log('error');
       }
 
       setResponse(parsedBody);
@@ -969,11 +981,7 @@ export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
                   <Label className='text-sm font-medium'>
                     Extracted Fields ({extractedFields.length})
                   </Label>
-                  <Button
-                    size='sm'
-                    onClick={handleSaveVariables}
-                    // className='bg-green-600 hover:bg-green-700 text-white'
-                  >
+                  <Button size='sm' onClick={handleSaveVariables}>
                     Save Variables
                   </Button>
                 </div>

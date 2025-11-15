@@ -15,6 +15,7 @@ import { Separator } from '@/components/ui/separator';
 import { Eye, EyeOff, Lock, Mail } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
+import { Loader } from '@/components/Loader';
 
 export default function SignIn() {
   const [, setLocation] = useLocation();
@@ -28,15 +29,15 @@ export default function SignIn() {
 
   // Redirect if user is already authenticated
   if (isAuthenticated && !isLoading) {
-    setLocation('/request-builder');
+    setLocation('/dashboard');
     return null;
   }
 
   if (isLoading) {
     return (
-      <div className='min-h-screen flex items-center justify-center'>
-        <div className='text-lg'>Loading...</div>
-      </div>
+      <>
+        <Loader message='Loading ' />
+      </>
     );
   }
 
@@ -45,21 +46,17 @@ export default function SignIn() {
 
     try {
       const loginMutationResult = await loginMutation.mutateAsync(formData);
-      console.log(
-        '🚀 ~ handleSubmit ~ loginMutationResult:',
-        loginMutationResult
-      );
-      if (loginMutationResult && loginMutationResult.token) {
-        setLocation('/request-builder');
-      } else {
-        errorToast('Login failed: No authentication token received');
+      console.log('loginMutationResult:', loginMutationResult);
+
+      if (loginMutationResult?.token) {
+        setLocation('/dashboard');
       }
     } catch (error) {
-      if (error instanceof Error) {
-        errorToast(error.message);
-      } else {
-        errorToast('An unexpected error occurred during login');
-      }
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'An unexpected error occurred during login';
+      errorToast(message);
     }
   };
 

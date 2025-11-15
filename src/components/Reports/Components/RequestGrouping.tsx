@@ -253,7 +253,7 @@ export const RequestGrouping: React.FC<RequestGroupingProps> = ({ report, testCa
 
   if (!entries.length) {
     return (
-      <div className="bg-white rounded-lg shadow-md p-8 text-center">
+      <div className="bg-white rounded-lg border border-gray-200 p-8 text-center">
         <Globe className="w-12 h-12 text-gray-400 mx-auto mb-4" />
         <p className="text-gray-500">No API requests found</p>
       </div>
@@ -262,7 +262,7 @@ export const RequestGrouping: React.FC<RequestGroupingProps> = ({ report, testCa
 
   return (
     <div className="space-y-4">
-      <div className="bg-white rounded-lg shadow-md p-6">
+      <div className="bg-white rounded-lg border border-gray-200 p-6">
         <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
           <Globe className="w-6 h-6 mr-2 text-blue-600" />
           API Endpoints ({entries.length} endpoints)

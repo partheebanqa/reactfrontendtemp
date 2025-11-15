@@ -31,6 +31,9 @@ export interface TestSuiteStats {
 }
 
 export interface TestSuite {
+  extractVariables: boolean;
+  preRequestId: any;
+  preRequestDetails: any;
   id: string;
   name: string;
   description: string;

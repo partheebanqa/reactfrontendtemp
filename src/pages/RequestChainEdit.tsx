@@ -10,6 +10,7 @@ import {
 import { useWorkspace } from '@/hooks/useWorkspace';
 import { useLocation, useParams } from 'wouter';
 import { Loader2 } from 'lucide-react';
+import { Loader } from '@/components/Loader';
 
 const RequestChainEdit = () => {
   const [, setLocation] = useLocation();
@@ -74,12 +75,9 @@ const RequestChainEdit = () => {
   // Show loading state while fetching chain details
   if (isLoadingChain) {
     return (
-      <div className='min-h-screen bg-background flex items-center justify-center'>
-        <div className='flex flex-col items-center space-y-4'>
-          <Loader2 className='w-8 h-8 animate-spin text-primary' />
-          <p className='text-muted-foreground'>Loading request chain...</p>
-        </div>
-      </div>
+      <>
+        <Loader message='Loading Request Chains' />
+      </>
     );
   }
 

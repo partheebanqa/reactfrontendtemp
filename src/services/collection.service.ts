@@ -4,12 +4,11 @@ import {
   API_COLLECTIONS,
 } from '@/config/apiRoutes';
 import { apiRequest } from '@/lib/queryClient';
-import {
-  Collection,
+import type {
   CreateCollection,
   ImportCollection,
 } from '@/shared/types/collection';
-import { CollectionsResponse } from '../models/collection.model';
+import type { CollectionsResponse } from '../models/collection.model';
 
 export const fetchCollectionList = async (workspaceId: string) => {
   try {
@@ -35,6 +34,9 @@ export const fetchCollectionList = async (workspaceId: string) => {
 export const addCollection = async (collection: CreateCollection) => {
   try {
     const response = await apiRequest('POST', API_COLLECTIONS, {
+      headers: {
+        'Content-Type': 'application/json',
+      },
       body: JSON.stringify(collection),
     });
     if (!response.ok) {
@@ -57,10 +59,12 @@ export const setFavouriteCollection = async ({
   try {
     const response = await apiRequest(
       'PUT',
-      `${API_COLLECTIONS}/${collectionId}/mark-important`
-      // {
-      //   body: JSON.stringify({ IsImportant }),
-      // }
+      `${API_COLLECTIONS}/${collectionId}/mark-important`,
+      {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }
     );
     if (!response.ok) {
       throw new Error('Failed to update collection');
@@ -75,7 +79,12 @@ export const setFavouriteCollection = async ({
 export const unsetFavouriteCollection = async (collectionId: string) => {
   const response = await apiRequest(
     'PUT',
-    `${API_COLLECTIONS}/${collectionId}/mark-not-important`
+    `${API_COLLECTIONS}/${collectionId}/mark-not-important`,
+    {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    }
   );
   return response;
 };
@@ -100,15 +109,34 @@ export const getCollectionRequests = async (collectionId: string) => {
   try {
     const response = await apiRequest(
       'GET',
-      `${API_COLLECTIONS}/${collectionId}/requests`
+      `${API_COLLECTIONS}/${collectionId}/folder-tree`
     );
     if (!response.ok) {
       throw new Error('Failed to fetch collection requests');
     }
     const data = await response.json();
-    return data?.map((request: any) => formatRequest(request)) || [];
+
+    const mapFolder = (folder: any): any => ({
+      id: folder.Id || folder.id,
+      collectionId: folder.CollectionId || folder.collectionId,
+      name: folder.Name || folder.name,
+      createdAt: folder.CreatedAt || folder.createdAt,
+      updatedAt: folder.UpdatedAt || folder.updatedAt,
+      requests: (folder.Requests || folder.requests || []).map((r: any) =>
+        formatRequest(r)
+      ),
+      folders: (folder.Folders || folder.folders || []).map(mapFolder),
+    });
+    const normalized = {
+      folders: (data?.Folders || data?.folders || []).map(mapFolder),
+      requests: (data?.Requests || data?.requests || []).map((r: any) =>
+        formatRequest(r)
+      ),
+    };
+
+    return normalized;
   } catch (error) {
-    return [];
+    return { folders: [], requests: [] };
   }
 };
 
@@ -121,6 +149,9 @@ export const renameCollection = async ({
 }) => {
   try {
     const response = await apiRequest('PUT', `${API_COLLECTIONS}/${id}`, {
+      headers: {
+        'Content-Type': 'application/json',
+      },
       body: JSON.stringify({ name: name }),
     });
     if (!response.ok) {
@@ -151,31 +182,23 @@ export const importCollectionFile = async (
   importCollection: ImportCollection
 ) => {
   try {
-    // If input method is file, use FormData to properly handle file uploads
     if (importCollection.inputMethod === 'file' && importCollection.file) {
       const formData = new FormData();
 
-      // Add all fields to the form data
       formData.append('name', importCollection.name || '');
       formData.append('workspaceId', importCollection.workspaceId);
       formData.append('inputMethod', importCollection.inputMethod);
       formData.append('specificationType', importCollection.specificationType);
       formData.append('file', importCollection.file);
 
-      // For completeness, include these if provided
       if (importCollection.url) formData.append('url', importCollection.url);
 
       const response = await apiRequest('POST', API_COLLECTION_IMPORT, {
         body: formData,
-        headers: {
-          // Let the browser set the correct content-type with boundary
-          // "content-type": "multipart/form-data; boundary=X-INSOMNIA-BOUNDARY",
-        },
       });
 
       return response;
     } else {
-      // For raw or URL imports, use JSON payload
       const response = await apiRequest('POST', API_COLLECTION_IMPORT, {
         body: JSON.stringify(importCollection),
         headers: {
@@ -210,6 +233,9 @@ export const useImpotCollectionJsonMutation = async (
 export const addRequest = async (requestData: any) => {
   try {
     const response = await apiRequest('POST', API_COLLECTION_REQUESTS, {
+      headers: {
+        'Content-Type': 'application/json',
+      },
       body: JSON.stringify(requestData),
     });
 
@@ -249,14 +275,21 @@ export const duplicateRequest = async ({
   try {
     const response = await apiRequest(
       'POST',
-      `${API_COLLECTION_REQUESTS}/${requestId}/duplicate`
+      `${API_COLLECTION_REQUESTS}/${requestId}/duplicate`,
+      {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }
     );
+
     if (!response.ok) {
       throw new Error('Failed to duplicate request');
     }
+
     const data = await response.json();
     return formatRequest(data);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error duplicating request:', error);
     throw error;
   }
@@ -266,28 +299,40 @@ export const renameRequest = async ({
   requestId,
   newName,
   workspaceId,
+  folderId,
+  collectionId,
 }: {
   requestId: string;
   newName?: string;
   workspaceId: string;
+  folderId: string;
+  collectionId: string;
 }) => {
   try {
     const response = await apiRequest(
       'PUT',
       `${API_COLLECTION_REQUESTS}/${requestId}`,
       {
-        body: newName
-          ? JSON.stringify({ name: newName, workspaceId })
-          : undefined,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body:
+          newName || folderId
+            ? JSON.stringify({
+                ...(newName ? { name: newName } : {}),
+                workspaceId,
+                ...(folderId ? { folderId } : {}),
+              })
+            : undefined,
       }
     );
     if (!response.ok) {
-      throw new Error('Failed to duplicate request');
+      throw new Error('Failed to rename request');
     }
     const data = await response.json();
     return formatRequest(data);
   } catch (error: any) {
-    console.error('Error duplicating request:', error);
+    console.error('Error renaming request:', error);
     throw error;
   }
 };
@@ -304,16 +349,19 @@ export const updateRequest = async ({
       'PUT',
       `${API_COLLECTION_REQUESTS}/${requestId}`,
       {
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify(requestData),
       }
     );
     if (!response.ok) {
-      throw new Error('Failed to duplicate request');
+      throw new Error('Failed to update request');
     }
     const data = await response.json();
     return formatRequest(data);
   } catch (error: any) {
-    console.error('Error duplicating request:', error);
+    console.error('Error updating request:', error);
     throw error;
   }
 };
@@ -322,11 +370,12 @@ export const formatRequest = (request: any) => {
   return {
     id: request.Id || request.id,
     collectionId: request.CollectionId || request.collectionId,
+    // added folderId support for folder tree
+    folderId: request.FolderId || request.folderId || undefined,
     name: request.Name || request.name,
     description: request.Description || request.description || '',
     method: request.Method || request.method,
     url: request.Url || request.url,
-    order: request.Order || request.order || 0,
     bodyType: request.BodyType || request.bodyType || 'none',
     bodyFormData: request.BodyFormData || request.bodyFormData,
     bodyRawContent: request.BodyRawContent || request.bodyRawContent,
@@ -335,7 +384,7 @@ export const formatRequest = (request: any) => {
     authorization: request.Authorization || request.authorization || {},
     headers: request.Headers || request.headers || [],
     params: request.Params || request.params || [],
-    variables: request.Variables || request.variables || {},
+    variable: request.Variable || request.variable || [],
     assertions: request.Assertions || request.assertions || [],
     createdBy: request.CreatedBy || request.createdBy,
     createdAt: request.CreatedAt || request.createdAt,

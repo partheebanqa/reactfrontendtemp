@@ -120,6 +120,10 @@ export function RequestExecutor({
     return cookies;
   };
 
+  const handleBack = () => {
+    setLocation('/request-chains');
+  };
+
   const extractDataFromResponse = (
     response: any,
     extractVariables: any[]
@@ -545,7 +549,7 @@ export function RequestExecutor({
             }
           } else {
             console.log(
-              '[v0] No extraction variables found or invalid response body'
+              'No extraction variables found or invalid response body'
             );
           }
 
@@ -691,18 +695,30 @@ export function RequestExecutor({
           ) : (
             <>
               {onPreExecute && (
-                <Button
-                  onClick={chainId ? handleUpdateChain : handleSaveChain}
-                  disabled={!chainName?.trim() || (!!savedChainId && !chainId)}
-                  className={`hover-scale ${
-                    !chainName?.trim() || (!!savedChainId && !chainId)
-                      ? 'bg-gray-300 text-gray-600 cursor-not-allowed hover:bg-gray-300'
-                      : 'bg-[#136fb0] text-white hover:bg-[#136fb0]'
-                  } disabled:opacity-70`}
-                >
-                  <Save className='w-4 h-4' />
-                  {chainId ? 'Update' : 'Save'}
-                </Button>
+                <>
+                  {!chainId && (
+                    <Button
+                      onClick={handleSaveChain}
+                      disabled={
+                        !chainName?.trim() || (!!savedChainId && !chainId)
+                      }
+                      className={`hover-scale ${
+                        !chainName?.trim() || (!!savedChainId && !chainId)
+                          ? 'bg-gray-300 text-gray-600 cursor-not-allowed hover:bg-gray-300'
+                          : 'bg-[#136fb0] text-white hover:bg-[#136fb0]'
+                      } disabled:opacity-70`}
+                    >
+                      <Save className='w-4 h-4' />
+                      Save
+                    </Button>
+                  )}
+
+                  {chainId && (
+                    <Button variant='outline' onClick={handleBack}>
+                      Cancel
+                    </Button>
+                  )}
+                </>
               )}
 
               {!chainId && (
@@ -721,6 +737,21 @@ export function RequestExecutor({
                 >
                   <Play className='w-4 h-4' />
                   Execute
+                </Button>
+              )}
+
+              {chainId && (
+                <Button
+                  onClick={handleUpdateChain}
+                  disabled={!chainName?.trim()}
+                  className={`hover-scale ${
+                    !chainName?.trim()
+                      ? 'bg-gray-300 text-gray-600 cursor-not-allowed hover:bg-gray-300 py-4'
+                      : 'bg-[#136fb0] text-white hover:bg-[#136fb0 py-4]'
+                  } disabled:opacity-70`}
+                >
+                  <Save className='w-4 h-4' />
+                  Update
                 </Button>
               )}
             </>

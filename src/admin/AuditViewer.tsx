@@ -74,7 +74,7 @@ export default function AuditViewer() {
           id: '1',
           timestamp: '2025-01-01T18:30:00Z',
           userId: 'user123',
-          userEmail: 'john.doe@example.com',
+          userEmail: 'john.smith@example.com',
           action: 'CREATE',
           resource: 'test_suite',
           resourceId: 'suite_456',

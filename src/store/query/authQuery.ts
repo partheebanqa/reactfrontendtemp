@@ -16,7 +16,7 @@ import {
   registerApi,
   forgotPasswordApi,
   resetPasswordApi,
-  updateProfileApi
+  updateProfileApi,
 } from '@/services/auth.service';
 import { DeactivationFormData } from '@/components/settings/AccountDeactivation';
 import { clearAllClientStorage } from '@/utils/logoutCacheClear';
@@ -54,24 +54,20 @@ export const useLoginMutation = () => {
     onSuccess: async (data: ILoginResponse) => {
       if (data.token) {
         authActions.setToken(data.token);
+
         const existingData = getEncryptedCookie(USER_COOKIE_NAME) || {};
-        const newUserData = {
-          ...existingData,
-          token: data.token,
-        };
+        const newUserData = { ...existingData, token: data.token };
         setEncryptedCookie(USER_COOKIE_NAME, newUserData);
+
         await queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
-        return true;
       }
-      return false;
     },
-    onError: (error: any) => {
-      const errorMessage =
+    onError: (error: unknown) => {
+      const message =
         error instanceof Error
           ? error.message
           : 'An unexpected error occurred during login';
-      console.error('Login error:', errorMessage);
-      throw new Error(errorMessage);
+      console.error('Login error:', message);
     },
   });
 };

@@ -1,7 +1,6 @@
 'use client';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import React from 'react';
-import dayjs from 'dayjs';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -41,6 +40,7 @@ import {
   XCircle,
   Shuffle,
   Edit3,
+  HelpCircle,
 } from 'lucide-react';
 import type {
   APIRequest,
@@ -65,16 +65,25 @@ import {
   getVariablesByPrefix,
   detectAutocompletePrefix,
   calculateAutocompletePosition,
-  type DynamicVariableOverride, // Removed redeclaration of Variable
+  type DynamicVariableOverride,
   type AutocompleteState,
+  parseUrlParams,
+  buildUrlWithParams,
+  generateDynamicValueById, // Import the new function
 } from '@/lib/request-utils';
 import { Controlled as CodeMirror } from 'react-codemirror2';
 import 'codemirror/lib/codemirror.css';
 import 'codemirror/theme/material.css';
 import 'codemirror/mode/javascript/javascript';
 import './../RequestBuilder/RequestEditor/whiteorange.css';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '../ui/tooltip';
+import { VariableHelpDialog } from './HelpTextDialougs/variablesUseDialogues';
 
-// Define Variable interface here as it's used in the props and functions
 interface Variable {
   id: string;
   name: string;
@@ -83,23 +92,27 @@ interface Variable {
   type: 'string' | 'number' | 'boolean';
   description?: string;
   environmentId?: string;
+  currentValue?: string; // Added for preview
 }
 
 interface RequestEditorProps {
-  request: APIRequest;
+  request: Partial<APIRequest>;
   onUpdate: (updates: Partial<APIRequest>) => void;
   onSave?: () => void;
   compact?: boolean;
+  showBody?: boolean;
   chainName?: string;
   chainDescription?: string;
   chainEnabled?: boolean;
   environmentBaseUrl?: string;
-  requestChainId?: string;
+  requestChainId?: string | undefined;
   chainId?: string;
   hideResponseExplorer?: boolean;
   onRequestExecution?: (executionLog: ExecutionLog) => void;
-  extractedVariables?: Record<string, any>;
-  chainVariables?: Variable[];
+  extractedVariables?: Record<string, any>; // Changed to Record<string, any>
+  chainVariables?: any[];
+  dynamicVariableOverrides?: DynamicVariableOverride[];
+  onRegenerateDynamicVariable?: (variableName: string) => void;
 }
 
 interface KeyValuePair {
@@ -110,17 +123,12 @@ interface KeyValuePair {
   description?: string;
 }
 
-// Removed redeclaration of DynamicVariableOverride
-// interface DynamicVariableOverride {
-//   name: string
-//   value: string | number
-// }
-
 export function RequestEditor({
-  request,
+  request: initialRequest,
   onUpdate,
   onSave,
   compact = false,
+  showBody = true,
   chainName,
   chainDescription,
   chainEnabled,
@@ -129,17 +137,33 @@ export function RequestEditor({
   chainId,
   hideResponseExplorer = false,
   onRequestExecution,
-  extractedVariables: parentExtractedVariables = {},
+  extractedVariables: parentExtractedVariables = {}, // Default to empty object
   chainVariables = [],
+  dynamicVariableOverrides,
+  onRegenerateDynamicVariable,
 }: RequestEditorProps) {
+  const isSyncingRef = useRef(false);
+  const isInitialMount = useRef(true);
   const [isJsonOpen, setIsJsonOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
+
   const [activeTab, setActiveTab] = useState<
-    'params' | 'headers' | 'body' | 'auth' | 'settings'
+    | 'params'
+    | 'headers'
+    | 'body'
+    | 'auth'
+    | 'settings'
+    | 'tests'
+    | 'conditional'
   >('params');
   const [isExecuting, setIsExecuting] = useState(false);
   const [executionResult, setExecutionResult] = useState<ExecutionLog | null>(
     null
   );
+  const [showVariablesPopup, setShowVariablesPopup] = useState(false);
+  const variablesPopupRef = useRef<HTMLDivElement>(null);
+
+  const [searchText, setSearchText] = useState('');
 
   const { variables: storeVariables, dynamicVariables } =
     useDataManagementStore();
@@ -147,6 +171,33 @@ export function RequestEditor({
   const [dynamicOverrides, setDynamicOverrides] = useState<
     DynamicVariableOverride[]
   >([]);
+
+  useEffect(() => {
+    if (dynamicVariableOverrides && dynamicVariableOverrides.length > 0) {
+      // Use overrides from parent chain
+      setDynamicOverrides(dynamicVariableOverrides);
+    } else if (dynamicVariables.length > 0 && dynamicOverrides.length === 0) {
+      // Only generate locally if no parent overrides exist
+      const initialOverrides: DynamicVariableOverride[] = dynamicVariables.map(
+        (d) => {
+          const generated = generateDynamicValueById(
+            d.generatorId,
+            d.parameters
+          );
+          return {
+            name: d.name,
+            value: String(generated),
+          };
+        }
+      );
+      setDynamicOverrides(initialOverrides);
+    }
+  }, [
+    dynamicVariables.length,
+    dynamicOverrides.length,
+    dynamicVariableOverrides,
+  ]);
+
   const [showDynamicEditor, setShowDynamicEditor] = useState(false);
 
   const [autocompleteState, setAutocompleteState] = useState<AutocompleteState>(
@@ -160,31 +211,42 @@ export function RequestEditor({
     }
   );
 
-  // State for individual fields to manage updates
-  const [url, setUrl] = useState(request.url || '');
-  const [body, setBody] = useState(request.body || '');
-  const [headers, setHeaders] = useState<KeyValuePair[]>(request.headers || []);
-  const [params, setParams] = useState<KeyValuePair[]>(request.params || []);
+  const [url, setUrl] = useState(initialRequest.url || '');
+  const [body, setBody] = useState(initialRequest.body || '');
+  const [headers, setHeaders] = useState<KeyValuePair[]>(
+    initialRequest.headers || []
+  );
+  const [params, setParams] = useState<KeyValuePair[]>(
+    initialRequest.params || []
+  );
   const [auth, setAuth] = useState({
-    username: request.authUsername || '',
-    password: request.authPassword || '',
-    token: request.authToken || '',
+    username: initialRequest.authUsername || '',
+    password: initialRequest.authPassword || '',
+    token: initialRequest.authToken || '',
   });
 
   useEffect(() => {
-    onUpdate({ url });
+    if (!isSyncingRef.current) {
+      onUpdate({ url });
+    }
   }, [url]);
 
   useEffect(() => {
-    onUpdate({ body });
+    if (!isSyncingRef.current) {
+      onUpdate({ body });
+    }
   }, [body]);
 
   useEffect(() => {
-    onUpdate({ headers });
+    if (!isSyncingRef.current) {
+      onUpdate({ headers });
+    }
   }, [headers]);
 
   useEffect(() => {
-    onUpdate({ params });
+    if (!isSyncingRef.current) {
+      onUpdate({ params });
+    }
   }, [params]);
 
   useEffect(() => {
@@ -196,38 +258,96 @@ export function RequestEditor({
   }, [auth]);
 
   useEffect(() => {
-    setUrl(request.url || '');
-    setBody(request.body || '');
-    setHeaders(request.headers || []);
-    setParams(request.params || []);
-    setAuth({
-      username: request.authUsername || '',
-      password: request.authPassword || '',
-      token: request.authToken || '',
-    });
-  }, [request.id]); // Only update when request ID changes to avoid infinite loops
+    setUrl(initialRequest.url || '');
+    setBody(initialRequest.body || '');
 
-  const dynamicStructured = mapDynamicToStatic(
-    dynamicVariables,
-    dynamicOverrides
+    const requestHeaders = initialRequest.headers || [];
+    const hasContentType = requestHeaders.some(
+      (h) => h.key.toLowerCase() === 'content-type'
+    );
+
+    if (!hasContentType) {
+      setHeaders([
+        ...requestHeaders,
+        { key: 'Content-Type', value: 'application/json', enabled: true },
+      ]);
+    } else {
+      setHeaders(requestHeaders);
+    }
+    // </CHANGE>
+
+    setParams(initialRequest.params || []);
+    setAuth({
+      username: initialRequest.authUsername || '',
+      password: initialRequest.authPassword || '',
+      token: initialRequest.authToken || '',
+    });
+  }, [initialRequest.id]); // Only update when request ID changes to avoid infinite loops
+
+  useEffect(() => {
+    if (isSyncingRef.current || !url.includes('?')) return;
+
+    isSyncingRef.current = true;
+    const parsedParams = parseUrlParams(url);
+    if (parsedParams.length > 0) {
+      setParams(parsedParams);
+    }
+    setTimeout(() => {
+      isSyncingRef.current = false;
+    }, 100);
+  }, [url]);
+
+  const dynamicStructured = useMemo(
+    () => mapDynamicToStatic(dynamicVariables, dynamicOverrides),
+    [dynamicVariables, dynamicOverrides]
   );
 
-  const getUsedDynamicVariables = () => {
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        variablesPopupRef.current &&
+        !variablesPopupRef.current.contains(event.target as Node)
+      ) {
+        setShowVariablesPopup(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    if (isSyncingRef.current || isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+
+    isSyncingRef.current = true;
+    const newUrl = buildUrlWithParams(url, params);
+    if (newUrl !== url) {
+      setUrl(newUrl);
+    }
+    setTimeout(() => {
+      isSyncingRef.current = false;
+    }, 100);
+  }, [params]);
+
+  const usedDynamicVariables = useMemo(() => {
     const allTextFields = [
-      request.url || '',
-      request.body || '',
-      request.authToken || '',
-      request.authUsername || '',
-      request.authPassword || '',
-      request.authApiKey || '',
-      request.authApiValue || '',
-      request.authorization?.token || '',
-      request.authorization?.username || '',
-      request.authorization?.password || '',
-      request.authorization?.key || '',
-      request.authorization?.value || '',
-      ...(request.headers || []).map((h) => `${h.key} ${h.value}`),
-      ...(request.params || []).map((p) => `${p.key} ${p.value}`),
+      initialRequest.url || '',
+      initialRequest.body || '',
+      initialRequest.authToken || '',
+      initialRequest.authUsername || '',
+      initialRequest.authPassword || '',
+      initialRequest.authApiKey || '',
+      initialRequest.authApiValue || '',
+      initialRequest.authorization?.token || '',
+      initialRequest.authorization?.username || '',
+      initialRequest.authorization?.password || '',
+      initialRequest.authorization?.key || '',
+      initialRequest.authorization?.value || '',
+      ...(initialRequest.headers || []).map((h) => `${h.key} ${h.value}`),
+      ...(initialRequest.params || []).map((p) => `${p.key} ${p.value}`),
     ];
 
     const allText = allTextFields.join(' ');
@@ -241,14 +361,24 @@ export function RequestEditor({
     return dynamicStructured.filter((variable) =>
       usedVariableNames.includes(variable.name)
     );
-  };
-
-  const usedDynamicVariables = getUsedDynamicVariables();
+  }, [
+    initialRequest.url,
+    initialRequest.body,
+    initialRequest.headers,
+    initialRequest.params,
+    initialRequest.authToken,
+    initialRequest.authUsername,
+    initialRequest.authPassword,
+    initialRequest.authApiKey,
+    initialRequest.authApiValue,
+    initialRequest.authorization,
+    dynamicStructured,
+  ]);
 
   const [showResponse, setShowResponse] = useState(false);
   const [extractedVariables, setExtractedVariables] = useState<
     Record<string, any>
-  >(parentExtractedVariables);
+  >(parentExtractedVariables); // Fixed: initialized with parentExtractedVariables
   const { activeEnvironment } = useDataManagement();
 
   const [previewUrl, setPreviewUrl] = useState('');
@@ -260,7 +390,8 @@ export function RequestEditor({
   >('body');
   const { toast } = useToast();
 
-  const [processedRequest, setProcessedRequest] = useState<APIRequest>(request);
+  const [processedRequest, setProcessedRequest] =
+    useState<APIRequest>(initialRequest);
 
   const updateExtractedVariables = (newVars: Record<string, any>) => {
     setExtractedVariables(newVars);
@@ -290,6 +421,7 @@ export function RequestEditor({
             : typeof value === 'boolean'
             ? 'boolean'
             : 'string',
+        currentValue: String(value), // Added for preview
       })
     );
 
@@ -323,7 +455,7 @@ export function RequestEditor({
     dynamicVariables,
     dynamicOverrides,
     activeEnvironment,
-    request.url,
+    initialRequest.url,
     parentExtractedVariables,
     chainVariables,
   ]);
@@ -335,7 +467,7 @@ export function RequestEditor({
       const raw = localStorage.getItem('lastExecutionByRequest');
       if (!raw) return;
       const map: Record<string, any> = JSON.parse(raw);
-      const saved = map?.[request.id];
+      const saved = map?.[initialRequest.id];
 
       const isRecent =
         saved?.endTime &&
@@ -363,13 +495,13 @@ export function RequestEditor({
           );
         }
       } else if (saved && !isRecent) {
-        delete map[request.id];
+        delete map[initialRequest.id];
         localStorage.setItem('lastExecutionByRequest', JSON.stringify(map));
       }
     } catch (e) {
       console.error('Failed to restore lastExecutionByRequest:', e);
     }
-  }, [request.id, hideResponseExplorer]);
+  }, [initialRequest.id, hideResponseExplorer]);
 
   const replaceVariables = (text: string, variables: Variable[]): string => {
     if (!text) return text;
@@ -475,12 +607,10 @@ export function RequestEditor({
     const currentValue = input.value;
     const cursorPos = autocompleteState.cursorPosition;
 
-    // Replace D_ or S_ with the selected variable name
     const beforePrefix = currentValue.substring(0, cursorPos - 2);
     const afterCursor = currentValue.substring(cursorPos);
     const newValue = beforePrefix + variable.name + afterCursor;
 
-    // Find which field this input belongs to and update the corresponding state
     const inputName =
       input.getAttribute('name') || input.getAttribute('data-field');
 
@@ -515,12 +645,10 @@ export function RequestEditor({
     } else if (inputName === 'auth-token') {
       setAuth((prev) => ({ ...prev, token: newValue }));
     } else {
-      // Fallback: directly update input value and dispatch event
       input.value = newValue;
       input.dispatchEvent(new Event('input', { bubbles: true }));
     }
 
-    // Set cursor position after the inserted variable name
     const newCursorPos = beforePrefix.length + variable.name.length;
     setTimeout(() => {
       input.setSelectionRange(newCursorPos, newCursorPos);
@@ -563,7 +691,7 @@ export function RequestEditor({
 
   React.useEffect(() => {
     const allVariables = getAllAvailableVariables();
-    const processed = processRequestWithVariables(request, allVariables);
+    const processed = processRequestWithVariables(initialRequest, allVariables);
     setProcessedRequest(processed);
     setPreviewUrl(getPreviewUrl(allVariables));
   }, [
@@ -571,10 +699,10 @@ export function RequestEditor({
     dynamicVariables,
     dynamicOverrides,
     activeEnvironment,
-    request,
+    initialRequest,
     parentExtractedVariables,
     chainVariables,
-    url, // Include state variables that affect processed request
+    url,
     body,
     headers,
     params,
@@ -582,7 +710,7 @@ export function RequestEditor({
   ]);
 
   const getPreviewUrl = (variables: Variable[]) => {
-    const replacedUrl = replaceVariables(url, variables); // Use state variable
+    const replacedUrl = replaceVariables(url, variables);
     const baseUrl = environmentBaseUrl?.trim();
     if (!baseUrl) return replacedUrl;
     try {
@@ -595,305 +723,34 @@ export function RequestEditor({
   };
 
   const updateDynamicOverride = (name: string, value: string | number) => {
-    setDynamicOverrides((prev) => {
-      const existing = prev.find((o) => o.name === name);
-      if (existing) {
-        return prev.map((o) => (o.name === name ? { ...o, value } : o));
-      } else {
-        return [...prev, { name, value }];
-      }
-    });
+    if (!onRegenerateDynamicVariable) {
+      setDynamicOverrides((prev) => {
+        const existing = prev.find((o) => o.name === name);
+        if (existing) {
+          return prev.map((o) =>
+            o.name === name ? { name, value: String(value) } : { ...o }
+          );
+        } else {
+          return [...prev, { name, value: String(value) }];
+        }
+      });
+    }
   };
 
   const regenerateDynamicVariable = (variableName: string) => {
-    const dynamicVar = dynamicVariables.find((v) => v.name === variableName);
-    console.log('Regenerating variable:', variableName, dynamicVar);
+    if (onRegenerateDynamicVariable) {
+      onRegenerateDynamicVariable(variableName);
+    } else {
+      const dynamicVar = dynamicVariables.find((v) => v.name === variableName);
+      console.log('Regenerating variable:', variableName, dynamicVar);
 
-    if (!dynamicVar) return;
+      if (!dynamicVar) return;
 
-    const randInt = (min: number, max: number) =>
-      Math.floor(Math.random() * (max - min + 1)) + min;
-    const randString = (len: number) =>
-      Array.from({ length: len }, () =>
-        Math.random().toString(36).charAt(2)
-      ).join('');
-    const randomAlphaNumeric = (length = 10) => {
-      const chars =
-        'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-      return Array.from({ length }, () =>
-        chars.charAt(randInt(0, chars.length - 1))
-      ).join('');
-    };
-    const randomBoolean = () => Math.random() < 0.5;
-    const randomUUID = () =>
-      crypto.randomUUID?.() ??
-      `${randString(8)}-${randString(4)}-${randString(4)}-${randString(
-        4
-      )}-${randString(12)}`;
-
-    const fakeFirstName = () =>
-      [
-        'Alice',
-        'Bob',
-        'Charlie',
-        'Diana',
-        'Ethan',
-        'Fiona',
-        'George',
-        'Hannah',
-      ][randInt(0, 7)];
-    const fakeLastName = () =>
-      ['Johnson', 'Smith', 'Brown', 'Williams', 'Taylor', 'Davis'][
-        randInt(0, 5)
-      ];
-    const fakeName = () => `${fakeFirstName()} ${fakeLastName()}`;
-    const fakeUsername = () =>
-      `${fakeFirstName().toLowerCase()}${randInt(10, 9999)}`;
-    const fakePhone = () => `+1${randInt(1000000000, 9999999999)}`;
-    const fakeSSN = () =>
-      `${randInt(100, 999)}-${randInt(10, 99)}-${randInt(1000, 9999)}`;
-    const fakeGender = () => ['Male', 'Female', 'Other'][randInt(0, 2)];
-    const fakeEmail = () => {
-      const domains = ['example.com', 'mail.com', 'test.org', 'demo.net'];
-      return `${randString(6)}@${domains[randInt(0, domains.length - 1)]}`;
-    };
-    const emailWithDomain = (domain = 'example.com') =>
-      `${randString(8)}@${domain}`;
-    const fakePassword = () => {
-      const chars =
-        'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
-      return Array.from({ length: 10 }, () =>
-        chars.charAt(randInt(0, chars.length - 1))
-      ).join('');
-    };
-
-    const randomIPv4 = () =>
-      `${randInt(0, 255)}.${randInt(0, 255)}.${randInt(0, 255)}.${randInt(
-        0,
-        255
-      )}`;
-    const randomURL = () => `https://www.${randString(6)}.com`;
-    const randomDomain = () => `${randString(5)}.com`;
-    const randomPort = () => randInt(1024, 65535);
-
-    const randomLatitude = () => +(Math.random() * 180 - 90).toFixed(6);
-    const randomLongitude = () => +(Math.random() * 360 - 180).toFixed(6);
-    const randomZip = () => randInt(10000, 99999).toString();
-    const randomCountry = () =>
-      ['United States', 'India', 'Canada', 'Australia', 'Germany', 'Japan'][
-        randInt(0, 5)
-      ];
-    const randomState = () =>
-      ['California', 'Texas', 'New York', 'Florida', 'Maharashtra', 'Ontario'][
-        randInt(0, 5)
-      ];
-    const randomCity = () =>
-      ['New York', 'Los Angeles', 'Chicago', 'Mumbai', 'Toronto', 'Berlin'][
-        randInt(0, 5)
-      ];
-    const randomAddress = () =>
-      `${randInt(
-        10,
-        9999
-      )} ${randomCity()} St, ${randomState()}, ${randomCountry()} - ${randomZip()}`;
-
-    const randomYear = () => randInt(1950, new Date().getFullYear());
-    const randomMonth = () =>
-      [
-        'January',
-        'February',
-        'March',
-        'April',
-        'May',
-        'June',
-        'July',
-        'August',
-        'September',
-        'October',
-        'November',
-        'December',
-      ][randInt(0, 11)];
-    const currentDate = (format = 'YYYY-MM-DD') => dayjs().format(format);
-    const currentTimestamp = () => Date.now();
-
-    const futureDate = (years = 1, format = 'YYYY-MM-DD') =>
-      dayjs().add(years, 'year').format(format);
-    const randomDate = (format = 'YYYY-MM-DD') => {
-      const start = dayjs('2000-01-01').toDate().getTime();
-      const end = new Date().getTime();
-      return dayjs(randInt(start, end)).format(format);
-    };
-    const price = (min = 1, max = 1000) => randInt(min, max);
-    const bearerToken = (length = 32) => {
-      try {
-        if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
-          const bytes = new Uint8Array(length);
-          crypto.getRandomValues(bytes);
-          return (
-            'Bearer ' +
-            Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('')
-          );
-        }
-      } catch {}
-      return 'Bearer ' + randString(length);
-    };
-
-    const apiKey = (length = 32, prefix = 'ak_') =>
-      `${prefix}${randomAlphaNumeric(length)}`;
-
-    const creditCardNumber = () => {
-      let num = '';
-      for (let i = 0; i < 16; i++) num += randInt(0, 9);
-      return num.replace(/(\d{4})(?=\d)/g, '$1 ');
-    };
-    const creditCardExp = () => {
-      const month = String(randInt(1, 12)).padStart(2, '0');
-      const year = String(
-        randInt(
-          new Date().getFullYear() % 100,
-          (new Date().getFullYear() % 100) + 10
-        )
+      const newValue = String(
+        generateDynamicValueById(dynamicVar.generatorId, dynamicVar.parameters)
       );
-      return `${month}/${year}`;
-    };
-    const creditCardCVV = () => String(randInt(100, 999));
-    const randomCurrency = () =>
-      ['USD', 'INR', 'EUR', 'GBP', 'JPY', 'CAD', 'AUD'][randInt(0, 6)];
-
-    let newValue: string | number | boolean = '';
-
-    switch (dynamicVar.generatorId) {
-      // Identity
-      case 'firstName':
-        newValue = fakeFirstName();
-        break;
-      case 'lastName':
-        newValue = fakeLastName();
-        break;
-      case 'name':
-        newValue = fakeName();
-        break;
-      case 'gender':
-        newValue = fakeGender();
-        break;
-      case 'username':
-        newValue = fakeUsername();
-        break;
-      case 'phone':
-        newValue = fakePhone();
-        break;
-      case 'ssn':
-        newValue = fakeSSN();
-        break;
-      case 'email':
-        newValue = fakeEmail();
-        break;
-      case 'emailWithDomain':
-        newValue = emailWithDomain(
-          dynamicVar.parameters?.domain ?? 'example.com'
-        );
-        break;
-      case 'password':
-        newValue = fakePassword();
-        break;
-
-      case 'ipv4':
-      case 'random_ip':
-        newValue = randomIPv4();
-        break;
-      case 'url':
-        newValue = randomURL();
-        break;
-      case 'domain':
-        newValue = randomDomain();
-        break;
-      case 'random_port':
-        newValue = randomPort();
-        break;
-      case 'boolean':
-        newValue = randomBoolean();
-        break;
-      case 'uuid':
-      case 'random_uuid':
-        newValue = randomUUID();
-        break;
-
-      case 'api_key':
-        newValue = apiKey(
-          dynamicVar.parameters?.length ?? 32,
-          dynamicVar.parameters?.prefix ?? 'ak_'
-        );
-        break;
-      case 'bearer_token':
-        newValue = bearerToken(dynamicVar.parameters?.length ?? 32);
-        break;
-
-      case 'creditCard':
-        newValue = creditCardCVV();
-        break;
-      case 'creditCardNumber':
-        newValue = creditCardNumber();
-        break;
-      case 'creditCardExp':
-        newValue = creditCardExp();
-        break;
-      case 'currency':
-        newValue = randomCurrency();
-        break;
-
-      case 'timestamp':
-        newValue = currentTimestamp();
-        break;
-      case 'random_email':
-        newValue = fakeEmail();
-        break;
-      case 'futureDate':
-        newValue = futureDate(
-          dynamicVar.parameters?.years ?? 1,
-          dynamicVar.parameters?.format ?? 'YYYY-MM-DD'
-        );
-        break;
-      case 'randomDate':
-        newValue = randomDate(dynamicVar.parameters?.format ?? 'YYYY-MM-DD');
-        break;
-      case 'date':
-        newValue = currentDate(dynamicVar.parameters?.format ?? 'YYYY-MM-DD');
-        break;
-      case 'year':
-        newValue = randomYear();
-        break;
-      case 'month':
-        newValue = randomMonth();
-        break;
-
-      case 'latitude':
-        newValue = randomLatitude();
-        break;
-      case 'longitude':
-        newValue = randomLongitude();
-        break;
-      case 'zip':
-        newValue = randomZip();
-        break;
-      case 'country':
-        newValue = randomCountry();
-        break;
-      case 'state':
-        newValue = randomState();
-        break;
-      case 'city':
-        newValue = randomCity();
-        break;
-      case 'address':
-        newValue = randomAddress();
-        break;
-
-      default:
-        newValue = '';
+      updateDynamicOverride(variableName, newValue);
     }
-
-    // ---------- Apply ----------
-    updateDynamicOverride(variableName, newValue);
   };
 
   const renderEnhancedPreviewUrl = () => {
@@ -954,15 +811,15 @@ export function RequestEditor({
   const handleExecute = async () => {
     const allVariables = getAllAvailableVariables();
     const safeRequest = {
-      ...request,
-      extractVariables: request.extractVariables ?? [],
-      headers: request.headers ?? [],
-      params: request.params ?? [],
-      url: url, // Use state variable for URL
-      body: body, // Use state variable for body
-      authToken: auth.token, // Use state variable for auth token
-      authUsername: auth.username, // Use state variable for auth username
-      authPassword: auth.password, // Use state variable for auth password
+      ...initialRequest,
+      extractVariables: initialRequest.extractVariables ?? [],
+      headers: initialRequest.headers ?? [],
+      params: initialRequest.params ?? [],
+      url: url,
+      body: body,
+      authToken: auth.token,
+      authUsername: auth.username,
+      authPassword: auth.password,
     };
 
     {
@@ -1010,6 +867,9 @@ export function RequestEditor({
     setIsExecuting(true);
     try {
       const startTime = Date.now();
+      (safeRequest as any).headers = (safeRequest.headers ?? []).filter(
+        (h) => h.key?.trim() && h.value?.trim()
+      );
       const payload = buildRequestPayload(safeRequest, allVariables);
       const previewUrl = getPreviewUrl(allVariables);
       payload.request.url = previewUrl;
@@ -1065,7 +925,7 @@ export function RequestEditor({
       try {
         const raw = localStorage.getItem('lastExecutionByRequest');
         const map = raw ? JSON.JSON.parse(raw) : {};
-        map[request.id] = log;
+        map[initialRequest.id] = log;
         localStorage.setItem('lastExecutionByRequest', JSON.stringify(map));
       } catch (e) {
         console.error('Failed to persist lastExecutionByRequest:', e);
@@ -1076,20 +936,21 @@ export function RequestEditor({
         variant: log.status === 'success' ? 'default' : 'destructive',
       });
     } catch (error) {
+      console.log('error888:', error);
       const endTime = Date.now();
       const errorLog: ExecutionLog = {
         id: Date.now().toString(),
         chainId: 'current-chain',
-        requestId: request.id,
+        requestId: initialRequest.id,
         status: 'error',
         startTime: new Date().toISOString(),
         endTime: new Date(endTime).toISOString(),
         duration: 0,
         request: {
-          method: request.method,
+          method: initialRequest.method,
           url: getPreviewUrl(getAllAvailableVariables()),
           headers: {},
-          body: request.body,
+          body: initialRequest.body,
         },
         error: error instanceof Error ? error.message : 'Unknown error',
       };
@@ -1105,7 +966,7 @@ export function RequestEditor({
       try {
         const raw = localStorage.getItem('lastExecutionByRequest');
         const map = raw ? JSON.parse(raw) : {};
-        map[request.id] = errorLog;
+        map[initialRequest.id] = errorLog;
         localStorage.setItem('lastExecutionByRequest', JSON.stringify(map));
       } catch (e) {
         console.error('Failed to persist lastExecutionByRequest (error):', e);
@@ -1164,8 +1025,9 @@ export function RequestEditor({
     { id: 'headers', label: 'Headers', icon: Code },
     { id: 'body', label: 'Body', icon: FileText },
     { id: 'auth', label: 'Auth', icon: Shield },
-    // { id: 'tests', label: 'Tests', icon: TestTube },
+    { id: 'tests', label: 'Tests', icon: TestTube },
     { id: 'settings', label: 'Settings', icon: Settings },
+    { id: 'conditional', label: 'Conditional', icon: GitBranch },
   ];
 
   const formatResponseBody = (body: string, contentType?: string) => {
@@ -1210,7 +1072,7 @@ export function RequestEditor({
   const handleExtractVariable = (extraction: DataExtraction) => {
     const normalizeString = (value?: string) => (value || '').trim();
     const normalizeBool = (value?: boolean) => !!value;
-    const currentExtractions = request.extractVariables || [];
+    const currentExtractions = initialRequest.extractVariables || [];
 
     const variableName = extraction.variableName || extraction.name;
 
@@ -1266,26 +1128,26 @@ export function RequestEditor({
       updatePayload.requestChainId = requestChainId;
     }
     const newRequest = {
-      url: request.url,
-      method: request.method,
-      requestName: request.name,
-      bodyType: request.bodyType,
-      bodyRawContent: request.body,
-      authorizationType: request.authorizationType,
+      url: initialRequest.url,
+      method: initialRequest.method,
+      requestName: initialRequest.name,
+      bodyType: initialRequest.bodyType,
+      bodyRawContent: initialRequest.body,
+      authorizationType: initialRequest.authorizationType,
       authorization: {
-        token: request.authToken,
-        username: request.authUsername,
-        password: request.authPassword,
-        apiKey: request.authApiKey,
-        apiValue: request.authApiValue,
-        apiLocation: request.authApiLocation,
+        token: initialRequest.authToken,
+        username: initialRequest.authUsername,
+        password: initialRequest.authPassword,
+        apiKey: initialRequest.authApiKey,
+        apiValue: initialRequest.authApiValue,
+        apiLocation: initialRequest.authApiLocation,
       },
-      headers: request.headers,
-      params: request.params,
-      variables: request.variables || {},
+      headers: initialRequest.headers,
+      params: initialRequest.params,
+      variables: initialRequest.variables || {},
       extractVariables: updatedExtractions,
-      name: request.name,
-      description: request.description,
+      name: initialRequest.name,
+      description: initialRequest.description,
       order: nextOrder,
     };
     const chainIndex = existingChains.findIndex(
@@ -1298,7 +1160,8 @@ export function RequestEditor({
     );
     if (chainIndex !== -1) {
       const alreadyExists = existingChains[chainIndex].chainRequests.some(
-        (req: any) => req.url === request.url && req.method === request.method
+        (req: any) =>
+          req.url === initialRequest.url && req.method === initialRequest.method
       );
       if (!alreadyExists) {
         existingChains[chainIndex].chainRequests.push(newRequest);
@@ -1327,8 +1190,8 @@ export function RequestEditor({
         try {
           const raw = localStorage.getItem('lastExecutionByRequest');
           const map = raw ? JSON.parse(raw) : {};
-          const existing = map[request.id] || {};
-          map[request.id] = {
+          const existing = map[initialRequest.id] || {};
+          map[initialRequest.id] = {
             ...existing,
             extractedVariables: {
               ...(existing.extractedVariables || {}),
@@ -1348,7 +1211,7 @@ export function RequestEditor({
   };
 
   const handleRemoveExtraction = (variableName: string) => {
-    const updatedExtractions = (request.extractVariables || []).filter(
+    const updatedExtractions = (initialRequest.extractVariables || []).filter(
       (e) => (e.variableName || e.name) !== variableName
     );
     onUpdate({ extractVariables: updatedExtractions });
@@ -1432,12 +1295,12 @@ export function RequestEditor({
       };
     }
     onUpdate({
-      testScripts: [...(request.testScripts || []), newTest],
+      testScripts: [...(initialRequest.testScripts || []), newTest],
     });
   };
 
   const updateTest = (testId: string, updates: Partial<TestScript>) => {
-    const updatedTests = (request.testScripts || []).map((test) =>
+    const updatedTests = (initialRequest.testScripts || []).map((test) =>
       test.id === testId ? { ...test, ...updates } : test
     );
     onUpdate({ testScripts: updatedTests });
@@ -1445,7 +1308,7 @@ export function RequestEditor({
 
   const removeTest = (testId: string) => {
     onUpdate({
-      testScripts: (request.testScripts || []).filter(
+      testScripts: (initialRequest.testScripts || []).filter(
         (test) => test.id !== testId
       ),
     });
@@ -1555,18 +1418,19 @@ export function RequestEditor({
   const showVariablePreview = () => {
     const allVariables = getAllAvailableVariables();
     return (
-      processedRequest.authToken !== request.authToken ||
-      processedRequest.authorization?.token !== request.authorization?.token ||
-      processedRequest.body !== request.body ||
-      processedRequest.url !== request.url ||
+      processedRequest.authToken !== initialRequest.authToken ||
+      processedRequest.authorization?.token !==
+        initialRequest.authorization?.token ||
+      processedRequest.body !== initialRequest.body ||
+      processedRequest.url !== initialRequest.url ||
       JSON.stringify(processedRequest.headers) !==
-        JSON.stringify(request.headers) ||
-      JSON.stringify(processedRequest.params) !== JSON.stringify(request.params)
+        JSON.stringify(initialRequest.headers) ||
+      JSON.stringify(processedRequest.params) !==
+        JSON.stringify(initialRequest.params)
     );
   };
 
   const DynamicVariablesPanel = () => {
-    // Only show if there are used dynamic variables
     if (usedDynamicVariables.length === 0) return null;
 
     return (
@@ -1592,30 +1456,33 @@ export function RequestEditor({
         {showDynamicEditor ? (
           <div className='space-y-3'>
             {usedDynamicVariables.map((variable) => {
-              const originalName = variable.name.replace('', '');
               const currentOverride = dynamicOverrides.find(
-                (o) => o.name === originalName
+                (o) => o.name === variable.name
               );
-
+              const displayValue =
+                currentOverride?.value ?? variable.value ?? '';
               return (
                 <div key={variable.id} className='flex items-center gap-3'>
                   <div className='flex items-center gap-2 flex-1'>
                     <span className='text-xs font-mono text-purple-700 min-w-0'>{`{{${variable.name}}}`}</span>
                     <Input
-                      value={String(currentOverride?.value || variable.value)}
-                      onChange={(e) =>
-                        updateDynamicOverride(originalName, e.target.value)
-                      }
+                      value={String(displayValue)}
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        const newValue = e.target.value;
+                        updateDynamicOverride(variable.name, newValue);
+                      }}
                       className='h-8 text-sm'
                       placeholder='Enter value'
+                      data-dynamic-variable={variable.name}
                     />
                   </div>
                   <Button
                     variant='ghost'
                     size='sm'
-                    onClick={() => regenerateDynamicVariable(originalName)}
+                    onClick={() => regenerateDynamicVariable(variable.name)}
                     className='h-8 w-8 p-0 text-purple-600 hover:bg-purple-100'
-                    title='Regenerate random value'
+                    title='Regenerate value'
                   >
                     <Shuffle className='w-3 h-3' />
                   </Button>
@@ -1626,17 +1493,22 @@ export function RequestEditor({
         ) : (
           <div className='flex flex-wrap gap-2'>
             {usedDynamicVariables.map((variable) => {
-              const originalName = variable.name.replace('', '');
+              const currentOverride = dynamicOverrides.find(
+                (o) => o.name === variable.name
+              );
+              const displayValue =
+                currentOverride?.value ?? variable.value ?? '';
+
               return (
                 <div
                   key={variable.id}
                   className='flex items-center gap-1 px-2 py-1 bg-purple-100 text-purple-800 rounded border border-purple-200'
                 >
                   <span className='text-xs font-mono'>
-                    {`{{${variable.name}}}`} = {String(variable.value)}
+                    {`{{${variable.name}}}`} = {String(displayValue)}
                   </span>
                   <button
-                    onClick={() => regenerateDynamicVariable(originalName)}
+                    onClick={() => regenerateDynamicVariable(variable.name)}
                     className='ml-1 p-0.5 hover:bg-purple-200 rounded transition-colors'
                     title='Regenerate value'
                   >
@@ -1689,6 +1561,37 @@ export function RequestEditor({
     );
   };
 
+  // Sync URL -> Params (when pasting URL with query params)
+  useEffect(() => {
+    if (isSyncingRef.current || !url.includes('?')) return;
+
+    isSyncingRef.current = true;
+    const parsedParams = parseUrlParams(url);
+    if (parsedParams.length > 0) {
+      setParams(parsedParams);
+    }
+    setTimeout(() => {
+      isSyncingRef.current = false;
+    }, 100);
+  }, [url]);
+
+  // Sync Params -> URL (when editing params table)
+  useEffect(() => {
+    if (isSyncingRef.current || isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+
+    isSyncingRef.current = true;
+    const newUrl = buildUrlWithParams(url, params);
+    if (newUrl !== url) {
+      setUrl(newUrl);
+    }
+    setTimeout(() => {
+      isSyncingRef.current = false;
+    }, 100);
+  }, [params]);
+
   if (compact) {
     return (
       <div className='space-y-4'>
@@ -1697,7 +1600,7 @@ export function RequestEditor({
         {/* Request URL */}
         <div className='flex items-center space-x-2'>
           <Select
-            value={request.method}
+            value={initialRequest.method}
             onValueChange={(value) => onUpdate({ method: value as any })}
           >
             <SelectTrigger className='w-24'>
@@ -1754,33 +1657,130 @@ export function RequestEditor({
 
         {/* Tabs */}
         <div className='border-b border-gray-200'>
-          <nav className='flex space-x-8 px-6'>
-            {tabs.map((tab) => {
-              const Icon = tab.icon;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id as typeof activeTab)}
-                  className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors flex items-center space-x-2 ${
-                    activeTab === tab.id
-                      ? 'border-blue-500 text-[#136fb0]'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
+          <div className='flex items-center justify-between px-6 relative'>
+            {/* Tabs */}
+            <nav className='flex space-x-8'>
+              {tabs.map((tab) => {
+                const Icon = tab.icon;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id as typeof activeTab)}
+                    className={`pt-4 pb-2 px-1 border-b-2 font-medium text-sm transition-colors flex items-center space-x-2 ${
+                      activeTab === tab.id
+                        ? 'border-blue-500 text-[#136fb0]'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    <Icon className='w-4 h-4' />
+                    <span>{tab.label}</span>
+                    {tab.id === 'tests' &&
+                      initialRequest.testScripts &&
+                      initialRequest.testScripts.length > 0 && (
+                        <span className='ml-1 px-2 py-1 text-xs bg-blue-100 text-blue-600 rounded-full'>
+                          {initialRequest.testScripts.length}
+                        </span>
+                      )}
+                  </button>
+                );
+              })}
+            </nav>
+
+            {/* Wrap popup + button in relative container */}
+            <div className='relative'>
+              {showVariablesPopup && (
+                <div
+                  ref={variablesPopupRef}
+                  className='absolute right-0 top-10 bg-white shadow-lg rounded-lg z-50 w-80 border border-gray-200'
                 >
-                  <Icon className='w-4 h-4' />
-                  <span>{tab.label}</span>
-                  {tab.id === 'tests' &&
-                    request.testScripts &&
-                    request.testScripts.length > 0 && (
-                      <span className='ml-1 px-2 py-1 text-xs bg-blue-100 text-blue-600 rounded-full'>
-                        {request.testScripts.length}
-                      </span>
-                    )}
-                </button>
-              );
-            })}
-          </nav>
+                  {/* Search */}
+                  <div className='p-2 border-b'>
+                    <input
+                      type='text'
+                      className='w-full px-3 py-1.5 rounded-md border border-gray-300
+                focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm'
+                      placeholder='Search variables...'
+                      autoComplete='off'
+                      autoCorrect='off'
+                      spellCheck={false}
+                      value={searchText}
+                      onChange={(e) => setSearchText(e.target.value)}
+                    />
+                  </div>
+
+                  {/* List */}
+                  <div className='max-h-60 overflow-y-auto'>
+                    {getAllAvailableVariables()
+                      .filter(
+                        (item) =>
+                          (item.name.startsWith('D_') ||
+                            item.name.startsWith('S_')) &&
+                          item.name
+                            .toLowerCase()
+                            .includes(searchText.toLowerCase())
+                      )
+                      .map((item) => (
+                        <div
+                          key={item.id}
+                          className='w-full flex justify-between items-center px-3 py-2
+                    text-sm border-b border-gray-100 hover:bg-blue-50 transition-colors'
+                          onClick={() => setShowVariablesPopup(false)}
+                        >
+                          <span className='text-gray-800 font-mono'>
+                            {item.name}
+                          </span>
+
+                          <div className='flex items-center space-x-2'>
+                            <span className='text-gray-500 truncate max-w-[120px]'>
+                              {item?.currentValue}
+                            </span>
+
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigator.clipboard.writeText(
+                                  `{{${item.name}}}`
+                                );
+                                setShowVariablesPopup(false);
+                              }}
+                              className='p-1 hover:text-blue-600 transition-colors'
+                              title='Copy variable'
+                            >
+                              <Copy className='w-4 h-4' />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Variables button */}
+              <div className='flex items-center gap-2'>
+                <Button onClick={() => setShowVariablesPopup((prev) => !prev)}>
+                  Variables
+                </Button>
+
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <HelpCircle
+                        size={16}
+                        strokeWidth={1.5}
+                        onClick={() => setHelpOpen(true)}
+                        className='cursor-pointer'
+                      />
+                    </TooltipTrigger>
+                    <TooltipContent>How to use variables</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+            </div>
+          </div>
         </div>
+
+        <VariableHelpDialog open={helpOpen} onOpenChange={setHelpOpen} />
+
         {/* Tab Content */}
         <div className='p-2'>
           {activeTab === 'params' && (
@@ -1965,7 +1965,7 @@ export function RequestEditor({
                     type='radio'
                     name='bodyType'
                     value='none'
-                    checked={request.bodyType === 'none'}
+                    checked={initialRequest.bodyType === 'none'}
                     onChange={(e) =>
                       onUpdate({
                         bodyType: e.target.value as APIRequest['bodyType'],
@@ -1980,7 +1980,7 @@ export function RequestEditor({
                     type='radio'
                     name='bodyType'
                     value='form-data'
-                    checked={request.bodyType === 'form-data'}
+                    checked={initialRequest.bodyType === 'form-data'}
                     onChange={(e) =>
                       onUpdate({
                         bodyType: e.target.value as APIRequest['bodyType'],
@@ -1995,7 +1995,7 @@ export function RequestEditor({
                     type='radio'
                     name='bodyType'
                     value='x-www-form-urlencoded'
-                    checked={request.bodyType === 'x-www-form-urlencoded'}
+                    checked={initialRequest.bodyType === 'x-www-form-urlencoded'}
                     onChange={(e) =>
                       onUpdate({
                         bodyType: e.target.value as APIRequest['bodyType'],
@@ -2010,7 +2010,7 @@ export function RequestEditor({
                     type='radio'
                     name='bodyType'
                     value='raw'
-                    checked={request.bodyType === 'raw'}
+                    checked={initialRequest.bodyType === 'raw'}
                     onChange={(e) =>
                       onUpdate({
                         bodyType: e.target.value as APIRequest['bodyType'],
@@ -2021,11 +2021,11 @@ export function RequestEditor({
                   <span className='text-sm'>Raw</span>
                 </label>
               </div> */}
-              {request.bodyType === 'raw' && (
+              {initialRequest.bodyType === 'raw' && (
                 <div className='space-y-2'>
                   {/* <div className='flex items-center justify-end'>
                     <select
-                      value={request.rawBodyType || 'text'}
+                      value={initialRequest.rawBodyType || 'text'}
                       onChange={(e) =>
                         onUpdate({
                           rawBodyType: e.target.value as
@@ -2069,7 +2069,7 @@ export function RequestEditor({
                   />
 
                   {/* Show processed value if different */}
-                  {processedRequest.body !== request.body &&
+                  {processedRequest.body !== initialRequest.body &&
                     processedRequest.body && (
                       <div className='mt-2 p-2 bg-blue-50 border border-blue-200 rounded'>
                         <div className='text-xs font-medium text-blue-900 mb-1'>
@@ -2082,12 +2082,13 @@ export function RequestEditor({
                     )}
                 </div>
               )}
-              {request.bodyType !== 'none' && request.bodyType !== 'raw' && (
-                <div className='text-center py-8 text-gray-500'>
-                  <FileText className='w-12 h-12 text-gray-300 mx-auto mb-3' />
-                  <p>Form data editor coming soon...</p>
-                </div>
-              )}
+              {initialRequest.bodyType !== 'none' &&
+                initialRequest.bodyType !== 'raw' && (
+                  <div className='text-center py-8 text-gray-500'>
+                    <FileText className='w-12 h-12 text-gray-300 mx-auto mb-3' />
+                    <p>Form data editor coming soon...</p>
+                  </div>
+                )}
             </div>
           )}
           {activeTab === 'auth' && (
@@ -2117,25 +2118,24 @@ export function RequestEditor({
                   <input
                     type='text'
                     name='auth-token'
+                    autoComplete='off'
+                    autoCorrect='off'
+                    autoCapitalize='off'
+                    spellCheck={false}
                     value={auth.token}
                     onChange={(e) =>
-                      handleInputChange(e, (value) =>
-                        setAuth((prev) => ({ ...prev, token: value }))
-                      )
+                      setAuth((prev) => ({ ...prev, token: e.target.value }))
+                    }
+                    onBlur={(e) =>
+                      setAuth((prev) => ({
+                        ...prev,
+                        token: e.target.value.trim(),
+                      }))
                     }
                     onKeyUp={(e) => handleAutocomplete(e)}
                     className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
                     placeholder='Enter bearer token or use {{tokenVariable}}'
                   />
-                  {(processedRequest.authorization?.token ||
-                    processedRequest.authToken) !==
-                    (request.authorization?.token || request.authToken) && (
-                    <div className='mt-1 px-2 py-1 bg-blue-50 border border-blue-200 rounded text-xs font-mono'>
-                      Processed:{' '}
-                      {processedRequest.authorization?.token ||
-                        processedRequest.authToken}
-                    </div>
-                  )}
                 </div>
               </div>
             </div>
@@ -2171,9 +2171,10 @@ export function RequestEditor({
                   </button>
                 </div>
               </div>
-              {request.testScripts && request.testScripts.length > 0 ? (
+              {initialRequest.testScripts &&
+              initialRequest.testScripts.length > 0 ? (
                 <div className='space-y-3'>
-                  {request.testScripts.map((test) => (
+                  {initialRequest.testScripts.map((test) => (
                     <div
                       key={test.id}
                       className='border border-gray-200 rounded-lg p-4'
@@ -2360,7 +2361,7 @@ export function RequestEditor({
                   </label>
                   <input
                     type='number'
-                    value={request.timeout}
+                    value={initialRequest.timeout}
                     onChange={(e) =>
                       onUpdate({
                         timeout: Number.parseInt(e.target.value) || 5000,
@@ -2379,7 +2380,7 @@ export function RequestEditor({
                   </label>
                   <input
                     type='number'
-                    value={request.retries}
+                    value={initialRequest.retries}
                     disabled
                     className='w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed'
                   />
@@ -2400,7 +2401,7 @@ export function RequestEditor({
                       type='radio'
                       name='errorHandling'
                       value='stop'
-                      checked={request.errorHandling === 'stop'}
+                      checked={initialRequest.errorHandling === 'stop'}
                       onChange={(e) =>
                         onUpdate({
                           errorHandling: e.target.value as
@@ -2421,8 +2422,8 @@ export function RequestEditor({
                       name='errorHandling'
                       value='continue'
                       checked={
-                        request.errorHandling === 'continue' ||
-                        !request.errorHandling
+                        initialRequest.errorHandling === 'continue' ||
+                        !initialRequest.errorHandling
                       }
                       onChange={(e) =>
                         onUpdate({
@@ -2448,7 +2449,7 @@ export function RequestEditor({
                       type='radio'
                       name='errorHandling'
                       value='retry'
-                      checked={request.errorHandling === 'retry'}
+                      checked={initialRequest.errorHandling === 'retry'}
                       disabled
                       className='text-orange-600'
                     />
@@ -2472,14 +2473,15 @@ export function RequestEditor({
               Variable Substitution Preview:
             </h4>
             <div className='space-y-2 text-xs'>
-              {(processedRequest.authToken !== request.authToken ||
+              {(processedRequest.authToken !== initialRequest.authToken ||
                 processedRequest.authorization?.token !==
-                  request.authorization?.token) && (
+                  initialRequest.authorization?.token) && (
                 <div>
                   <span className='font-medium'>Auth Token:</span>
                   <div className='font-mono bg-white p-1 rounded border max-w-full overflow-hidden text-ellipsis whitespace-nowrap'>
                     <span className='text-gray-500'>
-                      {request.authorization?.token || request.authToken}
+                      {initialRequest.authorization?.token ||
+                        initialRequest.authToken}
                     </span>{' '}
                     →
                     <span className='text-blue-600 ml-1'>
@@ -2489,18 +2491,19 @@ export function RequestEditor({
                   </div>
                 </div>
               )}
-              {processedRequest.url !== request.url && (
+              {processedRequest.url !== initialRequest.url && (
                 <div>
                   <span className='font-medium'>URL:</span>
                   <div className='font-mono bg-white p-1 rounded border'>
-                    <span className='text-gray-500'>{request.url}</span> →
+                    <span className='text-gray-500'>{initialRequest.url}</span>{' '}
+                    →
                     <span className='text-blue-600 ml-1'>
                       {processedRequest.url}
                     </span>
                   </div>
                 </div>
               )}
-              {processedRequest.body !== request.body &&
+              {processedRequest.body !== initialRequest.body &&
                 processedRequest.body && (
                   <div>
                     <span className='font-medium'>Body:</span>
@@ -2763,7 +2766,7 @@ export function RequestEditor({
                 response={executionResult.response}
                 onExtractVariable={handleExtractVariable}
                 extractedVariables={extractedVariables}
-                existingExtractions={request.extractVariables}
+                existingExtractions={initialRequest.extractVariables}
                 onRemoveExtraction={handleRemoveExtraction}
                 handleCopy={handleCopy}
                 copied={copied}
@@ -2791,7 +2794,7 @@ export function RequestEditor({
             <div className='space-y-2'>
               <Label>Request Name</Label>
               <Input
-                value={request.name}
+                value={initialRequest.name}
                 onChange={(e) => {
                   hasManuallyEditedNameRef.current = true;
                   onUpdate({ name: e.target.value });
@@ -2802,7 +2805,7 @@ export function RequestEditor({
             <div className='space-y-2'>
               <Label>Method</Label>
               <Select
-                value={request.method}
+                value={initialRequest.method}
                 onValueChange={(value) =>
                   onUpdate({ method: value as APIRequest['method'] })
                 }
@@ -2862,14 +2865,15 @@ export function RequestEditor({
             Variable Substitution Preview:
           </h4>
           <div className='space-y-2 text-xs'>
-            {(processedRequest.authToken !== request.authToken ||
+            {(processedRequest.authToken !== initialRequest.authToken ||
               processedRequest.authorization?.token !==
-                request.authorization?.token) && (
+                initialRequest.authorization?.token) && (
               <div>
                 <span className='font-medium'>Auth Token:</span>
                 <div className='font-mono bg-white p-1 rounded border'>
                   <span className='text-gray-500'>
-                    {request.authorization?.token || request.authToken}
+                    {initialRequest.authorization?.token ||
+                      initialRequest.authToken}
                   </span>{' '}
                   →
                   <span className='text-blue-600 ml-1'>
@@ -2879,18 +2883,18 @@ export function RequestEditor({
                 </div>
               </div>
             )}
-            {processedRequest.url !== request.url && (
+            {processedRequest.url !== initialRequest.url && (
               <div>
                 <span className='font-medium'>URL:</span>
                 <div className='font-mono bg-white p-1 rounded border'>
-                  <span className='text-gray-500'>{request.url}</span> →
+                  <span className='text-gray-500'>{initialRequest.url}</span> →
                   <span className='text-blue-600 ml-1'>
                     {processedRequest.url}
                   </span>
                 </div>
               </div>
             )}
-            {processedRequest.body !== request.body &&
+            {processedRequest.body !== initialRequest.body &&
               processedRequest.body && (
                 <div>
                   <span className='font-medium'>Body:</span>
@@ -2979,7 +2983,7 @@ export function RequestEditor({
               <div className='flex items-center space-x-4'>
                 <Label>Body Type:</Label>
                 <Select
-                  value={request.bodyType || 'none'}
+                  value={initialRequest.bodyType || 'none'}
                   onValueChange={(value) =>
                     onUpdate({ bodyType: value as any })
                   }
@@ -2996,7 +3000,7 @@ export function RequestEditor({
                   </SelectContent>
                 </Select>
               </div>
-              {request.bodyType !== 'none' && (
+              {initialRequest.bodyType !== 'none' && (
                 <div className='space-y-2'>
                   <Label>Body Content</Label>
                   <Textarea
@@ -3005,7 +3009,7 @@ export function RequestEditor({
                     onChange={(e) => handleInputChange(e, setBody)}
                     onKeyUp={(e) => handleAutocomplete(e)}
                     placeholder={
-                      request.bodyType === 'json'
+                      initialRequest.bodyType === 'json'
                         ? '{\n  "key": "value",\n  "array": [1, 2, 3]\n}'
                         : 'Enter request body'
                     }
@@ -3088,7 +3092,7 @@ export function RequestEditor({
                 <Input
                   id='timeout'
                   type='number'
-                  value={request.timeout}
+                  value={initialRequest.timeout}
                   onChange={(e) =>
                     onUpdate({ timeout: Number.parseInt(e.target.value) })
                   }
@@ -3102,7 +3106,7 @@ export function RequestEditor({
                 <Input
                   id='retries'
                   type='number'
-                  value={request.retries}
+                  value={initialRequest.retries}
                   disabled
                 />
                 <p className='text-xs text-gray-500 italic'>Upcoming</p>
@@ -3117,7 +3121,7 @@ export function RequestEditor({
                 </Label>
               </div>
               <RadioGroup
-                value={request.errorHandling || 'continue'}
+                value={initialRequest.errorHandling || 'continue'}
                 onValueChange={(value) =>
                   onUpdate({ errorHandling: value as any })
                 }
@@ -3156,7 +3160,7 @@ export function RequestEditor({
 
             <div className='flex items-center space-x-2'>
               <Switch
-                checked={request.enabled}
+                checked={initialRequest.enabled}
                 onCheckedChange={(checked) => onUpdate({ enabled: checked })}
               />
               <Label>Enable this request</Label>

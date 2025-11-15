@@ -1,8 +1,8 @@
 'use client';
 
 import type React from 'react';
-import { useState, useEffect } from 'react';
-import { Play, Save, FolderPlus, Plus, FileTerminal } from 'lucide-react';
+import { useState, useEffect, useRef, useMemo } from 'react';
+import { Play, Save, FolderPlus, HelpCircle, Info } from 'lucide-react';
 import { useRequest } from '@/hooks/useRequest';
 import { useCollection } from '@/hooks/useCollection';
 import { useWorkspace } from '@/hooks/useWorkspace';
@@ -15,23 +15,49 @@ import KeyValueEditorWithFileUpload, {
   type KeyValuePairWithFile,
 } from '@/components/ui/KeyValueEditorWithFileUpload';
 import ToggleSwitch from '@/components/ui/ToggleSwitch';
-import EditableText from '@/components/ui/EditableText';
 import Modal from '@/components/ui/Modal';
 import { useDataManagement } from '@/hooks/useDataManagement';
-import { executeCollectionRequest } from '@/services/executeRequest.service';
+import {
+  executeCollectionRequest,
+  executeRequest,
+  buildRequestPayload,
+} from '@/services/executeRequest.service';
 import { updateRequest } from '@/services/collection.service';
 import { useMutation } from '@tanstack/react-query';
-import { TooltipProvider } from '@/components/ui/tooltip';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
 import { generateAssertions } from '@/utils/assertionGenerator';
 import AssertionManager from './assertionManager';
 import ImportModal from './ImportModal';
 import { Input } from '@/components/ui/input';
-import { Controlled as CodeMirror } from 'react-codemirror2';
 import 'codemirror/lib/codemirror.css';
 import 'codemirror/theme/material.css';
 import 'codemirror/mode/javascript/javascript';
 import './whiteorange.css';
+import EditableTextWithoutIcon from '@/components/ui/EditableTextWithoutIcon';
+import { JsonVariableSubstitution } from './JsonVariableSubstitution';
+import { generateDynamicValueById } from '@/lib/request-utils';
+import RequestTabs from './RequestTabs';
+import { collectionActions, useCollectionStore } from '@/store/collectionStore';
+
+type Assertion = {
+  id: string;
+  category: string;
+  type: string;
+  description: string;
+  field: string;
+  operator: string;
+  expectedValue: any;
+  enabled: boolean;
+  impact: string;
+  group: string;
+  priority: string;
+};
 
 interface FormattedResponse {
   status: number;
@@ -41,6 +67,60 @@ interface FormattedResponse {
   responseTime: number;
   size: number;
 }
+
+interface SelectedVariable {
+  name: string;
+  path?: string;
+}
+
+interface PendingSubstitution {
+  lineIndex: number;
+  variableName: string;
+}
+
+type BodyType =
+  | 'none'
+  | 'json'
+  | 'form-data'
+  | 'x-www-form-urlencoded'
+  | 'raw'
+  | 'binary';
+
+const methodsWithBody = ['POST', 'PUT', 'PATCH', 'DELETE'];
+const getDefaultHeaders = (method: RequestMethod): Header[] => {
+  if (methodsWithBody.includes(method)) {
+    return [{ key: 'Content-Type', value: 'application/json', enabled: true }];
+  }
+  return [];
+};
+
+const generateBoundary = (): string => {
+  return '----WebKitFormBoundary' + Math.random().toString(36).substr(2, 16);
+};
+
+const getContentTypeForBodyType = (
+  bodyType:
+    | 'none'
+    | 'json'
+    | 'form-data'
+    | 'x-www-form-urlencoded'
+    | 'raw'
+    | 'binary'
+): string => {
+  if (bodyType === 'form-data') {
+    return `multipart/form-data; boundary=${generateBoundary()}`;
+  }
+  if (bodyType === 'x-www-form-urlencoded') {
+    return 'application/x-www-form-urlencoded';
+  }
+  if (bodyType === 'json') {
+    return 'application/json';
+  }
+  if (bodyType === 'raw') {
+    return 'text/plain';
+  }
+  return 'application/json';
+};
 
 const RequestEditor: React.FC = () => {
   const {
@@ -65,14 +145,17 @@ const RequestEditor: React.FC = () => {
     addCollectionMutation,
     addRequestMutation,
     renameRequestMutation,
-    handleCreateRequest,
+    handleCreateRequest: onCreateRequest,
     fetchCollectionRequests,
+    replaceRequest,
   } = useCollection();
 
-  console.log('fetchCollectionRequests:', fetchCollectionRequests);
+  const isExtractingRef = useRef(false);
 
-  const { variables, environments, activeEnvironment } = useDataManagement();
-  console.log('activeEnvironment:', activeEnvironment);
+  const { unsavedChanges } = useCollectionStore();
+
+  const { variables, dynamicVariables, environments, activeEnvironment } =
+    useDataManagement();
   const { error: showError, success: showSuccess, toast } = useToast();
   const { currentWorkspace } = useWorkspace();
   const [showCurlImport, setShowCurlImport] = useState(false);
@@ -89,20 +172,26 @@ const RequestEditor: React.FC = () => {
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [newCollectionName, setNewCollectionName] = useState('');
   const [url, setUrl] = useState('');
+  const [urlAtOpen, setUrlAtOpen] = useState('');
   const [method, setMethod] = useState<RequestMethod>('GET');
   const [params, setParams] = useState<Param[]>([]);
   const [headers, setHeaders] = useState<Header[]>([]);
-  const [bodyType, setBodyType] = useState<
-    'none' | 'json' | 'form-data' | 'x-www-form-urlencoded' | 'raw' | 'binary'
-  >('none');
+
+  const [bodyType, setBodyType] = useState<BodyType>('json');
   const [bodyContent, setBodyContent] = useState('');
   const [formFields, setFormFields] = useState<KeyValuePairWithFile[]>([]);
   const [urlEncodedFields, setUrlEncodedFields] = useState<Param[]>([]);
-  // ✅ FIX: Initialize authType as 'bearer' by default instead of 'none'
   const [authType, setAuthType] = useState<
     'none' | 'basic' | 'bearer' | 'apiKey' | 'oauth1' | 'oauth2'
   >('bearer');
   const [token, setToken] = useState('');
+  const [selectedVariable, setSelectedVariable] = useState<SelectedVariable[]>(
+    []
+  );
+
+  const [pendingSubstitutions, setPendingSubstitutions] = useState<
+    PendingSubstitution[]
+  >([]);
   const [authData, setAuthData] = useState({
     username: '',
     password: '',
@@ -110,7 +199,6 @@ const RequestEditor: React.FC = () => {
     key: '',
     value: '',
     addTo: 'header' as 'header' | 'query',
-    // OAuth 1.0 fields
     oauth1: {
       consumerKey: '',
       consumerSecret: '',
@@ -122,7 +210,6 @@ const RequestEditor: React.FC = () => {
       nonce: '',
       timestamp: '',
     },
-    // OAuth 2.0 fields
     oauth2: {
       clientId: '',
       clientSecret: '',
@@ -144,7 +231,118 @@ const RequestEditor: React.FC = () => {
     sslVerification: true,
   });
 
-  console.log('url in state:', url);
+  const formattedVariables = useMemo(() => {
+    const formatted: Array<{ name: string; value: string }> = [];
+
+    const isValidVar = (name: string) =>
+      name.startsWith('S_') || name.startsWith('D_');
+
+    if (Array.isArray(variables)) {
+      variables.forEach((variable: any) => {
+        const name = variable.name || variable.key || '';
+        const value = variable.value || variable.initialValue || '';
+        if (name && isValidVar(name)) {
+          formatted.push({ name, value });
+        }
+      });
+    }
+
+    if (Array.isArray(dynamicVariables)) {
+      dynamicVariables.forEach((variable: any) => {
+        const name = variable.name || '';
+        if (name && isValidVar(name)) {
+          const generatedValue = generateDynamicValueById(
+            variable.generatorId || '',
+            variable.parameters || {}
+          );
+          formatted.push({ name, value: String(generatedValue) });
+        }
+      });
+    }
+
+    return formatted;
+  }, [variables, dynamicVariables]);
+
+  const [selectedFolderId, setSelectedFolderId] = useState<string>('');
+  const [folderOptions, setFolderOptions] = useState<
+    Array<{ id: string; label: string }>
+  >([]);
+
+  const [selectedCollectionId, setSelectedCollectionId] = useState<string>('');
+  const [isSaving, setIsSaving] = useState(false);
+
+  const [loadedRequestId, setLoadedRequestId] = useState<string | undefined>();
+
+  const collectionsRef = useRef(collections);
+  useEffect(() => {
+    collectionsRef.current = collections;
+  }, [collections]);
+
+  const activeCollectionFull =
+    collections.find((c) => c.id === activeCollection?.id) ||
+    activeCollection ||
+    null;
+
+  function buildFolderOptions(
+    folders: any[] = [],
+    depth = 0,
+    acc: Array<{ id: string; label: string }> = []
+  ) {
+    for (const f of folders) {
+      const name = f?.name || f?.Name || 'Folder';
+      const id = f?.id || f?.Id;
+      const label = `${'— '.repeat(depth)}${name}`;
+      if (id) acc.push({ id, label });
+      if (Array.isArray(f?.folders) && f.folders.length) {
+        buildFolderOptions(f.folders, depth + 1, acc);
+      }
+    }
+    return acc;
+  }
+
+  useEffect(() => {
+    if (showSaveModal) {
+      setSelectedCollectionId(activeCollection?.id || '');
+    }
+  }, [showSaveModal, activeCollection?.id]);
+
+  useEffect(() => {
+    const loadFolders = async () => {
+      if (!showSaveModal || !selectedCollectionId) return;
+      try {
+        await fetchCollectionRequests.mutateAsync(selectedCollectionId);
+      } catch (e) {
+      } finally {
+        const latest = collectionsRef.current.find(
+          (c) => c.id === selectedCollectionId
+        );
+        const foldersTree = (latest as any)?.folders || [];
+        const options = buildFolderOptions(foldersTree);
+        setFolderOptions(options);
+      }
+    };
+    loadFolders();
+  }, [showSaveModal, selectedCollectionId]);
+
+  useEffect(() => {
+    setSelectedFolderId('');
+    const foldersTree = (activeCollectionFull as any)?.folders || [];
+    const options = buildFolderOptions(foldersTree);
+    setFolderOptions(options);
+  }, [activeCollection?.id]);
+
+  const findFolderName = (folderId: string, folders: any[] = []): string => {
+    for (const folder of folders) {
+      if (folder.id === folderId) {
+        return folder.name || folder.Name || 'Folder';
+      }
+      if (Array.isArray(folder.folders) && folder.folders.length > 0) {
+        const found = findFolderName(folderId, folder.folders);
+        if (found) return found;
+      }
+    }
+    return '';
+  };
 
   const updateRequestMutation = useMutation({
     mutationFn: ({
@@ -161,11 +359,66 @@ const RequestEditor: React.FC = () => {
     },
   });
 
+  const syncCurrentRequestToStore = () => {
+    if (activeRequest?.id && !isSaving) {
+      collectionActions.updateOpenedRequest({
+        ...activeRequest,
+        url,
+        method,
+        params,
+        headers,
+        bodyType,
+        bodyRawContent: bodyContent,
+        bodyFormData:
+          bodyType === 'form-data' ? activeRequest.bodyFormData : undefined,
+        authorizationType: authType,
+        authorization: authData,
+      });
+    }
+  };
+
+  const isNewRequest = (requestId?: string) => {
+    return !requestId || requestId.startsWith('temp-');
+  };
+
   useEffect(() => {
-    if (activeRequest) {
+    if (isExtractingRef.current) return;
+    if (isSaving) return;
+
+    const enabledParams = params.filter((p) => p.enabled && p.key);
+
+    if (!url) return;
+
+    const baseUrl = url.split('?')[0];
+
+    if (enabledParams.length > 0) {
+      const queryString = enabledParams
+        .map(
+          (p) => `${encodeURIComponent(p.key)}=${encodeURIComponent(p.value)}`
+        )
+        .join('&');
+      const newUrl = `${baseUrl}?${queryString}`;
+
+      if (newUrl !== url) {
+        setUrl(newUrl);
+      }
+    } else {
+      if (url.includes('?') && params.length === 0) {
+        setUrl(baseUrl);
+      }
+    }
+  }, [params, isSaving, url]);
+
+  useEffect(() => {
+    if (isSaving) return;
+
+    if (activeRequest && activeRequest.id !== loadedRequestId) {
+      setLoadedRequestId(activeRequest.id);
+
       setUrl(activeRequest.url || '');
       setMethod((activeRequest.method as RequestMethod) || 'GET');
       setParams(activeRequest.params || []);
+
       if (activeRequest.headers && Array.isArray(activeRequest.headers)) {
         try {
           const formattedHeaders = activeRequest.headers.map((h: any) => {
@@ -175,14 +428,35 @@ const RequestEditor: React.FC = () => {
               enabled: h.enabled !== undefined ? !!h.enabled : true,
             };
           });
-          setHeaders(formattedHeaders);
+
+          const defaultHeaders = methodsWithBody.includes(
+            activeRequest.method as RequestMethod
+          )
+            ? [
+                {
+                  key: 'Content-Type',
+                  value: 'application/json',
+                  enabled: true,
+                },
+              ]
+            : [];
+
+          const filteredHeaders = formattedHeaders.filter(
+            (h: Header) =>
+              h.key !== 'Postman-Token' &&
+              h.key !== 'User-Agent' &&
+              !defaultHeaders.find((dh) => dh.key === h.key)
+          );
+
+          setHeaders([...defaultHeaders, ...filteredHeaders]);
         } catch (error) {
           console.error('Error formatting headers:', error);
-          setHeaders([]);
+          setHeaders(getDefaultHeaders(activeRequest.method as RequestMethod));
         }
       } else {
-        setHeaders([]);
+        setHeaders(getDefaultHeaders(activeRequest.method as RequestMethod));
       }
+
       const allowedBodyTypes = [
         'none',
         'json',
@@ -194,18 +468,12 @@ const RequestEditor: React.FC = () => {
       const bodyTypeValue = activeRequest.bodyType || 'none';
       setBodyType(
         allowedBodyTypes.includes(bodyTypeValue)
-          ? (bodyTypeValue as
-              | 'none'
-              | 'json'
-              | 'form-data'
-              | 'x-www-form-urlencoded'
-              | 'raw'
-              | 'binary')
+          ? (bodyTypeValue as BodyType)
           : 'json'
       );
       setBodyContent(activeRequest.bodyRawContent || '');
+      setPendingSubstitutions([]);
 
-      // Initialize form fields from the request
       try {
         if (
           activeRequest.bodyFormData &&
@@ -228,7 +496,6 @@ const RequestEditor: React.FC = () => {
         setFormFields([]);
       }
 
-      // Initialize URL encoded fields from the request
       try {
         if (
           bodyTypeValue === 'x-www-form-urlencoded' &&
@@ -253,7 +520,6 @@ const RequestEditor: React.FC = () => {
       }
 
       setToken(activeRequest.authorization?.token || '');
-      // ✅ FIX: Set authType properly, defaulting to 'bearer' if there's a token
       const requestAuthType = activeRequest.authorizationType as
         | 'none'
         | 'basic'
@@ -262,7 +528,6 @@ const RequestEditor: React.FC = () => {
         | 'oauth1'
         | 'oauth2';
 
-      // If there's a token but no authType specified, assume bearer
       if (activeRequest.authorization?.token && !requestAuthType) {
         setAuthType('bearer');
       } else {
@@ -276,7 +541,6 @@ const RequestEditor: React.FC = () => {
         key: activeRequest.authorization?.key || '',
         value: activeRequest.authorization?.value || '',
         addTo: activeRequest.authorization?.addTo || 'header',
-        // Set default values for OAuth fields
         oauth1: {
           consumerKey: '',
           consumerSecret: '',
@@ -300,7 +564,6 @@ const RequestEditor: React.FC = () => {
         },
       });
 
-      // Load existing assertions from activeRequest if they exist
       if (
         activeRequest.assertions &&
         Array.isArray(activeRequest.assertions) &&
@@ -309,7 +572,6 @@ const RequestEditor: React.FC = () => {
         try {
           const existingAssertions = activeRequest.assertions.map(
             (assertion: any) => {
-              // Transform backend assertion format to frontend format
               return {
                 id: assertion.id || `temp-${Math.random()}`,
                 category: assertion.category || 'general',
@@ -317,9 +579,9 @@ const RequestEditor: React.FC = () => {
                 description: assertion.description || 'Custom assertion',
                 field: assertion.field,
                 operator: assertion.operator || 'equals',
-                expectedValue: assertion.expectedValue, // Handle both formats
+                expectedValue: assertion.expectedValue,
                 enabled:
-                  assertion.enabled !== undefined ? assertion.enabled : true, // Mark as selected
+                  assertion.enabled !== undefined ? assertion.enabled : true,
                 impact: assertion.impact,
                 group: assertion.group || 'custom',
                 priority: assertion.priority,
@@ -335,14 +597,34 @@ const RequestEditor: React.FC = () => {
       } else {
         setAssertions([]);
       }
-    } else {
-      handleCreateRequest();
+
+      if (activeRequest.folderId) {
+        setSelectedFolderId(activeRequest.folderId);
+      } else {
+        setSelectedFolderId('');
+      }
+
+      if (activeRequest.variable) {
+        if (Array.isArray(activeRequest.variable)) {
+          const filteredVariables = activeRequest.variable.filter(
+            (v: any) => v.path || v.name
+          );
+          setSelectedVariable(filteredVariables);
+        } else {
+          setSelectedVariable([]);
+        }
+      } else {
+        setSelectedVariable([]);
+      }
+    } else if (!isSaving && !activeRequest) {
+      setLoadedRequestId(undefined);
       setAssertions([]);
-      // ✅ FIX: When creating new request, ensure authType is 'bearer'
       setAuthType('bearer');
+      setSelectedVariable([]);
+      setPendingSubstitutions([]);
     }
     setResponseData(null);
-  }, [activeRequest]);
+  }, [activeRequest?.id, isSaving]);
 
   const formatBackendResponse = (result: any): FormattedResponse => {
     const importantHeaders = [
@@ -365,13 +647,11 @@ const RequestEditor: React.FC = () => {
     if (typeof result.body === 'string') {
       try {
         parsedBody = JSON.parse(result.body);
-      } catch {
-        parsedBody = result.body;
-      }
+      } catch {}
     }
 
     return {
-      status: result.statusCode,
+      status: result.status ?? result.statusCode,
       statusText: '',
       headers: filteredHeaders,
       data: parsedBody,
@@ -381,15 +661,14 @@ const RequestEditor: React.FC = () => {
   };
 
   const handleCurlImport = (parsedRequest: any) => {
-    console.log('parsedRequest:', parsedRequest);
-
     try {
-      // Set URL
       if (parsedRequest.url) {
         setUrl(parsedRequest.url);
+        if (activeRequest?.id) {
+          collectionActions.markUnsaved(activeRequest.id);
+        }
       }
 
-      // Set method
       if (parsedRequest.method) {
         const supportedMethods: RequestMethod[] = [
           'GET',
@@ -402,10 +681,12 @@ const RequestEditor: React.FC = () => {
           parsedRequest.method.toUpperCase() as RequestMethod;
         if (supportedMethods.includes(requestMethod)) {
           setMethod(requestMethod);
+          if (activeRequest?.id) {
+            collectionActions.markUnsaved(activeRequest.id);
+          }
         }
       }
 
-      // Set headers
       if (parsedRequest.headers && Array.isArray(parsedRequest.headers)) {
         const formattedHeaders = parsedRequest.headers.map((header: any) => ({
           key: header.key || '',
@@ -413,9 +694,11 @@ const RequestEditor: React.FC = () => {
           enabled: header.enabled !== undefined ? header.enabled : true,
         }));
         setHeaders(formattedHeaders);
+        if (activeRequest?.id) {
+          collectionActions.markUnsaved(activeRequest.id);
+        }
       }
 
-      // Set params
       if (parsedRequest.params && Array.isArray(parsedRequest.params)) {
         const formattedParams = parsedRequest.params.map((param: any) => ({
           key: param.key || '',
@@ -423,9 +706,11 @@ const RequestEditor: React.FC = () => {
           enabled: param.enabled !== undefined ? param.enabled : true,
         }));
         setParams(formattedParams);
+        if (activeRequest?.id) {
+          collectionActions.markUnsaved(activeRequest.id);
+        }
       }
 
-      // Set body type and content
       if (parsedRequest.bodyType) {
         const allowedBodyTypes = [
           'none',
@@ -436,30 +721,37 @@ const RequestEditor: React.FC = () => {
           'binary',
         ];
         if (allowedBodyTypes.includes(parsedRequest.bodyType)) {
-          setBodyType(
-            parsedRequest.bodyType as
-              | 'none'
-              | 'json'
-              | 'form-data'
-              | 'x-www-form-urlencoded'
-              | 'raw'
-              | 'binary'
-          );
+          setBodyType(parsedRequest.bodyType as BodyType);
+          if (activeRequest?.id) {
+            collectionActions.markUnsaved(activeRequest.id);
+          }
         }
       }
 
-      // Set body content
       if (parsedRequest.body) {
         let bodyContentToSet = '';
         if (typeof parsedRequest.body === 'string') {
           bodyContentToSet = parsedRequest.body;
         } else if (typeof parsedRequest.body === 'object') {
-          bodyContentToSet = JSON.stringify(parsedRequest.body, null, 2);
+          let parsedBodyContent = parsedRequest.body;
+          if (
+            typeof parsedBodyContent === 'object' &&
+            parsedBodyContent !== null
+          ) {
+            try {
+              parsedBodyContent = JSON.stringify(parsedBodyContent, null, 2);
+            } catch (e) {
+              console.error('Error stringifying parsed body:', e);
+            }
+          }
+          bodyContentToSet = parsedBodyContent;
         }
         setBodyContent(bodyContentToSet);
+        if (activeRequest?.id) {
+          collectionActions.markUnsaved(activeRequest.id);
+        }
       }
 
-      // Set authentication
       if (parsedRequest.auth && parsedRequest.auth.type) {
         const authTypeValue = parsedRequest.auth.type.toLowerCase();
 
@@ -495,12 +787,14 @@ const RequestEditor: React.FC = () => {
             }
             break;
           default:
-            setAuthType('bearer'); // ✅ FIX: Default to bearer instead of none
+            setAuthType('bearer');
             break;
+        }
+        if (activeRequest?.id) {
+          collectionActions.markUnsaved(activeRequest.id);
         }
       }
 
-      // Handle form data
       if (parsedRequest.bodyType === 'form-data' && parsedRequest.formData) {
         const formDataFields = Object.entries(parsedRequest.formData).map(
           ([key, value]) => ({
@@ -511,9 +805,11 @@ const RequestEditor: React.FC = () => {
           })
         );
         setFormFields(formDataFields);
+        if (activeRequest?.id) {
+          collectionActions.markUnsaved(activeRequest.id);
+        }
       }
 
-      // Handle URL encoded fields
       if (
         parsedRequest.bodyType === 'x-www-form-urlencoded' &&
         parsedRequest.body
@@ -525,12 +821,14 @@ const RequestEditor: React.FC = () => {
             encodedFields.push({ key, value, enabled: true });
           });
           setUrlEncodedFields(encodedFields);
+          if (activeRequest?.id) {
+            collectionActions.markUnsaved(activeRequest.id);
+          }
         } catch (e) {
           console.error('Error parsing URL encoded body:', e);
         }
       }
 
-      // Switch to appropriate tab based on what was imported
       if (
         parsedRequest.auth &&
         parsedRequest.auth.type &&
@@ -550,14 +848,12 @@ const RequestEditor: React.FC = () => {
       toast({
         title: 'cURL Imported Successfully',
         description: 'Request has been populated from cURL command',
-        type: 'success',
       });
     } catch (error) {
       console.error('Error importing cURL:', error);
       toast({
         title: 'Import Error',
         description: 'Failed to import cURL command. Please check the format.',
-        type: 'error',
       });
     }
   };
@@ -566,83 +862,205 @@ const RequestEditor: React.FC = () => {
     if (!activeRequest) return;
     clearError();
     setLoading(true);
+
     const newUrl = buildFinalUrl();
 
     try {
-      let requestFormData: FormData | undefined;
-      if (bodyType === 'form-data') {
-        const fileFields = formFields.filter(
-          (f) => f.enabled && f.type === 'file' && f.value instanceof File
-        );
-        if (fileFields.length > 0) {
-          requestFormData = new FormData();
-          formFields
-            .filter((f) => f.enabled)
-            .forEach((field) => {
-              if (field.type === 'file' && field.value instanceof File) {
-                requestFormData!.append(field.key, field.value, field.fileName);
-              } else {
-                requestFormData!.append(field.key, String(field.value));
+      const hasUnsavedChanges = activeRequest.id
+        ? unsavedChanges.has(activeRequest.id)
+        : false;
+
+      let backendData;
+
+      let effectiveAuthType = authType;
+
+      if (
+        authData?.token &&
+        authData.token.trim() !== '' &&
+        (!authType || authType === 'none')
+      ) {
+        effectiveAuthType = 'bearer';
+      }
+
+      if (!authData?.token || authData.token.trim() === '') {
+        effectiveAuthType = 'none';
+      }
+
+      if (hasUnsavedChanges || activeRequest.id?.startsWith('temp-')) {
+        let substitutedBodyContent = bodyContent;
+
+        if (
+          selectedVariable &&
+          selectedVariable.length > 0 &&
+          (bodyType === 'raw' || bodyType === 'json')
+        ) {
+          try {
+            const parsedBody = JSON.parse(bodyContent);
+
+            selectedVariable.forEach((varItem) => {
+              const variable = formattedVariables.find(
+                (v) => v.name === varItem.name
+              );
+              if (variable && varItem.path) {
+                parsedBody[varItem.path] = variable.value;
               }
             });
+
+            substitutedBodyContent = JSON.stringify(parsedBody, null, 2);
+          } catch {
+            selectedVariable.forEach((varItem) => {
+              const variable = formattedVariables.find(
+                (v) => v.name === varItem.name
+              );
+              if (variable) {
+                const regex = new RegExp(`{{${variable.name}}}`, 'g');
+                substitutedBodyContent = substitutedBodyContent.replace(
+                  regex,
+                  variable.value
+                );
+              }
+            });
+          }
+        } else if (selectedVariable && selectedVariable.length > 0) {
+          selectedVariable.forEach((varItem) => {
+            const variable = formattedVariables.find(
+              (v) => v.name === varItem.name
+            );
+            if (variable) {
+              const regex = new RegExp(`{{${variable.name}}}`, 'g');
+              substitutedBodyContent = substitutedBodyContent.replace(
+                regex,
+                variable.value
+              );
+            }
+          });
         }
+
+        const currentRequest = {
+          id: activeRequest.id,
+          name: activeRequest.name || 'Untitled Request',
+          method,
+          url: newUrl,
+          order: activeRequest.order || 0,
+          headers,
+          params,
+          body: substitutedBodyContent,
+          bodyRawContent: substitutedBodyContent,
+          bodyType: bodyType === 'json' ? 'raw' : bodyType,
+
+          authorizationType: effectiveAuthType,
+          authorization:
+            effectiveAuthType === 'bearer'
+              ? { token: authData.token }
+              : effectiveAuthType === 'basic'
+              ? {
+                  username: authData.username,
+                  password: authData.password,
+                }
+              : effectiveAuthType === 'apiKey'
+              ? {
+                  key: authData.key,
+                  value: authData.value,
+                  addTo: authData.addTo,
+                }
+              : undefined,
+
+          timeout: settings.timeout,
+          retries: 0,
+          extractVariables: [],
+          enabled: true,
+        };
+
+        const payload = buildRequestPayload(
+          currentRequest,
+          formattedVariables.map((v) => ({
+            name: v.name,
+            value: v.value,
+            type: 'string',
+            currentValue: v.value,
+          })),
+          currentWorkspace?.id
+        );
+
+        backendData = await executeRequest(payload);
+      } else {
+        if (!activeRequest?.id) {
+          throw new Error('please save a request before sending.');
+        }
+
+        const environmentId =
+          activeEnvironment?.name !== 'No Environment'
+            ? activeEnvironment?.id
+            : undefined;
+
+        backendData = await executeCollectionRequest(
+          activeRequest.id,
+          environmentId
+        );
       }
 
-      if (!activeRequest?.id) {
-        throw new Error('please save a request before sending.');
+      let backendBody;
+      let statusCode;
+      let responseHeaders;
+      let metrics;
+      let assertionLogs;
+      let schemaValidation;
+
+      if (
+        backendData?.data?.responses &&
+        Array.isArray(backendData.data.responses)
+      ) {
+        const firstResponse = backendData.data.responses[0];
+        backendBody = firstResponse.body;
+        statusCode = firstResponse.status ?? firstResponse.statusCode;
+        responseHeaders = firstResponse.headers;
+        metrics = firstResponse.metrics;
+        assertionLogs = [];
+        schemaValidation = null;
+      } else {
+        backendBody = backendData?.data?.body;
+        statusCode = backendData?.data?.statusCode;
+        responseHeaders = backendData?.data?.headers;
+        metrics = backendData?.data?.metrics;
+        assertionLogs = backendData?.data?.assertionLogs || [];
+        schemaValidation = backendData?.data?.schemaValidation || null;
       }
-
-      // 🔹 Decide environmentId
-      const environmentId =
-        activeEnvironment?.name !== 'No Environment'
-          ? activeEnvironment?.id
-          : undefined;
-
-      // 🔹 Send request to backend with optional environmentId
-      const backendData = await executeCollectionRequest(
-        activeRequest.id,
-        environmentId
-      );
-
-      const backendBody = backendData?.data?.body;
 
       if (backendBody) {
-        let parsedBody: any = backendBody;
+        let parsedBody = backendBody;
+
         if (typeof backendBody === 'string') {
           try {
             parsedBody = JSON.parse(backendBody);
-          } catch {
-            parsedBody = backendBody;
-          }
+          } catch {}
         }
 
         const normalizedResponse = {
-          status: backendData?.data?.statusCode ?? 200,
-          statusCode: backendData?.data?.statusCode ?? 200,
-          headers: backendData?.data?.headers ?? {},
+          status: statusCode ?? 200,
+          statusCode: statusCode ?? 200,
+          headers: responseHeaders ?? {},
           body: parsedBody,
           rawBody: backendBody,
-          metrics: backendData?.data?.metrics ?? {},
-          assertionLogs: backendData?.data?.assertionLogs || [],
-          schemaValidation: backendData?.data?.schemaValidation || null,
+          metrics: metrics ?? {},
+          assertionLogs,
+          schemaValidation,
         };
 
-        setResponseData(normalizedResponse as any);
+        setResponseData(normalizedResponse);
 
-        // 🔹 Generate assertions
         const formattedResponse = formatBackendResponse(normalizedResponse);
         const generatedAssertions = generateAssertions(formattedResponse);
 
         const existingAssertions = Array.isArray(assertions) ? assertions : [];
         const existingIds = new Set(existingAssertions.map((a) => a.id));
+
         const newAssertions = generatedAssertions.filter(
-          (newAssertion) => !existingIds.has(newAssertion.id)
+          (a) => !existingIds.has(a.id)
         );
-        const mergedAssertions = [...existingAssertions, ...newAssertions];
-        setAssertions(mergedAssertions);
+
+        setAssertions([...existingAssertions, ...newAssertions]);
       }
-    } catch (error: any) {
-      // Show backend error if present
+    } catch (error) {
       const backendErrorMessage =
         error?.response?.data?.errorDetails ||
         error?.response?.data?.error ||
@@ -652,7 +1070,6 @@ const RequestEditor: React.FC = () => {
       toast({
         title: 'Error',
         description: backendErrorMessage,
-        type: 'error',
       });
     } finally {
       setLoading(false);
@@ -662,26 +1079,25 @@ const RequestEditor: React.FC = () => {
   const handleSaveName = async (newName: string) => {
     try {
       if (!activeRequest) return;
-      if (newName.trim() && activeRequest?.id) {
-        // First update the server
-        await renameRequestMutation.mutateAsync({
-          requestId: activeRequest.id,
-          newName: newName.trim(),
-          workspaceId: currentWorkspace?.id || '',
-        });
+      if (!newName.trim()) return;
 
-        // The renameRequest action in the store will update both collections and activeRequest
-        // This prevents the race condition where activeRequest gets overwritten
-      } else if (newName.trim() && !activeRequest?.id) {
-        // For unsaved requests, just update the local state
-        const updatedRequest = {
-          ...activeRequest,
-          name: newName.trim(),
-        };
-        setActiveRequest(updatedRequest);
+      const isTempRequest = activeRequest.id?.startsWith('temp-');
+
+      if (isTempRequest) {
+        collectionActions.renameRequest(
+          newName.trim(),
+          activeRequest.id,
+          currentWorkspace?.id || ''
+        );
+      } else {
+        await handleUpdateRequest(newName.trim());
       }
     } catch (error) {
       console.error('Error renaming request:', error);
+      showError(
+        'Rename Failed',
+        'An error occurred while renaming the request.'
+      );
     }
   };
 
@@ -695,12 +1111,20 @@ const RequestEditor: React.FC = () => {
       return;
     }
 
+    setIsSaving(true);
+    setUrlAtOpen(url);
     setShowSaveModal(true);
   };
 
-  const handleUpdateRequest = async () => {
+  const handleUpdateRequest = async (overrideName?: string) => {
     try {
-      if (!activeRequest || !currentWorkspace) return;
+      if (!activeRequest || activeRequest.id?.startsWith('temp-')) {
+        showError(
+          'Invalid Request',
+          'Cannot update a temporary request. Please save it first.'
+        );
+        return;
+      }
       if (!url.trim()) {
         showError(
           'URL Required',
@@ -709,14 +1133,22 @@ const RequestEditor: React.FC = () => {
         return;
       }
 
-      let maxOrder = 0;
       if (activeCollection) {
-        const response = await fetchCollectionRequests.mutateAsync(
-          activeCollection.id
-        );
-        if (response && response.length > 0) {
-          maxOrder = Math.max(...response.map((req: any) => req.order || 0));
-        }
+        await fetchCollectionRequests.mutateAsync(activeCollection.id);
+      }
+
+      let effectiveAuthType = authType;
+
+      if (
+        authData?.token &&
+        authData.token.trim() !== '' &&
+        (!authType || authType === 'none')
+      ) {
+        effectiveAuthType = 'bearer';
+      }
+
+      if (!authData?.token || authData.token.trim() === '') {
+        effectiveAuthType = 'none';
       }
 
       let effectiveAuthType = authType;
@@ -740,13 +1172,16 @@ const RequestEditor: React.FC = () => {
             }))
         : [];
 
-      const requestData = {
+      const effectiveFolderId =
+        activeRequest?.folderId || selectedFolderId || undefined;
+
+      const requestData: any = {
         workspaceId: currentWorkspace.id,
         description: '',
-        name: activeRequest.name || 'New Request',
-        order: maxOrder + 1,
+        name: overrideName || activeRequest.name || 'New Request',
         method,
         url,
+        ...(effectiveFolderId ? { folderId: effectiveFolderId } : {}),
         bodyType: bodyType === 'json' ? 'raw' : bodyType,
         bodyFormData:
           bodyType === 'form-data'
@@ -776,7 +1211,7 @@ const RequestEditor: React.FC = () => {
                   }, {} as Record<string, string>)
               ).toString()
             : '',
-        authorizationType: effectiveAuthType, // ✅ updated to use effectiveAuthType
+        authorizationType: effectiveAuthType,
         authorization: {
           token: authData.token,
           username: effectiveAuthType === 'basic' ? authData.username : '',
@@ -813,10 +1248,12 @@ const RequestEditor: React.FC = () => {
               : undefined,
         },
         params,
-        headers,
+        headers: headers.filter((h) => h.enabled),
         assertions: selectedAssertions,
       };
-
+      if (selectedVariable && selectedVariable.length > 0) {
+        requestData.variable = selectedVariable;
+      }
       if (!activeRequest.id) {
         showError('Missing ID', 'Cannot update a request without an id.');
         return;
@@ -827,10 +1264,24 @@ const RequestEditor: React.FC = () => {
         requestData,
       });
 
+      if (overrideName) {
+        setActiveRequest({
+          ...activeRequest,
+          name: overrideName,
+        });
+        collectionActions.updateOpenedRequest({
+          ...activeRequest,
+          name: overrideName,
+        });
+      }
+
+      collectionActions.markSaved(activeRequest.id);
+
       toast({
-        title: 'Request updated successfully!',
+        title: overrideName
+          ? 'Request renamed successfully!'
+          : 'Request updated successfully!',
         duration: 3000,
-        type: 'success',
       });
     } catch (error) {
       console.error('Error updating request:', error);
@@ -844,8 +1295,10 @@ const RequestEditor: React.FC = () => {
 
   const handleConfirmSave = async () => {
     try {
+      setIsSaving(true);
       if (!activeRequest || !currentWorkspace) return;
-      if (!url.trim()) {
+
+      if (!urlAtOpen.trim()) {
         showError(
           'URL Required',
           'Please enter a URL before saving the request.'
@@ -854,23 +1307,22 @@ const RequestEditor: React.FC = () => {
       }
 
       let createdCollectionId: string | null = null;
+
       if (isCreatingCollection && newCollectionName.trim()) {
         const res = await addCollectionMutation.mutateAsync({
           name: newCollectionName.trim(),
           workspaceId: currentWorkspace.id,
           isImportant: false,
         });
+
         if (res?.collectionId) {
           createdCollectionId = res.collectionId;
-          const createdCollection = collections.find(
-            (collection) => collection.id === res.collectionId
-          );
-          setActiveCollection(createdCollection || null);
+          setSelectedCollectionId(res.collectionId);
         }
       }
 
       if (
-        !activeCollection &&
+        !selectedCollectionId &&
         (!isCreatingCollection || !newCollectionName.trim())
       ) {
         showError(
@@ -880,35 +1332,29 @@ const RequestEditor: React.FC = () => {
         return;
       }
 
-      let maxOrder = 0;
-      if (activeCollection) {
-        const response = await fetchCollectionRequests.mutateAsync(
-          activeCollection.id
-        );
-        if (response && response.length > 0) {
-          maxOrder = Math.max(...response.map((req) => req.order || 0));
-        }
+      const targetCollectionId = createdCollectionId || selectedCollectionId;
+
+      if (targetCollectionId) {
+        await fetchCollectionRequests.mutateAsync(targetCollectionId);
       }
 
-      // ✅ normalize authorizationType
       let effectiveAuthType = authType;
       if (authData?.token && (!authType || authType === 'none')) {
         effectiveAuthType = 'bearer';
       }
 
-      // Get selected assertions
       const selectedAssertions = Array.isArray(assertions)
-        ? assertions.filter((a) => a.enabled).map((a) => a)
+        ? assertions.filter((a) => a.enabled)
         : [];
 
-      const requestData = {
+      const requestData: any = {
         workspaceId: currentWorkspace.id,
-        collectionId: createdCollectionId || activeCollection?.id,
+        collectionId: targetCollectionId,
+        ...(selectedFolderId ? { folderId: selectedFolderId } : {}),
         description: '',
         name: activeRequest.name || 'New Request',
-        order: maxOrder + 1,
         method,
-        url,
+        url: urlAtOpen,
         bodyType: bodyType === 'json' ? 'raw' : bodyType,
         bodyFormData:
           bodyType === 'form-data'
@@ -938,78 +1384,53 @@ const RequestEditor: React.FC = () => {
                   }, {} as Record<string, string>)
               ).toString()
             : '',
-        authorizationType: effectiveAuthType, // ✅ fixed here
-        authorization: {
-          token: authData.token,
-          username: effectiveAuthType === 'basic' ? authData.username : '',
-          password: effectiveAuthType === 'basic' ? authData.password : '',
-          key: effectiveAuthType === 'apiKey' ? authData.key : '',
-          value: effectiveAuthType === 'apiKey' ? authData.value : '',
-          addTo: effectiveAuthType === 'apiKey' ? authData.addTo : 'header',
-          oauth1:
-            effectiveAuthType === 'oauth1'
-              ? {
-                  consumerKey: authData.oauth1.consumerKey,
-                  consumerSecret: authData.oauth1.consumerSecret,
-                  token: authData.oauth1.token,
-                  tokenSecret: authData.oauth1.tokenSecret,
-                  signatureMethod: authData.oauth1.signatureMethod,
-                  version: '1.0',
-                  realm: authData.oauth1.realm,
-                  nonce: authData.oauth1.nonce,
-                  timestamp: authData.oauth1.timestamp,
-                }
-              : undefined,
-          oauth2:
-            effectiveAuthType === 'oauth2'
-              ? {
-                  clientId: authData.oauth2.clientId,
-                  clientSecret: authData.oauth2.clientSecret,
-                  accessToken: authData.oauth2.accessToken,
-                  tokenType: authData.oauth2.tokenType,
-                  refreshToken: authData.oauth2.refreshToken,
-                  scope: authData.oauth2.scope,
-                  grantType: authData.oauth2.grantType,
-                  redirectUri: authData.oauth2.redirectUri,
-                }
-              : undefined,
-        },
+        authorizationType: effectiveAuthType,
+        authorization: requestDataAuthorization(effectiveAuthType, authData),
         params,
         headers,
         assertions: selectedAssertions,
+        ...(selectedVariable && selectedVariable.length > 0
+          ? { variable: selectedVariable }
+          : {}),
       };
-
-      console.log('requestData to save:', requestData);
 
       const savedRequestResponse = await addRequestMutation.mutateAsync(
         requestData
       );
-
-      setShowSaveModal(false);
-      setNewCollectionName('');
-      setIsCreatingCollection(false);
-      showSuccess('Request saved successfully!');
 
       if (
         savedRequestResponse &&
         (savedRequestResponse.id || savedRequestResponse.requestId)
       ) {
         const newId = savedRequestResponse.id || savedRequestResponse.requestId;
+
         const updatedRequest = {
           ...activeRequest,
           id: newId,
-          collectionId: createdCollectionId || activeCollection?.id,
+          collectionId: targetCollectionId,
+          ...(selectedFolderId ? ({ folderId: selectedFolderId } as any) : {}),
           name: activeRequest.name || 'New Request',
           method,
-          url,
+          url: urlAtOpen,
           bodyType,
           authorizationType: effectiveAuthType,
           authorization: requestData.authorization,
           params,
           headers,
+          ...(selectedVariable ? { variable: selectedVariable } : {}),
         };
+        const oldRequestId = activeRequest.id;
+        replaceRequest(oldRequestId, updatedRequest);
         setActiveRequest(updatedRequest);
+
+        await new Promise((resolve) => setTimeout(resolve, 0));
       }
+
+      setShowSaveModal(false);
+      setNewCollectionName('');
+      setIsCreatingCollection(false);
+
+      showSuccess('Request saved successfully!');
     } catch (error) {
       console.error('Error saving request:', error);
       showError('Save Failed', 'An error occurred while saving the request.');
@@ -1017,8 +1438,48 @@ const RequestEditor: React.FC = () => {
         title: 'Save Failed',
         description: 'An error occurred while saving the request.',
       });
+    } finally {
+      setIsSaving(false);
     }
   };
+
+  function requestDataAuthorization(type: string, authData: any) {
+    return {
+      token: authData.token,
+      username: type === 'basic' ? authData.username : '',
+      password: type === 'basic' ? authData.password : '',
+      key: type === 'apiKey' ? authData.key : '',
+      value: type === 'apiKey' ? authData.value : '',
+      addTo: type === 'apiKey' ? authData.addTo : 'header',
+      oauth1:
+        type === 'oauth1'
+          ? {
+              consumerKey: authData.oauth1.consumerKey,
+              consumerSecret: authData.oauth1.consumerSecret,
+              token: authData.oauth1.token,
+              tokenSecret: authData.oauth1.tokenSecret,
+              signatureMethod: authData.oauth1.signatureMethod,
+              version: '1.0',
+              realm: authData.oauth1.realm,
+              nonce: authData.oauth1.nonce,
+              timestamp: authData.oauth1.timestamp,
+            }
+          : undefined,
+      oauth2:
+        type === 'oauth2'
+          ? {
+              clientId: authData.oauth2.clientId,
+              clientSecret: authData.oauth2.clientSecret,
+              accessToken: authData.oauth2.accessToken,
+              tokenType: authData.oauth2.tokenType,
+              refreshToken: authData.oauth2.refreshToken,
+              scope: authData.oauth2.scope,
+              grantType: authData.oauth2.grantType,
+              redirectUri: authData.oauth2.redirectUri,
+            }
+          : undefined,
+    };
+  }
 
   const substituteVariables = (text: string): string => {
     let result = text;
@@ -1028,6 +1489,7 @@ const RequestEditor: React.FC = () => {
     });
     return result;
   };
+
   const buildFinalUrl = (): string => {
     if (!url) return '';
     let finalUrl = url;
@@ -1057,12 +1519,13 @@ const RequestEditor: React.FC = () => {
 
   const handleCancelSave = () => {
     setShowSaveModal(false);
-    setIsCreatingCollection(false);
-    setNewCollectionName('');
   };
 
   const addParam = () => {
     setParams([...params, { key: '', value: '', enabled: true }]);
+    if (activeRequest?.id) {
+      collectionActions.markUnsaved(activeRequest.id);
+    }
   };
 
   const updateParam = (
@@ -1073,14 +1536,24 @@ const RequestEditor: React.FC = () => {
     const newParams = [...params];
     newParams[index] = { ...newParams[index], [field]: value };
     setParams(newParams);
+
+    if (activeRequest?.id) {
+      collectionActions.markUnsaved(activeRequest.id);
+    }
   };
 
   const removeParam = (index: number) => {
     setParams(params.filter((_, i) => i !== index));
+    if (activeRequest?.id) {
+      collectionActions.markUnsaved(activeRequest.id);
+    }
   };
 
   const addHeader = () => {
     setHeaders([...headers, { key: '', value: '', enabled: true }]);
+    if (activeRequest?.id) {
+      collectionActions.markUnsaved(activeRequest.id);
+    }
   };
 
   const updateHeader = (
@@ -1091,18 +1564,26 @@ const RequestEditor: React.FC = () => {
     const newHeaders = [...headers];
     newHeaders[index] = { ...newHeaders[index], [field]: value };
     setHeaders(newHeaders);
+    if (activeRequest?.id) {
+      collectionActions.markUnsaved(activeRequest.id);
+    }
   };
 
   const removeHeader = (index: number) => {
     setHeaders(headers.filter((_, i) => i !== index));
+    if (activeRequest?.id) {
+      collectionActions.markUnsaved(activeRequest.id);
+    }
   };
 
-  // Form data field handlers
   const addFormField = () => {
     setFormFields([
       ...formFields,
       { key: '', value: '', enabled: true, type: 'text' },
     ]);
+    if (activeRequest?.id) {
+      collectionActions.markUnsaved(activeRequest.id);
+    }
   };
 
   const updateFormField = (
@@ -1113,18 +1594,30 @@ const RequestEditor: React.FC = () => {
     const newFormFields = [...formFields];
     newFormFields[index] = { ...newFormFields[index], [field]: value };
     setFormFields(newFormFields);
+    if (activeRequest?.id) {
+      collectionActions.markUnsaved(activeRequest.id);
+    }
   };
 
   const removeFormField = (index: number) => {
     setFormFields(formFields.filter((_, i) => i !== index));
+    if (activeRequest?.id) {
+      collectionActions.markUnsaved(activeRequest.id);
+    }
   };
 
-  // URL encoded field handlers
   const addUrlEncodedField = () => {
     setUrlEncodedFields([
       ...urlEncodedFields,
-      { key: '', value: '', enabled: true },
+      {
+        key: '',
+        value: '',
+        enabled: true,
+      },
     ]);
+    if (activeRequest?.id) {
+      collectionActions.markUnsaved(activeRequest.id);
+    }
   };
 
   const updateUrlEncodedField = (
@@ -1138,10 +1631,53 @@ const RequestEditor: React.FC = () => {
       [field]: value,
     };
     setUrlEncodedFields(newUrlEncodedFields);
+    if (activeRequest?.id) {
+      collectionActions.markUnsaved(activeRequest.id);
+    }
   };
 
   const removeUrlEncodedField = (index: number) => {
     setUrlEncodedFields(urlEncodedFields.filter((_, i) => i !== index));
+    if (activeRequest?.id) {
+      collectionActions.markUnsaved(activeRequest.id);
+    }
+  };
+
+  const handleConfirmSubstitutions = (substitutions: PendingSubstitution[]) => {
+    const lines = bodyContent.split('\n');
+    let updatedContent = bodyContent;
+
+    substitutions.forEach((sub) => {
+      if (lines[sub.lineIndex]) {
+        const line = lines[sub.lineIndex];
+        const updatedLine = `${line} // substituted with {{${sub.variableName}}}`;
+        updatedContent = updatedContent.replace(line, updatedLine);
+      }
+    });
+
+    setBodyContent(updatedContent);
+    setPendingSubstitutions([]);
+    if (activeRequest?.id) {
+      collectionActions.markUnsaved(activeRequest.id);
+    }
+  };
+
+  const handleBeautifyBody = () => {
+    try {
+      if (bodyType === 'json' || bodyType === 'raw') {
+        const parsed = JSON.parse(bodyContent);
+        const beautified = JSON.stringify(parsed, null, 2);
+        setBodyContent(beautified);
+        if (activeRequest?.id) {
+          collectionActions.markUnsaved(activeRequest.id);
+        }
+      }
+    } catch (error) {
+      showError(
+        'Invalid JSON',
+        'Unable to format. Please check your JSON syntax.'
+      );
+    }
   };
 
   const methods: RequestMethod[] = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'];
@@ -1162,6 +1698,56 @@ const RequestEditor: React.FC = () => {
     );
   };
 
+  const handleMethodChange = (newMethod: RequestMethod) => {
+    setMethod(newMethod);
+
+    const hasContentTypeHeader = headers.some((h) => h.key === 'Content-Type');
+    if (methodsWithBody.includes(newMethod) && !hasContentTypeHeader) {
+      setHeaders([
+        { key: 'Content-Type', value: 'application/json', enabled: true },
+        ...headers,
+      ]);
+    } else if (!methodsWithBody.includes(newMethod) && hasContentTypeHeader) {
+      setHeaders(headers.filter((h) => h.key !== 'Content-Type'));
+    }
+  };
+
+  const handleBodyTypeChange = (newBodyType: BodyType) => {
+    setBodyType(newBodyType);
+
+    if (newBodyType !== 'none') {
+      const contentTypeValue = getContentTypeForBodyType(newBodyType);
+      const contentTypeHeaderIndex = headers.findIndex(
+        (h) => h.key.toLowerCase() === 'content-type'
+      );
+
+      if (contentTypeHeaderIndex !== -1) {
+        const updatedHeaders = [...headers];
+        updatedHeaders[contentTypeHeaderIndex] = {
+          ...updatedHeaders[contentTypeHeaderIndex],
+          value: contentTypeValue,
+        };
+        setHeaders(updatedHeaders);
+      } else if (methodsWithBody.includes(method)) {
+        setHeaders([
+          {
+            key: 'Content-Type',
+            value: contentTypeValue,
+            enabled: true,
+          },
+          ...headers,
+        ]);
+      }
+    }
+  };
+
+  const handleVariableSelect = (variables: SelectedVariable[]) => {
+    setSelectedVariable(variables);
+    if (activeRequest) {
+      collectionActions.markUnsaved(activeRequest.id);
+    }
+  };
+
   if (!activeRequest) {
     return (
       <div className='flex-1 flex items-center justify-center bg-gray-50 dark:bg-gray-900 p-4'>
@@ -1169,8 +1755,14 @@ const RequestEditor: React.FC = () => {
           <p className='text-gray-500 dark:text-gray-400 mb-4'>
             No request selected
           </p>
-          <p className='text-sm text-gray-400'>
-            Select a request from the sidebar or create a new one
+          <p className='text-sm text-gray-400 mb-6'>
+            Select a request from the sidebar or{' '}
+            <button
+              onClick={(e: React.MouseEvent) => onCreateRequest()}
+              className='text-blue-600 hover:text-blue-700 font-medium underline focus:outline-none'
+            >
+              Create Request
+            </button>
           </p>
         </div>
       </div>
@@ -1180,27 +1772,106 @@ const RequestEditor: React.FC = () => {
   return (
     <TooltipProvider>
       <div className='flex-1 flex flex-col bg-white dark:bg-gray-900 overflow-hidden'>
-        <div className='border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex-shrink-0'>
-          <div className='flex items-center justify-between'>
-            <div className='flex items-center space-x-3'>
-              <EditableText
-                value={activeRequest.name || ''}
-                onSave={handleSaveName}
-                placeholder='Request Name'
-                fontSize='lg'
-                fontWeight='semibold'
-              />
+        <div className='sticky top-0 z-30 bg-white dark:bg-gray-900'>
+          <RequestTabs
+            onBeforeTabChange={syncCurrentRequestToStore}
+            onSaveRequest={async (request) => {
+              if (isNewRequest(activeRequest.id)) {
+                handleSaveRequest();
+              } else {
+                await handleUpdateRequest();
+              }
+            }}
+            onCurlImport={handleCurlImport}
+          />
+
+          <div className='border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex-shrink-0'>
+            <div className='flex items-center justify-between'>
+              <div className='flex items-center text-sm space-x-1'>
+                <span className='text-gray-500 dark:text-gray-400'>
+                  {activeCollectionFull?.name}
+                </span>
+                <span className='text-gray-500 dark:text-gray-400'>/</span>
+
+                {activeRequest?.folderId && (
+                  <>
+                    <span className='text-gray-500 dark:text-gray-400'>
+                      {findFolderName(
+                        activeRequest.folderId,
+                        (activeCollectionFull as any)?.folders || []
+                      )}
+                    </span>
+                    <span className='text-gray-500 dark:text-gray-400'>/</span>
+                  </>
+                )}
+
+                <div className='flex items-center gap-1'>
+                  <EditableTextWithoutIcon
+                    value={activeRequest.name || ''}
+                    onSave={handleSaveName}
+                    placeholder='Request Name'
+                    fontSize='sm'
+                    fontWeight='medium'
+                  />
+
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          type='button'
+                          className='p-1 text-gray-500 hover:text-[rgb(19,111,176)] transition-colors'
+                        >
+                          <Info className='w-3.5 h-3.5' />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>Double click to Rename</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Request URL Bar */}
         <div className='border-b border-gray-200 dark:border-gray-700 p-4 flex-shrink-0'>
           <div className='flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-2'>
             <select
               value={method}
-              onChange={(e) => setMethod(e.target.value as RequestMethod)}
-              className={`w-full sm:w-auto border rounded-md px-3 py-2 text-sm font-medium hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all duration-150 ${getMethodColor(
+              onChange={(e) => {
+                const newMethod = e.target.value as RequestMethod;
+                setMethod(newMethod);
+
+                const hasContentTypeHeader = headers.some(
+                  (h) => h.key === 'Content-Type'
+                );
+                if (
+                  methodsWithBody.includes(newMethod) &&
+                  !hasContentTypeHeader
+                ) {
+                  setHeaders([
+                    {
+                      key: 'Content-Type',
+                      value: 'application/json',
+                      enabled: true,
+                    },
+                    ...headers,
+                  ]);
+                } else if (
+                  !methodsWithBody.includes(newMethod) &&
+                  hasContentTypeHeader
+                ) {
+                  setHeaders(headers.filter((h) => h.key !== 'Content-Type'));
+                }
+
+                if (activeRequest?.id) {
+                  collectionActions.updateOpenedRequest({
+                    ...activeRequest,
+                    method: newMethod,
+                  });
+                  collectionActions.markUnsaved(activeRequest.id);
+                }
+              }}
+              className={`w-full sm:w-auto border rounded-md pl-3 pr-0 py-2 text-sm font-medium hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all duration-150 ${getMethodColor(
                 method
               )}`}
               style={{
@@ -1221,7 +1892,62 @@ const RequestEditor: React.FC = () => {
             <Input
               type='text'
               value={url}
-              onChange={(e) => setUrl(e.target.value)}
+              onChange={(e) => {
+                const newUrl = e.target.value;
+
+                isExtractingRef.current = true;
+
+                setUrl(newUrl);
+
+                if (activeRequest?.id) {
+                  collectionActions.markUnsaved(activeRequest.id);
+                  collectionActions.updateOpenedRequest({
+                    ...activeRequest,
+                    url: newUrl,
+                  });
+                }
+
+                setTimeout(() => {
+                  try {
+                    const urlObj = new URL(newUrl);
+                    const searchParams = urlObj.searchParams;
+
+                    const extractedParams: Param[] = [];
+                    searchParams.forEach((value, key) => {
+                      extractedParams.push({ key, value, enabled: true });
+                    });
+
+                    setParams(extractedParams);
+                    if (activeRequest?.id) {
+                      collectionActions.markUnsaved(activeRequest.id);
+                    }
+                  } catch (error) {
+                    const queryIndex = newUrl.indexOf('?');
+                    if (queryIndex !== -1) {
+                      const queryString = newUrl.substring(queryIndex + 1);
+                      const searchParams = new URLSearchParams(queryString);
+                      const extractedParams: Param[] = [];
+
+                      searchParams.forEach((value, key) => {
+                        extractedParams.push({ key, value, enabled: true });
+                      });
+
+                      setParams(extractedParams);
+                      if (activeRequest?.id) {
+                        collectionActions.markUnsaved(activeRequest.id);
+                      }
+                    } else {
+                      if (!newUrl.includes('?')) {
+                        setParams([]);
+                      }
+                    }
+                  }
+
+                  setTimeout(() => {
+                    isExtractingRef.current = false;
+                  }, 150);
+                }, 0);
+              }}
               placeholder='Enter request URL'
             />
 
@@ -1240,7 +1966,7 @@ const RequestEditor: React.FC = () => {
                 </span>
               </Button>
               <TooltipContainer text='Save request'>
-                {!activeRequest.id ? (
+                {isNewRequest(activeRequest.id) ? (
                   <button
                     onClick={handleSaveRequest}
                     className='border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 px-3 py-2 rounded-md'
@@ -1257,28 +1983,6 @@ const RequestEditor: React.FC = () => {
                     <Save className='h-4 w-4 text-[#136fb0]' />
                   </button>
                 )}
-              </TooltipContainer>
-
-              <TooltipContainer text='Import from cURL'>
-                <button
-                  onClick={() => setShowCurlImport(true)}
-                  className='border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 px-3 py-2 rounded-md text-sm font-medium'
-                  title='Import from cURL'
-                >
-                  <FileTerminal className='h-4 w-4 text-[#136fb0]' />
-                </button>
-              </TooltipContainer>
-
-              <TooltipContainer text='New request'>
-                <button
-                  onClick={() => {
-                    handleCreateRequest();
-                  }}
-                  className='border border-gray-300 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800'
-                  title='Create new request'
-                >
-                  <Plus className='h-4 w-4 text-[#136fb0]' />
-                </button>
               </TooltipContainer>
             </div>
           </div>
@@ -1297,7 +2001,6 @@ const RequestEditor: React.FC = () => {
           )}
         </div>
 
-        {/* Request Tabs */}
         <div className='border-b border-gray-200 dark:border-gray-700 flex-shrink-0'>
           <nav className='flex overflow-x-auto px-4'>
             {[
@@ -1327,7 +2030,7 @@ const RequestEditor: React.FC = () => {
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
                 className={`
-                  py-4 px-2 sm:px-4 border-b-2 font-medium text-sm transition-colors whitespace-nowrap
+                    pt-4 pb-2 px-2 sm:px-4 border-b-2 font-medium text-sm transition-colors whitespace-nowrap
                   ${
                     activeTab === tab.id
                       ? 'border-[#136fb0] text-[#136fb0]'
@@ -1346,7 +2049,6 @@ const RequestEditor: React.FC = () => {
           </nav>
         </div>
 
-        {/* Tab Content - This div now has overflow-auto to enable scrolling */}
         <div className='flex-1 overflow-auto p-4'>
           {activeTab === 'params' && (
             <KeyValueEditor
@@ -1375,50 +2077,107 @@ const RequestEditor: React.FC = () => {
           {activeTab === 'body' && (
             <div className='space-y-4'>
               <div className='flex items-center justify-between'>
-                <h3 className='text-base sm:text-lg font-medium text-gray-900 dark:text-white'>
-                  Request Body
-                </h3>
-                {/* <select
-                  value={bodyType}
-                  onChange={(e) => setBodyType(e.target.value as any)}
-                  className='border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-800 text-sm font-medium hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all duration-150'
-                >
-                  <option value='none'>None</option>
-                  <option value='json'>JSON</option>
-                  <option value='form-data'>Form Data</option>
-                  <option value='x-www-form-urlencoded'>
-                    x-www-form-urlencoded
-                  </option>
-                  <option value='raw'>Raw</option>
-                  <option value='binary'>Binary</option>
-                </select> */}
+                <TooltipProvider>
+                  <div className='flex items-center gap-2'>
+                    <h3 className='text-base sm:text-lg font-medium text-gray-900 dark:text-white'>
+                      Request Body
+                    </h3>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          type='button'
+                          className='p-1 text-gray-500 hover:text-[rgb(19,111,176)] transition-colors'
+                        >
+                          <HelpCircle className='w-4 h-4' />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        Request body can include both static and dynamic values.
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                </TooltipProvider>
+                <div className='flex items-center gap-2'>
+                  {(bodyType === 'json' || bodyType === 'raw') &&
+                    bodyContent.trim() && (
+                      <button
+                        onClick={handleBeautifyBody}
+                        className='px-3 py-2 bg-[rgb(19,111,176)] hover:bg-[rgb(15,90,144)] text-white text-sm rounded-md transition-colors font-medium'
+                        title='Format JSON with proper indentation'
+                      >
+                        Beautify
+                      </button>
+                    )}
+                  <select
+                    value={bodyType}
+                    onChange={(e) => {
+                      const newBodyType = e.target.value as BodyType;
+                      setBodyType(newBodyType);
+
+                      if (newBodyType !== 'none') {
+                        const contentTypeValue =
+                          getContentTypeForBodyType(newBodyType);
+                        const contentTypeHeaderIndex = headers.findIndex(
+                          (h) => h.key.toLowerCase() === 'content-type'
+                        );
+
+                        if (contentTypeHeaderIndex !== -1) {
+                          const updatedHeaders = [...headers];
+                          updatedHeaders[contentTypeHeaderIndex] = {
+                            ...updatedHeaders[contentTypeHeaderIndex],
+                            value: contentTypeValue,
+                          };
+                          setHeaders(updatedHeaders);
+                        } else if (methodsWithBody.includes(method)) {
+                          setHeaders([
+                            {
+                              key: 'Content-Type',
+                              value: contentTypeValue,
+                              enabled: true,
+                            },
+                            ...headers,
+                          ]);
+                        }
+                      }
+
+                      if (activeRequest?.id) {
+                        collectionActions.markUnsaved(activeRequest.id);
+                      }
+                    }}
+                    className='border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-800 text-sm font-medium hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all duration-150'
+                  >
+                    <option value='none'>None</option>
+                    <option value='json'>JSON</option>
+                    <option value='form-data'>Form Data</option>
+                    <option value='x-www-form-urlencoded'>URL Encoded</option>
+                    <option value='raw'>Raw</option>
+                    <option value='binary'>Binary</option>
+                  </select>
+                </div>
               </div>
 
               {bodyType === 'none' && (
                 <div className='text-gray-500 dark:text-gray-400 text-center p-8'>
-                  This request does not have a body
+                  This request does not have a body. Select a body type from the
+                  dropdown above to add one.
                 </div>
               )}
 
               {bodyType === 'json' && (
-                // <textarea
-                //   value={bodyContent}
-                //   onChange={(e) => setBodyContent(e.target.value)}
-                //   placeholder='Enter JSON body'
-                //   rows={8}
-                //   className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 font-mono text-sm dark:bg-gray-800 dark:text-white'
-                // />
-                <CodeMirror
+                <JsonVariableSubstitution
+                  onChange={(newValue) => {
+                    setBodyContent(newValue);
+                    if (activeRequest?.id) {
+                      collectionActions.markUnsaved(activeRequest.id);
+                    }
+                  }}
                   value={bodyContent}
-                  options={{
-                    mode: { name: 'javascript', json: true },
-                    theme: 'whiteorange',
-                    lineNumbers: true,
-                    lineWrapping: true,
-                  }}
-                  onBeforeChange={(editor, data, value) => {
-                    setBodyContent(value);
-                  }}
+                  onVariableSelect={handleVariableSelect}
+                  onConfirmSubstitution={handleConfirmSubstitutions}
+                  mode='json'
+                  variables={formattedVariables}
+                  initialVariable={activeRequest?.variable || []}
+                  readOnly={false}
                 />
               )}
 
@@ -1456,44 +2215,21 @@ const RequestEditor: React.FC = () => {
               )}
 
               {bodyType === 'raw' && (
-                <>
-                  {/* <textarea
+                <JsonVariableSubstitution
+                  onChange={(newValue) => {
+                    setBodyContent(newValue);
+                    if (activeRequest?.id) {
+                      collectionActions.markUnsaved(activeRequest.id);
+                    }
+                  }}
                   value={bodyContent}
-                  onChange={(e) => setBodyContent(e.target.value)}
-                  placeholder='Enter raw request body'
-                  rows={8}
-                  className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 font-mono text-sm dark:bg-gray-800 dark:text-white'
-                /> */}
-                  {/* <CodeMirror
-                    value={bodyContent}
-                    options={{
-                      mode: { name: 'javascript', json: true },
-                      theme: 'material', // base dark theme
-                      lineNumbers: true,
-                      lineWrapping: true,
-                    }}
-                    onBeforeChange={(editor, data, value) => {
-                      setBodyContent(value);
-                    }}
-                    editorDidMount={(editor) => {
-                      editor.getWrapperElement().style.fontSize = '14px';
-                      editor.getWrapperElement().style.color = '#FFA500';
-                    }}
-                  /> */}
-
-                  <CodeMirror
-                    value={bodyContent}
-                    options={{
-                      mode: { name: 'javascript', json: true },
-                      theme: 'whiteorange',
-                      lineNumbers: true,
-                      lineWrapping: true,
-                    }}
-                    onBeforeChange={(editor, data, value) => {
-                      setBodyContent(value);
-                    }}
-                  />
-                </>
+                  onVariableSelect={handleVariableSelect}
+                  onConfirmSubstitution={handleConfirmSubstitutions}
+                  mode='raw'
+                  variables={formattedVariables}
+                  initialVariable={activeRequest?.variable || []}
+                  readOnly={false}
+                />
               )}
 
               {bodyType === 'binary' && (
@@ -1513,7 +2249,6 @@ const RequestEditor: React.FC = () => {
                 <h3 className='text-base sm:text-lg font-medium text-gray-900 dark:text-white'>
                   Authorization
                 </h3>
-                {/* Locked to Bearer only */}
                 <select
                   value='bearer'
                   disabled
@@ -1523,16 +2258,17 @@ const RequestEditor: React.FC = () => {
                 </select>
               </div>
 
-              {/* Bearer Token only */}
               <div>
                 <Input
                   type='text'
                   value={authData.token}
-                  onChange={(e) =>
-                    setAuthData({ ...authData, token: e.target.value })
-                  }
+                  onChange={(e) => {
+                    setAuthData({ ...authData, token: e.target.value });
+                    if (activeRequest?.id) {
+                      collectionActions.markUnsaved(activeRequest.id);
+                    }
+                  }}
                   placeholder='Enter token'
-                  // className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 bg-white dark:bg-gray-800 text-sm'
                 />
               </div>
             </div>
@@ -1566,7 +2302,6 @@ const RequestEditor: React.FC = () => {
                   label='Follow Redirects'
                   description='Automatically follow HTTP redirects'
                 />
-
                 <div>
                   <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
                     Request Timeout (ms)
@@ -1588,7 +2323,6 @@ const RequestEditor: React.FC = () => {
                     out
                   </p>
                 </div>
-
                 <ToggleSwitch
                   id='sslVerification'
                   checked={settings.sslVerification}
@@ -1619,7 +2353,6 @@ const RequestEditor: React.FC = () => {
           )}
         </div>
 
-        {/* Save Modal */}
         <Modal
           isOpen={showSaveModal}
           onClose={handleCancelSave}
@@ -1635,7 +2368,7 @@ const RequestEditor: React.FC = () => {
               <button
                 onClick={handleConfirmSave}
                 disabled={
-                  !activeCollection &&
+                  !selectedCollectionId &&
                   (!isCreatingCollection || !newCollectionName.trim())
                 }
                 className='px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-md'
@@ -1653,11 +2386,9 @@ const RequestEditor: React.FC = () => {
             {!isCreatingCollection ? (
               <div className='space-y-2'>
                 <select
-                  value={activeCollection?.id || ''} // Set the value to show selected collection
+                  value={selectedCollectionId}
                   onChange={(e) => {
-                    setActiveCollection(
-                      collections.find((c) => c.id === e.target.value) || null
-                    );
+                    setSelectedCollectionId(e.target.value);
                   }}
                   className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150'
                 >
@@ -1668,6 +2399,26 @@ const RequestEditor: React.FC = () => {
                     </option>
                   ))}
                 </select>
+
+                {selectedCollectionId && (
+                  <div className='space-y-1'>
+                    <label className='block text-sm font-medium text-gray-700 dark:text-gray-300'>
+                      Folder (optional)
+                    </label>
+                    <select
+                      value={selectedFolderId}
+                      onChange={(e) => setSelectedFolderId(e.target.value)}
+                      className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150'
+                    >
+                      <option value=''>No folder</option>
+                      {folderOptions.map((f) => (
+                        <option key={f.id} value={f.id}>
+                          {f.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
                 <button
                   onClick={() => setIsCreatingCollection(true)}
@@ -1701,13 +2452,13 @@ const RequestEditor: React.FC = () => {
             )}
           </div>
 
-          {!url.trim() && (
+          {!urlAtOpen.trim() && (
             <div className='mt-2 text-red-600 text-sm'>
               URL is required to save a request.
             </div>
           )}
 
-          {!activeCollection &&
+          {!selectedCollectionId &&
             (!isCreatingCollection || !newCollectionName.trim()) && (
               <div className='mt-2 text-red-600 text-sm'>
                 Please select or create a collection.

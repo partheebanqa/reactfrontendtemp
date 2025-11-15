@@ -4,12 +4,7 @@ import {
   type Assertion,
 } from '@/store/requestStore';
 
-/**
- * Hook for managing API requests
- * This replaces the RequestContext with a store-based approach
- */
 export function useRequest() {
-  // Get request state from store
   const { requestData, isLoading, responseData, error, assertions } =
     useRequestStore();
 

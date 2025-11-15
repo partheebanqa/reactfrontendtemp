@@ -56,6 +56,9 @@ export const ExecutionsTable = ({
     );
   };
 
+  console.log(executions, "executions");
+
+
   return (
     <Table>
       <TableHeader>
@@ -83,11 +86,15 @@ export const ExecutionsTable = ({
               <TableCell>
                 <div>
                   {execution.testSuite ? (
-                    <p className='font-medium text-[#136fb0] hover:text-primary/80 cursor-pointer'>
+                    <p className='font-medium text-[#136fb0] hover:text-primary/80 cursor-pointer'
+                      onClick={() => setLocation(`/test-suites/${execution?.entityId}/edit`)}
+                    >
                       {execution.testSuite.name}
                     </p>
                   ) : (
-                    <p className='font-medium text-[#136fb0] hover:text-primary/80 cursor-pointer'>
+                    <p className='font-medium text-[#136fb0] hover:text-primary/80 cursor-pointer'
+                      onClick={() => setLocation(`/request-chains/${execution?.entityId}/edit`)}
+                    >
                       {execution.requestChain?.name || 'Request Chain'}
                     </p>
                   )}
@@ -114,7 +121,7 @@ export const ExecutionsTable = ({
               <TableCell>
                 <div className='flex items-center gap-2'>
                   {execution?.testSuite ? (
-                    <Beaker className='text-blue-600' size={16} />
+                    <Beaker className='text-[#136fb0]' size={16} />
                   ) : (
                     <GitBranch className='text-purple-600' size={16} />
                   )}
@@ -134,8 +141,8 @@ export const ExecutionsTable = ({
                     execution.status === 'success'
                       ? 'active'
                       : execution.status === 'failed'
-                      ? 'destructive'
-                      : 'secondary'
+                        ? 'destructive'
+                        : 'secondary'
                   }
                 >
                   <span className='mr-1'>

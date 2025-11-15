@@ -451,9 +451,9 @@ export const generateAssertions = (response: ApiResponse): Assertion[] => {
     type: 'response_time',
     description: `Response time is less than ${Math.max(
       response.responseTime * 2,
-      5000
-    )}ms`,
-    expectedValue: Math.max(response.responseTime * 2, 5000),
+      500
+    )} ms`,
+    expectedValue: Math.max(response.responseTime * 2, 500),
     enabled: false,
   });
 

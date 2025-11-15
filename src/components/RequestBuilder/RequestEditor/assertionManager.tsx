@@ -87,7 +87,6 @@ const AssertionManager: React.FC<AssertionManagerProps> = ({
           key={editKey}
           value={numberValue}
           onSave={(newValue) => {
-            // Update UI assertions directly
             const updateUiAssertions = (prevAssertions: Assertion[]) => {
               if (!Array.isArray(prevAssertions)) {
                 console.warn(

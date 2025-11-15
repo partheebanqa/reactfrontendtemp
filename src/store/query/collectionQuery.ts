@@ -9,25 +9,22 @@ import {
   fetchCollectionList,
   getCollectionRequests,
   importCollectionFile,
+  // importCollectionJson,
   renameCollection,
   renameRequest,
   setFavouriteCollection,
   unsetFavouriteCollection,
+  updateRequest,
 } from '@/services/collection.service';
 import { workspaceStore } from '../workspaceStore';
-import {
-  Collection,
-  CollectionRequest,
-  CreateCollection,
-} from '@/shared/types/collection';
+import type { CollectionRequest } from '@/shared/types/collection';
 import { queryClient } from '@/lib/queryClient';
 
-// Query to fetch collection data with current workspace context
 export const useCollectionQuery = (enabled = true) => {
   const currentWorkspace = workspaceStore.state.currentWorkspace;
   return useQuery({
     queryKey: ['/collections', currentWorkspace?.id],
-    enabled: enabled && !!currentWorkspace?.id, // Only enable if we have a workspace
+    enabled: enabled && !!currentWorkspace?.id,
     queryFn: async () => {
       if (!currentWorkspace?.id) {
         throw new Error('No active workspace selected');
@@ -53,8 +50,8 @@ export const useCollectionQuery = (enabled = true) => {
       }
     },
     refetchInterval: false,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 10 * 60 * 1000, // 10 minutes cache time
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 };
 
@@ -77,7 +74,6 @@ export const useRenameCollectionMutation = () => {
   return useMutation({
     mutationFn: renameCollection,
     onSuccess: (data, variables) => {
-      console.log('🚀 ~ useRenameCollectionMutation ~ data:', data);
       collectionActions.renameCollection(variables.id, variables.name);
     },
   });
@@ -127,40 +123,72 @@ export const useUnsetFavouriteCollectionMutation = () => {
 };
 
 export const useCollectionRequestsQuery = () => {
+  const flattenFolderTree = (folders: any[]): any[] => {
+    const all: any[] = [];
+    const walk = (nodes: any[]) => {
+      for (const f of nodes) {
+        if (Array.isArray(f.requests)) {
+          all.push(...f.requests);
+        }
+        if (Array.isArray(f.folders) && f.folders.length) {
+          walk(f.folders);
+        }
+      }
+    };
+    walk(folders);
+    return all;
+  };
+
   return useMutation({
     mutationFn: getCollectionRequests,
-    onSuccess: (requests, collectionId) => {
+    onSuccess: (payload, collectionId) => {
+      const rootRequests = Array.isArray(payload?.requests)
+        ? payload.requests
+        : [];
+      const fromFolders = Array.isArray(payload?.folders)
+        ? flattenFolderTree(payload.folders)
+        : [];
+
+      const fetchedAll = [...rootRequests, ...fromFolders];
+
       const updatedCollection = collectionStore.state.collections.map(
         (collection) => {
           if (collection.id === collectionId) {
             const unsavedRequests = collection.requests.filter(
               (req) => !req.id
             );
+
             if (unsavedRequests.length > 0) {
-              const collectionRequest: CollectionRequest = collectionStore.state
+              const collectionRequest = collectionStore.state
                 .activeRequest as CollectionRequest;
               collectionActions.setActiveRequest({
                 ...collectionRequest,
-                order: collection.requests.length,
+                order: fetchedAll.length,
               });
             }
+
+            const mergedRequests = [
+              ...fetchedAll,
+              ...unsavedRequests.map((req, idx) => ({
+                ...req,
+                order: fetchedAll.length + idx + 1,
+              })),
+            ];
+
             return {
               ...collection,
-              requests: [
-                ...requests,
-                ...unsavedRequests.map((req) => ({
-                  ...req,
-                  order: requests.length + 1,
-                })),
-              ],
+              requests: mergedRequests,
+              folders: payload?.folders || [],
               hasFetchedRequests: true,
             };
           }
           return collection;
         }
       );
+
       collectionActions.setCollections(updatedCollection);
-      return requests;
+
+      return fetchedAll;
     },
   });
 };
@@ -211,15 +239,23 @@ export const useAddRequestMutation = () => {
 };
 
 export const useRenameRequestMutation = () => {
+  const fetchCollectionRequests = useCollectionRequestsQuery();
   return useMutation({
     mutationFn: renameRequest,
-    onSuccess: (data, variables) => {
-      collectionActions.renameRequest(
-        variables?.newName || '',
-        variables.requestId,
-        variables.workspaceId || ''
-      );
+    onSuccess: async (data, variables) => {
+      fetchCollectionRequests.mutateAsync(variables.collectionId);
+      return data;
     },
+    onError: (error) => {
+      throw error;
+    },
+  });
+};
+
+export const useUpdateRequestMutation = () => {
+  return useMutation({
+    mutationFn: updateRequest,
+    onSuccess: (data, variables) => {},
     onError: (error) => {
       throw error;
     },
@@ -230,7 +266,6 @@ export const useDeleteCollectionMutation = () => {
   return useMutation({
     mutationFn: deleteCollection,
     onSuccess: (data, variables) => {
-      console.log('🚀 ~ useDeleteCollectionMutation ~ variables:', variables);
       collectionActions.deleteCollection(variables);
     },
     onError: (error) => {
