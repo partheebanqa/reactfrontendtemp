@@ -1151,11 +1151,6 @@ const RequestEditor: React.FC = () => {
         effectiveAuthType = 'none';
       }
 
-      let effectiveAuthType = authType;
-      if (authData?.token && (!authType || authType === 'none')) {
-        effectiveAuthType = 'bearer';
-      }
-
       const selectedAssertions = Array.isArray(assertions)
         ? assertions
             .filter((assertion) => assertion.enabled)
