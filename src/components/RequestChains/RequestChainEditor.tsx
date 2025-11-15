@@ -217,7 +217,7 @@ export function RequestChainEditor({
   const [executionLogs, setExecutionLogs] = useState<ExecutionLog[]>([]);
   const [extractedVariables, setExtractedVariables] = useState<
     Record<string, any>
-  >({});
+  >([]);
   const [extractedVariablesByRequest, setExtractedVariablesByRequest] =
     useState<Record<string, Record<string, any>>>({});
   const [isExecuting, setIsExecuting] = useState(false);
@@ -270,7 +270,21 @@ export function RequestChainEditor({
     updateDynamicOverride(name, newValue);
   };
 
-  // Dynamic Variables Panel Component
+  const regenerateAllDynamicVariables = () => {
+    const newOverrides: DynamicVariableOverride[] = [];
+    dynamicVariables.forEach((dynamicVar) => {
+      const newValue = `${generateDynamicValueById(
+        dynamicVar.generatorId,
+        dynamicVar.parameters
+      )}`;
+      newOverrides.push({
+        name: dynamicVar.name,
+        value: newValue,
+      });
+    });
+    setDynamicOverrides(newOverrides);
+  };
+
   const DynamicVariablesPanel = () => {
     if (usedDynamicVariables.length === 0) return null;
 
@@ -283,15 +297,26 @@ export function RequestChainEditor({
               Dynamic Variables ({usedDynamicVariables.length})
             </h4>
           </div>
-          <Button
-            variant='outline'
-            size='sm'
-            onClick={() => setShowDynamicEditor(!showDynamicEditor)}
-            className='text-purple-700 border-purple-300 hover:bg-purple-100'
-          >
-            <Edit3 className='w-3 h-3 mr-1' />
-            {showDynamicEditor ? 'Hide Editor' : 'Edit Values'}
-          </Button>
+          <div className='flex gap-2'>
+            <Button
+              variant='outline'
+              size='sm'
+              onClick={() => setShowDynamicEditor(!showDynamicEditor)}
+              className='text-purple-700 border-purple-300 hover:bg-purple-100'
+            >
+              <Edit3 className='w-3 h-3 mr-1' />
+              {showDynamicEditor ? 'Hide Editor' : 'Edit Values'}
+            </Button>
+            <Button
+              variant='outline'
+              size='sm'
+              onClick={regenerateAllDynamicVariables}
+              className='text-purple-700 border-purple-300 hover:bg-purple-100'
+            >
+              <Shuffle className='w-3 h-3 mr-1' />
+              Regenerate All
+            </Button>
+          </div>
         </div>
 
         {showDynamicEditor ? (
@@ -691,6 +716,8 @@ export function RequestChainEditor({
       return;
     }
 
+    regenerateAllDynamicVariables();
+
     setIsExecuting(true);
     setCurrentRequestIndex(0);
     setExecutionLogs([]);
@@ -757,7 +784,6 @@ export function RequestChainEditor({
             return [...filtered, log];
           });
 
-          // Update extracted variables immediately after each request
           if (log.extractedVariables) {
             variablesByRequest[log.requestId] = { ...log.extractedVariables };
             setExtractedVariablesByRequest((prev) => ({
@@ -765,7 +791,6 @@ export function RequestChainEditor({
               [log.requestId]: { ...log.extractedVariables },
             }));
 
-            // Update the accumulated extracted variables for the current execution
             Object.assign(
               allExtractedVarsInCurrentExecution,
               log.extractedVariables
