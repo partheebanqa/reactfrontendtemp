@@ -445,7 +445,12 @@ const ResponseViewer = () => {
   );
 
   const tabs = [
-    { id: 'body', label: 'Body', icon: Code },
+    {
+      id: 'body',
+      label: 'Body',
+      icon: Code,
+      hasIndicator: !!responseData?.bodySchema,
+    },
     {
       id: 'headers',
       label: 'Headers',
@@ -453,8 +458,17 @@ const ResponseViewer = () => {
       count: Object.keys(responseData?.headers || {}).length,
     },
     { id: 'cookies', label: 'Cookies', icon: Cookie },
-    { id: 'test-results', label: 'Test Results' },
-    { id: 'schema', label: 'Schema' },
+    {
+      id: 'test-results',
+      label: 'Test Results',
+      hasIndicator:
+        !!responseData?.assertionLogs && responseData.assertionLogs.length > 0,
+    },
+    {
+      id: 'schema',
+      label: 'Schema',
+      hasIndicator: !!responseData?.schemaValidation,
+    },
   ];
 
   if (!responseData) {
@@ -491,6 +505,9 @@ const ResponseViewer = () => {
                 >
                   {Icon && <Icon className='w-4 h-4' />}
                   <span>{tab.label}</span>
+                  {tab.hasIndicator && (
+                    <span className='ml-1 w-2 h-2 bg-blue-500 rounded-full' />
+                  )}
                   {tab.count !== undefined && tab.count > 0 && (
                     <span className='ml-1 bg-muted text-muted-foreground rounded-full px-2 py-0.5 text-xs'>
                       {tab.count}

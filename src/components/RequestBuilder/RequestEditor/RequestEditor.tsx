@@ -44,6 +44,7 @@ import { JsonVariableSubstitution } from './JsonVariableSubstitution';
 import { generateDynamicValueById } from '@/lib/request-utils';
 import RequestTabs from './RequestTabs';
 import { collectionActions, useCollectionStore } from '@/store/collectionStore';
+import { useSchema } from '@/hooks/useSchema';
 
 type Assertion = {
   id: string;
@@ -169,6 +170,10 @@ const RequestEditor: React.FC = () => {
     | 'schemas'
   >('params');
 
+  const { schemas } = useSchema();
+
+  console.log('schemas121:', schemas);
+
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [newCollectionName, setNewCollectionName] = useState('');
   const [url, setUrl] = useState('');
@@ -184,6 +189,7 @@ const RequestEditor: React.FC = () => {
   const [authType, setAuthType] = useState<
     'none' | 'basic' | 'bearer' | 'apiKey' | 'oauth1' | 'oauth2'
   >('bearer');
+
   const [token, setToken] = useState('');
   const [selectedVariable, setSelectedVariable] = useState<SelectedVariable[]>(
     []
@@ -225,6 +231,34 @@ const RequestEditor: React.FC = () => {
       redirectUri: '',
     },
   });
+
+  const getAuthCount = () => {
+    let count = 0;
+
+    if (authData.username.trim() !== '') count++;
+    if (authData.password.trim() !== '') count++;
+
+    if (authData.token.trim() !== '') count++;
+    if (authData.key.trim() !== '') count++;
+    if (authData.value.trim() !== '') count++;
+
+    if (authData.oauth1.consumerKey.trim() !== '') count++;
+    if (authData.oauth1.consumerSecret.trim() !== '') count++;
+    if (authData.oauth1.token.trim() !== '') count++;
+    if (authData.oauth1.tokenSecret.trim() !== '') count++;
+
+    if (authData.oauth2.clientId.trim() !== '') count++;
+    if (authData.oauth2.clientSecret.trim() !== '') count++;
+    if (authData.oauth2.accessToken.trim() !== '') count++;
+
+    return count;
+  };
+
+  const getBodyCount = () => {
+    return bodyContent.trim() !== '' ? 1 : 0;
+  };
+  console.log('authData', bodyContent);
+
   const [settings, setSettings] = useState({
     followRedirects: true,
     timeout: 30000,
@@ -2009,8 +2043,8 @@ const RequestEditor: React.FC = () => {
                 label: 'Headers',
                 count: headers.filter((h) => h.enabled).length,
               },
-              { id: 'body', label: 'Body' },
-              { id: 'auth', label: 'Authorization' },
+              { id: 'body', label: 'Body', count: getBodyCount() },
+              { id: 'auth', label: 'Authorization', count: getAuthCount() },
               {
                 id: 'assertions',
                 label: 'Assertions',
@@ -2019,7 +2053,11 @@ const RequestEditor: React.FC = () => {
                   : 0,
               },
               { id: 'settings', label: 'Settings' },
-              { id: 'schemas', label: 'Schemas' },
+              {
+                id: 'schemas',
+                label: 'Schemas',
+                count: Array.isArray(schemas) ? schemas.length : 0,
+              },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -2034,11 +2072,29 @@ const RequestEditor: React.FC = () => {
                 `}
               >
                 {tab.label}
-                {tab.count !== undefined && tab.count > 0 && (
-                  <span className='ml-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-full px-2 py-0.5 text-xs'>
-                    {tab.count}
-                  </span>
-                )}
+                {(tab.id === 'auth' ||
+                  tab.id === 'body' ||
+                  tab.id === 'schemas') &&
+                  (tab.count ?? 0) > 0 && (
+                    <span
+                      className='ml-1 inline-block w-2 h-2 rounded-full'
+                      style={{
+                        backgroundColor:
+                          'rgb(19 111 176 / var(--tw-bg-opacity, 1))',
+                      }}
+                    ></span>
+                  )}
+
+                {/* OTHER TABS → show number */}
+                {tab.id !== 'auth' &&
+                  tab.id !== 'body' &&
+                  tab.id !== 'schemas' &&
+                  tab.count !== undefined &&
+                  tab.count > 0 && (
+                    <span className='ml-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-full px-2 py-0.5 text-xs'>
+                      {tab.count}
+                    </span>
+                  )}
               </button>
             ))}
           </nav>

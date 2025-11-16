@@ -2016,12 +2016,13 @@ export function RequestChainEditor({
                                                 {expandedRequests.has(
                                                   request.id
                                                 ) ? (
-                                                  <ChevronUp className='w-4 h-4' />
+                                                  <ChevronUp className='w-4 h-4 text-[rgb(19_111_176)]' />
                                                 ) : (
-                                                  <ChevronDown className='w-4 h-4' />
+                                                  <ChevronDown className='w-4 h-4 text-[rgb(19_111_176)]' />
                                                 )}
                                               </Button>
                                             </TooltipTrigger>
+
                                             <TooltipContent>
                                               {expandedRequests.has(request.id)
                                                 ? 'Collapse'

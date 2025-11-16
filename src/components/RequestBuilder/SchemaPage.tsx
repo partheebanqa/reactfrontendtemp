@@ -23,6 +23,8 @@ const SchemaPage: React.FC = () => {
   const { activeRequest } = useCollection();
   const { toast } = useToast();
 
+  console.log('schemas:', schemas);
+
   const [compareMode, setCompareMode] = useState(false);
   const [selectedSchemas, setSelectedSchemas] = useState<string[]>([]);
   const [viewSchema, setViewSchema] = useState<{
@@ -33,7 +35,15 @@ const SchemaPage: React.FC = () => {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Upload handler shared by both button + drag-drop
+  // ⭐ FIX → Get schema count Safely
+  const schemaCount =
+    schemas.length > 0 && schemas[0]?.schema?.components?.schemas
+      ? Object.keys(schemas[0].schema.components.schemas).length
+      : 0;
+
+  console.log('Schema count:', schemaCount);
+
+  // Upload handler
   const processFile = async (file: File) => {
     if (!activeRequest?.id) {
       toast({
@@ -108,6 +118,10 @@ const SchemaPage: React.FC = () => {
           <div>
             <h3 className='text-base sm:text-lg font-medium text-gray-900 dark:text-white flex items-center gap-2'>
               API Schemas
+              {/* Show Dot if schemaCount > 0 */}
+              {schemaCount > 0 && (
+                <span className='ml-1 inline-block w-2 h-2 rounded-full bg-red-500'></span>
+              )}
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -122,8 +136,9 @@ const SchemaPage: React.FC = () => {
               </TooltipProvider>
             </h3>
           </div>
+
           <div className='flex space-x-2'>
-            {/* Hidden input for Upload button */}
+            {/* Hidden File Input */}
             <input
               ref={fileInputRef}
               type='file'
@@ -134,6 +149,7 @@ const SchemaPage: React.FC = () => {
                 if (file) processFile(file);
               }}
             />
+
             <Button
               variant='outline'
               disabled={schemas.length >= 2}
@@ -156,6 +172,7 @@ const SchemaPage: React.FC = () => {
                 </>
               )}
             </Button>
+
             {compareMode && (
               <Button
                 variant={canCompare ? 'default' : 'outline'}
@@ -166,6 +183,7 @@ const SchemaPage: React.FC = () => {
             )}
           </div>
         </CardHeader>
+
         <CardContent>
           {schemas.length === 0 ? (
             <SchemaUploader onUpload={processFile} />
@@ -181,7 +199,7 @@ const SchemaPage: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Schema Comparison */}
+      {/* Comparison section */}
       {canCompare && (
         <Card>
           <CardHeader>
@@ -195,7 +213,7 @@ const SchemaPage: React.FC = () => {
         </Card>
       )}
 
-      {/* Schema Viewer Modal */}
+      {/* Schema Modal */}
       {viewSchema && (
         <div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50'>
           <div className='bg-white dark:bg-gray-900 rounded-lg shadow-xl w-11/12 max-w-4xl max-h-[90vh] overflow-hidden'>

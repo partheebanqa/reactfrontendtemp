@@ -32,6 +32,7 @@ export interface DashboardStats {
 export interface Execution {
   executionId: string;
   type: 'testsuite' | 'requestchain' | string;
+  name: string;
   date: string;
   status: 'running' | 'completed' | 'failed' | string;
 }
