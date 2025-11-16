@@ -624,11 +624,13 @@ const RequestChainReport: React.FC<RequestChainReportProps> = ({ data, environme
 
 
       {/* Existing sections */}
+
+
+      <RequestChainExecutionFlow steps={steps} />
+
       <div className="bg-[#FAFAFA]">
         <VariablesAndDataFlow globalVariables={globalVars} extractedVariables={extractedVars} />
       </div>
-
-      <RequestChainExecutionFlow steps={steps} />
     </div>
   );
 };
