@@ -19,8 +19,11 @@ import {
   TrendingUp,
   CheckCircle,
   XCircle,
+  SkipForward,
+  Activity,
+  Globe,
 } from 'lucide-react';
-import { formatDistanceToNow, isValid } from 'date-fns';
+import { format, formatDate, formatDistanceToNow, isValid } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -32,6 +35,8 @@ import { downloadAsHTMLSameUI, downloadAsPDFSameUI } from '@/utils/exportUtilsSa
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 import { RequestMetrics } from '../Reports/Components/RequestMetrics';
 import { buildRequestMetrics } from '@/types/report';
+import ExportHTMLButton from '../Reports/Components/ExportHTMLButton';
+import ExportPDFButton from '../Reports/Components/ExportPDFButton';
 
 type RouteParams = {
   type: 'test_suite' | 'request_chain';
@@ -290,12 +295,95 @@ const TestSuiteReport: React.FC<TestSuiteReportProps> = ({ data }) => {
   );
 };
 
+
+// --- 🔧 Helpers (put near your other utils) -------------------------------
+
+type RequestExec = {
+  order?: number;
+  method?: string;
+  name?: string;
+  url?: string;
+  status?: 'passed' | 'failed' | 'skipped';
+  responseSize?: number;
+  duration?: number; // ms
+  extractedVariables?: Array<{ name: string; value: string }>;
+};
+
+function computeChainOverall(data: any) {
+  const total = Number(data?.totalRequests) || data?.requestExecutions?.length || 0;
+  const successful = Number(data?.successfulRequests) || 0;
+  const failed = Number(data?.failedRequests) || 0;
+  const skipped = Number(data?.skippedRequests) || 0;
+  const denom = total || successful + failed + skipped;
+  const successRate = denom ? Math.round((successful / denom) * 100) : 0;
+
+  return { total: denom, successful, failed, skipped, successRate };
+}
+
+function percentile(values: number[], p: number) {
+  if (!values.length) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const idx = Math.min(sorted.length - 1, Math.max(0, Math.ceil((p / 100) * sorted.length) - 1));
+  return sorted[idx];
+}
+
+type MethodRow = {
+  method: string;
+  total: number;
+  success: number;
+  failed: number;
+  avgDurationMs: number;
+  p95DurationMs: number;
+};
+
+function buildRequestMetricsFromChain(data: any): MethodRow[] {
+  const execs: RequestExec[] = data?.requestExecutions || [];
+  const byMethod = new Map<string, RequestExec[]>();
+
+  execs.forEach((r) => {
+    const key = (r.method || 'GET').toUpperCase();
+    if (!byMethod.has(key)) byMethod.set(key, []);
+    byMethod.get(key)!.push(r);
+  });
+
+  const rows: MethodRow[] = [];
+  for (const [method, list] of byMethod.entries()) {
+    const durations = list.map((x) => Number(x.duration || 0)).filter((n) => Number.isFinite(n));
+    const total = list.length;
+    const success = list.filter((x) => x.status === 'passed').length;
+    const failed = list.filter((x) => x.status === 'failed').length;
+    const avgDurationMs = durations.length ? Math.round(durations.reduce((a, b) => a + b, 0) / durations.length) : 0;
+    const p95DurationMs = Math.round(percentile(durations, 95));
+    rows.push({ method, total, success, failed, avgDurationMs, p95DurationMs });
+  }
+
+  // Stable order: GET, POST, PUT, PATCH, DELETE, OTHER
+  const order = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'];
+  rows.sort((a, b) => {
+    const ai = order.indexOf(a.method);
+    const bi = order.indexOf(b.method);
+    if (ai === -1 && bi === -1) return a.method.localeCompare(b.method);
+    if (ai === -1) return 1;
+    if (bi === -1) return -1;
+    return ai - bi;
+  });
+
+  return rows;
+}
+
+const formatMs = (ms: number) => (ms < 1000 ? `${ms}ms` : `${(ms / 1000).toFixed(2)}s`);
+
+
+// --- ✅ RequestChainReport with Metrics -----------------------------------
+
 type RequestChainReportProps = {
   data: any;
   environment: string;
   startedQS: string | null;
 };
+
 const RequestChainReport: React.FC<RequestChainReportProps> = ({ data, environment, startedQS }) => {
+  // 🧮 Derived data
   const steps =
     data.requestExecutions?.map((req: any, index: number) => ({
       step: req.order || index + 1,
@@ -303,9 +391,11 @@ const RequestChainReport: React.FC<RequestChainReportProps> = ({ data, environme
       name: req.name,
       url: req.url,
       statusCode: req.status === 'passed' ? 200 : 400,
+      requestCurl: req.requestCurl,
+      response: req.response,
       responseSize: `${req.responseSize || 0} bytes`,
       duration: `${req.duration}ms`,
-      status: req.status === 'passed' ? 'success' : 'fail',
+      status: req.status === 'passed' ? 'success' : req.status === 'failed' ? 'fail' : 'skipped',
       extractedVars:
         req.extractedVariables?.map((v: any) => ({
           key: v.name,
@@ -321,12 +411,68 @@ const RequestChainReport: React.FC<RequestChainReportProps> = ({ data, environme
       return acc;
     }, {}) || {};
 
+  const overall = React.useMemo(() => computeChainOverall(data), [data]);
+  const methodMetrics = React.useMemo(() => buildRequestMetricsFromChain(data), [data]);
+
+  const successRateColor =
+    overall.successRate >= 80
+      ? 'text-green-600 bg-green-100'
+      : overall.successRate >= 60
+        ? 'text-yellow-600 bg-yellow-100'
+        : 'text-red-600 bg-red-100';
+
+  const metricCards = [
+    {
+      title: 'Success Rate',
+      value: `${overall.successRate}%`,
+      icon: TrendingUp,
+      color: successRateColor,
+    },
+    {
+      title: 'Total Requests',
+      value: overall.total.toString(),
+      icon: Clock,
+      color: 'text-blue-600 bg-blue-100',
+    },
+    {
+      title: 'Successful',
+      value: overall.successful.toString(),
+      icon: CheckCircle,
+      color: 'text-green-600 bg-green-100',
+    },
+    {
+      title: 'Failed',
+      value: overall.failed.toString(),
+      icon: XCircle,
+      color: 'text-red-600 bg-red-100',
+    },
+    {
+      title: 'Skipped',
+      value: overall.skipped.toString(),
+      icon: SkipForward,
+      color: 'text-red-600 bg-orange-100',
+    },
+  ];
+
+  const formatDuration = (ms: number) => (ms < 1000 ? `${ms}ms` : `${(ms / 1000).toFixed(2)}s`);
+
+  const formatBytes = (bytes: number) => {
+    if (!bytes) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.min(Math.floor(Math.log(bytes) / Math.log(k)), sizes.length - 1);
+    return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
+  };
+
+  // console.log("Request Chain Report Data:", data);
+
   return (
     <div>
-      <AnalyticsReport
+      {/* Keeps your existing top summary card */}
+      {/* <AnalyticsReport
         title={data.name || 'Request Chain Report'}
         description="Request chain execution flow with variable extraction and data flow analysis"
-        successRate={`${data.successRate || 0}%`}
+        successRate={`${data.successRate ?? overall.successRate}%`}
         meta={{
           environment,
           executedAt: safeExecutedAt(startedQS),
@@ -334,13 +480,150 @@ const RequestChainReport: React.FC<RequestChainReportProps> = ({ data, environme
           executedBy: data.executedBy || 'Unknown',
         }}
         stats={[
-          { value: data.totalRequests?.toString() || '0', label: 'Total Requests', bgColor: 'bg-gray-100', textColor: 'text-gray-800' },
-          { value: data.successfulRequests?.toString() || '0', label: 'Successful', bgColor: 'bg-green-100', textColor: 'text-green-700' },
-          { value: data.failedRequests?.toString() || '0', label: 'Failed', bgColor: 'bg-red-100', textColor: 'text-red-700' },
-          { value: data.skippedRequests?.toString() || '0', label: 'Skipped', bgColor: 'bg-yellow-100', textColor: 'text-yellow-700' },
+          { value: (data.totalRequests ?? overall.total).toString(), label: 'Total Requests', bgColor: 'bg-gray-100', textColor: 'text-gray-800' },
+          { value: (data.successfulRequests ?? overall.successful).toString(), label: 'Successful', bgColor: 'bg-green-100', textColor: 'text-green-700' },
+          { value: (data.failedRequests ?? overall.failed).toString(), label: 'Failed', bgColor: 'bg-red-100', textColor: 'text-red-700' },
+          { value: (data.skippedRequests ?? overall.skipped).toString(), label: 'Skipped', bgColor: 'bg-yellow-100', textColor: 'text-yellow-700' },
         ]}
-      />
+      /> */}
 
+      {/* Header block (unchanged, except we reuse formatDuration) */}
+      <div className="border border-gray-200 bg-background rounded-lg px-6 py-3 animate-fade-in mt-3">
+        <div className="flex justify-between items-start mb-6">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">{data.name}</h1>
+            <p className="text-gray-600">
+              {data.description || 'Request chain execution flow with variable extraction and data flow analysis'}
+            </p>
+          </div>
+
+          {/* Replace Logo import if needed */}
+          <div>
+            <img src={Logo} alt="Optraflow logo" style={{ width: '100%', height: '50px' }} />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-3">
+          <div className="flex items-center space-x-3">
+            <Calendar className="w-5 h-5 text-blue-500" />
+            <div>
+              <p className="text-sm text-gray-500">Execution Date</p>
+              <p className="font-semibold">{format(new Date(data?.lastExecutionDate), 'MM/dd/yyyy, h:mm:ss a')}</p>
+            </div>
+          </div>
+
+          <div className="flex items-center space-x-3">
+            <Clock className="w-5 h-5 text-green-500" />
+            <div>
+              <p className="text-sm text-gray-500">Duration</p>
+              <p className="font-semibold">{formatDuration(data?.duration || 0)}</p>
+            </div>
+          </div>
+
+          <div className="flex items-center space-x-3">
+            <User className="w-5 h-5 text-purple-500" />
+            <div>
+              <p className="text-sm text-gray-500">Executed By</p>
+              <p className="font-semibold text-xs">{data.executedBy}</p>
+            </div>
+          </div>
+
+          <div className="flex items-center space-x-3">
+            <Database className="w-5 h-5 text-orange-500" />
+            <div>
+              <p className="text-sm text-gray-500">Environment</p>
+              <p className="font-semibold text-xs">{data.environmentId}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* 🔹 New: Metric Cards (same visual style as TestSuiteReport) */}
+
+
+        {/* (Optional) Action buttons retained but commented handlers */}
+
+        <div className="flex items-center gap-4">
+          <TooltipProvider>
+            <ExportHTMLButton reportData={data} />
+            <ExportPDFButton reportData={data} />
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors group" title="Share Report">
+                  <Share2 className="w-5 h-5" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>Share Report</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+      </div>
+
+
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-6 mb-3 mt-3">
+        {metricCards.map((metric, idx) => (
+          <div key={idx} className="border border-gray-200 bg-background rounded-lg px-6 py-6 animate-fade-in">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-500 mb-1">{metric.title}</p>
+                <p className="text-2xl font-bold text-gray-900">{metric.value}</p>
+              </div>
+              <div className={`p-3 rounded-full ${metric.color}`}>
+                <metric.icon className="w-6 h-6" />
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+
+      <div className="bg-white rounded-lg border border-gray-200  p-6">
+        <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center">
+          <Activity className="w-6 h-6 mr-2 text-blue-600" />
+          Request-Level Metrics
+        </h2>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+          <div className="text-center">
+            <div className="flex items-center justify-center w-12 h-12 bg-blue-100 rounded-full mx-auto mb-2">
+              <Globe className="w-6 h-6 text-blue-600" />
+            </div>
+            <p className="text-2xl font-bold text-gray-900">{data.totalRequests}</p>
+            <p className="text-sm text-gray-500">Total Requests</p>
+          </div>
+
+          <div className="text-center">
+            <div className="flex items-center justify-center w-12 h-12 bg-green-100 rounded-full mx-auto mb-2">
+              <Database className="w-6 h-6 text-green-600" />
+            </div>
+            <p className="text-2xl font-bold text-gray-900">{data.uniqueEndpoints}</p>
+            <p className="text-sm text-gray-500">Unique Endpoints</p>
+          </div>
+
+          <div className="text-center">
+            <div className="flex items-center justify-center w-12 h-12 bg-purple-100 rounded-full mx-auto mb-2">
+              <Clock className="w-6 h-6 text-purple-600" />
+            </div>
+            <p className="text-2xl font-bold text-gray-900">
+              {formatDuration(data.avgDurationMs)}
+            </p>
+            <p className="text-sm text-gray-500">Avg Response Time</p>
+          </div>
+
+          <div className="text-center">
+            <div className="flex items-center justify-center w-12 h-12 bg-orange-100 rounded-full mx-auto mb-2">
+              <TrendingUp className="w-6 h-6 text-orange-600" />
+            </div>
+            <p className="text-2xl font-bold text-gray-900">
+              {formatBytes(data.totalDataTransferred)}
+            </p>
+            <p className="text-sm text-gray-500">Data Transferred</p>
+          </div>
+        </div>
+      </div>
+
+
+
+      {/* Existing sections */}
       <div className="bg-[#FAFAFA]">
         <VariablesAndDataFlow globalVariables={globalVars} extractedVariables={extractedVars} />
       </div>
@@ -349,6 +632,7 @@ const RequestChainReport: React.FC<RequestChainReportProps> = ({ data, environme
     </div>
   );
 };
+
 
 // ----------------- Page component -----------------
 
@@ -402,11 +686,11 @@ const ExecutionReportPage: React.FC = () => {
               {type === 'test_suite' ? 'Test Suite Report' : 'Request Chain Report'}
             </h2>
           </div>
-          <div className="flex items-center space-x-4">
+          {/* <div className="flex items-center space-x-4">
             <Button onClick={() => handleDownloadPDF(reportData?.data?.name || 'Report')}>
               Download Report
             </Button>
-          </div>
+          </div> */}
         </div>
       </header>
 
