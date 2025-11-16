@@ -8,7 +8,16 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Copy, Calendar, GitBranch, Play, Eye, Beaker } from 'lucide-react';
+import {
+  Copy,
+  Calendar,
+  GitBranch,
+  Play,
+  Eye,
+  Beaker,
+  Repeat2,
+  RefreshCcw,
+} from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import {
   Tooltip,
@@ -17,6 +26,11 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { useLocation } from 'wouter';
+import { useMutation } from '@tanstack/react-query';
+import { executeTestSuite } from '@/services/testSuites.service';
+import { toast } from '@/hooks/use-toast';
+import { queryClient } from '@/lib/queryClientWithErrorDetail';
+import { useExecuteRequestChain } from '@/shared/hooks/requestChain';
 
 export const ExecutionsTable = ({
   executions,
@@ -29,7 +43,57 @@ export const ExecutionsTable = ({
 }: any) => {
   const [_, setLocation] = useLocation();
 
-  console.log('schedules:', executions);
+  //   const handleExecuteSuite = (id: string) => {
+  //   executeSuiteMutation.mutate({ testSuiteId: id });
+  // };
+  const { mutateAsync: playChain } = useExecuteRequestChain();
+
+  const executeSuiteMutation = useMutation({
+    mutationFn: executeTestSuite,
+    onSuccess: () => {
+      toast({
+        title: 'Queued',
+        description: 'Test suite has been added to the queue for execution.',
+      });
+      queryClient.invalidateQueries({ queryKey: ['testSuites'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Execute failed',
+        description: 'Execution failed. Please try again later.',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const handlePlayChain = async (chainId: string) => {
+    try {
+      const payload = {
+        requestChainId: chainId,
+      };
+
+      await playChain(payload);
+
+      toast({
+        title: 'Execution Started',
+        description: `Request chain ${chainId} started successfully.`,
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Execution Failed',
+        description: error?.message || 'Could not execute the request chain.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleReTest = async (executions: any) => {
+    if (executions?.executionType === 'test_suite') {
+      executeSuiteMutation.mutate({ testSuiteId: executions?.entityId });
+    } else if (executions?.executionType === 'request_chain') {
+      await handlePlayChain(executions?.entityId);
+    }
+  };
 
   const goToReport = (execution: any, environment: string) => {
     const type = execution?.executionType;
@@ -56,8 +120,7 @@ export const ExecutionsTable = ({
     );
   };
 
-  console.log(executions, "executions");
-
+  console.log(executions, 'executions');
 
   return (
     <Table>
@@ -86,14 +149,22 @@ export const ExecutionsTable = ({
               <TableCell>
                 <div>
                   {execution.testSuite ? (
-                    <p className='font-medium text-[#136fb0] hover:text-primary/80 cursor-pointer'
-                      onClick={() => setLocation(`/test-suites/${execution?.entityId}/edit`)}
+                    <p
+                      className='font-medium text-[#136fb0] hover:text-primary/80 cursor-pointer'
+                      onClick={() =>
+                        setLocation(`/test-suites/${execution?.entityId}/edit`)
+                      }
                     >
                       {execution.testSuite.name}
                     </p>
                   ) : (
-                    <p className='font-medium text-[#136fb0] hover:text-primary/80 cursor-pointer'
-                      onClick={() => setLocation(`/request-chains/${execution?.entityId}/edit`)}
+                    <p
+                      className='font-medium text-[#136fb0] hover:text-primary/80 cursor-pointer'
+                      onClick={() =>
+                        setLocation(
+                          `/request-chains/${execution?.entityId}/edit`
+                        )
+                      }
                     >
                       {execution.requestChain?.name || 'Request Chain'}
                     </p>
@@ -141,8 +212,8 @@ export const ExecutionsTable = ({
                     execution.status === 'success'
                       ? 'active'
                       : execution.status === 'failed'
-                        ? 'destructive'
-                        : 'secondary'
+                      ? 'destructive'
+                      : 'secondary'
                   }
                 >
                   <span className='mr-1'>
@@ -210,6 +281,24 @@ export const ExecutionsTable = ({
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent>View execution details</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+              </TableCell>
+              <TableCell>
+                <div className='flex items-center gap-1'>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          size='sm'
+                          variant='outline'
+                          onClick={() => handleReTest(execution)}
+                        >
+                          <RefreshCcw size={14} />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Re-Test</TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
                 </div>
