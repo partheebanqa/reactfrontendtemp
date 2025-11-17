@@ -657,6 +657,14 @@ const RequestEditor: React.FC = () => {
     setResponseData(null);
   }, [activeRequest?.id, isSaving]);
 
+  useEffect(() => {
+    if (activeRequest && !activeRequest.id?.startsWith('temp-')) {
+      if (activeRequest?.id) {
+        collectionActions.markUnsaved(activeRequest.id);
+      }
+    }
+  }, [activeEnvironment]);
+
   const formatBackendResponse = (result: any): FormattedResponse => {
     const importantHeaders = [
       'cache-control',
@@ -1600,6 +1608,7 @@ const RequestEditor: React.FC = () => {
         params,
         headers: headers.filter((h) => h.enabled),
         assertions: selectedAssertions,
+        environmentId: activeEnvironment?.id || null,
       };
       if (selectedVariable && selectedVariable.length > 0) {
         requestData.variable = selectedVariable;
