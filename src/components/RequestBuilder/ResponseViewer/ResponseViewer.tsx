@@ -32,8 +32,6 @@ interface JsonNode {
 const ResponseViewer = () => {
   const { responseData } = useRequest();
 
-  console.log('responseData123:', responseData);
-
   const [activeTab, setActiveTab] = useState<
     'body' | 'headers' | 'cookies' | 'test-results' | 'schema'
   >('body');

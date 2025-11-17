@@ -300,6 +300,8 @@ const AssertionManager: React.FC<AssertionManagerProps> = ({
         return;
       }
 
+      console.log('activeRequest123:', activeRequest);
+
       const selectedAssertions = uiAssertions
         .filter((assertion) => assertion.enabled)
         .map((assertion) => ({
@@ -317,6 +319,8 @@ const AssertionManager: React.FC<AssertionManagerProps> = ({
       const requestData = {
         assertions: selectedAssertions,
         workspaceId: currentWorkspace?.id,
+        collectionId: activeRequest?.collectionId || null,
+        folderId: activeRequest?.folderId || null,
       };
 
       await updateRequestMutation.mutateAsync({

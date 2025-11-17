@@ -80,6 +80,8 @@ export const JsonVariableSubstitution: React.FC<
   useEffect(() => {
     if (initialVariable && initialVariable.length > 0) {
       setSelectedVariables(initialVariable);
+    } else {
+      setSelectedVariables([]);
     }
   }, [initialVariable]);
 

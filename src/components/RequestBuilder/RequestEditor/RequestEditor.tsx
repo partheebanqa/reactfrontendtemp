@@ -637,16 +637,15 @@ const RequestEditor: React.FC = () => {
       } else {
         setSelectedFolderId('');
       }
-
-      if (activeRequest.variable) {
-        if (Array.isArray(activeRequest.variable)) {
-          const filteredVariables = activeRequest.variable.filter(
-            (v: any) => v.path || v.name
-          );
-          setSelectedVariable(filteredVariables);
-        } else {
-          setSelectedVariable([]);
-        }
+      if (
+        activeRequest.variable &&
+        Array.isArray(activeRequest.variable) &&
+        activeRequest.variable.length > 0
+      ) {
+        const filteredVariables = activeRequest.variable.filter(
+          (v: any) => v.path || v.name
+        );
+        setSelectedVariable(filteredVariables);
       } else {
         setSelectedVariable([]);
       }
