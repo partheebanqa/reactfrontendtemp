@@ -172,8 +172,6 @@ const RequestEditor: React.FC = () => {
 
   const { schemas } = useSchema();
 
-  console.log('schemas121:', schemas);
-
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [newCollectionName, setNewCollectionName] = useState('');
   const [url, setUrl] = useState('');
@@ -257,7 +255,6 @@ const RequestEditor: React.FC = () => {
   const getBodyCount = () => {
     return bodyContent.trim() !== '' ? 1 : 0;
   };
-  console.log('authData', bodyContent);
 
   const [settings, setSettings] = useState({
     followRedirects: true,
@@ -1160,8 +1157,6 @@ const RequestEditor: React.FC = () => {
         return;
       }
 
-      console.log('111');
-
       if (!url.trim()) {
         showError(
           'URL Required',
@@ -1169,15 +1164,12 @@ const RequestEditor: React.FC = () => {
         );
         return;
       }
-      console.log('222');
 
       if (activeCollection) {
         await fetchCollectionRequests.mutateAsync(activeCollection.id);
       }
-      console.log('333');
-      let effectiveAuthType = authType;
 
-      console.log('444');
+      let effectiveAuthType = authType;
 
       if (
         authData?.token &&
@@ -1190,8 +1182,6 @@ const RequestEditor: React.FC = () => {
       if (!authData?.token || authData.token.trim() === '') {
         effectiveAuthType = 'none';
       }
-
-      console.log('555');
 
       const selectedAssertions = Array.isArray(assertions)
         ? assertions
@@ -1288,8 +1278,6 @@ const RequestEditor: React.FC = () => {
         headers: headers.filter((h) => h.enabled),
         assertions: selectedAssertions,
       };
-
-      console.log('666');
 
       if (selectedVariable && selectedVariable.length > 0) {
         requestData.variable = selectedVariable;

@@ -345,9 +345,6 @@ export const updateRequest = async ({
   requestData: any;
 }) => {
   try {
-    console.log('requestData111:', requestData);
-    console.log('requestId111:', requestId);
-
     const response = await apiRequest(
       'PUT',
       `${API_COLLECTION_REQUESTS}/${requestId}`,
