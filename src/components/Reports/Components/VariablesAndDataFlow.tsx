@@ -1,6 +1,8 @@
-import { useState } from 'react';
-import { ChevronDown, ChevronUp, Copy } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Card } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import VariableTable from "./VariableTable";
+import { ExtractedVariable, Variable } from "@/shared/types/requestChain.model";
+
 
 type KV =
   | Record<string, any>
@@ -8,126 +10,155 @@ type KV =
   | undefined
   | null;
 
-function normalize(input: KV): Record<string, string> {
+interface VariablesAndDataFlowProps {
+  globalVariables?: KV;
+  extractedVariables?: KV;
+}
+
+/**
+ * Normalize KV into a simple Record<string, string>
+ */
+function normalizeToRecord(input: KV): Record<string, string> {
   if (!input) return {};
 
   const result: Record<string, string> = {};
 
   if (Array.isArray(input)) {
     input.forEach((item) => {
-      const k = String(item?.name ?? '');
+      const k = String(item?.name ?? "");
       const v = item?.value;
+      if (!k) return;
       result[k] =
-        v == null ? '' : typeof v === 'object' ? JSON.stringify(v) : String(v);
+        v == null ? "" : typeof v === "object" ? JSON.stringify(v) : String(v);
     });
   } else {
     Object.entries(input).forEach(([k, v]) => {
+      if (!k) return;
       result[String(k)] =
-        v == null ? '' : typeof v === 'object' ? JSON.stringify(v) : String(v);
+        v == null ? "" : typeof v === "object" ? JSON.stringify(v) : String(v);
     });
   }
 
   return result;
 }
 
-interface VariablesAndDataFlowProps {
-  globalVariables?: KV;
-  extractedVariables?: KV;
+/**
+ * Map KV -> Variable[]
+ * For now, everything is "static".
+ * (You can later add logic to detect env/dynamic types.)
+ */
+function mapToGlobalVariables(input: KV): Variable[] {
+  const record = normalizeToRecord(input);
+  return Object.entries(record).map<Variable>(([name, value]) => ({
+    name,
+    value,
+    currentValue: value,
+    type: "static",
+  }));
 }
 
-const VariablesAndDataFlow = ({
+/**
+ * Map KV -> ExtractedVariable[]
+ */
+function mapToExtractedVariables(input: KV): ExtractedVariable[] {
+  const record = normalizeToRecord(input);
+  return Object.entries(record).map<ExtractedVariable>(([name, value]) =>
+  ({
+    name,
+    value,
+    source: "response",
+  } as unknown as ExtractedVariable)
+  );
+}
+
+export default function VariablesAndDataFlow({
   globalVariables,
   extractedVariables,
-}: VariablesAndDataFlowProps) => {
-  const [open, setOpen] = useState(true);
-  const globals = normalize(globalVariables);
-  const extracted = normalize(extractedVariables);
+}: VariablesAndDataFlowProps) {
+  const globalVars = mapToGlobalVariables(globalVariables);
+  const extractedVars = mapToExtractedVariables(extractedVariables);
 
-  const copy = async (text: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-    } catch {}
-  };
-
-  const Row = ({ k, v, bg }: { k: string; v: string; bg: string }) => (
-    <div
-      className={`flex justify-between items-center ${bg} px-3 py-2 rounded-md`}
-    >
-      <span className='text-gray-700 font-medium mr-2 truncate'>{k}</span>
-      <div className='flex items-center gap-1 min-w-0'>
-        <span className='text-gray-600 truncate max-w-[60%] text-right'>
-          {v}
-        </span>
-        <Button
-          variant='ghost'
-          size='icon'
-          className='h-7 w-7'
-          onClick={() => copy(v)}
-          title='Copy value'
-        >
-          <Copy className='w-3.5 h-3.5' />
-        </Button>
-      </div>
-    </div>
-  );
+  const staticVars = globalVars.filter((v) => v.type === "static");
+  const dynamicVars = globalVars.filter((v) => v.type === "dynamic");
+  const envVars = globalVars.filter((v) => v.type === "environment");
 
   return (
-    <div className='border border-gray-200 rounded-lg mt-5 p-2 bg-white'>
-      <button
-        className='w-full flex justify-between items-center px-5 py-3 hover:bg-gray-50 transition'
-        onClick={() => setOpen(!open)}
-      >
-        <h2 className='text-1xl font-bold text-foreground mb-1'>
-          Variables &amp; Data Flow
-        </h2>
-        {open ? (
-          <ChevronUp className='w-5 h-5 text-gray-500' />
-        ) : (
-          <ChevronDown className='w-5 h-5 text-gray-500' />
-        )}
-      </button>
+    <div className="mx-auto mt-3">
+      <h2 className="text-lg font-semibold text-foreground mb-4">Variables</h2>
+      <Card className="p-6">
+        <Tabs defaultValue="global" className="w-full">
+          <TabsList>
+            <TabsTrigger value="global" data-testid="tab-global-variables">
+              Global Variables ({globalVars.length})
+            </TabsTrigger>
+            <TabsTrigger value="extracted" data-testid="tab-extracted-variables">
+              Extracted Variables ({extractedVars.length})
+            </TabsTrigger>
+          </TabsList>
 
-      {open && (
-        <div className='flex flex-col md:flex-row divide-y md:divide-y-0 md:divide-x border-t text-sm'>
-          {/* Global Variables */}
-          <div className='w-full md:w-1/2 p-5'>
-            <h3 className='font-semibold mb-2 text-gray-700'>
-              Global Variables
-            </h3>
-            <div className='space-y-2'>
-              {Object.keys(globals).length === 0 ? (
-                <div className='text-xs text-gray-500 italic bg-gray-50 p-2 rounded border border-dashed'>
-                  No global variables.
+          {/* Global Variables Tab */}
+          <TabsContent value="global" className="mt-4">
+            <div className="space-y-6">
+              {envVars.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-medium text-foreground mb-3">
+                    Environment Variables
+                  </h3>
+                  <VariableTable
+                    variables={envVars}
+                    title="Environment Variables"
+                    testId="table-env-vars"
+                  />
                 </div>
-              ) : (
-                Object.entries(globals).map(([k, v]) => (
-                  <Row key={`g-${k}`} k={k} v={v} bg='bg-blue-50' />
-                ))
               )}
-            </div>
-          </div>
+              {dynamicVars.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-medium text-foreground mb-3">
+                    Dynamic Variables
+                  </h3>
+                  <VariableTable
+                    variables={dynamicVars}
+                    title="Dynamic Variables"
+                    testId="table-dynamic-vars"
+                  />
+                </div>
+              )}
+              {staticVars.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-medium text-foreground mb-3">
+                    Static Variables
+                  </h3>
+                  <VariableTable
+                    variables={staticVars}
+                    title="Static Variables"
+                    testId="table-static-vars"
+                  />
+                </div>
+              )}
 
-          {/* Extracted Variables */}
-          <div className='w-full md:w-1/2 p-5'>
-            <h3 className='font-semibold mb-2 text-gray-700'>
-              Extracted Variables
-            </h3>
-            <div className='space-y-2'>
-              {Object.keys(extracted).length === 0 ? (
-                <div className='text-xs text-gray-500 italic bg-gray-50 p-2 rounded border border-dashed'>
-                  No extracted variables.
-                </div>
-              ) : (
-                Object.entries(extracted).map(([k, v]) => (
-                  <Row key={`e-${k}`} k={k} v={v} bg='bg-green-50' />
-                ))
-              )}
+              {/* If no global variables at all */}
+              {envVars.length === 0 &&
+                dynamicVars.length === 0 &&
+                staticVars.length === 0 && (
+                  <VariableTable
+                    variables={[]}
+                    title="Global Variables"
+                    testId="table-empty-global"
+                  />
+                )}
             </div>
-          </div>
-        </div>
-      )}
+          </TabsContent>
+
+          {/* Extracted Variables Tab */}
+          <TabsContent value="extracted" className="mt-4">
+            <VariableTable
+              variables={extractedVars}
+              title="Extracted Variables"
+              testId="table-all-extracted"
+            />
+          </TabsContent>
+        </Tabs>
+      </Card>
     </div>
   );
-};
-
-export default VariablesAndDataFlow;
+}
