@@ -342,8 +342,44 @@ const ResponseViewer = () => {
 
   const renderJsonTree = () => {
     try {
+      let nodesToShow = new Set<string>();
+      if (searchQuery) {
+        const searchLower = searchQuery.toLowerCase();
+        jsonNodes.forEach((node) => {
+          const matchesKey = node.key.toLowerCase().includes(searchLower);
+          const hasChildren = node.type === 'object' || node.type === 'array';
+          const matchesValue =
+            !hasChildren &&
+            String(node.value).toLowerCase().includes(searchLower);
+          const matchesPath = node.path.toLowerCase().includes(searchLower);
+
+          if (matchesKey || matchesValue || matchesPath) {
+            nodesToShow.add(node.path);
+            let parentPath = node.parentPath;
+            while (parentPath && parentPath !== 'root') {
+              nodesToShow.add(parentPath);
+              const parentNode = jsonNodes.find((n) => n.path === parentPath);
+              if (parentNode) {
+                parentPath = parentNode.parentPath;
+              } else {
+                break;
+              }
+            }
+          }
+        });
+      }
+
       const visibleNodes = jsonNodes.filter((node) => {
         if (node.level === 0) return true;
+        // When searching, show nodes that match or are parents of matches
+        if (searchQuery) {
+          return (
+            nodesToShow.has(node.path) &&
+            (node.parentPath === 'root' ||
+              nodesToShow.has(node.parentPath) ||
+              expandedNodes.has(node.parentPath))
+          );
+        }
         return expandedNodes.has(node.parentPath);
       });
 

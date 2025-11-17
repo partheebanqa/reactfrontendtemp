@@ -1,16 +1,16 @@
-import { API_WORKSPACES } from "@/config/apiRoutes";
-import { apiRequest } from "@/lib/queryClient";
-import { Workspace } from "@/shared/types/workspace";
+import { API_WORKSPACES } from '@/config/apiRoutes';
+import { apiRequest } from '@/lib/queryClient';
+import { Workspace } from '@/shared/types/workspace';
 
 export const fetchWorkspaces = async () => {
   try {
-    const response = await apiRequest("GET", API_WORKSPACES);
+    const response = await apiRequest('GET', API_WORKSPACES);
     if (!response.ok) {
-      throw new Error("Failed to fetch workspace data");
+      throw new Error('Failed to fetch workspace data');
     }
     return response.json();
   } catch (error) {
-    console.error("Error fetching workspaces:", error);
+    console.error('Error fetching workspaces:', error);
     return null;
   }
 };
@@ -19,18 +19,21 @@ export const createWorkspace = async (workspaceData: Partial<Workspace>) => {
   try {
     const bodyData = {
       name: workspaceData.name,
-      description: workspaceData.description || "testing ws",
+      description: workspaceData.description || 'testing ws',
     };
-    const response = await apiRequest("POST", API_WORKSPACES, {
+    const response = await apiRequest('POST', API_WORKSPACES, {
+      headers: {
+        'Content-Type': 'application/json',
+      },
       body: JSON.stringify(bodyData),
     });
 
     if (!response.ok) {
-      throw new Error("Failed to create workspace");
+      throw new Error('Failed to create workspace');
     }
     return response.json();
   } catch (error) {
-    console.error("Error creating workspace:", error);
+    console.error('Error creating workspace:', error);
     throw error;
   }
 };
@@ -39,22 +42,25 @@ export const updateWorkspace = async (workspaceData: Partial<Workspace>) => {
   try {
     const bodyData = {
       name: workspaceData.name,
-      description: workspaceData.description || "testing ws",
+      description: workspaceData.description || 'testing ws',
     };
     const response = await apiRequest(
-      "PUT",
+      'PUT',
       `${API_WORKSPACES}/${workspaceData.id}`,
       {
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify(bodyData),
       }
     );
 
     if (!response.ok) {
-      throw new Error("Failed to update workspace");
+      throw new Error('Failed to update workspace');
     }
     return response.json();
   } catch (error) {
-    console.error("Error updating workspace:", error);
+    console.error('Error updating workspace:', error);
     throw error;
   }
 };

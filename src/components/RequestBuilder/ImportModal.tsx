@@ -7,10 +7,6 @@ import {
   FileText,
   Terminal,
 } from 'lucide-react';
-import { ImportCollection } from '@/shared/types/collection';
-import { importPostmanCollection } from '@/lib/importers/postmanImporter';
-import { importSwaggerCollection } from '@/lib/importers/swaggerImporter';
-import { importCurlCommand } from '@/lib/importers/curlImporter';
 import { useWorkspace } from '@/hooks/useWorkspace';
 import { useCollection } from '@/hooks/useCollection';
 import { useToast } from '@/hooks/useToast';
@@ -99,16 +95,6 @@ const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose }) => {
           inputMethod: 'raw',
           specificationType: specificationType,
           raw: JSON.stringify(json),
-        });
-      } else if (importType === 'curl' && importText.trim()) {
-        const parsed = await importCurlCommand(importText.trim());
-
-        await importCollectionMutation.mutateAsync({
-          name: parsed.collectionName,
-          workspaceId: currentWorkspace?.id || '',
-          inputMethod: 'raw',
-          specificationType: 'specificationType',
-          raw: JSON.stringify(parsed),
         });
       } else if (importType === 'file' && selectedFile) {
         const fileText = await selectedFile.text();

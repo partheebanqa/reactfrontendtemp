@@ -119,14 +119,13 @@ export const customGenerators: DynamicVariableGenerator[] = [
   {
     name: 'randomString',
     label: 'Random String',
-    description: 'Generate random alphanumeric string',
+    description: 'Generate random string ',
     category: 'custom',
     configSchema: {
       length: { type: 'number', default: 10, min: 1, max: 100 },
     },
     generate: (config = { length: 10 }) => {
-      const chars =
-        'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
       let result = '';
       for (let i = 0; i < config.length; i++) {
         result += chars.charAt(Math.floor(Math.random() * chars.length));
@@ -143,7 +142,8 @@ export const customGenerators: DynamicVariableGenerator[] = [
       length: { type: 'number', default: 10, min: 1, max: 100 },
     },
     generate: (config = { length: 10 }) => {
-      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+      const chars =
+        'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
       let result = '';
       for (let i = 0; i < config.length; i++) {
         result += chars.charAt(Math.floor(Math.random() * chars.length));

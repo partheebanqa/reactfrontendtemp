@@ -19,6 +19,16 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '../ui/alert-dialog';
 
 type ApiWorkspace = { id: string; name: string };
 type ApiUser = {
@@ -229,7 +239,6 @@ export default function UserManagement() {
 
   const handleRemove = async (userId: string, workspaceId: string) => {
     if (!workspaceId) return;
-    if (!confirm('Remove this user from the workspace?')) return;
     await mutateRemove({ userId, workspaceId });
   };
 
@@ -325,7 +334,6 @@ export default function UserManagement() {
                         <span>{displayRoleName(r.roleLabel)}</span>
                       </div>
                     </div>
-
                     <div className='flex items-center gap-2'>
                       <Select
                         onValueChange={(newRoleId) =>
@@ -354,20 +362,40 @@ export default function UserManagement() {
                         </SelectContent>
                       </Select>
 
-                      <Button
-                        variant='outline'
-                        size='icon'
-                        disabled={!r.workspaceId || isRemoving || isUpdating}
-                        onClick={() => handleRemove(u.id, r.workspaceId)}
-                        title={
-                          r.workspaceId
-                            ? 'Remove from workspace'
-                            : 'No workspace'
-                        }
-                        className='text-red-600 hover:text-red-700'
-                      >
-                        <Trash2 className='w-4 h-4' />
-                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant='outline'
+                            size='icon'
+                            disabled={
+                              !r.workspaceId || isRemoving || isUpdating
+                            }
+                            className='text-red-600 hover:text-red-700'
+                          >
+                            <Trash2 className='w-4 h-4' />
+                          </Button>
+                        </AlertDialogTrigger>
+
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>
+                              Remove from Team member?
+                            </AlertDialogTitle>
+                            <AlertDialogDescription>
+                              {u.fullName} will be removed from this workspace.
+                              This action cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <Button
+                              onClick={() => handleRemove(u.id, r.workspaceId)}
+                            >
+                              Remove
+                            </Button>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </div>
                   </div>
                 ))}
