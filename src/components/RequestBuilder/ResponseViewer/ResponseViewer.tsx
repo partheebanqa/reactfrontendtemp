@@ -460,13 +460,13 @@ const ResponseViewer = () => {
     { id: 'cookies', label: 'Cookies', icon: Cookie },
     {
       id: 'test-results',
-      label: 'Test Results',
+      label: 'Assertions Result',
       hasIndicator:
         !!responseData?.assertionLogs && responseData.assertionLogs.length > 0,
     },
     {
       id: 'schema',
-      label: 'Schema',
+      label: 'Schema Result',
       hasIndicator: !!responseData?.schemaValidation,
     },
   ];
@@ -506,7 +506,7 @@ const ResponseViewer = () => {
                   {Icon && <Icon className='w-4 h-4' />}
                   <span>{tab.label}</span>
                   {tab.hasIndicator && (
-                    <span className='ml-1 w-2 h-2 bg-blue-500 rounded-full' />
+                    <span className='ml-1 w-1.5 h-1.5 bg-blue-500 rounded-full' />
                   )}
                   {tab.count !== undefined && tab.count > 0 && (
                     <span className='ml-1 bg-muted text-muted-foreground rounded-full px-2 py-0.5 text-xs'>
