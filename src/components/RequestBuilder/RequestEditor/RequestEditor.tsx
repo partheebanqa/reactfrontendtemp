@@ -1159,6 +1159,9 @@ const RequestEditor: React.FC = () => {
         );
         return;
       }
+
+      console.log('111');
+
       if (!url.trim()) {
         showError(
           'URL Required',
@@ -1166,12 +1169,15 @@ const RequestEditor: React.FC = () => {
         );
         return;
       }
+      console.log('222');
 
       if (activeCollection) {
         await fetchCollectionRequests.mutateAsync(activeCollection.id);
       }
-
+      console.log('333');
       let effectiveAuthType = authType;
+
+      console.log('444');
 
       if (
         authData?.token &&
@@ -1184,6 +1190,8 @@ const RequestEditor: React.FC = () => {
       if (!authData?.token || authData.token.trim() === '') {
         effectiveAuthType = 'none';
       }
+
+      console.log('555');
 
       const selectedAssertions = Array.isArray(assertions)
         ? assertions
@@ -1280,6 +1288,9 @@ const RequestEditor: React.FC = () => {
         headers: headers.filter((h) => h.enabled),
         assertions: selectedAssertions,
       };
+
+      console.log('666');
+
       if (selectedVariable && selectedVariable.length > 0) {
         requestData.variable = selectedVariable;
       }
@@ -1469,6 +1480,165 @@ const RequestEditor: React.FC = () => {
       });
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleUpdateContentRequest = async () => {
+    try {
+      if (!activeRequest || activeRequest.id?.startsWith('temp-')) {
+        showError(
+          'Invalid Request',
+          'Cannot update a temporary request. Please save it first.'
+        );
+        return;
+      }
+      if (!url.trim()) {
+        showError(
+          'URL Required',
+          'Please enter a URL before saving the request.'
+        );
+        return;
+      }
+
+      if (activeCollection) {
+        await fetchCollectionRequests.mutateAsync(activeCollection.id);
+      }
+
+      let effectiveAuthType = authType;
+
+      if (
+        authData?.token &&
+        authData.token.trim() !== '' &&
+        (!authType || authType === 'none')
+      ) {
+        effectiveAuthType = 'bearer';
+      }
+
+      if (!authData?.token || authData.token.trim() === '') {
+        effectiveAuthType = 'none';
+      }
+
+      const selectedAssertions = Array.isArray(assertions)
+        ? assertions
+            .filter((assertion) => assertion.enabled)
+            .map((assertion) => ({
+              ...assertion,
+              requestId: activeRequest.id,
+              expectedValue:
+                assertion.expectedValue !== undefined &&
+                assertion.expectedValue !== null
+                  ? typeof assertion.expectedValue === 'string'
+                    ? assertion.expectedValue
+                    : JSON.stringify(assertion.expectedValue)
+                  : '',
+            }))
+        : [];
+
+      const effectiveFolderId =
+        activeRequest?.folderId || selectedFolderId || undefined;
+
+      const requestData: any = {
+        workspaceId: currentWorkspace.id,
+        description: '',
+        name: activeRequest.name || 'New Request',
+        method,
+        url,
+        ...(effectiveFolderId ? { folderId: effectiveFolderId } : {}),
+        bodyType: bodyType === 'json' ? 'raw' : bodyType,
+        bodyFormData:
+          bodyType === 'form-data'
+            ? formFields
+                .filter((f) => f.enabled)
+                .reduce((acc: Record<string, any>, field) => {
+                  if (field.key) {
+                    if (field.type === 'file' && field.value instanceof File) {
+                      acc[field.key] = field.value;
+                    } else {
+                      acc[field.key] = String(field.value);
+                    }
+                  }
+                  return acc;
+                }, {})
+            : [],
+        bodyRawContent:
+          bodyType === 'raw' || bodyType === 'json'
+            ? bodyContent
+            : bodyType === 'x-www-form-urlencoded'
+            ? new URLSearchParams(
+                urlEncodedFields
+                  .filter((f) => f.enabled)
+                  .reduce((acc, field) => {
+                    if (field.key) acc[field.key] = field.value;
+                    return acc;
+                  }, {} as Record<string, string>)
+              ).toString()
+            : '',
+        authorizationType: effectiveAuthType,
+        authorization: {
+          token: authData.token,
+          username: effectiveAuthType === 'basic' ? authData.username : '',
+          password: effectiveAuthType === 'basic' ? authData.password : '',
+          key: effectiveAuthType === 'apiKey' ? authData.key : '',
+          value: effectiveAuthType === 'apiKey' ? authData.value : '',
+          addTo: effectiveAuthType === 'apiKey' ? authData.addTo : 'header',
+          oauth1:
+            effectiveAuthType === 'oauth1'
+              ? {
+                  consumerKey: authData.oauth1.consumerKey,
+                  consumerSecret: authData.oauth1.consumerSecret,
+                  token: authData.oauth1.token,
+                  tokenSecret: authData.oauth1.tokenSecret,
+                  signatureMethod: authData.oauth1.signatureMethod,
+                  version: '1.0',
+                  realm: authData.oauth1.realm,
+                  nonce: authData.oauth1.nonce,
+                  timestamp: authData.oauth1.timestamp,
+                }
+              : undefined,
+          oauth2:
+            effectiveAuthType === 'oauth2'
+              ? {
+                  clientId: authData.oauth2.clientId,
+                  clientSecret: authData.oauth2.clientSecret,
+                  accessToken: authData.oauth2.accessToken,
+                  tokenType: authData.oauth2.tokenType,
+                  refreshToken: authData.oauth2.refreshToken,
+                  scope: authData.oauth2.scope,
+                  grantType: authData.oauth2.grantType,
+                  redirectUri: authData.oauth2.redirectUri,
+                }
+              : undefined,
+        },
+        params,
+        headers: headers.filter((h) => h.enabled),
+        assertions: selectedAssertions,
+      };
+      if (selectedVariable && selectedVariable.length > 0) {
+        requestData.variable = selectedVariable;
+      }
+      if (!activeRequest.id) {
+        showError('Missing ID', 'Cannot update a request without an id.');
+        return;
+      }
+
+      await updateRequestMutation.mutateAsync({
+        requestId: activeRequest.id,
+        requestData,
+      });
+
+      collectionActions.markSaved(activeRequest.id);
+
+      toast({
+        title: 'Request updated successfully!',
+        duration: 3000,
+      });
+    } catch (error) {
+      console.error('Error updating request:', error);
+      showError('Save Failed', 'An error occurred while saving the request.');
+      setError({
+        title: 'Save Failed',
+        description: 'An error occurred while saving the request.',
+      });
     }
   };
 
@@ -1808,7 +1978,7 @@ const RequestEditor: React.FC = () => {
               if (isNewRequest(activeRequest.id)) {
                 handleSaveRequest();
               } else {
-                await handleUpdateRequest();
+                await handleUpdateContentRequest();
               }
             }}
             onCurlImport={handleCurlImport}
@@ -2005,7 +2175,7 @@ const RequestEditor: React.FC = () => {
                   </button>
                 ) : (
                   <button
-                    onClick={handleUpdateRequest}
+                    onClick={handleUpdateContentRequest}
                     className='border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 px-3 py-2 rounded-md'
                     aria-label='Save request'
                   >
@@ -2077,7 +2247,7 @@ const RequestEditor: React.FC = () => {
                   tab.id === 'schemas') &&
                   (tab.count ?? 0) > 0 && (
                     <span
-                      className='ml-1 inline-block w-2 h-2 rounded-full'
+                      className='ml-1 inline-block w-1.5 h-1.5 rounded-full'
                       style={{
                         backgroundColor:
                           'rgb(19 111 176 / var(--tw-bg-opacity, 1))',
