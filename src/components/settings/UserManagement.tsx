@@ -379,7 +379,7 @@ export default function UserManagement() {
                         <AlertDialogContent>
                           <AlertDialogHeader>
                             <AlertDialogTitle>
-                              Remove from Team member?
+                              Remove workspace access?
                             </AlertDialogTitle>
                             <AlertDialogDescription>
                               {u.fullName} will be removed from this workspace.
