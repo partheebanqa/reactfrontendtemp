@@ -35,6 +35,16 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '../ui/alert-dialog';
 
 interface Workspace extends BaseWorkspace {
   role: 'owner' | 'admin' | 'member';
@@ -171,11 +181,7 @@ export function WorkspaceManagement() {
     workspaceId: string,
     workspaceName: string
   ) => {
-    if (
-      confirm(
-        `Are you sure you want to delete "${workspaceName}"? This action cannot be undone.`
-      )
-    ) {
+    try {
       deleteWorkspaceMutation.mutate(workspaceId, {
         onSuccess: () => {
           toast({
@@ -193,6 +199,12 @@ export function WorkspaceManagement() {
             variant: 'destructive',
           });
         },
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Unexpected Error',
+        description: error.message || 'Something went wrong.',
+        variant: 'destructive',
       });
     }
   };
@@ -422,19 +434,48 @@ export function WorkspaceManagement() {
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <Button
-                                variant='outline'
-                                size='sm'
-                                onClick={() =>
-                                  handleDeleteWorkspace(
-                                    enrichedWorkspace.id,
-                                    enrichedWorkspace.name
-                                  )
-                                }
-                                className='text-red-600 hover:text-red-700'
-                              >
-                                <Trash2 className='h-3 w-3 sm:h-4 sm:w-4 ' />
-                              </Button>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button
+                                    variant='outline'
+                                    size='sm'
+                                    className='text-red-600 hover:text-red-700'
+                                  >
+                                    <Trash2 className='h-3 w-3 sm:h-4 sm:w-4' />
+                                  </Button>
+                                </AlertDialogTrigger>
+
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>
+                                      Delete Workspace?
+                                    </AlertDialogTitle>
+
+                                    <AlertDialogDescription>
+                                      This will permanently delete “
+                                      <b>{enrichedWorkspace.name}</b>”. This
+                                      action cannot be undone.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>
+                                      Cancel
+                                    </AlertDialogCancel>
+
+                                    <Button
+                                      onClick={() =>
+                                        handleDeleteWorkspace(
+                                          enrichedWorkspace.id,
+                                          enrichedWorkspace.name
+                                        )
+                                      }
+                                    >
+                                      Delete
+                                    </Button>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
                             </TooltipTrigger>
                             <TooltipContent>Delete</TooltipContent>
                           </Tooltip>

@@ -23,7 +23,7 @@ export function importCurlCommand(curlCommand: string): ParsedCurlRequest {
 
   const result: ParsedCurlRequest = {
     url: '',
-    method: 'GET',
+    method: '',
     headers: [],
     bodyType: 'none',
     params: [],
@@ -32,27 +32,23 @@ export function importCurlCommand(curlCommand: string): ParsedCurlRequest {
   const urlMatch = cleanCommand.match(
     /curl\s+(?:-[^\s]+\s+)*'([^']+)'|curl\s+(?:-[^\s]+\s+)*"([^"]+)"|curl\s+(?:-[^\s]+\s+)*([^\s]+)/
   );
+
   if (urlMatch) {
     const url = urlMatch[1] || urlMatch[2] || urlMatch[3];
     try {
       const urlObj = new URL(url);
       result.url = `${urlObj.protocol}//${urlObj.host}${urlObj.pathname}`;
-
       urlObj.searchParams.forEach((value, key) => {
-        result.params.push({
-          key,
-          value,
-          enabled: true,
-        });
+        result.params.push({ key, value, enabled: true });
       });
     } catch {
       result.url = url;
     }
   }
 
-  const methodMatch = cleanCommand.match(/(?:-X|--request)\s+([A-Z]+)/);
+  const methodMatch = cleanCommand.match(/(?:-X|--request)\s+([A-Za-z]+)/);
   if (methodMatch) {
-    result.method = methodMatch[1];
+    result.method = methodMatch[1].toUpperCase();
   }
 
   const headerMatches = cleanCommand.matchAll(
@@ -73,23 +69,15 @@ export function importCurlCommand(curlCommand: string): ParsedCurlRequest {
           };
         } else if (value.toLowerCase().startsWith('basic ')) {
           try {
-            const credentials = atob(value.substring(6).trim());
-            const [username, password] = credentials.split(':');
-            result.auth = {
-              type: 'basic',
-              username: username || '',
-              password: password || '',
-            };
+            const decoded = atob(value.substring(6).trim());
+            const [username, password] = decoded.split(':');
+            result.auth = { type: 'basic', username, password };
           } catch {
             result.auth = { type: 'basic', username: '', password: '' };
           }
         }
       } else {
-        result.headers.push({
-          key,
-          value,
-          enabled: true,
-        });
+        result.headers.push({ key, value, enabled: true });
       }
     }
   }
@@ -100,41 +88,56 @@ export function importCurlCommand(curlCommand: string): ParsedCurlRequest {
 
   if (bodyMatch) {
     const bodyData = bodyMatch[2];
-    if (bodyData) {
-      result.body = bodyData;
+    result.body = bodyData;
 
-      try {
-        JSON.parse(bodyData);
-        result.bodyType = 'json';
-      } catch {
-        if (bodyData.includes('=') && bodyData.includes('&')) {
-          result.bodyType = 'x-www-form-urlencoded';
-        } else {
-          result.bodyType = 'raw';
-        }
+    try {
+      JSON.parse(bodyData);
+      result.bodyType = 'json';
+    } catch {
+      if (bodyData.includes('=') && bodyData.includes('&')) {
+        result.bodyType = 'x-www-form-urlencoded';
+      } else {
+        result.bodyType = 'raw';
       }
+    }
 
-      if (result.method === 'GET') {
-        result.method = 'POST';
+    if (!result.method) {
+      result.method = 'POST';
+    }
+
+    try {
+      const parsed = JSON.parse(bodyData);
+      const innerMethod = parsed?.request?.method;
+      const valid = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'];
+
+      if (innerMethod && valid.includes(innerMethod.toUpperCase())) {
+        result.method = innerMethod.toUpperCase();
       }
+    } catch {
+      console.error('Failed to parse JSON body for method override');
     }
   }
 
   const formMatches = cleanCommand.matchAll(/(?:--form|-F)\s+(["'])(.*?)\1/g);
-  const formFields = [];
+  const formFields: string[] = [];
+
   for (const match of formMatches) {
     if (match[2].includes('=')) {
-      const [key, value] = match[2].split('=', 2);
-      formFields.push(`${key}=${value}`);
+      formFields.push(match[2]);
     }
   }
 
   if (formFields.length > 0) {
     result.body = formFields.join('&');
     result.bodyType = 'form-data';
-    if (result.method === 'GET') {
+
+    if (!result.method || result.method === 'GET') {
       result.method = 'POST';
     }
+  }
+
+  if (!result.method) {
+    result.method = 'GET';
   }
 
   return result;

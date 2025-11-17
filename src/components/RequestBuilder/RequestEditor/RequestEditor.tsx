@@ -45,6 +45,7 @@ import { generateDynamicValueById } from '@/lib/request-utils';
 import RequestTabs from './RequestTabs';
 import { collectionActions, useCollectionStore } from '@/store/collectionStore';
 import { useSchema } from '@/hooks/useSchema';
+import { CollectionRequest } from '@/shared/types/collection';
 
 type Assertion = {
   id: string;
@@ -139,6 +140,8 @@ const RequestEditor: React.FC = () => {
     activeCollection,
     activeRequest,
     setActiveRequest,
+    setCollection,
+    expandedCollections,
     setActiveCollection,
     setIsCreatingCollection,
     collections,
@@ -701,11 +704,27 @@ const RequestEditor: React.FC = () => {
 
   const handleCurlImport = (parsedRequest: any) => {
     try {
+      const generateUniqueRequestId = (): string => {
+        return `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      };
+
+      const newRequest: CollectionRequest = {
+        id: generateUniqueRequestId(),
+        name: 'New Request',
+        method: 'GET',
+        url: '',
+        bodyType: 'json',
+        bodyFormData: null,
+        authorizationType: 'none',
+        authorization: {},
+        variables: {},
+        headers: [],
+        params: [],
+        order: 0,
+      };
+
       if (parsedRequest.url) {
-        setUrl(parsedRequest.url);
-        if (activeRequest?.id) {
-          collectionActions.markUnsaved(activeRequest.id);
-        }
+        newRequest.url = parsedRequest.url;
       }
 
       if (parsedRequest.method) {
@@ -719,35 +738,24 @@ const RequestEditor: React.FC = () => {
         const requestMethod =
           parsedRequest.method.toUpperCase() as RequestMethod;
         if (supportedMethods.includes(requestMethod)) {
-          setMethod(requestMethod);
-          if (activeRequest?.id) {
-            collectionActions.markUnsaved(activeRequest.id);
-          }
+          newRequest.method = requestMethod;
         }
       }
 
       if (parsedRequest.headers && Array.isArray(parsedRequest.headers)) {
-        const formattedHeaders = parsedRequest.headers.map((header: any) => ({
+        newRequest.headers = parsedRequest.headers.map((header: any) => ({
           key: header.key || '',
           value: header.value || '',
           enabled: header.enabled !== undefined ? header.enabled : true,
         }));
-        setHeaders(formattedHeaders);
-        if (activeRequest?.id) {
-          collectionActions.markUnsaved(activeRequest.id);
-        }
       }
 
       if (parsedRequest.params && Array.isArray(parsedRequest.params)) {
-        const formattedParams = parsedRequest.params.map((param: any) => ({
+        newRequest.params = parsedRequest.params.map((param: any) => ({
           key: param.key || '',
           value: param.value || '',
           enabled: param.enabled !== undefined ? param.enabled : true,
         }));
-        setParams(formattedParams);
-        if (activeRequest?.id) {
-          collectionActions.markUnsaved(activeRequest.id);
-        }
       }
 
       if (parsedRequest.bodyType) {
@@ -760,10 +768,7 @@ const RequestEditor: React.FC = () => {
           'binary',
         ];
         if (allowedBodyTypes.includes(parsedRequest.bodyType)) {
-          setBodyType(parsedRequest.bodyType as BodyType);
-          if (activeRequest?.id) {
-            collectionActions.markUnsaved(activeRequest.id);
-          }
+          newRequest.bodyType = parsedRequest.bodyType as BodyType;
         }
       }
 
@@ -772,23 +777,13 @@ const RequestEditor: React.FC = () => {
         if (typeof parsedRequest.body === 'string') {
           bodyContentToSet = parsedRequest.body;
         } else if (typeof parsedRequest.body === 'object') {
-          let parsedBodyContent = parsedRequest.body;
-          if (
-            typeof parsedBodyContent === 'object' &&
-            parsedBodyContent !== null
-          ) {
-            try {
-              parsedBodyContent = JSON.stringify(parsedBodyContent, null, 2);
-            } catch (e) {
-              console.error('Error stringifying parsed body:', e);
-            }
+          try {
+            bodyContentToSet = JSON.stringify(parsedRequest.body, null, 2);
+          } catch (e) {
+            console.error('Error stringifying parsed body:', e);
           }
-          bodyContentToSet = parsedBodyContent;
         }
-        setBodyContent(bodyContentToSet);
-        if (activeRequest?.id) {
-          collectionActions.markUnsaved(activeRequest.id);
-        }
+        newRequest.bodyRawContent = bodyContentToSet;
       }
 
       if (parsedRequest.auth && parsedRequest.auth.type) {
@@ -796,77 +791,67 @@ const RequestEditor: React.FC = () => {
 
         switch (authTypeValue) {
           case 'bearer':
-            setAuthType('bearer');
+            newRequest.authorizationType = 'bearer';
             if (parsedRequest.auth.token) {
-              setAuthData((prev) => ({
-                ...prev,
-                token: parsedRequest.auth.token,
-              }));
+              newRequest.authorization = { token: parsedRequest.auth.token };
             }
             break;
           case 'basic':
-            setAuthType('basic');
+            newRequest.authorizationType = 'basic';
             if (parsedRequest.auth.username && parsedRequest.auth.password) {
-              setAuthData((prev) => ({
-                ...prev,
+              newRequest.authorization = {
                 username: parsedRequest.auth.username,
                 password: parsedRequest.auth.password,
-              }));
+              };
             }
             break;
           case 'apikey':
-            setAuthType('apiKey');
+            newRequest.authorizationType = 'apiKey';
             if (parsedRequest.auth.key && parsedRequest.auth.value) {
-              setAuthData((prev) => ({
-                ...prev,
+              newRequest.authorization = {
                 key: parsedRequest.auth.key,
                 value: parsedRequest.auth.value,
                 addTo: parsedRequest.auth.addTo || 'header',
-              }));
+              };
             }
             break;
           default:
-            setAuthType('bearer');
+            newRequest.authorizationType = 'bearer';
             break;
-        }
-        if (activeRequest?.id) {
-          collectionActions.markUnsaved(activeRequest.id);
         }
       }
 
       if (parsedRequest.bodyType === 'form-data' && parsedRequest.formData) {
-        const formDataFields = Object.entries(parsedRequest.formData).map(
-          ([key, value]) => ({
-            key,
-            value: String(value),
-            enabled: true,
-            type: 'text' as const,
-          })
-        );
-        setFormFields(formDataFields);
-        if (activeRequest?.id) {
-          collectionActions.markUnsaved(activeRequest.id);
-        }
+        newRequest.bodyFormData = parsedRequest.formData;
       }
 
-      if (
-        parsedRequest.bodyType === 'x-www-form-urlencoded' &&
-        parsedRequest.body
-      ) {
-        try {
-          const urlParams = new URLSearchParams(parsedRequest.body);
-          const encodedFields: Param[] = [];
-          urlParams.forEach((value, key) => {
-            encodedFields.push({ key, value, enabled: true });
-          });
-          setUrlEncodedFields(encodedFields);
-          if (activeRequest?.id) {
-            collectionActions.markUnsaved(activeRequest.id);
-          }
-        } catch (e) {
-          console.error('Error parsing URL encoded body:', e);
+      setResponseData(null);
+
+      if (activeCollection) {
+        newRequest.collectionId = activeCollection.id;
+
+        if (!expandedCollections.has(activeCollection.id)) {
+          collectionActions.toggleExpandedCollection(activeCollection.id);
         }
+
+        setCollection(
+          collections.map((col) => {
+            if (col.id !== activeCollection.id) return col;
+
+            const nextOrder = ((col.requests || []).length || 0) + 1;
+            newRequest.order = nextOrder;
+
+            return {
+              ...col,
+              requests: [...(col.requests || []), newRequest],
+            };
+          })
+        );
       }
+
+      collectionActions.openRequest(newRequest);
+      collectionActions.setActiveRequest(newRequest);
+      collectionActions.markUnsaved(newRequest.id);
 
       if (
         parsedRequest.auth &&
@@ -886,7 +871,7 @@ const RequestEditor: React.FC = () => {
 
       toast({
         title: 'cURL Imported Successfully',
-        description: 'Request has been populated from cURL command',
+        description: 'A new request has been created from the cURL command',
       });
     } catch (error) {
       console.error('Error importing cURL:', error);
