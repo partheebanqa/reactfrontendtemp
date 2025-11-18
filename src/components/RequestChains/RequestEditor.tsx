@@ -1434,15 +1434,6 @@ export function RequestEditor({
               Dynamic Variables ({usedDynamicVariables.length})
             </h4>
           </div>
-          {/* <Button
-            variant='outline'
-            size='sm'
-            onClick={() => setShowDynamicEditor(!showDynamicEditor)}
-            className='text-purple-700 border-purple-300 hover:bg-purple-100'
-          >
-            <Edit3 className='w-3 h-3 mr-1' />
-            {showDynamicEditor ? 'Hide Editor' : 'Edit Values'}
-          </Button> */}
         </div>
 
         {showDynamicEditor ? (

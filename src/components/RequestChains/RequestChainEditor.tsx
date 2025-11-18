@@ -202,12 +202,10 @@ export function RequestChainEditor({
   const handleEnvironmentChange = (environmentId: string) => {
     setSelectedEnvironment(environmentId);
     const selectedEnv = environments.find((env) => env.id === environmentId);
-    // if (selectedEnv) {
-    //   setActiveEnvironment(selectedEnv);
-    //   setEnvironmentBaseUrl(selectedEnv.baseUrl || '');
-    // }
+    if (selectedEnv) {
+      setEnvironmentBaseUrl(selectedEnv.baseUrl || '');
+    }
   };
-
   const isSaveDisabled =
     !formData.name?.trim() || (formData.chainRequests?.length ?? 0) === 0;
   const [expandedRequests, setExpandedRequests] = useState<Set<string>>(
@@ -1095,11 +1093,21 @@ export function RequestChainEditor({
   };
 
   const addNewRequest = () => {
+    const tempId = `temp_${Date.now()}_${Math.random()
+      .toString(36)
+      .substring(2, 9)}`;
     const newRequest: APIRequest = {
+      id: tempId,
       name: 'New Request',
       method: 'GET',
       url: '',
-      headers: [],
+      headers: [
+        {
+          key: 'Content-Type',
+          value: 'application/json',
+          enabled: true,
+        },
+      ],
       params: [],
       bodyType: 'raw',
       timeout: 5000,
@@ -1114,7 +1122,6 @@ export function RequestChainEditor({
       ...formData,
       chainRequests: [...(formData.chainRequests || []), newRequest],
     });
-    const tempId = Date.now().toString();
     setExpandedRequests(new Set([...expandedRequests, tempId]));
   };
 
