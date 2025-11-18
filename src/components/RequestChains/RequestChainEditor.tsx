@@ -181,9 +181,8 @@ export function RequestChainEditor({
   const [environmentBaseUrl, setEnvironmentBaseUrl] = useState<string>('');
 
   useEffect(() => {
-    if (activeEnvironment) {
+    if (!selectedEnvironment && activeEnvironment) {
       if (chain?.environmentId && environments.length > 0) {
-        // Edit mode: set from the chain’s environment
         const chainEnvironment = environments.find(
           (env) => env.id === chain.environmentId
         );
@@ -191,13 +190,28 @@ export function RequestChainEditor({
           setSelectedEnvironment(chain.environmentId);
           setEnvironmentBaseUrl(chainEnvironment.baseUrl || '');
         }
-      } else if (!chain) {
-        // Create mode: use the currently active environment
+      } else {
         setSelectedEnvironment(activeEnvironment.id);
         setEnvironmentBaseUrl(activeEnvironment.baseUrl || '');
       }
     }
-  }, [activeEnvironment, chain, environments]);
+  }, [
+    activeEnvironment,
+    chain?.environmentId,
+    environments,
+    selectedEnvironment,
+  ]);
+
+  useEffect(() => {
+    if (selectedEnvironment) {
+      const selectedEnv = environments.find(
+        (env) => env.id === selectedEnvironment
+      );
+      if (selectedEnv) {
+        setEnvironmentBaseUrl(selectedEnv.baseUrl || '');
+      }
+    }
+  }, [selectedEnvironment, environments]);
 
   const handleEnvironmentChange = (environmentId: string) => {
     setSelectedEnvironment(environmentId);
