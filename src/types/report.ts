@@ -25,6 +25,14 @@ export interface RequestMetrics {
   fastestRequests: RankedRequest[];
 }
 
+export interface MethodRow {
+  method: string;
+  total: number;
+  success: number;
+  failed: number;
+  avgDurationMs: number;
+  p95DurationMs: number;
+}
 /** --- Types that match your report JSON (trimmed to what we use) --- */
 
 interface AnyTestCase {

@@ -26,6 +26,8 @@ export const RequestMetrics: React.FC<RequestMetricsProps> = ({ metrics }) => {
         return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
     };
 
+    console.log("Rendering RequestMetrics with metrics:", metrics);
+
     const formatDuration = (ms?: number) => `${Number(ms ?? 0).toFixed(0)}ms`;
 
     const getMethodColor = (method: string) => {
