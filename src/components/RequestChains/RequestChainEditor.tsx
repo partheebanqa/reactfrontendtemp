@@ -444,7 +444,9 @@ export function RequestChainEditor({
           key: replaceVariables(param.key, variables),
           value: replaceVariables(param.value, variables),
         })) || [],
-      authToken: replaceVariables(request.authToken || '', variables),
+      authorization: {
+        token: replaceVariables(request.authToken || '', variables),
+      },
       authUsername: replaceVariables(request.authUsername || '', variables),
       authPassword: replaceVariables(request.authPassword || '', variables),
       authApiKey: replaceVariables(request.authApiKey || '', variables),
@@ -1158,12 +1160,25 @@ export function RequestChainEditor({
       const chainDataForBackend = {
         ...formData,
         chainRequests: formData.chainRequests?.map((request, index) => {
+          const token = request.authToken?.trim() || '';
+          const authorization: any = {};
+          let authorizationType = request.authorizationType || 'none';
+
+          if (token) {
+            authorization.token = token;
+            authorizationType = 'bearer';
+          } else {
+            authorizationType = 'none';
+          }
+
           const isExistingRequest =
             request.id && originalRequestIds.has(request.id);
           if (isExistingRequest) {
             return {
               ...request,
               order: index + 1,
+              authorizationType,
+              authorization,
               headers:
                 request.headers?.map((h) =>
                   h.id && !h.id.startsWith('temp_')
@@ -1182,6 +1197,8 @@ export function RequestChainEditor({
               ...request,
               id: undefined,
               order: index + 1,
+              authorizationType,
+              authorization,
               headers:
                 request.headers?.map((h) => ({ ...h, id: undefined })) || [],
               params:
@@ -1289,11 +1306,14 @@ export function RequestChainEditor({
         let authApiValue = '';
         let authApiLocation = 'header';
 
-        if (req.authorizationType && req.authorizationType !== 'none') {
+        if (req.authorization?.token && req.authorization.token.trim() !== '') {
+          authorizationType = 'bearer';
+          authToken = req.authorization.token.trim();
+        } else if (req.authorizationType && req.authorizationType !== 'none') {
           authorizationType = req.authorizationType;
 
           if (req.authorizationType === 'bearer' && req.authorization?.token) {
-            authToken = req.authorization.token;
+            authToken = req.authorization.token.trim();
           } else if (req.authorizationType === 'basic' && req.authorization) {
             authUsername = req.authorization.username || '';
             authPassword = req.authorization.password || '';
@@ -1323,7 +1343,10 @@ export function RequestChainEditor({
           bodyType,
           body: hasBody ? req.bodyRawContent : '',
           authorizationType,
-          authToken,
+          authorization: {
+            token: authToken,
+          },
+
           authUsername,
           authPassword,
           authApiKey,
@@ -1512,23 +1535,24 @@ export function RequestChainEditor({
       } else if (inputName === 'auth-password') {
         requests[requestIndex] = {
           ...requests[requestIndex],
-          authPassword: newValue, // Assuming authPassword is a direct property
+          authPassword: newValue,
         };
         setFormData({ ...formData, chainRequests: requests });
       } else if (inputName === 'auth-token') {
         requests[requestIndex] = {
           ...requests[requestIndex],
-          authToken: newValue, // Assuming authToken is a direct property
+          authorization: {
+            ...requests[requestIndex].authorization,
+            token: newValue,
+          },
         };
         setFormData({ ...formData, chainRequests: requests });
       } else {
-        // Fallback: directly update input value and dispatch event if no specific handler found
         input.value = newValue;
         input.dispatchEvent(new Event('input', { bubbles: true }));
       }
     }
 
-    // Set cursor position after the inserted variable name
     const newCursorPos = beforePrefix.length + variable.name.length;
     setTimeout(() => {
       input.setSelectionRange(newCursorPos, newCursorPos);
