@@ -23,7 +23,7 @@ import {
   Activity,
   Globe,
 } from 'lucide-react';
-import { format, formatDate, formatDistanceToNow, isValid } from 'date-fns';
+import { format, formatDate, formatDistanceToNow, isValid, sub } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -37,6 +37,7 @@ import { RequestMetrics } from '../Reports/Components/RequestMetrics';
 import { buildRequestMetrics } from '@/types/report';
 import ExportHTMLButton from '../Reports/Components/ExportHTMLButton';
 import ExportPDFButton from '../Reports/Components/ExportPDFButton';
+import { RequestReportMetrics } from '../Reports/Components/RequestReportMetrics';
 
 type RouteParams = {
   type: 'test_suite' | 'request_chain';
@@ -395,6 +396,7 @@ const RequestChainReport: React.FC<RequestChainReportProps> = ({ data, environme
       response: req.response,
       responseSize: `${req.responseSize || 0} bytes`,
       duration: `${req.duration}ms`,
+      substitutedVariables: req.substitutedVariables || [],
       status: req.status === 'passed' ? 'success' : req.status === 'failed' ? 'fail' : 'skipped',
       extractedVars:
         req.extractedVariables?.map((v: any) => ({
@@ -413,7 +415,7 @@ const RequestChainReport: React.FC<RequestChainReportProps> = ({ data, environme
 
   const overall = React.useMemo(() => computeChainOverall(data), [data]);
   const methodMetrics = React.useMemo(() => buildRequestMetricsFromChain(data), [data]);
-
+  // console.log("RequestChainReport Render - methodMetrics:", methodMetrics);
   const successRateColor =
     overall.successRate >= 80
       ? 'text-green-600 bg-green-100'
@@ -464,7 +466,7 @@ const RequestChainReport: React.FC<RequestChainReportProps> = ({ data, environme
     return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
   };
 
-  // console.log("Request Chain Report Data:", data);
+
 
   return (
     <div>
@@ -576,7 +578,7 @@ const RequestChainReport: React.FC<RequestChainReportProps> = ({ data, environme
       </div>
 
 
-      <div className="bg-white rounded-lg border border-gray-200  p-6">
+      {/* <div className="bg-white rounded-lg border border-gray-200  p-6">
         <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center">
           <Activity className="w-6 h-6 mr-2 text-blue-600" />
           Request-Level Metrics
@@ -604,7 +606,7 @@ const RequestChainReport: React.FC<RequestChainReportProps> = ({ data, environme
               <Clock className="w-6 h-6 text-purple-600" />
             </div>
             <p className="text-2xl font-bold text-gray-900">
-              {formatDuration(data.avgDurationMs)}
+              {formatDuration(data.duration / data.totalRequests)}
             </p>
             <p className="text-sm text-gray-500">Avg Response Time</p>
           </div>
@@ -619,8 +621,10 @@ const RequestChainReport: React.FC<RequestChainReportProps> = ({ data, environme
             <p className="text-sm text-gray-500">Data Transferred</p>
           </div>
         </div>
-      </div>
+      </div> */}
 
+
+      <RequestReportMetrics metrics={methodMetrics} />
 
 
       {/* Existing sections */}

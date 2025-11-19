@@ -17,6 +17,8 @@ export default function VariableTable({ variables, title, testId }: VariableTabl
     );
   }
 
+  // console.log("Rendering VariableTable with variables:", variables);
+
   const getTypeBadgeVariant = (type: string) => {
     switch (type) {
       case "dynamic":
@@ -34,8 +36,10 @@ export default function VariableTable({ variables, title, testId }: VariableTabl
 
   const hasSource = variables.some((v) => "source" in v && v.source);
   const getVariableType = (variable: Variable | ExtractedVariable): string => {
-    return "type" in variable ? variable.type : "extracted";
+    return "type" in variable ? variable?.type : "extracted";
   };
+
+  // console.log("VariableTable Render - Variables:", variables);
 
   return (
     <div className="overflow-x-auto" data-testid={testId}>
@@ -59,8 +63,8 @@ export default function VariableTable({ variables, title, testId }: VariableTabl
             >
               <td className="py-3 px-4 font-mono text-xs text-foreground">{variable.name}</td>
               <td className="py-3 px-4 font-mono text-xs text-muted-foreground max-w-md truncate">
-                {variable?.value.slice(0, 100)}
-                {variable?.value.length > 100 && "..."}
+                {String(variable?.value ?? "").slice(0, 100)}
+                {String(variable?.value ?? "").length > 100 && "..."}
               </td>
               <td className="py-3 px-4">
                 <Badge variant={getTypeBadgeVariant(getVariableType(variable))} className="text-xs">

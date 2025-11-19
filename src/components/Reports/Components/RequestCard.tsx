@@ -66,6 +66,7 @@ export default function RequestCard({ request, index }: RequestCardProps) {
     const hasExtracted =
         request.extractedVariables && request.extractedVariables.length > 0;
 
+    // console.log("RequestCard Render - Request:", request);
     return (
         <div className="relative pl-8" data-testid={`request-card-${index}`}>
             {/* Timeline line + dot */}
@@ -260,7 +261,11 @@ export default function RequestCard({ request, index }: RequestCardProps) {
                                 {hasExtracted && (
                                     <TabsContent value="variables" className="mt-4">
                                         <VariableTable
-                                            variables={request.extractedVariables!}
+                                            variables={request.extractedVariables!.map((v: any) => ({
+                                                ...v,
+                                                status: (v as any).status ?? "success",
+                                                source: (v as any).source ?? "response",
+                                            }))}
                                             title="Extracted Variables"
                                             testId={`table-extracted-${index}`}
                                         />

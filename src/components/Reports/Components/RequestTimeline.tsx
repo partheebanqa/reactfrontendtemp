@@ -10,6 +10,8 @@ export interface ExtractedVarMapped {
     name: string;
     value: string;
     usedIn?: string;
+    source?: string;
+    path?: string;
 }
 
 export interface RequestTimelineItem {

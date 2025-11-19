@@ -514,16 +514,16 @@ export default function ExportHTMLButton({ reportData }: ExportHTMLButtonProps) 
               <th>Name</th>
               <th>Value</th>
               <th>Type</th>
-              ${reportData.globalVariables.some(v => v?.description) ? '<th>Description</th>' : ''}
+             
             </tr>
           </thead>
           <tbody>
             ${reportData.globalVariables.map(v => `
               <tr>
                 <td class="variable-name">${esc(v.name)}</td>
-                <td class="variable-value" style="word-break: break-all;">${esc(v?.value)}</td>
+                <td class="variable-value" style="word-break: break-all;">${esc(v?.value || "")}</td>
                 <td><span class="type-badge type-${esc(v.type)}">${esc(v.type)}</span></td>
-                ${reportData.globalVariables.some(v => v?.description) ? `<td>${esc(v?.description || '-')}</td>` : ''}
+              
               </tr>
             `).join('')}
           </tbody>
