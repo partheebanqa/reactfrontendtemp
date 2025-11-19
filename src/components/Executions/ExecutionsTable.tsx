@@ -134,6 +134,9 @@ export const ExecutionsTable = ({
           <TableHead>Duration</TableHead>
           <TableHead>Results</TableHead>
           <TableHead>Trigger</TableHead>
+          <TableHead>Results</TableHead>
+          <TableHead className='whitespace-nowrap'>Re-Run</TableHead>
+
           <TableHead></TableHead>
         </TableRow>
       </TableHeader>
@@ -171,7 +174,7 @@ export const ExecutionsTable = ({
                   )}
                   <div className='flex items-center gap-2 mt-1'>
                     <p className='text-sm text-muted-foreground'>
-                      ID: {execution.id}
+                      {execution.id}
                     </p>
                     <Button
                       variant='ghost'
@@ -266,9 +269,8 @@ export const ExecutionsTable = ({
                   </span>
                 </div>
               </TableCell>
-
               <TableCell>
-                <div className='flex items-center gap-1'>
+                <div className='flex items-center'>
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -286,7 +288,7 @@ export const ExecutionsTable = ({
                 </div>
               </TableCell>
               <TableCell>
-                <div className='flex items-center gap-1'>
+                <div className='flex items-center'>
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
