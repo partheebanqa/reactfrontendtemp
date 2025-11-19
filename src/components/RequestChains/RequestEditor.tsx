@@ -216,7 +216,8 @@ export function RequestEditor({
   const [auth, setAuth] = useState({
     username: initialRequest.authUsername || '',
     password: initialRequest.authPassword || '',
-    token: initialRequest.authToken || '',
+    token:
+      initialRequest.authToken || initialRequest.authorization?.token || '',
   });
 
   useEffect(() => {
@@ -274,7 +275,8 @@ export function RequestEditor({
     setAuth({
       username: initialRequest.authUsername || '',
       password: initialRequest.authPassword || '',
-      token: initialRequest.authToken || '',
+      token:
+        initialRequest.authToken || initialRequest.authorization?.token || '',
     });
   }, [initialRequest.id]); // Only update when request ID changes to avoid infinite loops
 
@@ -288,7 +290,7 @@ export function RequestEditor({
     }
     setTimeout(() => {
       isSyncingRef.current = false;
-    }, 100);
+    }, 0);
   }, [url]);
 
   const dynamicStructured = useMemo(
@@ -814,6 +816,7 @@ export function RequestEditor({
       authToken: auth.token,
       authUsername: auth.username,
       authPassword: auth.password,
+      authorization: initialRequest.authorization,
     };
 
     {
@@ -824,6 +827,10 @@ export function RequestEditor({
       ).trim();
       if (token) {
         (safeRequest as any).authorizationType = 'bearer';
+        (safeRequest as any).authorization = {
+          ...(safeRequest.authorization || {}),
+          token,
+        };
 
         const headers = Array.isArray(safeRequest.headers)
           ? [...safeRequest.headers]
@@ -847,6 +854,9 @@ export function RequestEditor({
           });
         }
         (safeRequest as any).headers = headers;
+      } else {
+        (safeRequest as any).authorizationType = 'none';
+        (safeRequest as any).authorization = {};
       }
     }
 
