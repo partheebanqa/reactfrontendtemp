@@ -68,14 +68,6 @@ const displayRoleName = (name?: string) => {
   return n === 'org admin' ? 'Account Owner' : name || '';
 };
 
-const roleBadgeClass = (label: string) => {
-  const n = norm(label);
-  if (n === 'org admin') return 'bg-amber-50 text-amber-700 border-amber-200';
-  if (n === 'admin') return 'bg-blue-50 text-blue-700 border-blue-200';
-  if (n === 'user') return 'bg-gray-50 text-gray-700 border-gray-200';
-  return 'bg-gray-50 text-gray-600 border-gray-200';
-};
-
 const RoleIcon = ({ label }: { label: string }) => {
   const n = norm(label);
   if (n === 'org admin') return <Crown className='w-4 h-4 text-amber-500' />;

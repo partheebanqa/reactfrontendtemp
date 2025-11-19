@@ -28,6 +28,7 @@ import {
   Shield,
   User,
   UserCog,
+  Send,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useMutation, useQuery } from '@tanstack/react-query';
@@ -503,21 +504,48 @@ export function PeopleManagement() {
             <UserPlus className='h-5 w-5' />
             Invite Team Member
           </CardTitle>
-
-          {/* 🔹 Toggle between Existing and Add New */}
-          <button
-            type='button'
-            onClick={() => {
-              setUserType((prev) => (prev === 'existing' ? 'new' : 'existing'));
-              setShowSuggestions(false);
-            }}
-            className='text-sm text-blue-600 hover:underline'
-          >
-            {userType === 'existing'
-              ? 'Invite new member'
-              : 'Invite existing member'}
-          </button>
         </CardHeader>
+
+        <div className='px-6 pb-2'>
+          <div className='flex items-center'>
+            <div className='flex rounded-lg border overflow-hidden text-sm'>
+              <button
+                type='button'
+                onClick={() => {
+                  setUserType('existing');
+                  setShowSuggestions(false);
+                }}
+                className={`flex items-center gap-1.5 px-3 py-2 transition-all 
+            ${userType === 'existing' ? 'text-white' : 'text-gray-700'}`}
+                style={
+                  userType === 'existing'
+                    ? { backgroundColor: 'rgb(19 111 176)' }
+                    : {}
+                }
+              >
+                <User className='w-4 h-4' />
+                Add Existing Member
+              </button>
+              <button
+                type='button'
+                onClick={() => {
+                  setUserType('new');
+                  setShowSuggestions(false);
+                }}
+                className={`flex items-center gap-1.5 px-3 py-2 transition-all 
+            ${userType === 'new' ? 'text-white' : 'text-gray-700'}`}
+                style={
+                  userType === 'new'
+                    ? { backgroundColor: 'rgb(19 111 176)' }
+                    : {}
+                }
+              >
+                <Send className='w-4 h-4' />
+                Invite New Member
+              </button>
+            </div>
+          </div>
+        </div>
 
         <CardContent>
           <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
@@ -579,7 +607,7 @@ export function PeopleManagement() {
                   <Input
                     id='invite-email'
                     type='email'
-                    placeholder='colleague@company.com'
+                    placeholder='Enter new email address'
                     value={inviteEmail}
                     onChange={(e) => {
                       setInviteEmail(e.target.value);

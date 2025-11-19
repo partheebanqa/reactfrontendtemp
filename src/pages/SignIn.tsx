@@ -128,16 +128,6 @@ export default function SignIn() {
             </CardDescription>
           </CardHeader>
           <CardContent className='space-y-6'>
-            {loginMutation.isError && (
-              <Alert variant='destructive'>
-                <AlertDescription>
-                  {loginMutation.error instanceof Error
-                    ? loginMutation.error.message
-                    : 'Invalid email or password. Please try again.'}
-                </AlertDescription>
-              </Alert>
-            )}
-
             <form onSubmit={handleSubmit} className='space-y-4'>
               <div>
                 <Label htmlFor='email'>Email address</Label>

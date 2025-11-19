@@ -1842,7 +1842,7 @@ export function RequestChainEditor({
                           </Button>
                           <Button onClick={addNewRequest} className='gap-2'>
                             <Plus className='w-4 h-4' />
-                            Add Request
+                            Request
                           </Button>
                         </div>
                       </div>

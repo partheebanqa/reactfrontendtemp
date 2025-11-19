@@ -17,10 +17,9 @@ import {
   X,
   Save,
   Copy,
-  FileJson2,
   Search,
-  Move,
   Zap,
+  Import,
 } from 'lucide-react';
 import { useCollection } from '@/hooks/useCollection';
 import { useWorkspace } from '@/hooks/useWorkspace';
@@ -821,9 +820,8 @@ const Sidebar: React.FC = () => {
                     onClick={() => setShowImportModal(true)}
                     className='border border-gray-300 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800'
                     aria-label='Import collection'
-                    title='Import from Existing Collection'
                   >
-                    <Upload className='text-[#136fb0]' size={23} />
+                    <Import className='text-[#136fb0]' size={23} />
                   </button>
                 </TooltipContainer>
               </div>

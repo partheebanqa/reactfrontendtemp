@@ -671,7 +671,7 @@ export function RequestExecutor({
               ? 'Individual request execution'
               : `${
                   processedRequests?.filter((r) => r.enabled).length ?? 0
-                } enabled requests`}
+                } requests`}
           </p>
         </div>
         <div className='flex flex-wrap gap-2 sm:gap-3'>
@@ -758,7 +758,6 @@ export function RequestExecutor({
           )}
         </div>
       </div>
-
       {isExecuting && !request && (
         <div className='mb-6 p-4 bg-primary/10 border border-primary/20 rounded-lg'>
           <div className='flex items-center space-x-3'>
@@ -775,7 +774,6 @@ export function RequestExecutor({
           </div>
         </div>
       )}
-
       {extractedVariables.length > 0 && (
         <div className='mb-6 p-4 bg-accent/20 border border-accent/30 rounded-lg'>
           <h4 className='font-medium text-accent-foreground mb-2'>
@@ -803,7 +801,6 @@ export function RequestExecutor({
           </div>
         </div>
       )}
-
       {executionLogs.length > 0 && (
         <div className='space-y-3'>
           <h4 className='font-medium text-foreground'>Execution Logs</h4>

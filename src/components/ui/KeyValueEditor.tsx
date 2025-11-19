@@ -12,7 +12,11 @@ export interface KeyValuePair {
 interface KeyValueEditorProps {
   items: KeyValuePair[];
   onAdd: () => void;
-  onUpdate: (index: number, field: keyof KeyValuePair, value: string | boolean) => void;
+  onUpdate: (
+    index: number,
+    field: keyof KeyValuePair,
+    value: string | boolean
+  ) => void;
   onRemove: (index: number) => void;
   title: string;
   addButtonLabel?: string;
@@ -61,7 +65,7 @@ const KeyValueEditor: React.FC<KeyValueEditorProps> = ({
                   type='text'
                   value={item.key}
                   onChange={(e) => onUpdate(index, 'key', e.target.value)}
-                  placeholder='Keyas'
+                  placeholder='Key'
                   className='flex-1 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 dark:bg-gray-800 dark:text-white hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/50 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150'
                 />
                 <input
@@ -71,14 +75,18 @@ const KeyValueEditor: React.FC<KeyValueEditorProps> = ({
                   placeholder='Value'
                   className='flex-1 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 dark:bg-gray-800 dark:text-white hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/50 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150'
                 />
-                <TooltipContainer text='Remove' position='bottom' children={
+                <TooltipContainer
+                  text='Remove'
+                  position='bottom'
+                  children={
                     <button
-                  onClick={() => onRemove(index)}
-                  className='text-red-600 hover:text-red-700 px-2 py-1 whitespace-nowrap'
-                >
-                  <Trash2 className='h-4 w-4' />
-                </button>
-                } />
+                      onClick={() => onRemove(index)}
+                      className='text-red-600 hover:text-red-700 px-2 py-1 whitespace-nowrap'
+                    >
+                      <Trash2 className='h-4 w-4' />
+                    </button>
+                  }
+                />
               </div>
             </div>
           ))}

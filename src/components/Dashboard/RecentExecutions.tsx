@@ -1,20 +1,12 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import {
-  Activity,
-  TrendingUp,
-  Play,
-  CheckCircle2,
-  XCircle,
-  Loader2,
-  Beaker,
-  GitBranch,
-} from 'lucide-react';
+import { Activity, Beaker, GitBranch } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
 
 interface Execution {
+  entityId: string;
   executionId: string;
-  type: string; // <-- using this now
+  type: string;
   name: string;
   date: string;
   status: 'running' | 'completed' | 'failed' | string;
@@ -23,6 +15,24 @@ interface Execution {
 interface RecentExecutionsProps {
   data: Execution[];
 }
+
+const getExecutionUrl = (
+  type: string,
+  entityId: string,
+  executionId: string
+) => {
+  const lower = type.toLowerCase();
+
+  if (lower === 'testsuite') {
+    return `/executions/report/test_suite/${entityId}?executionId=${executionId}`;
+  }
+
+  if (lower === 'requestchain') {
+    return `/executions/report/request_chain/${entityId}?executionId=${executionId}`;
+  }
+
+  return `/executions/report/execution/${entityId}?executionId=${executionId}`;
+};
 
 const getStatusStyles = (status: string) => {
   switch (status) {
@@ -37,9 +47,8 @@ const getStatusStyles = (status: string) => {
   }
 };
 
-// NEW: icon based on type
-const getTypeIcon = (type: string) => {
-  const lower = type?.toLowerCase();
+const getTypeIcon = (exec: Execution) => {
+  const lower = exec.type?.toLowerCase();
 
   const icon =
     lower === 'testsuite' ? (
@@ -57,10 +66,17 @@ const getTypeIcon = (type: string) => {
       ? 'Request Chain'
       : 'Execution';
 
+  const url = getExecutionUrl(exec.type, exec.entityId, exec.executionId);
+
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <div className='cursor-pointer'>{icon}</div>
+        <div
+          className='cursor-pointer'
+          onClick={() => (window.location.href = url)}
+        >
+          {icon}
+        </div>
       </TooltipTrigger>
       <TooltipContent>
         <p>{label}</p>
@@ -100,18 +116,26 @@ export default function RecentExecutions({ data }: RecentExecutionsProps) {
                 className='flex items-center justify-between border border-gray-100 dark:border-gray-800 rounded-md p-3 hover:bg-gray-50 dark:hover:bg-gray-900 transition'
               >
                 <div className='flex items-center gap-3'>
-                  {/* 🔥 Type-based icon */}
-                  {getTypeIcon(exec.type)}
+                  {getTypeIcon(exec)}
 
-                  <div>
-                    <p className='font-medium text-sm capitalize'>
+                  <div
+                    className='cursor-pointer'
+                    onClick={() => {
+                      const url = getExecutionUrl(
+                        exec.type,
+                        exec.entityId,
+                        exec.executionId
+                      );
+                      window.location.href = url;
+                    }}
+                  >
+                    <p className='font-medium text-sm capitalize text-black hover:text-blue-600 transition'>
                       {exec.name}
                     </p>
                     <p className='text-xs text-gray-500'>{exec.date}</p>
                   </div>
                 </div>
 
-                {/* Status badge stays the same */}
                 <Badge
                   variant='outline'
                   className={`${getStatusStyles(exec.status)} capitalize`}
