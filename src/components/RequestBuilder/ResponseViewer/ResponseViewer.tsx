@@ -682,31 +682,10 @@ const ResponseViewer = () => {
         </div>
       )}
 
-      {/* Content */}
       <div className='flex-1 overflow-auto p-2'>
         {activeTab === 'body' && (
           <div>
-            <div className='flex items-center justify-between mb-2'>
-              {/* <div className='flex items-center space-x-2'>
-                <h3 className='text-sm font-medium text-foreground'>
-                  Response Body
-                </h3>
-                <div className='relative group'>
-                  <Info className='w-4 h-4 text-muted-foreground cursor-help' />
-                  <div className='absolute left-0 bottom-full mb-2 w-64 p-3 text-xs text-foreground bg-popover border border-border rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50'>
-                    <p className='font-medium mb-1'>
-                      How to extract variables:
-                    </p>
-                    <ul className='list-disc list-inside space-y-1'>
-                      <li>Hover over any value in the JSON</li>
-                      <li>Click the "Extract" button</li>
-                      <li>Give it a name and confirm</li>
-                      <li>Use the variable in future requests</li>
-                    </ul>
-                  </div>
-                </div>
-              </div> */}
-            </div>
+            <div className='flex items-center justify-between mb-2'></div>
             {renderJsonTree()}
           </div>
         )}

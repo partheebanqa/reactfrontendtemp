@@ -30,7 +30,6 @@ import {
 } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
 import { generateAssertions } from '@/utils/assertionGenerator';
-import AssertionManager from './assertionManager';
 import ImportModal from './ImportModal';
 import { Input } from '@/components/ui/input';
 import 'codemirror/lib/codemirror.css';
@@ -44,6 +43,7 @@ import { collectionActions, useCollectionStore } from '@/store/collectionStore';
 import { useSchema } from '@/hooks/useSchema';
 import type { CollectionRequest } from '@/shared/types/collection';
 import RequestBody from '@/components/Shared/RequestTabs/RequestBody';
+import { PrePostRequest } from '@/components/Shared/RequestTabs/PrePostRequest';
 
 type Assertion = {
   id: string;
@@ -162,13 +162,7 @@ const RequestEditor: React.FC = () => {
   const { currentWorkspace } = useWorkspace();
   const [showCurlImport, setShowCurlImport] = useState(false);
   const [activeTab, setActiveTab] = useState<
-    | 'params'
-    | 'headers'
-    | 'body'
-    | 'auth'
-    | 'assertions'
-    | 'settings'
-    | 'schemas'
+    'params' | 'headers' | 'body' | 'auth' | 'scripts' | 'settings' | 'schemas'
   >('params');
 
   const { schemas } = useSchema();
@@ -1924,6 +1918,8 @@ const RequestEditor: React.FC = () => {
     }
   };
 
+  // const [scriptsTab, setScriptsTab] = useState<"pre-request" | "post-response">("pre-request")
+
   if (!activeRequest) {
     return (
       <div className='flex-1 flex items-center justify-center bg-gray-50 dark:bg-gray-900 p-4'>
@@ -2191,20 +2187,18 @@ const RequestEditor: React.FC = () => {
                 count: headers.filter((h) => h.enabled).length,
               },
               { id: 'body', label: 'Body', count: getBodyCount() },
-              { id: 'auth', label: 'Authorization', count: getAuthCount() },
+              { id: 'auth', label: 'Auth', count: getAuthCount() },
               {
-                id: 'assertions',
-                label: 'Assertions',
-                count: Array.isArray(assertions)
-                  ? assertions.filter((a) => a.enabled).length
-                  : 0,
+                id: 'scripts',
+                label: 'Pre & Post',
+                count: 0,
               },
-              { id: 'settings', label: 'Settings' },
               {
                 id: 'schemas',
                 label: 'Schemas',
                 count: Array.isArray(schemas) ? schemas.length : 0,
               },
+              { id: 'settings', label: 'Settings' },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -2364,16 +2358,46 @@ const RequestEditor: React.FC = () => {
             </div>
           )}
 
-          {activeTab === 'assertions' && (
-            <AssertionManager
-              assertions={assertions}
-              setAssertions={setAssertions}
-              responseData={responseData}
-              activeRequest={activeRequest}
-              currentWorkspace={currentWorkspace}
-              updateRequestMutation={updateRequestMutation}
-              toggleAssertion={toggleAssertion}
-            />
+          {activeTab === 'scripts' && (
+            <div className='flex h-full'>
+              {/* Left sidebar with Pre-request and Post-response */}
+              {/* <div className="w-40 border-r border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
+                <button
+                  onClick={() => setScriptsTab("pre-request")}
+                  className={`w-full text-left px-4 py-3 text-sm font-medium transition-colors ${
+                    scriptsTab === "pre-request"
+                      ? "bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white border-l-2 border-blue-500"
+                      : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                  }`}
+                >
+                  Pre-request
+                </button>
+                <button
+                  onClick={() => setScriptsTab("post-response")}
+                  className={`w-full text-left px-4 py-3 text-sm font-medium transition-colors ${
+                    scriptsTab === "post-response"
+                      ? "bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white border-l-2 border-blue-500"
+                      : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                  }`}
+                >
+                  Post-response
+                </button>
+              </div> */}
+
+              {/* Right content area */}
+              <div className='flex-1 overflow-auto'>
+                <PrePostRequest
+                  assertions={assertions}
+                  setAssertions={setAssertions}
+                  responseData={responseData}
+                  activeRequest={activeRequest}
+                  currentWorkspace={currentWorkspace}
+                  updateRequestMutation={updateRequestMutation}
+                  toggleAssertion={toggleAssertion}
+                  showAssertions={true}
+                />
+              </div>
+            </div>
           )}
 
           {activeTab === 'settings' && (
