@@ -482,16 +482,14 @@ const ResponseViewer = () => {
     {
       id: 'body',
       label: 'Body',
-      icon: Code,
       hasIndicator: !!responseData?.bodySchema,
     },
     {
       id: 'headers',
       label: 'Headers',
-      icon: Hash,
       count: Object.keys(responseData?.headers || {}).length,
     },
-    { id: 'cookies', label: 'Cookies', icon: Cookie },
+    { id: 'cookies', label: 'Cookies' },
     {
       id: 'test-results',
       label: 'Assertions Result',
@@ -520,13 +518,10 @@ const ResponseViewer = () => {
 
   return (
     <div className='flex-1 flex flex-col bg-background min-h-0 overflow-hidden'>
-      {/* Header with tabs and status */}
       <div className='bg-card border-b border-border flex-shrink-0'>
-        {/* Tabs and Status on same row */}
         <div className='flex items-center justify-between border-b border-border'>
           <nav className='flex space-x-8 px-4'>
             {tabs.map((tab) => {
-              const Icon = tab.icon;
               return (
                 <button
                   key={tab.id}
@@ -537,7 +532,6 @@ const ResponseViewer = () => {
                       : 'border-transparent text-muted-foreground hover:text-foreground hover:border-muted'
                   }`}
                 >
-                  {Icon && <Icon className='w-4 h-4' />}
                   <span>{tab.label}</span>
                   {tab.hasIndicator && (
                     <span className='ml-1 w-1.5 h-1.5 bg-blue-500 rounded-full' />

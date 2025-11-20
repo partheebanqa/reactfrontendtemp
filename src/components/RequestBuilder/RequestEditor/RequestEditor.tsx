@@ -2,7 +2,7 @@
 
 import type React from 'react';
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { Play, Save, FolderPlus, HelpCircle, Info } from 'lucide-react';
+import { Play, Save, FolderPlus, Info } from 'lucide-react';
 import { useRequest } from '@/hooks/useRequest';
 import { useCollection } from '@/hooks/useCollection';
 import { useWorkspace } from '@/hooks/useWorkspace';
@@ -11,9 +11,7 @@ import SchemaPage from '../SchemaPage';
 import { useToast } from '@/hooks/useToast';
 import TooltipContainer from '@/components/ui/tooltip-container';
 import KeyValueEditor from '@/components/ui/KeyValueEditor';
-import KeyValueEditorWithFileUpload, {
-  type KeyValuePairWithFile,
-} from '@/components/ui/KeyValueEditorWithFileUpload';
+import type { KeyValuePairWithFile } from '@/components/ui/KeyValueEditorWithFileUpload';
 import ToggleSwitch from '@/components/ui/ToggleSwitch';
 import Modal from '@/components/ui/Modal';
 import { useDataManagement } from '@/hooks/useDataManagement';
@@ -40,12 +38,12 @@ import 'codemirror/theme/material.css';
 import 'codemirror/mode/javascript/javascript';
 import './whiteorange.css';
 import EditableTextWithoutIcon from '@/components/ui/EditableTextWithoutIcon';
-import { JsonVariableSubstitution } from './JsonVariableSubstitution';
 import { generateDynamicValueById } from '@/lib/request-utils';
 import RequestTabs from './RequestTabs';
 import { collectionActions, useCollectionStore } from '@/store/collectionStore';
 import { useSchema } from '@/hooks/useSchema';
-import { CollectionRequest } from '@/shared/types/collection';
+import type { CollectionRequest } from '@/shared/types/collection';
+import RequestBody from '@/components/Shared/RequestTabs/RequestBody';
 
 type Assertion = {
   id: string;
@@ -183,7 +181,7 @@ const RequestEditor: React.FC = () => {
   const [params, setParams] = useState<Param[]>([]);
   const [headers, setHeaders] = useState<Header[]>([]);
 
-  const [bodyType, setBodyType] = useState<BodyType>('json');
+  const [bodyType, setBodyType] = useState<BodyType>('raw');
   const [bodyContent, setBodyContent] = useState('');
   const [formFields, setFormFields] = useState<KeyValuePairWithFile[]>([]);
   const [urlEncodedFields, setUrlEncodedFields] = useState<Param[]>([]);
@@ -500,11 +498,7 @@ const RequestEditor: React.FC = () => {
         'binary',
       ];
       const bodyTypeValue = activeRequest.bodyType || 'none';
-      setBodyType(
-        allowedBodyTypes.includes(bodyTypeValue)
-          ? (bodyTypeValue as BodyType)
-          : 'json'
-      );
+      setBodyType('raw');
       setBodyContent(activeRequest.bodyRawContent || '');
       setPendingSubstitutions([]);
 
@@ -657,7 +651,7 @@ const RequestEditor: React.FC = () => {
       setPendingSubstitutions([]);
     }
     setResponseData(null);
-  }, [activeRequest?.id, isSaving]);
+  }, [activeRequest, isSaving]);
 
   useEffect(() => {
     if (activeRequest && !activeRequest.id?.startsWith('temp-')) {
@@ -1201,7 +1195,7 @@ const RequestEditor: React.FC = () => {
         method,
         url,
         ...(effectiveFolderId ? { folderId: effectiveFolderId } : {}),
-        bodyType: bodyType === 'json' ? 'raw' : bodyType,
+        bodyType: bodyType,
         bodyFormData:
           bodyType === 'form-data'
             ? formFields
@@ -1375,7 +1369,7 @@ const RequestEditor: React.FC = () => {
         name: activeRequest.name || 'New Request',
         method,
         url: urlAtOpen,
-        bodyType: bodyType === 'json' ? 'raw' : bodyType,
+        bodyType: bodyType,
         bodyFormData:
           bodyType === 'form-data'
             ? formFields
@@ -1423,6 +1417,7 @@ const RequestEditor: React.FC = () => {
         (savedRequestResponse.id || savedRequestResponse.requestId)
       ) {
         const newId = savedRequestResponse.id || savedRequestResponse.requestId;
+        const oldRequestId = activeRequest.id;
 
         const updatedRequest = {
           ...activeRequest,
@@ -1433,13 +1428,15 @@ const RequestEditor: React.FC = () => {
           method,
           url: urlAtOpen,
           bodyType,
+          bodyRawContent: bodyContent,
+          bodyFormData:
+            bodyType === 'form-data' ? formFields.filter((f) => f.enabled) : [],
           authorizationType: effectiveAuthType,
           authorization: requestData.authorization,
           params,
           headers,
           ...(selectedVariable ? { variable: selectedVariable } : {}),
         };
-        const oldRequestId = activeRequest.id;
         replaceRequest(oldRequestId, updatedRequest);
         setActiveRequest(updatedRequest);
 
@@ -1524,7 +1521,7 @@ const RequestEditor: React.FC = () => {
         method,
         url,
         ...(effectiveFolderId ? { folderId: effectiveFolderId } : {}),
-        bodyType: bodyType === 'json' ? 'raw' : bodyType,
+        bodyType: bodyType,
         bodyFormData:
           bodyType === 'form-data'
             ? formFields
@@ -1592,7 +1589,6 @@ const RequestEditor: React.FC = () => {
         params,
         headers: headers.filter((h) => h.enabled),
         assertions: selectedAssertions,
-        environmentId: activeEnvironment?.id || null,
       };
       if (selectedVariable && selectedVariable.length > 0) {
         requestData.variable = selectedVariable;
@@ -2277,172 +2273,64 @@ const RequestEditor: React.FC = () => {
           )}
 
           {activeTab === 'body' && (
-            <div className='space-y-4'>
-              <div className='flex items-center justify-between'>
-                <TooltipProvider>
-                  <div className='flex items-center gap-2'>
-                    <h3 className='text-base sm:text-lg font-medium text-gray-900 dark:text-white'>
-                      Request Body
-                    </h3>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button
-                          type='button'
-                          className='p-1 text-gray-500 hover:text-[rgb(19,111,176)] transition-colors'
-                        >
-                          <HelpCircle className='w-4 h-4' />
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        Request body can include both static and dynamic values.
-                      </TooltipContent>
-                    </Tooltip>
-                  </div>
-                </TooltipProvider>
-                <div className='flex items-center gap-2'>
-                  {(bodyType === 'json' || bodyType === 'raw') &&
-                    bodyContent.trim() && (
-                      <button
-                        onClick={handleBeautifyBody}
-                        className='px-3 py-2 bg-[rgb(19,111,176)] hover:bg-[rgb(15,90,144)] text-white text-sm rounded-md transition-colors font-medium'
-                        title='Format JSON with proper indentation'
-                      >
-                        Beautify
-                      </button>
-                    )}
-                  <select
-                    value={bodyType}
-                    onChange={(e) => {
-                      const newBodyType = e.target.value as BodyType;
-                      setBodyType(newBodyType);
+            <RequestBody
+              bodyType={bodyType}
+              bodyContent={bodyContent}
+              formFields={formFields}
+              urlEncodedFields={urlEncodedFields}
+              headers={headers}
+              method={method}
+              variables={formattedVariables}
+              initialVariable={activeRequest?.variable || []}
+              onBodyTypeChange={(newBodyType) => {
+                setBodyType(newBodyType);
 
-                      if (newBodyType !== 'none') {
-                        const contentTypeValue =
-                          getContentTypeForBodyType(newBodyType);
-                        const contentTypeHeaderIndex = headers.findIndex(
-                          (h) => h.key.toLowerCase() === 'content-type'
-                        );
+                if (newBodyType !== 'none') {
+                  const contentTypeValue =
+                    getContentTypeForBodyType(newBodyType);
+                  const contentTypeHeaderIndex = headers.findIndex(
+                    (h) => h.key.toLowerCase() === 'content-type'
+                  );
 
-                        if (contentTypeHeaderIndex !== -1) {
-                          const updatedHeaders = [...headers];
-                          updatedHeaders[contentTypeHeaderIndex] = {
-                            ...updatedHeaders[contentTypeHeaderIndex],
-                            value: contentTypeValue,
-                          };
-                          setHeaders(updatedHeaders);
-                        } else if (methodsWithBody.includes(method)) {
-                          setHeaders([
-                            {
-                              key: 'Content-Type',
-                              value: contentTypeValue,
-                              enabled: true,
-                            },
-                            ...headers,
-                          ]);
-                        }
-                      }
+                  if (contentTypeHeaderIndex !== -1) {
+                    const updatedHeaders = [...headers];
+                    updatedHeaders[contentTypeHeaderIndex] = {
+                      ...updatedHeaders[contentTypeHeaderIndex],
+                      value: contentTypeValue,
+                    };
+                    setHeaders(updatedHeaders);
+                  } else if (methodsWithBody.includes(method)) {
+                    setHeaders([
+                      {
+                        key: 'Content-Type',
+                        value: contentTypeValue,
+                        enabled: true,
+                      },
+                      ...headers,
+                    ]);
+                  }
+                }
 
-                      if (activeRequest?.id) {
-                        collectionActions.markUnsaved(activeRequest.id);
-                      }
-                    }}
-                    className='border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-800 text-sm font-medium hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all duration-150'
-                  >
-                    <option value='none'>None</option>
-                    <option value='json'>JSON</option>
-                    <option value='form-data'>Form Data</option>
-                    <option value='x-www-form-urlencoded'>URL Encoded</option>
-                    <option value='raw'>Raw</option>
-                    <option value='binary'>Binary</option>
-                  </select>
-                </div>
-              </div>
-
-              {bodyType === 'none' && (
-                <div className='text-gray-500 dark:text-gray-400 text-center p-8'>
-                  This request does not have a body. Select a body type from the
-                  dropdown above to add one.
-                </div>
-              )}
-
-              {bodyType === 'json' && (
-                <JsonVariableSubstitution
-                  onChange={(newValue) => {
-                    setBodyContent(newValue);
-                    if (activeRequest?.id) {
-                      collectionActions.markUnsaved(activeRequest.id);
-                    }
-                  }}
-                  value={bodyContent}
-                  onVariableSelect={handleVariableSelect}
-                  onConfirmSubstitution={handleConfirmSubstitutions}
-                  mode='json'
-                  variables={formattedVariables}
-                  initialVariable={activeRequest?.variable || []}
-                  readOnly={false}
-                />
-              )}
-
-              {bodyType === 'form-data' && (
-                <>
-                  <div className='mb-2 text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 p-3 rounded-md border border-gray-200 dark:border-gray-700'>
-                    <p>
-                      Form fields support both text values and file uploads.
-                      Click the "File" button next to any field to upload a
-                      file.
-                    </p>
-                  </div>
-                  <KeyValueEditorWithFileUpload
-                    items={formFields}
-                    onAdd={addFormField}
-                    onUpdate={updateFormField}
-                    onRemove={removeFormField}
-                    title='Form fields'
-                    addButtonLabel='Add Field'
-                    emptyMessage='No form fields added yet.'
-                  />
-                </>
-              )}
-
-              {bodyType === 'x-www-form-urlencoded' && (
-                <KeyValueEditor
-                  items={urlEncodedFields}
-                  onAdd={addUrlEncodedField}
-                  onUpdate={updateUrlEncodedField}
-                  onRemove={removeUrlEncodedField}
-                  title='URL encoded fields'
-                  addButtonLabel='Add Field'
-                  emptyMessage='No URL encoded fields added yet.'
-                />
-              )}
-
-              {bodyType === 'raw' && (
-                <JsonVariableSubstitution
-                  onChange={(newValue) => {
-                    setBodyContent(newValue);
-                    if (activeRequest?.id) {
-                      collectionActions.markUnsaved(activeRequest.id);
-                    }
-                  }}
-                  value={bodyContent}
-                  onVariableSelect={handleVariableSelect}
-                  onConfirmSubstitution={handleConfirmSubstitutions}
-                  mode='raw'
-                  variables={formattedVariables}
-                  initialVariable={activeRequest?.variable || []}
-                  readOnly={false}
-                />
-              )}
-
-              {bodyType === 'binary' && (
-                <div className='text-center p-8 border border-dashed border-gray-300 dark:border-gray-700 rounded-md'>
-                  <p className='text-gray-500 dark:text-gray-400 mb-4'>
-                    Select a file to upload
-                  </p>
-                  <Button>Choose File</Button>
-                </div>
-              )}
-            </div>
+                if (activeRequest?.id) {
+                  collectionActions.markUnsaved(activeRequest.id);
+                }
+              }}
+              onBodyContentChange={(newContent) => {
+                setBodyContent(newContent);
+                if (activeRequest?.id) {
+                  collectionActions.markUnsaved(activeRequest.id);
+                }
+              }}
+              onBeautify={handleBeautifyBody}
+              onVariableSelect={handleVariableSelect}
+              onConfirmSubstitution={handleConfirmSubstitutions}
+              onAddFormField={addFormField}
+              onUpdateFormField={updateFormField}
+              onRemoveFormField={removeFormField}
+              onAddUrlEncodedField={addUrlEncodedField}
+              onUpdateUrlEncodedField={updateUrlEncodedField}
+              onRemoveUrlEncodedField={removeUrlEncodedField}
+            />
           )}
 
           {activeTab === 'auth' && (
