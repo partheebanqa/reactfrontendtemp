@@ -26,7 +26,6 @@ import {
   Key,
   TestTube,
   Settings,
-  GitBranch,
   ChevronDown,
   ChevronRight,
   TriangleAlert,
@@ -35,11 +34,9 @@ import {
   AlertTriangle,
   Shield,
   FileText,
-  Clock,
   CheckCircle,
   XCircle,
   Shuffle,
-  Edit3,
   HelpCircle,
 } from 'lucide-react';
 import type {
@@ -69,20 +66,34 @@ import {
   type AutocompleteState,
   parseUrlParams,
   buildUrlWithParams,
-  generateDynamicValueById, // Import the new function
+  generateDynamicValueById,
 } from '@/lib/request-utils';
-import { Controlled as CodeMirror } from 'react-codemirror2';
 import 'codemirror/lib/codemirror.css';
 import 'codemirror/theme/material.css';
 import 'codemirror/mode/javascript/javascript';
 import './../RequestBuilder/RequestEditor/whiteorange.css';
 import {
   Tooltip,
-  TooltipContent,
   TooltipProvider,
+  TooltipContent,
   TooltipTrigger,
 } from '../ui/tooltip';
 import { VariableHelpDialog } from './HelpTextDialougs/variablesUseDialogues';
+import RequestBody from '@/components/Shared/RequestTabs/RequestBody';
+
+type FormField = {
+  id: string;
+  key: string;
+  value: string;
+  type: 'text' | 'file';
+  fileName?: string;
+};
+
+type KeyValueField = {
+  id: string;
+  key: string;
+  value: string;
+};
 
 interface Variable {
   id: string;
@@ -92,7 +103,7 @@ interface Variable {
   type: 'string' | 'number' | 'boolean';
   description?: string;
   environmentId?: string;
-  currentValue?: string; // Added for preview
+  currentValue?: string;
 }
 
 interface RequestEditorProps {
@@ -109,7 +120,7 @@ interface RequestEditorProps {
   chainId?: string;
   hideResponseExplorer?: boolean;
   onRequestExecution?: (executionLog: ExecutionLog) => void;
-  extractedVariables?: Record<string, any>; // Changed to Record<string, any>
+  extractedVariables?: Record<string, any>;
   chainVariables?: any[];
   dynamicVariableOverrides?: DynamicVariableOverride[];
   onRegenerateDynamicVariable?: (variableName: string) => void;
@@ -137,7 +148,7 @@ export function RequestEditor({
   chainId,
   hideResponseExplorer = false,
   onRequestExecution,
-  extractedVariables: parentExtractedVariables = {}, // Default to empty object
+  extractedVariables: parentExtractedVariables = {},
   chainVariables = [],
   dynamicVariableOverrides,
   onRegenerateDynamicVariable,
@@ -168,10 +179,8 @@ export function RequestEditor({
 
   useEffect(() => {
     if (dynamicVariableOverrides && dynamicVariableOverrides.length > 0) {
-      // Use overrides from parent chain
       setDynamicOverrides(dynamicVariableOverrides);
     } else if (dynamicVariables.length > 0 && dynamicOverrides.length === 0) {
-      // Only generate locally if no parent overrides exist
       const initialOverrides: DynamicVariableOverride[] = dynamicVariables.map(
         (d) => {
           const generated = generateDynamicValueById(
@@ -219,6 +228,12 @@ export function RequestEditor({
     token:
       initialRequest.authToken || initialRequest.authorization?.token || '',
   });
+
+  const [bodyType, setBodyType] = useState<any>(
+    initialRequest.bodyType || 'none'
+  );
+  const [formFields, setFormFields] = useState<FormField[]>([]);
+  const [urlEncodedFields, setUrlEncodedFields] = useState<KeyValueField[]>([]);
 
   useEffect(() => {
     if (!isSyncingRef.current) {
@@ -269,7 +284,6 @@ export function RequestEditor({
     } else {
       setHeaders(requestHeaders);
     }
-    // </CHANGE>
 
     setParams(initialRequest.params || []);
     setAuth({
@@ -278,7 +292,36 @@ export function RequestEditor({
       token:
         initialRequest.authToken || initialRequest.authorization?.token || '',
     });
-  }, [initialRequest.id]); // Only update when request ID changes to avoid infinite loops
+    setBodyType(initialRequest.bodyType || 'none');
+    if (initialRequest.bodyType === 'form' && initialRequest.body) {
+      try {
+        setFormFields(JSON.parse(initialRequest.body));
+      } catch (e) {
+        console.error(
+          'Failed to parse form fields from initial request body:',
+          e
+        );
+        setFormFields([]);
+      }
+    } else if (
+      initialRequest.bodyType === 'urlencoded' &&
+      initialRequest.body
+    ) {
+      try {
+        setUrlEncodedFields(JSON.parse(initialRequest.body));
+      } catch (e) {
+        console.error(
+          'Failed to parse URL-encoded fields from initial request body:',
+          e
+        );
+        setUrlEncodedFields([]);
+      }
+    } else if (initialRequest.bodyType === 'raw' && initialRequest.body) {
+      setBody(initialRequest.body);
+    } else {
+      setBody('');
+    }
+  }, [initialRequest.id]);
 
   useEffect(() => {
     if (isSyncingRef.current || !url.includes('?')) return;
@@ -374,7 +417,7 @@ export function RequestEditor({
   const [showResponse, setShowResponse] = useState(false);
   const [extractedVariables, setExtractedVariables] = useState<
     Record<string, any>
-  >(parentExtractedVariables); // Fixed: initialized with parentExtractedVariables
+  >(parentExtractedVariables);
   const { activeEnvironment } = useDataManagement();
 
   const [previewUrl, setPreviewUrl] = useState('');
@@ -417,7 +460,7 @@ export function RequestEditor({
             : typeof value === 'boolean'
             ? 'boolean'
             : 'string',
-        currentValue: String(value), // Added for preview
+        currentValue: String(value),
       })
     );
 
@@ -817,7 +860,14 @@ export function RequestEditor({
       authUsername: auth.username,
       authPassword: auth.password,
       authorization: initialRequest.authorization,
+      bodyType: bodyType,
     };
+
+    if (bodyType === 'form') {
+      safeRequest.body = JSON.stringify(formFields);
+    } else if (bodyType === 'urlencoded') {
+      safeRequest.body = JSON.stringify(urlEncodedFields);
+    }
 
     {
       const token = (
@@ -1025,11 +1075,11 @@ export function RequestEditor({
   };
 
   const tabs = [
-    { id: 'params', label: 'Params', icon: FileText },
-    { id: 'headers', label: 'Headers', icon: Code },
-    { id: 'body', label: 'Body', icon: FileText },
-    { id: 'auth', label: 'Auth', icon: Shield },
-    { id: 'settings', label: 'Settings', icon: Settings },
+    { id: 'params', label: 'Params' },
+    { id: 'headers', label: 'Headers' },
+    { id: 'body', label: 'Body' },
+    { id: 'auth', label: 'Auth' },
+    { id: 'settings', label: 'Settings' },
   ];
 
   const formatResponseBody = (body: string, contentType?: string) => {
@@ -1041,7 +1091,7 @@ export function RequestEditor({
         return JSON.stringify(JSON.parse(body), null, 2);
       }
     } catch {
-      // Return as-is if not valid JSON
+      console.error('Failed to format response body as JSON');
     }
     return body;
   };
@@ -1069,6 +1119,68 @@ export function RequestEditor({
 
   const removeParam = (index: number) => {
     setParams((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleBodyTypeChange = (type: any) => {
+    setBodyType(type);
+    onUpdate({ bodyType: type });
+  };
+
+  const handleBodyContentChange = (content: string) => {
+    setBody(content);
+  };
+
+  const handleBeautify = () => {
+    try {
+      const parsed = JSON.parse(body);
+      const beautified = JSON.stringify(parsed, null, 2);
+      setBody(beautified);
+      onUpdate({ body: beautified });
+    } catch (e) {
+      console.error('Invalid JSON for beautification');
+    }
+  };
+
+  const handleAddFormField = () => {
+    const newField: FormField = {
+      id: Math.random().toString(),
+      key: '',
+      value: '',
+      type: 'text',
+    };
+    setFormFields([...formFields, newField]);
+  };
+
+  const handleUpdateFormField = (id: string, field: Partial<FormField>) => {
+    setFormFields(
+      formFields.map((f) => (f.id === id ? { ...f, ...field } : f))
+    );
+  };
+
+  const handleRemoveFormField = (id: string) => {
+    setFormFields(formFields.filter((f) => f.id !== id));
+  };
+
+  const handleAddUrlEncodedField = () => {
+    const newField: KeyValueField = {
+      id: Math.random().toString(),
+      key: '',
+      value: '',
+    };
+    setUrlEncodedFields([...urlEncodedFields, newField]);
+  };
+
+  const handleUpdateUrlEncodedField = (
+    id: string,
+    field: Partial<KeyValueField>
+  ) => {
+    setUrlEncodedFields(
+      urlEncodedFields.map((f) => (f.id === id ? { ...f, ...field } : f))
+    );
+  };
+
+  const handleRemoveUrlEncodedField = (id: string) => {
+    setUrlEncodedFields(urlEncodedFields.filter((f) => f.id !== id));
   };
 
   const handleExtractVariable = (extraction: DataExtraction) => {
@@ -1444,6 +1556,12 @@ export function RequestEditor({
               Dynamic Variables ({usedDynamicVariables.length})
             </h4>
           </div>
+          <button
+            onClick={() => setShowDynamicEditor((prev) => !prev)}
+            className='text-sm text-purple-600 hover:underline'
+          >
+            {showDynamicEditor ? 'Hide Editor' : 'Edit Values'}
+          </button>
         </div>
 
         {showDynamicEditor ? (
@@ -1554,7 +1672,6 @@ export function RequestEditor({
     );
   };
 
-  // Sync URL -> Params (when pasting URL with query params)
   useEffect(() => {
     if (isSyncingRef.current || !url.includes('?')) return;
 
@@ -1567,8 +1684,6 @@ export function RequestEditor({
       isSyncingRef.current = false;
     }, 100);
   }, [url]);
-
-  // Sync Params -> URL (when editing params table)
   useEffect(() => {
     if (isSyncingRef.current || isInitialMount.current) {
       isInitialMount.current = false;
@@ -1635,10 +1750,7 @@ export function RequestEditor({
           <div className='flex-1'>{renderEnhancedPreviewUrl()}</div>
         </div>
 
-        {/* Dynamic Variables Panel - Now only shows used variables */}
         <DynamicVariablesPanel />
-
-        {/* Show available variables for debugging */}
         {Object.keys(parentExtractedVariables).length > 0 && (
           <div className='mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-sm'>
             <strong>Available Variables:</strong>{' '}
@@ -1651,10 +1763,8 @@ export function RequestEditor({
         {/* Tabs */}
         <div className='border-b border-gray-200'>
           <div className='flex items-center justify-between px-6 relative'>
-            {/* Tabs */}
             <nav className='flex space-x-8'>
               {tabs.map((tab) => {
-                const Icon = tab.icon;
                 return (
                   <button
                     key={tab.id}
@@ -1665,7 +1775,6 @@ export function RequestEditor({
                         : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                     }`}
                   >
-                    <Icon className='w-4 h-4' />
                     <span>{tab.label}</span>
                     {tab.id === 'tests' &&
                       initialRequest.testScripts &&
@@ -1841,9 +1950,7 @@ export function RequestEditor({
                           ? 'text-green-600 hover:bg-green-50'
                           : 'text-gray-400 hover:bg-gray-50'
                       }`}
-                    >
-                      {/* toggle visibility icon here */}
-                    </button>
+                    ></button>
                     <button
                       onClick={() => removeParam(index)}
                       className='p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors'
@@ -1926,9 +2033,7 @@ export function RequestEditor({
                           ? 'text-green-600 hover:bg-green-50'
                           : 'text-gray-400 hover:bg-gray-50'
                       }`}
-                    >
-                      {/* toggle visibility icon */}
-                    </button>
+                    ></button>
                     <button
                       onClick={() => removeHeader(index)}
                       className='p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors'
@@ -1941,142 +2046,26 @@ export function RequestEditor({
             </div>
           )}
 
-          {activeTab === 'body' && (
-            <div className='space-y-4'>
-              <h3 className='text-lg font-medium text-gray-900'>
-                Request Body
-              </h3>
-              {/* <div className='flex items-center space-x-4'>
-                <label className='flex items-center space-x-2'>
-                  <input
-                    type='radio'
-                    name='bodyType'
-                    value='none'
-                    checked={initialRequest.bodyType === 'none'}
-                    onChange={(e) =>
-                      onUpdate({
-                        bodyType: e.target.value as APIRequest['bodyType'],
-                      })
-                    }
-                    className='text-blue-600'
-                  />
-                  <span className='text-sm'>None</span>
-                </label>
-                <label className='flex items-center space-x-2'>
-                  <input
-                    type='radio'
-                    name='bodyType'
-                    value='form-data'
-                    checked={initialRequest.bodyType === 'form-data'}
-                    onChange={(e) =>
-                      onUpdate({
-                        bodyType: e.target.value as APIRequest['bodyType'],
-                      })
-                    }
-                    className='text-blue-600'
-                  />
-                  <span className='text-sm'>Form Data</span>
-                </label>
-                <label className='flex items-center space-x-2'>
-                  <input
-                    type='radio'
-                    name='bodyType'
-                    value='x-www-form-urlencoded'
-                    checked={initialRequest.bodyType === 'x-www-form-urlencoded'}
-                    onChange={(e) =>
-                      onUpdate({
-                        bodyType: e.target.value as APIRequest['bodyType'],
-                      })
-                    }
-                    className='text-blue-600'
-                  />
-                  <span className='text-sm'>x-www-form-urlencoded</span>
-                </label>
-                <label className='flex items-center space-x-2'>
-                  <input
-                    type='radio'
-                    name='bodyType'
-                    value='raw'
-                    checked={initialRequest.bodyType === 'raw'}
-                    onChange={(e) =>
-                      onUpdate({
-                        bodyType: e.target.value as APIRequest['bodyType'],
-                      })
-                    }
-                    className='text-blue-600'
-                  />
-                  <span className='text-sm'>Raw</span>
-                </label>
-              </div> */}
-              {initialRequest.bodyType === 'raw' && (
-                <div className='space-y-2'>
-                  {/* <div className='flex items-center justify-end'>
-                    <select
-                      value={initialRequest.rawBodyType || 'text'}
-                      onChange={(e) =>
-                        onUpdate({
-                          rawBodyType: e.target.value as
-                            | 'text'
-                            | 'json'
-                            | 'xml'
-                            | 'html',
-                        })
-                      }
-                      className='px-3 py-1 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-                    >
-                      <option value='text'>Text</option>
-                      <option value='json'>JSON</option>
-                      <option value='xml'>XML</option>
-                      <option value='html'>HTML</option>
-                    </select>
-                  </div> */}
-                  {/* <textarea
-                    name='body'
-                    value={body}
-                    onChange={(e) => handleInputChange(e, setBody)}
-                    onKeyUp={(e) => handleAutocomplete(e)}
-                    rows={8}
-                    className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm'
-                    placeholder='Enter request body... Use {{variableName}} or {{dynamicVar}} for variables'
-                  /> */}
-
-                  <CodeMirror
-                    value={body}
-                    options={{
-                      mode: { name: 'javascript', json: true },
-                      theme: 'whiteorange',
-                      lineNumbers: true,
-                      lineWrapping: true,
-                    }}
-                    onBeforeChange={(editor, data, value) => {
-                      handleInputChange({ target: { value } }, setBody);
-                    }}
-                    onKeyUp={(editor, event) => handleAutocomplete(event)}
-                    className='w-full border border-gray-300 rounded-lg font-mono text-[12px]'
-                  />
-
-                  {/* Show processed value if different */}
-                  {processedRequest.body !== initialRequest.body &&
-                    processedRequest.body && (
-                      <div className='mt-2 p-2 bg-blue-50 border border-blue-200 rounded'>
-                        <div className='text-xs font-medium text-blue-900 mb-1'>
-                          Processed Body:
-                        </div>
-                        <pre className='text-xs font-mono text-blue-800 max-h-32 overflow-y-auto'>
-                          {processedRequest.body}
-                        </pre>
-                      </div>
-                    )}
-                </div>
-              )}
-              {initialRequest.bodyType !== 'none' &&
-                initialRequest.bodyType !== 'raw' && (
-                  <div className='text-center py-8 text-gray-500'>
-                    <FileText className='w-12 h-12 text-gray-300 mx-auto mb-3' />
-                    <p>Form data editor coming soon...</p>
-                  </div>
-                )}
-            </div>
+          {activeTab === 'body' && showBody && (
+            <RequestBody
+              bodyType={bodyType}
+              bodyContent={body}
+              formFields={formFields}
+              urlEncodedFields={urlEncodedFields}
+              variables={storeVariables || []}
+              initialVariable={chainVariables || []}
+              onBodyTypeChange={handleBodyTypeChange}
+              onBodyContentChange={handleBodyContentChange}
+              onBeautify={handleBeautify}
+              onVariableSelect={(variable) => {}}
+              onConfirmSubstitution={(substitutions) => {}}
+              onAddFormField={handleAddFormField}
+              onUpdateFormField={handleUpdateFormField}
+              onRemoveFormField={handleRemoveFormField}
+              onAddUrlEncodedField={handleAddUrlEncodedField}
+              onUpdateUrlEncodedField={handleUpdateUrlEncodedField}
+              onRemoveUrlEncodedField={handleRemoveUrlEncodedField}
+            />
           )}
           {activeTab === 'auth' && (
             <div className='space-y-4'>
@@ -2130,11 +2119,9 @@ export function RequestEditor({
 
           {activeTab === 'settings' && (
             <div className='space-y-4'>
-              <h3 className='text-lg font-medium text-gray-900'>
-                Request Settings
-              </h3>
+              <h3 className='text-lg font-semibold mb-4'>Request Settings</h3>
 
-              <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
+              <div className='grid grid-cols-1 md:grid-cols-2 gap-6 mb-6'>
                 <div>
                   <label className='block text-sm font-medium text-gray-700 mb-2'>
                     Timeout (ms)
@@ -2754,12 +2741,7 @@ export function RequestEditor({
             <CardContent className='space-y-4'>
               <div className='flex items-center space-x-4'>
                 <Label>Body Type:</Label>
-                <Select
-                  value={initialRequest.bodyType || 'none'}
-                  onValueChange={(value) =>
-                    onUpdate({ bodyType: value as any })
-                  }
-                >
+                <Select value={bodyType} onValueChange={handleBodyTypeChange}>
                   <SelectTrigger className='w-40'>
                     <SelectValue />
                   </SelectTrigger>
@@ -2767,12 +2749,15 @@ export function RequestEditor({
                     <SelectItem value='none'>None</SelectItem>
                     <SelectItem value='json'>JSON</SelectItem>
                     <SelectItem value='form'>Form Data</SelectItem>
+                    <SelectItem value='urlencoded'>
+                      x-www-form-urlencoded
+                    </SelectItem>
                     <SelectItem value='raw'>Raw</SelectItem>
                     <SelectItem value='binary'>Binary</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-              {initialRequest.bodyType !== 'none' && (
+              {bodyType !== 'none' && bodyType !== 'binary' && (
                 <div className='space-y-2'>
                   <Label>Body Content</Label>
                   <Textarea
@@ -2781,13 +2766,212 @@ export function RequestEditor({
                     onChange={(e) => handleInputChange(e, setBody)}
                     onKeyUp={(e) => handleAutocomplete(e)}
                     placeholder={
-                      initialRequest.bodyType === 'json'
+                      bodyType === 'json'
                         ? '{\n  "key": "value",\n  "array": [1, 2, 3]\n}'
                         : 'Enter request body'
                     }
                     rows={10}
                     className='font-mono'
                   />
+                  {bodyType === 'json' && (
+                    <Button
+                      onClick={handleBeautify}
+                      variant='outline'
+                      className='mt-2 bg-transparent'
+                    >
+                      Beautify JSON
+                    </Button>
+                  )}
+                </div>
+              )}
+              {bodyType === 'form' && (
+                <div className='space-y-4'>
+                  <div className='flex items-center justify-between'>
+                    <h3 className='text-lg font-medium text-gray-900'>
+                      Form Fields
+                    </h3>
+                    <Button
+                      variant='link'
+                      size='sm'
+                      onClick={handleAddFormField}
+                      className='gap-2 text-primary'
+                    >
+                      <Plus className='w-4 h-4' />
+                      Add Field
+                    </Button>
+                  </div>
+                  {formFields.length > 0 ? (
+                    <div className='space-y-2'>
+                      {formFields.map((field) => (
+                        <div
+                          key={field.id}
+                          className='grid grid-cols-12 gap-2 items-center'
+                        >
+                          <div className='col-span-4'>
+                            <Input
+                              value={field.key}
+                              onChange={(e) =>
+                                handleUpdateFormField(field.id, {
+                                  key: e.target.value,
+                                })
+                              }
+                              placeholder='Key'
+                            />
+                          </div>
+                          <div className='col-span-5'>
+                            {field.type === 'text' ? (
+                              <Input
+                                value={field.value}
+                                onChange={(e) =>
+                                  handleUpdateFormField(field.id, {
+                                    value: e.target.value,
+                                  })
+                                }
+                                placeholder='Value'
+                              />
+                            ) : (
+                              <div className='flex items-center space-x-2'>
+                                <Input
+                                  type='file'
+                                  onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) {
+                                      handleUpdateFormField(field.id, {
+                                        value: file.name,
+                                        fileName: file.name,
+                                      });
+                                    }
+                                  }}
+                                  placeholder='Choose File'
+                                />
+                                {field.fileName && (
+                                  <span className='text-xs text-gray-500'>
+                                    {field.fileName}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                          <div className='col-span-2'>
+                            <Select
+                              value={field.type}
+                              onValueChange={(type) =>
+                                handleUpdateFormField(field.id, {
+                                  type: type as any,
+                                })
+                              }
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value='text'>Text</SelectItem>
+                                <SelectItem value='file'>File</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className='col-span-1 flex justify-center'>
+                            <Button
+                              variant='ghost'
+                              size='sm'
+                              onClick={() => handleRemoveFormField(field.id)}
+                              className='h-8 w-8 p-0 text-red-600 hover:text-red-700'
+                            >
+                              <Trash2 className='w-3 h-3' />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className='flex flex-col items-center justify-center py-12'>
+                      <div className='w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4'>
+                        <FileText className='w-8 h-8 text-muted-foreground' />
+                      </div>
+                      <p className='text-muted-foreground'>
+                        No form fields added. Click 'Add Field' to get started.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+              {bodyType === 'urlencoded' && (
+                <div className='space-y-4'>
+                  <div className='flex items-center justify-between'>
+                    <h3 className='text-lg font-medium text-gray-900'>
+                      URL Encoded Fields
+                    </h3>
+                    <Button
+                      variant='link'
+                      size='sm'
+                      onClick={handleAddUrlEncodedField}
+                      className='gap-2 text-primary'
+                    >
+                      <Plus className='w-4 h-4' />
+                      Add Field
+                    </Button>
+                  </div>
+                  {urlEncodedFields.length > 0 ? (
+                    <div className='space-y-2'>
+                      {urlEncodedFields.map((field) => (
+                        <div
+                          key={field.id}
+                          className='grid grid-cols-12 gap-2 items-center'
+                        >
+                          <div className='col-span-5'>
+                            <Input
+                              value={field.key}
+                              onChange={(e) =>
+                                handleUpdateUrlEncodedField(field.id, {
+                                  key: e.target.value,
+                                })
+                              }
+                              placeholder='Key'
+                            />
+                          </div>
+                          <div className='col-span-6'>
+                            <Input
+                              value={field.value}
+                              onChange={(e) =>
+                                handleUpdateUrlEncodedField(field.id, {
+                                  value: e.target.value,
+                                })
+                              }
+                              placeholder='Value'
+                            />
+                          </div>
+                          <div className='col-span-1 flex justify-center'>
+                            <Button
+                              variant='ghost'
+                              size='sm'
+                              onClick={() =>
+                                handleRemoveUrlEncodedField(field.id)
+                              }
+                              className='h-8 w-8 p-0 text-red-600 hover:text-red-700'
+                            >
+                              <Trash2 className='w-3 h-3' />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className='flex flex-col items-center justify-center py-12'>
+                      <div className='w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4'>
+                        <FileText className='w-8 h-8 text-muted-foreground' />
+                      </div>
+                      <p className='text-muted-foreground'>
+                        No URL-encoded fields added. Click 'Add Field' to get
+                        started.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+              {bodyType === 'binary' && (
+                <div className='text-center py-8 text-gray-500'>
+                  <FileText className='w-12 h-12 text-gray-300 mx-auto mb-3' />
+                  <p>Binary file upload coming soon...</p>
                 </div>
               )}
             </CardContent>

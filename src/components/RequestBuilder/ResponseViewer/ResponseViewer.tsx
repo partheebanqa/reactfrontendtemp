@@ -482,16 +482,14 @@ const ResponseViewer = () => {
     {
       id: 'body',
       label: 'Body',
-      icon: Code,
       hasIndicator: !!responseData?.bodySchema,
     },
     {
       id: 'headers',
       label: 'Headers',
-      icon: Hash,
       count: Object.keys(responseData?.headers || {}).length,
     },
-    { id: 'cookies', label: 'Cookies', icon: Cookie },
+    { id: 'cookies', label: 'Cookies' },
     {
       id: 'test-results',
       label: 'Assertions Result',
@@ -520,13 +518,10 @@ const ResponseViewer = () => {
 
   return (
     <div className='flex-1 flex flex-col bg-background min-h-0 overflow-hidden'>
-      {/* Header with tabs and status */}
       <div className='bg-card border-b border-border flex-shrink-0'>
-        {/* Tabs and Status on same row */}
         <div className='flex items-center justify-between border-b border-border'>
           <nav className='flex space-x-8 px-4'>
             {tabs.map((tab) => {
-              const Icon = tab.icon;
               return (
                 <button
                   key={tab.id}
@@ -537,7 +532,6 @@ const ResponseViewer = () => {
                       : 'border-transparent text-muted-foreground hover:text-foreground hover:border-muted'
                   }`}
                 >
-                  {Icon && <Icon className='w-4 h-4' />}
                   <span>{tab.label}</span>
                   {tab.hasIndicator && (
                     <span className='ml-1 w-1.5 h-1.5 bg-blue-500 rounded-full' />
@@ -688,31 +682,10 @@ const ResponseViewer = () => {
         </div>
       )}
 
-      {/* Content */}
       <div className='flex-1 overflow-auto p-2'>
         {activeTab === 'body' && (
           <div>
-            <div className='flex items-center justify-between mb-2'>
-              {/* <div className='flex items-center space-x-2'>
-                <h3 className='text-sm font-medium text-foreground'>
-                  Response Body
-                </h3>
-                <div className='relative group'>
-                  <Info className='w-4 h-4 text-muted-foreground cursor-help' />
-                  <div className='absolute left-0 bottom-full mb-2 w-64 p-3 text-xs text-foreground bg-popover border border-border rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50'>
-                    <p className='font-medium mb-1'>
-                      How to extract variables:
-                    </p>
-                    <ul className='list-disc list-inside space-y-1'>
-                      <li>Hover over any value in the JSON</li>
-                      <li>Click the "Extract" button</li>
-                      <li>Give it a name and confirm</li>
-                      <li>Use the variable in future requests</li>
-                    </ul>
-                  </div>
-                </div>
-              </div> */}
-            </div>
+            <div className='flex items-center justify-between mb-2'></div>
             {renderJsonTree()}
           </div>
         )}

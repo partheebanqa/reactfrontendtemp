@@ -352,7 +352,7 @@ export const generateAssertions = (response: ApiResponse): Assertion[] => {
     type: 'status_equals',
     description: `Status code equals ${response.status}`,
     operator: 'equals',
-    expectedValue: response.status,
+    expectedValue: `${response.status}`,
     enabled: false,
   });
 

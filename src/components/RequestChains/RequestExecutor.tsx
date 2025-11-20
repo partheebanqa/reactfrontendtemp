@@ -87,7 +87,7 @@ export function RequestExecutor({
   const processedRequests = useMemo(() => {
     return requests.map((req) => ({
       ...req,
-      enabled: req.enabled !== false, // Default to true if not explicitly false
+      enabled: req.enabled !== false,
     }));
   }, [requests]);
 
@@ -135,7 +135,7 @@ export function RequestExecutor({
           ? JSON.parse(response.body)[variable.path]
           : undefined;
         if (value !== undefined) {
-          extracted[variable.name] = value; // Changed from variable.variableName to variable.name
+          extracted[variable.name] = value;
         }
       });
     }
@@ -450,15 +450,12 @@ export function RequestExecutor({
         result.data.responses.forEach((response: any) => {
           let requestUrl = '';
           if (response.requestCurl) {
-            // Extract URL from curl command - look for quoted URLs first
             const quotedUrlMatch =
               response.requestCurl.match(/'(https?:\/\/[^']+)'/g);
             if (quotedUrlMatch && quotedUrlMatch.length > 0) {
-              // Get the last quoted URL (usually the actual request URL)
               const lastQuotedUrl = quotedUrlMatch[quotedUrlMatch.length - 1];
               requestUrl = lastQuotedUrl.replace(/'/g, '');
             } else {
-              // Fallback: look for any HTTP URL in the curl command
               const urlMatch =
                 response.requestCurl.match(/https?:\/\/[^\s'"]+/);
               requestUrl = urlMatch ? urlMatch[0] : '';
@@ -514,11 +511,11 @@ export function RequestExecutor({
                 const value = responseData[variable.path];
 
                 if (value !== undefined) {
-                  log.extractedVariables![variable.name] = value; // Changed from variable.variableName
+                  log.extractedVariables![variable.name] = value;
 
                   const newVar: Variable = {
                     id: `${Date.now()}-${Math.random()}`,
-                    name: variable.name, // Changed from variable.variableName
+                    name: variable.name,
                     value: String(value),
                     type:
                       typeof value === 'number'
@@ -566,17 +563,6 @@ export function RequestExecutor({
           (log) => log.status === 'success'
         ).length;
         const totalCount = logs.length;
-
-        // toast({
-        //   title: 'Execution Complete',
-        //   description: `Completed ${successCount}/${totalCount} requests successfully`,
-        //   variant: successCount === totalCount ? 'default' : 'destructive',
-        // });
-      } else {
-        // toast({
-        //   title: 'Execution Started',
-        //   description: `Request chain execution started successfully.`,
-        // });
       }
     } catch (error: any) {
       toast({
@@ -639,7 +625,7 @@ export function RequestExecutor({
         return JSON.stringify(JSON.parse(body), null, 2);
       }
     } catch {
-      // Return as-is if not valid JSON
+      console.error('Failed to parse response body as JSON');
     }
     return body;
   };
@@ -649,12 +635,9 @@ export function RequestExecutor({
       if (!url || url.trim() === '') {
         return url || 'Invalid URL';
       }
-
-      // Check if it's a valid URL
       const urlObj = new URL(url);
       return urlObj.pathname;
     } catch (error) {
-      // If URL construction fails, return the original string
       return url || 'Invalid URL';
     }
   };
