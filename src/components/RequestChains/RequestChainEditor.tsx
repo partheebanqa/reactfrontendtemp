@@ -1288,7 +1288,7 @@ export function RequestChainEditor({
         let bodyContent = '';
 
         if (req.bodyType === 'form-data' && Array.isArray(req.bodyFormData)) {
-          bodyType = 'form';
+          bodyType = 'form-data';
           bodyContent = JSON.stringify(
             req.bodyFormData.map((field: any) => ({
               id: field.id || `temp_${Date.now()}_${Math.random()}`,

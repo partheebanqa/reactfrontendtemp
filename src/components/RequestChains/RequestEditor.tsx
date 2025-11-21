@@ -297,7 +297,7 @@ export function RequestEditor({
     setBodyType(requestBodyType);
 
     // Handle form-data (form) body type
-    if (requestBodyType === 'form' && initialRequest.body) {
+    if (requestBodyType === 'form-data' && initialRequest.body) {
       try {
         const parsed = JSON.parse(initialRequest.body);
         if (Array.isArray(parsed)) {
@@ -874,7 +874,7 @@ export function RequestEditor({
       bodyType: bodyType,
     };
 
-    if (bodyType === 'form') {
+    if (bodyType === 'form-data') {
       safeRequest.body = JSON.stringify(formFields);
     } else if (bodyType === 'urlencoded') {
       safeRequest.body = JSON.stringify(urlEncodedFields);
@@ -2759,7 +2759,7 @@ export function RequestEditor({
                   <SelectContent>
                     <SelectItem value='none'>None</SelectItem>
                     <SelectItem value='json'>JSON</SelectItem>
-                    <SelectItem value='form'>Form Data</SelectItem>
+                    <SelectItem value='form-data'>Form Data</SelectItem>
                     <SelectItem value='urlencoded'>
                       x-www-form-urlencoded
                     </SelectItem>
@@ -2795,7 +2795,7 @@ export function RequestEditor({
                   )}
                 </div>
               )}
-              {bodyType === 'form' && (
+              {bodyType === 'form-data' && (
                 <div className='space-y-4'>
                   <div className='flex items-center justify-between'>
                     <h3 className='text-lg font-medium text-gray-900'>
