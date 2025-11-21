@@ -492,24 +492,40 @@ const RequestEditor: React.FC = () => {
         'binary',
       ];
       const bodyTypeValue = activeRequest.bodyType || 'none';
-      setBodyType('raw');
+      if (allowedBodyTypes.includes(bodyTypeValue)) {
+        setBodyType(bodyTypeValue as BodyType);
+      } else {
+        setBodyType('raw');
+      }
       setBodyContent(activeRequest.bodyRawContent || '');
       setPendingSubstitutions([]);
 
       try {
-        if (
-          activeRequest.bodyFormData &&
-          typeof activeRequest.bodyFormData === 'object'
-        ) {
-          const formDataFields = Object.entries(activeRequest.bodyFormData).map(
-            ([key, value]) => ({
+        if (bodyTypeValue === 'form-data' && activeRequest.bodyFormData) {
+          if (Array.isArray(activeRequest.bodyFormData)) {
+            const formDataFields = activeRequest.bodyFormData.map(
+              (field: any) => ({
+                key: field.key || '',
+                value: field.value || '',
+                enabled: field.enabled !== undefined ? field.enabled : true,
+                type: (field.type || 'text') as 'text' | 'file',
+                ...(field.fileName ? { fileName: field.fileName } : {}),
+              })
+            );
+            setFormFields(formDataFields);
+          } else if (typeof activeRequest.bodyFormData === 'object') {
+            const formDataFields = Object.entries(
+              activeRequest.bodyFormData
+            ).map(([key, value]) => ({
               key,
               value: value?.toString() || '',
               enabled: true,
               type: 'text' as const,
-            })
-          );
-          setFormFields(formDataFields);
+            }));
+            setFormFields(formDataFields);
+          } else {
+            setFormFields([]);
+          }
         } else {
           setFormFields([]);
         }
@@ -700,7 +716,7 @@ const RequestEditor: React.FC = () => {
         name: 'New Request',
         method: 'GET',
         url: '',
-        bodyType: 'json',
+        bodyType: 'raw',
         bodyFormData: null,
         authorizationType: 'none',
         authorization: {},
