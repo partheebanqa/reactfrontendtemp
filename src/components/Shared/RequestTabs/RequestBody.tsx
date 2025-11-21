@@ -74,6 +74,7 @@ export default function RequestBody({
   onUpdateUrlEncodedField,
   onRemoveUrlEncodedField,
 }: RequestBodyProps) {
+  console.log('bodyType123:', bodyType);
   return (
     <div className='space-y-4'>
       <div className='flex items-center justify-between'>

@@ -1284,10 +1284,24 @@ export function RequestChainEditor({
   const handleImportRequests = async (importedRequests: ExtendedRequest[]) => {
     try {
       const transformedRequests: APIRequest[] = importedRequests.map((req) => {
-        const hasBody = req.bodyRawContent && req.bodyRawContent.trim() !== '';
-        const bodyType: APIRequest['bodyType'] = hasBody
-          ? (req.bodyType as APIRequest['bodyType']) || 'raw'
-          : 'none';
+        let bodyType: APIRequest['bodyType'] = 'none';
+        let bodyContent = '';
+
+        if (req.bodyType === 'form-data' && Array.isArray(req.bodyFormData)) {
+          bodyType = 'form';
+          bodyContent = JSON.stringify(
+            req.bodyFormData.map((field: any) => ({
+              id: field.id || `temp_${Date.now()}_${Math.random()}`,
+              key: field.key || '',
+              value: field.value || '',
+              type: field.type || 'text',
+              enabled: field.enabled !== false,
+            }))
+          );
+        } else if (req.bodyRawContent && req.bodyRawContent.trim() !== '') {
+          bodyType = (req.bodyType as APIRequest['bodyType']) || 'raw';
+          bodyContent = req.bodyRawContent;
+        }
 
         const headers = Array.isArray(req.headers)
           ? req.headers.map((header: any) => ({
@@ -1341,12 +1355,11 @@ export function RequestChainEditor({
           headers,
           params,
           bodyType,
-          body: hasBody ? req.bodyRawContent : '',
+          body: bodyContent,
           authorizationType,
           authorization: {
             token: authToken,
           },
-
           authUsername,
           authPassword,
           authApiKey,
@@ -1386,7 +1399,6 @@ export function RequestChainEditor({
       });
     }
   };
-
   const currentRequestChainId = requestChainId || chain?.id || '';
 
   function commitRequestName(index: number, nameValue: string) {

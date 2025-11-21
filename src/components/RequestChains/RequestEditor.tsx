@@ -292,10 +292,19 @@ export function RequestEditor({
       token:
         initialRequest.authToken || initialRequest.authorization?.token || '',
     });
-    setBodyType(initialRequest.bodyType || 'none');
-    if (initialRequest.bodyType === 'form' && initialRequest.body) {
+
+    const requestBodyType = initialRequest.bodyType || 'none';
+    setBodyType(requestBodyType);
+
+    // Handle form-data (form) body type
+    if (requestBodyType === 'form' && initialRequest.body) {
       try {
-        setFormFields(JSON.parse(initialRequest.body));
+        const parsed = JSON.parse(initialRequest.body);
+        if (Array.isArray(parsed)) {
+          setFormFields(parsed);
+        } else {
+          setFormFields([]);
+        }
       } catch (e) {
         console.error(
           'Failed to parse form fields from initial request body:',
@@ -303,12 +312,14 @@ export function RequestEditor({
         );
         setFormFields([]);
       }
-    } else if (
-      initialRequest.bodyType === 'urlencoded' &&
-      initialRequest.body
-    ) {
+    } else if (requestBodyType === 'urlencoded' && initialRequest.body) {
       try {
-        setUrlEncodedFields(JSON.parse(initialRequest.body));
+        const parsed = JSON.parse(initialRequest.body);
+        if (Array.isArray(parsed)) {
+          setUrlEncodedFields(parsed);
+        } else {
+          setUrlEncodedFields([]);
+        }
       } catch (e) {
         console.error(
           'Failed to parse URL-encoded fields from initial request body:',
@@ -316,7 +327,7 @@ export function RequestEditor({
         );
         setUrlEncodedFields([]);
       }
-    } else if (initialRequest.bodyType === 'raw' && initialRequest.body) {
+    } else if (requestBodyType === 'raw' && initialRequest.body) {
       setBody(initialRequest.body);
     } else {
       setBody('');
