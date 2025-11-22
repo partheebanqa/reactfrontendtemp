@@ -10,11 +10,13 @@ import {
   Search,
   Globe,
   Clock,
-  Zap,
-  TrendingUp,
-  AlertTriangle,
+  FileJson,
+  FileText,
+  Table,
 } from 'lucide-react';
-import { jsPDF } from 'jspdf';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
+import Papa from 'papaparse';
 import { toast } from '@/hooks/use-toast';
 import { collectionActions } from '@/store/collectionStore';
 
@@ -161,9 +163,367 @@ interface SanitizeTestRunnerProps {
   activeEnvironment?: any;
 }
 
+// Export Modal Component
+interface ExportModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  collection: Collection;
+  metrics: TestMetrics;
+  testResults: TestResult[];
+}
+
+type Format = 'pdf' | 'json' | 'csv';
+
+function ExportModal({
+  isOpen,
+  onClose,
+  collection,
+  metrics,
+  testResults,
+}: ExportModalProps) {
+  const [selectedFormat, setSelectedFormat] = useState<Format>('json');
+  const [isExporting, setIsExporting] = useState(false);
+  const [includeMetrics, setIncludeMetrics] = useState(true);
+  const [includeResults, setIncludeResults] = useState(true);
+  const [includeInsights, setIncludeInsights] = useState(true);
+
+  const formats = [
+    {
+      id: 'pdf' as const,
+      label: 'PDF Report',
+      icon: FileText,
+      description: 'Professional PDF with charts',
+    },
+    {
+      id: 'json' as const,
+      label: 'JSON Data',
+      icon: FileJson,
+      description: 'Structured data export',
+    },
+    {
+      id: 'csv' as const,
+      label: 'CSV File',
+      icon: Table,
+      description: 'Spreadsheet compatible',
+    },
+  ];
+
+  const exportJSON = () => {
+    const data = {
+      collection: {
+        name: collection.name,
+        exportedAt: new Date().toISOString(),
+      },
+      metrics: includeMetrics ? metrics : undefined,
+      results: includeResults
+        ? testResults.map((r) => ({
+            id: r.id,
+            name: r.name,
+            method: r.method,
+            status: r.status,
+            statusCode: r.statusCode,
+            responseTime: r.responseTime,
+            timestamp: r.timestamp,
+          }))
+        : undefined,
+    };
+
+    const jsonString = JSON.stringify(data, null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${collection.name}_test_report_${
+      new Date().toISOString().split('T')[0]
+    }.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const exportCSV = () => {
+    const rows = [
+      ['Test Report Summary'],
+      ['Collection', collection.name],
+      ['Exported At', new Date().toISOString()],
+      [],
+      ['Metrics'],
+      ['Total Tests', metrics.total],
+      ['Passed', metrics.passed],
+      ['Failed', metrics.failed],
+      ['Skipped', metrics.skipped],
+      ['Auth APIs', metrics.authAPIs],
+      ['Max Response Time (ms)', metrics.maxResponseTime],
+      ['Min Response Time (ms)', metrics.minResponseTime],
+      ['Slowest API', metrics.slowestAPI],
+      ['Fastest API', metrics.fastestAPI],
+      ['Total Execution Time (ms)', metrics.totalExecutionTime],
+      [],
+      ['Test Results'],
+      [
+        'ID',
+        'Name',
+        'Method',
+        'Status',
+        'Status Code',
+        'Response Time (ms)',
+        'Timestamp',
+      ],
+      ...testResults.map((r) => [
+        r.id,
+        r.name,
+        r.method,
+        r.status,
+        r.statusCode || '',
+        r.responseTime || '',
+        r.timestamp || '',
+      ]),
+    ];
+
+    const csvContent = rows
+      .map((row) =>
+        row
+          .map((cell) => {
+            const cellStr = String(cell);
+            if (
+              cellStr.includes(',') ||
+              cellStr.includes('"') ||
+              cellStr.includes('\n')
+            ) {
+              return `"${cellStr.replace(/"/g, '""')}"`;
+            }
+            return cellStr;
+          })
+          .join(',')
+      )
+      .join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${collection.name}_test_report_${
+      new Date().toISOString().split('T')[0]
+    }.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const exportPDF = async (
+    collection: Collection,
+    results: TestResult[],
+    metrics: TestMetrics,
+    elementId: string
+  ) => {
+    try {
+      const element = document.getElementById(elementId);
+      if (!element) throw new Error('Element not found');
+
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+      });
+
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4',
+      });
+
+      const imgWidth = 210;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const imgData = canvas.toDataURL('image/png');
+
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+
+      while (heightLeft >= 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+
+      pdf.save(
+        `${collection.name}_test_report_${
+          new Date().toISOString().split('T')[0]
+        }.pdf`
+      );
+    } catch (error) {
+      console.error('PDF export failed:', error);
+      throw error;
+    }
+  };
+
+  const handleExport = async () => {
+    setIsExporting(true);
+    try {
+      switch (selectedFormat) {
+        case 'pdf':
+          await exportPDF(collection, testResults, metrics, 'summary-content');
+          break;
+        case 'json':
+          exportJSON();
+          break;
+        case 'csv':
+          exportCSV();
+          break;
+      }
+      setTimeout(() => {
+        setIsExporting(false);
+        onClose();
+        toast({
+          title: 'Export Successful',
+          description: `Test report exported as ${selectedFormat.toUpperCase()}`,
+        });
+      }, 1000);
+    } catch (error) {
+      console.error('Export failed:', error);
+      setIsExporting(false);
+      toast({
+        title: 'Export Failed',
+        description: 'An error occurred while exporting the report',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className='fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4'>
+      <div className='bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-md w-full'>
+        <div className='flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700'>
+          <h2 className='text-xl font-semibold text-gray-900 dark:text-white'>
+            Export Test Report
+          </h2>
+          <button
+            onClick={onClose}
+            disabled={isExporting}
+            className='p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors'
+          >
+            <X size={20} className='text-gray-500' />
+          </button>
+        </div>
+
+        <div className='p-6 space-y-6'>
+          <div>
+            <label className='text-sm font-semibold text-gray-900 dark:text-white mb-3 block'>
+              Export Format
+            </label>
+            <div className='space-y-2'>
+              {formats.map(({ id, label, icon: Icon, description }) => (
+                <button
+                  key={id}
+                  onClick={() => setSelectedFormat(id)}
+                  className={`w-full px-4 py-3 rounded-lg border-2 transition-all flex items-center gap-3 ${
+                    selectedFormat === id
+                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                      : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                  }`}
+                >
+                  <Icon
+                    size={20}
+                    className={
+                      selectedFormat === id ? 'text-blue-600' : 'text-gray-400'
+                    }
+                  />
+                  <div className='text-left'>
+                    <div className='font-medium text-gray-900 dark:text-white'>
+                      {label}
+                    </div>
+                    <div className='text-xs text-gray-500 dark:text-gray-400'>
+                      {description}
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className='text-sm font-semibold text-gray-900 dark:text-white mb-3 block'>
+              Include in Export
+            </label>
+            <div className='space-y-2'>
+              <label className='flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer'>
+                <input
+                  type='checkbox'
+                  checked={includeMetrics}
+                  onChange={(e) => setIncludeMetrics(e.target.checked)}
+                  className='w-4 h-4 rounded border-gray-300 text-blue-500 cursor-pointer'
+                />
+                <span className='text-sm text-gray-700 dark:text-gray-300'>
+                  Performance Metrics
+                </span>
+              </label>
+              <label className='flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer'>
+                <input
+                  type='checkbox'
+                  checked={includeResults}
+                  onChange={(e) => setIncludeResults(e.target.checked)}
+                  className='w-4 h-4 rounded border-gray-300 text-blue-500 cursor-pointer'
+                />
+                <span className='text-sm text-gray-700 dark:text-gray-300'>
+                  Test Results
+                </span>
+              </label>
+              <label className='flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer'>
+                <input
+                  type='checkbox'
+                  checked={includeInsights}
+                  onChange={(e) => setIncludeInsights(e.target.checked)}
+                  className='w-4 h-4 rounded border-gray-300 text-blue-500 cursor-pointer'
+                />
+                <span className='text-sm text-gray-700 dark:text-gray-300'>
+                  Smart Insights
+                </span>
+              </label>
+            </div>
+          </div>
+
+          <div className='flex gap-3 pt-4 border-t border-gray-200 dark:border-gray-700'>
+            <button
+              onClick={onClose}
+              disabled={isExporting}
+              className='flex-1 px-4 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50'
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleExport}
+              disabled={isExporting}
+              className='flex-1 px-4 py-2.5 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2'
+            >
+              {isExporting ? (
+                <>
+                  <Loader2 size={16} className='animate-spin' />
+                  Exporting...
+                </>
+              ) : (
+                <>
+                  <Download size={16} />
+                  Export
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
   collection,
-
   workspaceId,
   environments = [],
   activeEnvironment,
@@ -174,6 +534,7 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
   const [isRunning, setIsRunning] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [startTime, setStartTime] = useState<Date | null>(null);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -244,9 +605,11 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
 
     setSearchQuery('');
   }, [collection.id, collection.requests, collection.folders]);
+
   const handleClose = () => {
     collectionActions.closeSanitizeTestRunner();
   };
+
   const handleSelectAll = () => {
     setRequests((prev) => prev.map((req) => ({ ...req, isSelected: true })));
   };
@@ -553,44 +916,6 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
     return { metrics, testResults, insights };
   }, [requests]);
 
-  const handleDownloadPDF = () => {
-    const doc = new jsPDF();
-
-    doc.setFontSize(18);
-    doc.text(`Test Summary`, 20, 20);
-    doc.setFontSize(12);
-    doc.text(collection.name, 20, 30);
-    doc.setFontSize(10);
-    doc.text(`Generated: ${new Date().toLocaleString()}`, 20, 40);
-
-    let yPos = 55;
-    const summaryData = [
-      { label: 'Total', value: metrics.total.toString() },
-      { label: 'Passed', value: metrics.passed.toString() },
-      { label: 'Failed', value: metrics.failed.toString() },
-      { label: 'Skipped', value: metrics.skipped.toString() },
-      { label: 'Auth APIs', value: metrics.authAPIs.toString() },
-      {
-        label: 'Max Response Time',
-        value:
-          metrics.maxResponseTime > 0 ? `${metrics.maxResponseTime}ms` : 'N/A',
-      },
-    ];
-
-    summaryData.forEach((item) => {
-      doc.text(`${item.label}:`, 20, yPos);
-      doc.text(item.value, 100, yPos);
-      yPos += 10;
-    });
-
-    doc.save(`${collection.name}-test-summary.pdf`);
-
-    toast({
-      title: 'PDF Downloaded',
-      description: 'Test summary has been downloaded successfully.',
-    });
-  };
-
   const handleShare = async () => {
     const summaryText = `
 Test Summary: ${collection.name}
@@ -815,7 +1140,7 @@ Max Response Time: ${
                 <Button
                   variant='outline'
                   size='sm'
-                  onClick={handleDownloadPDF}
+                  onClick={() => setIsExportModalOpen(true)}
                   disabled={metrics.passed === 0 && metrics.failed === 0}
                   className='flex items-center gap-2'
                 >
@@ -835,7 +1160,7 @@ Max Response Time: ${
               </div>
             </div>
 
-            <div className='p-4 space-y-6'>
+            <div id='summary-content' className='p-4 space-y-6'>
               {/* Stats Cards */}
               <div className='grid grid-cols-2 gap-3'>
                 <MetricBadge
@@ -931,6 +1256,15 @@ Max Response Time: ${
           </div>
         </Panel>
       </PanelGroup>
+
+      {/* Export Modal */}
+      <ExportModal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+        collection={collection}
+        metrics={metrics}
+        testResults={testResults}
+      />
     </div>
   );
 };

@@ -2398,7 +2398,6 @@ export function RequestEditor({
           )}
         </div>
 
-        {/* Show variable substitution preview for debugging */}
         {showVariablePreview() && (
           <div className='mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg'>
             <h4 className='text-sm font-medium text-blue-900 mb-2'>
@@ -2789,8 +2788,7 @@ export function RequestEditor({
           )}
         </CardContent>
       </Card>
-      {/* Main Tabs */}
-      {/* Show processed values for debugging */}
+
       {showVariablePreview() && (
         <div className='mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg'>
           <h4 className='text-sm font-medium text-blue-900 mb-2'>
