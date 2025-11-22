@@ -79,6 +79,7 @@ import {
 } from '../ui/tooltip';
 import { VariableHelpDialog } from './HelpTextDialougs/variablesUseDialogues';
 import RequestBody from '@/components/Shared/RequestTabs/RequestBody';
+import { KeyValuePairWithFile } from '../ui/KeyValueEditorWithFileUpload';
 
 type FormField = {
   id: string;
@@ -152,8 +153,6 @@ export function RequestEditor({
   dynamicVariableOverrides,
   onRegenerateDynamicVariable,
 }: RequestEditorProps) {
-  console.log('initialRequest:', initialRequest);
-
   const isSyncingRef = useRef(false);
   const isInitialMount = useRef(true);
   const [isJsonOpen, setIsJsonOpen] = useState(false);
@@ -297,13 +296,11 @@ export function RequestEditor({
     const requestBodyType = initialRequest.bodyType || 'none';
     setBodyType(requestBodyType);
 
-    // ✅ Fix: Check both bodyFormData and body for form-data
     if (requestBodyType === 'form-data') {
       if (
         initialRequest.bodyFormData &&
         Array.isArray(initialRequest.bodyFormData)
       ) {
-        // Use bodyFormData directly if it exists
         setFormFields(
           initialRequest.bodyFormData.map((field) => ({
             id: field.id || `temp_${Date.now()}_${Math.random()}`,
@@ -315,7 +312,6 @@ export function RequestEditor({
           }))
         );
       } else if (initialRequest.body) {
-        // Fallback to parsing body if bodyFormData doesn't exist
         try {
           const parsed = JSON.parse(initialRequest.body);
           if (Array.isArray(parsed)) {
@@ -838,7 +834,6 @@ export function RequestEditor({
       onRegenerateDynamicVariable(variableName);
     } else {
       const dynamicVar = dynamicVariables.find((v) => v.name === variableName);
-      console.log('Regenerating variable:', variableName, dynamicVar);
 
       if (!dynamicVar) return;
 
@@ -1068,7 +1063,6 @@ export function RequestEditor({
         variant: log.status === 'success' ? 'default' : 'destructive',
       });
     } catch (error) {
-      console.log('error888:', error);
       const endTime = Date.now();
       const errorLog: ExecutionLog = {
         id: Date.now().toString(),
@@ -1219,6 +1213,33 @@ export function RequestEditor({
     }
   };
 
+  const addFormField = () => {
+    setFormFields([
+      ...formFields,
+      {
+        id: `temp_${Date.now()}_${Math.random()}`,
+        key: '',
+        value: '',
+        enabled: true,
+        type: 'text',
+      },
+    ]);
+    const updatedFields = [
+      ...formFields,
+      {
+        id: `temp_${Date.now()}_${Math.random()}`,
+        key: '',
+        value: '',
+        enabled: true,
+        type: 'text',
+      },
+    ];
+    onUpdate({
+      bodyFormData: updatedFields,
+      body: JSON.stringify(updatedFields),
+    });
+  };
+
   const handleAddFormField = () => {
     const newField: FormField = {
       id: `temp_${Date.now()}_${Math.random()}`,
@@ -1229,26 +1250,79 @@ export function RequestEditor({
     const updatedFields = [...formFields, newField];
     setFormFields(updatedFields);
 
-    // ✅ ADD THIS: Sync with parent component
     onUpdate({
       bodyFormData: updatedFields,
       body: JSON.stringify(updatedFields),
     });
   };
+
+  const addUrlEncodedField = () => {
+    setUrlEncodedFields([
+      ...urlEncodedFields,
+      { id: Math.random().toString(), key: '', value: '' },
+    ]);
+  };
+
+  const updateFormField = (
+    index: number,
+    field: keyof KeyValuePairWithFile,
+    value: string | boolean | File | undefined
+  ) => {
+    const newFormFields = [...formFields];
+    newFormFields[index] = { ...newFormFields[index], [field]: value };
+    setFormFields(newFormFields);
+    onUpdate({
+      bodyFormData: newFormFields,
+      body: JSON.stringify(newFormFields),
+    });
+  };
+
+  const updateUrlEncodedField = (
+    index: number,
+    field: keyof KeyValueField,
+    value: string
+  ) => {
+    const newUrlEncodedFields = [...urlEncodedFields];
+    newUrlEncodedFields[index] = {
+      ...newUrlEncodedFields[index],
+      [field]: value,
+    };
+    setUrlEncodedFields(newUrlEncodedFields);
+  };
+
+  const removeUrlEncodedField = (index: number) => {
+    setUrlEncodedFields(urlEncodedFields.filter((_, i) => i !== index));
+  };
+
   const handleUpdateFormField = (id: string, field: Partial<FormField>) => {
     const updatedFields = formFields.map((f) =>
       f.id === id ? { ...f, ...field } : f
     );
     setFormFields(updatedFields);
 
-    // ✅ ADD THIS: Sync with parent component
     onUpdate({
       bodyFormData: updatedFields,
-      body: JSON.stringify(updatedFields), // Keep body in sync
+      body: JSON.stringify(updatedFields),
     });
   };
+
+  const removeFormField = (index: number) => {
+    const updatedFields = formFields.filter((_, i) => i !== index);
+    setFormFields(updatedFields);
+    onUpdate({
+      bodyFormData: updatedFields,
+      body: JSON.stringify(updatedFields),
+    });
+  };
+
   const handleRemoveFormField = (id: string) => {
-    setFormFields(formFields.filter((f) => f.id !== id));
+    const updatedFields = formFields.filter((f) => f.id !== id);
+    setFormFields(updatedFields);
+
+    onUpdate({
+      bodyFormData: updatedFields,
+      body: JSON.stringify(updatedFields),
+    });
   };
 
   const handleAddUrlEncodedField = () => {
@@ -2149,14 +2223,15 @@ export function RequestEditor({
               onBeautify={handleBeautify}
               onVariableSelect={(variable) => {}}
               onConfirmSubstitution={(substitutions) => {}}
-              onAddFormField={handleAddFormField}
-              onUpdateFormField={handleUpdateFormField}
-              onRemoveFormField={handleRemoveFormField}
-              onAddUrlEncodedField={handleAddUrlEncodedField}
-              onUpdateUrlEncodedField={handleUpdateUrlEncodedField}
-              onRemoveUrlEncodedField={handleRemoveUrlEncodedField}
+              onAddFormField={addFormField}
+              onUpdateFormField={updateFormField}
+              onRemoveFormField={removeFormField}
+              onAddUrlEncodedField={addUrlEncodedField}
+              onUpdateUrlEncodedField={updateUrlEncodedField}
+              onRemoveUrlEncodedField={removeUrlEncodedField}
             />
           )}
+
           {activeTab === 'auth' && (
             <div className='space-y-4'>
               <h3 className='text-lg font-medium text-gray-900'>
