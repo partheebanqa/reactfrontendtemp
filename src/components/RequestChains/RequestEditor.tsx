@@ -1,7 +1,6 @@
 'use client';
 import { useEffect, useState, useRef, useMemo } from 'react';
 import React from 'react';
-
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -153,6 +152,8 @@ export function RequestEditor({
   dynamicVariableOverrides,
   onRegenerateDynamicVariable,
 }: RequestEditorProps) {
+  console.log('initialRequest:', initialRequest);
+
   const isSyncingRef = useRef(false);
   const isInitialMount = useRef(true);
   const [isJsonOpen, setIsJsonOpen] = useState(false);
@@ -296,35 +297,80 @@ export function RequestEditor({
     const requestBodyType = initialRequest.bodyType || 'none';
     setBodyType(requestBodyType);
 
-    // Handle form-data (form) body type
-    if (requestBodyType === 'form-data' && initialRequest.body) {
-      try {
-        const parsed = JSON.parse(initialRequest.body);
-        if (Array.isArray(parsed)) {
-          setFormFields(parsed);
-        } else {
+    // ✅ Fix: Check both bodyFormData and body for form-data
+    if (requestBodyType === 'form-data') {
+      if (
+        initialRequest.bodyFormData &&
+        Array.isArray(initialRequest.bodyFormData)
+      ) {
+        // Use bodyFormData directly if it exists
+        setFormFields(
+          initialRequest.bodyFormData.map((field) => ({
+            id: field.id || `temp_${Date.now()}_${Math.random()}`,
+            key: field.key || '',
+            value: field.value || '',
+            type: field.type || 'text',
+            fileName: field.fileName,
+            enabled: field.enabled !== false,
+          }))
+        );
+      } else if (initialRequest.body) {
+        // Fallback to parsing body if bodyFormData doesn't exist
+        try {
+          const parsed = JSON.parse(initialRequest.body);
+          if (Array.isArray(parsed)) {
+            setFormFields(
+              parsed.map((field) => ({
+                ...field,
+                id: field.id || `temp_${Date.now()}_${Math.random()}`,
+              }))
+            );
+          } else {
+            setFormFields([]);
+          }
+        } catch (e) {
+          console.error(
+            'Failed to parse form fields from initial request body:',
+            e
+          );
           setFormFields([]);
         }
-      } catch (e) {
-        console.error(
-          'Failed to parse form fields from initial request body:',
-          e
-        );
+      } else {
         setFormFields([]);
       }
-    } else if (requestBodyType === 'urlencoded' && initialRequest.body) {
-      try {
-        const parsed = JSON.parse(initialRequest.body);
-        if (Array.isArray(parsed)) {
-          setUrlEncodedFields(parsed);
-        } else {
+    } else if (requestBodyType === 'urlencoded') {
+      if (
+        initialRequest.bodyFormData &&
+        Array.isArray(initialRequest.bodyFormData)
+      ) {
+        setUrlEncodedFields(
+          initialRequest.bodyFormData.map((field) => ({
+            id: field.id || `temp_${Date.now()}_${Math.random()}`,
+            key: field.key || '',
+            value: field.value || '',
+          }))
+        );
+      } else if (initialRequest.body) {
+        try {
+          const parsed = JSON.parse(initialRequest.body);
+          if (Array.isArray(parsed)) {
+            setUrlEncodedFields(
+              parsed.map((field) => ({
+                ...field,
+                id: field.id || `temp_${Date.now()}_${Math.random()}`,
+              }))
+            );
+          } else {
+            setUrlEncodedFields([]);
+          }
+        } catch (e) {
+          console.error(
+            'Failed to parse URL-encoded fields from initial request body:',
+            e
+          );
           setUrlEncodedFields([]);
         }
-      } catch (e) {
-        console.error(
-          'Failed to parse URL-encoded fields from initial request body:',
-          e
-        );
+      } else {
         setUrlEncodedFields([]);
       }
     } else if (requestBodyType === 'raw' && initialRequest.body) {
@@ -860,7 +906,7 @@ export function RequestEditor({
 
   const handleExecute = async () => {
     const allVariables = getAllAvailableVariables();
-    const safeRequest = {
+    const safeRequest: any = {
       ...initialRequest,
       extractVariables: initialRequest.extractVariables ?? [],
       headers: initialRequest.headers ?? [],
@@ -875,11 +921,32 @@ export function RequestEditor({
     };
 
     if (bodyType === 'form-data') {
-      safeRequest.body = JSON.stringify(formFields);
+      const formDataArray = formFields.map((field) => ({
+        key: field.key,
+        value: field.value,
+        enabled: field.enabled !== false,
+        type: field.type,
+      }));
+      safeRequest.bodyFormData = formDataArray;
+      safeRequest.body = '';
+      safeRequest.bodyRawContent = '';
     } else if (bodyType === 'urlencoded') {
+      const urlEncodedArray = urlEncodedFields.map((field) => ({
+        key: field.key,
+        value: field.value,
+        enabled: true,
+      }));
       safeRequest.body = JSON.stringify(urlEncodedFields);
+      safeRequest.bodyFormData = urlEncodedArray;
+      safeRequest.bodyRawContent = '';
+    } else if (bodyType === 'raw' || bodyType === 'json') {
+      safeRequest.body = body;
+      safeRequest.bodyFormData = null;
+      safeRequest.bodyRawContent = body;
+    } else {
+      safeRequest.bodyFormData = null;
+      safeRequest.bodyRawContent = '';
     }
-
     {
       const token = (
         safeRequest.authToken ||
@@ -1154,20 +1221,32 @@ export function RequestEditor({
 
   const handleAddFormField = () => {
     const newField: FormField = {
-      id: Math.random().toString(),
+      id: `temp_${Date.now()}_${Math.random()}`,
       key: '',
       value: '',
       type: 'text',
     };
-    setFormFields([...formFields, newField]);
-  };
+    const updatedFields = [...formFields, newField];
+    setFormFields(updatedFields);
 
+    // ✅ ADD THIS: Sync with parent component
+    onUpdate({
+      bodyFormData: updatedFields,
+      body: JSON.stringify(updatedFields),
+    });
+  };
   const handleUpdateFormField = (id: string, field: Partial<FormField>) => {
-    setFormFields(
-      formFields.map((f) => (f.id === id ? { ...f, ...field } : f))
+    const updatedFields = formFields.map((f) =>
+      f.id === id ? { ...f, ...field } : f
     );
-  };
+    setFormFields(updatedFields);
 
+    // ✅ ADD THIS: Sync with parent component
+    onUpdate({
+      bodyFormData: updatedFields,
+      body: JSON.stringify(updatedFields), // Keep body in sync
+    });
+  };
   const handleRemoveFormField = (id: string) => {
     setFormFields(formFields.filter((f) => f.id !== id));
   };

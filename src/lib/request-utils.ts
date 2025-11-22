@@ -180,7 +180,57 @@ export const getExecutionLogForRequest = (
 export const transformRequestForSave = (request: APIRequest): APIRequest => {
   const transformedRequest = { ...request };
 
-  if (request.body && ['POST', 'PUT', 'PATCH'].includes(request.method)) {
+  if (request.bodyType === 'form-data') {
+    if (Array.isArray(request.bodyFormData)) {
+      transformedRequest.bodyFormData = request.bodyFormData.map((field) => ({
+        key: field.key,
+        value: field.value,
+        enabled: field.enabled,
+        type: field.type,
+      }));
+    } else if (request.body && typeof request.body === 'string') {
+      try {
+        const parsed = JSON.parse(request.body);
+        if (Array.isArray(parsed)) {
+          transformedRequest.bodyFormData = parsed.map((field) => ({
+            key: field.key,
+            value: field.value,
+            enabled: field.enabled,
+            type: field.type,
+          }));
+        }
+      } catch (e) {
+        console.error('Failed to parse bodyFormData from body:', e);
+      }
+    }
+    transformedRequest.body = '';
+    transformedRequest.bodyRawContent = '';
+  } else if (request.bodyType === 'urlencoded') {
+    if (Array.isArray(request.bodyFormData)) {
+      transformedRequest.bodyFormData = request.bodyFormData.map((field) => ({
+        key: field.key,
+        value: field.value,
+        enabled: field.enabled,
+      }));
+    } else if (request.body && typeof request.body === 'string') {
+      try {
+        const parsed = JSON.parse(request.body);
+        if (Array.isArray(parsed)) {
+          transformedRequest.bodyFormData = parsed.map((field) => ({
+            key: field.key,
+            value: field.value,
+            enabled: field.enabled,
+          }));
+        }
+      } catch (e) {
+        console.error('Failed to parse bodyFormData from body:', e);
+      }
+    }
+    transformedRequest.bodyRawContent = '';
+  } else if (
+    request.body &&
+    ['POST', 'PUT', 'PATCH'].includes(request.method)
+  ) {
     transformedRequest.body = request.body;
     transformedRequest.bodyRawContent = request.body;
   }
@@ -197,25 +247,15 @@ export const transformRequestForSave = (request: APIRequest): APIRequest => {
     request.authUsername &&
     request.authPassword
   ) {
-    // transformedRequest.authorization = {
-    //   username: request.authUsername,
-    //   password: request.authPassword,
-    // };
     delete transformedRequest.authUsername;
     delete transformedRequest.authPassword;
   }
 
-  // Handle API Key Auth
   if (
     request.authorizationType === 'apikey' &&
     request.authApiKey &&
     request.authApiValue
   ) {
-    // transformedRequest.authorization = {
-    //   key: request.authApiKey,
-    //   value: request.authApiValue,
-    //   addTo: request.authApiLocation || 'header',
-    // };
     delete transformedRequest.authApiKey;
     delete transformedRequest.authApiValue;
     delete transformedRequest.authApiLocation;
@@ -224,7 +264,6 @@ export const transformRequestForSave = (request: APIRequest): APIRequest => {
   return transformedRequest;
 };
 
-// Helper function to replace variables in any text
 export const replaceVariablesInText = (
   text: string,
   variables: any[]
@@ -411,7 +450,6 @@ export const getUsedDynamicVariablesFromRequest = (
   );
 };
 
-// Common function to get used dynamic variables from multiple requests
 export const getUsedDynamicVariablesFromRequests = (
   requests: any[],
   dynamicVariables: Variable[]
@@ -443,7 +481,6 @@ export const getUsedDynamicVariablesFromRequests = (
   );
 };
 
-// Common function to handle autocomplete input detection
 export const detectAutocompletePrefix = (
   value: string,
   cursorPosition: number
@@ -1005,7 +1042,6 @@ function generateDynamicValueById(id: string, params: any = {}): string {
   }
 }
 
-// Helper function to parse URL parameters
 export const parseUrlParams = (url: string): KeyValuePair[] => {
   try {
     const urlObj = new URL(
@@ -1026,17 +1062,14 @@ export const parseUrlParams = (url: string): KeyValuePair[] => {
   }
 };
 
-// Helper function to build URL with params
 export const buildUrlWithParams = (
   baseUrl: string,
   params: KeyValuePair[]
 ): string => {
   try {
-    // Remove existing query params from baseUrl
     const urlParts = baseUrl.split('?');
     const cleanUrl = urlParts[0];
 
-    // Build new query string from params
     const enabledParams = params.filter((p) => p.enabled && p.key.trim());
     if (enabledParams.length === 0) {
       return cleanUrl;

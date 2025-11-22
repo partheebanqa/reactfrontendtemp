@@ -17,7 +17,7 @@ export type BodyType =
   | 'none'
   | 'json'
   | 'form-data'
-  | 'x-www-form-urlencoded'
+  | 'urlencoded'
   | 'raw'
   | 'binary';
 
@@ -117,7 +117,7 @@ export default function RequestBody({
             <option value='none'>None</option>
             <option value='json'>JSON</option>
             <option value='form-data'>Form Data</option>
-            <option value='x-www-form-urlencoded'>URL Encoded</option>
+            <option value='urlencoded'>URL Encoded</option>{' '}
             <option value='raw'>Raw</option>
             <option value='binary'>Binary</option>
           </select>
@@ -164,7 +164,7 @@ export default function RequestBody({
         </>
       )}
 
-      {bodyType === 'x-www-form-urlencoded' && (
+      {bodyType === 'urlencoded' && (
         <KeyValueEditor
           items={urlEncodedFields}
           onAdd={onAddUrlEncodedField}

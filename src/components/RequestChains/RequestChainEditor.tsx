@@ -175,6 +175,7 @@ export function RequestChainEditor({
     variables: chain?.variables || [],
     environment: chain?.environment || 'dev',
   });
+
   const { environments, activeEnvironment, setActiveEnvironment } =
     useDataManagement();
   const [selectedEnvironment, setSelectedEnvironment] = useState<string>('');
@@ -582,6 +583,8 @@ export function RequestChainEditor({
     if (!request.url) {
       throw new Error('Request URL is required');
     }
+
+    // Ensure arrays exist
     request = {
       ...request,
       headers: request.headers ?? [],
@@ -591,6 +594,8 @@ export function RequestChainEditor({
     const startTime = Date.now();
 
     const processedRequest = processRequestWithVariables(request, variables);
+
+    // Handle Bearer token authorization
     {
       const token = (
         processedRequest.authToken ||
@@ -625,12 +630,30 @@ export function RequestChainEditor({
       }
     }
 
+    if (processedRequest.bodyType === 'form-data' && processedRequest.body) {
+      try {
+        const parsedBody = JSON.parse(processedRequest.body);
+        if (Array.isArray(parsedBody)) {
+          (processedRequest as any).bodyFormData = parsedBody.map(
+            (field: any) => ({
+              key: field.key,
+              value: field.value,
+              enabled: field.enabled !== false,
+              type: field.type || 'text',
+            })
+          );
+        }
+      } catch (e) {
+        console.error('Failed to parse form-data from body:', e);
+      }
+    }
+
     const payload = buildRequestPayload(processedRequest, variables);
     const previewUrl = getPreviewUrl(request, variables);
     payload.request.url = previewUrl;
 
     try {
-      console.log('payload111:', payload);
+      console.log('Executing request with payload:', payload);
 
       const backendData = await executeRequest(payload);
       const result = backendData?.data?.responses?.[0];
@@ -675,6 +698,7 @@ export function RequestChainEditor({
         extractedVariables: extractedData,
       };
 
+      // Persist execution log
       try {
         const raw = localStorage.getItem('lastExecutionByRequest');
         const map = raw ? JSON.parse(raw) : {};
@@ -704,6 +728,7 @@ export function RequestChainEditor({
         error: error instanceof Error ? error.message : 'Unknown error',
       };
 
+      // Persist error log
       try {
         const raw = localStorage.getItem('lastExecutionByRequest');
         const map = raw ? JSON.parse(raw) : {};
@@ -719,7 +744,6 @@ export function RequestChainEditor({
       throw errorLog;
     }
   };
-
   const handleRunAll = async () => {
     if (!formData.chainRequests || formData.chainRequests.length === 0) {
       toast({
@@ -1142,6 +1166,7 @@ export function RequestChainEditor({
   };
 
   const saveChainToAPI = async (): Promise<RequestChain | null> => {
+    console.log('save chain is called...');
     if (!formData.name?.trim()) {
       toast({
         title: 'Validation Error',
