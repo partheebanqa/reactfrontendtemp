@@ -71,6 +71,7 @@ import 'codemirror/lib/codemirror.css';
 import 'codemirror/theme/material.css';
 import 'codemirror/mode/javascript/javascript';
 import './../RequestBuilder/RequestEditor/whiteorange.css';
+import { generateAssertions } from '@/utils/assertionGenerator';
 import {
   Tooltip,
   TooltipProvider,
@@ -80,6 +81,7 @@ import {
 import { VariableHelpDialog } from './HelpTextDialougs/variablesUseDialogues';
 import RequestBody from '@/components/Shared/RequestTabs/RequestBody';
 import { KeyValuePairWithFile } from '../ui/KeyValueEditorWithFileUpload';
+import { PrePostRequest } from '../Shared/RequestTabs/PrePostRequest';
 
 type FormField = {
   id: string;
@@ -159,7 +161,7 @@ export function RequestEditor({
   const [helpOpen, setHelpOpen] = useState(false);
 
   const [activeTab, setActiveTab] = useState<
-    'params' | 'headers' | 'body' | 'auth' | 'settings'
+    'params' | 'headers' | 'scripts' | 'body' | 'auth' | 'settings'
   >('params');
   const [isExecuting, setIsExecuting] = useState(false);
   const [executionResult, setExecutionResult] = useState<ExecutionLog | null>(
@@ -1001,6 +1003,30 @@ export function RequestEditor({
       const previewUrl = getPreviewUrl(allVariables);
       payload.request.url = previewUrl;
       const backendData = await executeRequest(payload);
+
+      const responseItem = backendData?.data?.responses?.[0];
+
+      const formattedAssertionFormat = {
+        status: responseItem?.statusCode ?? null,
+        statusText: '',
+        headers: responseItem?.headers ?? {},
+        data: (() => {
+          try {
+            return JSON.parse(responseItem?.body || '{}');
+          } catch {
+            return {};
+          }
+        })(),
+        responseTime: responseItem?.metrics?.responseTime ?? 0,
+        size: responseItem?.metrics?.bytesReceived ?? 0,
+      };
+
+      const generatedAssertion = await generateAssertions(
+        formattedAssertionFormat
+      );
+
+      console.log('generatedAssertion:', generatedAssertion);
+
       const result = backendData?.data?.responses?.[0];
       if (!result) throw new Error('No response from executor');
       const extractedData = extractDataFromResponse(
@@ -1150,6 +1176,7 @@ export function RequestEditor({
     { id: 'params', label: 'Params' },
     { id: 'headers', label: 'Headers' },
     { id: 'body', label: 'Body' },
+    { id: 'scripts', label: 'Pre & Post' },
     { id: 'auth', label: 'Auth' },
     { id: 'settings', label: 'Settings' },
   ];
@@ -1939,7 +1966,7 @@ export function RequestEditor({
                         : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                     }`}
                   >
-                    <span>{tab.label}</span>
+                    <span className='whitespace-nowrap'>{tab.label}</span>
                     {tab.id === 'tests' &&
                       initialRequest.testScripts &&
                       initialRequest.testScripts.length > 0 && (
@@ -2277,6 +2304,121 @@ export function RequestEditor({
                     className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
                     placeholder='Enter bearer token or use {{tokenVariable}}'
                   />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'scripts' && (
+            <div className='space-y-4'>
+              <h3 className='text-lg font-semibold mb-4'>Request Settings</h3>
+
+              <div className='grid grid-cols-1 md:grid-cols-2 gap-6 mb-6'>
+                <div>
+                  <label className='block text-sm font-medium text-gray-700 mb-2'>
+                    Timeout (ms)
+                  </label>
+                  <input
+                    type='number'
+                    value={initialRequest.timeout}
+                    onChange={(e) =>
+                      onUpdate({
+                        timeout: Number.parseInt(e.target.value) || 5000,
+                      })
+                    }
+                    className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+                    min='1000'
+                    max='60000'
+                  />
+                </div>
+
+                {/* Retries (disabled + upcoming) */}
+                <div className='opacity-60'>
+                  <label className='block text-sm font-medium text-gray-700 mb-2'>
+                    Retries
+                  </label>
+                  <input
+                    type='number'
+                    value={initialRequest.retries}
+                    disabled
+                    className='w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed'
+                  />
+                  <p className='text-xs text-gray-500 italic mt-1'>Upcoming</p>
+                </div>
+              </div>
+
+              <div className='p-4 border border-orange-200 bg-orange-50 rounded-lg'>
+                <div className='flex items-center space-x-2 mb-3'>
+                  <AlertTriangle className='w-5 h-5 text-orange-600' />
+                  <h4 className='font-medium text-orange-900'>
+                    Error Handling
+                  </h4>
+                </div>
+                <div className='space-y-2'>
+                  <label className='flex items-center space-x-2'>
+                    <input
+                      type='radio'
+                      name='errorHandling'
+                      value='stop'
+                      checked={initialRequest.errorHandling === 'stop'}
+                      onChange={(e) =>
+                        onUpdate({
+                          errorHandling: e.target.value as
+                            | 'stop'
+                            | 'continue'
+                            | 'retry',
+                        })
+                      }
+                      className='text-orange-600'
+                    />
+                    <span className='text-sm text-orange-800'>
+                      Stop chain on failure
+                    </span>
+                  </label>
+                  <label className='flex items-center space-x-2 opacity-60'>
+                    <input
+                      type='radio'
+                      name='errorHandling'
+                      value='continue'
+                      checked={
+                        initialRequest.errorHandling === 'continue' ||
+                        !initialRequest.errorHandling
+                      }
+                      onChange={(e) =>
+                        onUpdate({
+                          errorHandling: e.target.value as
+                            | 'stop'
+                            | 'continue'
+                            | 'retry',
+                        })
+                      }
+                      className='text-orange-600'
+                    />
+                    <span className='text-sm text-orange-800'>
+                      Continue to next step
+                      <span className='text-xs italic text-gray-500'>
+                        (Upcoming)
+                      </span>
+                    </span>
+                  </label>
+
+                  {/* Retry disabled + upcoming */}
+                  <label className='flex items-center space-x-2 opacity-60'>
+                    <input
+                      type='radio'
+                      name='errorHandling'
+                      value='retry'
+                      checked={initialRequest.errorHandling === 'retry'}
+                      disabled
+                      className='text-orange-600'
+                    />
+                    <span className='text-sm text-orange-800'>
+                      Retry with backoff{' '}
+                      <span className='text-xs italic text-gray-500'>
+                        (Upcoming)
+                      </span>
+                    </span>
+                  </label>
                 </div>
               </div>
             </div>
@@ -2854,6 +2996,11 @@ export function RequestEditor({
             <Key className='w-4 h-4' />
             Auth
           </TabsTrigger>
+
+          <TabsTrigger value='scripts' className='gap-2'>
+            <Code className='w-4 h-4' />
+            Pre & Post
+          </TabsTrigger>
           <TabsTrigger value='settings' className='gap-2'>
             <Settings className='w-4 h-4' />
             Settings
@@ -3175,6 +3322,18 @@ export function RequestEditor({
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+        <TabsContent value='scripts' className='space-y-6'>
+          <PrePostRequest
+            assertions={assertions}
+            setAssertions={setAssertions}
+            responseData={responseData}
+            activeRequest={activeRequest}
+            currentWorkspace={currentWorkspace}
+            updateRequestMutation={updateRequestMutation}
+            toggleAssertion={toggleAssertion}
+            showAssertions={true}
+          />
         </TabsContent>
 
         <TabsContent value='settings' className='space-y-6'>

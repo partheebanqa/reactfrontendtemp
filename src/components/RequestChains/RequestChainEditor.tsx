@@ -88,6 +88,7 @@ import {
 import { ResponseExplorer } from './ResponseExplorer';
 import BreadCum from '../BreadCum/Breadcum';
 import { useDataManagementStore } from '@/store/dataManagementStore';
+import { generateAssertions } from '@/utils/assertionGenerator';
 
 interface RequestChainEditorProps {
   chain?: RequestChain;
@@ -656,7 +657,29 @@ export function RequestChainEditor({
       console.log('Executing request with payload:', payload);
 
       const backendData = await executeRequest(payload);
+
       const result = backendData?.data?.responses?.[0];
+      const formattedAssertionFormat = {
+        status: result?.statusCode ?? null,
+        statusText: '',
+        headers: result?.headers ?? {},
+        data: (() => {
+          try {
+            return JSON.parse(result?.body || '{}');
+          } catch {
+            return {};
+          }
+        })(),
+        responseTime: result?.metrics?.responseTime ?? 0,
+        size: result?.metrics?.bytesReceived ?? 0,
+      };
+
+      const generatedAssertion = await generateAssertions(
+        formattedAssertionFormat
+      );
+
+      console.log('generatedAssertion123:', generatedAssertion);
+
       if (!result) throw new Error('No response from executor');
 
       const extractedData = extractDataFromResponse(

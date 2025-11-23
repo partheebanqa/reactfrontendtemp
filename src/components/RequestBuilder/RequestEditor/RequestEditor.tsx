@@ -1076,6 +1076,7 @@ const RequestEditor: React.FC = () => {
         setResponseData(normalizedResponse);
 
         const formattedResponse = formatBackendResponse(normalizedResponse);
+
         const generatedAssertions = generateAssertions(formattedResponse);
 
         const existingAssertions = Array.isArray(assertions) ? assertions : [];
