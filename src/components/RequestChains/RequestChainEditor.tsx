@@ -678,7 +678,7 @@ export function RequestChainEditor({
         formattedAssertionFormat
       );
 
-      console.log('generatedAssertion123:', generatedAssertion);
+      setAssertions(generatedAssertion);
 
       if (!result) throw new Error('No response from executor');
 

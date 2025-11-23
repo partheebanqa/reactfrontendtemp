@@ -126,6 +126,8 @@ interface RequestEditorProps {
   chainVariables?: any[];
   dynamicVariableOverrides?: DynamicVariableOverride[];
   onRegenerateDynamicVariable?: (variableName: string) => void;
+  requestAssertions?: any[];
+  onAssertionsUpdate?: (assertions: any[]) => void;
 }
 
 interface KeyValuePair {
@@ -154,7 +156,10 @@ export function RequestEditor({
   chainVariables = [],
   dynamicVariableOverrides,
   onRegenerateDynamicVariable,
+  onAssertionsUpdate,
 }: RequestEditorProps) {
+  console.log('RequestEditor-initialRequest:', initialRequest);
+
   const isSyncingRef = useRef(false);
   const isInitialMount = useRef(true);
   const [isJsonOpen, setIsJsonOpen] = useState(false);
@@ -163,6 +168,9 @@ export function RequestEditor({
   const [activeTab, setActiveTab] = useState<
     'params' | 'headers' | 'scripts' | 'body' | 'auth' | 'settings'
   >('params');
+
+  const [assertions, setAssertions] = useState<any[]>([]);
+
   const [isExecuting, setIsExecuting] = useState(false);
   const [executionResult, setExecutionResult] = useState<ExecutionLog | null>(
     null
@@ -425,6 +433,13 @@ export function RequestEditor({
       isSyncingRef.current = false;
     }, 100);
   }, [params]);
+
+  const handleAssertionsUpdate = (newAssertions: any[]) => {
+    setAssertions(newAssertions);
+    if (onAssertionsUpdate) {
+      onAssertionsUpdate(newAssertions);
+    }
+  };
 
   const usedDynamicVariables = useMemo(() => {
     const allTextFields = [
@@ -1024,6 +1039,9 @@ export function RequestEditor({
       const generatedAssertion = await generateAssertions(
         formattedAssertionFormat
       );
+
+      setAssertions(generatedAssertion);
+      handleAssertionsUpdate(generatedAssertion);
 
       console.log('generatedAssertion:', generatedAssertion);
 
@@ -2311,116 +2329,12 @@ export function RequestEditor({
 
           {activeTab === 'scripts' && (
             <div className='space-y-4'>
-              <h3 className='text-lg font-semibold mb-4'>Request Settings</h3>
-
-              <div className='grid grid-cols-1 md:grid-cols-2 gap-6 mb-6'>
-                <div>
-                  <label className='block text-sm font-medium text-gray-700 mb-2'>
-                    Timeout (ms)
-                  </label>
-                  <input
-                    type='number'
-                    value={initialRequest.timeout}
-                    onChange={(e) =>
-                      onUpdate({
-                        timeout: Number.parseInt(e.target.value) || 5000,
-                      })
-                    }
-                    className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-                    min='1000'
-                    max='60000'
-                  />
-                </div>
-
-                {/* Retries (disabled + upcoming) */}
-                <div className='opacity-60'>
-                  <label className='block text-sm font-medium text-gray-700 mb-2'>
-                    Retries
-                  </label>
-                  <input
-                    type='number'
-                    value={initialRequest.retries}
-                    disabled
-                    className='w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed'
-                  />
-                  <p className='text-xs text-gray-500 italic mt-1'>Upcoming</p>
-                </div>
-              </div>
-
-              <div className='p-4 border border-orange-200 bg-orange-50 rounded-lg'>
-                <div className='flex items-center space-x-2 mb-3'>
-                  <AlertTriangle className='w-5 h-5 text-orange-600' />
-                  <h4 className='font-medium text-orange-900'>
-                    Error Handling
-                  </h4>
-                </div>
-                <div className='space-y-2'>
-                  <label className='flex items-center space-x-2'>
-                    <input
-                      type='radio'
-                      name='errorHandling'
-                      value='stop'
-                      checked={initialRequest.errorHandling === 'stop'}
-                      onChange={(e) =>
-                        onUpdate({
-                          errorHandling: e.target.value as
-                            | 'stop'
-                            | 'continue'
-                            | 'retry',
-                        })
-                      }
-                      className='text-orange-600'
-                    />
-                    <span className='text-sm text-orange-800'>
-                      Stop chain on failure
-                    </span>
-                  </label>
-                  <label className='flex items-center space-x-2 opacity-60'>
-                    <input
-                      type='radio'
-                      name='errorHandling'
-                      value='continue'
-                      checked={
-                        initialRequest.errorHandling === 'continue' ||
-                        !initialRequest.errorHandling
-                      }
-                      onChange={(e) =>
-                        onUpdate({
-                          errorHandling: e.target.value as
-                            | 'stop'
-                            | 'continue'
-                            | 'retry',
-                        })
-                      }
-                      className='text-orange-600'
-                    />
-                    <span className='text-sm text-orange-800'>
-                      Continue to next step
-                      <span className='text-xs italic text-gray-500'>
-                        (Upcoming)
-                      </span>
-                    </span>
-                  </label>
-
-                  {/* Retry disabled + upcoming */}
-                  <label className='flex items-center space-x-2 opacity-60'>
-                    <input
-                      type='radio'
-                      name='errorHandling'
-                      value='retry'
-                      checked={initialRequest.errorHandling === 'retry'}
-                      disabled
-                      className='text-orange-600'
-                    />
-                    <span className='text-sm text-orange-800'>
-                      Retry with backoff{' '}
-                      <span className='text-xs italic text-gray-500'>
-                        (Upcoming)
-                      </span>
-                    </span>
-                  </label>
-                </div>
-              </div>
+              <PrePostRequest
+                assertions={assertions}
+                setAssertions={setAssertions}
+                responseData={executionResult?.response}
+                showAssertions={true}
+              />
             </div>
           )}
 
@@ -3327,11 +3241,7 @@ export function RequestEditor({
           <PrePostRequest
             assertions={assertions}
             setAssertions={setAssertions}
-            responseData={responseData}
-            activeRequest={activeRequest}
-            currentWorkspace={currentWorkspace}
-            updateRequestMutation={updateRequestMutation}
-            toggleAssertion={toggleAssertion}
+            responseData={executionResult?.response}
             showAssertions={true}
           />
         </TabsContent>
