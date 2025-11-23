@@ -156,9 +156,10 @@ export function RequestEditor({
   chainVariables = [],
   dynamicVariableOverrides,
   onRegenerateDynamicVariable,
+  requestAssertions,
   onAssertionsUpdate,
 }: RequestEditorProps) {
-  console.log('RequestEditor-initialRequest:', initialRequest);
+  console.log('requestAssertions:', requestAssertions);
 
   const isSyncingRef = useRef(false);
   const isInitialMount = useRef(true);
@@ -585,6 +586,13 @@ export function RequestEditor({
       if ((saved?.response || saved?.error) && isRecent) {
         setExecutionResult(saved);
         setShowResponse(true);
+
+        if (saved.assertions && Array.isArray(saved.assertions)) {
+          setAssertions(saved.assertions);
+          if (onAssertionsUpdate) {
+            onAssertionsUpdate(saved.assertions);
+          }
+        }
 
         if (
           saved.extractedVariables &&
@@ -1194,8 +1202,8 @@ export function RequestEditor({
     { id: 'params', label: 'Params' },
     { id: 'headers', label: 'Headers' },
     { id: 'body', label: 'Body' },
-    { id: 'scripts', label: 'Pre & Post' },
     { id: 'auth', label: 'Auth' },
+    { id: 'scripts', label: 'Pre & Post' },
     { id: 'settings', label: 'Settings' },
   ];
 
@@ -1908,6 +1916,12 @@ export function RequestEditor({
       isSyncingRef.current = false;
     }, 100);
   }, [params]);
+
+  useEffect(() => {
+    if (requestAssertions && requestAssertions.length > 0) {
+      setAssertions(requestAssertions);
+    }
+  }, [requestAssertions]);
 
   if (compact) {
     return (

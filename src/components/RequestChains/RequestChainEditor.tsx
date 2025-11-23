@@ -118,6 +118,12 @@ export function RequestChainEditor({
     DynamicVariableOverride[]
   >([]);
 
+  const [assertions, setAssertions] = useState<any[]>([]);
+
+  const [assertionsByRequest, setAssertionsByRequest] = useState<
+    Record<string, any[]>
+  >({});
+
   useEffect(() => {
     if (dynamicVariables.length > 0) {
       setDynamicOverrides((prevOverrides) => {
@@ -677,7 +683,10 @@ export function RequestChainEditor({
       const generatedAssertion = await generateAssertions(
         formattedAssertionFormat
       );
-
+      setAssertionsByRequest((prev) => ({
+        ...prev,
+        [request.id]: generatedAssertion,
+      }));
       setAssertions(generatedAssertion);
 
       if (!result) throw new Error('No response from executor');
@@ -725,7 +734,10 @@ export function RequestChainEditor({
       try {
         const raw = localStorage.getItem('lastExecutionByRequest');
         const map = raw ? JSON.parse(raw) : {};
-        map[request.id] = log;
+        map[request.id] = {
+          ...log,
+          assertions: generatedAssertion,
+        };
         localStorage.setItem('lastExecutionByRequest', JSON.stringify(map));
       } catch (e) {
         console.error('Failed to persist lastExecutionByRequest:', e);
@@ -1712,6 +1724,13 @@ export function RequestChainEditor({
               chainVariables={formData.variables || []}
               dynamicVariableOverrides={dynamicOverrides}
               onRegenerateDynamicVariable={regenerateDynamicVariableLocal}
+              requestAssertions={assertionsByRequest[request.id] || []}
+              onAssertionsUpdate={(assertions) => {
+                setAssertionsByRequest((prev) => ({
+                  ...prev,
+                  [request.id]: assertions,
+                }));
+              }}
             />
           </div>
         </div>
@@ -2175,6 +2194,16 @@ export function RequestChainEditor({
                                           onRegenerateDynamicVariable={
                                             regenerateDynamicVariableLocal
                                           }
+                                          requestAssertions={
+                                            assertionsByRequest[request.id] ||
+                                            []
+                                          }
+                                          onAssertionsUpdate={(assertions) => {
+                                            setAssertionsByRequest((prev) => ({
+                                              ...prev,
+                                              [request.id]: assertions,
+                                            }));
+                                          }}
                                         />
 
                                         {/* Response Section - Only show here, not in RequestEditor */}

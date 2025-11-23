@@ -157,7 +157,7 @@ export interface ExecutionLog {
   };
   error?: string;
   extractedVariables?: Record<string, any>;
-  assertions?: any;
+  assertions?: any[];
 }
 
 export interface KeyValuePair {
