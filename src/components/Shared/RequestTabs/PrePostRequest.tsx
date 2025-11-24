@@ -2,6 +2,12 @@
 
 import { useState } from 'react';
 import AssertionManager from '@/components/RequestBuilder/RequestEditor/assertionManager';
+import { Trash2 } from 'lucide-react';
+
+interface SelectedVariable {
+  name: string;
+  path: string;
+}
 
 interface PrePostRequestProps {
   assertions?: any[];
@@ -12,6 +18,9 @@ interface PrePostRequestProps {
   updateRequestMutation?: any;
   toggleAssertion?: (index: number) => void;
   showAssertions?: boolean;
+  selectedVariables?: SelectedVariable[];
+  onRemoveVariable?: (path: string) => void;
+  onVariableSelect?: (variables: SelectedVariable[]) => void;
 }
 
 export function PrePostRequest({
@@ -23,6 +32,9 @@ export function PrePostRequest({
   updateRequestMutation,
   toggleAssertion,
   showAssertions = true,
+  selectedVariables = [],
+  onRemoveVariable,
+  onVariableSelect,
 }: PrePostRequestProps) {
   const [scriptsTab, setScriptsTab] = useState<'pre-request' | 'post-response'>(
     'pre-request'
@@ -59,16 +71,54 @@ export function PrePostRequest({
       {/* Right content area */}
       <div className='flex-1 overflow-auto'>
         {scriptsTab === 'pre-request' && (
-          <div className='p-4'>
-            <h3 className='text-lg font-semibold mb-4 text-gray-900 dark:text-white'>
-              Pre-request data
-            </h3>
-            {/* <textarea
-              //   placeholder='Use JavaScript to configure this request dynamically. Ctrl+/'
-              value={preRequestScript}
-              onChange={(e) => setPreRequestScript(e.target.value)}
-              className='w-full h-96 p-3 font-mono text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-            /> */}
+          <div className='px-2'>
+            {selectedVariables.length > 0 && (
+              <div className='mb-6'>
+                {/* Styled Container */}
+                <div className='rounded-xl border border-gray-300 dark:border-gray-700 shadow-sm overflow-hidden bg-white dark:bg-gray-900'>
+                  <table className='w-full text-sm'>
+                    <tbody>
+                      {/* Row 1 */}
+                      <tr className='border-b border-gray-200 dark:border-gray-700'>
+                        <td className='px-4 py-3 font-semibold text-gray-900 dark:text-gray-200 w-56 bg-gray-50 dark:bg-gray-800'>
+                          Substituted variable
+                        </td>
+                        <td className='px-4 py-3 text-gray-800 dark:text-gray-300'>
+                          {/* Tag-like variables */}
+                          <div className='flex flex-wrap gap-2'>
+                            {selectedVariables.map((v, i) => (
+                              <span
+                                key={i}
+                                className='inline-flex items-center px-3 py-1 text-xs font-medium bg-green-500 text-white rounded-lg shadow-sm'
+                              >
+                                {v.path}: {v.name}
+                              </span>
+                            ))}
+                          </div>
+                        </td>
+                      </tr>
+
+                      {/* Row 2 */}
+                      <tr>
+                        <td className='px-4 py-3 font-semibold text-gray-900 dark:text-gray-200 w-56 bg-gray-50 dark:bg-gray-800'>
+                          Extracted variable
+                        </td>
+                        <td className='px-4 py-3 text-gray-800 dark:text-gray-300'>
+                          -
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {selectedVariables.length === 0 && (
+              <div className='text-sm text-gray-500 dark:text-gray-400 italic'>
+                No variables substituted yet. Substitute variables in the Body
+                tab to see them here.
+              </div>
+            )}
           </div>
         )}
 

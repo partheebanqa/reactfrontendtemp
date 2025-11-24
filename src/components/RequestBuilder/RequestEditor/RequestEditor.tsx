@@ -1935,6 +1935,12 @@ const RequestEditor: React.FC = () => {
     }
   };
 
+  const handleRemoveVariable = (path: string) => {
+    setSelectedVariable((prev) => prev.filter((v) => v.path !== path));
+    if (activeRequest?.id) {
+      collectionActions.markUnsaved(activeRequest.id);
+    }
+  };
   // const [scriptsTab, setScriptsTab] = useState<"pre-request" | "post-response">("pre-request")
 
   if (!activeRequest) {
@@ -2292,7 +2298,7 @@ const RequestEditor: React.FC = () => {
               headers={headers}
               method={method}
               variables={formattedVariables}
-              initialVariable={activeRequest?.variable || []}
+              initialVariable={selectedVariable}
               onBodyTypeChange={(newBodyType) => {
                 setBodyType(newBodyType);
 
@@ -2412,6 +2418,9 @@ const RequestEditor: React.FC = () => {
                   updateRequestMutation={updateRequestMutation}
                   toggleAssertion={toggleAssertion}
                   showAssertions={true}
+                  selectedVariables={selectedVariable}
+                  onRemoveVariable={handleRemoveVariable}
+                  onVariableSelect={handleVariableSelect}
                 />
               </div>
             </div>
