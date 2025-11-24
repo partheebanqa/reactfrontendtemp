@@ -37,7 +37,6 @@ export function PrePostRequest({
   onRemoveVariable,
   onVariableSelect,
 }: PrePostRequestProps) {
-  const [preRequestScript, setPreRequestScript] = useState('');
   const [postResponseScript, setPostResponseScript] = useState('');
 
   return (
@@ -46,17 +45,14 @@ export function PrePostRequest({
         <div className='px-2'>
           {selectedVariables.length > 0 && (
             <div className='mb-6'>
-              {/* Styled Container */}
               <div className='rounded-xl border border-gray-300 dark:border-gray-700 shadow-sm overflow-hidden bg-white dark:bg-gray-900'>
                 <table className='w-full text-sm'>
                   <tbody>
-                    {/* Row 1 */}
                     <tr className='border-b border-gray-200 dark:border-gray-700'>
                       <td className='px-4 py-3 font-semibold text-gray-900 dark:text-gray-200 w-56 bg-gray-50 dark:bg-gray-800'>
                         Substituted variable
                       </td>
                       <td className='px-4 py-3 text-gray-800 dark:text-gray-300'>
-                        {/* Tag-like variables */}
                         <div className='flex flex-wrap gap-2'>
                           {selectedVariables.map((v, i) => (
                             <span
@@ -70,7 +66,6 @@ export function PrePostRequest({
                       </td>
                     </tr>
 
-                    {/* Row 2 */}
                     <tr>
                       <td className='px-4 py-3 font-semibold text-gray-900 dark:text-gray-200 w-56 bg-gray-50 dark:bg-gray-800'>
                         Extracted variable
@@ -125,6 +120,23 @@ export function PrePostRequest({
               </p>
             </div>
           )}
+
+          <div className='mb-6 pt-3 '>
+            <div className='rounded-xl border border-gray-300 dark:border-gray-700 shadow-sm overflow-hidden bg-white dark:bg-gray-900'>
+              <table className='w-full text-sm'>
+                <tbody>
+                  <tr>
+                    <td className='px-4 py-3 font-semibold text-gray-900 dark:text-gray-200 w-56 bg-gray-50 dark:bg-gray-800'>
+                      Extracted variable
+                    </td>
+                    <td className='px-4 py-3 text-gray-800 dark:text-gray-300'>
+                      <div className='flex flex-wrap gap-2'>-</div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       )}
     </div>
