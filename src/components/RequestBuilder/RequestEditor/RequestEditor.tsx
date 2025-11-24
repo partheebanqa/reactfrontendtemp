@@ -162,7 +162,14 @@ const RequestEditor: React.FC = () => {
   const { currentWorkspace } = useWorkspace();
   const [showCurlImport, setShowCurlImport] = useState(false);
   const [activeTab, setActiveTab] = useState<
-    'params' | 'headers' | 'body' | 'auth' | 'scripts' | 'settings' | 'schemas'
+    | 'params'
+    | 'headers'
+    | 'body'
+    | 'auth'
+    | 'pre-request'
+    | 'post-request'
+    | 'settings'
+    | 'schemas'
   >('params');
 
   const { schemas } = useSchema();
@@ -892,13 +899,14 @@ const RequestEditor: React.FC = () => {
 
     const newUrl = buildFinalUrl();
 
+    let substitutedBodyContent = bodyContent;
+
     try {
       const hasUnsavedChanges = activeRequest.id
         ? unsavedChanges.has(activeRequest.id)
         : false;
 
       let backendData;
-
       let effectiveAuthType = authType;
 
       if (
@@ -908,47 +916,23 @@ const RequestEditor: React.FC = () => {
       ) {
         effectiveAuthType = 'bearer';
       }
-
       if (!authData?.token || authData.token.trim() === '') {
         effectiveAuthType = 'none';
       }
 
-      if (hasUnsavedChanges || activeRequest.id?.startsWith('temp-')) {
-        let substitutedBodyContent = bodyContent;
-
-        if (
-          selectedVariable &&
-          selectedVariable.length > 0 &&
-          (bodyType === 'raw' || bodyType === 'json')
-        ) {
-          try {
-            const parsedBody = JSON.parse(bodyContent);
-
-            selectedVariable.forEach((varItem) => {
-              const variable = formattedVariables.find(
-                (v) => v.name === varItem.name
-              );
-              if (variable && varItem.path) {
-                parsedBody[varItem.path] = variable.value;
-              }
-            });
-
-            substitutedBodyContent = JSON.stringify(parsedBody, null, 2);
-          } catch {
-            selectedVariable.forEach((varItem) => {
-              const variable = formattedVariables.find(
-                (v) => v.name === varItem.name
-              );
-              if (variable) {
-                const regex = new RegExp(`{{${variable.name}}}`, 'g');
-                substitutedBodyContent = substitutedBodyContent.replace(
-                  regex,
-                  variable.value
-                );
-              }
-            });
-          }
-        } else if (selectedVariable && selectedVariable.length > 0) {
+      if (selectedVariable && selectedVariable.length > 0) {
+        try {
+          const parsedBody = JSON.parse(bodyContent);
+          selectedVariable.forEach((varItem) => {
+            const variable = formattedVariables.find(
+              (v) => v.name === varItem.name
+            );
+            if (variable && varItem.path) {
+              parsedBody[varItem.path] = variable.value;
+            }
+          });
+          substitutedBodyContent = JSON.stringify(parsedBody, null, 2);
+        } catch {
           selectedVariable.forEach((varItem) => {
             const variable = formattedVariables.find(
               (v) => v.name === varItem.name
@@ -962,7 +946,9 @@ const RequestEditor: React.FC = () => {
             }
           });
         }
+      }
 
+      if (hasUnsavedChanges || activeRequest.id?.startsWith('temp-')) {
         const currentRequest = {
           id: activeRequest.id,
           name: activeRequest.name || 'Untitled Request',
@@ -974,7 +960,6 @@ const RequestEditor: React.FC = () => {
           body: substitutedBodyContent,
           bodyRawContent: substitutedBodyContent,
           bodyType: bodyType === 'json' ? 'raw' : bodyType,
-
           authorizationType: effectiveAuthType,
           authorization:
             effectiveAuthType === 'bearer'
@@ -991,7 +976,6 @@ const RequestEditor: React.FC = () => {
                   addTo: authData.addTo,
                 }
               : undefined,
-
           timeout: settings.timeout,
           retries: 0,
           extractVariables: [],
@@ -1033,13 +1017,13 @@ const RequestEditor: React.FC = () => {
       let metrics;
       let assertionLogs;
       let schemaValidation;
-      console.log('backendData123:', backendData);
 
       if (
         backendData?.data?.responses &&
         Array.isArray(backendData.data.responses)
       ) {
         const firstResponse = backendData.data.responses[0];
+
         backendBody = firstResponse.body;
         statusCode = firstResponse.status ?? firstResponse.statusCode;
         responseHeaders = firstResponse.headers;
@@ -1048,6 +1032,7 @@ const RequestEditor: React.FC = () => {
         assertionLogs = [];
         schemaValidation = null;
       } else {
+        console.log('backendBody:', backendBody);
         backendBody = backendData?.data?.body;
         statusCode = backendData?.data?.statusCode;
         responseHeaders = backendData?.data?.headers;
@@ -1066,11 +1051,32 @@ const RequestEditor: React.FC = () => {
           } catch {}
         }
 
+        const actualRequest = {
+          method,
+          url: newUrl,
+          headers: headers
+            .filter((h) => h.enabled)
+            .reduce((acc, h) => {
+              if (h.key) acc[h.key] = h.value;
+              return acc;
+            }, {} as Record<string, string>),
+          body: substitutedBodyContent
+            ? (() => {
+                try {
+                  return JSON.parse(substitutedBodyContent);
+                } catch {
+                  return substitutedBodyContent;
+                }
+              })()
+            : null,
+        };
+
         const normalizedResponse = {
           status: statusCode ?? 200,
           statusCode: statusCode ?? 200,
           headers: responseHeaders ?? {},
           requestCurl: requestCurl ?? {},
+          actualRequest,
           body: parsedBody,
           rawBody: backendBody,
           metrics: metrics ?? {},
@@ -1081,24 +1087,59 @@ const RequestEditor: React.FC = () => {
         setResponseData(normalizedResponse);
 
         const formattedResponse = formatBackendResponse(normalizedResponse);
-
         const generatedAssertions = generateAssertions(formattedResponse);
-
-        const existingAssertions = Array.isArray(assertions) ? assertions : [];
-        const existingIds = new Set(existingAssertions.map((a) => a.id));
-
-        const newAssertions = generatedAssertions.filter(
+        const existingIds = new Set(assertions.map((a) => a.id));
+        const filtered = generatedAssertions.filter(
           (a) => !existingIds.has(a.id)
         );
-
-        setAssertions([...existingAssertions, ...newAssertions]);
+        setAssertions([...assertions, ...filtered]);
       }
-    } catch (error) {
+    } catch (error: any) {
       const backendErrorMessage =
         error?.response?.data?.errorDetails ||
         error?.response?.data?.error ||
+        error?.response?.data?.message ||
         error?.message ||
         'An unknown error occurred.';
+
+      const statusCode =
+        error?.response?.status || error?.response?.data?.statusCode || 500;
+
+      const responseHeaders = error?.response?.headers || {};
+      const backendBody = error?.response?.data || backendErrorMessage;
+
+      const normalizedResponse = {
+        status: statusCode,
+        statusCode,
+        headers: responseHeaders,
+        requestCurl: error?.response?.data?.requestCurl || {},
+        actualRequest: {
+          method,
+          url: newUrl,
+          headers: headers
+            .filter((h) => h.enabled)
+            .reduce((acc, h) => {
+              if (h.key) acc[h.key] = h.value;
+              return acc;
+            }, {} as Record<string, string>),
+          body: substitutedBodyContent
+            ? (() => {
+                try {
+                  return JSON.parse(substitutedBodyContent);
+                } catch {
+                  return substitutedBodyContent;
+                }
+              })()
+            : null,
+        },
+        body: backendBody,
+        rawBody: backendBody,
+        metrics: {},
+        assertionLogs: [],
+        schemaValidation: null,
+      };
+
+      setResponseData(normalizedResponse);
 
       toast({
         title: 'Error',
@@ -2216,8 +2257,13 @@ const RequestEditor: React.FC = () => {
               { id: 'body', label: 'Body', count: getBodyCount() },
               { id: 'auth', label: 'Auth', count: getAuthCount() },
               {
-                id: 'scripts',
-                label: 'Pre & Post',
+                id: 'pre-request',
+                label: 'Pre-request',
+                count: 0,
+              },
+              {
+                id: 'post-request',
+                label: 'Post-request',
                 count: 0,
               },
               {
@@ -2385,49 +2431,38 @@ const RequestEditor: React.FC = () => {
             </div>
           )}
 
-          {activeTab === 'scripts' && (
-            <div className='flex h-full'>
-              {/* Left sidebar with Pre-request and Post-response */}
-              {/* <div className="w-40 border-r border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
-                <button
-                  onClick={() => setScriptsTab("pre-request")}
-                  className={`w-full text-left px-4 py-3 text-sm font-medium transition-colors ${
-                    scriptsTab === "pre-request"
-                      ? "bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white border-l-2 border-blue-500"
-                      : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-                  }`}
-                >
-                  Pre-request
-                </button>
-                <button
-                  onClick={() => setScriptsTab("post-response")}
-                  className={`w-full text-left px-4 py-3 text-sm font-medium transition-colors ${
-                    scriptsTab === "post-response"
-                      ? "bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white border-l-2 border-blue-500"
-                      : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-                  }`}
-                >
-                  Post-response
-                </button>
-              </div> */}
+          {activeTab === 'pre-request' && (
+            <PrePostRequest
+              type='pre-request'
+              assertions={assertions}
+              setAssertions={setAssertions}
+              responseData={responseData}
+              activeRequest={activeRequest}
+              currentWorkspace={currentWorkspace}
+              updateRequestMutation={updateRequestMutation}
+              toggleAssertion={toggleAssertion}
+              showAssertions={false}
+              selectedVariables={selectedVariable}
+              onRemoveVariable={handleRemoveVariable}
+              onVariableSelect={handleVariableSelect}
+            />
+          )}
 
-              {/* Right content area */}
-              <div className='flex-1 overflow-auto'>
-                <PrePostRequest
-                  assertions={assertions}
-                  setAssertions={setAssertions}
-                  responseData={responseData}
-                  activeRequest={activeRequest}
-                  currentWorkspace={currentWorkspace}
-                  updateRequestMutation={updateRequestMutation}
-                  toggleAssertion={toggleAssertion}
-                  showAssertions={true}
-                  selectedVariables={selectedVariable}
-                  onRemoveVariable={handleRemoveVariable}
-                  onVariableSelect={handleVariableSelect}
-                />
-              </div>
-            </div>
+          {activeTab === 'post-request' && (
+            <PrePostRequest
+              type='post-request'
+              assertions={assertions}
+              setAssertions={setAssertions}
+              responseData={responseData}
+              activeRequest={activeRequest}
+              currentWorkspace={currentWorkspace}
+              updateRequestMutation={updateRequestMutation}
+              toggleAssertion={toggleAssertion}
+              showAssertions={true}
+              selectedVariables={selectedVariable}
+              onRemoveVariable={handleRemoveVariable}
+              onVariableSelect={handleVariableSelect}
+            />
           )}
 
           {activeTab === 'settings' && (

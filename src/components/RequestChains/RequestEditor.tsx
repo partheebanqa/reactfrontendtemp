@@ -167,7 +167,13 @@ export function RequestEditor({
   const [helpOpen, setHelpOpen] = useState(false);
 
   const [activeTab, setActiveTab] = useState<
-    'params' | 'headers' | 'scripts' | 'body' | 'auth' | 'settings'
+    | 'params'
+    | 'headers'
+    | 'pre-request'
+    | 'post-request'
+    | 'body'
+    | 'auth'
+    | 'settings'
   >('params');
 
   const [assertions, setAssertions] = useState<any[]>([]);
@@ -1203,7 +1209,8 @@ export function RequestEditor({
     { id: 'headers', label: 'Headers' },
     { id: 'body', label: 'Body' },
     { id: 'auth', label: 'Auth' },
-    { id: 'scripts', label: 'Pre & Post' },
+    { id: 'pre-request', label: 'Pre-request' },
+    { id: 'post-request', label: 'Post-request' },
     { id: 'settings', label: 'Settings' },
   ];
 
@@ -2341,9 +2348,22 @@ export function RequestEditor({
             </div>
           )}
 
-          {activeTab === 'scripts' && (
+          {activeTab === 'pre-request' && (
             <div className='space-y-4'>
               <PrePostRequest
+                type='pre-request'
+                assertions={assertions}
+                setAssertions={setAssertions}
+                responseData={executionResult?.response}
+                showAssertions={true}
+              />
+            </div>
+          )}
+
+          {activeTab === 'post-request' && (
+            <div className='space-y-4'>
+              <PrePostRequest
+                type='post-request'
                 assertions={assertions}
                 setAssertions={setAssertions}
                 responseData={executionResult?.response}
@@ -2925,9 +2945,14 @@ export function RequestEditor({
             Auth
           </TabsTrigger>
 
-          <TabsTrigger value='scripts' className='gap-2'>
+          <TabsTrigger value='pre-request' className='gap-2'>
             <Code className='w-4 h-4' />
-            Pre & Post
+            Pre-request
+          </TabsTrigger>
+
+          <TabsTrigger value='post-request' className='gap-2'>
+            <Code className='w-4 h-4' />
+            Post-requestS
           </TabsTrigger>
           <TabsTrigger value='settings' className='gap-2'>
             <Settings className='w-4 h-4' />
@@ -3251,8 +3276,19 @@ export function RequestEditor({
             </CardContent>
           </Card>
         </TabsContent>
-        <TabsContent value='scripts' className='space-y-6'>
+        <TabsContent value='pre-request' className='space-y-6'>
           <PrePostRequest
+            type='pre-request'
+            assertions={assertions}
+            setAssertions={setAssertions}
+            responseData={executionResult?.response}
+            showAssertions={true}
+          />
+        </TabsContent>
+
+        <TabsContent value='post-request' className='space-y-6'>
+          <PrePostRequest
+            type='post-request'
             assertions={assertions}
             setAssertions={setAssertions}
             responseData={executionResult?.response}
