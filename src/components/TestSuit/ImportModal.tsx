@@ -449,8 +449,8 @@ export const ImportModal: React.FC<ImportModalProps> = ({
     e: React.ChangeEvent<HTMLInputElement>
   ) => {
     const file = e.target.files?.[0];
-    if (!file) return;
 
+    if (!file) return;
     try {
       const text = await file.text();
       const json = JSON.parse(text);
@@ -466,7 +466,6 @@ export const ImportModal: React.FC<ImportModalProps> = ({
           } else if (item.request) {
             const method = item.request.method;
             const url = item.request.url?.raw || item.request.url;
-
             const headers = item.request.header
               ? item.request.header.map((h: any) => ({
                   id: `header_${Date.now()}_${Math.random()}`,
@@ -475,7 +474,6 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                   enabled: !h.disabled,
                 }))
               : [];
-
             const params = item.request.url?.query
               ? item.request.url.query.map((q: any) => ({
                   id: `param_${Date.now()}_${Math.random()}`,
@@ -484,7 +482,6 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                   enabled: !q.disabled,
                 }))
               : [];
-
             let bodyRawContent = '';
             let bodyType = 'none';
             if (item.request.body) {

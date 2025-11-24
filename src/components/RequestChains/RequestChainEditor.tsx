@@ -88,6 +88,7 @@ import {
 import { ResponseExplorer } from './ResponseExplorer';
 import BreadCum from '../BreadCum/Breadcum';
 import { useDataManagementStore } from '@/store/dataManagementStore';
+import { generateAssertions } from '@/utils/assertionGenerator';
 
 interface RequestChainEditorProps {
   chain?: RequestChain;
@@ -116,6 +117,12 @@ export function RequestChainEditor({
   const [dynamicOverrides, setDynamicOverrides] = useState<
     DynamicVariableOverride[]
   >([]);
+
+  const [assertions, setAssertions] = useState<any[]>([]);
+
+  const [assertionsByRequest, setAssertionsByRequest] = useState<
+    Record<string, any[]>
+  >({});
 
   useEffect(() => {
     if (dynamicVariables.length > 0) {
@@ -175,6 +182,7 @@ export function RequestChainEditor({
     variables: chain?.variables || [],
     environment: chain?.environment || 'dev',
   });
+
   const { environments, activeEnvironment, setActiveEnvironment } =
     useDataManagement();
   const [selectedEnvironment, setSelectedEnvironment] = useState<string>('');
@@ -582,6 +590,8 @@ export function RequestChainEditor({
     if (!request.url) {
       throw new Error('Request URL is required');
     }
+
+    // Ensure arrays exist
     request = {
       ...request,
       headers: request.headers ?? [],
@@ -591,6 +601,8 @@ export function RequestChainEditor({
     const startTime = Date.now();
 
     const processedRequest = processRequestWithVariables(request, variables);
+
+    // Handle Bearer token authorization
     {
       const token = (
         processedRequest.authToken ||
@@ -625,15 +637,58 @@ export function RequestChainEditor({
       }
     }
 
+    if (processedRequest.bodyType === 'form-data' && processedRequest.body) {
+      try {
+        const parsedBody = JSON.parse(processedRequest.body);
+        if (Array.isArray(parsedBody)) {
+          (processedRequest as any).bodyFormData = parsedBody.map(
+            (field: any) => ({
+              key: field.key,
+              value: field.value,
+              enabled: field.enabled !== false,
+              type: field.type || 'text',
+            })
+          );
+        }
+      } catch (e) {
+        console.error('Failed to parse form-data from body:', e);
+      }
+    }
+
     const payload = buildRequestPayload(processedRequest, variables);
     const previewUrl = getPreviewUrl(request, variables);
     payload.request.url = previewUrl;
 
     try {
-      console.log('payload111:', payload);
+      console.log('Executing request with payload:', payload);
 
       const backendData = await executeRequest(payload);
+
       const result = backendData?.data?.responses?.[0];
+      const formattedAssertionFormat = {
+        status: result?.statusCode ?? null,
+        statusText: '',
+        headers: result?.headers ?? {},
+        data: (() => {
+          try {
+            return JSON.parse(result?.body || '{}');
+          } catch {
+            return {};
+          }
+        })(),
+        responseTime: result?.metrics?.responseTime ?? 0,
+        size: result?.metrics?.bytesReceived ?? 0,
+      };
+
+      const generatedAssertion = await generateAssertions(
+        formattedAssertionFormat
+      );
+      setAssertionsByRequest((prev) => ({
+        ...prev,
+        [request.id]: generatedAssertion,
+      }));
+      setAssertions(generatedAssertion);
+
       if (!result) throw new Error('No response from executor');
 
       const extractedData = extractDataFromResponse(
@@ -675,10 +730,14 @@ export function RequestChainEditor({
         extractedVariables: extractedData,
       };
 
+      // Persist execution log
       try {
         const raw = localStorage.getItem('lastExecutionByRequest');
         const map = raw ? JSON.parse(raw) : {};
-        map[request.id] = log;
+        map[request.id] = {
+          ...log,
+          assertions: generatedAssertion,
+        };
         localStorage.setItem('lastExecutionByRequest', JSON.stringify(map));
       } catch (e) {
         console.error('Failed to persist lastExecutionByRequest:', e);
@@ -704,6 +763,7 @@ export function RequestChainEditor({
         error: error instanceof Error ? error.message : 'Unknown error',
       };
 
+      // Persist error log
       try {
         const raw = localStorage.getItem('lastExecutionByRequest');
         const map = raw ? JSON.parse(raw) : {};
@@ -719,7 +779,6 @@ export function RequestChainEditor({
       throw errorLog;
     }
   };
-
   const handleRunAll = async () => {
     if (!formData.chainRequests || formData.chainRequests.length === 0) {
       toast({
@@ -1142,6 +1201,7 @@ export function RequestChainEditor({
   };
 
   const saveChainToAPI = async (): Promise<RequestChain | null> => {
+    console.log('save chain is called...');
     if (!formData.name?.trim()) {
       toast({
         title: 'Validation Error',
@@ -1284,10 +1344,24 @@ export function RequestChainEditor({
   const handleImportRequests = async (importedRequests: ExtendedRequest[]) => {
     try {
       const transformedRequests: APIRequest[] = importedRequests.map((req) => {
-        const hasBody = req.bodyRawContent && req.bodyRawContent.trim() !== '';
-        const bodyType: APIRequest['bodyType'] = hasBody
-          ? (req.bodyType as APIRequest['bodyType']) || 'raw'
-          : 'none';
+        let bodyType: APIRequest['bodyType'] = 'none';
+        let bodyContent = '';
+
+        if (req.bodyType === 'form-data' && Array.isArray(req.bodyFormData)) {
+          bodyType = 'form-data';
+          bodyContent = JSON.stringify(
+            req.bodyFormData.map((field: any) => ({
+              id: field.id || `temp_${Date.now()}_${Math.random()}`,
+              key: field.key || '',
+              value: field.value || '',
+              type: field.type || 'text',
+              enabled: field.enabled !== false,
+            }))
+          );
+        } else if (req.bodyRawContent && req.bodyRawContent.trim() !== '') {
+          bodyType = (req.bodyType as APIRequest['bodyType']) || 'raw';
+          bodyContent = req.bodyRawContent;
+        }
 
         const headers = Array.isArray(req.headers)
           ? req.headers.map((header: any) => ({
@@ -1341,12 +1415,11 @@ export function RequestChainEditor({
           headers,
           params,
           bodyType,
-          body: hasBody ? req.bodyRawContent : '',
+          body: bodyContent,
           authorizationType,
           authorization: {
             token: authToken,
           },
-
           authUsername,
           authPassword,
           authApiKey,
@@ -1386,7 +1459,6 @@ export function RequestChainEditor({
       });
     }
   };
-
   const currentRequestChainId = requestChainId || chain?.id || '';
 
   function commitRequestName(index: number, nameValue: string) {
@@ -1652,6 +1724,13 @@ export function RequestChainEditor({
               chainVariables={formData.variables || []}
               dynamicVariableOverrides={dynamicOverrides}
               onRegenerateDynamicVariable={regenerateDynamicVariableLocal}
+              requestAssertions={assertionsByRequest[request.id] || []}
+              onAssertionsUpdate={(assertions) => {
+                setAssertionsByRequest((prev) => ({
+                  ...prev,
+                  [request.id]: assertions,
+                }));
+              }}
             />
           </div>
         </div>
@@ -2115,6 +2194,16 @@ export function RequestChainEditor({
                                           onRegenerateDynamicVariable={
                                             regenerateDynamicVariableLocal
                                           }
+                                          requestAssertions={
+                                            assertionsByRequest[request.id] ||
+                                            []
+                                          }
+                                          onAssertionsUpdate={(assertions) => {
+                                            setAssertionsByRequest((prev) => ({
+                                              ...prev,
+                                              [request.id]: assertions,
+                                            }));
+                                          }}
                                         />
 
                                         {/* Response Section - Only show here, not in RequestEditor */}

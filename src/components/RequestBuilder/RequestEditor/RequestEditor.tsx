@@ -492,24 +492,40 @@ const RequestEditor: React.FC = () => {
         'binary',
       ];
       const bodyTypeValue = activeRequest.bodyType || 'none';
-      setBodyType('raw');
+      if (allowedBodyTypes.includes(bodyTypeValue)) {
+        setBodyType(bodyTypeValue as BodyType);
+      } else {
+        setBodyType('raw');
+      }
       setBodyContent(activeRequest.bodyRawContent || '');
       setPendingSubstitutions([]);
 
       try {
-        if (
-          activeRequest.bodyFormData &&
-          typeof activeRequest.bodyFormData === 'object'
-        ) {
-          const formDataFields = Object.entries(activeRequest.bodyFormData).map(
-            ([key, value]) => ({
+        if (bodyTypeValue === 'form-data' && activeRequest.bodyFormData) {
+          if (Array.isArray(activeRequest.bodyFormData)) {
+            const formDataFields = activeRequest.bodyFormData.map(
+              (field: any) => ({
+                key: field.key || '',
+                value: field.value || '',
+                enabled: field.enabled !== undefined ? field.enabled : true,
+                type: (field.type || 'text') as 'text' | 'file',
+                ...(field.fileName ? { fileName: field.fileName } : {}),
+              })
+            );
+            setFormFields(formDataFields);
+          } else if (typeof activeRequest.bodyFormData === 'object') {
+            const formDataFields = Object.entries(
+              activeRequest.bodyFormData
+            ).map(([key, value]) => ({
               key,
               value: value?.toString() || '',
               enabled: true,
               type: 'text' as const,
-            })
-          );
-          setFormFields(formDataFields);
+            }));
+            setFormFields(formDataFields);
+          } else {
+            setFormFields([]);
+          }
         } else {
           setFormFields([]);
         }
@@ -700,7 +716,7 @@ const RequestEditor: React.FC = () => {
         name: 'New Request',
         method: 'GET',
         url: '',
-        bodyType: 'json',
+        bodyType: 'raw',
         bodyFormData: null,
         authorizationType: 'none',
         authorization: {},
@@ -1013,9 +1029,11 @@ const RequestEditor: React.FC = () => {
       let backendBody;
       let statusCode;
       let responseHeaders;
+      let requestCurl;
       let metrics;
       let assertionLogs;
       let schemaValidation;
+      console.log('backendData123:', backendData);
 
       if (
         backendData?.data?.responses &&
@@ -1025,6 +1043,7 @@ const RequestEditor: React.FC = () => {
         backendBody = firstResponse.body;
         statusCode = firstResponse.status ?? firstResponse.statusCode;
         responseHeaders = firstResponse.headers;
+        requestCurl = firstResponse.requestCurl;
         metrics = firstResponse.metrics;
         assertionLogs = [];
         schemaValidation = null;
@@ -1032,6 +1051,7 @@ const RequestEditor: React.FC = () => {
         backendBody = backendData?.data?.body;
         statusCode = backendData?.data?.statusCode;
         responseHeaders = backendData?.data?.headers;
+        requestCurl = backendData?.data?.requestCurl;
         metrics = backendData?.data?.metrics;
         assertionLogs = backendData?.data?.assertionLogs || [];
         schemaValidation = backendData?.data?.schemaValidation || null;
@@ -1050,6 +1070,7 @@ const RequestEditor: React.FC = () => {
           status: statusCode ?? 200,
           statusCode: statusCode ?? 200,
           headers: responseHeaders ?? {},
+          requestCurl: requestCurl ?? {},
           body: parsedBody,
           rawBody: backendBody,
           metrics: metrics ?? {},
@@ -1060,6 +1081,7 @@ const RequestEditor: React.FC = () => {
         setResponseData(normalizedResponse);
 
         const formattedResponse = formatBackendResponse(normalizedResponse);
+
         const generatedAssertions = generateAssertions(formattedResponse);
 
         const existingAssertions = Array.isArray(assertions) ? assertions : [];
@@ -1918,7 +1940,12 @@ const RequestEditor: React.FC = () => {
     }
   };
 
-  // const [scriptsTab, setScriptsTab] = useState<"pre-request" | "post-response">("pre-request")
+  const handleRemoveVariable = (path: string) => {
+    setSelectedVariable((prev) => prev.filter((v) => v.path !== path));
+    if (activeRequest?.id) {
+      collectionActions.markUnsaved(activeRequest.id);
+    }
+  };
 
   if (!activeRequest) {
     return (
@@ -2275,7 +2302,7 @@ const RequestEditor: React.FC = () => {
               headers={headers}
               method={method}
               variables={formattedVariables}
-              initialVariable={activeRequest?.variable || []}
+              initialVariable={selectedVariable}
               onBodyTypeChange={(newBodyType) => {
                 setBodyType(newBodyType);
 
@@ -2395,6 +2422,9 @@ const RequestEditor: React.FC = () => {
                   updateRequestMutation={updateRequestMutation}
                   toggleAssertion={toggleAssertion}
                   showAssertions={true}
+                  selectedVariables={selectedVariable}
+                  onRemoveVariable={handleRemoveVariable}
+                  onVariableSelect={handleVariableSelect}
                 />
               </div>
             </div>

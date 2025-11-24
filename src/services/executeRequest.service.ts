@@ -55,9 +55,7 @@ export const buildRequestPayload = (
 
   const getAuthToken = (): string => {
     if (request.authorizationType === 'bearer') {
-      // Always replace variables — prevents using stale old token
       const rawToken = request.authToken ?? request.authorization?.token ?? '';
-
       return replaceVariables(rawToken);
     }
     return '';
@@ -90,6 +88,36 @@ export const buildRequestPayload = (
     return undefined;
   };
 
+  const processFormData = () => {
+    let formDataSource = request.bodyFormData;
+    console.log('formDataSource123:', formDataSource);
+
+    if (!formDataSource && request.bodyType === 'form-data' && request.body) {
+      try {
+        const parsedBody = JSON.parse(request.body);
+        if (Array.isArray(parsedBody)) {
+          formDataSource = parsedBody;
+        }
+      } catch (e) {
+        console.error('Failed to parse form-data from body:', e);
+        return null;
+      }
+    }
+
+    if (!formDataSource || !Array.isArray(formDataSource)) {
+      return null;
+    }
+
+    return formDataSource
+      .filter((field: any) => field.enabled !== false)
+      .map((field: any) => ({
+        key: replaceVariables(field.key),
+        value: replaceVariables(field.value),
+        enabled: field.enabled !== false,
+        type: field.type || 'text',
+      }));
+  };
+
   return {
     request: {
       workspaceId,
@@ -98,8 +126,11 @@ export const buildRequestPayload = (
       method: request.method,
       url: replaceVariables(request.url),
       bodyType: request.bodyType,
-      bodyFormData: request.bodyFormData ?? null,
-      bodyRawContent: replaceVariables(request.body),
+      bodyFormData: processFormData(),
+      bodyRawContent:
+        request.bodyType === 'raw' || request.bodyType === 'json'
+          ? replaceVariables(request.body)
+          : '',
 
       authorizationType: request.authorizationType,
       authorization: buildAuthorization(),

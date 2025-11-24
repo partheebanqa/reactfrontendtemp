@@ -78,11 +78,8 @@ export const JsonVariableSubstitution: React.FC<
   >({ open: false });
 
   useEffect(() => {
-    if (initialVariable && initialVariable.length > 0) {
-      setSelectedVariables(initialVariable);
-    } else {
-      setSelectedVariables([]);
-    }
+    // Always sync with initialVariable, even if it's empty
+    setSelectedVariables(initialVariable || []);
   }, [initialVariable]);
 
   const lines = value.split('\n');
@@ -263,33 +260,7 @@ export const JsonVariableSubstitution: React.FC<
 
   return (
     <div ref={containerRef} className='relative w-full space-y-3'>
-      {selectedVariables.length > 0 && (
-        <div className='bg-green-50 border border-green-200 rounded-md p-[7px] overflow-x-auto'>
-          <div className='flex items-center gap-3 whitespace-nowrap'>
-            <span className='text-sm font-medium text-green-900 flex-shrink-0'>
-              Substituted Variables:
-            </span>
-
-            {selectedVariables.map((variable, index) => (
-              <div
-                key={`${variable.path}-${index}`}
-                className='flex items-center gap-2 px-3 py-1 bg-green-500 text-white text-xs rounded font-mono font-medium flex-shrink-0'
-              >
-                <span>
-                  {variable.path}: {variable.name}
-                </span>
-                <button
-                  onClick={() => confirmDeleteSaved(variable.path)}
-                  className='p-0.5 bg-white/20 hover:bg-white/30 rounded transition-colors'
-                  title='Remove variable'
-                >
-                  <Trash2 className='w-3 h-3' />
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      {/* Removed the green banner - variables will be shown in Pre-request tab */}
 
       <div className='relative flex border border-border rounded-md overflow-hidden bg-card focus-within:ring-2 focus-within:ring-ring focus-within:border-ring'>
         {/* Line numbers column */}

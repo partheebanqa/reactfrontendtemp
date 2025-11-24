@@ -1,7 +1,6 @@
 'use client';
 import { useEffect, useState, useRef, useMemo } from 'react';
 import React from 'react';
-
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -72,6 +71,7 @@ import 'codemirror/lib/codemirror.css';
 import 'codemirror/theme/material.css';
 import 'codemirror/mode/javascript/javascript';
 import './../RequestBuilder/RequestEditor/whiteorange.css';
+import { generateAssertions } from '@/utils/assertionGenerator';
 import {
   Tooltip,
   TooltipProvider,
@@ -80,6 +80,8 @@ import {
 } from '../ui/tooltip';
 import { VariableHelpDialog } from './HelpTextDialougs/variablesUseDialogues';
 import RequestBody from '@/components/Shared/RequestTabs/RequestBody';
+import { KeyValuePairWithFile } from '../ui/KeyValueEditorWithFileUpload';
+import { PrePostRequest } from '../Shared/RequestTabs/PrePostRequest';
 
 type FormField = {
   id: string;
@@ -124,6 +126,8 @@ interface RequestEditorProps {
   chainVariables?: any[];
   dynamicVariableOverrides?: DynamicVariableOverride[];
   onRegenerateDynamicVariable?: (variableName: string) => void;
+  requestAssertions?: any[];
+  onAssertionsUpdate?: (assertions: any[]) => void;
 }
 
 interface KeyValuePair {
@@ -152,15 +156,22 @@ export function RequestEditor({
   chainVariables = [],
   dynamicVariableOverrides,
   onRegenerateDynamicVariable,
+  requestAssertions,
+  onAssertionsUpdate,
 }: RequestEditorProps) {
+  console.log('requestAssertions:', requestAssertions);
+
   const isSyncingRef = useRef(false);
   const isInitialMount = useRef(true);
   const [isJsonOpen, setIsJsonOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
 
   const [activeTab, setActiveTab] = useState<
-    'params' | 'headers' | 'body' | 'auth' | 'settings'
+    'params' | 'headers' | 'scripts' | 'body' | 'auth' | 'settings'
   >('params');
+
+  const [assertions, setAssertions] = useState<any[]>([]);
+
   const [isExecuting, setIsExecuting] = useState(false);
   const [executionResult, setExecutionResult] = useState<ExecutionLog | null>(
     null
@@ -292,31 +303,84 @@ export function RequestEditor({
       token:
         initialRequest.authToken || initialRequest.authorization?.token || '',
     });
-    setBodyType(initialRequest.bodyType || 'none');
-    if (initialRequest.bodyType === 'form' && initialRequest.body) {
-      try {
-        setFormFields(JSON.parse(initialRequest.body));
-      } catch (e) {
-        console.error(
-          'Failed to parse form fields from initial request body:',
-          e
+
+    const requestBodyType = initialRequest.bodyType || 'none';
+    setBodyType(requestBodyType);
+
+    if (requestBodyType === 'form-data') {
+      if (
+        initialRequest.bodyFormData &&
+        Array.isArray(initialRequest.bodyFormData)
+      ) {
+        setFormFields(
+          initialRequest.bodyFormData.map((field) => ({
+            id: field.id || `temp_${Date.now()}_${Math.random()}`,
+            key: field.key || '',
+            value: field.value || '',
+            type: field.type || 'text',
+            fileName: field.fileName,
+            enabled: field.enabled !== false,
+          }))
         );
+      } else if (initialRequest.body) {
+        try {
+          const parsed = JSON.parse(initialRequest.body);
+          if (Array.isArray(parsed)) {
+            setFormFields(
+              parsed.map((field) => ({
+                ...field,
+                id: field.id || `temp_${Date.now()}_${Math.random()}`,
+              }))
+            );
+          } else {
+            setFormFields([]);
+          }
+        } catch (e) {
+          console.error(
+            'Failed to parse form fields from initial request body:',
+            e
+          );
+          setFormFields([]);
+        }
+      } else {
         setFormFields([]);
       }
-    } else if (
-      initialRequest.bodyType === 'urlencoded' &&
-      initialRequest.body
-    ) {
-      try {
-        setUrlEncodedFields(JSON.parse(initialRequest.body));
-      } catch (e) {
-        console.error(
-          'Failed to parse URL-encoded fields from initial request body:',
-          e
+    } else if (requestBodyType === 'urlencoded') {
+      if (
+        initialRequest.bodyFormData &&
+        Array.isArray(initialRequest.bodyFormData)
+      ) {
+        setUrlEncodedFields(
+          initialRequest.bodyFormData.map((field) => ({
+            id: field.id || `temp_${Date.now()}_${Math.random()}`,
+            key: field.key || '',
+            value: field.value || '',
+          }))
         );
+      } else if (initialRequest.body) {
+        try {
+          const parsed = JSON.parse(initialRequest.body);
+          if (Array.isArray(parsed)) {
+            setUrlEncodedFields(
+              parsed.map((field) => ({
+                ...field,
+                id: field.id || `temp_${Date.now()}_${Math.random()}`,
+              }))
+            );
+          } else {
+            setUrlEncodedFields([]);
+          }
+        } catch (e) {
+          console.error(
+            'Failed to parse URL-encoded fields from initial request body:',
+            e
+          );
+          setUrlEncodedFields([]);
+        }
+      } else {
         setUrlEncodedFields([]);
       }
-    } else if (initialRequest.bodyType === 'raw' && initialRequest.body) {
+    } else if (requestBodyType === 'raw' && initialRequest.body) {
       setBody(initialRequest.body);
     } else {
       setBody('');
@@ -370,6 +434,13 @@ export function RequestEditor({
       isSyncingRef.current = false;
     }, 100);
   }, [params]);
+
+  const handleAssertionsUpdate = (newAssertions: any[]) => {
+    setAssertions(newAssertions);
+    if (onAssertionsUpdate) {
+      onAssertionsUpdate(newAssertions);
+    }
+  };
 
   const usedDynamicVariables = useMemo(() => {
     const allTextFields = [
@@ -515,6 +586,13 @@ export function RequestEditor({
       if ((saved?.response || saved?.error) && isRecent) {
         setExecutionResult(saved);
         setShowResponse(true);
+
+        if (saved.assertions && Array.isArray(saved.assertions)) {
+          setAssertions(saved.assertions);
+          if (onAssertionsUpdate) {
+            onAssertionsUpdate(saved.assertions);
+          }
+        }
 
         if (
           saved.extractedVariables &&
@@ -781,7 +859,6 @@ export function RequestEditor({
       onRegenerateDynamicVariable(variableName);
     } else {
       const dynamicVar = dynamicVariables.find((v) => v.name === variableName);
-      console.log('Regenerating variable:', variableName, dynamicVar);
 
       if (!dynamicVar) return;
 
@@ -849,7 +926,7 @@ export function RequestEditor({
 
   const handleExecute = async () => {
     const allVariables = getAllAvailableVariables();
-    const safeRequest = {
+    const safeRequest: any = {
       ...initialRequest,
       extractVariables: initialRequest.extractVariables ?? [],
       headers: initialRequest.headers ?? [],
@@ -863,12 +940,33 @@ export function RequestEditor({
       bodyType: bodyType,
     };
 
-    if (bodyType === 'form') {
-      safeRequest.body = JSON.stringify(formFields);
+    if (bodyType === 'form-data') {
+      const formDataArray = formFields.map((field) => ({
+        key: field.key,
+        value: field.value,
+        enabled: field.enabled !== false,
+        type: field.type,
+      }));
+      safeRequest.bodyFormData = formDataArray;
+      safeRequest.body = '';
+      safeRequest.bodyRawContent = '';
     } else if (bodyType === 'urlencoded') {
+      const urlEncodedArray = urlEncodedFields.map((field) => ({
+        key: field.key,
+        value: field.value,
+        enabled: true,
+      }));
       safeRequest.body = JSON.stringify(urlEncodedFields);
+      safeRequest.bodyFormData = urlEncodedArray;
+      safeRequest.bodyRawContent = '';
+    } else if (bodyType === 'raw' || bodyType === 'json') {
+      safeRequest.body = body;
+      safeRequest.bodyFormData = null;
+      safeRequest.bodyRawContent = body;
+    } else {
+      safeRequest.bodyFormData = null;
+      safeRequest.bodyRawContent = '';
     }
-
     {
       const token = (
         safeRequest.authToken ||
@@ -928,6 +1026,33 @@ export function RequestEditor({
       const previewUrl = getPreviewUrl(allVariables);
       payload.request.url = previewUrl;
       const backendData = await executeRequest(payload);
+
+      const responseItem = backendData?.data?.responses?.[0];
+
+      const formattedAssertionFormat = {
+        status: responseItem?.statusCode ?? null,
+        statusText: '',
+        headers: responseItem?.headers ?? {},
+        data: (() => {
+          try {
+            return JSON.parse(responseItem?.body || '{}');
+          } catch {
+            return {};
+          }
+        })(),
+        responseTime: responseItem?.metrics?.responseTime ?? 0,
+        size: responseItem?.metrics?.bytesReceived ?? 0,
+      };
+
+      const generatedAssertion = await generateAssertions(
+        formattedAssertionFormat
+      );
+
+      setAssertions(generatedAssertion);
+      handleAssertionsUpdate(generatedAssertion);
+
+      console.log('generatedAssertion:', generatedAssertion);
+
       const result = backendData?.data?.responses?.[0];
       if (!result) throw new Error('No response from executor');
       const extractedData = extractDataFromResponse(
@@ -990,7 +1115,6 @@ export function RequestEditor({
         variant: log.status === 'success' ? 'default' : 'destructive',
       });
     } catch (error) {
-      console.log('error888:', error);
       const endTime = Date.now();
       const errorLog: ExecutionLog = {
         id: Date.now().toString(),
@@ -1079,6 +1203,7 @@ export function RequestEditor({
     { id: 'headers', label: 'Headers' },
     { id: 'body', label: 'Body' },
     { id: 'auth', label: 'Auth' },
+    { id: 'scripts', label: 'Pre & Post' },
     { id: 'settings', label: 'Settings' },
   ];
 
@@ -1141,24 +1266,116 @@ export function RequestEditor({
     }
   };
 
+  const addFormField = () => {
+    setFormFields([
+      ...formFields,
+      {
+        id: `temp_${Date.now()}_${Math.random()}`,
+        key: '',
+        value: '',
+        enabled: true,
+        type: 'text',
+      },
+    ]);
+    const updatedFields = [
+      ...formFields,
+      {
+        id: `temp_${Date.now()}_${Math.random()}`,
+        key: '',
+        value: '',
+        enabled: true,
+        type: 'text',
+      },
+    ];
+    onUpdate({
+      bodyFormData: updatedFields,
+      body: JSON.stringify(updatedFields),
+    });
+  };
+
   const handleAddFormField = () => {
     const newField: FormField = {
-      id: Math.random().toString(),
+      id: `temp_${Date.now()}_${Math.random()}`,
       key: '',
       value: '',
       type: 'text',
     };
-    setFormFields([...formFields, newField]);
+    const updatedFields = [...formFields, newField];
+    setFormFields(updatedFields);
+
+    onUpdate({
+      bodyFormData: updatedFields,
+      body: JSON.stringify(updatedFields),
+    });
+  };
+
+  const addUrlEncodedField = () => {
+    setUrlEncodedFields([
+      ...urlEncodedFields,
+      { id: Math.random().toString(), key: '', value: '' },
+    ]);
+  };
+
+  const updateFormField = (
+    index: number,
+    field: keyof KeyValuePairWithFile,
+    value: string | boolean | File | undefined
+  ) => {
+    const newFormFields = [...formFields];
+    newFormFields[index] = { ...newFormFields[index], [field]: value };
+    setFormFields(newFormFields);
+    onUpdate({
+      bodyFormData: newFormFields,
+      body: JSON.stringify(newFormFields),
+    });
+  };
+
+  const updateUrlEncodedField = (
+    index: number,
+    field: keyof KeyValueField,
+    value: string
+  ) => {
+    const newUrlEncodedFields = [...urlEncodedFields];
+    newUrlEncodedFields[index] = {
+      ...newUrlEncodedFields[index],
+      [field]: value,
+    };
+    setUrlEncodedFields(newUrlEncodedFields);
+  };
+
+  const removeUrlEncodedField = (index: number) => {
+    setUrlEncodedFields(urlEncodedFields.filter((_, i) => i !== index));
   };
 
   const handleUpdateFormField = (id: string, field: Partial<FormField>) => {
-    setFormFields(
-      formFields.map((f) => (f.id === id ? { ...f, ...field } : f))
+    const updatedFields = formFields.map((f) =>
+      f.id === id ? { ...f, ...field } : f
     );
+    setFormFields(updatedFields);
+
+    onUpdate({
+      bodyFormData: updatedFields,
+      body: JSON.stringify(updatedFields),
+    });
+  };
+
+  const removeFormField = (index: number) => {
+    const updatedFields = formFields.filter((_, i) => i !== index);
+    setFormFields(updatedFields);
+    onUpdate({
+      bodyFormData: updatedFields,
+      body: JSON.stringify(updatedFields),
+    });
   };
 
   const handleRemoveFormField = (id: string) => {
-    setFormFields(formFields.filter((f) => f.id !== id));
+    const updatedFields = formFields.filter((f) => f.id !== id);
+    setFormFields(updatedFields);
+
+    onUpdate({
+      bodyFormData: updatedFields,
+      body: JSON.stringify(updatedFields),
+    });
   };
 
   const handleAddUrlEncodedField = () => {
@@ -1700,6 +1917,12 @@ export function RequestEditor({
     }, 100);
   }, [params]);
 
+  useEffect(() => {
+    if (requestAssertions && requestAssertions.length > 0) {
+      setAssertions(requestAssertions);
+    }
+  }, [requestAssertions]);
+
   if (compact) {
     return (
       <div className='space-y-4'>
@@ -1775,7 +1998,7 @@ export function RequestEditor({
                         : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                     }`}
                   >
-                    <span>{tab.label}</span>
+                    <span className='whitespace-nowrap'>{tab.label}</span>
                     {tab.id === 'tests' &&
                       initialRequest.testScripts &&
                       initialRequest.testScripts.length > 0 && (
@@ -2059,14 +2282,15 @@ export function RequestEditor({
               onBeautify={handleBeautify}
               onVariableSelect={(variable) => {}}
               onConfirmSubstitution={(substitutions) => {}}
-              onAddFormField={handleAddFormField}
-              onUpdateFormField={handleUpdateFormField}
-              onRemoveFormField={handleRemoveFormField}
-              onAddUrlEncodedField={handleAddUrlEncodedField}
-              onUpdateUrlEncodedField={handleUpdateUrlEncodedField}
-              onRemoveUrlEncodedField={handleRemoveUrlEncodedField}
+              onAddFormField={addFormField}
+              onUpdateFormField={updateFormField}
+              onRemoveFormField={removeFormField}
+              onAddUrlEncodedField={addUrlEncodedField}
+              onUpdateUrlEncodedField={updateUrlEncodedField}
+              onRemoveUrlEncodedField={removeUrlEncodedField}
             />
           )}
+
           {activeTab === 'auth' && (
             <div className='space-y-4'>
               <h3 className='text-lg font-medium text-gray-900'>
@@ -2114,6 +2338,17 @@ export function RequestEditor({
                   />
                 </div>
               </div>
+            </div>
+          )}
+
+          {activeTab === 'scripts' && (
+            <div className='space-y-4'>
+              <PrePostRequest
+                assertions={assertions}
+                setAssertions={setAssertions}
+                responseData={executionResult?.response}
+                showAssertions={true}
+              />
             </div>
           )}
 
@@ -2233,7 +2468,6 @@ export function RequestEditor({
           )}
         </div>
 
-        {/* Show variable substitution preview for debugging */}
         {showVariablePreview() && (
           <div className='mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg'>
             <h4 className='text-sm font-medium text-blue-900 mb-2'>
@@ -2624,8 +2858,7 @@ export function RequestEditor({
           )}
         </CardContent>
       </Card>
-      {/* Main Tabs */}
-      {/* Show processed values for debugging */}
+
       {showVariablePreview() && (
         <div className='mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg'>
           <h4 className='text-sm font-medium text-blue-900 mb-2'>
@@ -2691,6 +2924,11 @@ export function RequestEditor({
             <Key className='w-4 h-4' />
             Auth
           </TabsTrigger>
+
+          <TabsTrigger value='scripts' className='gap-2'>
+            <Code className='w-4 h-4' />
+            Pre & Post
+          </TabsTrigger>
           <TabsTrigger value='settings' className='gap-2'>
             <Settings className='w-4 h-4' />
             Settings
@@ -2748,7 +2986,7 @@ export function RequestEditor({
                   <SelectContent>
                     <SelectItem value='none'>None</SelectItem>
                     <SelectItem value='json'>JSON</SelectItem>
-                    <SelectItem value='form'>Form Data</SelectItem>
+                    <SelectItem value='form-data'>Form Data</SelectItem>
                     <SelectItem value='urlencoded'>
                       x-www-form-urlencoded
                     </SelectItem>
@@ -2784,7 +3022,7 @@ export function RequestEditor({
                   )}
                 </div>
               )}
-              {bodyType === 'form' && (
+              {bodyType === 'form-data' && (
                 <div className='space-y-4'>
                   <div className='flex items-center justify-between'>
                     <h3 className='text-lg font-medium text-gray-900'>
@@ -3012,6 +3250,14 @@ export function RequestEditor({
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+        <TabsContent value='scripts' className='space-y-6'>
+          <PrePostRequest
+            assertions={assertions}
+            setAssertions={setAssertions}
+            responseData={executionResult?.response}
+            showAssertions={true}
+          />
         </TabsContent>
 
         <TabsContent value='settings' className='space-y-6'>

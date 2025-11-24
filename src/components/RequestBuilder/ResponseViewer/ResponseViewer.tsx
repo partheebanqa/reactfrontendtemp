@@ -16,7 +16,6 @@ import {
   Hash,
   Cookie,
   Trash2,
-  Info,
 } from 'lucide-react';
 import { useRequest } from '@/hooks/useRequest';
 
@@ -31,9 +30,13 @@ interface JsonNode {
 
 const ResponseViewer = () => {
   const { responseData } = useRequest();
-
   const [activeTab, setActiveTab] = useState<
-    'body' | 'headers' | 'cookies' | 'test-results' | 'schema'
+    | 'body'
+    | 'headers'
+    | 'cookies'
+    | 'test-results'
+    | 'schema'
+    | 'actual-request'
   >('body');
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);
@@ -227,12 +230,35 @@ const ResponseViewer = () => {
     );
   };
 
+  const parseRequestFromCurl = () => {
+    if (!responseData?.requestCurl) return null;
+
+    const curlCommand = responseData.requestCurl;
+    const methodMatch = curlCommand.match(/-X '(\w+)'/);
+    const urlMatch = curlCommand.match(/'(https?:\/\/[^']+)'/);
+    const bodyMatch = curlCommand.match(/-d '({[^']+})'/);
+
+    const headerMatches = curlCommand.matchAll(/-H '([^:]+):\s*([^']+)'/g);
+    const headers: Record<string, string> = {};
+    for (const match of headerMatches) {
+      headers[match[1]] = match[2];
+    }
+
+    return {
+      method: methodMatch?.[1] || 'GET',
+      url: urlMatch?.[1] || '',
+      headers,
+      body: bodyMatch?.[1] ? JSON.parse(bodyMatch[1]) : null,
+    };
+  };
+
+  const requestDetails = parseRequestFromCurl();
+
   const renderJsonValue = (node: JsonNode) => {
     const isExpanded = expandedNodes.has(node.path);
     const hasChildren = node.type === 'object' || node.type === 'array';
     const isAlreadyExtracted = !hasChildren && isValueExtracted(node.value);
 
-    // Search filtering
     if (searchQuery) {
       const searchLower = searchQuery.toLowerCase();
       const matchesKey = node.key.toLowerCase().includes(searchLower);
@@ -369,7 +395,6 @@ const ResponseViewer = () => {
 
       const visibleNodes = jsonNodes.filter((node) => {
         if (node.level === 0) return true;
-        // When searching, show nodes that match or are parents of matches
         if (searchQuery) {
           return (
             nodesToShow.has(node.path) &&
@@ -399,8 +424,8 @@ const ResponseViewer = () => {
   };
 
   const renderHeadersTab = () => (
-    <div>
-      {Object.entries(responseData.headers).map(([key, value]) => {
+    <div className='space-y-2'>
+      {Object.entries(responseData?.headers || {}).map(([key, value]) => {
         const isAlreadyExtracted = isValueExtracted(value);
         return (
           <div
@@ -453,30 +478,36 @@ const ResponseViewer = () => {
     </div>
   );
 
-  const StatusSummary = () => (
-    <div className='flex items-center space-x-4 text-sm'>
-      <div className='flex items-center space-x-1'>
-        <CheckCircle
-          className={`h-4 w-4 ${getStatusColor(responseData.status)}`}
-        />
-        <span className={`font-medium ${getStatusColor(responseData.status)}`}>
-          {responseData.status} {responseData.statusText}
-        </span>
+  const StatusSummary = () => {
+    if (!responseData) return null;
+
+    return (
+      <div className='flex items-center space-x-4 text-sm'>
+        <div className='flex items-center space-x-1'>
+          <CheckCircle
+            className={`h-4 w-4 ${getStatusColor(responseData.status)}`}
+          />
+          <span
+            className={`font-medium ${getStatusColor(responseData.status)}`}
+          >
+            {responseData.status} {responseData.statusText || ''}
+          </span>
+        </div>
+        <div className='flex items-center space-x-1'>
+          <Clock className='h-4 w-4 text-muted-foreground' />
+          <span className='font-medium text-foreground'>
+            {responseData.metrics?.responseTime || 0}ms
+          </span>
+        </div>
+        <div className='flex items-center space-x-1'>
+          <HardDrive className='h-4 w-4 text-muted-foreground' />
+          <span className='font-medium text-foreground'>
+            {calculateResponseSize(responseData.body)}
+          </span>
+        </div>
       </div>
-      <div className='flex items-center space-x-1'>
-        <Clock className='h-4 w-4 text-muted-foreground' />
-        <span className='font-medium text-foreground'>
-          {responseData.metrics?.responseTime || 0}ms
-        </span>
-      </div>
-      <div className='flex items-center space-x-1'>
-        <HardDrive className='h-4 w-4 text-muted-foreground' />
-        <span className='font-medium text-foreground'>
-          {calculateResponseSize(responseData.body)}
-        </span>
-      </div>
-    </div>
-  );
+    );
+  };
 
   const tabs = [
     {
@@ -500,6 +531,11 @@ const ResponseViewer = () => {
       id: 'schema',
       label: 'Schema Result',
       hasIndicator: !!responseData?.schemaValidation,
+    },
+    {
+      id: 'actual-request',
+      label: 'Actual Request',
+      hasIndicator: !!responseData?.requestCurl,
     },
   ];
 
@@ -700,7 +736,7 @@ const ResponseViewer = () => {
         )}
 
         {activeTab === 'test-results' && responseData.assertionLogs && (
-          <div>
+          <div className='space-y-2'>
             {responseData.assertionLogs.map((assertion) => (
               <div
                 key={assertion.id}
@@ -804,6 +840,109 @@ const ResponseViewer = () => {
                 </div>
                 <div className='text-sm text-gray-400'>
                   Schema validation will appear here when available
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'actual-request' && requestDetails && (
+          <div className='space-y-4'>
+            {/* Request URL */}
+            <div className='bg-card border border-border rounded-lg p-4'>
+              <h3 className='text-sm font-semibold text-foreground mb-3'>
+                Request URL:
+              </h3>
+              <div className='flex items-center space-x-3'>
+                <span className='px-3 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 rounded font-semibold text-sm'>
+                  {requestDetails.method}
+                </span>
+                <span className='text-sm text-foreground font-mono flex-1 truncate'>
+                  {requestDetails.url}
+                </span>
+                <button
+                  onClick={() => handleCopy(requestDetails.url, 'request-url')}
+                  className='p-1 text-muted-foreground hover:text-foreground rounded'
+                  title='Copy URL'
+                >
+                  {copiedItem === 'request-url' ? (
+                    <CheckCircle className='w-4 h-4 text-success' />
+                  ) : (
+                    <Copy className='w-4 h-4' />
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Headers */}
+            <div className='bg-card border border-border rounded-lg p-4'>
+              <h3 className='text-sm font-semibold text-foreground mb-3'>
+                Headers:
+              </h3>
+              <div className='overflow-x-auto'>
+                <table className='w-full text-sm'>
+                  <thead>
+                    <tr className='border-b border-border'>
+                      <th className='text-left py-2 px-3 text-muted-foreground font-semibold'>
+                        Name
+                      </th>
+                      <th className='text-left py-2 px-3 text-muted-foreground font-semibold'>
+                        Value
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {Object.entries(requestDetails.headers).map(
+                      ([name, value]) => (
+                        <tr
+                          key={name}
+                          className='border-b border-border hover:bg-accent transition-colors'
+                        >
+                          <td className='py-2 px-3 text-foreground font-medium'>
+                            {name}
+                          </td>
+                          <td className='py-2 px-3 text-muted-foreground font-mono'>
+                            {String(value)}
+                          </td>
+                        </tr>
+                      )
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Body */}
+            {requestDetails.body && (
+              <div className='bg-card border border-border rounded-lg p-4'>
+                <div className='flex items-center justify-between mb-3'>
+                  <h3 className='text-sm font-semibold text-foreground'>
+                    Body:
+                  </h3>
+                  <span className='text-xs text-muted-foreground bg-muted px-2 py-1 rounded'>
+                    Body Type: application/json
+                  </span>
+                </div>
+                <div className='bg-muted rounded-lg p-3 relative'>
+                  <button
+                    onClick={() =>
+                      handleCopy(
+                        JSON.stringify(requestDetails.body, null, 2),
+                        'request-body'
+                      )
+                    }
+                    className='absolute top-2 right-2 p-1 text-muted-foreground hover:text-foreground rounded'
+                    title='Copy body'
+                  >
+                    {copiedItem === 'request-body' ? (
+                      <CheckCircle className='w-4 h-4 text-success' />
+                    ) : (
+                      <Copy className='w-4 h-4' />
+                    )}
+                  </button>
+                  <pre className='text-sm text-foreground font-mono overflow-x-auto'>
+                    {JSON.stringify(requestDetails.body, null, 2)}
+                  </pre>
                 </div>
               </div>
             )}
