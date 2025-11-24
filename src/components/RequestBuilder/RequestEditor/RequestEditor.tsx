@@ -1029,9 +1029,11 @@ const RequestEditor: React.FC = () => {
       let backendBody;
       let statusCode;
       let responseHeaders;
+      let requestCurl;
       let metrics;
       let assertionLogs;
       let schemaValidation;
+      console.log('backendData123:', backendData);
 
       if (
         backendData?.data?.responses &&
@@ -1041,6 +1043,7 @@ const RequestEditor: React.FC = () => {
         backendBody = firstResponse.body;
         statusCode = firstResponse.status ?? firstResponse.statusCode;
         responseHeaders = firstResponse.headers;
+        requestCurl = firstResponse.requestCurl;
         metrics = firstResponse.metrics;
         assertionLogs = [];
         schemaValidation = null;
@@ -1048,6 +1051,7 @@ const RequestEditor: React.FC = () => {
         backendBody = backendData?.data?.body;
         statusCode = backendData?.data?.statusCode;
         responseHeaders = backendData?.data?.headers;
+        requestCurl = backendData?.data?.requestCurl;
         metrics = backendData?.data?.metrics;
         assertionLogs = backendData?.data?.assertionLogs || [];
         schemaValidation = backendData?.data?.schemaValidation || null;
@@ -1066,6 +1070,7 @@ const RequestEditor: React.FC = () => {
           status: statusCode ?? 200,
           statusCode: statusCode ?? 200,
           headers: responseHeaders ?? {},
+          requestCurl: requestCurl ?? {},
           body: parsedBody,
           rawBody: backendBody,
           metrics: metrics ?? {},
@@ -1941,7 +1946,6 @@ const RequestEditor: React.FC = () => {
       collectionActions.markUnsaved(activeRequest.id);
     }
   };
-  // const [scriptsTab, setScriptsTab] = useState<"pre-request" | "post-response">("pre-request")
 
   if (!activeRequest) {
     return (

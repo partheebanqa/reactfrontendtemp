@@ -236,6 +236,7 @@ export interface ExecuteRequestPayload {
 
 export interface ExecutionResponse {
   data: {
+    requestCurl: any;
     body: any;
     schemaValidation: null;
     assertionLogs: never[];
@@ -243,6 +244,7 @@ export interface ExecutionResponse {
     headers: {};
     statusCode: number;
     responses: Array<{
+      requestCurl: any;
       status: number;
       statusCode: number;
       headers: Record<string, string>;
