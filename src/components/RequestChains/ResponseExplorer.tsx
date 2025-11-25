@@ -30,6 +30,10 @@ interface ResponseExplorerProps {
   handleCopy: (value: string) => void;
   copied?: boolean;
   chainId: string;
+  actualRequestUrl?: string;
+  actualRequestHeaders?: Record<string, string>;
+  actualRequestBody?: string;
+  actualRequestMethod?: string;
 }
 
 interface JsonNode {
@@ -49,10 +53,14 @@ export function ResponseExplorer({
   handleCopy,
   copied,
   chainId,
+  actualRequestUrl,
+  actualRequestHeaders,
+  actualRequestBody,
+  actualRequestMethod = 'POST',
 }: ResponseExplorerProps) {
-  const [activeTab, setActiveTab] = useState<'body' | 'headers' | 'cookies'>(
-    'body'
-  );
+  const [activeTab, setActiveTab] = useState<
+    'body' | 'headers' | 'cookies' | 'actualRequest'
+  >('body');
 
   const getValueByPath = (obj: any, path: string): any => {
     if (!obj || !path) return undefined;
@@ -555,6 +563,139 @@ export function ResponseExplorer({
     </div>
   );
 
+  const renderActualRequestTab = () => {
+    if (!actualRequestUrl) {
+      return (
+        <div className='text-center py-8 text-gray-500'>
+          <Code className='w-12 h-12 text-gray-300 mx-auto mb-3' />
+          <p>No request information available</p>
+        </div>
+      );
+    }
+
+    const getMethodColor = (method: string) => {
+      switch (method.toUpperCase()) {
+        case 'POST':
+          return 'bg-blue-700 text-white';
+        case 'GET':
+          return 'bg-green-700 text-white';
+        case 'PUT':
+          return 'bg-orange-800 text-white';
+        case 'DELETE':
+          return 'bg-red-800 text-white';
+        case 'PATCH':
+          return 'bg-purple-500 text-white';
+        default:
+          return 'bg-gray-500 text-white';
+      }
+    };
+
+    return (
+      <div className='space-y-6'>
+        {/* Request URL */}
+        <div>
+          <h4 className='text-sm font-semibold text-gray-700 mb-3'>
+            Request URL:
+          </h4>
+          <div className='flex items-center space-x-3 p-3 bg-gray-50 border border-gray-200 rounded-lg'>
+            <span
+              className={`px-2 py-1 ${getMethodColor(
+                actualRequestMethod
+              )} text-xs font-semibold rounded`}
+            >
+              {actualRequestMethod}
+            </span>
+            <span className='text-sm font-mono text-gray-900 flex-1 break-all'>
+              {actualRequestUrl}
+            </span>
+            <button
+              onClick={() => navigator.clipboard.writeText(actualRequestUrl)}
+              className='p-1 text-gray-400 hover:text-gray-600 rounded'
+              title='Copy URL'
+            >
+              <Copy className='w-4 h-4' />
+            </button>
+          </div>
+        </div>
+
+        {/* Headers */}
+        <div>
+          <h4 className='text-sm font-semibold text-gray-700 mb-3'>Headers:</h4>
+          <div className='border border-gray-200 rounded-lg overflow-hidden'>
+            <table className='w-full'>
+              <thead className='bg-gray-50 border-b border-gray-200'>
+                <tr>
+                  <th className='px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase'>
+                    Name
+                  </th>
+                  <th className='px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase'>
+                    Value
+                  </th>
+                </tr>
+              </thead>
+              <tbody className='divide-y divide-gray-200'>
+                {actualRequestHeaders &&
+                typeof actualRequestHeaders === 'object' ? (
+                  Object.entries(actualRequestHeaders).map(([key, value]) => (
+                    <tr key={key} className='hover:bg-gray-50'>
+                      <td className='px-4 py-2 text-sm font-medium text-gray-900'>
+                        {key}
+                      </td>
+                      <td className='px-4 py-2 text-sm text-gray-600 font-mono break-all'>
+                        {value}
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td
+                      colSpan={2}
+                      className='px-4 py-4 text-center text-sm text-gray-500'
+                    >
+                      No headers available
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Body */}
+        {actualRequestBody && (
+          <div>
+            <h4 className='text-sm font-semibold text-gray-700 mb-3'>Body:</h4>
+            <div className='bg-gray-50 border border-gray-200 rounded-lg p-4'>
+              <div className='flex items-center justify-between mb-2'>
+                <span className='text-xs text-gray-600'>
+                  Body Type: application/json
+                </span>
+                <button
+                  onClick={() =>
+                    navigator.clipboard.writeText(
+                      typeof actualRequestBody === 'string'
+                        ? actualRequestBody
+                        : JSON.stringify(actualRequestBody, null, 2)
+                    )
+                  }
+                  className='p-1 text-gray-400 hover:text-gray-600 rounded'
+                  title='Copy body'
+                >
+                  <Copy className='w-4 h-4' />
+                </button>
+              </div>
+              <pre className='text-sm text-gray-900 font-mono overflow-x-auto'>
+                {typeof actualRequestBody === 'string'
+                  ? actualRequestBody
+                  : JSON.stringify(actualRequestBody, null, 2)}
+              </pre>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className='space-y-6'>
       <div className='bg-white border border-gray-200 rounded-lg'>
@@ -564,6 +705,7 @@ export function ResponseExplorer({
               { id: 'body', label: 'Response Body' },
               { id: 'headers', label: 'Headers' },
               { id: 'cookies', label: 'Cookies' },
+              { id: 'actualRequest', label: 'Actual Request' },
             ].map((tab) => {
               return (
                 <button
@@ -594,6 +736,7 @@ export function ResponseExplorer({
           {activeTab === 'body' && renderJsonTree()}
           {activeTab === 'headers' && renderHeadersTab()}
           {activeTab === 'cookies' && renderCookiesTab()}
+          {activeTab === 'actualRequest' && renderActualRequestTab()}
         </div>
       </div>
       {finalExtractedVariables &&

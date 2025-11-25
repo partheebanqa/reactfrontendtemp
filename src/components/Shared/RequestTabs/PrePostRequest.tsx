@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import AssertionManager from '@/components/RequestBuilder/RequestEditor/assertionManager';
-import { Trash2 } from 'lucide-react';
 
 interface SelectedVariable {
   name: string;
@@ -10,6 +9,7 @@ interface SelectedVariable {
 }
 
 interface PrePostRequestProps {
+  type: 'pre-request' | 'post-request';
   assertions?: any[];
   setAssertions?: (assertions: any[]) => void;
   responseData?: any;
@@ -24,6 +24,7 @@ interface PrePostRequestProps {
 }
 
 export function PrePostRequest({
+  type = 'pre-request',
   assertions = [],
   setAssertions,
   responseData,
@@ -36,126 +37,108 @@ export function PrePostRequest({
   onRemoveVariable,
   onVariableSelect,
 }: PrePostRequestProps) {
-  const [scriptsTab, setScriptsTab] = useState<'pre-request' | 'post-response'>(
-    'pre-request'
-  );
-  const [preRequestScript, setPreRequestScript] = useState('');
   const [postResponseScript, setPostResponseScript] = useState('');
 
   return (
-    <div className='flex h-full'>
-      {/* Left sidebar with Pre-request and Post-response */}
-      <div className='w-40 border-r border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900'>
-        <button
-          onClick={() => setScriptsTab('pre-request')}
-          className={`w-full text-left px-4 py-3 text-sm font-medium transition-colors ${
-            scriptsTab === 'pre-request'
-              ? 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white border-l-2 border-blue-500'
-              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-          }`}
-        >
-          Pre-request
-        </button>
-        <button
-          onClick={() => setScriptsTab('post-response')}
-          className={`w-full text-left px-4 py-3 text-sm font-medium transition-colors ${
-            scriptsTab === 'post-response'
-              ? 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white border-l-2 border-blue-500'
-              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-          }`}
-        >
-          Post-response
-        </button>
-      </div>
+    <div className='w-full h-full'>
+      {type === 'pre-request' && (
+        <div className='px-2'>
+          {selectedVariables.length > 0 && (
+            <div className='mb-6'>
+              <div className='rounded-xl border border-gray-300 dark:border-gray-700 shadow-sm overflow-hidden bg-white dark:bg-gray-900'>
+                <table className='w-full text-sm'>
+                  <tbody>
+                    <tr className='border-b border-gray-200 dark:border-gray-700'>
+                      <td className='px-4 py-3 font-semibold text-gray-900 dark:text-gray-200 w-56 bg-gray-50 dark:bg-gray-800'>
+                        Substituted variable
+                      </td>
+                      <td className='px-4 py-3 text-gray-800 dark:text-gray-300'>
+                        <div className='flex flex-wrap gap-2'>
+                          {selectedVariables.map((v, i) => (
+                            <span
+                              key={i}
+                              className='inline-flex items-center px-3 py-1 text-xs font-medium bg-green-500 text-white rounded-lg shadow-sm'
+                            >
+                              {v.path}: {v.name}
+                            </span>
+                          ))}
+                        </div>
+                      </td>
+                    </tr>
 
-      {/* Right content area */}
-      <div className='flex-1 overflow-auto'>
-        {scriptsTab === 'pre-request' && (
-          <div className='px-2'>
-            {selectedVariables.length > 0 && (
-              <div className='mb-6'>
-                {/* Styled Container */}
-                <div className='rounded-xl border border-gray-300 dark:border-gray-700 shadow-sm overflow-hidden bg-white dark:bg-gray-900'>
-                  <table className='w-full text-sm'>
-                    <tbody>
-                      {/* Row 1 */}
-                      <tr className='border-b border-gray-200 dark:border-gray-700'>
-                        <td className='px-4 py-3 font-semibold text-gray-900 dark:text-gray-200 w-56 bg-gray-50 dark:bg-gray-800'>
-                          Substituted variable
-                        </td>
-                        <td className='px-4 py-3 text-gray-800 dark:text-gray-300'>
-                          {/* Tag-like variables */}
-                          <div className='flex flex-wrap gap-2'>
-                            {selectedVariables.map((v, i) => (
-                              <span
-                                key={i}
-                                className='inline-flex items-center px-3 py-1 text-xs font-medium bg-green-500 text-white rounded-lg shadow-sm'
-                              >
-                                {v.path}: {v.name}
-                              </span>
-                            ))}
-                          </div>
-                        </td>
-                      </tr>
-
-                      {/* Row 2 */}
-                      <tr>
-                        <td className='px-4 py-3 font-semibold text-gray-900 dark:text-gray-200 w-56 bg-gray-50 dark:bg-gray-800'>
-                          Extracted variable
-                        </td>
-                        <td className='px-4 py-3 text-gray-800 dark:text-gray-300'>
-                          -
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
+                    <tr>
+                      <td className='px-4 py-3 font-semibold text-gray-900 dark:text-gray-200 w-56 bg-gray-50 dark:bg-gray-800'>
+                        Extracted variable
+                      </td>
+                      <td className='px-4 py-3 text-gray-800 dark:text-gray-300'>
+                        -
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
-            )}
+            </div>
+          )}
 
-            {selectedVariables.length === 0 && (
-              <div className='text-sm text-gray-500 dark:text-gray-400 italic'>
-                No variables substituted yet. Substitute variables in the Body
-                tab to see them here.
-              </div>
-            )}
-          </div>
-        )}
+          {selectedVariables.length === 0 && (
+            <div className='text-sm text-gray-500 dark:text-gray-400 italic'>
+              No variables substituted yet. Substitute variables in the Body tab
+              to see them here.
+            </div>
+          )}
+        </div>
+      )}
 
-        {scriptsTab === 'post-response' && (
-          <div>
-            {showAssertions && (
-              <AssertionManager
-                assertions={assertions}
-                setAssertions={setAssertions}
-                responseData={responseData}
-                activeRequest={activeRequest}
-                currentWorkspace={currentWorkspace}
-                updateRequestMutation={updateRequestMutation}
-                toggleAssertion={toggleAssertion}
+      {type === 'post-request' && (
+        <div>
+          {showAssertions && (
+            <AssertionManager
+              assertions={assertions}
+              setAssertions={setAssertions}
+              responseData={responseData}
+              activeRequest={activeRequest}
+              currentWorkspace={currentWorkspace}
+              updateRequestMutation={updateRequestMutation}
+              toggleAssertion={toggleAssertion}
+            />
+          )}
+
+          {!showAssertions && (
+            <div className='p-4'>
+              <h3 className='text-lg font-semibold mb-4 text-gray-900 dark:text-white'>
+                Post-response Script
+              </h3>
+              <textarea
+                placeholder='Use JavaScript to process the response dynamically. Ctrl+/'
+                value={postResponseScript}
+                onChange={(e) => setPostResponseScript(e.target.value)}
+                className='w-full h-96 p-3 font-mono text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent'
               />
-            )}
+              <p className='text-xs text-gray-500 dark:text-gray-400 mt-2'>
+                Scripts run after the response is received. Use it to parse
+                data, validate responses, or set variables.
+              </p>
+            </div>
+          )}
 
-            {!showAssertions && (
-              <div className='p-4'>
-                <h3 className='text-lg font-semibold mb-4 text-gray-900 dark:text-white'>
-                  Post-response Script
-                </h3>
-                <textarea
-                  placeholder='Use JavaScript to process the response dynamically. Ctrl+/'
-                  value={postResponseScript}
-                  onChange={(e) => setPostResponseScript(e.target.value)}
-                  className='w-full h-96 p-3 font-mono text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-                />
-                <p className='text-xs text-gray-500 dark:text-gray-400 mt-2'>
-                  Scripts run after the response is received. Use it to parse
-                  data, validate responses, or set variables.
-                </p>
-              </div>
-            )}
+          <div className='mb-6 pt-3 '>
+            <div className='rounded-xl border border-gray-300 dark:border-gray-700 shadow-sm overflow-hidden bg-white dark:bg-gray-900'>
+              <table className='w-full text-sm'>
+                <tbody>
+                  <tr>
+                    <td className='px-4 py-3 font-semibold text-gray-900 dark:text-gray-200 w-56 bg-gray-50 dark:bg-gray-800'>
+                      Extracted variable
+                    </td>
+                    <td className='px-4 py-3 text-gray-800 dark:text-gray-300'>
+                      <div className='flex flex-wrap gap-2'>-</div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

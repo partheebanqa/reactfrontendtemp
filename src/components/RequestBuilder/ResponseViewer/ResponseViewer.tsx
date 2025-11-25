@@ -30,6 +30,9 @@ interface JsonNode {
 
 const ResponseViewer = () => {
   const { responseData } = useRequest();
+
+  console.log('responseData123:', responseData);
+
   const [activeTab, setActiveTab] = useState<
     | 'body'
     | 'headers'
@@ -231,6 +234,10 @@ const ResponseViewer = () => {
   };
 
   const parseRequestFromCurl = () => {
+    if (responseData?.actualRequest) {
+      return responseData.actualRequest;
+    }
+
     if (!responseData?.requestCurl) return null;
 
     const curlCommand = responseData.requestCurl;
@@ -251,7 +258,6 @@ const ResponseViewer = () => {
       body: bodyMatch?.[1] ? JSON.parse(bodyMatch[1]) : null,
     };
   };
-
   const requestDetails = parseRequestFromCurl();
 
   const renderJsonValue = (node: JsonNode) => {
@@ -523,13 +529,13 @@ const ResponseViewer = () => {
     { id: 'cookies', label: 'Cookies' },
     {
       id: 'test-results',
-      label: 'Assertions Result',
+      label: 'Assertions(R)',
       hasIndicator:
         !!responseData?.assertionLogs && responseData.assertionLogs.length > 0,
     },
     {
       id: 'schema',
-      label: 'Schema Result',
+      label: 'Schema(R)',
       hasIndicator: !!responseData?.schemaValidation,
     },
     {
@@ -556,7 +562,7 @@ const ResponseViewer = () => {
     <div className='flex-1 flex flex-col bg-background min-h-0 overflow-hidden'>
       <div className='bg-card border-b border-border flex-shrink-0'>
         <div className='flex items-center justify-between border-b border-border'>
-          <nav className='flex space-x-8 px-4'>
+          <nav className='flex space-x-8 px-4 whitespace-nowrap overflow-x-auto no-scrollbar'>
             {tabs.map((tab) => {
               return (
                 <button

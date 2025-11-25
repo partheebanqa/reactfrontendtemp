@@ -701,6 +701,13 @@ export function RequestChainEditor({
       );
 
       const endTime = Date.now();
+
+      // Store actual request details after variable replacement
+      const actualRequestHeaders = Object.fromEntries(
+        processedRequest.headers.map((h) => [h.key, h.value])
+      );
+      const actualRequestBody = processedRequest.body ?? '';
+
       const log: ExecutionLog = {
         id: Date.now().toString(),
         chainId: 'current-chain',
@@ -715,10 +722,8 @@ export function RequestChainEditor({
         request: {
           method: processedRequest.method,
           url: previewUrl,
-          headers: Object.fromEntries(
-            processedRequest.headers.map((h) => [h.key, h.value])
-          ),
-          body: processedRequest.body ?? '',
+          headers: actualRequestHeaders,
+          body: actualRequestBody,
         },
         response: {
           status: result.statusCode,
@@ -779,6 +784,7 @@ export function RequestChainEditor({
       throw errorLog;
     }
   };
+
   const handleRunAll = async () => {
     if (!formData.chainRequests || formData.chainRequests.length === 0) {
       toast({
@@ -2323,6 +2329,15 @@ export function RequestChainEditor({
                                                     copiedStates[
                                                       executionLog.requestId
                                                     ] || false
+                                                  }
+                                                  actualRequestUrl={
+                                                    executionLog.request.url
+                                                  }
+                                                  actualRequestHeaders={
+                                                    executionLog.request.headers
+                                                  }
+                                                  actualRequestBody={
+                                                    executionLog.request.body
                                                   }
                                                 />
                                               </div>

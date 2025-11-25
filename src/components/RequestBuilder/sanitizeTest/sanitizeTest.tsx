@@ -937,10 +937,6 @@ Max Response Time: ${
           title: `Test Summary: ${collection.name}`,
           text: summaryText,
         });
-        toast({
-          title: 'Shared Successfully',
-          description: 'Test summary has been shared.',
-        });
       } catch (error) {
         if ((error as Error).name !== 'AbortError') {
           console.error('Error sharing:', error);
