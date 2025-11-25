@@ -171,11 +171,9 @@ const AssertionManager: React.FC<AssertionManagerProps> = ({
         </div>
       ) : (
         <div className='bg-white rounded-xl border border-gray-200 p-8 text-center'>
-          <div className='w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3'>
-            <Plus className='w-6 h-6 text-gray-400' />
-          </div>
           <p className='text-gray-600 mb-4'>No assertions selected</p>
           <Button onClick={() => setShowDialog(true)}>
+            <Plus className='w-4 h-4' />
             Generate Assertions
           </Button>
         </div>
