@@ -973,6 +973,7 @@ export function RequestEditor({
       safeRequest.bodyFormData = null;
       safeRequest.bodyRawContent = '';
     }
+
     {
       const token = (
         safeRequest.authToken ||
@@ -1070,6 +1071,13 @@ export function RequestEditor({
         safeRequest.extractVariables
       );
       const endTime = Date.now();
+
+      // Store actual request details
+      const actualRequestHeaders = Object.fromEntries(
+        safeRequest.headers.map((h) => [h.key, h.value])
+      );
+      const actualRequestBody = safeRequest.body ?? '';
+
       const log: ExecutionLog = {
         id: Date.now().toString(),
         chainId: 'current-chain',
@@ -1084,10 +1092,8 @@ export function RequestEditor({
         request: {
           method: safeRequest.method,
           url: previewUrl,
-          headers: Object.fromEntries(
-            safeRequest.headers.map((h) => [h.key, h.value])
-          ),
-          body: safeRequest.body ?? '',
+          headers: actualRequestHeaders,
+          body: actualRequestBody,
         },
         response: {
           status: result.statusCode,
@@ -1109,7 +1115,7 @@ export function RequestEditor({
 
       try {
         const raw = localStorage.getItem('lastExecutionByRequest');
-        const map = raw ? JSON.JSON.parse(raw) : {};
+        const map = raw ? JSON.parse(raw) : {};
         map[initialRequest.id] = log;
         localStorage.setItem('lastExecutionByRequest', JSON.stringify(map));
       } catch (e) {
@@ -2792,6 +2798,9 @@ export function RequestEditor({
                 handleCopy={handleCopy}
                 copied={copied}
                 chainId={chainId || requestChainId || ''}
+                actualRequestUrl={executionResult.request.url}
+                actualRequestHeaders={executionResult.request.headers}
+                actualRequestBody={executionResult.request.body}
               />
             </div>
           )}
