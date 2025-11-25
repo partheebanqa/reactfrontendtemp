@@ -9,7 +9,7 @@ interface SelectedVariable {
 }
 
 interface PrePostRequestProps {
-  type: 'pre-request' | 'post-request';
+  type: 'pre-request' | 'post-response';
   assertions?: any[];
   setAssertions?: (assertions: any[]) => void;
   responseData?: any;
@@ -89,7 +89,7 @@ export function PrePostRequest({
         </div>
       )}
 
-      {type === 'post-request' && (
+      {type === 'post-response' && (
         <div>
           {showAssertions && (
             <AssertionManager
@@ -121,7 +121,7 @@ export function PrePostRequest({
             </div>
           )}
 
-          <div className='mb-6 pt-3 '>
+          <div className='mb-6 py-3 '>
             <div className='rounded-xl border border-gray-300 dark:border-gray-700 shadow-sm overflow-hidden bg-white dark:bg-gray-900'>
               <table className='w-full text-sm'>
                 <tbody>

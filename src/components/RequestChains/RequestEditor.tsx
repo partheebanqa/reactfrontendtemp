@@ -170,7 +170,7 @@ export function RequestEditor({
     | 'params'
     | 'headers'
     | 'pre-request'
-    | 'post-request'
+    | 'post-response'
     | 'body'
     | 'auth'
     | 'settings'
@@ -1216,7 +1216,7 @@ export function RequestEditor({
     { id: 'body', label: 'Body' },
     { id: 'auth', label: 'Auth' },
     { id: 'pre-request', label: 'Pre-request' },
-    { id: 'post-request', label: 'Post-request' },
+    { id: 'post-response', label: 'Post-response' },
     { id: 'settings', label: 'Settings' },
   ];
 
@@ -2366,10 +2366,10 @@ export function RequestEditor({
             </div>
           )}
 
-          {activeTab === 'post-request' && (
+          {activeTab === 'post-response' && (
             <div className='space-y-4'>
               <PrePostRequest
-                type='post-request'
+                type='post-response'
                 assertions={assertions}
                 setAssertions={setAssertions}
                 responseData={executionResult?.response}
@@ -2959,9 +2959,9 @@ export function RequestEditor({
             Pre-request
           </TabsTrigger>
 
-          <TabsTrigger value='post-request' className='gap-2'>
+          <TabsTrigger value='post-response' className='gap-2'>
             <Code className='w-4 h-4' />
-            Post-requestS
+            Post-response
           </TabsTrigger>
           <TabsTrigger value='settings' className='gap-2'>
             <Settings className='w-4 h-4' />
@@ -3295,9 +3295,9 @@ export function RequestEditor({
           />
         </TabsContent>
 
-        <TabsContent value='post-request' className='space-y-6'>
+        <TabsContent value='post-response' className='space-y-6'>
           <PrePostRequest
-            type='post-request'
+            type='post-response'
             assertions={assertions}
             setAssertions={setAssertions}
             responseData={executionResult?.response}
