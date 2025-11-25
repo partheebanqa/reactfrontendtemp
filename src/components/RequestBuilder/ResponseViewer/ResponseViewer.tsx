@@ -524,7 +524,7 @@ const ResponseViewer = () => {
     {
       id: 'headers',
       label: 'Headers',
-      count: Object.keys(responseData?.headers || {}).length,
+      // count: Object.keys(responseData?.headers || {}).length,
     },
     { id: 'cookies', label: 'Cookies' },
     {
