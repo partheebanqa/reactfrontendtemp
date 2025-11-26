@@ -37,6 +37,13 @@ interface ResponseExplorerProps {
   actualRequestMethod?: string;
   executionStatus?: 'success' | 'error';
   errorMessage?: string;
+  executionLog?: {
+    duration: number;
+    response?: {
+      size: number;
+      status: number;
+    };
+  };
 }
 
 interface JsonNode {
@@ -62,15 +69,13 @@ export function ResponseExplorer({
   actualRequestMethod,
   executionStatus,
   errorMessage,
+  executionLog,
 }: ResponseExplorerProps) {
   const [activeTab, setActiveTab] = useState<
     'body' | 'headers' | 'cookies' | 'actualRequest'
   >('body');
 
-  console.log('response123:', response);
-  console.log('actualRequestUrl', actualRequestUrl);
-  console.log('actualRequestBody:', actualRequestBody);
-  console.log('actualRequestHeaders', actualRequestHeaders);
+  console.log('executionLog:', executionLog);
 
   const getValueByPath = (obj: any, path: string): any => {
     if (!obj || !path) return undefined;
@@ -728,29 +733,45 @@ export function ResponseExplorer({
   return (
     <div className='space-y-6'>
       <div className='bg-white border border-gray-200 rounded-lg'>
-        <div className='border-b border-gray-200 flex items-center justify-between'>
-          <nav className='flex space-x-8 px-6'>
+        <div className='border-b border-gray-200 flex items-center justify-between px-6'>
+          {/* LEFT: Tabs */}
+          <nav className='flex space-x-8'>
             {[
               { id: 'body', label: 'Response Body' },
               { id: 'headers', label: 'Headers' },
               { id: 'cookies', label: 'Cookies' },
               { id: 'actualRequest', label: 'Actual Request' },
-            ].map((tab) => {
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id as typeof activeTab)}
-                  className={`pt-4 pb-2 px-1 border-b-2 font-medium text-sm transition-colors flex items-center space-x-2 ${
-                    activeTab === tab.id
-                      ? 'border-blue-500 text-blue-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
-                >
-                  <span>{tab.label}</span>
-                </button>
-              );
-            })}
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as typeof activeTab)}
+                className={`pt-4 pb-2 px-1 border-b-2 font-medium text-sm transition-colors flex items-center space-x-2 ${
+                  activeTab === tab.id
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <span>{tab.label}</span>
+              </button>
+            ))}
           </nav>
+
+          {/* RIGHT: Status panel */}
+          {executionLog && (
+            <div className='flex items-center space-x-4 text-sm text-gray-600'>
+              {/* Status Badge */}
+              <span className='flex items-center space-x-1 bg-green-100 text-green-700 px-2 py-1 rounded-full'>
+                <CheckCircle className='w-4 h-4' />
+                <span>{executionLog.response?.status} OK</span>
+              </span>
+
+              {/* Duration */}
+              <span>{executionLog.duration}ms</span>
+
+              {/* Size */}
+              <span>{(executionLog.response?.size / 1024).toFixed(2)} KB</span>
+            </div>
+          )}
         </div>
 
         <div className='p-6 max-h-96 overflow-auto'>
