@@ -4,7 +4,6 @@ import { Plus, Link, Clock, Settings, LineChart } from 'lucide-react';
 import { useLocation } from 'wouter';
 
 export default function QuickActions() {
-
   const [, setLocation] = useLocation();
 
   return (
@@ -17,7 +16,7 @@ export default function QuickActions() {
       <CardContent>
         <div className='space-y-3'>
           <Button
-            onClick={() => setLocation("/request-builder")}
+            onClick={() => setLocation('/request-builder')}
             variant='ghost'
             className='w-full justify-start h-auto p-4 border border-slate-200 hover:bg-slate-50 transition-colors'
           >
@@ -37,7 +36,7 @@ export default function QuickActions() {
           </Button>
 
           <Button
-            onClick={() => setLocation("/test-suites/create")}
+            onClick={() => setLocation('/test-suites/create')}
             variant='ghost'
             className='w-full justify-start h-auto p-4 border border-slate-200 hover:bg-slate-50 transition-colors'
           >
@@ -57,7 +56,7 @@ export default function QuickActions() {
           </Button>
 
           <Button
-            onClick={() => setLocation("/executions")}
+            onClick={() => setLocation('/executions')}
             variant='ghost'
             className='w-full justify-start h-auto p-4 border border-slate-200 hover:bg-slate-50 transition-colors'
           >
@@ -73,7 +72,7 @@ export default function QuickActions() {
           </Button>
 
           <Button
-            onClick={() => setLocation("/request-chains/create")}
+            onClick={() => setLocation('/request-chains/create')}
             variant='ghost'
             className='w-full justify-start h-auto p-4 border border-slate-200 hover:bg-slate-50 transition-colors'
           >
@@ -93,7 +92,7 @@ export default function QuickActions() {
           </Button>
 
           <Button
-            onClick={() => setLocation("/scheduler")}
+            onClick={() => setLocation('/scheduler')}
             variant='ghost'
             className='w-full justify-start h-auto p-4 border border-slate-200 hover:bg-slate-50 transition-colors'
           >
