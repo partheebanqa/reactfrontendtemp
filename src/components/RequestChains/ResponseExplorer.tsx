@@ -18,7 +18,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
 import { Button } from '../ui/button';
 
 interface ResponseExplorerProps {
-  response: {
+  response?: {
     status: number;
     headers: Record<string, string>;
     body: string;
@@ -67,7 +67,10 @@ export function ResponseExplorer({
     'body' | 'headers' | 'cookies' | 'actualRequest'
   >('body');
 
-  console.log('actualRequestMethod:', actualRequestMethod);
+  console.log('response123:', response);
+  console.log('actualRequestUrl', actualRequestUrl);
+  console.log('actualRequestBody:', actualRequestBody);
+  console.log('actualRequestHeaders', actualRequestHeaders);
 
   const getValueByPath = (obj: any, path: string): any => {
     if (!obj || !path) return undefined;
@@ -112,15 +115,15 @@ export function ResponseExplorer({
 
         switch (source) {
           case 'response_header':
-            sourceData = response.headers;
+            sourceData = response?.headers;
             break;
           case 'response_cookie':
-            sourceData = response.cookies;
+            sourceData = response?.cookies;
             break;
           case 'response_body':
           default:
             try {
-              sourceData = JSON.parse(response.body);
+              sourceData = JSON.parse(response?.body || '');
             } catch {
               console.warn(
                 'Failed to parse response body for variable extraction'
@@ -368,6 +371,25 @@ export function ResponseExplorer({
   };
 
   const renderJsonTree = () => {
+    if (!response || response.body === undefined || response.body === null) {
+      return (
+        <div className='bg-red-50 border border-red-200 rounded-lg p-4'>
+          <div className='flex items-start space-x-3'>
+            <AlertCircle className='w-5 h-5 text-red-600 flex-shrink-0 mt-0.5' />
+            <div className='flex-1'>
+              <h4 className='font-medium text-red-900 mb-1'>
+                No Response Data
+              </h4>
+              <p className='text-sm text-red-700'>
+                The response body is empty or undefined. This may indicate a
+                failed request or network error.
+              </p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     try {
       let jsonData;
       let cleanBody = response.body;
@@ -417,7 +439,7 @@ export function ResponseExplorer({
               Response is not valid JSON
             </p>
             <pre className='text-xs text-gray-700 whitespace-pre-wrap max-h-40 overflow-y-auto'>
-              {response.body}
+              {response?.body}
             </pre>
           </div>
           <div className='p-3 bg-blue-50 border border-blue-200 rounded-lg'>
@@ -430,7 +452,7 @@ export function ResponseExplorer({
                 handleExtractClick(
                   'response_body',
                   'raw_response',
-                  response.body
+                  response?.body
                 )
               }
               className='px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 transition-colors'
@@ -445,9 +467,9 @@ export function ResponseExplorer({
 
   const renderHeadersTab = () => (
     <div className='space-y-2'>
-      {response.headers &&
-        typeof response.headers === 'object' &&
-        Object.entries(response.headers).map(([key, value]) => {
+      {response?.headers &&
+        typeof response?.headers === 'object' &&
+        Object.entries(response?.headers).map(([key, value]) => {
           if (!key || value === undefined || value === null) return null;
           const isAlreadyExtracted = existingExtractions.some(
             (e) => e.source === 'response_header' && e.path === key
@@ -496,9 +518,9 @@ export function ResponseExplorer({
             </div>
           );
         })}
-      {(!response.headers ||
-        typeof response.headers !== 'object' ||
-        Object.keys(response.headers).length === 0) && (
+      {(!response?.headers ||
+        typeof response?.headers !== 'object' ||
+        Object.keys(response?.headers).length === 0) && (
         <div className='text-center py-8 text-gray-500'>
           <Hash className='w-12 h-12 text-gray-300 mx-auto mb-3' />
           <p>No headers found in response</p>
@@ -509,10 +531,10 @@ export function ResponseExplorer({
 
   const renderCookiesTab = () => (
     <div className='space-y-2'>
-      {response.cookies &&
-      typeof response.cookies === 'object' &&
-      Object.keys(response.cookies).length > 0 ? (
-        Object.entries(response.cookies).map(([key, value]) => {
+      {response?.cookies &&
+      typeof response?.cookies === 'object' &&
+      Object.keys(response?.cookies).length > 0 ? (
+        Object.entries(response?.cookies).map(([key, value]) => {
           if (!key || value === undefined || value === null) return null;
           const isAlreadyExtracted = existingExtractions.some(
             (e) => e.source === 'response_cookie' && e.path === key
@@ -705,17 +727,6 @@ export function ResponseExplorer({
 
   return (
     <div className='space-y-6'>
-      {executionStatus === 'error' && errorMessage && (
-        <div className='bg-red-50 border border-red-200 rounded-lg p-4'>
-          <div className='flex items-start space-x-3'>
-            <AlertCircle className='w-5 h-5 text-red-600 flex-shrink-0 mt-0.5' />
-            <div className='flex-1'>
-              <h4 className='font-medium text-red-900 mb-1'>Error</h4>
-              <p className='text-sm text-red-700'>{errorMessage}</p>
-            </div>
-          </div>
-        </div>
-      )}
       <div className='bg-white border border-gray-200 rounded-lg'>
         <div className='border-b border-gray-200 flex items-center justify-between'>
           <nav className='flex space-x-8 px-6'>
@@ -740,21 +751,24 @@ export function ResponseExplorer({
               );
             })}
           </nav>
-
-          <div className='relative group pr-4'>
-            <Info className='w-5 h-5 text-gray-400 cursor-pointer' />
-            <div className='absolute right-0 mt-2 w-56 p-2 text-xs text-gray-700 bg-white border border-gray-200 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity'>
-              Mouse over on element and click on "extract" button to extract
-              variable.
-            </div>
-          </div>
         </div>
 
         <div className='p-6 max-h-96 overflow-auto'>
-          {activeTab === 'body' && renderJsonTree()}
-          {activeTab === 'headers' && renderHeadersTab()}
-          {activeTab === 'cookies' && renderCookiesTab()}
-          {activeTab === 'actualRequest' && renderActualRequestTab()}
+          {executionStatus === 'error' && errorMessage ? (
+            <div className='flex items-start space-x-3 text-red-600'>
+              <AlertCircle className='w-5 h-5 text-red-600 flex-shrink-0 mt-0.5' />
+              <div className='flex-1'>
+                <p className='font-mono text-sm'>{errorMessage}</p>
+              </div>
+            </div>
+          ) : (
+            <>
+              {activeTab === 'body' && renderJsonTree()}
+              {activeTab === 'headers' && renderHeadersTab()}
+              {activeTab === 'cookies' && renderCookiesTab()}
+              {activeTab === 'actualRequest' && renderActualRequestTab()}
+            </>
+          )}
         </div>
       </div>
       {finalExtractedVariables &&
@@ -773,7 +787,7 @@ export function ResponseExplorer({
             <div className='grid grid-cols-1 md:grid-cols-2 gap-3'>
               {Object.entries(finalExtractedVariables).map(([name, value]) => {
                 if (!name || value === undefined) return null;
-                const extraction = existingExtractions.find(
+                const extraction = existingExtractions?.find(
                   (e) => e.variableName === name || e.name === name
                 );
                 return (
@@ -803,11 +817,8 @@ export function ResponseExplorer({
                         </Tooltip>
                       </div>
                       <div className='flex items-center space-x-2'>
-                        <span className='text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded'>
-                          {(extraction?.source || 'response body').replace(
-                            '_',
-                            ' '
-                          )}
+                        <span className='text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded border text-sm font-mono flex-1 overflow-x-auto whitespace-nowrap'>
+                          {extraction?.path}
                         </span>
                         <button
                           onClick={() => onRemoveExtraction(name)}

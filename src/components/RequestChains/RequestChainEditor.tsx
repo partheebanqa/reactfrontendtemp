@@ -2179,7 +2179,7 @@ export function RequestChainEditor({
                                             environmentBaseUrl
                                           }
                                           chainId={chain?.id || ''}
-                                          hideResponseExplorer={true}
+                                          hideResponseExplorer={false}
                                           onRequestExecution={(executionLog) =>
                                             handleRequestExecution(
                                               request.id,
@@ -2277,12 +2277,32 @@ export function RequestChainEditor({
                                               </div>
                                             </div>
 
-                                            {executionLog.response && (
+                                            {(executionLog.response != null ||
+                                              executionLog.error) && (
                                               <div className='border-t border-gray-200 p-6'>
-                                                <h3 className='text-lg font-medium text-gray-900 mb-4'>
-                                                  Extract Variables from
-                                                  Response
-                                                </h3>
+                                                <div className='flex items-center gap-2 mb-4'>
+                                                  <h3 className='text-lg font-medium text-gray-900'>
+                                                    Extract Variables from
+                                                    Response
+                                                  </h3>
+
+                                                  {/* Tooltip trigger should ONLY wrap the icon */}
+                                                  <div className='relative group inline-block'>
+                                                    <Info className='w-4 h-4 text-gray-400 cursor-pointer' />
+
+                                                    {/* Tooltip */}
+                                                    <div
+                                                      className='absolute left-0 mt-2 w-56 p-2 text-xs text-gray-700 bg-white border 
+                    border-gray-200 rounded shadow-lg opacity-0 group-hover:opacity-100 
+                    pointer-events-none transition-opacity z-50'
+                                                    >
+                                                      Mouse over on element and
+                                                      click on "extract" button
+                                                      to extract variable.
+                                                    </div>
+                                                  </div>
+                                                </div>
+
                                                 <ResponseExplorer
                                                   response={
                                                     executionLog.response
