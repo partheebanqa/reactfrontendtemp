@@ -1024,6 +1024,7 @@ export function RequestEditor({
     setIsExecuting(true);
     try {
       const startTime = Date.now();
+
       (safeRequest as any).headers = (safeRequest.headers ?? []).filter(
         (h) => h.key?.trim() && h.value?.trim()
       );
@@ -1137,6 +1138,18 @@ export function RequestEditor({
       console.log('error121:', error);
 
       const endTime = Date.now();
+
+      const processedRequest = processRequestWithVariables(
+        safeRequest,
+        allVariables
+      );
+
+      const previewUrl = getPreviewUrl(allVariables);
+      const actualRequestHeaders = Object.fromEntries(
+        processedRequest.headers.map((h) => [h.key, h.value])
+      );
+      const actualRequestBody = processedRequest.body ?? '';
+
       const errorLog: ExecutionLog = {
         id: Date.now().toString(),
         chainId: 'current-chain',
@@ -1147,9 +1160,9 @@ export function RequestEditor({
         duration: 0,
         request: {
           method: initialRequest.method,
-          url: getPreviewUrl(getAllAvailableVariables()),
-          headers: {},
-          body: initialRequest.body,
+          url: previewUrl,
+          headers: actualRequestHeaders,
+          body: actualRequestBody,
         },
         error: error instanceof Error ? error.message : 'Unknown error',
       };
@@ -2493,7 +2506,7 @@ export function RequestEditor({
           )}
         </div>
 
-        {showVariablePreview() && (
+        {/* {showVariablePreview() && (
           <div className='mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg'>
             <h4 className='text-sm font-medium text-blue-900 mb-2'>
               Variable Substitution Preview:
@@ -2542,7 +2555,7 @@ export function RequestEditor({
                 )}
             </div>
           </div>
-        )}
+        )} */}
 
         {hideResponseExplorer &&
           executionResult &&
@@ -2646,7 +2659,7 @@ export function RequestEditor({
         </CardContent>
       </Card>
 
-      {showVariablePreview() && (
+      {/* {showVariablePreview() && (
         <div className='mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg'>
           <h4 className='text-sm font-medium text-blue-900 mb-2'>
             Variable Substitution Preview:
@@ -2692,7 +2705,7 @@ export function RequestEditor({
               )}
           </div>
         </div>
-      )}
+      )} */}
       <Tabs defaultValue='params' className='w-full'>
         <TabsList className='grid w-full grid-cols-7'>
           <TabsTrigger value='params' className='gap-2'>

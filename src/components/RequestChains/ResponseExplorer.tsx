@@ -75,7 +75,7 @@ export function ResponseExplorer({
     'body' | 'headers' | 'cookies' | 'actualRequest'
   >('body');
 
-  console.log('executionLog:', executionLog);
+  console.log('actualRequestBody:', actualRequestBody);
 
   const getValueByPath = (obj: any, path: string): any => {
     if (!obj || !path) return undefined;
@@ -695,7 +695,6 @@ export function ResponseExplorer({
           </div>
         </div>
 
-        {/* Body */}
         {actualRequestBody && (
           <div>
             <h4 className='text-sm font-semibold text-gray-700 mb-3'>Body:</h4>
@@ -773,23 +772,21 @@ export function ResponseExplorer({
             </div>
           )}
         </div>
-
         <div className='p-6 max-h-96 overflow-auto'>
-          {executionStatus === 'error' && errorMessage ? (
-            <div className='flex items-start space-x-3 text-red-600'>
-              <AlertCircle className='w-5 h-5 text-red-600 flex-shrink-0 mt-0.5' />
-              <div className='flex-1'>
-                <p className='font-mono text-sm'>{errorMessage}</p>
+          {activeTab === 'body' &&
+            (executionStatus === 'error' && errorMessage ? (
+              <div className='flex items-start space-x-3 text-red-600'>
+                <AlertCircle className='w-5 h-5 text-red-600 flex-shrink-0 mt-0.5' />
+                <div className='flex-1'>
+                  <p className='font-mono text-sm'>{errorMessage}</p>
+                </div>
               </div>
-            </div>
-          ) : (
-            <>
-              {activeTab === 'body' && renderJsonTree()}
-              {activeTab === 'headers' && renderHeadersTab()}
-              {activeTab === 'cookies' && renderCookiesTab()}
-              {activeTab === 'actualRequest' && renderActualRequestTab()}
-            </>
-          )}
+            ) : (
+              renderJsonTree()
+            ))}
+          {activeTab === 'headers' && renderHeadersTab()}
+          {activeTab === 'cookies' && renderCookiesTab()}
+          {activeTab === 'actualRequest' && renderActualRequestTab()}
         </div>
       </div>
       {finalExtractedVariables &&
