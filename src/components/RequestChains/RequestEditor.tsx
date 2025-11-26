@@ -170,7 +170,7 @@ export function RequestEditor({
     | 'params'
     | 'headers'
     | 'pre-request'
-    | 'post-request'
+    | 'post-response'
     | 'body'
     | 'auth'
     | 'settings'
@@ -1023,15 +1023,24 @@ export function RequestEditor({
       });
       return;
     }
+
     setIsExecuting(true);
     try {
       const startTime = Date.now();
       (safeRequest as any).headers = (safeRequest.headers ?? []).filter(
         (h) => h.key?.trim() && h.value?.trim()
       );
-      const payload = buildRequestPayload(safeRequest, allVariables);
+
+      const processedRequest = processRequestWithVariables(
+        safeRequest,
+        allVariables
+      );
+
+      const payload = buildRequestPayload(processedRequest, allVariables);
+
       const previewUrl = getPreviewUrl(allVariables);
       payload.request.url = previewUrl;
+
       const backendData = await executeRequest(payload);
 
       const responseItem = backendData?.data?.responses?.[0];
@@ -1058,10 +1067,9 @@ export function RequestEditor({
       setAssertions(generatedAssertion);
       handleAssertionsUpdate(generatedAssertion);
 
-      console.log('generatedAssertion:', generatedAssertion);
-
       const result = backendData?.data?.responses?.[0];
       if (!result) throw new Error('No response from executor');
+
       const extractedData = extractDataFromResponse(
         {
           body: result.body,
@@ -1072,11 +1080,12 @@ export function RequestEditor({
       );
       const endTime = Date.now();
 
-      // Store actual request details
       const actualRequestHeaders = Object.fromEntries(
-        safeRequest.headers.map((h) => [h.key, h.value])
+        processedRequest.headers.map((h) => [h.key, h.value])
       );
-      const actualRequestBody = safeRequest.body ?? '';
+      const actualRequestUrl = previewUrl;
+      const actualRequestBody = processedRequest.body ?? '';
+      const actualRequestMethod = processedRequest.method;
 
       const log: ExecutionLog = {
         id: Date.now().toString(),
@@ -1090,8 +1099,8 @@ export function RequestEditor({
         endTime: new Date(endTime).toISOString(),
         duration: result.metrics.responseTime,
         request: {
-          method: safeRequest.method,
-          url: previewUrl,
+          method: actualRequestMethod,
+          url: actualRequestUrl,
           headers: actualRequestHeaders,
           body: actualRequestBody,
         },
@@ -1121,6 +1130,7 @@ export function RequestEditor({
       } catch (e) {
         console.error('Failed to persist lastExecutionByRequest:', e);
       }
+
       toast({
         title: 'Execution Complete',
         description: `Request completed with status ${result.statusCode}`,
@@ -1161,6 +1171,7 @@ export function RequestEditor({
       } catch (e) {
         console.error('Failed to persist lastExecutionByRequest (error):', e);
       }
+
       toast({
         title: 'Execution Failed',
         description: error instanceof Error ? error.message : 'Unknown error',
@@ -1216,7 +1227,7 @@ export function RequestEditor({
     { id: 'body', label: 'Body' },
     { id: 'auth', label: 'Auth' },
     { id: 'pre-request', label: 'Pre-request' },
-    { id: 'post-request', label: 'Post-request' },
+    { id: 'post-response', label: 'Post-response' },
     { id: 'settings', label: 'Settings' },
   ];
 
@@ -1941,7 +1952,6 @@ export function RequestEditor({
       <div className='space-y-4'>
         <VariableAutocomplete />
 
-        {/* Request URL */}
         <div className='flex items-center space-x-2'>
           <Select
             value={initialRequest.method}
@@ -1978,7 +1988,6 @@ export function RequestEditor({
           </Button>
         </div>
 
-        {/* Enhanced URL Preview */}
         <div className='flex items-start space-x-2 mt-2 text-sm'>
           <span className='text-gray-600 dark:text-gray-400 font-medium'>
             Final URL Preview:
@@ -1996,7 +2005,6 @@ export function RequestEditor({
           </div>
         )}
 
-        {/* Tabs */}
         <div className='border-b border-gray-200'>
           <div className='flex items-center justify-between px-6 relative'>
             <nav className='flex space-x-8'>
@@ -2024,14 +2032,12 @@ export function RequestEditor({
               })}
             </nav>
 
-            {/* Wrap popup + button in relative container */}
             <div className='relative'>
               {showVariablesPopup && (
                 <div
                   ref={variablesPopupRef}
                   className='absolute right-0 top-10 bg-white shadow-lg rounded-lg z-50 w-80 border border-gray-200'
                 >
-                  {/* Search */}
                   <div className='p-2 border-b'>
                     <input
                       type='text'
@@ -2046,7 +2052,6 @@ export function RequestEditor({
                     />
                   </div>
 
-                  {/* List */}
                   <div className='max-h-60 overflow-y-auto'>
                     {getAllAvailableVariables()
                       .filter(
@@ -2093,7 +2098,6 @@ export function RequestEditor({
                 </div>
               )}
 
-              {/* Variables button */}
               <div className='flex items-center gap-2'>
                 <Button onClick={() => setShowVariablesPopup((prev) => !prev)}>
                   Variables
@@ -2119,7 +2123,6 @@ export function RequestEditor({
 
         <VariableHelpDialog open={helpOpen} onOpenChange={setHelpOpen} />
 
-        {/* Tab Content */}
         <div className='p-2'>
           {activeTab === 'params' && (
             <div className='space-y-4'>
@@ -2136,7 +2139,6 @@ export function RequestEditor({
                 </button>
               </div>
 
-              {/* Parameters List (no empty state) */}
               <div className='space-y-2'>
                 {params.map((param, index) => (
                   <div key={param.id} className='flex items-center space-x-2'>
@@ -2212,7 +2214,6 @@ export function RequestEditor({
                 </button>
               </div>
 
-              {/* Headers List (no empty state) */}
               <div className='space-y-2'>
                 {headers.map((header, index) => (
                   <div key={header.id} className='flex items-center space-x-2'>
@@ -2252,7 +2253,6 @@ export function RequestEditor({
                       className='flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm'
                       placeholder='Value (use {{variableName}} or {{dynamicVar}} for variables)'
                     />
-                    {/* Show processed value if different */}
                     {processedRequest.headers?.[index]?.value !==
                       header.value &&
                       processedRequest.headers?.[index]?.value && (
@@ -2366,10 +2366,10 @@ export function RequestEditor({
             </div>
           )}
 
-          {activeTab === 'post-request' && (
+          {activeTab === 'post-response' && (
             <div className='space-y-4'>
               <PrePostRequest
-                type='post-request'
+                type='post-response'
                 assertions={assertions}
                 setAssertions={setAssertions}
                 responseData={executionResult?.response}
@@ -2401,7 +2401,6 @@ export function RequestEditor({
                   />
                 </div>
 
-                {/* Retries (disabled + upcoming) */}
                 <div className='opacity-60'>
                   <label className='block text-sm font-medium text-gray-700 mb-2'>
                     Retries
@@ -2471,7 +2470,6 @@ export function RequestEditor({
                     </span>
                   </label>
 
-                  {/* Retry disabled + upcoming */}
                   <label className='flex items-center space-x-2 opacity-60'>
                     <input
                       type='radio'
@@ -2545,7 +2543,6 @@ export function RequestEditor({
           </div>
         )}
 
-        {/* Response Section - Only show if not hidden by parent */}
         {!hideResponseExplorer && executionResult && (
           <div className='border-t border-gray-200'>
             <div className='flex items-center justify-between p-4 bg-gray-50 border-b border-gray-200'>
@@ -2771,17 +2768,8 @@ export function RequestEditor({
                 </div>
               </>
             )}
-            {showResponse && !executionResult.response && (
-              <div className='p-6'>
-                <div className='text-red-600'>
-                  <h4 className='font-medium mb-2'>Error</h4>
-                  <p className='text-sm'>{executionResult.error}</p>
-                </div>
-              </div>
-            )}
           </div>
         )}
-        {/* Variable Extraction Section - Only show if not hidden by parent */}
         {!hideResponseExplorer &&
           executionResult &&
           executionResult.response && (
@@ -2801,6 +2789,9 @@ export function RequestEditor({
                 actualRequestUrl={executionResult.request.url}
                 actualRequestHeaders={executionResult.request.headers}
                 actualRequestBody={executionResult.request.body}
+                actualRequestMethod={executionResult.request.method}
+                executionStatus={executionResult.status}
+                errorMessage={executionResult.error}
               />
             </div>
           )}
@@ -2811,7 +2802,6 @@ export function RequestEditor({
     <div className='flex flex-col h-full'>
       <VariableAutocomplete />
 
-      {/* Request Configuration */}
       <Card>
         <CardHeader>
           <CardTitle className='flex items-center gap-2'>
@@ -2865,7 +2855,6 @@ export function RequestEditor({
               placeholder='https://api.example.com/endpoint'
             />
           </div>
-          {/* Enhanced URL Preview */}
           <div className='flex items-start space-x-2 mt-2 text-sm'>
             <span className='text-gray-600 dark:text-gray-400 font-medium'>
               Final URL Preview:
@@ -2873,10 +2862,8 @@ export function RequestEditor({
             <div className='flex-1'>{renderEnhancedPreviewUrl()}</div>
           </div>
 
-          {/* Dynamic Variables Panel - Now only shows used variables */}
           <DynamicVariablesPanel />
 
-          {/* Show available variables for debugging */}
           {Object.keys(parentExtractedVariables).length > 0 && (
             <div className='mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-sm'>
               <strong>Available Variables:</strong>{' '}
@@ -2959,9 +2946,9 @@ export function RequestEditor({
             Pre-request
           </TabsTrigger>
 
-          <TabsTrigger value='post-request' className='gap-2'>
+          <TabsTrigger value='post-response' className='gap-2'>
             <Code className='w-4 h-4' />
-            Post-requestS
+            Post-response
           </TabsTrigger>
           <TabsTrigger value='settings' className='gap-2'>
             <Settings className='w-4 h-4' />
@@ -2974,7 +2961,6 @@ export function RequestEditor({
               <CardTitle>Query Parameters</CardTitle>
             </CardHeader>
             <CardContent>
-              {/* Ensure temp IDs are used for display but not persisted */}
               <KeyValueTable
                 type='params'
                 items={params.map((param) => ({
@@ -3295,9 +3281,9 @@ export function RequestEditor({
           />
         </TabsContent>
 
-        <TabsContent value='post-request' className='space-y-6'>
+        <TabsContent value='post-response' className='space-y-6'>
           <PrePostRequest
-            type='post-request'
+            type='post-response'
             assertions={assertions}
             setAssertions={setAssertions}
             responseData={executionResult?.response}
@@ -3322,7 +3308,6 @@ export function RequestEditor({
                 />
               </div>
 
-              {/* Retries disabled + upcoming */}
               <div className='space-y-2 opacity-60'>
                 <Label htmlFor='retries'>Retries</Label>
                 <Input
@@ -3356,7 +3341,6 @@ export function RequestEditor({
                   </Label>
                 </div>
 
-                {/* Continue disabled + upcoming */}
                 <div className='flex items-center space-x-2 opacity-60'>
                   <RadioGroupItem value='continue' id='continue' disabled />
                   <Label htmlFor='continue' className='text-orange-700'>
@@ -3367,7 +3351,6 @@ export function RequestEditor({
                   </Label>
                 </div>
 
-                {/* Retry disabled + upcoming */}
                 <div className='flex items-center space-x-2 opacity-60'>
                   <RadioGroupItem value='retry' id='retry' disabled />
                   <Label htmlFor='retry' className='text-orange-700'>

@@ -4,8 +4,10 @@ import type React from 'react';
 import { useState, useMemo } from 'react';
 import { CheckCircle2, Circle, Search, X, Plus, Filter } from 'lucide-react';
 import { useToast } from '@/hooks/useToast';
+import { Button } from '@/components/ui/button';
 
 interface Assertion {
+  impact: React.JSX.Element;
   id: string;
   description: string;
   category: string;
@@ -83,6 +85,8 @@ const AssertionManager: React.FC<AssertionManagerProps> = ({
     });
     return grouped;
   }, [filteredAssertions]);
+
+  console.log('filteredAssertions123:', filteredAssertions);
 
   const getPriorityColor = (priority?: string) => {
     switch (priority?.toLowerCase()) {
@@ -167,16 +171,11 @@ const AssertionManager: React.FC<AssertionManagerProps> = ({
         </div>
       ) : (
         <div className='bg-white rounded-xl border border-gray-200 p-8 text-center'>
-          <div className='w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3'>
-            <Plus className='w-6 h-6 text-gray-400' />
-          </div>
           <p className='text-gray-600 mb-4'>No assertions selected</p>
-          <button
-            onClick={() => setShowDialog(true)}
-            className='px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors'
-          >
-            Add New
-          </button>
+          <Button onClick={() => setShowDialog(true)}>
+            <Plus className='w-4 h-4' />
+            Generate Assertions
+          </Button>
         </div>
       )}
 
@@ -270,26 +269,33 @@ const AssertionManager: React.FC<AssertionManagerProps> = ({
                                     <Circle className='w-5 h-5 text-gray-400' />
                                   )}
                                 </div>
+
                                 <div className='flex-1 min-w-0'>
-                                  <p className='text-sm font-medium text-gray-900'>
+                                  <p className='text-sm font-medium text-gray-900 truncate'>
                                     {assertion.description}
                                   </p>
-                                  {assertion.priority && (
-                                    <div className='mt-2 flex gap-2'>
-                                      <span
-                                        className={`px-2 py-1 rounded text-xs font-medium ${getPriorityColor(
-                                          assertion.priority
-                                        )}`}
-                                      >
-                                        {assertion.priority}
-                                      </span>
-                                    </div>
+
+                                  {assertion.impact && (
+                                    <p className='text-xs text-gray-600 mt-1 italic'>
+                                      Impact: {assertion.impact}
+                                    </p>
                                   )}
                                 </div>
-                                <div className='flex-shrink-0'>
+
+                                <div className='flex-shrink-0 flex items-center gap-2'>
                                   <span className='px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs font-medium'>
                                     {assertion.category}
                                   </span>
+
+                                  {assertion.priority && (
+                                    <span
+                                      className={`px-2 py-1 rounded text-xs font-medium ${getPriorityColor(
+                                        assertion.priority
+                                      )}`}
+                                    >
+                                      {assertion.priority}
+                                    </span>
+                                  )}
                                 </div>
                               </div>
                             </div>
@@ -314,12 +320,7 @@ const AssertionManager: React.FC<AssertionManagerProps> = ({
                 >
                   Cancel
                 </button>
-                <button
-                  onClick={handleSaveAssertions}
-                  className='px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors'
-                >
-                  Save Assertions
-                </button>
+                <Button onClick={handleSaveAssertions}>Save Assertions</Button>
               </div>
             </div>
           </div>

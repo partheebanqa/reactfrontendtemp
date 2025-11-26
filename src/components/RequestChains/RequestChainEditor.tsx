@@ -591,7 +591,6 @@ export function RequestChainEditor({
       throw new Error('Request URL is required');
     }
 
-    // Ensure arrays exist
     request = {
       ...request,
       headers: request.headers ?? [],
@@ -602,7 +601,6 @@ export function RequestChainEditor({
 
     const processedRequest = processRequestWithVariables(request, variables);
 
-    // Handle Bearer token authorization
     {
       const token = (
         processedRequest.authToken ||
@@ -656,7 +654,7 @@ export function RequestChainEditor({
     }
 
     const payload = buildRequestPayload(processedRequest, variables);
-    const previewUrl = getPreviewUrl(request, variables);
+    const previewUrl = getPreviewUrl(processedRequest, variables);
     payload.request.url = previewUrl;
 
     try {
@@ -702,11 +700,15 @@ export function RequestChainEditor({
 
       const endTime = Date.now();
 
-      // Store actual request details after variable replacement
       const actualRequestHeaders = Object.fromEntries(
         processedRequest.headers.map((h) => [h.key, h.value])
       );
+
+      const actualRequestUrl = previewUrl;
+
       const actualRequestBody = processedRequest.body ?? '';
+      const actualRequestMethod = processedRequest.method;
+      const actualRequestParams = processedRequest.params || [];
 
       const log: ExecutionLog = {
         id: Date.now().toString(),
@@ -720,8 +722,8 @@ export function RequestChainEditor({
         endTime: new Date(endTime).toISOString(),
         duration: result.metrics.responseTime,
         request: {
-          method: processedRequest.method,
-          url: previewUrl,
+          method: actualRequestMethod,
+          url: actualRequestUrl,
           headers: actualRequestHeaders,
           body: actualRequestBody,
         },
@@ -763,7 +765,7 @@ export function RequestChainEditor({
           method: processedRequest.method,
           url: previewUrl,
           headers: {},
-          body: processedRequest.body,
+          body: processedRequest.body, // Use processed body even in error case
         },
         error: error instanceof Error ? error.message : 'Unknown error',
       };
@@ -948,7 +950,6 @@ export function RequestChainEditor({
       setCurrentRequestIndex(-1);
     }
   };
-
   const handleRequestExecution = (
     requestId: string,
     executionLog: ExecutionLog
@@ -1763,7 +1764,6 @@ export function RequestChainEditor({
 
       <div className='flex-1 border border-gray-200 rounded-lg bg-background mt-3'>
         <div className='p-6 space-y-6'>
-          {/* 1. Basic Information Box */}
           <Card>
             <CardHeader>
               <CardTitle>Basic Information</CardTitle>
@@ -1844,12 +1844,10 @@ export function RequestChainEditor({
                 </Select>
               </div>
 
-              {/* Dynamic Variables Panel */}
               <DynamicVariablesPanel />
             </CardContent>
           </Card>
 
-          {/* 2. Requests and Extracted Variables Box */}
           <Card>
             <CardHeader>
               <CardTitle>Requests and Extracted Variables</CardTitle>
@@ -2212,7 +2210,6 @@ export function RequestChainEditor({
                                           }}
                                         />
 
-                                        {/* Response Section - Only show here, not in RequestEditor */}
                                         {executionLog && (
                                           <div className='border-t border-gray-200 pt-4'>
                                             <div className='flex items-center justify-between p-4 bg-gray-50 border-b border-gray-200 rounded-t-lg'>
@@ -2339,20 +2336,16 @@ export function RequestChainEditor({
                                                   actualRequestBody={
                                                     executionLog.request.body
                                                   }
+                                                  actualRequestMethod={
+                                                    executionLog.request.method
+                                                  }
+                                                  executionStatus={
+                                                    executionLog.status
+                                                  }
+                                                  errorMessage={
+                                                    executionLog.error
+                                                  }
                                                 />
-                                              </div>
-                                            )}
-
-                                            {!executionLog.response && (
-                                              <div className='p-6'>
-                                                <div className='text-red-600'>
-                                                  <h4 className='font-medium mb-2'>
-                                                    Error
-                                                  </h4>
-                                                  <p className='text-sm'>
-                                                    {executionLog.error}
-                                                  </p>
-                                                </div>
                                               </div>
                                             )}
                                           </div>
@@ -2410,7 +2403,6 @@ export function RequestChainEditor({
             </CardContent>
           </Card>
 
-          {/* 3. Save & Execute Chain Box */}
           <Card>
             <CardHeader>
               <CardTitle>

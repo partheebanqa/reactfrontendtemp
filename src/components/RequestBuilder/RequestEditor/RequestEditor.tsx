@@ -167,7 +167,7 @@ const RequestEditor: React.FC = () => {
     | 'body'
     | 'auth'
     | 'pre-request'
-    | 'post-request'
+    | 'post-response'
     | 'settings'
     | 'schemas'
   >('params');
@@ -2262,8 +2262,8 @@ const RequestEditor: React.FC = () => {
                 count: 0,
               },
               {
-                id: 'post-request',
-                label: 'Post-request',
+                id: 'post-response',
+                label: 'Post-response',
                 count: 0,
               },
               {
@@ -2448,9 +2448,9 @@ const RequestEditor: React.FC = () => {
             />
           )}
 
-          {activeTab === 'post-request' && (
+          {activeTab === 'post-response' && (
             <PrePostRequest
-              type='post-request'
+              type='post-response'
               assertions={assertions}
               setAssertions={setAssertions}
               responseData={responseData}

@@ -11,6 +11,7 @@ import {
   CheckCircle,
   Trash2,
   Info,
+  AlertCircle,
 } from 'lucide-react';
 import type { DataExtraction } from '@/shared/types/requestChain.model';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
@@ -34,6 +35,8 @@ interface ResponseExplorerProps {
   actualRequestHeaders?: Record<string, string>;
   actualRequestBody?: string;
   actualRequestMethod?: string;
+  executionStatus?: 'success' | 'error';
+  errorMessage?: string;
 }
 
 interface JsonNode {
@@ -56,11 +59,15 @@ export function ResponseExplorer({
   actualRequestUrl,
   actualRequestHeaders,
   actualRequestBody,
-  actualRequestMethod = 'POST',
+  actualRequestMethod,
+  executionStatus,
+  errorMessage,
 }: ResponseExplorerProps) {
   const [activeTab, setActiveTab] = useState<
     'body' | 'headers' | 'cookies' | 'actualRequest'
   >('body');
+
+  console.log('actualRequestMethod:', actualRequestMethod);
 
   const getValueByPath = (obj: any, path: string): any => {
     if (!obj || !path) return undefined;
@@ -698,6 +705,17 @@ export function ResponseExplorer({
 
   return (
     <div className='space-y-6'>
+      {executionStatus === 'error' && errorMessage && (
+        <div className='bg-red-50 border border-red-200 rounded-lg p-4'>
+          <div className='flex items-start space-x-3'>
+            <AlertCircle className='w-5 h-5 text-red-600 flex-shrink-0 mt-0.5' />
+            <div className='flex-1'>
+              <h4 className='font-medium text-red-900 mb-1'>Error</h4>
+              <p className='text-sm text-red-700'>{errorMessage}</p>
+            </div>
+          </div>
+        </div>
+      )}
       <div className='bg-white border border-gray-200 rounded-lg'>
         <div className='border-b border-gray-200 flex items-center justify-between'>
           <nav className='flex space-x-8 px-6'>
