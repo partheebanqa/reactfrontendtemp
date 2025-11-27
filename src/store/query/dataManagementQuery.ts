@@ -26,6 +26,10 @@ import {
   Variable,
   DynamicVariable,
 } from '@/shared/types/datamanagement';
+import {
+  getSavedEnvironmentId,
+  saveActiveEnvironment,
+} from '@/utils/environmentStorage';
 
 export const usegetEnvironmentQuery = (enabled = true) => {
   const workspaceId = workspaceStore.state.currentWorkspace?.id;
@@ -45,13 +49,35 @@ export const usegetEnvironmentQuery = (enabled = true) => {
 
         dataManagementActions.setEnvironments(filteredEnvironments);
 
-        // Only set active environment if none is currently set
+        // Try to restore from localStorage first
         const currentActive = dataManagementStore.state.activeEnvironment;
-        if (
-          !currentActive ||
-          !filteredEnvironments.find((e) => e.id === currentActive.id)
-        ) {
-          dataManagementActions.setActiveEnvironment(filteredEnvironments[0]);
+        const savedEnvId = getSavedEnvironmentId(workspaceId);
+
+        // Priority: 1) Saved env, 2) Current active if exists, 3) First env
+        let envToSet: Environment | null = null;
+
+        if (savedEnvId) {
+          envToSet =
+            filteredEnvironments.find(
+              (e: Environment) => e.id === savedEnvId
+            ) || null;
+        }
+
+        if (!envToSet && currentActive) {
+          envToSet =
+            filteredEnvironments.find(
+              (e: Environment) => e.id === currentActive.id
+            ) || null;
+        }
+
+        if (!envToSet) {
+          envToSet = filteredEnvironments[0];
+        }
+
+        if (envToSet) {
+          dataManagementActions.setActiveEnvironment(envToSet);
+          // Save to localStorage to ensure it's persisted
+          saveActiveEnvironment(workspaceId, envToSet.id);
         }
 
         return filteredEnvironments[0];
