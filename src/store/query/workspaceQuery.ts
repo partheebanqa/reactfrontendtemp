@@ -9,6 +9,10 @@ import { Workspace } from '@/shared/types/workspace';
 import { apiRequest } from '@/lib/queryClient';
 import { API_WORKSPACES } from '@/config/apiRoutes';
 import { queryClient } from '@/lib/queryClient';
+import {
+  getSavedWorkspaceId,
+  saveActiveWorkspace,
+} from '@/utils/workspaceStorage';
 
 export const useWorkspacesQuery = (enabled = true) => {
   return useQuery({
@@ -38,8 +42,36 @@ export const useWorkspacesQuery = (enabled = true) => {
           // Update store
           workspaceActions.setWorkspaces(mappedWorkspaces);
 
-          // Initialize current workspace if needed
-          workspaceActions.initializeCurrentWorkspace();
+          // Restore workspace from localStorage
+          const currentActive = workspaceStore.state.currentWorkspace;
+          const savedWorkspaceId = getSavedWorkspaceId();
+
+          // Priority: 1) Saved workspace, 2) Current active if exists, 3) First workspace
+          let workspaceToSet: Workspace | null = null;
+
+          if (savedWorkspaceId) {
+            workspaceToSet =
+              mappedWorkspaces.find(
+                (ws: Workspace) => ws.id === savedWorkspaceId
+              ) || null;
+          }
+
+          if (!workspaceToSet && currentActive) {
+            workspaceToSet =
+              mappedWorkspaces.find(
+                (ws: Workspace) => ws.id === currentActive.id
+              ) || null;
+          }
+
+          if (!workspaceToSet && mappedWorkspaces.length > 0) {
+            workspaceToSet = mappedWorkspaces[0];
+          }
+
+          if (workspaceToSet) {
+            workspaceActions.setCurrentWorkspace(workspaceToSet);
+            // Save to localStorage to ensure it's persisted
+            saveActiveWorkspace(workspaceToSet.id);
+          }
         }
 
         workspaceActions.setIsLoading(false);
@@ -55,13 +87,13 @@ export const useWorkspacesQuery = (enabled = true) => {
 
 // Create workspace mutation
 export const useCreateWorkspaceMutation = () => {
-  const workspaceQuery = useWorkspacesQuery();
   return useMutation({
     mutationFn: async (workspaceData: Partial<Workspace>) => {
       return await createWorkspace(workspaceData);
     },
-    onSuccess: (data) => {
-      workspaceQuery.refetch();
+    onSuccess: () => {
+      // Invalidate to trigger refetch
+      queryClient.invalidateQueries({ queryKey: ['/api/workspaces'] });
     },
   });
 };
@@ -80,6 +112,8 @@ export const useUpdateWorkspaceMutation = () => {
         const state = workspaceStore.state;
         if (state.currentWorkspace?.id === variables.id) {
           workspaceActions.setCurrentWorkspace(updatedWorkspace);
+          // Update localStorage with new data
+          saveActiveWorkspace(updatedWorkspace.id);
         }
 
         // Update the query cache directly
@@ -110,17 +144,26 @@ export const useDeleteWorkspaceMutation = () => {
       }
       return response.json();
     },
-    onSuccess: (_, variables) => {
-      // Handle current workspace if the deleted one was current
+    onSuccess: (_, deletedWorkspaceId) => {
       const state = workspaceStore.state;
-      if (state.currentWorkspace?.id === variables) {
-        workspaceActions.setCurrentWorkspace(
-          state.workspaces.length > 0 ? state.workspaces[1] : null
-        );
-      }
 
       // Remove from store
-      workspaceActions.removeWorkspace(variables);
+      workspaceActions.removeWorkspace(deletedWorkspaceId);
+
+      // Handle current workspace if the deleted one was current
+      if (state.currentWorkspace?.id === deletedWorkspaceId) {
+        const remainingWorkspaces = state.workspaces.filter(
+          (ws) => ws.id !== deletedWorkspaceId
+        );
+
+        if (remainingWorkspaces.length > 0) {
+          const newCurrent = remainingWorkspaces[0];
+          workspaceActions.setCurrentWorkspace(newCurrent);
+          saveActiveWorkspace(newCurrent.id);
+        } else {
+          workspaceActions.setCurrentWorkspace(null);
+        }
+      }
 
       // Update the query cache directly
       queryClient.setQueryData(['/api/workspaces'], (oldData: any) => {
@@ -128,7 +171,7 @@ export const useDeleteWorkspaceMutation = () => {
         return {
           ...oldData,
           workspaces: oldData.workspaces.filter(
-            (workspace: Workspace) => workspace.id !== variables
+            (workspace: Workspace) => workspace.id !== deletedWorkspaceId
           ),
         };
       });

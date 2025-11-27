@@ -47,48 +47,28 @@ export const usegetEnvironmentQuery = (enabled = true) => {
           (env: ResponseEnvironment) => filterEnvironment(env)
         );
 
+        // Update the environments list in store
         dataManagementActions.setEnvironments(filteredEnvironments);
 
-        // Try to restore from localStorage first
-        const currentActive = dataManagementStore.state.activeEnvironment;
-        const savedEnvId = getSavedEnvironmentId(workspaceId);
+        // DON'T set active environment here - let useDataManagement handle it
+        // This prevents race conditions and duplicate logic
 
-        // Priority: 1) Saved env, 2) Current active if exists, 3) First env
-        let envToSet: Environment | null = null;
-
-        if (savedEnvId) {
-          envToSet =
-            filteredEnvironments.find(
-              (e: Environment) => e.id === savedEnvId
-            ) || null;
-        }
-
-        if (!envToSet && currentActive) {
-          envToSet =
-            filteredEnvironments.find(
-              (e: Environment) => e.id === currentActive.id
-            ) || null;
-        }
-
-        if (!envToSet) {
-          envToSet = filteredEnvironments[0];
-        }
-
-        if (envToSet) {
-          dataManagementActions.setActiveEnvironment(envToSet);
-          // Save to localStorage to ensure it's persisted
-          saveActiveEnvironment(workspaceId, envToSet.id);
-        }
-
-        return filteredEnvironments[0];
+        return filteredEnvironments;
       } else {
         dataManagementActions.setEnvironments([]);
-        dataManagementActions.setActiveEnvironment(null);
-        return null;
+        // Only clear if there are truly no environments
+        const currentActive = dataManagementStore.state.activeEnvironment;
+        if (currentActive) {
+          dataManagementActions.setActiveEnvironment(null);
+        }
+        return [];
       }
     },
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 10 * 60 * 1000, // 10 minutes
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    // Prevent automatic refetching that could cause state resets
+    refetchOnWindowFocus: false,
+    refetchOnMount: true,
   });
 };
 
@@ -98,18 +78,14 @@ export const usefetchVariablesQuery = (enabled = true) => {
 
   return useQuery({
     queryKey: ['variables', workspaceId, activeEnvironment?.id],
-    // Wait for both workspace AND active environment
     enabled: !!workspaceId && !!activeEnvironment?.id && enabled,
     queryFn: async () => {
       if (!workspaceId) throw new Error('Workspace ID is missing');
-
       const response = await fetchVariables(workspaceId);
-
       if (response.items.length > 0) {
         const filteredVariables = response.items.map(filterVariable);
         dataManagementActions.setVariables(filteredVariables);
 
-        // Update baseUrl if found
         const baseUrlVar = filteredVariables.find(
           (v) => v.name.toLowerCase() === 'baseurl'
         );
@@ -128,7 +104,7 @@ export const usefetchVariablesQuery = (enabled = true) => {
         return [];
       }
     },
-    staleTime: 2 * 60 * 1000, // 2 minutes
+    staleTime: 2 * 60 * 1000,
   });
 };
 
@@ -138,7 +114,6 @@ export const usefetchDynamicVariablesQuery = (enabled = true) => {
 
   return useQuery({
     queryKey: ['dynamicVariables', workspaceId, activeEnvironment?.id],
-    // Wait for both workspace AND active environment
     enabled: !!workspaceId && !!activeEnvironment?.id && enabled,
     queryFn: async () => {
       if (!workspaceId) throw new Error('Workspace ID is missing');
@@ -150,9 +125,8 @@ export const usefetchDynamicVariablesQuery = (enabled = true) => {
           response.variables.map(mapDynamicVariable);
         dataManagementActions.setDynamicVariables(mappedDynamicVariables);
 
-        // Update baseUrl if found
         const baseUrlVar = mappedDynamicVariables.find(
-          (v) => v.name.toLowerCase() === 'baseurl'
+          (v: any) => v.name.toLowerCase() === 'baseurl'
         );
 
         if (baseUrlVar && activeEnvironment) {
@@ -169,18 +143,16 @@ export const usefetchDynamicVariablesQuery = (enabled = true) => {
         return [];
       }
     },
-    staleTime: 2 * 60 * 1000, // 2 minutes
+    staleTime: 2 * 60 * 1000,
   });
 };
 
-// Mutations remain the same but with better invalidation
 export const useCreateEnvironmentMutation = () => {
   const workspaceId = workspaceStore.state.currentWorkspace?.id;
 
   return useMutation({
     mutationFn: createEnvironment,
     onSuccess: async () => {
-      // Invalidate to trigger refetch
       await queryClient.invalidateQueries({
         queryKey: ['environments', workspaceId],
       });
@@ -230,7 +202,6 @@ export const useCreateVariableMutation = () => {
   return useMutation({
     mutationFn: createVariable,
     onSuccess: async () => {
-      // Invalidate both queries
       await Promise.all([
         queryClient.invalidateQueries({
           queryKey: ['variables', workspaceId, activeEnvironment?.id],
@@ -313,8 +284,6 @@ export const useDeleteDynamicVariableMutation = () => {
     },
   });
 };
-
-// ---------- Helpers ----------
 
 const filterEnvironment = (environment: ResponseEnvironment): Environment => {
   return {
