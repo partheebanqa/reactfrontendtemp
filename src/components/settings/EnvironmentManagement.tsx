@@ -334,7 +334,6 @@ export function EnvironmentManagement() {
                     name='baseUrl'
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Base URL (Optional)</FormLabel>
                         <FormControl>
                           <Input
                             placeholder='https://api.example.com'

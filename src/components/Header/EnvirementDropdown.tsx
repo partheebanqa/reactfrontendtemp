@@ -7,25 +7,13 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '../ui/button';
-import {
-  ChevronDown,
-  Edit,
-  PlusCircle,
-  Trash,
-  Settings,
-  Cloud,
-  Server,
-  CheckCircle,
-  Globe,
-  Database,
-} from 'lucide-react';
+import { ChevronDown, Settings, Loader2 } from 'lucide-react';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { Badge } from '../ui/badge';
 import { Environment } from '@/shared/types/datamanagement';
 import { useDataManagement } from '@/hooks/useDataManagement';
 import { useLocation } from 'wouter';
@@ -43,11 +31,13 @@ export default function EnvironmentDropdown({
   setEnvironmentModalState,
   handleDeleteEnvironment,
 }: EnvironmentDropdownProps): ReactElement {
-  const { environments, activeEnvironment, setActiveEnvironment, variables } =
-    useDataManagement();
-
-  // console.log('Environments:', environments);
-  // console.log('Active Environment:', activeEnvironment);
+  const {
+    environments,
+    activeEnvironment,
+    setActiveEnvironment,
+    isLoading,
+    isEnvironmentsLoading,
+  } = useDataManagement();
 
   const [_, setLocation] = useLocation();
 
@@ -65,6 +55,7 @@ export default function EnvironmentDropdown({
       return '#06090eff';
     }
   };
+
   return (
     <TooltipProvider>
       <Tooltip>
@@ -76,8 +67,16 @@ export default function EnvironmentDropdown({
                 className='flex items-center space-x-1 sm:space-x-2 max-w-[120px] xs:max-w-[150px] sm:max-w-[200px] md:max-w-[250px] lg:max-w-[300px] h-9 px-2 py-1 border-gray-200 hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 rounded-md shadow-sm'
                 size='sm'
                 aria-label='Select environment'
+                disabled={isEnvironmentsLoading}
               >
-                {activeEnvironment && (
+                {isEnvironmentsLoading ? (
+                  <>
+                    <Loader2 className='h-3.5 w-3.5 animate-spin' />
+                    <span className='truncate text-xs sm:text-sm font-semibold'>
+                      Loading...
+                    </span>
+                  </>
+                ) : activeEnvironment ? (
                   <>
                     <div
                       className='h-3.5 w-3.5 rounded-full flex-shrink-0 ring-1 ring-opacity-25 ring-gray-400'
@@ -89,6 +88,10 @@ export default function EnvironmentDropdown({
                       {activeEnvironment?.name}
                     </span>
                   </>
+                ) : (
+                  <span className='truncate text-xs sm:text-sm font-semibold text-gray-400'>
+                    No Environment
+                  </span>
                 )}
                 <ChevronDown className='h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0 text-gray-500' />
               </Button>
@@ -122,7 +125,14 @@ export default function EnvironmentDropdown({
 
             <DropdownMenuSeparator className='my-2' />
 
-            {environments.length === 0 ? (
+            {isEnvironmentsLoading ? (
+              <div className='flex items-center justify-center py-4'>
+                <Loader2 className='h-5 w-5 animate-spin text-gray-400' />
+                <span className='ml-2 text-xs text-gray-500'>
+                  Loading environments...
+                </span>
+              </div>
+            ) : environments.length === 0 ? (
               <p className='text-xs text-gray-500 p-2 italic'>
                 No environments available
               </p>

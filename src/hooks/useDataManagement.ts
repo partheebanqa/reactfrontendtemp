@@ -32,18 +32,27 @@ export function useDataManagement() {
 
   const { currentWorkspace } = useWorkspace();
 
+  // Fetch environment first
   const {
-    refetch,
-    isLoading: isRefetching,
-    data,
+    refetch: refetchEnvironments,
+    isLoading: isEnvironmentsLoading,
+    data: environmentData,
+    isFetching: isEnvironmentsFetching,
   } = usegetEnvironmentQuery(!!currentWorkspace?.id);
 
-  const { data: variablesData, isLoading: isVariablesLoading } =
-    usefetchVariablesQuery(!!data?.id);
-  const { data: dynamicVariablesData, isLoading: isDynamicVariablesLoading } =
-    usefetchDynamicVariablesQuery(!!data?.id);
+  // Only fetch variables after environment is loaded
+  const {
+    data: variablesData,
+    isLoading: isVariablesLoading,
+    isFetching: isVariablesFetching,
+  } = usefetchVariablesQuery(!!activeEnvironment?.id);
 
-  const setEnvironments = dataManagementActions.setEnvironments;
+  const {
+    data: dynamicVariablesData,
+    isLoading: isDynamicVariablesLoading,
+    isFetching: isDynamicVariablesFetching,
+  } = usefetchDynamicVariablesQuery(!!activeEnvironment?.id);
+
   const _setActiveEnvironment = dataManagementActions.setActiveEnvironment;
 
   const createEnvironmentMutation = useCreateEnvironmentMutation();
@@ -76,26 +85,54 @@ export function useDataManagement() {
    * - environments finish loading
    */
   useEffect(() => {
+    // Wait until environments are actually loaded
+    if (isEnvironmentsLoading || !environments?.length) return;
+
     const key = envKey(currentWorkspace?.id);
     let saved: { id: string } | null = null;
     try {
-      saved = JSON.parse(localStorage.getItem(key) || 'null');
+      const item = localStorage.getItem(key);
+      saved = item ? JSON.parse(item) : null;
     } catch {
       saved = null;
     }
 
-    if (!saved?.id || !environments?.length) return;
+    if (!saved?.id) {
+      // If no saved preference, use first environment
+      if (environments.length > 0 && !activeEnvironment) {
+        _setActiveEnvironment(environments[0]);
+      }
+      return;
+    }
 
     // Only apply if found and different from current active
     const match = environments.find((e) => e.id === saved!.id);
     if (match && activeEnvironment?.id !== match.id) {
-      _setActiveEnvironment(match); // no re-persist here to avoid loop
+      _setActiveEnvironment(match);
+    } else if (!match && environments.length > 0) {
+      // Saved env no longer exists, default to first
+      _setActiveEnvironment(environments[0]);
     }
-  }, [currentWorkspace?.id, environments, _setActiveEnvironment]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [
+    currentWorkspace?.id,
+    environments,
+    activeEnvironment?.id,
+    isEnvironmentsLoading,
+    _setActiveEnvironment,
+  ]);
+
+  /**
+   * Clear workspace when it changes
+   */
+  useEffect(() => {
+    // Reset when workspace changes
+    _setActiveEnvironment(null);
+    dataManagementActions.setVariables([]);
+    dataManagementActions.setDynamicVariables([]);
+  }, [currentWorkspace?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /**
    * If an active env was deleted, clear the persisted key
-   * (Call this where you handle delete success, or keep this passive guard)
    */
   useEffect(() => {
     if (!activeEnvironment) return;
@@ -113,15 +150,29 @@ export function useDataManagement() {
     _setActiveEnvironment,
   ]);
 
+  // Combined loading state
+  const isFullyLoading =
+    isEnvironmentsLoading ||
+    isEnvironmentsFetching ||
+    isVariablesLoading ||
+    isDynamicVariablesLoading ||
+    isVariablesFetching ||
+    isDynamicVariablesFetching;
+
   return {
     environments,
     activeEnvironment,
-    isLoading,
+    isLoading: isFullyLoading,
     variables,
     dynamicVariables,
 
+    // Also expose individual loading states if needed
+    isEnvironmentsLoading,
+    isVariablesLoading,
+    isDynamicVariablesLoading,
+
     setActiveEnvironment,
-    setEnvironments,
+    setEnvironments: dataManagementActions.setEnvironments,
     setVariables: dataManagementActions.setVariables,
     setDynamicVariables: dataManagementActions.setDynamicVariables,
 
@@ -133,5 +184,7 @@ export function useDataManagement() {
     deleteEnvironmentMutation,
     deletedVariableMutation,
     deletedDynamicVariableMutation,
+
+    refetchEnvironments,
   };
 }
