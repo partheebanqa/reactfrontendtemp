@@ -1,21 +1,21 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import {
-  Search,
-  Plus,
-  Copy,
-  Eye,
-  EyeOff,
-  Pencil,
-  Trash2,
-  X,
-} from 'lucide-react';
+import { Search, Copy, Trash2, X, Edit } from 'lucide-react';
 import { useDataManagement } from '@/hooks/useDataManagement';
-import { useToast } from '@/hooks/useToast';
+import { useToast } from '@/hooks/use-toast';
 import VariableCreateDialog from './CreateVariableDialog';
 import EditDynamicVariableDialog from './EditDynamicVariableDialog';
 import type { DynamicVariable } from '@/shared/types/datamanagement';
 import { Button } from '@/components/ui/button';
-import { Input } from '../ui/input';
+import { Input } from '@/components/ui/input';
+import { Loader } from '@/components/Loader';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 
 const debounce = (fn: (...a: any[]) => void, ms = 250) => {
   let t: ReturnType<typeof setTimeout>;
@@ -24,41 +24,6 @@ const debounce = (fn: (...a: any[]) => void, ms = 250) => {
     t = setTimeout(() => fn(...args), ms);
   };
 };
-
-const TableSkeleton: React.FC<{ rows?: number }> = ({ rows = 8 }) => (
-  <div className='border border-gray-200 rounded-lg overflow-hidden'>
-    <table className='w-full'>
-      <thead>
-        <tr className='bg-gray-50 border-b border-gray-200'>
-          <th className='px-4 py-2 text-left text-xs font-medium text-gray-600 uppercase tracking-wider'>
-            Name
-          </th>
-          <th className='px-4 py-2 text-left text-xs font-medium text-gray-600 uppercase tracking-wider'>
-            Value
-          </th>
-          <th className='px-4 py-2 text-right text-xs font-medium text-gray-600 uppercase tracking-wider w-24'>
-            Actions
-          </th>
-        </tr>
-      </thead>
-      <tbody className='divide-y divide-gray-200 bg-white'>
-        {Array.from({ length: rows }).map((_, i) => (
-          <tr key={i}>
-            <td className='px-4 py-3'>
-              <div className='h-4 w-40 bg-gray-100 rounded animate-pulse' />
-            </td>
-            <td className='px-4 py-3'>
-              <div className='h-4 w-80 bg-gray-100 rounded animate-pulse' />
-            </td>
-            <td className='px-4 py-3'>
-              <div className='ml-auto h-4 w-20 bg-gray-100 rounded animate-pulse' />
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  </div>
-);
 
 /* for CreateVariableDialog's form shape */
 type NewVariableForm = {
@@ -119,16 +84,6 @@ export function DynamicVariables() {
     run(searchTerm);
   }, [searchTerm]);
 
-  // secrets visibility
-  const [visibleSecrets, setVisibleSecrets] = useState<Set<string>>(new Set());
-  const toggleSecretVisibility = (id: string) => {
-    setVisibleSecrets((prev) => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
-  };
-
   // create/edit dialogs
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -176,10 +131,10 @@ export function DynamicVariables() {
 
   /* ---------------- actions ---------------- */
 
-  const copyToClipboard = async (text: string) => {
+  const copyToClipboard = async (text: string, what: string) => {
     try {
       await navigator.clipboard.writeText(text || '');
-      toast({ title: 'Copied', description: 'Copied to clipboard' });
+      toast({ title: 'Copied', description: `${what} copied to clipboard` });
     } catch {
       toast({
         title: 'Copy failed',
@@ -307,11 +262,11 @@ export function DynamicVariables() {
   /* ---------------- render ---------------- */
   return (
     <div className='space-y-4'>
-      {/* top bar (new UI) */}
+      {/* top bar */}
       <div className='flex items-center justify-between gap-3'>
         <div className='relative flex-1 max-w-sm'>
           <Search
-            className='absolute left-3 top-1/2 -translate-y-1/2 text-gray-400'
+            className='absolute left-3 top-1/2 -translate-y-1/2 text-slate-400'
             size={16}
           />
           <Input
@@ -319,11 +274,11 @@ export function DynamicVariables() {
             placeholder='Search variables...'
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className='w-full pl-9 pr-16 py-1.5 text-sm border border-gray-200 rounded-md'
+            className='w-full pl-9 pr-16 py-2 text-sm rounded-md'
           />
           {searchTerm && (
             <button
-              className='absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600'
+              className='absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600'
               onClick={() => setSearchTerm('')}
               aria-label='Clear search'
             >
@@ -345,129 +300,111 @@ export function DynamicVariables() {
 
       {/* content */}
       {isLoading ? (
-        <TableSkeleton rows={8} />
+        <Loader />
       ) : filtered.length === 0 ? (
-        <div className='text-center py-12 text-sm text-gray-500'>
-          {debouncedTerm
-            ? 'No dynamic variables match your search.'
-            : 'No dynamic variables yet'}
+        <div className='bg-white rounded-lg border border-slate-200 p-12 text-center'>
+          <p className='text-sm text-slate-500 mb-3'>
+            {debouncedTerm
+              ? 'No dynamic variables match your search.'
+              : 'No dynamic variables yet.'}
+          </p>
+          <Button
+            onClick={() => setIsCreateOpen(true)}
+            className='inline-flex items-center gap-1'
+          >
+            <Search size={16} />
+            Create Variable
+          </Button>
         </div>
       ) : (
         <>
-          <div className='border border-gray-200 rounded-lg overflow-hidden'>
-            <table className='w-full'>
-              <thead>
-                <tr className='bg-gray-50 border-b border-gray-200'>
-                  <th className='px-4 py-2 text-left text-xs font-medium text-gray-600 uppercase tracking-wider'>
+          <div className='bg-white rounded-lg border border-slate-200 overflow-hidden'>
+            <Table>
+              <TableHeader>
+                <TableRow className='bg-slate-50'>
+                  <TableHead className='font-semibold text-slate-600 text-sm capitalize tracking-wider'>
                     Name
-                  </th>
-                  <th className='px-4 py-2 text-left text-xs font-medium text-gray-600 uppercase tracking-wider'>
+                  </TableHead>
+                  <TableHead className='font-semibold text-slate-600 text-sm capitalize tracking-wider'>
                     Generator Name
-                  </th>
-                  <th className='px-4 py-2 text-left text-xs font-medium text-gray-600 uppercase tracking-wider'>
+                  </TableHead>
+                  <TableHead className='font-semibold text-slate-600 text-sm capitalize tracking-wider'>
                     Parameters
-                  </th>
-                  <th className='px-4 py-2 text-right text-xs font-medium text-gray-600 uppercase tracking-wider w-24'>
+                  </TableHead>
+                  <TableHead className='font-semibold text-slate-600 text-sm capitalize tracking-wider text-right w-24'>
                     Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className='divide-y divide-gray-200 bg-white'>
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {current.map((variable) => (
-                  <tr
+                  <TableRow
                     key={variable.id}
-                    className='hover:bg-gray-50 transition-colors group'
+                    className='border-b border-slate-100 hover:bg-slate-50 group'
                   >
-                    <td className='px-4 py-2.5'>
+                    <TableCell className='py-4'>
                       <div className='flex items-center gap-2'>
-                        <span className='text-sm font-mono font-medium text-gray-900'>
+                        <span className='text-sm font-medium text-slate-900'>
                           {variable.name}
                         </span>
                         <button
-                          onClick={() => copyToClipboard(variable.name)}
-                          className='opacity-0 group-hover:opacity-100 text-gray-400 hover:text-gray-600 transition-opacity'
+                          onClick={() => copyToClipboard(variable.name, 'name')}
+                          className='opacity-0 group-hover:opacity-100 text-slate-400 hover:text-slate-600 transition-opacity'
                           title='Copy name'
                         >
                           <Copy size={13} />
                         </button>
                       </div>
-                    </td>
+                    </TableCell>
 
-                    <td className='px-4 py-2.5'>
+                    <TableCell className='py-4'>
                       <div className='flex items-center gap-2'>
-                        <code className='text-sm font-mono text-gray-700 truncate max-w-md'>
+                        <span className='text-sm text-slate-700 truncate max-w-md'>
                           {variable.generatorName || '—'}
-                        </code>
+                        </span>
                       </div>
-                    </td>
-                    <td className='px-4 py-2.5'>
+                    </TableCell>
+
+                    <TableCell className='py-4'>
                       {Object.keys(variable.parameters ?? {}).length > 0 && (
-                        <div className='flex items-center space-x-2'>
-                          <code className='px-2 py-1 rounded text-sm bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300'>
+                        <div className='flex items-center'>
+                          <span className='px-2 py-1 rounded text-xs bg-slate-100 text-slate-700 truncate max-w-md'>
                             {formatParameters(variable.parameters)}
-                          </code>
+                          </span>
                         </div>
                       )}
-                    </td>
+                    </TableCell>
 
-                    {/* <td className="px-4 py-2.5">
-                      <div className="flex items-center gap-1.5">
-                        <code className="text-sm font-mono text-gray-700 truncate max-w-md">
-
-                          {(variable.generatorName || "—")}
-                        </code>
-                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
-                          {!!variable.generatorName && (
-                            <button
-                              onClick={() => copyToClipboard(variable.generatorName)}
-                              className="text-gray-400 hover:text-gray-600 transition-colors"
-                              title="Copy value"
-                            >
-                              <Copy size={14} />
-                            </button>
-                          )}
-                          {!!variable.generatorName && (
-                            <button
-                              onClick={() => toggleSecretVisibility(variable.id)}
-                              className="text-gray-400 hover:text-gray-600 transition-colors"
-                              title={visibleSecrets.has(variable.id) ? "Hide" : "Show"}
-                            >
-                              {visibleSecrets.has(variable.id) ? <EyeOff size={14} /> : <Eye size={14} />}
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    </td> */}
-                    <td className='px-4 py-2.5'>
+                    <TableCell className='py-4'>
                       <div className='flex items-center justify-end gap-1'>
                         <button
                           onClick={() => handleEdit(variable)}
-                          className='p-1 text-gray-400 hover:text-blue-600 transition-colors'
+                          className='p-1 text-slate-400 hover:text-blue-600 transition-colors'
                           title='Edit'
                         >
-                          <Pencil size={14} />
+                          <Edit className='w-4 h-4' />
                         </button>
                         <button
                           onClick={() =>
                             handleDelete(variable.id, variable.name)
                           }
-                          className='p-1 text-gray-400 hover:text-red-600 transition-colors'
+                          className='p-1 text-slate-400 hover:text-red-600 transition-colors'
                           title='Delete'
                         >
-                          <Trash2 size={14} />
+                          <Trash2 className='w-4 h-4' />
                         </button>
                       </div>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
 
           {/* footer / pagination */}
           {totalPages > 1 && (
             <div className='flex items-center justify-between text-xs mt-2'>
-              <div className='text-gray-600'>
+              <div className='text-slate-600'>
                 {filtered.length === 0
                   ? '0'
                   : `${start + 1}-${Math.min(
@@ -484,7 +421,7 @@ export function DynamicVariables() {
                     setItemsPerPage(Number(e.target.value));
                     setPage(1);
                   }}
-                  className='px-2 py-1 border border-gray-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500'
+                  className='px-2 py-1 border border-slate-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500'
                 >
                   <option value={10}>10</option>
                   <option value={25}>25</option>
@@ -495,14 +432,14 @@ export function DynamicVariables() {
                   <button
                     onClick={() => setPage((p) => Math.max(p - 1, 1))}
                     disabled={clamped === 1}
-                    className='px-2 py-1 border border-gray-200 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
+                    className='px-2 py-1 border border-slate-200 rounded hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
                   >
                     Prev
                   </button>
                   <button
                     onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
                     disabled={clamped === totalPages}
-                    className='px-2 py-1 border border-gray-200 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
+                    className='px-2 py-1 border border-slate-200 rounded hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
                   >
                     Next
                   </button>
