@@ -26,10 +26,12 @@ import {
   Variable,
   DynamicVariable,
 } from '@/shared/types/datamanagement';
+import {
+  getSavedEnvironmentId,
+  saveActiveEnvironment,
+} from '@/utils/environmentStorage';
 
 export const usegetEnvironmentQuery = (enabled = true) => {
-
-
   const workspaceId = workspaceStore.state.currentWorkspace?.id;
 
   return useQuery({
@@ -37,37 +39,49 @@ export const usegetEnvironmentQuery = (enabled = true) => {
     enabled: !!workspaceId && enabled,
     queryFn: async () => {
       if (!workspaceId) throw new Error('Workspace ID is missing');
+
       const response = await fetchEnvironments(workspaceId);
+
       if (response?.environments?.length) {
         const filteredEnvironments = response.environments.map(
           (env: ResponseEnvironment) => filterEnvironment(env)
         );
-        const environment = filteredEnvironments[0];
 
+        // Update the environments list in store
         dataManagementActions.setEnvironments(filteredEnvironments);
-        dataManagementActions.setActiveEnvironment(environment);
-        return environment;
+
+        // DON'T set active environment here - let useDataManagement handle it
+        // This prevents race conditions and duplicate logic
+
+        return filteredEnvironments;
       } else {
         dataManagementActions.setEnvironments([]);
-        dataManagementActions.setActiveEnvironment(null);
+        // Only clear if there are truly no environments
+        const currentActive = dataManagementStore.state.activeEnvironment;
+        if (currentActive) {
+          dataManagementActions.setActiveEnvironment(null);
+        }
+        return [];
       }
-
-      return null;
     },
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    // Prevent automatic refetching that could cause state resets
+    refetchOnWindowFocus: false,
+    refetchOnMount: true,
   });
 };
 
 export const usefetchVariablesQuery = (enabled = true) => {
-  const environment = dataManagementStore.state.activeEnvironment;
+  const activeEnvironment = dataManagementStore.state.activeEnvironment;
   const workspaceId = workspaceStore.state.currentWorkspace?.id;
+
   return useQuery({
-    queryKey: ['variables', workspaceId],
-    enabled: !!workspaceId && enabled,
+    queryKey: ['variables', workspaceId, activeEnvironment?.id],
+    enabled: !!workspaceId && !!activeEnvironment?.id && enabled,
     queryFn: async () => {
-      if (!workspaceId) throw new Error('Environment ID is missing');
-
+      if (!workspaceId) throw new Error('Workspace ID is missing');
       const response = await fetchVariables(workspaceId);
-
       if (response.items.length > 0) {
         const filteredVariables = response.items.map(filterVariable);
         dataManagementActions.setVariables(filteredVariables);
@@ -76,29 +90,31 @@ export const usefetchVariablesQuery = (enabled = true) => {
           (v) => v.name.toLowerCase() === 'baseurl'
         );
 
-        const updatedEnvironment = {
-          ...environment,
-          baseUrl: baseUrlVar?.initialValue || '', // fallback to empty if not found
-        };
+        if (baseUrlVar && activeEnvironment) {
+          const updatedEnvironment = {
+            ...activeEnvironment,
+            baseUrl: baseUrlVar.initialValue || '',
+          };
+          dataManagementActions.setActiveEnvironment(updatedEnvironment);
+        }
 
-        dataManagementActions.setActiveEnvironment(updatedEnvironment);
+        return filteredVariables;
       } else {
-        // Set empty array if no variables
         dataManagementActions.setVariables([]);
+        return [];
       }
-
-      return [];
     },
+    staleTime: 2 * 60 * 1000,
   });
 };
 
 export const usefetchDynamicVariablesQuery = (enabled = true) => {
-  const environment = dataManagementStore.state.activeEnvironment;
+  const activeEnvironment = dataManagementStore.state.activeEnvironment;
   const workspaceId = workspaceStore.state.currentWorkspace?.id;
 
   return useQuery({
-    queryKey: ['dynamicVariables', workspaceId],
-    enabled: !!workspaceId && enabled,
+    queryKey: ['dynamicVariables', workspaceId, activeEnvironment?.id],
+    enabled: !!workspaceId && !!activeEnvironment?.id && enabled,
     queryFn: async () => {
       if (!workspaceId) throw new Error('Workspace ID is missing');
 
@@ -106,39 +122,40 @@ export const usefetchDynamicVariablesQuery = (enabled = true) => {
 
       if (response?.variables?.length > 0) {
         const mappedDynamicVariables =
-          response?.variables.map(mapDynamicVariable);
-
+          response.variables.map(mapDynamicVariable);
         dataManagementActions.setDynamicVariables(mappedDynamicVariables);
 
         const baseUrlVar = mappedDynamicVariables.find(
-          (v) => v.name.toLowerCase() === 'baseurl'
+          (v: any) => v.name.toLowerCase() === 'baseurl'
         );
 
-        if (environment && baseUrlVar) {
+        if (baseUrlVar && activeEnvironment) {
           const updatedEnvironment = {
-            ...environment,
+            ...activeEnvironment,
             baseUrl: baseUrlVar.parameters?.url ?? '',
           };
-
           dataManagementActions.setActiveEnvironment(updatedEnvironment);
         }
+
+        return mappedDynamicVariables;
       } else {
         dataManagementActions.setDynamicVariables([]);
+        return [];
       }
-
-      return [];
     },
+    staleTime: 2 * 60 * 1000,
   });
 };
 
-
-
 export const useCreateEnvironmentMutation = () => {
-  const fetchEnvironmentsQuery = usegetEnvironmentQuery();
+  const workspaceId = workspaceStore.state.currentWorkspace?.id;
+
   return useMutation({
     mutationFn: createEnvironment,
     onSuccess: async () => {
-      await fetchEnvironmentsQuery.refetch();
+      await queryClient.invalidateQueries({
+        queryKey: ['environments', workspaceId],
+      });
     },
     onError: (error) => {
       console.error('Error creating environment:', error);
@@ -147,12 +164,14 @@ export const useCreateEnvironmentMutation = () => {
 };
 
 export const useUpdateEnvironmentMutation = () => {
-  const fetchEnvironmentsQuery = usegetEnvironmentQuery();
+  const workspaceId = workspaceStore.state.currentWorkspace?.id;
+
   return useMutation({
     mutationFn: updateEnvironment,
-    onSuccess: (updatedEnvironment: Environment) => {
-      console.log('Environment updated:', updatedEnvironment);
-      fetchEnvironmentsQuery.refetch();
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ['environments', workspaceId],
+      });
     },
     onError: (error) => {
       console.error('Error updating environment:', error);
@@ -161,12 +180,14 @@ export const useUpdateEnvironmentMutation = () => {
 };
 
 export const useDeleteEnvironmentMutation = () => {
-  const fetchEnvironmentsQuery = usegetEnvironmentQuery();
+  const workspaceId = workspaceStore.state.currentWorkspace?.id;
+
   return useMutation({
     mutationFn: deleteEnvironment,
-    onSuccess: () => {
-      console.log('Environment deleted');
-      fetchEnvironmentsQuery.refetch();
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ['environments', workspaceId],
+      });
     },
     onError: (error) => {
       console.error('Error deleting environment:', error);
@@ -175,14 +196,20 @@ export const useDeleteEnvironmentMutation = () => {
 };
 
 export const useCreateVariableMutation = () => {
-  const fetchVariablesQuery = usefetchVariablesQuery();
-  const fetchDynamicVariablesQuery = usefetchDynamicVariablesQuery();
+  const workspaceId = workspaceStore.state.currentWorkspace?.id;
+  const activeEnvironment = dataManagementStore.state.activeEnvironment;
 
   return useMutation({
     mutationFn: createVariable,
-    onSuccess: () => {
-      fetchVariablesQuery.refetch();
-      fetchDynamicVariablesQuery.refetch();
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ['variables', workspaceId, activeEnvironment?.id],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ['dynamicVariables', workspaceId, activeEnvironment?.id],
+        }),
+      ]);
     },
     onError: (error) => {
       console.error('Error creating variable:', error);
@@ -191,11 +218,15 @@ export const useCreateVariableMutation = () => {
 };
 
 export const useUpdateVariableMutation = () => {
-  const fetchVariablesQuery = usefetchVariablesQuery();
+  const workspaceId = workspaceStore.state.currentWorkspace?.id;
+  const activeEnvironment = dataManagementStore.state.activeEnvironment;
+
   return useMutation({
     mutationFn: updateVariable,
-    onSuccess: () => {
-      fetchVariablesQuery.refetch();
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ['variables', workspaceId, activeEnvironment?.id],
+      });
     },
     onError: (error) => {
       console.error('Error updating variable:', error);
@@ -204,11 +235,15 @@ export const useUpdateVariableMutation = () => {
 };
 
 export const useUpdateDynamicVariableMutation = () => {
-  const fetchDynamicVariablesQuery = usefetchDynamicVariablesQuery();
+  const workspaceId = workspaceStore.state.currentWorkspace?.id;
+  const activeEnvironment = dataManagementStore.state.activeEnvironment;
+
   return useMutation({
     mutationFn: updateDynamicVariable,
-    onSuccess: () => {
-      fetchDynamicVariablesQuery.refetch();
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ['dynamicVariables', workspaceId, activeEnvironment?.id],
+      });
     },
     onError: (error) => {
       console.error('Error updating dynamic variable:', error);
@@ -217,34 +252,38 @@ export const useUpdateDynamicVariableMutation = () => {
 };
 
 export const useDeleteVariableMutation = () => {
-  const fetchVariablesQuery = usefetchVariablesQuery();
+  const workspaceId = workspaceStore.state.currentWorkspace?.id;
+  const activeEnvironment = dataManagementStore.state.activeEnvironment;
+
   return useMutation({
     mutationFn: deleteVariable,
-    onSuccess: () => {
-      fetchVariablesQuery.refetch();
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ['variables', workspaceId, activeEnvironment?.id],
+      });
     },
     onError: (error) => {
       console.error('Error deleting variable:', error);
-      fetchVariablesQuery.refetch();
     },
   });
 };
 
 export const useDeleteDynamicVariableMutation = () => {
-  const fetchDynamicVariablesQuery = usefetchDynamicVariablesQuery();
+  const workspaceId = workspaceStore.state.currentWorkspace?.id;
+  const activeEnvironment = dataManagementStore.state.activeEnvironment;
+
   return useMutation({
     mutationFn: deleteDynamicVariable,
-    onSuccess: () => {
-      fetchDynamicVariablesQuery.refetch();
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ['dynamicVariables', workspaceId, activeEnvironment?.id],
+      });
     },
     onError: (error) => {
       console.error('Error deleting variable:', error);
-      fetchDynamicVariablesQuery.refetch();
     },
   });
 };
-
-// ---------- Helpers ----------
 
 const filterEnvironment = (environment: ResponseEnvironment): Environment => {
   return {

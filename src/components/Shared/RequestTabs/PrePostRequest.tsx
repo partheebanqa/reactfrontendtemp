@@ -38,6 +38,9 @@ export function PrePostRequest({
   onVariableSelect,
 }: PrePostRequestProps) {
   const [postResponseScript, setPostResponseScript] = useState('');
+  const [activeSubTab, setActiveSubTab] = useState<'assertions' | 'extracted'>(
+    'assertions'
+  );
 
   return (
     <div className='w-full h-full'>
@@ -91,52 +94,84 @@ export function PrePostRequest({
 
       {type === 'post-response' && (
         <div>
-          {showAssertions && (
-            <AssertionManager
-              assertions={assertions}
-              setAssertions={setAssertions}
-              responseData={responseData}
-              activeRequest={activeRequest}
-              currentWorkspace={currentWorkspace}
-              updateRequestMutation={updateRequestMutation}
-              toggleAssertion={toggleAssertion}
-            />
-          )}
+          <div className='border-b border-gray-200 mb-4 flex space-x-8 px-4'>
+            <button
+              onClick={() => setActiveSubTab('assertions')}
+              className={`pb-2 text-sm font-medium ${
+                activeSubTab === 'assertions'
+                  ? 'border-b-2 border-blue-600 text-blue-700'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              Assertions
+            </button>
 
-          {!showAssertions && (
-            <div className='p-4'>
-              <h3 className='text-lg font-semibold mb-4 text-gray-900 dark:text-white'>
-                Post-response Script
-              </h3>
-              <textarea
-                placeholder='Use JavaScript to process the response dynamically. Ctrl+/'
-                value={postResponseScript}
-                onChange={(e) => setPostResponseScript(e.target.value)}
-                className='w-full h-96 p-3 font-mono text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-              />
-              <p className='text-xs text-gray-500 dark:text-gray-400 mt-2'>
-                Scripts run after the response is received. Use it to parse
-                data, validate responses, or set variables.
-              </p>
-            </div>
-          )}
-
-          <div className='mb-6 py-3 '>
-            <div className='rounded-xl border border-gray-300 dark:border-gray-700 shadow-sm overflow-hidden bg-white dark:bg-gray-900'>
-              <table className='w-full text-sm'>
-                <tbody>
-                  <tr>
-                    <td className='px-4 py-3 font-semibold text-gray-900 dark:text-gray-200 w-56 bg-gray-50 dark:bg-gray-800'>
-                      Extracted variable
-                    </td>
-                    <td className='px-4 py-3 text-gray-800 dark:text-gray-300'>
-                      <div className='flex flex-wrap gap-2'>-</div>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+            <button
+              onClick={() => setActiveSubTab('extracted')}
+              className={`pb-2 text-sm font-medium ${
+                activeSubTab === 'extracted'
+                  ? 'border-b-2 border-blue-600 text-blue-700'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              Extracted Variables
+            </button>
           </div>
+
+          {activeSubTab === 'assertions' && (
+            <>
+              {showAssertions && (
+                <AssertionManager
+                  assertions={assertions}
+                  setAssertions={setAssertions}
+                  responseData={responseData}
+                  activeRequest={activeRequest}
+                  currentWorkspace={currentWorkspace}
+                  updateRequestMutation={updateRequestMutation}
+                  toggleAssertion={toggleAssertion}
+                />
+              )}
+
+              {!showAssertions && (
+                <div className='p-4'>
+                  <h3 className='text-lg font-semibold mb-4 text-gray-900 dark:text-white'>
+                    Post-response Script
+                  </h3>
+
+                  <textarea
+                    placeholder='Use JavaScript to process the response dynamically. Ctrl+/'
+                    value={postResponseScript}
+                    onChange={(e) => setPostResponseScript(e.target.value)}
+                    className='w-full h-96 p-3 font-mono text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+                  />
+
+                  <p className='text-xs text-gray-500 dark:text-gray-400 mt-2'>
+                    Scripts run after the response is received. Use it to parse
+                    data, validate responses, or set variables.
+                  </p>
+                </div>
+              )}
+            </>
+          )}
+
+          {activeSubTab === 'extracted' && (
+            <div className='mb-6 py-3'>
+              <div className='rounded-xl border border-gray-300 dark:border-gray-700 shadow-sm overflow-hidden bg-white dark:bg-gray-900'>
+                <table className='w-full text-sm'>
+                  <tbody>
+                    <tr>
+                      <td className='px-4 py-3 font-semibold text-gray-900 dark:text-gray-200 w-56 bg-gray-50 dark:bg-gray-800'>
+                        Extracted variable
+                      </td>
+                      <td className='px-4 py-3 text-gray-800 dark:text-gray-300'>
+                        <div className='flex flex-wrap gap-2'>-</div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

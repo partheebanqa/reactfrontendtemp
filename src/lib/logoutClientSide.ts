@@ -1,27 +1,31 @@
-import { queryClient } from './queryClient'; // or wherever it's defined
+import { queryClient } from './queryClient';
 import { removeCookie } from '@/lib/cookieUtils';
 import { USER_COOKIE_NAME } from '@/lib/constants';
 import { workspaceActions } from '@/store/workspaceStore';
 import { authActions } from '@/store/authStore';
+import { dataManagementActions } from '@/store/dataManagementStore';
+import { clearWorkspaceStorage } from '@/utils/workspaceStorage';
+import { clearAllEnvironmentStorage } from '@/utils/environmentStorage';
 
 export const logoutClientSide = async () => {
-  // 1. Remove cookies
+  clearWorkspaceStorage();
+  clearAllEnvironmentStorage();
+
   removeCookie(USER_COOKIE_NAME);
 
-  // 2. Clear browser storage
   localStorage.clear();
   sessionStorage.clear();
 
-  // 3. Reset app state
-  workspaceActions.reset(); // ✅ Clears workspace store
-  authActions.clearAuth(); // ✅ Clears auth store
+  workspaceActions.reset();
+  authActions.clearAuth();
+  dataManagementActions.setEnvironments([]);
+  dataManagementActions.setActiveEnvironment(null);
+  dataManagementActions.setVariables([]);
+  dataManagementActions.setDynamicVariables([]);
 
-  // 4. Clear TanStack Query client
   await queryClient.cancelQueries();
   await queryClient.removeQueries();
-  await queryClient.cancelQueries();
   queryClient.clear();
 
-  // 5. Hard redirect to signin
   window.location.replace('/signin');
 };

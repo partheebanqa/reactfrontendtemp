@@ -8,14 +8,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Button } from '../ui/button';
 import { useWorkspace } from '@/hooks/useWorkspace';
-import {
-  ChevronDown,
-  Edit,
-  PlusCircle,
-  Trash,
-  CheckCircle,
-  Settings,
-} from 'lucide-react';
+import { ChevronDown, Settings, Loader2 } from 'lucide-react';
 import {
   Tooltip,
   TooltipContent,
@@ -37,7 +30,8 @@ export default function WorkspaceDropdown({
   setWorkspaceModalState,
   handleDeleteWorkspace,
 }: WorkspaceDropdownProps): ReactElement {
-  const { currentWorkspace, workspaces, setCurrentWorkspace } = useWorkspace();
+  const { currentWorkspace, workspaces, setCurrentWorkspace, isLoading } =
+    useWorkspace();
   const [_, setLocation] = useLocation();
 
   return (
@@ -51,12 +45,23 @@ export default function WorkspaceDropdown({
                 className='flex items-center space-x-1 sm:space-x-2 max-w-[120px] xs:max-w-[150px] sm:max-w-[200px] md:max-w-[250px] lg:max-w-[300px] h-9 px-2 py-1 border-blue-100 hover:bg-blue-50 hover:border-blue-200 transition-all duration-200'
                 size='sm'
                 aria-label='Select workspace'
+                disabled={isLoading}
               >
-                {/* <Building className='h-3.5 w-3.5 sm:h-4 sm:w-4 text-blue-600 flex-shrink-0' /> */}
-                <span className='truncate text-xs sm:text-sm font-medium'>
-                  {currentWorkspace?.name || 'Select Workspace'}
-                </span>
-                <ChevronDown className='h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0 text-gray-500' />
+                {isLoading ? (
+                  <>
+                    <Loader2 className='h-3.5 w-3.5 animate-spin' />
+                    <span className='truncate text-xs sm:text-sm font-medium'>
+                      Loading...
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span className='truncate text-xs sm:text-sm font-medium'>
+                      {currentWorkspace?.name || 'Select Workspace'}
+                    </span>
+                    <ChevronDown className='h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0 text-gray-500' />
+                  </>
+                )}
               </Button>
             </DropdownMenuTrigger>
           </TooltipTrigger>
@@ -89,7 +94,14 @@ export default function WorkspaceDropdown({
             </DropdownMenuItem>
             <DropdownMenuSeparator className='my-2' />
 
-            {workspaces.length === 0 ? (
+            {isLoading ? (
+              <div className='flex items-center justify-center py-4'>
+                <Loader2 className='h-5 w-5 animate-spin text-gray-400' />
+                <span className='ml-2 text-xs text-gray-500'>
+                  Loading workspaces...
+                </span>
+              </div>
+            ) : workspaces.length === 0 ? (
               <p className='text-xs text-gray-500 p-2'>
                 No workspaces available
               </p>
@@ -103,12 +115,11 @@ export default function WorkspaceDropdown({
                       onClick={() => setCurrentWorkspace(workspace)}
                       className={`justify-between text-xs sm:text-sm py-2 rounded-md ${
                         isSelected
-                          ? 'bg-blue-50 text-blue-700'
-                          : 'hover:bg-gray-50'
+                          ? 'bg-blue-50 text-blue-700 border border-blue-200 shadow-sm'
+                          : 'hover:bg-gray-50 border border-transparent hover:border-gray-100'
                       }`}
                     >
                       <div className='flex items-center'>
-                        {/* <Building className='h-3.5 w-3.5 mr-2 text-gray-500' /> */}
                         <span className='font-medium truncate mr-2'>
                           {workspace.name}
                         </span>

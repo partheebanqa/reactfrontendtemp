@@ -1,72 +1,101 @@
-import { useEffect, useState } from "react";
-import { useWorkspaceStore, workspaceActions } from "@/store/workspaceStore";
+import { useEffect, useState } from 'react';
+import { useWorkspaceStore, workspaceActions } from '@/store/workspaceStore';
 import {
   useWorkspacesQuery,
   useCreateWorkspaceMutation,
   useUpdateWorkspaceMutation,
   useDeleteWorkspaceMutation,
-} from "@/store/query/workspaceQuery";
-import { useAuth } from "./useAuth";
-import { Workspace } from "@/shared/types/workspace";
-import { getEncryptedCookie, setEncryptedCookie } from "@/lib/cookieUtils";
-import { USER_COOKIE_NAME } from "@/lib/constants";
+} from '@/store/query/workspaceQuery';
+import { useAuth } from './useAuth';
+import { Workspace } from '@/shared/types/workspace';
+import {
+  saveActiveWorkspace,
+  getSavedWorkspaceId,
+  clearSavedWorkspace,
+} from '@/utils/workspaceStorage';
 
 export function useWorkspace() {
-  // Get auth state to check if authenticated
   const { isAuthenticated } = useAuth();
-
-  // Get workspace state from store
   const { currentWorkspace, workspaces, isLoading } = useWorkspaceStore();
-
-  // Track if we need to fetch workspaces
   const [shouldFetchWorkspaces, setShouldFetchWorkspaces] = useState(true);
 
-  // Setup queries and mutations
-  const { refetch: refreshWorkspaces, isLoading: isRefetching } =
-    useWorkspacesQuery(isAuthenticated && shouldFetchWorkspaces);
+  const {
+    refetch: refreshWorkspaces,
+    isLoading: isRefetching,
+    isFetching: isWorkspacesFetching,
+  } = useWorkspacesQuery(isAuthenticated && shouldFetchWorkspaces);
 
   const createWorkspaceMutation = useCreateWorkspaceMutation();
   const updateWorkspaceMutation = useUpdateWorkspaceMutation();
   const deleteWorkspaceMutation = useDeleteWorkspaceMutation();
 
-  // Set current workspace
   const setCurrentWorkspace = (workspace: Workspace | null) => {
-    const existingData = getEncryptedCookie(USER_COOKIE_NAME) || {};
-    const newUserData = {
-      ...existingData,
-      workspaceId: workspace?.id || null,
-    };
-    setEncryptedCookie(USER_COOKIE_NAME, newUserData);
     workspaceActions.setCurrentWorkspace(workspace);
+    if (workspace) {
+      saveActiveWorkspace(workspace.id);
+    } else {
+      clearSavedWorkspace();
+    }
   };
 
-  // Initialize workspaces when authenticated changes
   useEffect(() => {
     if (isAuthenticated) {
-      // Only fetch workspaces if we don't already have them
       if (workspaces.length === 0) {
         setShouldFetchWorkspaces(true);
       } else {
         setShouldFetchWorkspaces(false);
       }
     } else {
-      // Clear workspaces when not authenticated
       workspaceActions.setWorkspaces([]);
       workspaceActions.setCurrentWorkspace(null);
+      clearSavedWorkspace();
     }
   }, [isAuthenticated, workspaces.length]);
 
+  useEffect(() => {
+    if (isRefetching || !workspaces.length) return;
+
+    const savedWorkspaceId = getSavedWorkspaceId();
+
+    if (!savedWorkspaceId) {
+      if (workspaces.length > 0 && !currentWorkspace) {
+        const firstWorkspace = workspaces[0];
+        workspaceActions.setCurrentWorkspace(firstWorkspace);
+        saveActiveWorkspace(firstWorkspace.id);
+      }
+      return;
+    }
+
+    const match = workspaces.find((ws) => ws.id === savedWorkspaceId);
+
+    if (match) {
+      if (currentWorkspace?.id !== match.id) {
+        workspaceActions.setCurrentWorkspace(match);
+      }
+    } else if (workspaces.length > 0) {
+      const firstWorkspace = workspaces[0];
+      workspaceActions.setCurrentWorkspace(firstWorkspace);
+      saveActiveWorkspace(firstWorkspace.id);
+    }
+  }, [workspaces, isRefetching, currentWorkspace?.id]);
+
+  useEffect(() => {
+    if (!currentWorkspace) return;
+    const stillExists = workspaces.some((ws) => ws.id === currentWorkspace.id);
+    if (!stillExists) {
+      clearSavedWorkspace();
+      workspaceActions.setCurrentWorkspace(null);
+    }
+  }, [workspaces, currentWorkspace]);
+
   return {
-    // State
     currentWorkspace,
     workspaces,
-    isLoading: isLoading || isRefetching,
+    isLoading: isLoading || isRefetching || isWorkspacesFetching,
 
-    // Actions
     setCurrentWorkspace,
-    refreshWorkspaces, // Replace with our controlled version
+    refreshWorkspaces,
 
-    // Mutations
     createWorkspaceMutation,
     updateWorkspaceMutation,
     deleteWorkspaceMutation,

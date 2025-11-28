@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import {
   dataManagementActions,
   useDataManagementStore,
@@ -18,8 +18,11 @@ import {
 } from '@/store/query/dataManagementQuery';
 import { useWorkspace } from './useWorkspace';
 import { Environment } from '@/shared/types/datamanagement';
-
-const envKey = (wsId?: string | null) => `dm:activeEnv:${wsId ?? 'default'}`;
+import {
+  saveActiveEnvironment,
+  getSavedEnvironmentId,
+  clearSavedEnvironment,
+} from '@/utils/environmentStorage';
 
 export function useDataManagement() {
   const {
@@ -31,19 +34,28 @@ export function useDataManagement() {
   } = useDataManagementStore();
 
   const { currentWorkspace } = useWorkspace();
+  const previousWorkspaceId = useRef(currentWorkspace?.id);
+  const isInitialMount = useRef(true);
 
   const {
-    refetch,
-    isLoading: isRefetching,
-    data,
+    refetch: refetchEnvironments,
+    isLoading: isEnvironmentsLoading,
+    data: environmentData,
+    isFetching: isEnvironmentsFetching,
   } = usegetEnvironmentQuery(!!currentWorkspace?.id);
 
-  const { data: variablesData, isLoading: isVariablesLoading } =
-    usefetchVariablesQuery(!!data?.id);
-  const { data: dynamicVariablesData, isLoading: isDynamicVariablesLoading } =
-    usefetchDynamicVariablesQuery(!!data?.id);
+  const {
+    data: variablesData,
+    isLoading: isVariablesLoading,
+    isFetching: isVariablesFetching,
+  } = usefetchVariablesQuery(!!activeEnvironment?.id);
 
-  const setEnvironments = dataManagementActions.setEnvironments;
+  const {
+    data: dynamicVariablesData,
+    isLoading: isDynamicVariablesLoading,
+    isFetching: isDynamicVariablesFetching,
+  } = usefetchDynamicVariablesQuery(!!activeEnvironment?.id);
+
   const _setActiveEnvironment = dataManagementActions.setActiveEnvironment;
 
   const createEnvironmentMutation = useCreateEnvironmentMutation();
@@ -55,56 +67,90 @@ export function useDataManagement() {
   const deletedVariableMutation = useDeleteVariableMutation();
   const deletedDynamicVariableMutation = useDeleteDynamicVariableMutation();
 
-  /**
-   * Wrapper: set active env + persist to localStorage (per workspace)
-   */
   const setActiveEnvironment = (env: Environment | null) => {
     _setActiveEnvironment(env);
-    try {
-      const key = envKey(currentWorkspace?.id);
-      if (env) {
-        localStorage.setItem(key, JSON.stringify({ id: env.id }));
-      } else {
-        localStorage.removeItem(key);
-      }
-    } catch {}
+    if (env) {
+      saveActiveEnvironment(currentWorkspace?.id, env.id);
+    } else {
+      clearSavedEnvironment(currentWorkspace?.id);
+    }
   };
 
-  /**
-   * Hydrate selection from localStorage when:
-   * - workspace changes
-   * - environments finish loading
-   */
+  // Handle workspace changes - clear state when workspace changes
   useEffect(() => {
-    const key = envKey(currentWorkspace?.id);
-    let saved: { id: string } | null = null;
-    try {
-      saved = JSON.parse(localStorage.getItem(key) || 'null');
-    } catch {
-      saved = null;
-    }
-
-    if (!saved?.id || !environments?.length) return;
-
-    // Only apply if found and different from current active
-    const match = environments.find((e) => e.id === saved!.id);
-    if (match && activeEnvironment?.id !== match.id) {
-      _setActiveEnvironment(match); // no re-persist here to avoid loop
-    }
-  }, [currentWorkspace?.id, environments, _setActiveEnvironment]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  /**
-   * If an active env was deleted, clear the persisted key
-   * (Call this where you handle delete success, or keep this passive guard)
-   */
-  useEffect(() => {
-    if (!activeEnvironment) return;
-    const stillExists = environments.some((e) => e.id === activeEnvironment.id);
-    if (!stillExists) {
-      try {
-        localStorage.removeItem(envKey(currentWorkspace?.id));
-      } catch {}
+    if (previousWorkspaceId.current !== currentWorkspace?.id) {
       _setActiveEnvironment(null);
+      dataManagementActions.setVariables([]);
+      dataManagementActions.setDynamicVariables([]);
+      previousWorkspaceId.current = currentWorkspace?.id;
+    }
+  }, [currentWorkspace?.id, _setActiveEnvironment]);
+
+  // Handle environment initialization and restoration from localStorage
+  useEffect(() => {
+    // Skip if still loading or no environments
+    if (isEnvironmentsLoading || isEnvironmentsFetching) return;
+    if (!environments?.length) {
+      // If no environments exist, clear active environment
+      if (activeEnvironment) {
+        _setActiveEnvironment(null);
+        clearSavedEnvironment(currentWorkspace?.id);
+      }
+      return;
+    }
+
+    // Get saved environment ID from localStorage
+    const savedEnvId = getSavedEnvironmentId(currentWorkspace?.id);
+
+    // If we have a saved environment ID, try to restore it
+    if (savedEnvId) {
+      const savedEnv = environments.find((e) => e.id === savedEnvId);
+
+      if (savedEnv) {
+        // Only update if it's different from current
+        if (!activeEnvironment || activeEnvironment.id !== savedEnv.id) {
+          _setActiveEnvironment(savedEnv);
+        }
+        return;
+      }
+
+      // Saved environment no longer exists, clear it
+      clearSavedEnvironment(currentWorkspace?.id);
+    }
+
+    // No saved environment or saved one doesn't exist anymore
+    // Set first environment as active if none is selected
+    if (!activeEnvironment && environments.length > 0) {
+      const firstEnv = environments[0];
+      _setActiveEnvironment(firstEnv);
+      saveActiveEnvironment(currentWorkspace?.id, firstEnv.id);
+    }
+  }, [
+    environments,
+    isEnvironmentsLoading,
+    isEnvironmentsFetching,
+    currentWorkspace?.id,
+    activeEnvironment,
+    _setActiveEnvironment,
+  ]);
+
+  // Validate active environment still exists in the list
+  useEffect(() => {
+    if (!activeEnvironment || !environments.length) return;
+
+    const stillExists = environments.some((e) => e.id === activeEnvironment.id);
+
+    if (!stillExists) {
+      clearSavedEnvironment(currentWorkspace?.id);
+
+      // Set first environment if available
+      if (environments.length > 0) {
+        const firstEnv = environments[0];
+        _setActiveEnvironment(firstEnv);
+        saveActiveEnvironment(currentWorkspace?.id, firstEnv.id);
+      } else {
+        _setActiveEnvironment(null);
+      }
     }
   }, [
     environments,
@@ -113,15 +159,27 @@ export function useDataManagement() {
     _setActiveEnvironment,
   ]);
 
+  const isFullyLoading =
+    isEnvironmentsLoading ||
+    isEnvironmentsFetching ||
+    isVariablesLoading ||
+    isDynamicVariablesLoading ||
+    isVariablesFetching ||
+    isDynamicVariablesFetching;
+
   return {
     environments,
     activeEnvironment,
-    isLoading,
+    isLoading: isFullyLoading,
     variables,
     dynamicVariables,
 
+    isEnvironmentsLoading,
+    isVariablesLoading,
+    isDynamicVariablesLoading,
+
     setActiveEnvironment,
-    setEnvironments,
+    setEnvironments: dataManagementActions.setEnvironments,
     setVariables: dataManagementActions.setVariables,
     setDynamicVariables: dataManagementActions.setDynamicVariables,
 
@@ -133,5 +191,7 @@ export function useDataManagement() {
     deleteEnvironmentMutation,
     deletedVariableMutation,
     deletedDynamicVariableMutation,
+
+    refetchEnvironments,
   };
 }

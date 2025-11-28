@@ -231,9 +231,6 @@ const ResetPassword: React.FC = () => {
     <div className='min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4'>
       <Card className='w-full max-w-md shadow-xl'>
         <CardHeader className='text-center pb-4'>
-          <div className='w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4'>
-            <Shield className='w-8 h-8 text-primary' />
-          </div>
           <CardTitle className='text-2xl font-bold'>
             Reset Your Password
           </CardTitle>

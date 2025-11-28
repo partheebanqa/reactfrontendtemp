@@ -41,7 +41,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useToast } from '@/hooks/use-toast'; // Assuming useToast is the correct hook
+import { useToast } from '@/hooks/use-toast';
 import type {
   RequestChain,
   APIRequest,
@@ -2179,7 +2179,7 @@ export function RequestChainEditor({
                                             environmentBaseUrl
                                           }
                                           chainId={chain?.id || ''}
-                                          hideResponseExplorer={true}
+                                          hideResponseExplorer={false}
                                           onRequestExecution={(executionLog) =>
                                             handleRequestExecution(
                                               request.id,
@@ -2212,77 +2212,30 @@ export function RequestChainEditor({
 
                                         {executionLog && (
                                           <div className='border-t border-gray-200 pt-4'>
-                                            <div className='flex items-center justify-between p-4 bg-gray-50 border-b border-gray-200 rounded-t-lg'>
-                                              <div className='flex items-center space-x-4'>
-                                                {executionLog.status ===
-                                                'success' ? (
-                                                  <div className='flex items-center space-x-2'>
-                                                    <CheckCircle className='w-5 h-5 text-green-500' />
-                                                    <span className='text-sm font-medium text-green-700'>
-                                                      Response
-                                                    </span>
-                                                  </div>
-                                                ) : (
-                                                  <div className='flex items-center space-x-2'>
-                                                    <XCircle className='w-5 h-5 text-red-500' />
-                                                    <span className='text-sm font-medium text-red-700'>
-                                                      Response
-                                                    </span>
-                                                  </div>
-                                                )}
-                                                {executionLog.response && (
-                                                  <>
-                                                    <span
-                                                      className={`px-2 py-1 text-xs font-medium rounded ${
-                                                        executionLog.response
-                                                          .status < 300
-                                                          ? 'bg-green-100 text-green-800'
-                                                          : executionLog
-                                                              .response.status <
-                                                            400
-                                                          ? 'bg-yellow-100 text-yellow-800'
-                                                          : 'bg-red-100 text-red-800'
-                                                      }`}
-                                                    >
-                                                      {
-                                                        executionLog.response
-                                                          .status
-                                                      }{' '}
-                                                      {executionLog.response
-                                                        .status === 200
-                                                        ? 'OK'
-                                                        : executionLog.response
-                                                            .status === 201
-                                                        ? 'Created'
-                                                        : executionLog.response
-                                                            .status === 404
-                                                        ? 'Not Found'
-                                                        : executionLog.response
-                                                            .status === 500
-                                                        ? 'Server Error'
-                                                        : ''}
-                                                    </span>
-                                                    <span className='text-sm text-gray-600'>
-                                                      {executionLog.duration}ms
-                                                    </span>
-                                                    <span className='text-sm text-gray-600'>
-                                                      {(
-                                                        executionLog.response
-                                                          .size / 1024
-                                                      ).toFixed(2)}{' '}
-                                                      KB
-                                                    </span>
-                                                  </>
-                                                )}
-                                              </div>
-                                            </div>
-
-                                            {executionLog.response && (
+                                            {(executionLog.response != null ||
+                                              executionLog.error) && (
                                               <div className='border-t border-gray-200 p-6'>
-                                                <h3 className='text-lg font-medium text-gray-900 mb-4'>
-                                                  Extract Variables from
-                                                  Response
-                                                </h3>
+                                                <div className='flex items-center gap-2 mb-4'>
+                                                  <h3 className='text-lg font-medium text-gray-900'>
+                                                    Extract Variables from
+                                                    Response
+                                                  </h3>
+
+                                                  <div className='relative group inline-block'>
+                                                    <Info className='w-4 h-4 text-gray-400 cursor-pointer' />
+
+                                                    <div
+                                                      className='absolute left-0 mt-2 w-56 p-2 text-xs text-gray-700 bg-white border 
+                    border-gray-200 rounded shadow-lg opacity-0 group-hover:opacity-100 
+                    pointer-events-none transition-opacity z-50'
+                                                    >
+                                                      Mouse over on element and
+                                                      click on "extract" button
+                                                      to extract variable.
+                                                    </div>
+                                                  </div>
+                                                </div>
+
                                                 <ResponseExplorer
                                                   response={
                                                     executionLog.response
@@ -2345,6 +2298,7 @@ export function RequestChainEditor({
                                                   errorMessage={
                                                     executionLog.error
                                                   }
+                                                  executionLog={executionLog}
                                                 />
                                               </div>
                                             )}

@@ -23,20 +23,15 @@ import {
   Code,
   Globe,
   Key,
-  TestTube,
   Settings,
-  ChevronDown,
-  ChevronRight,
   TriangleAlert,
   Play,
   Copy,
   AlertTriangle,
-  Shield,
   FileText,
-  CheckCircle,
-  XCircle,
   Shuffle,
   HelpCircle,
+  Info,
 } from 'lucide-react';
 import type {
   APIRequest,
@@ -56,7 +51,6 @@ import { useDataManagement } from '@/hooks/useDataManagement';
 import {
   getExtractVariablesByEnvironment,
   extractDataFromResponse,
-  copyToClipboard,
   mapDynamicToStatic,
   getVariablesByPrefix,
   detectAutocompletePrefix,
@@ -80,7 +74,7 @@ import {
 } from '../ui/tooltip';
 import { VariableHelpDialog } from './HelpTextDialougs/variablesUseDialogues';
 import RequestBody from '@/components/Shared/RequestTabs/RequestBody';
-import { KeyValuePairWithFile } from '../ui/KeyValueEditorWithFileUpload';
+import type { KeyValuePairWithFile } from '../ui/KeyValueEditorWithFileUpload';
 import { PrePostRequest } from '../Shared/RequestTabs/PrePostRequest';
 
 type FormField = {
@@ -159,7 +153,7 @@ export function RequestEditor({
   requestAssertions,
   onAssertionsUpdate,
 }: RequestEditorProps) {
-  console.log('requestAssertions:', requestAssertions);
+  console.log('hideResponseExplorer:', hideResponseExplorer);
 
   const isSyncingRef = useRef(false);
   const isInitialMount = useRef(true);
@@ -182,6 +176,9 @@ export function RequestEditor({
   const [executionResult, setExecutionResult] = useState<ExecutionLog | null>(
     null
   );
+
+  console.log('executionResult123:', executionResult);
+
   const [showVariablesPopup, setShowVariablesPopup] = useState(false);
   const variablesPopupRef = useRef<HTMLDivElement>(null);
 
@@ -1027,6 +1024,7 @@ export function RequestEditor({
     setIsExecuting(true);
     try {
       const startTime = Date.now();
+
       (safeRequest as any).headers = (safeRequest.headers ?? []).filter(
         (h) => h.key?.trim() && h.value?.trim()
       );
@@ -1114,7 +1112,7 @@ export function RequestEditor({
         extractedVariables: extractedData,
       };
 
-      if (!hideResponseExplorer) {
+      if (hideResponseExplorer) {
         setExecutionResult(log);
       }
 
@@ -1137,7 +1135,21 @@ export function RequestEditor({
         variant: log.status === 'success' ? 'default' : 'destructive',
       });
     } catch (error) {
+      console.log('error121:', error);
+
       const endTime = Date.now();
+
+      const processedRequest = processRequestWithVariables(
+        safeRequest,
+        allVariables
+      );
+
+      const previewUrl = getPreviewUrl(allVariables);
+      const actualRequestHeaders = Object.fromEntries(
+        processedRequest.headers.map((h) => [h.key, h.value])
+      );
+      const actualRequestBody = processedRequest.body ?? '';
+
       const errorLog: ExecutionLog = {
         id: Date.now().toString(),
         chainId: 'current-chain',
@@ -1148,14 +1160,16 @@ export function RequestEditor({
         duration: 0,
         request: {
           method: initialRequest.method,
-          url: getPreviewUrl(getAllAvailableVariables()),
-          headers: {},
-          body: initialRequest.body,
+          url: previewUrl,
+          headers: actualRequestHeaders,
+          body: actualRequestBody,
         },
         error: error instanceof Error ? error.message : 'Unknown error',
       };
 
-      if (!hideResponseExplorer) {
+      console.log('errorLog:', errorLog);
+
+      if (hideResponseExplorer) {
         setExecutionResult(errorLog);
       }
 
@@ -2492,7 +2506,7 @@ export function RequestEditor({
           )}
         </div>
 
-        {showVariablePreview() && (
+        {/* {showVariablePreview() && (
           <div className='mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg'>
             <h4 className='text-sm font-medium text-blue-900 mb-2'>
               Variable Substitution Preview:
@@ -2541,242 +2555,12 @@ export function RequestEditor({
                 )}
             </div>
           </div>
-        )}
+        )} */}
 
-        {!hideResponseExplorer && executionResult && (
-          <div className='border-t border-gray-200'>
-            <div className='flex items-center justify-between p-4 bg-gray-50 border-b border-gray-200'>
-              <div className='flex items-center space-x-4'>
-                {executionResult.status === 'success' ? (
-                  <div className='flex items-center space-x-2'>
-                    <CheckCircle className='w-5 h-5 text-green-500' />
-                    <span className='text-sm font-medium text-green-700'>
-                      Response
-                    </span>
-                  </div>
-                ) : (
-                  <div className='flex items-center space-x-2'>
-                    <XCircle className='w-5 h-5 text-red-500' />
-                    <span className='text-sm font-medium text-red-700'>
-                      Response
-                    </span>
-                  </div>
-                )}
-                {executionResult.response && (
-                  <>
-                    <span
-                      className={`px-2 py-1 text-xs font-medium rounded ${
-                        executionResult.response.status < 300
-                          ? 'bg-green-100 text-green-800'
-                          : executionResult.response.status < 400
-                          ? 'bg-yellow-100 text-yellow-800'
-                          : 'bg-red-100 text-red-800'
-                      }`}
-                    >
-                      {executionResult.response.status}{' '}
-                      {executionResult.response.status === 200
-                        ? 'OK'
-                        : executionResult.response.status === 201
-                        ? 'Created'
-                        : executionResult.response.status === 404
-                        ? 'Not Found'
-                        : executionResult.response.status === 500
-                        ? 'Server Error'
-                        : ''}
-                    </span>
-                    <span className='text-sm text-gray-600'>
-                      {executionResult.duration}ms
-                    </span>
-                    <span className='text-sm text-gray-600'>
-                      {(executionResult.response.size / 1024).toFixed(2)} KB
-                    </span>
-                  </>
-                )}
-              </div>
-              <div className='flex items-center space-x-2'>
-                <button
-                  onClick={() => setShowResponse(!showResponse)}
-                  className='flex items-center space-x-1 px-3 py-1 text-sm text-gray-600 hover:bg-gray-200 rounded transition-colors'
-                >
-                  {showResponse ? (
-                    <ChevronDown className='w-4 h-4' />
-                  ) : (
-                    <ChevronRight className='w-4 h-4' />
-                  )}
-                  <span>{showResponse ? 'Hide' : 'Show'}</span>
-                </button>
-              </div>
-            </div>
-            {showResponse && executionResult.response && (
-              <>
-                <div className='border-b border-gray-200'>
-                  <nav className='flex space-x-8 px-6'>
-                    {[
-                      { id: 'body', label: 'Body', count: null },
-                      {
-                        id: 'cookies',
-                        label: 'Cookies',
-                        count: executionResult.response.cookies
-                          ? Object.keys(executionResult.response.cookies).length
-                          : 0,
-                      },
-                      {
-                        id: 'headers',
-                        label: 'Headers',
-                        count: Object.keys(executionResult.response.headers)
-                          .length,
-                      },
-                      {
-                        id: 'test-results',
-                        label: 'Test Results',
-                        count: null,
-                      },
-                    ].map((tab) => (
-                      <button
-                        key={tab.id}
-                        onClick={() =>
-                          setResponseTab(tab.id as typeof responseTab)
-                        }
-                        className={`py-3 px-1 border-b-2 font-medium text-sm transition-colors flex items-center space-x-2 ${
-                          responseTab === tab.id
-                            ? 'border-blue-500 text-blue-600'
-                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                        }`}
-                      >
-                        <span>{tab.label}</span>
-                        {tab.count !== null && tab.count > 0 && (
-                          <span className='ml-1 px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded-full'>
-                            {tab.count}
-                          </span>
-                        )}
-                      </button>
-                    ))}
-                  </nav>
-                </div>
-                <div className='p-6'>
-                  {responseTab === 'body' && (
-                    <div className='space-y-4'>
-                      <div
-                        className='flex items-center justify-between cursor-pointer'
-                        onClick={() => setIsJsonOpen((prev) => !prev)}
-                      >
-                        <div className='flex items-center space-x-2'>
-                          {isJsonOpen ? (
-                            <ChevronDown className='w-4 h-4 text-gray-400' />
-                          ) : (
-                            <ChevronRight className='w-4 h-4 text-gray-400' />
-                          )}
-                          <span className='text-sm font-medium text-gray-700'>
-                            JSON
-                          </span>
-                        </div>
-                        <div className='flex items-center space-x-2'>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              copyToClipboard(executionResult.response!.body);
-                            }}
-                            className='flex items-center space-x-1 px-2 py-1 text-xs text-gray-600 hover:bg-gray-100 rounded transition-colors'
-                          >
-                            <Copy className='w-3 h-3' />
-                            <span>Copy</span>
-                          </button>
-                        </div>
-                      </div>
-                      {isJsonOpen && (
-                        <div className='relative'>
-                          <pre className='bg-gray-50 border border-gray-200 rounded-lg p-4 text-sm font-mono overflow-x-auto max-h-96 leading-relaxed'>
-                            <code className='text-gray-800'>
-                              {formatResponseBody(
-                                executionResult.response.body,
-                                executionResult.response.headers['content-type']
-                              )}
-                            </code>
-                          </pre>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  {responseTab === 'cookies' && (
-                    <div className='space-y-3'>
-                      {executionResult.response.cookies &&
-                      Object.keys(executionResult.response.cookies).length >
-                        0 ? (
-                        Object.entries(executionResult.response.cookies).map(
-                          ([name, value]) => (
-                            <div
-                              key={name}
-                              className='flex items-center justify-between p-3 bg-gray-50 rounded-lg border'
-                            >
-                              <div>
-                                <span className='font-medium text-gray-900'>
-                                  {name}
-                                </span>
-                                <p className='text-sm text-gray-600 font-mono'>
-                                  {value}
-                                </p>
-                              </div>
-                              <button
-                                onClick={() => copyToClipboard(value)}
-                                className='p-1 text-gray-400 hover:text-gray-600 rounded'
-                              >
-                                <Copy className='w-4 h-4' />
-                              </button>
-                            </div>
-                          )
-                        )
-                      ) : (
-                        <p className='text-gray-500 text-center py-8'>
-                          No cookies in response
-                        </p>
-                      )}
-                    </div>
-                  )}
-                  {responseTab === 'headers' && (
-                    <div className='space-y-3'>
-                      {Object.entries(executionResult.response.headers).map(
-                        ([name, value]) => (
-                          <div
-                            key={name}
-                            className='flex items-center justify-between p-3 bg-gray-50 rounded-lg border'
-                          >
-                            <div>
-                              <span className='font-medium text-gray-900'>
-                                {name}
-                              </span>
-                              <p className='text-sm text-gray-600 font-mono'>
-                                {value}
-                              </p>
-                            </div>
-                            <button
-                              onClick={() => copyToClipboard(value)}
-                              className='p-1 text-gray-400 hover:text-gray-600 rounded'
-                            >
-                              <Copy className='w-4 h-4' />
-                            </button>
-                          </div>
-                        )
-                      )}
-                    </div>
-                  )}
-                  {responseTab === 'test-results' && (
-                    <div className='text-center py-8 text-gray-500'>
-                      <TestTube className='w-12 h-12 text-gray-300 mx-auto mb-3' />
-                      <p>Test results will appear here after running tests</p>
-                    </div>
-                  )}
-                </div>
-              </>
-            )}
-          </div>
-        )}
-        {!hideResponseExplorer &&
+        {hideResponseExplorer &&
           executionResult &&
-          executionResult.response && (
+          (executionResult.response || executionResult.error) && (
             <div className='border-t border-gray-200 p-6'>
-              <h3 className='text-lg font-medium text-gray-900 mb-4'>
-                Extract Variables from Response
-              </h3>
               <ResponseExplorer
                 response={executionResult.response}
                 onExtractVariable={handleExtractVariable}
@@ -2875,7 +2659,7 @@ export function RequestEditor({
         </CardContent>
       </Card>
 
-      {showVariablePreview() && (
+      {/* {showVariablePreview() && (
         <div className='mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg'>
           <h4 className='text-sm font-medium text-blue-900 mb-2'>
             Variable Substitution Preview:
@@ -2921,7 +2705,7 @@ export function RequestEditor({
               )}
           </div>
         </div>
-      )}
+      )} */}
       <Tabs defaultValue='params' className='w-full'>
         <TabsList className='grid w-full grid-cols-7'>
           <TabsTrigger value='params' className='gap-2'>
