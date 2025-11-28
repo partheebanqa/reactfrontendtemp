@@ -24,7 +24,6 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 
-/* ---------------- helpers ---------------- */
 const debounce = (fn: (...a: any[]) => void, ms = 250) => {
   let t: ReturnType<typeof setTimeout>;
   return (...args: any[]) => {
@@ -68,7 +67,6 @@ const TableSkeleton: React.FC<{ rows?: number }> = ({ rows = 8 }) => (
   </div>
 );
 
-/* ---------------- inline edit dialog ---------------- */
 type EditDialogProps = {
   open: boolean;
   onClose: () => void;
@@ -87,7 +85,7 @@ const EditVariableDialog: React.FC<EditDialogProps> = ({
   const [form, setForm] = useState({
     name: '',
     description: '',
-    value: '',
+    currentValue: '',
     isSecret: false,
   });
 
@@ -96,7 +94,7 @@ const EditVariableDialog: React.FC<EditDialogProps> = ({
       setForm({
         name: variable.name ?? '',
         description: variable.description ?? '',
-        value: variable.value ?? '',
+        currentValue: variable.currentValue ?? '',
         isSecret: !!variable.isSecret,
       });
     }
@@ -114,9 +112,7 @@ const EditVariableDialog: React.FC<EditDialogProps> = ({
       ...variable,
       name: form.name.trim(),
       description: form.description.trim(),
-      value: form.value,
-      initialValue: form.value,
-      currentValue: form.value,
+      currentValue: form.currentValue,
       isSecret: form.isSecret,
       updatedAt: new Date().toISOString(),
     });
@@ -143,8 +139,8 @@ const EditVariableDialog: React.FC<EditDialogProps> = ({
           <Input
             placeholder={form.isSecret ? 'Secret value' : 'Value'}
             type={form.isSecret ? 'password' : 'text'}
-            value={form.value}
-            onChange={onChange('value')}
+            value={form.currentValue}
+            onChange={onChange('currentValue')}
           />
           <div className='flex justify-end gap-2'>
             <Button variant='outline' onClick={onClose} disabled={loading}>
@@ -160,11 +156,9 @@ const EditVariableDialog: React.FC<EditDialogProps> = ({
   );
 };
 
-/* ---------------- main ---------------- */
 export function StaticVariables() {
   const { toast } = useToast();
 
-  // Pull from your hook. Adjust names if they differ in your codebase.
   const dm = useDataManagement() as {
     environments?: { id: string; name: string }[];
     variables?: Variable[];
@@ -180,23 +174,20 @@ export function StaticVariables() {
   };
 
   const environments = dm.environments ?? [];
-  const variables = dm.variables; // optional during first load
+  const variables = dm.variables;
   const isLoading = dm.isLoading ?? variables === undefined;
 
   const createVariableMutation = dm.createVariableMutation;
   const deletedVariableMutation = dm.deletedVariableMutation;
   const updateVariableMutation = dm.updateVariableMutation;
 
-  // search & pagination
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedTerm, setDebouncedTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
-  // secrets visibility
   const [visibleSecrets, setVisibleSecrets] = useState<Set<string>>(new Set());
 
-  // create dialog
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [newVariable, setNewVariable] = useState<Variable>({
     id: '',
@@ -215,34 +206,29 @@ export function StaticVariables() {
     isSecret: false,
   });
 
-  // edit dialog
   const [editingVariable, setEditingVariable] = useState<Variable | null>(null);
   const [isUpdatingId, setIsUpdatingId] = useState<string | null>(null);
 
-  // optimistic local list
   const [localList, setLocalList] = useState<Variable[]>([]);
   useEffect(() => {
     if (variables) setLocalList(variables);
   }, [variables]);
 
-  // debounce search
   useEffect(() => {
     const run = debounce((v: string) => setDebouncedTerm(v), 250);
     run(searchTerm);
   }, [searchTerm]);
 
-  // filter: name + (non-secret) value
   const filtered = useMemo(() => {
     const q = debouncedTerm.trim().toLowerCase();
     if (!q) return localList;
     return localList.filter((v) => {
       const name = v.name?.toLowerCase() || '';
-      const val = v.isSecret ? '' : v.value?.toLowerCase() || '';
+      const val = v.isSecret ? '' : v.currentValue?.toLowerCase() || '';
       return name.includes(q) || val.includes(q);
     });
   }, [debouncedTerm, localList]);
 
-  // pagination
   const totalPages = Math.max(1, Math.ceil(filtered.length / itemsPerPage));
   const clampedPage = Math.min(currentPage, totalPages);
   const startIndex = (clampedPage - 1) * itemsPerPage;
@@ -253,7 +239,6 @@ export function StaticVariables() {
 
   useEffect(() => setCurrentPage(1), [debouncedTerm, itemsPerPage]);
 
-  /* ---------------- actions ---------------- */
   const toggleSecretVisibility = (id: string) => {
     setVisibleSecrets((prev) => {
       const next = new Set(prev);
@@ -285,11 +270,12 @@ export function StaticVariables() {
       }
 
       if (!createVariableMutation) throw new Error('Create mutation missing');
-      const created = await createVariableMutation.mutateAsync({
+
+      await createVariableMutation.mutateAsync({
         ...payload,
         name: finalName,
+        currentValue: payload.currentValue || payload.value || '',
       });
-      setLocalList((prev) => [created, ...prev]);
 
       toast({
         title: 'Variable Created',
@@ -301,7 +287,7 @@ export function StaticVariables() {
         id: '',
         name: '',
         description: '',
-        value: '',
+        currentValue: '',
         environmentId: '',
       }));
     } catch (error: any) {
@@ -326,22 +312,26 @@ export function StaticVariables() {
       setLocalList((list) =>
         list.map((v) => (v.id === updated.id ? updated : v))
       );
+
       try {
         if (updateVariableMutation?.mutateAsync) {
-          const saved = await updateVariableMutation.mutateAsync(updated);
-          setLocalList((list) =>
-            list.map((v) => (v.id === updated.id ? saved : v))
-          );
+          await updateVariableMutation.mutateAsync({
+            ...updated,
+            currentValue: updated.currentValue,
+          });
         } else if (updateVariableMutation?.mutate) {
-          updateVariableMutation.mutate(updated);
+          updateVariableMutation.mutate({
+            ...updated,
+            currentValue: updated.currentValue,
+          });
         }
+
         toast({
           title: 'Variable Updated',
           description: 'The variable has been updated successfully.',
         });
         setEditingVariable(null);
       } catch (error: any) {
-        // rollback
         setLocalList(prev);
         toast({
           title: 'Update failed',
@@ -379,10 +369,8 @@ export function StaticVariables() {
     }
   };
 
-  /* ---------------- render ---------------- */
   return (
     <div className='space-y-4'>
-      {/* top bar */}
       <div className='flex items-center justify-between gap-3'>
         <div className='relative flex-1 max-w-sm'>
           <Search
@@ -413,13 +401,10 @@ export function StaticVariables() {
           newVariable={newVariable}
           setNewVariable={setNewVariable}
           handleCreate={handleCreate}
-          // // pass environments if your dialog needs them:
-          // environments={environments}
           type='static'
         />
       </div>
 
-      {/* loader / empty / table */}
       {isLoading ? (
         <TableSkeleton rows={8} />
       ) : filtered.length === 0 ? (
@@ -479,13 +464,13 @@ export function StaticVariables() {
                         <code className='text-sm font-mono text-gray-700 truncate max-w-md'>
                           {variable.isSecret && !visibleSecrets.has(variable.id)
                             ? '••••••••••••'
-                            : variable.value}
+                            : variable.currentValue}
                         </code>
                         <div className='flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0'>
                           {!variable.isSecret && (
                             <button
                               onClick={() =>
-                                copyToClipboard(variable.value, 'value')
+                                copyToClipboard(variable.currentValue, 'value')
                               }
                               className='text-gray-400 hover:text-gray-600 transition-colors'
                               title='Copy value'
@@ -544,7 +529,6 @@ export function StaticVariables() {
             </table>
           </div>
 
-          {/* footer / pagination */}
           {totalPages > 1 && (
             <div className='flex items-center justify-between text-xs mt-2'>
               <div className='text-gray-600'>
@@ -591,7 +575,6 @@ export function StaticVariables() {
         </>
       )}
 
-      {/* Edit Dialog */}
       <EditVariableDialog
         open={!!editingVariable}
         onClose={() => setEditingVariable(null)}

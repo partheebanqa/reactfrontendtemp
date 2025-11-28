@@ -1,7 +1,7 @@
 'use client';
 
 import type React from 'react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -29,6 +29,7 @@ import {
   Globe,
   MapPin,
   CreditCard,
+  RefreshCw,
 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { allGenerators, getGenerator } from '@/lib/dynamicVariables';
@@ -72,22 +73,82 @@ const EditDynamicVariableDialog: React.FC<EditDynamicVariableDialogProps> = ({
     generatorConfig: {},
   });
 
+  const [previewValue, setPreviewValue] = useState<string>('');
+
   const [errors, setErrors] = useState<{
     name?: string;
   }>({});
 
-  // Initialize form when variable changes
+  const generatePreview = useCallback(() => {
+    try {
+      const generator = getGenerator(editedVariable.generatorFunction);
+      if (generator) {
+        const config = {
+          ...(generator.configSchema &&
+            Object.fromEntries(
+              Object.entries(generator.configSchema).map(
+                ([key, schema]: [string, any]) => [
+                  key,
+                  editedVariable.generatorConfig?.[key] ?? schema.default,
+                ]
+              )
+            )),
+          ...editedVariable.generatorConfig,
+        };
+
+        const preview = generator.generate(config);
+        setPreviewValue(String(preview));
+      } else {
+        setPreviewValue('Invalid generator');
+      }
+    } catch (error) {
+      setPreviewValue(
+        `Error: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+    }
+  }, [editedVariable.generatorFunction, editedVariable.generatorConfig]);
+
   useEffect(() => {
     if (open && variable) {
       setEditedVariable({
         name: variable.name,
-        description: '', // Add description field if available in your data
+        description: '',
         generatorFunction: variable.generatorId,
         generatorConfig: variable.parameters || {},
       });
       setErrors({});
+
+      setTimeout(() => {
+        try {
+          const generator = getGenerator(variable.generatorId);
+          if (generator) {
+            const config = {
+              ...(generator.configSchema &&
+                Object.fromEntries(
+                  Object.entries(generator.configSchema).map(
+                    ([key, schema]: [string, any]) => [
+                      key,
+                      variable.parameters?.[key] ?? schema.default,
+                    ]
+                  )
+                )),
+              ...variable.parameters,
+            };
+            const preview = generator.generate(config);
+            setPreviewValue(String(preview));
+          }
+        } catch (error) {
+          setPreviewValue('Error generating preview');
+        }
+      }, 0);
     }
   }, [open, variable]);
+
+  useEffect(() => {
+    if (editedVariable.generatorFunction) {
+      generatePreview();
+    }
+  }, [editedVariable.generatorFunction, generatePreview]);
 
   const validateForm = (): boolean => {
     const newErrors: { name?: string } = {};
@@ -110,7 +171,6 @@ const EditDynamicVariableDialog: React.FC<EditDynamicVariableDialogProps> = ({
 
     const generator = getGenerator(editedVariable.generatorFunction);
 
-    // Prepare the payload
     const payload: any = {
       name: editedVariable.name,
       description: editedVariable.description,
@@ -119,7 +179,6 @@ const EditDynamicVariableDialog: React.FC<EditDynamicVariableDialogProps> = ({
       generatorName: generator?.label || variable.generatorName,
     };
 
-    // Set category and type based on generator category (same logic as create)
     if (generator?.category === 'custom') {
       payload.category = 'Custom';
       const numberGenerators = ['randomInteger', 'price'];
@@ -191,7 +250,6 @@ const EditDynamicVariableDialog: React.FC<EditDynamicVariableDialogProps> = ({
         </DialogHeader>
 
         <div className='space-y-4'>
-          {/* Variable Name */}
           <div className='space-y-1'>
             <label className='text-sm font-medium'>Variable Name</label>
             <Input
@@ -222,7 +280,6 @@ const EditDynamicVariableDialog: React.FC<EditDynamicVariableDialogProps> = ({
             )}
           </div>
 
-          {/* Generator Function Selection */}
           <div className='space-y-1'>
             <label className='text-sm font-medium'>Generator Function</label>
             <Select
@@ -231,7 +288,7 @@ const EditDynamicVariableDialog: React.FC<EditDynamicVariableDialogProps> = ({
                 setEditedVariable((prev) => ({
                   ...prev,
                   generatorFunction: value,
-                  generatorConfig: {}, // Reset config when changing generator
+                  generatorConfig: {},
                 }));
               }}
             >
@@ -433,7 +490,6 @@ const EditDynamicVariableDialog: React.FC<EditDynamicVariableDialogProps> = ({
             </Select>
           </div>
 
-          {/* Generator Configuration */}
           {(() => {
             const generator = getGenerator(editedVariable.generatorFunction);
             return generator?.configSchema ? (
@@ -543,43 +599,24 @@ const EditDynamicVariableDialog: React.FC<EditDynamicVariableDialogProps> = ({
             );
           })()}
 
-          {/* Preview */}
           {editedVariable.generatorFunction && (
             <div className='p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg'>
-              <div className='text-xs font-medium text-blue-700 dark:text-blue-300 mb-1'>
-                Preview
+              <div className='flex items-center justify-between mb-1'>
+                <div className='text-xs font-medium text-blue-700 dark:text-blue-300'>
+                  Preview
+                </div>
+                <Button
+                  variant='ghost'
+                  size='sm'
+                  onClick={generatePreview}
+                  className='h-6 px-2 text-xs'
+                  title='Generate new preview'
+                >
+                  <RefreshCw className='w-3 h-3' />
+                </Button>
               </div>
               <div className='text-sm font-mono text-blue-800 dark:text-blue-200'>
-                {(() => {
-                  try {
-                    const generator = getGenerator(
-                      editedVariable.generatorFunction
-                    );
-                    if (generator) {
-                      const config = {
-                        ...(generator.configSchema &&
-                          Object.fromEntries(
-                            Object.entries(generator.configSchema).map(
-                              ([key, schema]: [string, any]) => [
-                                key,
-                                editedVariable.generatorConfig?.[key] ??
-                                  schema.default,
-                              ]
-                            )
-                          )),
-                        ...editedVariable.generatorConfig,
-                      };
-
-                      const preview = generator.generate(config);
-                      return String(preview);
-                    }
-                    return 'Invalid generator';
-                  } catch (error) {
-                    return `Error: ${
-                      error instanceof Error ? error.message : 'Unknown error'
-                    }`;
-                  }
-                })()}
+                {previewValue}
               </div>
               {editedVariable.generatorConfig &&
                 Object.keys(editedVariable.generatorConfig).length > 0 && (
@@ -590,7 +627,6 @@ const EditDynamicVariableDialog: React.FC<EditDynamicVariableDialogProps> = ({
             </div>
           )}
 
-          {/* Description */}
           <div className='space-y-1'>
             <label className='text-sm font-medium'>
               Description (optional)
