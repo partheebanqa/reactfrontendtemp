@@ -113,7 +113,6 @@ const ImportModal: React.FC<ImportModalProps> = ({
             title: 'cURL Parsed',
             description: 'cURL command has been successfully parsed',
           });
-          console.log('Parsed cURL request:', parsedRequest);
           handleOnClose();
         }
       } else if (importType === 'swagger') {

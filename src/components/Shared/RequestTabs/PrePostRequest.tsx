@@ -21,6 +21,7 @@ interface PrePostRequestProps {
   selectedVariables?: SelectedVariable[];
   onRemoveVariable?: (path: string) => void;
   onVariableSelect?: (variables: SelectedVariable[]) => void;
+  onSaveAssertions?: () => Promise<void>;
 }
 
 export function PrePostRequest({
@@ -36,6 +37,7 @@ export function PrePostRequest({
   selectedVariables = [],
   onRemoveVariable,
   onVariableSelect,
+  onSaveAssertions,
 }: PrePostRequestProps) {
   const [postResponseScript, setPostResponseScript] = useState('');
   const [activeSubTab, setActiveSubTab] = useState<'assertions' | 'extracted'>(
@@ -129,6 +131,7 @@ export function PrePostRequest({
                   currentWorkspace={currentWorkspace}
                   updateRequestMutation={updateRequestMutation}
                   toggleAssertion={toggleAssertion}
+                  onSaveAssertions={onSaveAssertions}
                 />
               )}
 

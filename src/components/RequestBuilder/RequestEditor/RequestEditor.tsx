@@ -896,19 +896,10 @@ const RequestEditor: React.FC = () => {
     if (!activeRequest) return;
     clearError();
     setLoading(true);
-
     const newUrl = buildFinalUrl();
-
     let substitutedBodyContent = bodyContent;
-
     try {
-      const hasUnsavedChanges = activeRequest.id
-        ? unsavedChanges.has(activeRequest.id)
-        : false;
-
-      let backendData;
       let effectiveAuthType = authType;
-
       if (
         authData?.token &&
         authData.token.trim() !== '' &&
@@ -916,6 +907,7 @@ const RequestEditor: React.FC = () => {
       ) {
         effectiveAuthType = 'bearer';
       }
+
       if (!authData?.token || authData.token.trim() === '') {
         effectiveAuthType = 'none';
       }
@@ -948,67 +940,68 @@ const RequestEditor: React.FC = () => {
         }
       }
 
-      if (hasUnsavedChanges || activeRequest.id?.startsWith('temp-')) {
-        const currentRequest = {
-          id: activeRequest.id,
-          name: activeRequest.name || 'Untitled Request',
-          method,
-          url: newUrl,
-          order: activeRequest.order || 0,
-          headers,
-          params,
-          body: substitutedBodyContent,
-          bodyRawContent: substitutedBodyContent,
-          bodyType: bodyType === 'json' ? 'raw' : bodyType,
-          authorizationType: effectiveAuthType,
-          authorization:
-            effectiveAuthType === 'bearer'
-              ? { token: authData.token }
-              : effectiveAuthType === 'basic'
-              ? {
-                  username: authData.username,
-                  password: authData.password,
-                }
-              : effectiveAuthType === 'apiKey'
-              ? {
-                  key: authData.key,
-                  value: authData.value,
-                  addTo: authData.addTo,
-                }
-              : undefined,
-          timeout: settings.timeout,
-          retries: 0,
-          extractVariables: [],
-          enabled: true,
-        };
+      const currentRequest = {
+        id: activeRequest.id,
+        name: activeRequest.name || 'Untitled Request',
+        method,
+        url: newUrl,
+        order: activeRequest.order || 0,
+        headers,
+        params,
+        body: substitutedBodyContent,
+        bodyRawContent: substitutedBodyContent,
+        bodyType: bodyType === 'json' ? 'raw' : bodyType,
+        authorizationType: effectiveAuthType,
+        authorization:
+          effectiveAuthType === 'bearer'
+            ? { token: authData.token }
+            : effectiveAuthType === 'basic'
+            ? {
+                username: authData.username,
+                password: authData.password,
+              }
+            : effectiveAuthType === 'apiKey'
+            ? {
+                key: authData.key,
+                value: authData.value,
+                addTo: authData.addTo,
+              }
+            : undefined,
+        timeout: settings.timeout,
+        retries: 0,
+        extractVariables: [],
+        enabled: true,
+      };
 
-        const payload = buildRequestPayload(
-          currentRequest,
-          formattedVariables.map((v) => ({
-            name: v.name,
-            value: v.value,
-            type: 'string',
-            currentValue: v.value,
-          })),
-          currentWorkspace?.id
-        );
+      const enabledAssertions = Array.isArray(assertions)
+        ? assertions.filter((assertion) => assertion.enabled)
+        : [];
 
-        backendData = await executeRequest(payload);
-      } else {
-        if (!activeRequest?.id) {
-          throw new Error('please save a request before sending.');
-        }
+      const payload = buildRequestPayload(
+        currentRequest,
+        formattedVariables.map((v) => ({
+          name: v.name,
+          value: v.value,
+          type: 'string',
+          currentValue: v.value,
+        })),
+        currentWorkspace?.id
+      );
 
-        const environmentId =
-          activeEnvironment?.name !== 'No Environment'
-            ? activeEnvironment?.id
-            : undefined;
+      const payloadWithAssertions = {
+        ...payload,
+        assertions: enabledAssertions,
+      };
 
-        backendData = await executeCollectionRequest(
-          activeRequest.id,
-          environmentId
-        );
+      const primarySchema = schemas?.find(
+        (s) => s.requestId === activeRequest.id && s.isPrimary
+      );
+
+      if (primarySchema) {
+        payloadWithAssertions.schemaId = primarySchema.id;
       }
+
+      const backendData = await executeRequest(payloadWithAssertions);
 
       let backendBody;
       let statusCode;
@@ -1029,10 +1022,10 @@ const RequestEditor: React.FC = () => {
         responseHeaders = firstResponse.headers;
         requestCurl = firstResponse.requestCurl;
         metrics = firstResponse.metrics;
-        assertionLogs = [];
-        schemaValidation = null;
+
+        assertionLogs = backendData.data.assertionResults || [];
+        schemaValidation = backendData.data.schemaValidation || null;
       } else {
-        console.log('backendBody:', backendBody);
         backendBody = backendData?.data?.body;
         statusCode = backendData?.data?.statusCode;
         responseHeaders = backendData?.data?.headers;
@@ -1044,7 +1037,6 @@ const RequestEditor: React.FC = () => {
 
       if (backendBody) {
         let parsedBody = backendBody;
-
         if (typeof backendBody === 'string') {
           try {
             parsedBody = JSON.parse(backendBody);
@@ -1085,7 +1077,6 @@ const RequestEditor: React.FC = () => {
         };
 
         setResponseData(normalizedResponse);
-
         const formattedResponse = formatBackendResponse(normalizedResponse);
         const generatedAssertions = generateAssertions(formattedResponse);
         const existingIds = new Set(assertions.map((a) => a.id));
@@ -1101,10 +1092,8 @@ const RequestEditor: React.FC = () => {
         error?.response?.data?.message ||
         error?.message ||
         'An unknown error occurred.';
-
       const statusCode =
         error?.response?.status || error?.response?.data?.statusCode || 500;
-
       const responseHeaders = error?.response?.headers || {};
       const backendBody = error?.response?.data || backendErrorMessage;
 
@@ -1140,7 +1129,6 @@ const RequestEditor: React.FC = () => {
       };
 
       setResponseData(normalizedResponse);
-
       toast({
         title: 'Error',
         description: backendErrorMessage,
@@ -2298,8 +2286,6 @@ const RequestEditor: React.FC = () => {
                       }}
                     ></span>
                   )}
-
-                {/* OTHER TABS → show number */}
                 {tab.id !== 'auth' &&
                   tab.id !== 'body' &&
                   tab.id !== 'schemas' &&
@@ -2445,6 +2431,7 @@ const RequestEditor: React.FC = () => {
               selectedVariables={selectedVariable}
               onRemoveVariable={handleRemoveVariable}
               onVariableSelect={handleVariableSelect}
+              onSaveAssertions={handleUpdateRequest}
             />
           )}
 
@@ -2462,6 +2449,7 @@ const RequestEditor: React.FC = () => {
               selectedVariables={selectedVariable}
               onRemoveVariable={handleRemoveVariable}
               onVariableSelect={handleVariableSelect}
+              onSaveAssertions={handleUpdateRequest}
             />
           )}
 

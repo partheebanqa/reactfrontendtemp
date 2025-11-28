@@ -90,8 +90,6 @@ export const buildRequestPayload = (
 
   const processFormData = () => {
     let formDataSource = request.bodyFormData;
-    console.log('formDataSource123:', formDataSource);
-
     if (!formDataSource && request.bodyType === 'form-data' && request.body) {
       try {
         const parsedBody = JSON.parse(request.body);

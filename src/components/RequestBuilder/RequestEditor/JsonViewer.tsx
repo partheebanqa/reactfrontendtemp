@@ -14,8 +14,6 @@ const JsonViewer: React.FC<JsonViewerProps> = ({
   isError = false,
   searchQuery = '',
 }) => {
-  console.log('data123:', data);
-
   const formatJson = (data: any, viewType: string): string => {
     try {
       if (viewType === 'raw') {
