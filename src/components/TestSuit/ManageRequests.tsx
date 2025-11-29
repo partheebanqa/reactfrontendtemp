@@ -409,7 +409,7 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
                 key={request.id}
                 className='p-4 border rounded-lg hover:bg-muted/50 transition-colors'
               >
-                <div className='flex items-start justify-between'>
+                <div className='flex items-center justify-between'>
                   <div className='flex items-start space-x-3 flex-1'>
                     <Badge className={getMethodBadgeColor(request.method)}>
                       {request.method}
@@ -428,89 +428,70 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
                           </Badge>
                         )}
                       </div>
-                      <p className='text-sm text-muted-foreground mt-1 break-all'>
+                      <p className='text-[12px] text-muted-foreground mt-1 break-all'>
                         {finalUrl}
                       </p>
                     </div>
                   </div>
-                  <div className='flex items-center space-x-2'>
-                    <TooltipProvider>
-                      {showAuthCapture && request.method === 'POST' && (
-                        <Tooltip>
-                          <TooltipTrigger asChild>
+                  <div className='flex items-center justify-center space-x-2'>
+                    {showAuthCapture && request.method === 'POST' && (
+                      <Button
+                        onClick={() => handleTestRequest(request)}
+                      >
+                        Capture Auth
+                      </Button>
+                    )}
+
+                    {testSuiteId &&
+                      onUpdateTestCases &&
+                      preRequestId !== request.id && (
+                        <>
+                          <Button
+                            onClick={() =>
+                              handleConfigureTestCases(request)
+                            }>
+                            Select testcases
+                          </Button>
+                        </>
+                      )}
+                    <AlertDialog>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <AlertDialogTrigger asChild>
                             <Button
                               variant='ghost'
                               size='sm'
-                              onClick={() => handleTestRequest(request)}
-                              className='text-muted-foreground hover:text-primary hover:bg-primary/10'
+                              className='text-red-600 hover:text-red-700 hover:bg-red-100 dark:hover:bg-red-900'
                             >
-                              <FileKey className='w-4 h-4' />
+                              <Trash2 className='w-4 h-4' />
                             </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Capture Auth</TooltipContent>
-                        </Tooltip>
-                      )}
+                          </AlertDialogTrigger>
+                        </TooltipTrigger>
+                        <TooltipContent>Delete Request</TooltipContent>
+                      </Tooltip>
 
-                      {testSuiteId &&
-                        onUpdateTestCases &&
-                        preRequestId !== request.id && (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant='ghost'
-                                size='sm'
-                                onClick={() =>
-                                  handleConfigureTestCases(request)
-                                }
-                                className='text-muted-foreground hover:text-primary hover:bg-primary/10'
-                              >
-                                <Settings className='w-4 h-4' />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>Select testcases</TooltipContent>
-                          </Tooltip>
-                        )}
-
-
-                      <AlertDialog>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <AlertDialogTrigger asChild>
-                              <Button
-                                variant='ghost'
-                                size='sm'
-                                className='text-red-600 hover:text-red-700 hover:bg-red-100 dark:hover:bg-red-900'
-                              >
-                                <Trash2 className='w-4 h-4' />
-                              </Button>
-                            </AlertDialogTrigger>
-                          </TooltipTrigger>
-                          <TooltipContent>Delete Request</TooltipContent>
-                        </Tooltip>
-
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>
-                              Delete this request?
-                            </AlertDialogTitle>
-                            <AlertDialogDescription>
-                              {preRequestId === request.id
-                                ? 'You are trying to delete the pre-request api. Check once before deleting.'
-                                : `This will permanently delete "${request.name}". This action cannot be undone.`}
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => onDeleteRequest(request.id)}
-                              className='bg-red-600 hover:bg-red-700'
-                            >
-                              Delete
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </TooltipProvider>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>
+                            Delete this request?
+                          </AlertDialogTitle>
+                          <AlertDialogDescription>
+                            {preRequestId === request.id
+                              ? 'You are trying to delete the pre-request api. Check once before deleting.'
+                              : `This will permanently delete "${request.name}". This action cannot be undone.`}
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => onDeleteRequest(request.id)}
+                            className='bg-red-600 hover:bg-red-700'
+                          >
+                            Delete
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </div>
                 </div>
                 {testSuiteId && preRequestId !== request.id && (

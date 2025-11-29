@@ -699,13 +699,11 @@ const CreateTestSuit: React.FC = () => {
   const getNextButtonText = () => {
 
 
+    if (isPreparingTestCases) {
+      return 'Preparing test cases...';
+    }
     if (isSaving) {
-      if (currentStep === 'select-apis') {
-        return 'Generating test cases...';
-      }
-      if (currentStep === 'select-tests') {
-        return 'Preparing test cases...';
-      }
+      return 'Generating test cases...';
     }
 
     switch (currentStep) {
@@ -714,7 +712,7 @@ const CreateTestSuit: React.FC = () => {
       case 'prerequisites':
         return 'Continue to Select APIs';
       case 'select-apis':
-        return 'Create Test Case';
+        return 'Generate Test Cases';
       case 'select-tests':
         return 'Continue to Execute';
       case 'execute':
@@ -726,6 +724,17 @@ const CreateTestSuit: React.FC = () => {
 
 
 
+  const isPreparingTestCases =
+    currentStep === 'select-tests' &&
+    totalTestCases === 0 &&
+    requests.length > 0;
+
+
+
+
+  const showNextLoader =
+    (currentStep === 'select-apis' && isSaving) ||
+    isPreparingTestCases;
 
   return (
     <div className="bg-gray-50">
@@ -750,7 +759,7 @@ const CreateTestSuit: React.FC = () => {
         {/* STEP INDICATOR */}
         <WorkflowStepper currentStep={currentStep} completedSteps={completedSteps} />
 
-        <div className="mt-8 space-y-6">
+        <div className="mt-4 space-y-6">
           {/* STEP 1: BASIC INFO */}
           {currentStep === 'basic-info' && (
             <Card>
@@ -845,12 +854,12 @@ const CreateTestSuit: React.FC = () => {
                 <div className="bg-gray-50 p-3 rounded-lg border border-dashed flex flex-col items-center justify-center text-center">
 
                   <div className="w-full text-left">
-                    <p className="text-sm text-muted-foreground mb-3 text-center">
+                    <p className="text-sm text-muted-foreground text-center">
                       This authentication API will run before your test suite and its token can
                       be used in all imported requests.
                     </p>
 
-                    <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+                    {/* <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
                       <div className="flex items-center justify-between mb-2">
                         <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                           {preRequestInfo.method}
@@ -873,7 +882,7 @@ const CreateTestSuit: React.FC = () => {
                         </p>
                       )}
 
-                      {/* <div className="mt-4 flex justify-end">
+                      <div className="mt-4 flex justify-end">
                         <Button
                           variant="outline"
                           size="sm"
@@ -881,44 +890,44 @@ const CreateTestSuit: React.FC = () => {
                         >
                           Edit Authentication API
                         </Button>
-                      </div> */}
-                    </div>
+                      </div>
+                    </div> */}
                   </div>
                 </div>
               )}
-              <CardContent>
-                {requests.length === 0 ? (
-                  <div className="bg-gray-50 p-3 rounded-lg border border-dashed flex flex-col items-center justify-center text-center">
-                    <div className="w-16 h-16 mb-6 rounded-full bg-muted flex items-center justify-center">
-                      <Download className="w-8 h-8 text-muted-foreground" />
-                    </div>
-                    <p className="text-muted-foreground mb-6 max-w-md">
-                      If your APIs require authentication, add a pre-request API to fetch
-                      the token. Skip this step if authentication is not needed.
-                    </p>
-                    <Button onClick={() => setIsImportModalOpen(true)}>
-                      <Download className="w-4 h-4 mr-2" />
-                      Choose Authentication Request
-                    </Button>
+
+              {requests.length === 0 ? (
+                <div className="bg-gray-50 p-3 rounded-lg border border-dashed flex flex-col items-center justify-center text-center">
+                  <div className="w-16 h-16 mb-6 rounded-full bg-muted flex items-center justify-center">
+                    <Download className="w-8 h-8 text-muted-foreground" />
                   </div>
-                ) : (
-                  <>
-                    <ManageRequests
-                      requests={requests}
-                      testSuiteId={id || ''}
-                      onImport={() => setIsImportModalOpen(true)}
-                      onDeleteRequest={handleDeleteRequest}
-                      onUpdateTestCases={handleUpdateTestCases}
-                      onRefreshRequests={async () => {
-                        await refetchRequests();
-                      }}
-                      onSaveExtractVariables={handleSaveExtractVariables}
-                      preRequestId={preRequestId}
-                      extractVariables={extractVariables}
-                      filterMethod="POST"
-                      showAuthCapture={true}
-                    />
-                    {/* {preRequestInfo && (
+                  <p className="text-muted-foreground mb-6 max-w-md">
+                    If your APIs require authentication, add a pre-request API to fetch
+                    the token. Skip this step if authentication is not needed.
+                  </p>
+                  <Button onClick={() => setIsImportModalOpen(true)}>
+                    <Download className="w-4 h-4 mr-2" />
+                    Choose Authentication Request
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <ManageRequests
+                    requests={requests}
+                    testSuiteId={id || ''}
+                    onImport={() => setIsImportModalOpen(true)}
+                    onDeleteRequest={handleDeleteRequest}
+                    onUpdateTestCases={handleUpdateTestCases}
+                    onRefreshRequests={async () => {
+                      await refetchRequests();
+                    }}
+                    onSaveExtractVariables={handleSaveExtractVariables}
+                    preRequestId={preRequestId}
+                    extractVariables={extractVariables}
+                    filterMethod="POST"
+                    showAuthCapture={true}
+                  />
+                  {/* {preRequestInfo && (
                       <div className="px-6 py-4 bg-gray-50 mt-4 border-gray-200 flex justify-between items-center">
                         <div className="text-sm text-gray-600 space-y-1">
 
@@ -930,9 +939,8 @@ const CreateTestSuit: React.FC = () => {
                         </div>
                       </div>
                     )} */}
-                  </>
-                )}
-              </CardContent>
+                </>
+              )}
 
               <RequestTestDialog
                 isOpen={isTestDialogOpen}
@@ -1047,9 +1055,26 @@ const CreateTestSuit: React.FC = () => {
             <div >
               {isLoading ? (
                 <div className="space-y-4">
+                  {/* title skeleton */}
                   <div className="h-4 w-1/3 bg-gray-200 rounded animate-pulse" />
-                  <div className="h-20 w-full bg-gray-100 rounded animate-pulse" />
-                  <div className="h-20 w-full bg-gray-100 rounded animate-pulse" />
+
+                  {/* row 1 */}
+                  <div className="flex items-center gap-4 p-4 border rounded-lg bg-gray-100 animate-pulse">
+                    <div className="w-10 h-10 rounded bg-gray-300"></div>
+                    <div className="flex-1 space-y-2">
+                      <div className="h-3 w-1/2 bg-gray-300 rounded"></div>
+                      <div className="h-3 w-1/3 bg-gray-300 rounded"></div>
+                    </div>
+                  </div>
+
+                  {/* row 2 */}
+                  <div className="flex items-center gap-4 p-4 border rounded-lg bg-gray-100 animate-pulse">
+                    <div className="w-10 h-10 rounded bg-gray-300"></div>
+                    <div className="flex-1 space-y-2">
+                      <div className="h-3 w-1/2 bg-gray-300 rounded"></div>
+                      <div className="h-3 w-1/3 bg-gray-300 rounded"></div>
+                    </div>
+                  </div>
                 </div>
               ) : requests.length === 0 ? (
 
@@ -1142,7 +1167,7 @@ const CreateTestSuit: React.FC = () => {
         </div>
 
         {/* BOTTOM NAVIGATION */}
-        <div className="mt-8 flex items-center justify-between">
+        <div className="mt-5 flex items-center justify-between">
           <button
             onClick={handleBackStep}
             className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -1154,17 +1179,22 @@ const CreateTestSuit: React.FC = () => {
           <div className="flex gap-3">
             <Button
               onClick={handleNextStep}
-              disabled={!canProceed() || isSaving}
+              disabled={
+                !canProceed() ||
+                (currentStep === 'select-apis' && isSaving) ||
+                isPreparingTestCases
+              }
               className="inline-flex items-center gap-2 px-6 py-2 bg-[#136fb0] text-white rounded-lg hover:bg-[#136fb0] transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {getNextButtonText()}
 
-              {isSaving ? (
+              {showNextLoader ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
                 <ChevronRight className="w-4 h-4" />
               )}
             </Button>
+
 
 
           </div>
