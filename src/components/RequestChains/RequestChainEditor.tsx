@@ -480,13 +480,20 @@ export function RequestChainEditor({
           key: replaceVariables(param.key, variables),
           value: replaceVariables(param.value, variables),
         })) || [],
-      authorization: {
-        token: replaceVariables(request.authToken || '', variables),
-      },
+      authToken: replaceVariables(request.authToken || '', variables),
       authUsername: replaceVariables(request.authUsername || '', variables),
       authPassword: replaceVariables(request.authPassword || '', variables),
       authApiKey: replaceVariables(request.authApiKey || '', variables),
       authApiValue: replaceVariables(request.authApiValue || '', variables),
+      authorization: request.authorization
+        ? {
+            ...request.authorization,
+            token: replaceVariables(
+              request.authorization.token || '',
+              variables
+            ),
+          }
+        : request.authorization,
     };
   };
 
