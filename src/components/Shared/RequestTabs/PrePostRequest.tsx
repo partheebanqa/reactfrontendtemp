@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Trash2 } from 'lucide-react';
+import AssertionManager from '@/components/RequestBuilder/RequestEditor/assertionManager';
 import {
   AlertDialog,
   AlertDialogContent,
@@ -72,7 +73,7 @@ export function PrePostRequest({
                 <table className='w-full text-sm'>
                   <tbody>
                     <tr className='border-b border-gray-200 dark:border-gray-700'>
-                      <td className='px-4 py-3 font-semibold text-gray-900 dark:text-gray-200 w-56 bg-gray-50 dark:bg-gray-800'>
+                      <td className='px-4 py-3 font-semibold text-gray-900 dark:text-gray-200 w-48 bg-gray-50 dark:bg-gray-800'>
                         Substituted variable
                       </td>
                       <td className='px-4 py-3 text-gray-800 dark:text-gray-300'>
@@ -85,10 +86,9 @@ export function PrePostRequest({
                               <span>
                                 {v.path}: {v.name}
                               </span>
-
                               <button
                                 onClick={() => setDeleteTargetPath(v.path)}
-                                className='transition-opacity p-0.5 rounded'
+                                className='transition-opacity p-0.5 hover:bg-red-600/20 rounded'
                                 title='Remove variable'
                               >
                                 <Trash2 className='w-3 h-3 text-red-600' />
@@ -100,7 +100,7 @@ export function PrePostRequest({
                     </tr>
 
                     <tr>
-                      <td className='px-4 py-3 font-semibold text-gray-900 dark:text-gray-200 w-56 bg-gray-50 dark:bg-gray-800'>
+                      <td className='px-4 py-3 font-semibold text-gray-900 dark:text-gray-200 w-48 bg-gray-50 dark:bg-gray-800'>
                         Extracted variable
                       </td>
                       <td className='px-4 py-3 text-gray-800 dark:text-gray-300'>
@@ -151,11 +151,16 @@ export function PrePostRequest({
           {activeSubTab === 'assertions' && (
             <>
               {showAssertions && (
-                <div className='p-4'>
-                  <p className='text-sm text-gray-500'>
-                    Assertions component would go here
-                  </p>
-                </div>
+                <AssertionManager
+                  assertions={assertions}
+                  setAssertions={setAssertions}
+                  responseData={responseData}
+                  activeRequest={activeRequest}
+                  currentWorkspace={currentWorkspace}
+                  updateRequestMutation={updateRequestMutation}
+                  toggleAssertion={toggleAssertion}
+                  onSaveAssertions={onSaveAssertions}
+                />
               )}
 
               {!showAssertions && (
@@ -186,7 +191,7 @@ export function PrePostRequest({
                 <table className='w-full text-sm'>
                   <tbody>
                     <tr>
-                      <td className='px-4 py-3 font-semibold text-gray-900 dark:text-gray-200 w-56 bg-gray-50 dark:bg-gray-800'>
+                      <td className='px-4 py-3 font-semibold text-gray-900 dark:text-gray-200 w-48 bg-gray-50 dark:bg-gray-800'>
                         Extracted variable
                       </td>
                       <td className='px-4 py-3 text-gray-800 dark:text-gray-300'>
