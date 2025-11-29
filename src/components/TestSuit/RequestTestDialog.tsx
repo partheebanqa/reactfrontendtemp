@@ -64,9 +64,9 @@ interface ExtractedVariable {
 interface RequestTestDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  request: Request;
+  request?: Request;
   onSaveExtractVariables?: (
-    requestId: string,
+    request: { id: string; name: string; method: string; url: string },
     extractVariables: ExtractedVariable[]
   ) => void;
 }
@@ -78,9 +78,9 @@ export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
   onSaveExtractVariables,
 }) => {
   const { currentWorkspace } = useWorkspace();
-  const [url, setUrl] = useState(request.url);
+  const [url, setUrl] = useState(request?.url);
   const [showToken, setShowToken] = useState(false);
-  const [method, setMethod] = useState(request.method);
+  const [method, setMethod] = useState(request?.method);
   const [headers, setHeaders] = useState<RequestHeader[]>(() => {
     const existingHeaders =
       request?.headers?.length && request.headers.length > 0
@@ -105,11 +105,11 @@ export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
       ? request.params
       : [{ key: '', value: '', enabled: true }]
   );
-  const [body, setBody] = useState(request.bodyRawContent);
-  const [bodyType, setBodyType] = useState(request.bodyType);
-  const [authType, setAuthType] = useState(request.authorizationType);
+  const [body, setBody] = useState(request?.bodyRawContent);
+  const [bodyType, setBodyType] = useState(request?.bodyType);
+  const [authType, setAuthType] = useState(request?.authorizationType);
   const [authToken, setAuthToken] = useState(
-    request.authorization?.token || ''
+    request?.authorization?.token || ''
   );
 
   // response state can hold either string or object
@@ -542,9 +542,8 @@ export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
       setResponse(parsedBody);
       setResponseHeaders(firstResponse?.headers || {});
     } catch (error) {
-      const errorMessage = `Error: ${
-        error instanceof Error ? error.message : 'Unknown error'
-      }`;
+      const errorMessage = `Error: ${error instanceof Error ? error.message : 'Unknown error'
+        }`;
       setResponse(errorMessage);
       setResponseHeaders({});
     } finally {
@@ -553,37 +552,46 @@ export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
   };
 
   const handleSaveVariables = () => {
-    if (onSaveExtractVariables && extractedFields.length > 0) {
-      const formattedVariables: ExtractedVariable[] = extractedFields.map(
-        (field) => ({
-          name: field.variableName,
-          path: field.path,
-          source: field.source,
-          type:
-            typeof field.value === 'string'
-              ? 'string'
-              : typeof field.value === 'number'
+    if (!onSaveExtractVariables || extractedFields.length === 0) return;
+
+    const formattedVariables: ExtractedVariable[] = extractedFields.map(
+      (field) => ({
+        name: field.variableName,
+        path: field.path,
+        source: field.source,
+        type:
+          typeof field.value === 'string'
+            ? 'string'
+            : typeof field.value === 'number'
               ? 'number'
               : typeof field.value === 'boolean'
-              ? 'boolean'
-              : Array.isArray(field.value)
-              ? 'array'
-              : typeof field.value === 'object'
-              ? 'object'
-              : 'string',
-        })
-      );
+                ? 'boolean'
+                : Array.isArray(field.value)
+                  ? 'array'
+                  : typeof field.value === 'object'
+                    ? 'object'
+                    : 'string',
+      })
+    );
 
-      console.log('Saving variables from RequestTestDialog:', {
-        requestId: request.id,
-        variables: formattedVariables,
-      });
+    // ✅ Build a consistent request info object
+    const reqInfo = {
+      id: request?.id || 'auth-pre-request',               // fallback id
+      name: request?.name || 'Authentication API',         // fallback name
+      method: method || request?.method || 'POST',
+      url: url || request?.url || '',
+    };
 
-      onSaveExtractVariables(request.id, formattedVariables);
-      setExtractedFields([]);
-      onClose();
-    }
+    console.log('Saving variables from RequestTestDialog:', {
+      request: reqInfo,
+      variables: formattedVariables,
+    });
+
+    onSaveExtractVariables(reqInfo, formattedVariables);
+    setExtractedFields([]);
+    onClose();
   };
+
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -592,7 +600,7 @@ export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
           <div className='flex items-center gap-2'>
             <DialogTitle className='flex items-center gap-2'>
               <span>Add Authentication extraction</span>
-              <span className='text-sm text-gray-500'>: {request.name}</span>
+              <span className='text-sm text-gray-500'>: {request?.name}</span>
             </DialogTitle>
 
             <Tooltip>

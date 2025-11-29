@@ -1,4 +1,4 @@
-'use client';
+
 
 import type React from 'react';
 import { useMemo, useState } from 'react';
@@ -76,7 +76,7 @@ interface Request {
 interface ManageRequestsProps {
   requests: Request[];
   testSuiteId?: string;
-  onImport: () => void;
+  onImport?: () => void;
   onDeleteRequest: (requestId: string) => void;
   onUpdateTestCases?: (requestId: string, testCaseIds: string[]) => void;
   onRefreshRequests?: () => Promise<void> | void;
@@ -89,6 +89,8 @@ interface ManageRequestsProps {
   activeEnvironment?: any;
   preRequestId?: string | null;
   extractVariables?: ExtractedVariable[];
+  filterMethod?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
+  showAuthCapture?: boolean;
 }
 
 const getMethodBadgeColor = (method: string) => {
@@ -121,18 +123,33 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
   activeEnvironment,
   preRequestId,
   extractVariables = [],
+  filterMethod,
+  showAuthCapture,
 }) => {
   const [showCategories, setShowCategories] = useState(false);
 
   const [selectedRequest, setSelectedRequest] = useState<Request | null>(null);
   const [isTestCaseModalOpen, setIsTestCaseModalOpen] = useState(false);
 
-  console.log('requests123:', requests);
+  // console.log('requests123:', requests);
+
+  // console.log('preRequestId:', preRequestId);
+
+  // console.log('extractVariables:', extractVariables);
+
+  // console.log('testSuiteId:', testSuiteId);
 
   const [isTestDialogOpen, setIsTestDialogOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [pendingRequest, setPendingRequest] = useState<Request | null>(null);
   const [showOverwriteDialog, setShowOverwriteDialog] = useState(false);
+
+  const visibleRequests = useMemo(() => {
+    if (!filterMethod) return requests;
+    return requests.filter(
+      (r) => r.method?.toUpperCase() === filterMethod.toUpperCase()
+    );
+  }, [requests, filterMethod]);
 
   const mapCategoryData = (meta: any) => {
     if (!meta)
@@ -213,24 +230,15 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
   };
 
   const handleTestRequest = (request: Request) => {
-    console.log('Testing request:', request.id);
-    console.log('Current preRequestId:', preRequestId);
-    console.log('Current extractVariables count:', extractVariables.length);
-
-    // Check if there's already a preRequestId and it's different from current request
-    // AND there are existing extracted variables
     if (
       preRequestId &&
       preRequestId !== request.id &&
       extractVariables.length > 0
     ) {
-      console.log(
-        'Showing overwrite dialog - different preRequestId with existing variables'
-      );
+
       setPendingRequest(request);
       setShowOverwriteDialog(true);
     } else {
-      console.log('Opening test dialog directly');
       setSelectedRequest(request);
       setIsTestDialogOpen(true);
     }
@@ -279,8 +287,8 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
     requestId: string,
     extractVariables: ExtractedVariable[]
   ) => {
-    console.log('requestId:', requestId);
-    console.log('extractVariables:', extractVariables);
+    // console.log('requestId:', requestId);
+    // console.log('extractVariables:', extractVariables);
 
     // Pass the data to parent component instead of storing locally
     if (onSaveExtractVariables) {
@@ -363,6 +371,7 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
     <Card>
       <CardHeader>
         <div className='flex items-center justify-between'>
+
           <CardTitle>Requests ({requests.length})</CardTitle>
 
           <div className='flex items-center space-x-2'>
@@ -378,17 +387,19 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
                 {refreshing ? 'Refreshing...' : 'Refresh'}
               </Button>
             )}
-            <Button variant='outline' onClick={onImport}>
-              <Download className='w-4 h-4 mr-2' />
-              Import More Requests
-            </Button>
+            {onImport && (
+              <Button variant='outline' onClick={onImport}>
+                <Download className='w-4 h-4 mr-2' />
+                Import More Requests
+              </Button>
+            )}
           </div>
         </div>
       </CardHeader>
 
       <CardContent>
         <div className='space-y-3'>
-          {requests.map((request) => {
+          {visibleRequests.map((request) => {
             const finalUrl = buildFinalUrl(request.url);
             const { totalTests, selectedTests, selectedByCategory } =
               mapCategoryData(request.meta);
@@ -424,7 +435,7 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
                   </div>
                   <div className='flex items-center space-x-2'>
                     <TooltipProvider>
-                      {request.method === 'POST' && (
+                      {showAuthCapture && request.method === 'POST' && (
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Button
@@ -459,6 +470,7 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
                             <TooltipContent>Select testcases</TooltipContent>
                           </Tooltip>
                         )}
+
 
                       <AlertDialog>
                         <Tooltip>
@@ -532,11 +544,10 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
 
                         {/* collapsible category list */}
                         <div
-                          className={`overflow-hidden transition-all duration-300 ${
-                            showCategories
-                              ? 'max-h-[1000px] opacity-100'
-                              : 'max-h-0 opacity-0'
-                          }`}
+                          className={`overflow-hidden transition-all duration-300 ${showCategories
+                            ? 'max-h-[1000px] opacity-100'
+                            : 'max-h-0 opacity-0'
+                            }`}
                         >
                           <div className='space-y-2'>
                             {selectedByCategory.map((categoryData) => (
@@ -599,7 +610,7 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
         />
       )}
 
-      {selectedRequest && testSuiteId && (
+      {/* {selectedRequest && testSuiteId && (
         <TestCaseSelectionModal
           isOpen={isTestCaseModalOpen}
           onClose={() => {
@@ -613,7 +624,24 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
           }}
           testSuiteId={testSuiteId}
         />
+      )} */}
+
+      {selectedRequest && (
+        <TestCaseSelectionModal
+          isOpen={isTestCaseModalOpen}
+          onClose={() => {
+            setIsTestCaseModalOpen(false);
+            setSelectedRequest(null);
+          }}
+          onSelect={handleTestCaseSelection}
+          request={{
+            ...selectedRequest,
+            selectedTestCases: selectedRequest.selectedTestCases || [],
+          }}
+          testSuiteId={testSuiteId || ''}
+        />
       )}
+
 
       <AlertDialog
         open={showOverwriteDialog}
