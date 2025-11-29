@@ -728,7 +728,7 @@ const CreateTestSuit: React.FC = () => {
 
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="bg-gray-50">
       <BreadCum
         title={isCreateMode ? 'Create Test Suite' : 'Edit Test Suite'}
         subtitle={
@@ -746,7 +746,7 @@ const CreateTestSuit: React.FC = () => {
         iconSize={36}
       />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 border border-gray-200 bg-background rounded-lg mt-3">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-6 py-8 border border-gray-200 bg-background rounded-lg mt-3">
         {/* STEP INDICATOR */}
         <WorkflowStepper currentStep={currentStep} completedSteps={completedSteps} />
 
