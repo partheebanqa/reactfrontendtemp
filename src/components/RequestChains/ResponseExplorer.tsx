@@ -12,6 +12,7 @@ import {
   Trash2,
   Info,
   AlertCircle,
+  X,
 } from 'lucide-react';
 import type { DataExtraction } from '@/shared/types/requestChain.model';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
@@ -23,6 +24,18 @@ interface ResponseExplorerProps {
     headers: Record<string, string>;
     body: string;
     cookies?: Record<string, string>;
+    assertions?: Array<{
+      status: 'passed' | 'failed';
+      responseStatus?: number;
+      responseTime?: number;
+      responseSize?: number;
+      description: string;
+      expectedValue?: string;
+      operator?: string;
+      type?: string;
+      category?: string;
+      errorMessage?: string;
+    }>;
   };
   onExtractVariable: (extraction: DataExtraction) => void;
   extractedVariables: Record<string, any>;
@@ -72,10 +85,8 @@ export function ResponseExplorer({
   executionLog,
 }: ResponseExplorerProps) {
   const [activeTab, setActiveTab] = useState<
-    'body' | 'headers' | 'cookies' | 'actualRequest'
+    'body' | 'headers' | 'cookies' | 'actualRequest' | 'assertions'
   >('body');
-
-  console.log('actualRequestBody:', actualRequestBody);
 
   const getValueByPath = (obj: any, path: string): any => {
     if (!obj || !path) return undefined;
@@ -597,6 +608,100 @@ export function ResponseExplorer({
     </div>
   );
 
+  const renderAssertionsTab = () => {
+    if (!response?.assertions || response.assertions.length === 0) {
+      return (
+        <div className='text-center py-8 text-gray-500'>
+          <CheckCircle className='w-12 h-12 text-gray-300 mx-auto mb-3' />
+          <p>No assertions configured for this request</p>
+        </div>
+      );
+    }
+
+    const passedCount = response.assertions.filter(
+      (a) => a.status === 'passed'
+    ).length;
+    const failedCount = response.assertions.length - passedCount;
+
+    return (
+      <div className='space-y-4'>
+        {/* Summary */}
+        <div className='flex items-center space-x-4 p-4 bg-gray-50 rounded-lg'>
+          <div className='flex items-center space-x-2'>
+            <CheckCircle className='w-5 h-5 text-green-600' />
+            <span className='font-medium text-gray-900'>
+              {passedCount} Passed
+            </span>
+          </div>
+          {failedCount > 0 && (
+            <div className='flex items-center space-x-2'>
+              <X className='w-5 h-5 text-red-600' />
+              <span className='font-medium text-gray-900'>
+                {failedCount} Failed
+              </span>
+            </div>
+          )}
+        </div>
+
+        <div className='space-y-2'>
+          {response.assertions.map((assertion, index) => (
+            <div
+              key={index}
+              className={`border rounded-lg p-4 ${
+                assertion.status === 'passed'
+                  ? 'bg-green-50 border-green-200'
+                  : 'bg-red-50 border-red-200'
+              }`}
+            >
+              <div className='flex items-start justify-between'>
+                <div className='flex items-start space-x-3 flex-1'>
+                  {assertion.status === 'passed' ? (
+                    <CheckCircle className='w-5 h-5 text-green-600 flex-shrink-0 mt-0.5' />
+                  ) : (
+                    <X className='w-5 h-5 text-red-600 flex-shrink-0 mt-0.5' />
+                  )}
+                  <div className='flex-1 min-w-0'>
+                    <h4
+                      className={`font-medium ${
+                        assertion.status === 'passed'
+                          ? 'text-green-900'
+                          : 'text-red-900'
+                      }`}
+                    >
+                      {assertion.description}
+                    </h4>
+                    {assertion.errorMessage && (
+                      <p className='mt-2 text-sm text-red-700'>
+                        {assertion.errorMessage}
+                      </p>
+                    )}
+                    <div className='mt-2 flex flex-wrap gap-2'>
+                      {assertion.expectedValue && (
+                        <span className='text-xs bg-white px-2 py-1 rounded border'>
+                          Expected: {assertion.expectedValue}
+                        </span>
+                      )}
+                      {assertion.operator && (
+                        <span className='text-xs bg-white px-2 py-1 rounded border'>
+                          Operator: {assertion.operator}
+                        </span>
+                      )}
+                      {assertion.category && (
+                        <span className='text-xs bg-white px-2 py-1 rounded border capitalize'>
+                          {assertion.category}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   const renderActualRequestTab = () => {
     if (!actualRequestUrl) {
       return (
@@ -634,7 +739,7 @@ export function ResponseExplorer({
           <div className='flex items-center space-x-3 p-3 bg-gray-50 border border-gray-200 rounded-lg'>
             <span
               className={`px-2 py-1 ${getMethodColor(
-                actualRequestMethod
+                actualRequestMethod || 'GET'
               )} text-xs font-semibold rounded`}
             >
               {actualRequestMethod}
@@ -740,6 +845,7 @@ export function ResponseExplorer({
               { id: 'headers', label: 'Headers' },
               { id: 'cookies', label: 'Cookies' },
               { id: 'actualRequest', label: 'Actual Request' },
+              { id: 'assertions', label: 'Assertions(R)' },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -768,7 +874,9 @@ export function ResponseExplorer({
               <span>{executionLog.duration}ms</span>
 
               {/* Size */}
-              <span>{(executionLog.response?.size / 1024).toFixed(2)} KB</span>
+              <span>
+                {(executionLog.response?.size || 0 / 1024).toFixed(2)} KB
+              </span>
             </div>
           )}
         </div>
@@ -787,6 +895,7 @@ export function ResponseExplorer({
           {activeTab === 'headers' && renderHeadersTab()}
           {activeTab === 'cookies' && renderCookiesTab()}
           {activeTab === 'actualRequest' && renderActualRequestTab()}
+          {activeTab === 'assertions' && renderAssertionsTab()}
         </div>
       </div>
       {finalExtractedVariables &&

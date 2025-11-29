@@ -154,6 +154,7 @@ export interface ExecutionLog {
     body: string;
     size: number;
     cookies?: Record<string, string>;
+    assertions?: any[];
   };
   error?: string;
   extractedVariables?: Record<string, any>;
@@ -246,6 +247,7 @@ export interface ExecuteRequestPayload {
 
 export interface ExecutionResponse {
   data: {
+    assertionResults?: any;
     requestCurl: any;
     body: any;
     schemaValidation: null;

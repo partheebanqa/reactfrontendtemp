@@ -211,9 +211,9 @@ export default function Header({ isDrawerOpen, toggleDrawer }: HeaderProps) {
             </div>
           )}
 
-          <div className=' xs:block'>
+          {/* <div className=' xs:block'>
             <NotificationBell />
-          </div>
+          </div> */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <div className='flex items-center cursor-pointer'>

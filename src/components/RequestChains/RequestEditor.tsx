@@ -153,8 +153,6 @@ export function RequestEditor({
   requestAssertions,
   onAssertionsUpdate,
 }: RequestEditorProps) {
-  console.log('hideResponseExplorer:', hideResponseExplorer);
-
   const isSyncingRef = useRef(false);
   const isInitialMount = useRef(true);
   const [isJsonOpen, setIsJsonOpen] = useState(false);
@@ -177,7 +175,7 @@ export function RequestEditor({
     null
   );
 
-  console.log('executionResult123:', executionResult);
+  console.log('assertions123:', assertions);
 
   const [showVariablesPopup, setShowVariablesPopup] = useState(false);
   const variablesPopupRef = useRef<HTMLDivElement>(null);
@@ -1038,10 +1036,15 @@ export function RequestEditor({
 
       const previewUrl = getPreviewUrl(allVariables);
       payload.request.url = previewUrl;
+      payload.assertions = assertions.filter((a) => a.enabled);
 
       const backendData = await executeRequest(payload);
 
+      console.log('backendData121:', backendData);
+
       const responseItem = backendData?.data?.responses?.[0];
+
+      const asserttionResult = backendData?.data?.assertionResults || [];
 
       const formattedAssertionFormat = {
         status: responseItem?.statusCode ?? null,
@@ -1108,6 +1111,7 @@ export function RequestEditor({
           body: result.body,
           size: result.metrics.bytesReceived,
           cookies: parseCookies(result.headers?.['set-cookie'] ?? ''),
+          assertions: asserttionResult,
         },
         extractedVariables: extractedData,
       };
@@ -1135,8 +1139,6 @@ export function RequestEditor({
         variant: log.status === 'success' ? 'default' : 'destructive',
       });
     } catch (error) {
-      console.log('error121:', error);
-
       const endTime = Date.now();
 
       const processedRequest = processRequestWithVariables(
@@ -1166,8 +1168,6 @@ export function RequestEditor({
         },
         error: error instanceof Error ? error.message : 'Unknown error',
       };
-
-      console.log('errorLog:', errorLog);
 
       if (hideResponseExplorer) {
         setExecutionResult(errorLog);
