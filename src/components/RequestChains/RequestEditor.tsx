@@ -175,8 +175,6 @@ export function RequestEditor({
     null
   );
 
-  console.log('assertions123:', assertions);
-
   const [showVariablesPopup, setShowVariablesPopup] = useState(false);
   const variablesPopupRef = useRef<HTMLDivElement>(null);
 

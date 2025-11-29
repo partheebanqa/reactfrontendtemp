@@ -97,9 +97,6 @@ interface RequestChainEditorProps {
   requestChainId?: string;
 }
 
-// Removed duplicate type definitions for Variable and DynamicVariableOverride
-// They are now imported from '@/lib/request-utils'
-
 export function RequestChainEditor({
   chain,
   onBack,
@@ -123,6 +120,29 @@ export function RequestChainEditor({
   const [assertionsByRequest, setAssertionsByRequest] = useState<
     Record<string, any[]>
   >({});
+
+  console.log('assertionsByRequest123:', assertionsByRequest);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('lastExecutionByRequest');
+      if (!raw) return;
+      const map: Record<string, any> = JSON.parse(raw);
+
+      const loadedAssertions: Record<string, any[]> = {};
+      Object.entries(map).forEach(([requestId, log]: [string, any]) => {
+        if (log.assertions && Array.isArray(log.assertions)) {
+          loadedAssertions[requestId] = log.assertions;
+        }
+      });
+
+      if (Object.keys(loadedAssertions).length > 0) {
+        setAssertionsByRequest(loadedAssertions);
+      }
+    } catch (e) {
+      console.error('Failed to load persisted assertions:', e);
+    }
+  }, []);
 
   useEffect(() => {
     if (dynamicVariables.length > 0) {
@@ -220,6 +240,14 @@ export function RequestChainEditor({
       }
     }
   }, [selectedEnvironment, environments]);
+
+  useEffect(() => {
+    if (Object.keys(assertionsByRequest).length > 0) {
+      Object.entries(assertionsByRequest).forEach(([requestId, assertions]) => {
+        persistAssertionsToStorage(requestId, assertions);
+      });
+    }
+  }, [assertionsByRequest]);
 
   const handleEnvironmentChange = (environmentId: string) => {
     setSelectedEnvironment(environmentId);
@@ -585,10 +613,35 @@ export function RequestChainEditor({
   const executeSingleRequest = async (
     request: APIRequest,
     variables: Variable[],
-    requestIndex: number
+    requestIndex: number,
+    requestAssertions: any[] = []
   ): Promise<ExecutionLog> => {
     if (!request.url) {
       throw new Error('Request URL is required');
+    }
+    const preparedRequest = {
+      ...request,
+      headers: request.headers ?? [],
+      params: request.params ?? [],
+    };
+
+    // Extract auth token from either authToken or authorization.token
+    const rawToken = (
+      preparedRequest.authToken ||
+      preparedRequest.authorization?.token ||
+      ''
+    ).trim();
+
+    console.log('rawToken123:', rawToken);
+
+    // Set up authorization object if token exists
+    if (rawToken) {
+      preparedRequest.authorizationType = 'bearer';
+      preparedRequest.authorization = {
+        ...preparedRequest.authorization,
+        token: rawToken,
+      };
+      preparedRequest.authToken = rawToken;
     }
 
     request = {
@@ -607,6 +660,7 @@ export function RequestChainEditor({
         processedRequest.authorization?.token ||
         ''
       ).trim();
+
       if (token) {
         (processedRequest as any).authorizationType = 'bearer';
 
@@ -656,11 +710,13 @@ export function RequestChainEditor({
     const payload = buildRequestPayload(processedRequest, variables);
     const previewUrl = getPreviewUrl(processedRequest, variables);
     payload.request.url = previewUrl;
+    const currentAssertions =
+      assertionsByRequest[request.id] || requestAssertions || [];
+    payload.assertions = currentAssertions.filter((a) => a.enabled);
 
     try {
-      console.log('Executing request with payload:', payload);
-
       const backendData = await executeRequest(payload);
+      const asserttionResult = backendData?.data?.assertionResults || [];
 
       const result = backendData?.data?.responses?.[0];
       const formattedAssertionFormat = {
@@ -733,11 +789,11 @@ export function RequestChainEditor({
           body: result.body,
           size: result.metrics.bytesReceived,
           cookies: parseCookies(result.headers?.['set-cookie'] ?? ''),
+          assertions: asserttionResult,
         },
         extractedVariables: extractedData,
       };
 
-      // Persist execution log
       try {
         const raw = localStorage.getItem('lastExecutionByRequest');
         const map = raw ? JSON.parse(raw) : {};
@@ -796,7 +852,6 @@ export function RequestChainEditor({
       });
       return;
     }
-
     regenerateAllDynamicVariables();
 
     setIsExecuting(true);
@@ -850,11 +905,15 @@ export function RequestChainEditor({
                 allExtractedVarsInCurrentExecution
               );
 
+            const requestAssertions = assertionsByRequest[request.id] || [];
+
             log = await executeSingleRequest(
               request,
               currentAvailableVariables,
-              i
+              i,
+              requestAssertions
             );
+
             allLogs.push(log);
           }
 
@@ -950,6 +1009,7 @@ export function RequestChainEditor({
       setCurrentRequestIndex(-1);
     }
   };
+
   const handleRequestExecution = (
     requestId: string,
     executionLog: ExecutionLog
@@ -1745,6 +1805,22 @@ export function RequestChainEditor({
     }
   }
 
+  const persistAssertionsToStorage = (requestId: string, assertions: any[]) => {
+    try {
+      const raw = localStorage.getItem('lastExecutionByRequest');
+      const map = raw ? JSON.parse(raw) : {};
+
+      if (!map[requestId]) {
+        map[requestId] = {};
+      }
+
+      map[requestId].assertions = assertions;
+      localStorage.setItem('lastExecutionByRequest', JSON.stringify(map));
+    } catch (e) {
+      console.error('Failed to persist assertions:', e);
+    }
+  };
+
   return (
     <div className='h-full flex flex-col'>
       <BreadCum
@@ -2207,9 +2283,12 @@ export function RequestChainEditor({
                                               ...prev,
                                               [request.id]: assertions,
                                             }));
+                                            persistAssertionsToStorage(
+                                              request.id,
+                                              assertions
+                                            );
                                           }}
                                         />
-
                                         {executionLog && (
                                           <div className='border-t border-gray-200 pt-4'>
                                             {(executionLog.response != null ||
