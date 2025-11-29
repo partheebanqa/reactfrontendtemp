@@ -115,7 +115,7 @@ export default function RequestBody({
             className='border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-800 text-sm font-medium hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all duration-150'
           >
             <option value='none'>None</option>
-            {/* <option value='json'>JSON</option> */}
+            <option value='json'>JSON</option>
             <option value='form-data'>Form Data</option>
             <option value='urlencoded'>URL Encoded</option>{' '}
             <option value='raw'>Raw</option>
