@@ -43,6 +43,7 @@ import ResetPassword from '@/pages/ResetPassword';
 import RequestChainCreate from '@/pages/RequestChainCreate';
 import RequestChainEdit from '@/pages/RequestChainEdit';
 import { Loader } from '@/components/Loader';
+import CreateTestSuit from '@/components/TestSuitNew/CreateTestSuit';
 
 export default function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -77,6 +78,8 @@ export default function Router() {
           <Route path='/test-suites' component={TestSuites} />
           <Route path='/test-suites/:id/edit' component={EditTestSuite} />
           <Route path='/test-suites/create' component={EditTestSuite} />
+          <Route path='/create-test-suite' component={CreateTestSuit} />
+          <Route path="/test-suites/:id" component={CreateTestSuit} />
           <Route path='/scheduler' component={Scheduler} />
           <Route path='/cicd' component={CiCdIntegration} />
           <Route path='/data-management' component={DataManagement} />

@@ -91,6 +91,7 @@ const FolderTreeItem: React.FC<{
   expandedFolders: Set<string>;
   onToggleFolder: (folderId: string) => void;
   searchQuery: string;
+  isLocked: boolean;
 }> = ({
   folder,
   collectionId,
@@ -100,121 +101,125 @@ const FolderTreeItem: React.FC<{
   expandedFolders,
   onToggleFolder,
   searchQuery,
+  isLocked,
 }) => {
-  const isExpanded = expandedFolders.has(folder.id);
-  const hasSubFolders = folder.folders && folder.folders.length > 0;
-  const hasRequests = folder.requests && folder.requests.length > 0;
+    const isExpanded = expandedFolders.has(folder.id);
+    const hasSubFolders = folder.folders && folder.folders.length > 0;
+    const hasRequests = folder.requests && folder.requests.length > 0;
 
-  const filteredRequests = folder.requests?.filter((req) =>
-    (req.name ?? '').toLowerCase().includes(searchQuery.toLowerCase())
-  );
+    const filteredRequests = folder.requests?.filter((req) =>
+      (req.name ?? '').toLowerCase().includes(searchQuery.toLowerCase())
+    );
 
-  const hasExpandableContent = hasSubFolders || hasRequests;
-  const hasVisibleContent =
-    (filteredRequests && filteredRequests.length > 0) || hasSubFolders;
+    const hasExpandableContent = hasSubFolders || hasRequests;
+    const hasVisibleContent =
+      (filteredRequests && filteredRequests.length > 0) || hasSubFolders;
 
-  if (!hasVisibleContent) return null;
+    if (!hasVisibleContent) return null;
 
-  return (
-    <div className='ml-6'>
-      {/* Folder header */}
-      <div className='flex items-center gap-3 py-2.5 px-3 bg-muted/30 rounded-md hover:bg-muted/50 transition-colors border-l-2 border-primary/50'>
-        {hasExpandableContent && (
-          <button
-            onClick={() => onToggleFolder(folder.id)}
-            className='p-0.5 hover:bg-background rounded transition-colors'
-          >
-            {isExpanded ? (
-              <ChevronUp className='w-4 h-4 text-primary' />
-            ) : (
-              <ChevronDown className='w-4 h-4 text-primary' />
-            )}
-          </button>
-        )}
-        {!hasExpandableContent && <div className='w-5' />}
-        <div className='p-1.5 bg-primary/10 rounded'>
-          <Folder className='w-4 h-4 text-primary' />
+
+
+    return (
+      <div className='ml-6'>
+        {/* Folder header */}
+        <div className='flex items-center gap-3 py-2.5 px-3 bg-muted/30 rounded-md hover:bg-muted/50 transition-colors border-l-2 border-primary/50'>
+          {hasExpandableContent && (
+            <button
+              onClick={() => onToggleFolder(folder.id)}
+              className='p-0.5 hover:bg-background rounded transition-colors'
+            >
+              {isExpanded ? (
+                <ChevronUp className='w-4 h-4 text-primary' />
+              ) : (
+                <ChevronDown className='w-4 h-4 text-primary' />
+              )}
+            </button>
+          )}
+          {!hasExpandableContent && <div className='w-5' />}
+          <div className='p-1.5 bg-primary/10 rounded'>
+            <Folder className='w-4 h-4 text-primary' />
+          </div>
+          <span className='font-medium text-foreground'>{folder.name}</span>
         </div>
-        <span className='font-medium text-foreground'>{folder.name}</span>
-      </div>
 
-      {/* Folder contents */}
-      {isExpanded && (
-        <div className='ml-2'>
-          {/* Requests in this folder */}
-          {filteredRequests && filteredRequests.length > 0 && (
-            <div className='ml-8 space-y-1 border-l-2 border-muted pl-4'>
-              {filteredRequests.map((request) => {
-                const imported = importedRequestIds.includes(request.id);
-                const selected = selectedRequests.includes(request.id);
+        {/* Folder contents */}
+        {isExpanded && (
+          <div className='ml-2'>
+            {/* Requests in this folder */}
+            {filteredRequests && filteredRequests.length > 0 && (
+              <div className='ml-8 space-y-1 border-l-2 border-muted pl-4'>
+                {filteredRequests.map((request) => {
+                  const imported = importedRequestIds.includes(request.id);
+                  const selected = selectedRequests.includes(request.id);
 
-                return (
-                  <div
-                    key={request.id}
-                    className={`flex items-center gap-3 p-3 rounded-lg transition-all ${
-                      imported
+                  return (
+                    <div
+                      key={request.id}
+                      className={`flex items-center gap-3 p-3 rounded-lg transition-all ${imported
                         ? 'bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900'
                         : 'hover:bg-muted/50 border border-transparent hover:border-border'
-                    }`}
-                  >
-                    {imported ? (
-                      <div className='w-4 h-4 rounded bg-green-500 flex items-center justify-center flex-shrink-0'>
-                        <Check className='w-3 h-3 text-white' />
+                        }`}
+                    >
+                      {imported ? (
+                        <div className='w-4 h-4 rounded bg-green-500 flex items-center justify-center flex-shrink-0'>
+                          <Check className='w-3 h-3 text-white' />
+                        </div>
+                      ) : (
+                        <Checkbox
+                          checked={selected}
+                          disabled={isLocked}
+                          onCheckedChange={(checked) =>
+                            onSelectRequest(request.id, checked as boolean)
+                          }
+                          className='flex-shrink-0'
+                        />
+                      )}
+                      <MethodBadge method={request.method || 'GET'} />
+                      <div className='flex-1 min-w-0'>
+                        <div className='flex items-center gap-2'>
+                          <h4 className='font-medium text-foreground truncate'>
+                            {request.name}
+                          </h4>
+                          {imported && (
+                            <span className='text-xs bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 px-2 py-0.5 rounded-full whitespace-nowrap font-medium'>
+                              Already imported
+                            </span>
+                          )}
+                        </div>
+                        <p className='text-sm text-muted-foreground truncate mt-0.5'>
+                          {request.url}
+                        </p>
                       </div>
-                    ) : (
-                      <Checkbox
-                        checked={selected}
-                        onCheckedChange={(checked) =>
-                          onSelectRequest(request.id, checked as boolean)
-                        }
-                        className='flex-shrink-0'
-                      />
-                    )}
-                    <MethodBadge method={request.method || 'GET'} />
-                    <div className='flex-1 min-w-0'>
-                      <div className='flex items-center gap-2'>
-                        <h4 className='font-medium text-foreground truncate'>
-                          {request.name}
-                        </h4>
-                        {imported && (
-                          <span className='text-xs bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 px-2 py-0.5 rounded-full whitespace-nowrap font-medium'>
-                            Already imported
-                          </span>
-                        )}
-                      </div>
-                      <p className='text-sm text-muted-foreground truncate mt-0.5'>
-                        {request.url}
-                      </p>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+                  );
+                })}
+              </div>
+            )}
 
-          {/* Nested folders */}
-          {folder.folders && folder.folders.length > 0 && (
-            <div className='mt-1'>
-              {folder.folders.map((subFolder) => (
-                <FolderTreeItem
-                  key={subFolder.id}
-                  folder={subFolder}
-                  collectionId={collectionId}
-                  selectedRequests={selectedRequests}
-                  importedRequestIds={importedRequestIds}
-                  onSelectRequest={onSelectRequest}
-                  expandedFolders={expandedFolders}
-                  onToggleFolder={onToggleFolder}
-                  searchQuery={searchQuery}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-};
+            {/* Nested folders */}
+            {folder.folders && folder.folders.length > 0 && (
+              <div className='mt-1'>
+                {folder.folders.map((subFolder) => (
+                  <FolderTreeItem
+                    key={subFolder.id}
+                    folder={subFolder}
+                    collectionId={collectionId}
+                    selectedRequests={selectedRequests}
+                    importedRequestIds={importedRequestIds}
+                    onSelectRequest={onSelectRequest}
+                    expandedFolders={expandedFolders}
+                    onToggleFolder={onToggleFolder}
+                    searchQuery={searchQuery}
+                    isLocked={isLocked}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
 
 export const ImportModal: React.FC<ImportModalProps> = ({
   isOpen,
@@ -256,6 +261,8 @@ export const ImportModal: React.FC<ImportModalProps> = ({
   const [externalFileError, setExternalFileError] = useState<string | null>(
     null
   );
+  const [activeCollectionId, setActiveCollectionId] = useState<string | null>(null);
+
   const [externalFolderTree, setExternalFolderTree] =
     useState<FolderNode | null>(null);
   const [externalExpandedFolders, setExternalExpandedFolders] = useState<
@@ -314,7 +321,14 @@ export const ImportModal: React.FC<ImportModalProps> = ({
     return requestIds;
   };
 
+
+
   const handleSelectAll = async (collectionId: string) => {
+
+    if (activeCollectionId && activeCollectionId !== collectionId) {
+      return;
+    }
+
     if (!folderTreeData[collectionId]) {
       setLoadingFolderTree((prev) => ({ ...prev, [collectionId]: true }));
       try {
@@ -385,7 +399,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
   const isRequestImported = (requestId: string) =>
     importedRequestIds.includes(requestId);
 
-  const handleSelectRequest = (requestId: string, checked: boolean) => {
+  const handleSelectRequests = (requestId: string, checked: boolean) => {
     if (isRequestImported(requestId)) return;
 
     if (checked) {
@@ -394,6 +408,36 @@ export const ImportModal: React.FC<ImportModalProps> = ({
       setSelectedRequests((prev) => prev.filter((id) => id !== requestId));
     }
   };
+
+  const handleSelectRequest = (
+    collectionId: string,
+    requestId: string,
+    checked: boolean
+  ) => {
+    if (isRequestImported(requestId)) return;
+
+    setSelectedRequests((prev) => {
+      if (checked && activeCollectionId && activeCollectionId !== collectionId) {
+        return prev;
+      }
+
+      if (checked) {
+        if (!activeCollectionId) {
+          setActiveCollectionId(collectionId);
+        }
+        if (prev.includes(requestId)) return prev;
+        return [...prev, requestId];
+      } else {
+        const next = prev.filter((id) => id !== requestId);
+        if (next.length === 0) {
+          setActiveCollectionId(null);
+        }
+
+        return next;
+      }
+    });
+  };
+
 
   const toggleCollection = async (collectionId: string) => {
     const isCurrentlyExpanded = expandedCollections.includes(collectionId);
@@ -440,6 +484,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
     onImport(requestsToImport);
     setSelectedRequests([]);
     setSearchQuery('');
+    setActiveCollectionId(null);
     onClose();
   };
 
@@ -468,19 +513,19 @@ export const ImportModal: React.FC<ImportModalProps> = ({
             const url = item.request.url?.raw || item.request.url;
             const headers = item.request.header
               ? item.request.header.map((h: any) => ({
-                  id: `header_${Date.now()}_${Math.random()}`,
-                  key: h.key || '',
-                  value: h.value || '',
-                  enabled: !h.disabled,
-                }))
+                id: `header_${Date.now()}_${Math.random()}`,
+                key: h.key || '',
+                value: h.value || '',
+                enabled: !h.disabled,
+              }))
               : [];
             const params = item.request.url?.query
               ? item.request.url.query.map((q: any) => ({
-                  id: `param_${Date.now()}_${Math.random()}`,
-                  key: q.key || '',
-                  value: q.value || '',
-                  enabled: !q.disabled,
-                }))
+                id: `param_${Date.now()}_${Math.random()}`,
+                key: q.key || '',
+                value: q.value || '',
+                enabled: !q.disabled,
+              }))
               : [];
             let bodyRawContent = '';
             let bodyType = 'none';
@@ -640,9 +685,8 @@ export const ImportModal: React.FC<ImportModalProps> = ({
         <DialogTitle>Import Collections</DialogTitle>
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList
-            className={`grid w-full ${
-              isRequestChainsRoute ? 'grid-cols-2' : 'grid-cols-1'
-            }`}
+            className={`grid w-full ${isRequestChainsRoute ? 'grid-cols-2' : 'grid-cols-1'
+              }`}
           >
             <TabsTrigger value='Internal'>
               Import from existing Collection
@@ -724,12 +768,13 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                                 </p>
                               </div>
                             </div>
+
                             <Button
                               variant='link'
                               size='sm'
                               onClick={() => handleSelectAll(collection.id)}
                               disabled={isLoadingTree}
-                              className='text-blue-600 hover:text-blue-700 font-medium'
+                              className='text-[#136fb0] hover:text-[#136fb0] font-medium'
                             >
                               {isLoadingTree ? (
                                 <>
@@ -774,15 +819,16 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                                               selectedRequests.includes(
                                                 request.id
                                               );
+                                            const isLocked =
+                                              !!activeCollectionId && activeCollectionId !== collection.id;
 
                                             return (
                                               <div
                                                 key={request.id}
-                                                className={`flex items-center gap-3 p-3 rounded-lg transition-all ${
-                                                  imported
-                                                    ? 'bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900'
-                                                    : 'hover:bg-muted/50 border border-transparent hover:border-border'
-                                                }`}
+                                                className={`flex items-center gap-3 p-3 rounded-lg transition-all ${imported
+                                                  ? 'bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900'
+                                                  : 'hover:bg-muted/50 border border-transparent hover:border-border'
+                                                  }`}
                                               >
                                                 {imported ? (
                                                   <div className='w-4 h-4 rounded bg-green-500 flex items-center justify-center flex-shrink-0'>
@@ -791,10 +837,10 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                                                 ) : (
                                                   <Checkbox
                                                     checked={selected}
-                                                    onCheckedChange={(
-                                                      checked
-                                                    ) =>
+                                                    disabled={isLocked}
+                                                    onCheckedChange={(checked) =>
                                                       handleSelectRequest(
+                                                        collection.id,
                                                         request.id,
                                                         checked as boolean
                                                       )
@@ -831,25 +877,34 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                                   {treeData.folders &&
                                     treeData.folders.length > 0 && (
                                       <div>
-                                        {treeData.folders.map((folder: any) => (
-                                          <FolderTreeItem
-                                            key={folder.id}
-                                            folder={folder}
-                                            collectionId={collection.id}
-                                            selectedRequests={selectedRequests}
-                                            importedRequestIds={
-                                              importedRequestIds
-                                            }
-                                            onSelectRequest={
-                                              handleSelectRequest
-                                            }
-                                            expandedFolders={expandedFolders}
-                                            onToggleFolder={toggleFolder}
-                                            searchQuery={searchQuery}
-                                          />
-                                        ))}
+                                        {treeData.folders.map((folder: any) => {
+                                          const isLocked =
+                                            !!activeCollectionId && activeCollectionId !== collection.id;
+
+                                          return (
+                                            <FolderTreeItem
+                                              key={folder.id}
+                                              folder={folder}
+                                              collectionId={collection.id}
+                                              selectedRequests={selectedRequests}
+                                              importedRequestIds={importedRequestIds}
+                                              onSelectRequest={(requestId, checked) =>
+                                                handleSelectRequest(
+                                                  collection.id,
+                                                  requestId,
+                                                  checked as boolean
+                                                )
+                                              }
+                                              expandedFolders={expandedFolders}
+                                              onToggleFolder={toggleFolder}
+                                              searchQuery={searchQuery}
+                                              isLocked={isLocked}
+                                            />
+                                          );
+                                        })}
                                       </div>
                                     )}
+
                                 </div>
                               ) : (
                                 <p className='text-muted-foreground text-center py-4'>
@@ -882,7 +937,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                   <Button
                     onClick={handleImport}
                     disabled={selectedCount === 0}
-                    className='bg-blue-500 hover:bg-blue-600 text-white'
+                    className='bg-[#136fb0] hover:bg-[#136fb0] text-white'
                   >
                     Import {selectedCount} Request
                     {selectedCount !== 1 ? 's' : ''}
@@ -958,16 +1013,16 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                           );
                           const newSelections = allSelected
                             ? selectedRequests.filter(
-                                (id) => !available.some((r) => r.id === id)
-                              )
+                              (id) => !available.some((r) => r.id === id)
+                            )
                             : [
-                                ...selectedRequests,
-                                ...available.map((r) => r.id),
-                              ];
+                              ...selectedRequests,
+                              ...available.map((r) => r.id),
+                            ];
 
                           setSelectedRequests(newSelections);
                         }}
-                        className='text-blue-600 hover:text-blue-700 font-medium'
+                        className='text-[#136fb0] hover:text-[#136fb0] font-medium'
                       >
                         {externalRequests.every((r) =>
                           selectedRequests.includes(r.id)
@@ -996,11 +1051,10 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                                 return (
                                   <div
                                     key={request.id}
-                                    className={`flex items-center gap-3 p-3 rounded-lg transition-all ${
-                                      imported
-                                        ? 'bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900'
-                                        : 'hover:bg-muted/50 border border-transparent hover:border-border'
-                                    }`}
+                                    className={`flex items-center gap-3 p-3 rounded-lg transition-all ${imported
+                                      ? 'bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900'
+                                      : 'hover:bg-muted/50 border border-transparent hover:border-border'
+                                      }`}
                                   >
                                     {imported ? (
                                       <div className='w-4 h-4 rounded bg-green-500 flex items-center justify-center flex-shrink-0'>
