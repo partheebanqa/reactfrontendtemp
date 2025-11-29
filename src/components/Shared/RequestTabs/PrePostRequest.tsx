@@ -81,17 +81,23 @@ export function PrePostRequest({
                           {selectedVariables.map((v, i) => (
                             <div
                               key={i}
-                              className='inline-flex items-center gap-2 px-2 py-1 text-xs font-medium bg-green-500 text-white rounded-lg shadow-sm group'
+                              className='inline-flex items-center gap-2 px-2 py-1 text-xs font-medium text-white rounded-lg shadow-sm group'
+                              style={{
+                                backgroundColor:
+                                  'rgb(19 111 176 / var(--tw-bg-opacity))',
+                              }}
                             >
                               <span>
                                 {v.path}: {v.name}
                               </span>
+
+                              {/* Trash icon */}
                               <button
                                 onClick={() => setDeleteTargetPath(v.path)}
-                                className='transition-opacity p-0.5 hover:bg-red-600/20 rounded'
+                                className='transition-colors p-0.5 rounded group-hover:text-red-500 text-white'
                                 title='Remove variable'
                               >
-                                <Trash2 className='w-3 h-3 text-red-600' />
+                                <Trash2 className='w-3 h-3' />
                               </button>
                             </div>
                           ))}

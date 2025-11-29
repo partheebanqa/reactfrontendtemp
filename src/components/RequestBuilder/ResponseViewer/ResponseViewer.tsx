@@ -339,7 +339,7 @@ const ResponseViewer = () => {
                   <Copy className='w-3 h-3' />
                 )}
               </button>
-              {isAlreadyExtracted ? (
+              {/* {isAlreadyExtracted ? (
                 <div className='flex items-center space-x-1 px-2 py-1 bg-success/10 text-success rounded text-xs whitespace-nowrap'>
                   <CheckCircle className='w-3 h-3' />
                   <span>Extracted</span>
@@ -355,7 +355,7 @@ const ResponseViewer = () => {
                   <Plus className='w-3 h-3 mr-1' />
                   Extract
                 </button>
-              )}
+              )} */}
             </div>
           )}
         </div>
