@@ -624,6 +624,17 @@ export const ImportModal: React.FC<ImportModalProps> = ({
     location === '/request-chains/create' ||
     (location.startsWith('/request-chains/') && location.endsWith('/edit'));
 
+  const [pathname, search = ''] = location.split('?');
+  const searchParams = new URLSearchParams(search);
+  const step = searchParams.get('step');
+
+  const isCreateTestSuitePrereqRoute =
+    typeof window !== 'undefined' &&
+    window.location.href.includes('create-test-suite?step=prerequisites');
+
+
+
+
   const toggleExternalFolder = (folderId: string) => {
     setExternalExpandedFolders((prev) => {
       const newSet = new Set(prev);
@@ -769,22 +780,31 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                               </div>
                             </div>
 
-                            <Button
-                              variant='link'
-                              size='sm'
-                              onClick={() => handleSelectAll(collection.id)}
-                              disabled={isLoadingTree}
-                              className='text-[#136fb0] hover:text-[#136fb0] font-medium'
-                            >
-                              {isLoadingTree ? (
-                                <>
-                                  <span className='animate-spin mr-2'>⏳</span>
-                                  Loading...
-                                </>
-                              ) : (
-                                'Select All Available'
-                              )}
-                            </Button>
+                            {isCreateTestSuitePrereqRoute ? (
+                              <>
+                              </>
+                            ) : (
+                              <>
+                                <Button
+                                  variant='link'
+                                  size='sm'
+                                  onClick={() => handleSelectAll(collection.id)}
+                                  disabled={isLoadingTree}
+                                  className='text-[#136fb0] hover:text-[#136fb0] font-medium'
+                                >
+                                  {isLoadingTree ? (
+                                    <>
+                                      <span className='animate-spin mr-2'>⏳</span>
+                                      Loading...
+                                    </>
+                                  ) : (
+                                    'Select All Available'
+                                  )}
+                                </Button>
+                              </>
+                            )
+                            }
+
                           </div>
 
                           {isExpanded && (
@@ -1110,6 +1130,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                                 expandedFolders={externalExpandedFolders}
                                 onToggleFolder={toggleExternalFolder}
                                 searchQuery={searchQuery}
+                                isLocked={false}
                               />
                             ))}
                           </div>
@@ -1146,7 +1167,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
             </div>
           </TabsContent>
         </Tabs>
-      </DialogContent>
-    </Dialog>
+      </DialogContent >
+    </Dialog >
   );
 };
