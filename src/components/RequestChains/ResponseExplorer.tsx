@@ -13,6 +13,7 @@ import {
   Info,
   AlertCircle,
   X,
+  Wand2,
 } from 'lucide-react';
 import type { DataExtraction } from '@/shared/types/requestChain.model';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
@@ -57,6 +58,7 @@ interface ResponseExplorerProps {
       status: number;
     };
   };
+  onApplyToAllRequests?: (variableName: string) => void;
 }
 
 interface JsonNode {
@@ -83,6 +85,7 @@ export function ResponseExplorer({
   executionStatus,
   errorMessage,
   executionLog,
+  onApplyToAllRequests,
 }: ResponseExplorerProps) {
   const [activeTab, setActiveTab] = useState<
     'body' | 'headers' | 'cookies' | 'actualRequest' | 'assertions'
@@ -300,6 +303,13 @@ export function ResponseExplorer({
       setExtractionModal(null);
       setVariableName('');
     }
+  };
+
+  const isJWTToken = (value: any): boolean => {
+    if (typeof value !== 'string') return false;
+    // JWT format: header.payload.signature (three base64url encoded parts separated by dots)
+    const jwtRegex = /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/;
+    return jwtRegex.test(value);
   };
 
   const renderJsonValue = (node: JsonNode, isVisible: boolean) => {
@@ -917,6 +927,12 @@ export function ResponseExplorer({
                 const extraction = existingExtractions?.find(
                   (e) => e.variableName === name || e.name === name
                 );
+                const isJwt =
+                  typeof value === 'string' &&
+                  /[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]+/.test(
+                    value
+                  );
+
                 return (
                   <div
                     key={name}
@@ -942,6 +958,25 @@ export function ResponseExplorer({
                           </TooltipTrigger>
                           <TooltipContent>Copy variable name</TooltipContent>
                         </Tooltip>
+
+                        {onApplyToAllRequests && isJwt && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                onClick={() => onApplyToAllRequests(name)}
+                                className='flex items-center gap-1 p-1 text-purple-600 hover:bg-purple-50 rounded'
+                              >
+                                <Wand2 className='w-3 h-3' />
+                                <span className='text-xs font-medium'>
+                                  Apply Auth to all
+                                </span>
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              Apply to all subsequent requests
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
                       </div>
                       <div className='flex items-center space-x-2'>
                         <span className='text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded border text-sm font-mono flex-1 overflow-x-auto whitespace-nowrap'>

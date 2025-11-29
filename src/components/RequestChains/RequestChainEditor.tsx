@@ -121,8 +121,6 @@ export function RequestChainEditor({
     Record<string, any[]>
   >({});
 
-  console.log('assertionsByRequest123:', assertionsByRequest);
-
   useEffect(() => {
     try {
       const raw = localStorage.getItem('lastExecutionByRequest');
@@ -148,8 +146,6 @@ export function RequestChainEditor({
     if (dynamicVariables.length > 0) {
       setDynamicOverrides((prevOverrides) => {
         const updatedOverrides = [...prevOverrides];
-
-        // Check each dynamic variable and add override if missing
         dynamicVariables.forEach((d) => {
           const hasOverride = updatedOverrides.some((o) => o.name === d.name);
           if (!hasOverride) {
@@ -331,6 +327,27 @@ export function RequestChainEditor({
       });
     });
     setDynamicOverrides(newOverrides);
+  };
+
+  const handleApplyToAllRequests = (variableName: string) => {
+    if (!formData.chainRequests) return;
+
+    const updatedRequests = formData.chainRequests.map((request) => ({
+      ...request,
+      authToken: `{{${variableName}}}`,
+      authorization: {
+        ...request.authorization,
+        token: `{{${variableName}}}`,
+      },
+      authorizationType: 'bearer' as const,
+    }));
+
+    setFormData({ ...formData, chainRequests: updatedRequests });
+
+    toast({
+      title: 'Applied to All Requests',
+      description: `Variable {{${variableName}}} has been set as the Bearer Token for all ${updatedRequests.length} requests`,
+    });
   };
 
   const DynamicVariablesPanel = () => {
@@ -2385,6 +2402,9 @@ export function RequestChainEditor({
                                                     executionLog.error
                                                   }
                                                   executionLog={executionLog}
+                                                  onApplyToAllRequests={
+                                                    handleApplyToAllRequests
+                                                  }
                                                 />
                                               </div>
                                             )}
