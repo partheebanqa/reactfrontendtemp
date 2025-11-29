@@ -9,10 +9,11 @@ import {
   Trash2,
   X,
   Loader2,
+  Edit,
 } from 'lucide-react';
 import { useDataManagement } from '@/hooks/useDataManagement';
 import { Variable } from '@/shared/types/datamanagement';
-import { useToast } from '@/hooks/useToast';
+import { useToast } from '@/hooks/use-toast';
 import VariableCreateDialog from './CreateVariableDialog';
 import {
   Dialog,
@@ -23,6 +24,15 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
+import { Loader } from '@/components/Loader';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 
 const debounce = (fn: (...a: any[]) => void, ms = 250) => {
   let t: ReturnType<typeof setTimeout>;
@@ -31,41 +41,6 @@ const debounce = (fn: (...a: any[]) => void, ms = 250) => {
     t = setTimeout(() => fn(...args), ms);
   };
 };
-
-const TableSkeleton: React.FC<{ rows?: number }> = ({ rows = 8 }) => (
-  <div className='border border-gray-200 rounded-lg overflow-hidden'>
-    <table className='w-full'>
-      <thead>
-        <tr className='bg-gray-50 border-b border-gray-200'>
-          <th className='px-4 py-2 text-left text-xs font-medium text-gray-600 uppercase tracking-wider'>
-            Name
-          </th>
-          <th className='px-4 py-2 text-left text-xs font-medium text-gray-600 uppercase tracking-wider'>
-            Value
-          </th>
-          <th className='px-4 py-2 text-right text-xs font-medium text-gray-600 uppercase tracking-wider w-24'>
-            Actions
-          </th>
-        </tr>
-      </thead>
-      <tbody className='divide-y divide-gray-200 bg-white'>
-        {Array.from({ length: rows }).map((_, i) => (
-          <tr key={i}>
-            <td className='px-4 py-3'>
-              <div className='h-4 w-40 bg-gray-100 rounded animate-pulse' />
-            </td>
-            <td className='px-4 py-3'>
-              <div className='h-4 w-80 bg-gray-100 rounded animate-pulse' />
-            </td>
-            <td className='px-4 py-3'>
-              <div className='ml-auto h-4 w-20 bg-gray-100 rounded animate-pulse' />
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  </div>
-);
 
 type EditDialogProps = {
   open: boolean;
@@ -374,7 +349,7 @@ export function StaticVariables() {
       <div className='flex items-center justify-between gap-3'>
         <div className='relative flex-1 max-w-sm'>
           <Search
-            className='absolute left-3 top-1/2 -translate-y-1/2 text-gray-400'
+            className='absolute left-3 top-1/2 -translate-y-1/2 text-slate-400'
             size={16}
           />
           <Input
@@ -382,11 +357,11 @@ export function StaticVariables() {
             placeholder='Search variables...'
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className='w-full pl-9 pr-16 py-2 text-sm border border-gray-200 rounded-md'
+            className='w-full pl-9 pr-16 py-2 text-sm rounded-md'
           />
           {searchTerm && (
             <button
-              className='absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600'
+              className='absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600'
               onClick={() => setSearchTerm('')}
               aria-label='Clear search'
             >
@@ -406,10 +381,10 @@ export function StaticVariables() {
       </div>
 
       {isLoading ? (
-        <TableSkeleton rows={8} />
+        <Loader />
       ) : filtered.length === 0 ? (
-        <div className='border border-gray-200 rounded-lg p-8 text-center bg-white'>
-          <p className='text-sm text-gray-600 mb-3'>
+        <div className='bg-white rounded-lg border border-slate-200 p-12 text-center'>
+          <p className='text-sm text-slate-500 mb-3'>
             {debouncedTerm
               ? 'No variables match your search.'
               : 'No variables yet.'}
@@ -424,66 +399,68 @@ export function StaticVariables() {
         </div>
       ) : (
         <>
-          <div className='border border-gray-200 rounded-lg overflow-hidden'>
-            <table className='w-full'>
-              <thead>
-                <tr className='bg-gray-50 border-b border-gray-200'>
-                  <th className='px-4 py-2 text-left text-xs font-medium text-gray-600 uppercase tracking-wider'>
+          <div className='bg-white rounded-lg border border-slate-200 overflow-hidden'>
+            <Table>
+              <TableHeader>
+                <TableRow className='bg-slate-50'>
+                  <TableHead className='font-semibold text-slate-600 text-sm capitalize tracking-wider'>
                     Name
-                  </th>
-                  <th className='px-4 py-2 text-left text-xs font-medium text-gray-600 uppercase tracking-wider'>
+                  </TableHead>
+                  <TableHead className='font-semibold text-slate-600 text-sm capitalize tracking-wider'>
                     Value
-                  </th>
-                  <th className='px-4 py-2 text-right text-xs font-medium text-gray-600 uppercase tracking-wider w-24'>
+                  </TableHead>
+                  <TableHead className='font-semibold text-slate-600 text-sm capitalize tracking-wider text-right w-24'>
                     Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className='divide-y divide-gray-200 bg-white'>
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {currentVariables.map((variable) => (
-                  <tr
+                  <TableRow
                     key={variable.id}
-                    className='hover:bg-gray-50 transition-colors group'
+                    className='border-b border-slate-100 hover:bg-slate-50 group'
                   >
-                    <td className='px-4 py-2.5'>
+                    <TableCell className='py-4'>
                       <div className='flex items-center gap-2'>
-                        <span className='text-sm font-mono font-medium text-gray-900'>
+                        <span className='text-sm font-medium text-slate-900'>
                           {variable.name}
                         </span>
                         <button
                           onClick={() => copyToClipboard(variable.name, 'name')}
-                          className='opacity-0 group-hover:opacity-100 text-gray-400 hover:text-gray-600 transition-opacity'
+                          className='opacity-0 group-hover:opacity-100 text-slate-400 hover:text-slate-600 transition-opacity'
                           title='Copy name'
                         >
                           <Copy size={13} />
                         </button>
                       </div>
-                    </td>
-                    <td className='px-4 py-2.5'>
+                    </TableCell>
+                    <TableCell className='py-4'>
                       <div className='flex items-center gap-1.5'>
-                        <code className='text-sm font-mono text-gray-700 truncate max-w-md'>
+                        <span className='text-sm text-slate-700 truncate max-w-[28rem]'>
                           {variable.isSecret && !visibleSecrets.has(variable.id)
                             ? '••••••••••••'
                             : variable.currentValue}
-                        </code>
+                        </span>
+
                         <div className='flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0'>
                           {!variable.isSecret && (
                             <button
                               onClick={() =>
                                 copyToClipboard(variable.currentValue, 'value')
                               }
-                              className='text-gray-400 hover:text-gray-600 transition-colors'
+                              className='text-slate-400 hover:text-slate-600 transition-colors'
                               title='Copy value'
                             >
                               <Copy size={14} />
                             </button>
                           )}
+
                           {variable.isSecret && (
                             <button
                               onClick={() =>
                                 toggleSecretVisibility(variable.id)
                               }
-                              className='text-gray-400 hover:text-gray-600 transition-colors'
+                              className='text-slate-400 hover:text-slate-600 transition-colors'
                               title={
                                 visibleSecrets.has(variable.id)
                                   ? 'Hide'
@@ -499,42 +476,47 @@ export function StaticVariables() {
                           )}
                         </div>
                       </div>
-                    </td>
-                    <td className='px-4 py-2.5'>
+                    </TableCell>
+
+                    <TableCell className='py-4'>
                       <div className='flex items-center justify-end gap-1'>
                         <button
                           onClick={() => handleEditVariable(variable)}
-                          className='p-1 text-gray-400 hover:text-blue-600 transition-colors'
+                          className='p-1 text-slate-400 hover:text-blue-600 transition-colors'
                           title='Edit'
                           disabled={isUpdatingId === variable.id}
                         >
                           {isUpdatingId === variable.id ? (
                             <Loader2 size={14} className='animate-spin' />
                           ) : (
-                            <Pencil size={14} />
+                            <Edit className='w-4 h-4' />
                           )}
                         </button>
                         <button
                           onClick={() => handleDelete(variable.id)}
-                          className='p-1 text-gray-400 hover:text-red-600 transition-colors'
+                          className='p-1 text-slate-400 hover:text-red-600 transition-colors'
                           title='Delete'
                         >
-                          <Trash2 size={14} />
+                          <Trash2 className='w-4 h-4' />
                         </button>
                       </div>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
 
           {totalPages > 1 && (
             <div className='flex items-center justify-between text-xs mt-2'>
-              <div className='text-gray-600'>
-                {startIndex + 1}-
-                {Math.min(startIndex + itemsPerPage, filtered.length)} of{' '}
-                {filtered.length}
+              <div className='text-slate-600'>
+                {filtered.length === 0
+                  ? '0'
+                  : `${startIndex + 1}-${Math.min(
+                      startIndex + itemsPerPage,
+                      filtered.length
+                    )}`}{' '}
+                of {filtered.length}
               </div>
 
               <div className='flex items-center gap-3'>
@@ -544,7 +526,7 @@ export function StaticVariables() {
                     setItemsPerPage(Number(e.target.value));
                     setCurrentPage(1);
                   }}
-                  className='px-2 py-1 border border-gray-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500'
+                  className='px-2 py-1 border border-slate-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500'
                 >
                   <option value={10}>10</option>
                   <option value={25}>25</option>
@@ -555,7 +537,7 @@ export function StaticVariables() {
                   <button
                     onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
                     disabled={clampedPage === 1}
-                    className='px-2 py-1 border border-gray-200 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
+                    className='px-2 py-1 border border-slate-200 rounded hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
                   >
                     Prev
                   </button>
@@ -564,7 +546,7 @@ export function StaticVariables() {
                       setCurrentPage((p) => Math.min(p + 1, totalPages))
                     }
                     disabled={clampedPage === totalPages}
-                    className='px-2 py-1 border border-gray-200 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
+                    className='px-2 py-1 border border-slate-200 rounded hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
                   >
                     Next
                   </button>

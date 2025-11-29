@@ -19,11 +19,13 @@ interface Assertion {
 interface AssertionManagerProps {
   assertions: Assertion[];
   setAssertions: (assertions: Assertion[]) => void;
+  onSaveAssertions?: () => Promise<void>;
 }
 
 const AssertionManager: React.FC<AssertionManagerProps> = ({
   assertions,
   setAssertions,
+  onSaveAssertions,
 }) => {
   const [showDialog, setShowDialog] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('All Categories');
@@ -36,15 +38,32 @@ const AssertionManager: React.FC<AssertionManagerProps> = ({
     );
   };
 
-  const handleSaveAssertions = () => {
+  const handleSaveAssertions = async () => {
     const selectedCount = assertions.filter((a) => a.enabled).length;
-    toast({
-      title: 'Success',
-      description: `${selectedCount} assertion(s) saved successfully`,
-    });
+
+    if (onSaveAssertions) {
+      try {
+        await onSaveAssertions();
+        toast({
+          title: 'Success',
+          description: `${selectedCount} assertion(s) saved successfully`,
+        });
+      } catch (error) {
+        console.error('Error saving assertions:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to save assertions',
+        });
+      }
+    } else {
+      toast({
+        title: 'Success',
+        description: `${selectedCount} assertion(s) selected`,
+      });
+    }
+
     setShowDialog(false);
   };
-
   const selectedAssertions = assertions.filter((a) => a.enabled);
   const totalCount = assertions.length;
 
@@ -85,8 +104,6 @@ const AssertionManager: React.FC<AssertionManagerProps> = ({
     });
     return grouped;
   }, [filteredAssertions]);
-
-  console.log('filteredAssertions123:', filteredAssertions);
 
   const getPriorityColor = (priority?: string) => {
     switch (priority?.toLowerCase()) {

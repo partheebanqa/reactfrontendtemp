@@ -104,7 +104,7 @@ export function useCollection() {
       name: 'New Request',
       method: 'GET',
       url: '',
-      bodyType: 'json',
+      bodyType: 'raw',
       bodyFormData: null,
       authorizationType: 'none',
       authorization: {},

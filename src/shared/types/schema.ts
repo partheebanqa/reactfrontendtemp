@@ -1,13 +1,14 @@
 export type SchemaType = 'postman' | 'openapi' | 'generated';
 
 export interface SchemaInfo {
+  requestId: string | undefined;
   id: string;
   name: string;
   content: any;
   isPrimary: boolean;
   type: SchemaType;
   createdAt: string;
-  schema:any;
+  schema: any;
 }
 
 export type DifferenceType = 'added' | 'removed' | 'changed';

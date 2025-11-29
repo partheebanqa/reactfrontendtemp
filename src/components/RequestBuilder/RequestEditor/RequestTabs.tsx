@@ -210,7 +210,6 @@ const RequestTabs: React.FC<RequestTabsProps> = ({
   return (
     <>
       <div className='flex items-center bg-white border-b border-gray-200 px-4 py-0'>
-        {/* Scrollable tab area */}
         <div className='flex items-center overflow-x-auto'>
           {openedRequests.map((request) => {
             const isActive = activeRequest?.id === request.id;
@@ -219,7 +218,6 @@ const RequestTabs: React.FC<RequestTabsProps> = ({
               : false;
             return (
               <div key={request.id} className='flex items-center'>
-                {/* === Tab Button === */}
                 <button
                   onClick={() => handleTabClick(request)}
                   className={`group relative flex items-center gap-2 px-3 py-2
@@ -230,7 +228,6 @@ const RequestTabs: React.FC<RequestTabsProps> = ({
                   : 'border-transparent hover:bg-gray-50'
               }`}
                 >
-                  {/* Method */}
                   <span
                     className={`text-xs font-semibold ${methodColor(
                       request.method
@@ -243,7 +240,6 @@ const RequestTabs: React.FC<RequestTabsProps> = ({
                     })()}
                   </span>
 
-                  {/* Name */}
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -268,7 +264,6 @@ const RequestTabs: React.FC<RequestTabsProps> = ({
                     </Tooltip>
                   </TooltipProvider>
 
-                  {/* Close Button */}
                   <button
                     onClick={(e) => handleCloseTab(e, request.id)}
                     className='p-0.5 hover:bg-gray-200 rounded opacity-0 group-hover:opacity-100 transition-colors'
@@ -277,14 +272,12 @@ const RequestTabs: React.FC<RequestTabsProps> = ({
                   </button>
                 </button>
 
-                {/* Divider */}
                 <div className='h-5 w-px bg-gray-200'></div>
               </div>
             );
           })}
         </div>
 
-        {/* Sticky Actions */}
         <div className='flex items-center gap-1 ml-auto sticky right-0 bg-white py-1 px-2'>
           <button
             onClick={handleCreateNewRequest}
@@ -308,7 +301,6 @@ const RequestTabs: React.FC<RequestTabsProps> = ({
         </div>
       </div>
 
-      {/* Confirmation Modal */}
       {showConfirmDialog && requestToClose && (
         <AlertDialog open={showConfirmDialog}>
           <AlertDialogContent>
@@ -323,7 +315,6 @@ const RequestTabs: React.FC<RequestTabsProps> = ({
             </AlertDialogHeader>
 
             <AlertDialogFooter>
-              {/* Don't Save */}
               <AlertDialogAction
                 onClick={handleDontSave}
                 disabled={isSaving}
@@ -331,8 +322,6 @@ const RequestTabs: React.FC<RequestTabsProps> = ({
               >
                 Don't save
               </AlertDialogAction>
-
-              {/* Cancel */}
               <AlertDialogCancel
                 onClick={handleCancelClose}
                 disabled={isSaving}
@@ -340,12 +329,7 @@ const RequestTabs: React.FC<RequestTabsProps> = ({
                 Cancel
               </AlertDialogCancel>
 
-              {/* Save */}
-              <Button
-                onClick={handleSaveChanges}
-                disabled={isSaving}
-                // className='bg-orange-500 hover:bg-orange-600 text-white'
-              >
+              <Button onClick={handleSaveChanges} disabled={isSaving}>
                 {isSaving ? 'Saving...' : 'Save changes'}
               </Button>
             </AlertDialogFooter>
@@ -361,7 +345,6 @@ const RequestTabs: React.FC<RequestTabsProps> = ({
         />
       )}
 
-      {/* cURL Import Modal */}
       <ImportModal
         isOpen={showCurlImport}
         onClose={() => setShowCurlImport(false)}

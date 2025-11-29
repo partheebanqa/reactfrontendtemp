@@ -232,6 +232,16 @@ export interface ExecuteRequestPayload {
     headers: Array<{ key: string; value: string; enabled: boolean }>;
     params: Array<{ key: string; value: string; enabled: boolean }>;
   };
+
+  assertions?: Array<{
+    id: string;
+    type: string;
+    expected: unknown;
+    actualPath: string;
+    enabled: boolean;
+  }>;
+
+  schemaId?: string;
 }
 
 export interface ExecutionResponse {

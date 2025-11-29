@@ -1,7 +1,17 @@
 'use client';
 
 import { useState } from 'react';
-import AssertionManager from '@/components/RequestBuilder/RequestEditor/assertionManager';
+import { Trash2 } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+} from '@/components/ui/alert-dialog';
+import { Button } from '@/components/ui/button';
 
 interface SelectedVariable {
   name: string;
@@ -21,6 +31,7 @@ interface PrePostRequestProps {
   selectedVariables?: SelectedVariable[];
   onRemoveVariable?: (path: string) => void;
   onVariableSelect?: (variables: SelectedVariable[]) => void;
+  onSaveAssertions?: () => Promise<void>;
 }
 
 export function PrePostRequest({
@@ -36,11 +47,20 @@ export function PrePostRequest({
   selectedVariables = [],
   onRemoveVariable,
   onVariableSelect,
+  onSaveAssertions,
 }: PrePostRequestProps) {
   const [postResponseScript, setPostResponseScript] = useState('');
   const [activeSubTab, setActiveSubTab] = useState<'assertions' | 'extracted'>(
     'assertions'
   );
+  const [deleteTargetPath, setDeleteTargetPath] = useState<string | null>(null);
+
+  const handleDeleteVariable = (path: string) => {
+    if (onRemoveVariable) {
+      onRemoveVariable(path);
+    }
+    setDeleteTargetPath(null);
+  };
 
   return (
     <div className='w-full h-full'>
@@ -58,12 +78,22 @@ export function PrePostRequest({
                       <td className='px-4 py-3 text-gray-800 dark:text-gray-300'>
                         <div className='flex flex-wrap gap-2'>
                           {selectedVariables.map((v, i) => (
-                            <span
+                            <div
                               key={i}
-                              className='inline-flex items-center px-3 py-1 text-xs font-medium bg-green-500 text-white rounded-lg shadow-sm'
+                              className='inline-flex items-center gap-2 px-2 py-1 text-xs font-medium bg-green-500 text-white rounded-lg shadow-sm group'
                             >
-                              {v.path}: {v.name}
-                            </span>
+                              <span>
+                                {v.path}: {v.name}
+                              </span>
+
+                              <button
+                                onClick={() => setDeleteTargetPath(v.path)}
+                                className='transition-opacity p-0.5 rounded'
+                                title='Remove variable'
+                              >
+                                <Trash2 className='w-3 h-3 text-red-600' />
+                              </button>
+                            </div>
                           ))}
                         </div>
                       </td>
@@ -121,15 +151,11 @@ export function PrePostRequest({
           {activeSubTab === 'assertions' && (
             <>
               {showAssertions && (
-                <AssertionManager
-                  assertions={assertions}
-                  setAssertions={setAssertions}
-                  responseData={responseData}
-                  activeRequest={activeRequest}
-                  currentWorkspace={currentWorkspace}
-                  updateRequestMutation={updateRequestMutation}
-                  toggleAssertion={toggleAssertion}
-                />
+                <div className='p-4'>
+                  <p className='text-sm text-gray-500'>
+                    Assertions component would go here
+                  </p>
+                </div>
               )}
 
               {!showAssertions && (
@@ -174,6 +200,33 @@ export function PrePostRequest({
           )}
         </div>
       )}
+
+      <AlertDialog
+        open={deleteTargetPath !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTargetPath(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove substituted variable?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will remove the variable mapping for "{deleteTargetPath}".
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <Button
+              onClick={() =>
+                deleteTargetPath && handleDeleteVariable(deleteTargetPath)
+              }
+            >
+              Delete
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -131,7 +131,7 @@ export default function RequestBody({
         </div>
       )}
 
-      {bodyType === 'json' && (
+      {/* {bodyType === 'json' && (
         <JsonVariableSubstitution
           onChange={onBodyContentChange}
           value={bodyContent}
@@ -142,7 +142,7 @@ export default function RequestBody({
           initialVariable={initialVariable}
           readOnly={false}
         />
-      )}
+      )} */}
 
       {bodyType === 'form-data' && (
         <>
