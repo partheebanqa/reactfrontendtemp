@@ -196,6 +196,13 @@ const CreateTestSuit: React.FC = () => {
       preRequestId?: string;
       extractVariables?: ExtractedVariable[];
     }) => createTestSuite({ ...data, workspaceId: currentWorkspace!.id }),
+    onMutate: () => {
+      toast({
+        title: 'Generating test cases…',
+        description: 'Test cases are being generated, please wait for some time.',
+        variant: 'default',
+      });
+    },
     onSuccess: () => {
       toast({
         title: 'Testcase are getting generated ',
@@ -635,7 +642,7 @@ const CreateTestSuit: React.FC = () => {
       case 'prerequisites':
         return true;
       case 'select-apis':
-        return requests.length > 0;
+        return requests.length > 1;
       case 'generate-tests':
         return requests.length > 0;
       case 'select-tests':
@@ -735,6 +742,10 @@ const CreateTestSuit: React.FC = () => {
   const showNextLoader =
     (currentStep === 'select-apis' && isSaving) ||
     isPreparingTestCases;
+
+
+  const authRequest = requests.find(r => r.id === preRequestId);
+  const authBaseUrl = authRequest?.url;
 
   return (
     <div className="bg-gray-50">
@@ -859,6 +870,7 @@ const CreateTestSuit: React.FC = () => {
                       be used in all imported requests.
                     </p>
 
+
                     {/* <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
                       <div className="flex items-center justify-between mb-2">
                         <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
@@ -931,11 +943,7 @@ const CreateTestSuit: React.FC = () => {
                       <div className="px-6 py-4 bg-gray-50 mt-4 border-gray-200 flex justify-between items-center">
                         <div className="text-sm text-gray-600 space-y-1">
 
-                          {extractVariables.length > 0 && (
-                            <div className="text-green-600">
-                              Extracted variables: {extractVariables.length}
-                            </div>
-                          )}
+                         
                         </div>
                       </div>
                     )} */}
@@ -1209,6 +1217,7 @@ const CreateTestSuit: React.FC = () => {
         importedRequestIds={importedRequestIds}
         // @ts-ignore: if your ImportModal accepts "requests" / "collections", pass them here
         requests={importableRequests}
+        authBaseUrl={authBaseUrl}
       />
     </div>
   );

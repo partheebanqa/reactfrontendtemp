@@ -33,6 +33,7 @@ interface ImportModalProps {
   onClose: () => void;
   onImport: (requests: ExtendedRequest[]) => void;
   importedRequestIds?: string[];
+  authBaseUrl?: string;
 }
 
 const buildFolderTreeFromRequests = (
@@ -92,6 +93,9 @@ const FolderTreeItem: React.FC<{
   onToggleFolder: (folderId: string) => void;
   searchQuery: string;
   isLocked: boolean;
+  isPrereqMode?: boolean;
+  allowedDomain?: string | null;
+  isSelectApisMode?: boolean;
 }> = ({
   folder,
   collectionId,
@@ -102,14 +106,43 @@ const FolderTreeItem: React.FC<{
   onToggleFolder,
   searchQuery,
   isLocked,
+  isPrereqMode = false,
+  allowedDomain,
+  isSelectApisMode,
 }) => {
     const isExpanded = expandedFolders.has(folder.id);
     const hasSubFolders = folder.folders && folder.folders.length > 0;
     const hasRequests = folder.requests && folder.requests.length > 0;
 
-    const filteredRequests = folder.requests?.filter((req) =>
-      (req.name ?? '').toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const filteredRequests = folder.requests?.filter((req) => {
+      if (isPrereqMode) {
+        if (req.method?.toUpperCase() !== 'POST') return false;
+
+        const url = (req.url ?? '').toLowerCase();
+        const isLoginUrl =
+          url.includes('/login') ||
+          url.includes('/sign-in') ||
+          url.includes('/signin');
+        if (!isLoginUrl) return false;
+      }
+
+      if (isSelectApisMode && allowedDomain && req.url) {
+        try {
+          if (new URL(req.url).origin !== allowedDomain) return false;
+        } catch {
+          return false;
+        }
+      }
+
+      const search = searchQuery.toLowerCase();
+      const name = (req.name ?? '').toLowerCase();
+      const urlLower = (req.url ?? '').toLowerCase();
+
+      return name.includes(search) || urlLower.includes(search);
+    });
+
+
+
 
     const hasExpandableContent = hasSubFolders || hasRequests;
     const hasVisibleContent =
@@ -226,6 +259,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
   onClose,
   onImport,
   importedRequestIds = [],
+  authBaseUrl
 }) => {
   const { currentWorkspace } = useWorkspace();
   const workspaceId = currentWorkspace?.id;
@@ -381,12 +415,97 @@ export const ImportModal: React.FC<ImportModalProps> = ({
       }
     }
   };
+  const isCreateTestSuitePrereqRoute =
+    typeof window !== 'undefined' &&
+    window.location.href.includes('create-test-suite?step=prerequisites');
+
+  const isCreateTestSuiteSelectApisRoute =
+    typeof window !== 'undefined' &&
+    window.location.href.includes('create-test-suite?step=select-apis');
+
+  const allowedDomain = React.useMemo(() => {
+    if (!authBaseUrl || !isCreateTestSuiteSelectApisRoute) return null;
+    try {
+      return new URL(authBaseUrl).origin;
+    } catch {
+      return null;
+    }
+  }, [authBaseUrl, isCreateTestSuiteSelectApisRoute]);
+
+
+  const isUrlOnAllowedDomain = (urlStr?: string | null) => {
+    if (!allowedDomain || !isCreateTestSuiteSelectApisRoute) return true; // no lock
+    if (!urlStr) return false;
+    try {
+      const u = new URL(urlStr, allowedDomain); // supports relative URLs
+      return u.origin === allowedDomain;
+    } catch {
+      return false;
+    }
+  };
+
+  const isRequestAllowed = (req: { method?: string; url?: string }) => {
+    const rawUrl = req.url ?? '';
+    const lowerUrl = rawUrl.toLowerCase();
+
+    // 1) Prerequisite step: only POST + login/sign-in
+    if (isCreateTestSuitePrereqRoute) {
+      if (req.method?.toUpperCase() !== 'POST') return false;
+
+      const isLoginUrl =
+        lowerUrl.includes('/login') ||
+        lowerUrl.includes('/sign-in') ||
+        lowerUrl.includes('/signin');
+
+      if (!isLoginUrl) return false;
+    }
+
+    // 2) Select APIs step: only same domain as auth
+    if (isCreateTestSuiteSelectApisRoute && allowedDomain) {
+      try {
+        const origin = new URL(rawUrl).origin;
+        if (origin !== allowedDomain) return false;
+      } catch {
+        return false;
+      }
+    }
+
+    return true;
+  };
+
 
   const filteredCollections = collections
     .map((collection: TransformedCollection) => {
-      const filteredRequests = collection.requests.filter((request) =>
-        (request.name ?? '').toLowerCase().includes(searchQuery.toLowerCase())
-      );
+      const filteredRequests = collection.requests.filter((request) => {
+
+        if (!isRequestAllowed(request)) return false;
+
+
+        const search = searchQuery.toLowerCase();
+        const name = (request.name ?? '').toLowerCase();
+        const url = (request.url ?? '').toLowerCase();
+
+        // 💡 Extra filtering ONLY on prerequisites route
+        if (isCreateTestSuitePrereqRoute) {
+          // 1) Only POST requests
+          if (request.method?.toUpperCase() !== 'POST') {
+            return false;
+          }
+
+          // 2) Only URLs containing /login or /sign-in (or /signin)
+          const isLoginUrl =
+            url.includes('/login') ||
+            url.includes('/sign-in') ||
+            url.includes('/signin');
+
+          if (!isLoginUrl) {
+            return false;
+          }
+        }
+
+        // Normal search (works in all routes, including prerequisites)
+        return name.includes(search) || url.includes(search);
+      });
 
       return {
         ...collection,
@@ -395,6 +514,8 @@ export const ImportModal: React.FC<ImportModalProps> = ({
       };
     })
     .filter((collection) => collection.requests.length > 0);
+
+
 
   const isRequestImported = (requestId: string) =>
     importedRequestIds.includes(requestId);
@@ -409,12 +530,28 @@ export const ImportModal: React.FC<ImportModalProps> = ({
     }
   };
 
+
+
   const handleSelectRequest = (
     collectionId: string,
     requestId: string,
     checked: boolean
   ) => {
     if (isRequestImported(requestId)) return;
+
+    if (isCreateTestSuitePrereqRoute) {
+      setSelectedRequests((prev) => {
+        if (checked) {
+          setActiveCollectionId(collectionId);
+
+          return [requestId];
+        } else {
+          setActiveCollectionId(null);
+          return [];
+        }
+      });
+      return;
+    }
 
     setSelectedRequests((prev) => {
       if (checked && activeCollectionId && activeCollectionId !== collectionId) {
@@ -624,15 +761,6 @@ export const ImportModal: React.FC<ImportModalProps> = ({
     location === '/request-chains/create' ||
     (location.startsWith('/request-chains/') && location.endsWith('/edit'));
 
-  const [pathname, search = ''] = location.split('?');
-  const searchParams = new URLSearchParams(search);
-  const step = searchParams.get('step');
-
-  const isCreateTestSuitePrereqRoute =
-    typeof window !== 'undefined' &&
-    window.location.href.includes('create-test-suite?step=prerequisites');
-
-
 
 
   const toggleExternalFolder = (folderId: string) => {
@@ -820,79 +948,72 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                                 </div>
                               ) : treeData ? (
                                 <div className='space-y-1'>
-                                  {treeData.requests &&
-                                    treeData.requests.length > 0 && (
-                                      <div className='space-y-1 mb-4'>
-                                        {treeData.requests
-                                          .filter((req: any) =>
-                                            (req.name ?? '')
-                                              .toLowerCase()
-                                              .includes(
-                                                searchQuery.toLowerCase()
-                                              )
-                                          )
-                                          .map((request: any) => {
-                                            const imported = isRequestImported(
-                                              request.id
-                                            );
-                                            const selected =
-                                              selectedRequests.includes(
-                                                request.id
-                                              );
-                                            const isLocked =
-                                              !!activeCollectionId && activeCollectionId !== collection.id;
+                                  {treeData.requests && treeData.requests.length > 0 && (
+                                    <div className='space-y-1 mb-4'>
+                                      {treeData.requests
+                                        .filter((req: any) => {
+                                          if (!isRequestAllowed(req)) return false;
 
-                                            return (
-                                              <div
-                                                key={request.id}
-                                                className={`flex items-center gap-3 p-3 rounded-lg transition-all ${imported
-                                                  ? 'bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900'
-                                                  : 'hover:bg-muted/50 border border-transparent hover:border-border'
-                                                  }`}
-                                              >
-                                                {imported ? (
-                                                  <div className='w-4 h-4 rounded bg-green-500 flex items-center justify-center flex-shrink-0'>
-                                                    <Check className='w-3 h-3 text-white' />
-                                                  </div>
-                                                ) : (
-                                                  <Checkbox
-                                                    checked={selected}
-                                                    disabled={isLocked}
-                                                    onCheckedChange={(checked) =>
-                                                      handleSelectRequest(
-                                                        collection.id,
-                                                        request.id,
-                                                        checked as boolean
-                                                      )
-                                                    }
-                                                    className='flex-shrink-0'
-                                                  />
-                                                )}
-                                                <MethodBadge
-                                                  method={
-                                                    request.method || 'GET'
-                                                  }
-                                                />
-                                                <div className='flex-1 min-w-0'>
-                                                  <div className='flex items-center gap-2'>
-                                                    <h4 className='font-medium text-foreground truncate'>
-                                                      {request.name}
-                                                    </h4>
-                                                    {imported && (
-                                                      <span className='text-xs bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 px-2 py-0.5 rounded-full whitespace-nowrap font-medium'>
-                                                        Already imported
-                                                      </span>
-                                                    )}
-                                                  </div>
-                                                  <p className='text-sm text-muted-foreground truncate mt-0.5'>
-                                                    {request.url}
-                                                  </p>
+                                          const search = searchQuery.toLowerCase();
+                                          const name = (req.name ?? '').toLowerCase();
+                                          const url = (req.url ?? '').toLowerCase();
+
+                                          // normal search (name or url)
+                                          return name.includes(search) || url.includes(search);
+                                        })
+                                        .map((request: any) => {
+                                          const imported = isRequestImported(request.id);
+                                          const selected = selectedRequests.includes(request.id);
+                                          const isLocked =
+                                            !!activeCollectionId && activeCollectionId !== collection.id;
+
+                                          return (
+                                            <div
+                                              key={request.id}
+                                              className={`flex items-center gap-3 p-3 rounded-lg transition-all ${imported
+                                                ? 'bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900'
+                                                : 'hover:bg-muted/50 border border-transparent hover:border-border'
+                                                }`}
+                                            >
+                                              {imported ? (
+                                                <div className='w-4 h-4 rounded bg-green-500 flex items-center justify-center flex-shrink-0'>
+                                                  <Check className='w-3 h-3 text-white' />
                                                 </div>
+                                              ) : (
+                                                <Checkbox
+                                                  checked={selected}
+                                                  disabled={isCreateTestSuitePrereqRoute ? false : isLocked}
+                                                  onCheckedChange={(checked) =>
+                                                    handleSelectRequest(
+                                                      collection.id,
+                                                      request.id,
+                                                      checked as boolean
+                                                    )
+                                                  }
+                                                  className='flex-shrink-0'
+                                                />
+                                              )}
+                                              <MethodBadge method={request.method || 'GET'} />
+                                              <div className='flex-1 min-w-0'>
+                                                <div className='flex items-center gap-2'>
+                                                  <h4 className='font-medium text-foreground truncate'>
+                                                    {request.name}
+                                                  </h4>
+                                                  {imported && (
+                                                    <span className='text-xs bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 px-2 py-0.5 rounded-full whitespace-nowrap font-medium'>
+                                                      Already imported
+                                                    </span>
+                                                  )}
+                                                </div>
+                                                <p className='text-sm text-muted-foreground truncate mt-0.5'>
+                                                  {request.url}
+                                                </p>
                                               </div>
-                                            );
-                                          })}
-                                      </div>
-                                    )}
+                                            </div>
+                                          );
+                                        })}
+                                    </div>
+                                  )}
 
                                   {treeData.folders &&
                                     treeData.folders.length > 0 && (
@@ -918,7 +1039,10 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                                               expandedFolders={expandedFolders}
                                               onToggleFolder={toggleFolder}
                                               searchQuery={searchQuery}
-                                              isLocked={isLocked}
+                                              isLocked={isCreateTestSuitePrereqRoute ? false : isLocked} // 🔒 only lock in normal mode
+                                              isPrereqMode={isCreateTestSuitePrereqRoute}
+                                              allowedDomain={allowedDomain}
+                                              isSelectApisMode={isCreateTestSuiteSelectApisRoute}
                                             />
                                           );
                                         })}

@@ -367,6 +367,14 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
   const getCategoryIcon = (category: string) =>
     categoryConfig[category]?.icon || DEFAULT_ICON;
 
+
+  const shouldHidePreRequest =
+    typeof window !== 'undefined' &&
+    (
+      window.location.href.includes('create-test-suite?step=select-apis') || // step 3 (create)
+      window.location.href.includes('step=select-tests')                    // step 4 (edit or create)
+    );
+
   return (
     <Card>
       <CardHeader>
@@ -390,7 +398,7 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
             {onImport && (
               <Button variant='outline' onClick={onImport}>
                 <Download className='w-4 h-4 mr-2' />
-                Import More Requests
+                Import  Requests
               </Button>
             )}
           </div>
@@ -400,7 +408,15 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
       <CardContent>
         <div className='space-y-3'>
           {visibleRequests.map((request) => {
+
+            if (shouldHidePreRequest && preRequestId === request.id) {
+              return null;
+            }
+            const MAX_CHAR = 105;
             const finalUrl = buildFinalUrl(request.url);
+            const displayUrl = finalUrl.length > MAX_CHAR
+              ? finalUrl.substring(0, MAX_CHAR) + "..."
+              : finalUrl;
             const { totalTests, selectedTests, selectedByCategory } =
               mapCategoryData(request.meta);
 
@@ -410,7 +426,8 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
                 className='p-4 border rounded-lg hover:bg-muted/50 transition-colors'
               >
                 <div className='flex items-center justify-between'>
-                  <div className='flex items-start space-x-3 flex-1'>
+
+                  <div className='flex items-center space-x-3 flex-1'>
                     <Badge className={getMethodBadgeColor(request.method)}>
                       {request.method}
                     </Badge>
@@ -428,11 +445,14 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
                           </Badge>
                         )}
                       </div>
-                      <p className='text-[12px] text-muted-foreground mt-1 break-all'>
-                        {finalUrl}
+                      <p className='text-[13px] text-muted-foreground mt-1 break-all'>
+                        {displayUrl}
                       </p>
                     </div>
                   </div>
+
+
+
                   <div className='flex items-center justify-center space-x-2'>
                     {showAuthCapture && request.method === 'POST' && (
                       <Button
