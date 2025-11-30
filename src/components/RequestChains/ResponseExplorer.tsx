@@ -968,7 +968,7 @@ export function ResponseExplorer({
                               >
                                 <Wand2 className='w-3 h-3' />
                                 <span className='text-xs font-medium'>
-                                  Apply Auth to all
+                                  Apply auth to all requests
                                 </span>
                               </button>
                             </TooltipTrigger>
