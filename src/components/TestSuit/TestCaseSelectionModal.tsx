@@ -201,7 +201,7 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
     TestCaseCategory[]
   >([]);
 
-  console.log(testCaseCategories, 'testCaseCategories');
+  // console.log(testCaseCategories, 'testCaseCategories');
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -546,18 +546,16 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
                   onClick={
                     () => setSubcatFilter(active ? '' : chip.name) // toggle
                   }
-                  className={`inline-flex items-center rounded-md border px-2 py-1 text-xs ${
-                    active
-                      ? 'bg-[#136fb0] text-white border-[#136fb0]'
-                      : 'bg-transparent text-foreground border-muted-foreground/30 hover:bg-muted/40'
-                  }`}
+                  className={`inline-flex items-center rounded-md border px-2 py-1 text-xs ${active
+                    ? 'bg-[#136fb0] text-white border-[#136fb0]'
+                    : 'bg-transparent text-foreground border-muted-foreground/30 hover:bg-muted/40'
+                    }`}
                   title={chip.name}
                 >
                   <span className='mr-1 capitalize'>{chip.name}</span>
                   <span
-                    className={`ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[#136fb0] ${
-                      active ? 'bg-white/20 text-[#ffffff]' : 'bg-muted'
-                    }`}
+                    className={`ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[#136fb0] ${active ? 'bg-white/20 text-[#ffffff]' : 'bg-muted'
+                      }`}
                   >
                     {chip.count}
                   </span>
@@ -620,6 +618,10 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
                       selectedTestCases.includes(test?.id || '')
                     ).length;
 
+                    const isAllSelected =
+                      categoryTests.length > 0 &&
+                      selectedInCategory === categoryTests.length;
+
                     return (
                       <div
                         key={category.category}
@@ -643,7 +645,7 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
                             </span>
                             <span className='font-medium'>
                               {category.category}
-                              {}
+                              { }
                             </span>
                             <Badge variant='outline'>
                               {categoryTests.length}
@@ -664,7 +666,7 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
                             }}
                             className='text-[#136fb0] hover:text-blue-700'
                           >
-                            Select All
+                            {isAllSelected ? 'Unselect All' : 'Select All'}
                           </Button>
                         </div>
 
@@ -806,9 +808,9 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
                                                 <JsonView
                                                   dark
                                                   enableClipboard
-                                                  onAdd={() => {}}
-                                                  onDelete={() => {}}
-                                                  onEdit={() => {}}
+                                                  onAdd={() => { }}
+                                                  onDelete={() => { }}
+                                                  onEdit={() => { }}
                                                   src={test}
                                                   theme='default'
                                                 />
@@ -830,9 +832,9 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
                                                 <JsonView
                                                   dark
                                                   enableClipboard
-                                                  onAdd={() => {}}
-                                                  onDelete={() => {}}
-                                                  onEdit={() => {}}
+                                                  onAdd={() => { }}
+                                                  onDelete={() => { }}
+                                                  onEdit={() => { }}
                                                   src={test}
                                                   theme='default'
                                                 />

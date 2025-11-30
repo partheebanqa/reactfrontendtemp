@@ -157,11 +157,11 @@ const TestSuites: React.FC = () => {
   };
 
   const handleEditSuite = (suite: TestSuite) => {
-    setLocation(`/test-suites/${suite.id}/edit`);
+    setLocation(`/test-suites/${suite.id}/?step=select-tests`);
   };
 
   const handleCreateSuite = () => {
-    setLocation('/test-suites/create');
+    setLocation('/create-test-suite');
   };
 
   const envOptions = useMemo(() => {

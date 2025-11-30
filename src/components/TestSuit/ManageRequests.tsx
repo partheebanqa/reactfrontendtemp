@@ -1,4 +1,4 @@
-'use client';
+
 
 import type React from 'react';
 import { useMemo, useState } from 'react';
@@ -76,7 +76,7 @@ interface Request {
 interface ManageRequestsProps {
   requests: Request[];
   testSuiteId?: string;
-  onImport: () => void;
+  onImport?: () => void;
   onDeleteRequest: (requestId: string) => void;
   onUpdateTestCases?: (requestId: string, testCaseIds: string[]) => void;
   onRefreshRequests?: () => Promise<void> | void;
@@ -89,6 +89,8 @@ interface ManageRequestsProps {
   activeEnvironment?: any;
   preRequestId?: string | null;
   extractVariables?: ExtractedVariable[];
+  filterMethod?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
+  showAuthCapture?: boolean;
 }
 
 const getMethodBadgeColor = (method: string) => {
@@ -121,18 +123,33 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
   activeEnvironment,
   preRequestId,
   extractVariables = [],
+  filterMethod,
+  showAuthCapture,
 }) => {
   const [showCategories, setShowCategories] = useState(false);
 
   const [selectedRequest, setSelectedRequest] = useState<Request | null>(null);
   const [isTestCaseModalOpen, setIsTestCaseModalOpen] = useState(false);
 
-  console.log('requests123:', requests);
+  // console.log('requests123:', requests);
+
+  // console.log('preRequestId:', preRequestId);
+
+  // console.log('extractVariables:', extractVariables);
+
+  // console.log('testSuiteId:', testSuiteId);
 
   const [isTestDialogOpen, setIsTestDialogOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [pendingRequest, setPendingRequest] = useState<Request | null>(null);
   const [showOverwriteDialog, setShowOverwriteDialog] = useState(false);
+
+  const visibleRequests = useMemo(() => {
+    if (!filterMethod) return requests;
+    return requests.filter(
+      (r) => r.method?.toUpperCase() === filterMethod.toUpperCase()
+    );
+  }, [requests, filterMethod]);
 
   const mapCategoryData = (meta: any) => {
     if (!meta)
@@ -213,24 +230,15 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
   };
 
   const handleTestRequest = (request: Request) => {
-    console.log('Testing request:', request.id);
-    console.log('Current preRequestId:', preRequestId);
-    console.log('Current extractVariables count:', extractVariables.length);
-
-    // Check if there's already a preRequestId and it's different from current request
-    // AND there are existing extracted variables
     if (
       preRequestId &&
       preRequestId !== request.id &&
       extractVariables.length > 0
     ) {
-      console.log(
-        'Showing overwrite dialog - different preRequestId with existing variables'
-      );
+
       setPendingRequest(request);
       setShowOverwriteDialog(true);
     } else {
-      console.log('Opening test dialog directly');
       setSelectedRequest(request);
       setIsTestDialogOpen(true);
     }
@@ -279,8 +287,8 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
     requestId: string,
     extractVariables: ExtractedVariable[]
   ) => {
-    console.log('requestId:', requestId);
-    console.log('extractVariables:', extractVariables);
+    // console.log('requestId:', requestId);
+    // console.log('extractVariables:', extractVariables);
 
     // Pass the data to parent component instead of storing locally
     if (onSaveExtractVariables) {
@@ -359,10 +367,19 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
   const getCategoryIcon = (category: string) =>
     categoryConfig[category]?.icon || DEFAULT_ICON;
 
+
+  const shouldHidePreRequest =
+    typeof window !== 'undefined' &&
+    (
+      window.location.href.includes('create-test-suite?step=select-apis') || // step 3 (create)
+      window.location.href.includes('step=select-tests')                    // step 4 (edit or create)
+    );
+
   return (
     <Card>
       <CardHeader>
         <div className='flex items-center justify-between'>
+
           <CardTitle>Requests ({requests.length})</CardTitle>
 
           <div className='flex items-center space-x-2'>
@@ -378,18 +395,28 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
                 {refreshing ? 'Refreshing...' : 'Refresh'}
               </Button>
             )}
-            <Button variant='outline' onClick={onImport}>
-              <Download className='w-4 h-4 mr-2' />
-              Import More Requests
-            </Button>
+            {onImport && (
+              <Button variant='outline' onClick={onImport}>
+                <Download className='w-4 h-4 mr-2' />
+                Import  Requests
+              </Button>
+            )}
           </div>
         </div>
       </CardHeader>
 
       <CardContent>
         <div className='space-y-3'>
-          {requests.map((request) => {
+          {visibleRequests.map((request) => {
+
+            if (shouldHidePreRequest && preRequestId === request.id) {
+              return null;
+            }
+            const MAX_CHAR = 105;
             const finalUrl = buildFinalUrl(request.url);
+            const displayUrl = finalUrl.length > MAX_CHAR
+              ? finalUrl.substring(0, MAX_CHAR) + "..."
+              : finalUrl;
             const { totalTests, selectedTests, selectedByCategory } =
               mapCategoryData(request.meta);
 
@@ -398,8 +425,9 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
                 key={request.id}
                 className='p-4 border rounded-lg hover:bg-muted/50 transition-colors'
               >
-                <div className='flex items-start justify-between'>
-                  <div className='flex items-start space-x-3 flex-1'>
+                <div className='flex items-center justify-between'>
+
+                  <div className='flex items-center space-x-3 flex-1'>
                     <Badge className={getMethodBadgeColor(request.method)}>
                       {request.method}
                     </Badge>
@@ -417,88 +445,73 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
                           </Badge>
                         )}
                       </div>
-                      <p className='text-sm text-muted-foreground mt-1 break-all'>
-                        {finalUrl}
+                      <p className='text-[13px] text-muted-foreground mt-1 break-all'>
+                        {displayUrl}
                       </p>
                     </div>
                   </div>
-                  <div className='flex items-center space-x-2'>
-                    <TooltipProvider>
-                      {request.method === 'POST' && (
-                        <Tooltip>
-                          <TooltipTrigger asChild>
+
+
+
+                  <div className='flex items-center justify-center space-x-2'>
+                    {showAuthCapture && request.method === 'POST' && (
+                      <Button
+                        onClick={() => handleTestRequest(request)}
+                      >
+                        Capture Auth
+                      </Button>
+                    )}
+
+                    {testSuiteId &&
+                      onUpdateTestCases &&
+                      preRequestId !== request.id && (
+                        <>
+                          <Button
+                            onClick={() =>
+                              handleConfigureTestCases(request)
+                            }>
+                            Select testcases
+                          </Button>
+                        </>
+                      )}
+                    <AlertDialog>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <AlertDialogTrigger asChild>
                             <Button
                               variant='ghost'
                               size='sm'
-                              onClick={() => handleTestRequest(request)}
-                              className='text-muted-foreground hover:text-primary hover:bg-primary/10'
+                              className='text-red-600 hover:text-red-700 hover:bg-red-100 dark:hover:bg-red-900'
                             >
-                              <FileKey className='w-4 h-4' />
+                              <Trash2 className='w-4 h-4' />
                             </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Capture Auth</TooltipContent>
-                        </Tooltip>
-                      )}
+                          </AlertDialogTrigger>
+                        </TooltipTrigger>
+                        <TooltipContent>Delete Request</TooltipContent>
+                      </Tooltip>
 
-                      {testSuiteId &&
-                        onUpdateTestCases &&
-                        preRequestId !== request.id && (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant='ghost'
-                                size='sm'
-                                onClick={() =>
-                                  handleConfigureTestCases(request)
-                                }
-                                className='text-muted-foreground hover:text-primary hover:bg-primary/10'
-                              >
-                                <Settings className='w-4 h-4' />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>Select testcases</TooltipContent>
-                          </Tooltip>
-                        )}
-
-                      <AlertDialog>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <AlertDialogTrigger asChild>
-                              <Button
-                                variant='ghost'
-                                size='sm'
-                                className='text-red-600 hover:text-red-700 hover:bg-red-100 dark:hover:bg-red-900'
-                              >
-                                <Trash2 className='w-4 h-4' />
-                              </Button>
-                            </AlertDialogTrigger>
-                          </TooltipTrigger>
-                          <TooltipContent>Delete Request</TooltipContent>
-                        </Tooltip>
-
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>
-                              Delete this request?
-                            </AlertDialogTitle>
-                            <AlertDialogDescription>
-                              {preRequestId === request.id
-                                ? 'You are trying to delete the pre-request api. Check once before deleting.'
-                                : `This will permanently delete "${request.name}". This action cannot be undone.`}
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => onDeleteRequest(request.id)}
-                              className='bg-red-600 hover:bg-red-700'
-                            >
-                              Delete
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </TooltipProvider>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>
+                            Delete this request?
+                          </AlertDialogTitle>
+                          <AlertDialogDescription>
+                            {preRequestId === request.id
+                              ? 'You are trying to delete the pre-request api. Check once before deleting.'
+                              : `This will permanently delete "${request.name}". This action cannot be undone.`}
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => onDeleteRequest(request.id)}
+                            className='bg-red-600 hover:bg-red-700'
+                          >
+                            Delete
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </div>
                 </div>
                 {testSuiteId && preRequestId !== request.id && (
@@ -532,11 +545,10 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
 
                         {/* collapsible category list */}
                         <div
-                          className={`overflow-hidden transition-all duration-300 ${
-                            showCategories
-                              ? 'max-h-[1000px] opacity-100'
-                              : 'max-h-0 opacity-0'
-                          }`}
+                          className={`overflow-hidden transition-all duration-300 ${showCategories
+                            ? 'max-h-[1000px] opacity-100'
+                            : 'max-h-0 opacity-0'
+                            }`}
                         >
                           <div className='space-y-2'>
                             {selectedByCategory.map((categoryData) => (
@@ -599,7 +611,7 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
         />
       )}
 
-      {selectedRequest && testSuiteId && (
+      {/* {selectedRequest && testSuiteId && (
         <TestCaseSelectionModal
           isOpen={isTestCaseModalOpen}
           onClose={() => {
@@ -613,7 +625,24 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
           }}
           testSuiteId={testSuiteId}
         />
+      )} */}
+
+      {selectedRequest && (
+        <TestCaseSelectionModal
+          isOpen={isTestCaseModalOpen}
+          onClose={() => {
+            setIsTestCaseModalOpen(false);
+            setSelectedRequest(null);
+          }}
+          onSelect={handleTestCaseSelection}
+          request={{
+            ...selectedRequest,
+            selectedTestCases: selectedRequest.selectedTestCases || [],
+          }}
+          testSuiteId={testSuiteId || ''}
+        />
       )}
+
 
       <AlertDialog
         open={showOverwriteDialog}
