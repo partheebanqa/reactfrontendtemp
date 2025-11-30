@@ -12,6 +12,8 @@ import {
   Trash2,
   Info,
   AlertCircle,
+  X,
+  Wand2,
 } from 'lucide-react';
 import type { DataExtraction } from '@/shared/types/requestChain.model';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
@@ -23,6 +25,18 @@ interface ResponseExplorerProps {
     headers: Record<string, string>;
     body: string;
     cookies?: Record<string, string>;
+    assertions?: Array<{
+      status: 'passed' | 'failed';
+      responseStatus?: number;
+      responseTime?: number;
+      responseSize?: number;
+      description: string;
+      expectedValue?: string;
+      operator?: string;
+      type?: string;
+      category?: string;
+      errorMessage?: string;
+    }>;
   };
   onExtractVariable: (extraction: DataExtraction) => void;
   extractedVariables: Record<string, any>;
@@ -44,6 +58,7 @@ interface ResponseExplorerProps {
       status: number;
     };
   };
+  onApplyToAllRequests?: (variableName: string) => void;
 }
 
 interface JsonNode {
@@ -70,12 +85,11 @@ export function ResponseExplorer({
   executionStatus,
   errorMessage,
   executionLog,
+  onApplyToAllRequests,
 }: ResponseExplorerProps) {
   const [activeTab, setActiveTab] = useState<
-    'body' | 'headers' | 'cookies' | 'actualRequest'
+    'body' | 'headers' | 'cookies' | 'actualRequest' | 'assertions'
   >('body');
-
-  console.log('actualRequestBody:', actualRequestBody);
 
   const getValueByPath = (obj: any, path: string): any => {
     if (!obj || !path) return undefined;
@@ -291,6 +305,13 @@ export function ResponseExplorer({
     }
   };
 
+  const isJWTToken = (value: any): boolean => {
+    if (typeof value !== 'string') return false;
+    // JWT format: header.payload.signature (three base64url encoded parts separated by dots)
+    const jwtRegex = /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/;
+    return jwtRegex.test(value);
+  };
+
   const renderJsonValue = (node: JsonNode, isVisible: boolean) => {
     if (!isVisible) return null;
     const isExpanded = expandedNodes.has(node.path);
@@ -443,7 +464,7 @@ export function ResponseExplorer({
             <p className='text-gray-600 text-sm mb-2'>
               Response is not valid JSON
             </p>
-            <pre className='text-xs text-gray-700 whitespace-pre-wrap max-h-40 overflow-y-auto'>
+            <pre className='text-xs text-gray-700 whitespace-pre-wrap max-h-40 overflow-y-auto scrollbar-thin'>
               {response?.body}
             </pre>
           </div>
@@ -597,6 +618,100 @@ export function ResponseExplorer({
     </div>
   );
 
+  const renderAssertionsTab = () => {
+    if (!response?.assertions || response.assertions.length === 0) {
+      return (
+        <div className='text-center py-8 text-gray-500'>
+          <CheckCircle className='w-12 h-12 text-gray-300 mx-auto mb-3' />
+          <p>No assertions configured for this request</p>
+        </div>
+      );
+    }
+
+    const passedCount = response.assertions.filter(
+      (a) => a.status === 'passed'
+    ).length;
+    const failedCount = response.assertions.length - passedCount;
+
+    return (
+      <div className='space-y-4'>
+        {/* Summary */}
+        <div className='flex items-center space-x-4 p-4 bg-gray-50 rounded-lg'>
+          <div className='flex items-center space-x-2'>
+            <CheckCircle className='w-5 h-5 text-green-600' />
+            <span className='font-medium text-gray-900'>
+              {passedCount} Passed
+            </span>
+          </div>
+          {failedCount > 0 && (
+            <div className='flex items-center space-x-2'>
+              <X className='w-5 h-5 text-red-600' />
+              <span className='font-medium text-gray-900'>
+                {failedCount} Failed
+              </span>
+            </div>
+          )}
+        </div>
+
+        <div className='space-y-2'>
+          {response.assertions.map((assertion, index) => (
+            <div
+              key={index}
+              className={`border rounded-lg p-4 ${
+                assertion.status === 'passed'
+                  ? 'bg-green-50 border-green-200'
+                  : 'bg-red-50 border-red-200'
+              }`}
+            >
+              <div className='flex items-start justify-between'>
+                <div className='flex items-start space-x-3 flex-1'>
+                  {assertion.status === 'passed' ? (
+                    <CheckCircle className='w-5 h-5 text-green-600 flex-shrink-0 mt-0.5' />
+                  ) : (
+                    <X className='w-5 h-5 text-red-600 flex-shrink-0 mt-0.5' />
+                  )}
+                  <div className='flex-1 min-w-0'>
+                    <h4
+                      className={`font-medium ${
+                        assertion.status === 'passed'
+                          ? 'text-green-900'
+                          : 'text-red-900'
+                      }`}
+                    >
+                      {assertion.description}
+                    </h4>
+                    {assertion.errorMessage && (
+                      <p className='mt-2 text-sm text-red-700'>
+                        {assertion.errorMessage}
+                      </p>
+                    )}
+                    <div className='mt-2 flex flex-wrap gap-2'>
+                      {assertion.expectedValue && (
+                        <span className='text-xs bg-white px-2 py-1 rounded border'>
+                          Expected: {assertion.expectedValue}
+                        </span>
+                      )}
+                      {assertion.operator && (
+                        <span className='text-xs bg-white px-2 py-1 rounded border'>
+                          Operator: {assertion.operator}
+                        </span>
+                      )}
+                      {assertion.category && (
+                        <span className='text-xs bg-white px-2 py-1 rounded border capitalize'>
+                          {assertion.category}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   const renderActualRequestTab = () => {
     if (!actualRequestUrl) {
       return (
@@ -634,7 +749,7 @@ export function ResponseExplorer({
           <div className='flex items-center space-x-3 p-3 bg-gray-50 border border-gray-200 rounded-lg'>
             <span
               className={`px-2 py-1 ${getMethodColor(
-                actualRequestMethod
+                actualRequestMethod || 'GET'
               )} text-xs font-semibold rounded`}
             >
               {actualRequestMethod}
@@ -717,7 +832,7 @@ export function ResponseExplorer({
                   <Copy className='w-4 h-4' />
                 </button>
               </div>
-              <pre className='text-sm text-gray-900 font-mono overflow-x-auto'>
+              <pre className='text-sm text-gray-900 font-mono overflow-x-auto scrollbar-thin'>
                 {typeof actualRequestBody === 'string'
                   ? actualRequestBody
                   : JSON.stringify(actualRequestBody, null, 2)}
@@ -740,6 +855,7 @@ export function ResponseExplorer({
               { id: 'headers', label: 'Headers' },
               { id: 'cookies', label: 'Cookies' },
               { id: 'actualRequest', label: 'Actual Request' },
+              { id: 'assertions', label: 'Assertions(R)' },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -768,7 +884,9 @@ export function ResponseExplorer({
               <span>{executionLog.duration}ms</span>
 
               {/* Size */}
-              <span>{(executionLog.response?.size / 1024).toFixed(2)} KB</span>
+              <span>
+                {(executionLog.response?.size || 0 / 1024).toFixed(2)} KB
+              </span>
             </div>
           )}
         </div>
@@ -787,6 +905,7 @@ export function ResponseExplorer({
           {activeTab === 'headers' && renderHeadersTab()}
           {activeTab === 'cookies' && renderCookiesTab()}
           {activeTab === 'actualRequest' && renderActualRequestTab()}
+          {activeTab === 'assertions' && renderAssertionsTab()}
         </div>
       </div>
       {finalExtractedVariables &&
@@ -808,6 +927,12 @@ export function ResponseExplorer({
                 const extraction = existingExtractions?.find(
                   (e) => e.variableName === name || e.name === name
                 );
+                const isJwt =
+                  typeof value === 'string' &&
+                  /[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]+/.test(
+                    value
+                  );
+
                 return (
                   <div
                     key={name}
@@ -833,9 +958,28 @@ export function ResponseExplorer({
                           </TooltipTrigger>
                           <TooltipContent>Copy variable name</TooltipContent>
                         </Tooltip>
+
+                        {onApplyToAllRequests && isJwt && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                onClick={() => onApplyToAllRequests(name)}
+                                className='flex items-center gap-1 p-1 text-purple-600 hover:bg-purple-50 rounded'
+                              >
+                                <Wand2 className='w-3 h-3' />
+                                <span className='text-xs font-medium'>
+                                  Apply Auth to all
+                                </span>
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              Apply to all subsequent requests
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
                       </div>
                       <div className='flex items-center space-x-2'>
-                        <span className='text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded border text-sm font-mono flex-1 overflow-x-auto whitespace-nowrap'>
+                        <span className='text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded border text-sm font-mono flex-1 overflow-x-auto scrollbar-thin whitespace-nowrap'>
                           {extraction?.path}
                         </span>
                         <button
@@ -850,12 +994,12 @@ export function ResponseExplorer({
                     <div className='text-sm'>
                       <p className='text-gray-600 mb-1 flex items-center gap-2'>
                         <span>Path:</span>
-                        <span className='bg-gray-50 px-2 py-1 rounded border text-sm font-mono flex-1 overflow-x-auto whitespace-nowrap'>
+                        <span className='bg-gray-50 px-2 py-1 rounded border text-sm font-mono flex-1 overflow-x-auto scrollbar-thin whitespace-nowrap'>
                           {extraction?.path}
                         </span>
                       </p>
 
-                      <div className='bg-gray-50 px-2 py-1 rounded border text-sm font-mono overflow-x-auto whitespace-nowrap'>
+                      <div className='bg-gray-50 px-2 py-1 rounded border text-sm font-mono overflow-x-auto scrollbar-thin whitespace-nowrap'>
                         {typeof value === 'object'
                           ? JSON.stringify(value)
                           : String(value)}
@@ -869,7 +1013,7 @@ export function ResponseExplorer({
               <p className='text-sm text-blue-800'>
                 <strong>💡 Usage:</strong> Use these variables in subsequent
                 requests with the syntax:{' '}
-                <code className='bg-blue-100 px-1 rounded overflow-x-auto whitespace-nowrap inline-block'>{`{{variableName}}`}</code>
+                <code className='bg-blue-100 px-1 rounded overflow-x-auto scrollbar-thin whitespace-nowrap inline-block'>{`{{variableName}}`}</code>
               </p>
             </div>
           </div>
@@ -895,7 +1039,7 @@ export function ResponseExplorer({
                   type='text'
                   value={variableName}
                   onChange={(e) => handleVariableNameChange(e.target.value)}
-                  className='w-full px-3 py-1.5 border border-gray-300 rounded-lg bg-gray-50 font-mono text-sm overflow-x-auto whitespace-nowrap'
+                  className='w-full px-3 py-1.5 border border-gray-300 rounded-lg bg-gray-50 font-mono text-sm overflow-x-auto scrollbar-thin whitespace-nowrap'
                   placeholder='variable_name'
                 />
                 <p className='text-xs text-gray-500 mt-1'>
@@ -912,7 +1056,7 @@ export function ResponseExplorer({
                     .replace('_', ' ')
                     .replace(/\b\w/g, (l) => l.toUpperCase())}
                   readOnly
-                  className='flex-1 px-3 py-1.5 border border-gray-300 rounded-lg bg-gray-50 text-sm overflow-x-auto whitespace-nowrap'
+                  className='flex-1 px-3 py-1.5 border border-gray-300 rounded-lg bg-gray-50 text-sm overflow-x-auto scrollbar-thin whitespace-nowrap'
                 />
               </div>
               <div className='flex items-center space-x-2 w-full'>
@@ -923,14 +1067,14 @@ export function ResponseExplorer({
                   type='text'
                   value={extractionModal.path}
                   readOnly
-                  className='flex-1 px-3 py-1.5 border border-gray-300 rounded-lg bg-gray-50 font-mono text-sm overflow-x-auto whitespace-nowrap'
+                  className='flex-1 px-3 py-1.5 border border-gray-300 rounded-lg bg-gray-50 font-mono text-sm overflow-x-auto scrollbar-thin whitespace-nowrap'
                 />
               </div>
               <div>
                 <label className='block text-sm font-medium text-gray-700 mb-1'>
                   Preview Value
                 </label>
-                <div className='p-2 bg-gray-50 rounded-lg border overflow-x-auto'>
+                <div className='p-2 bg-gray-50 rounded-lg border overflow-x-auto scrollbar-thin'>
                   <code className='text-sm text-gray-900 whitespace-nowrap'>
                     {typeof extractionModal.value === 'object'
                       ? JSON.stringify(extractionModal.value, null, 2)
@@ -945,7 +1089,7 @@ export function ResponseExplorer({
                 <input
                   type='text'
                   id='transform'
-                  className='w-full px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm overflow-x-auto whitespace-nowrap'
+                  className='w-full px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm overflow-x-auto scrollbar-thin whitespace-nowrap'
                   placeholder='e.g., value.toUpperCase(), parseInt(value)'
                 />
                 <p className='text-xs text-gray-500 mt-1'>

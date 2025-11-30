@@ -294,7 +294,7 @@ export default function ScheduleCreate({
           New Schedule
         </Button>
       </DialogTrigger>
-      <DialogContent className='max-w-2xl max-h-[90vh] overflow-y-auto'>
+      <DialogContent className='max-w-2xl max-h-[90vh] overflow-y-auto scrollbar-thin'>
         <DialogHeader>
           <div className='flex items-center justify-between'>
             <DialogTitle className='text-xl font-semibold'>

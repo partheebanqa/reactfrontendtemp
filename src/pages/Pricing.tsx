@@ -370,7 +370,7 @@ const Pricing: React.FC = () => {
 
             <Card>
               <CardContent className='p-0'>
-                <div className='overflow-x-auto'>
+                <div className='overflow-x-auto scrollbar-thin'>
                   <table className='w-full'>
                     <thead>
                       <tr className='border-b'>

@@ -101,7 +101,7 @@ export default function EnvironmentDropdown({
             <p className='text-xs'>Switch between environments</p>
           </TooltipContent>
 
-          <DropdownMenuContent className='w-72 sm:w-80 max-h-[60vh] overflow-y-auto custom-scrollbar p-2 shadow-md rounded-md border border-gray-200'>
+          <DropdownMenuContent className='w-72 sm:w-80 max-h-[60vh] overflow-y-auto scrollbar-thin custom-scrollbar p-2 shadow-md rounded-md border border-gray-200'>
             <div className='mb-3 pb-2 border-b border-gray-100'>
               <h3 className='text-sm text-gray-800 font-semibold mb-1'>
                 Environments

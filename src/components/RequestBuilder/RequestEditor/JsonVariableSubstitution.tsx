@@ -260,8 +260,6 @@ export const JsonVariableSubstitution: React.FC<
 
   return (
     <div ref={containerRef} className='relative w-full space-y-3'>
-      {/* Removed the green banner - variables will be shown in Pre-request tab */}
-
       <div className='relative flex border border-border rounded-md overflow-hidden bg-card focus-within:ring-2 focus-within:ring-ring focus-within:border-ring'>
         {/* Line numbers column */}
         <div
@@ -289,7 +287,7 @@ export const JsonVariableSubstitution: React.FC<
             value={value}
             onChange={(e) => onChange?.(e.target.value)}
             readOnly={readOnly}
-            className='w-full p-2 pl-3 font-mono text-sm bg-transparent text-foreground focus:outline-none resize-none leading-6'
+            className='w-full p-2 pl-3 pr-48 font-mono text-sm bg-transparent text-foreground focus:outline-none resize-none leading-6'
             style={{
               fontFamily:
                 "'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace",
@@ -302,11 +300,15 @@ export const JsonVariableSubstitution: React.FC<
           <div className='absolute top-0 left-0 right-0 bottom-0 pointer-events-none pt-2'>
             {lines.map((line, index) => {
               const hasKey = /"[^"]+"\s*:/.test(line);
+              const selectedVar = getSelectedVariableForLine(index);
+              const alreadySubstituted = getAlreadySubstitutedVariable(index);
+              const hasVariable = selectedVar || alreadySubstituted;
+
               return (
                 <div
                   key={`underline-${index}`}
                   className={`h-6 transition-colors ${
-                    hoveredLine === index && hasKey
+                    (hoveredLine === index || hasVariable) && hasKey
                       ? 'border-t border-b border-primary/40'
                       : ''
                   }`}
@@ -329,50 +331,59 @@ export const JsonVariableSubstitution: React.FC<
                   onMouseEnter={() => setHoveredLine(index)}
                   onMouseLeave={() => setHoveredLine(null)}
                 >
-                  {hoveredLine === index && hasKey && (
-                    <div className='pointer-events-auto ml-auto mr-1 flex items-center gap-1'>
-                      {selectedVar && !alreadySubstituted ? (
-                        <>
-                          <span className='px-2 py-0.5 bg-green-500 text-white text-[11px] rounded font-mono whitespace-nowrap font-medium'>
-                            {selectedVar}
-                          </span>
+                  {hasKey &&
+                    (selectedVar ||
+                      alreadySubstituted ||
+                      hoveredLine === index) && (
+                      <div className='pointer-events-auto ml-auto mr-1 flex items-center gap-1'>
+                        {selectedVar && !alreadySubstituted ? (
+                          <>
+                            <span
+                              className='px-2 py-0.5 text-white text-[11px] rounded font-mono whitespace-nowrap font-medium'
+                              style={{
+                                backgroundColor:
+                                  'rgb(19 111 176 / var(--tw-bg-opacity))',
+                              }}
+                            >
+                              {selectedVar}
+                            </span>
+                            <button
+                              onClick={() =>
+                                confirmDeleteSaved(extractPathFromLine(index))
+                              }
+                              className='p-0.5 bg-destructive/10 hover:bg-destructive/20 rounded transition-colors'
+                              title='Remove variable'
+                            >
+                              <Trash2 className='w-3 h-3 text-destructive' />
+                            </button>
+                          </>
+                        ) : alreadySubstituted ? (
+                          <>
+                            <span className='px-2 py-0.5 bg-success text-success-foreground text-[11px] rounded font-mono whitespace-nowrap font-medium'>
+                              {alreadySubstituted}
+                            </span>
+                            <button
+                              onClick={() => confirmDeleteLine(index)}
+                              className='p-0.5 bg-destructive/10 hover:bg-destructive/20 rounded transition-colors'
+                              title='Remove substitution'
+                            >
+                              <Trash2 className='w-3 h-3 text-destructive' />
+                            </button>
+                          </>
+                        ) : hoveredLine === index ? (
                           <button
-                            onClick={() =>
-                              confirmDeleteSaved(extractPathFromLine(index))
-                            }
-                            className='p-0.5 bg-destructive/10 hover:bg-destructive/20 rounded transition-colors'
-                            title='Remove variable'
+                            ref={(el) => {
+                              if (el) buttonRefs.current.set(index, el);
+                              else buttonRefs.current.delete(index);
+                            }}
+                            onClick={() => handleSubstituteClick(index)}
+                            className='px-2 py-0.5 bg-[rgb(19,111,176)] hover:bg-[rgb(15,90,144)] text-white text-[11px] rounded transition-colors flex items-center justify-center whitespace-nowrap font-medium'
                           >
-                            <Trash2 className='w-3 h-3 text-destructive' />
+                            Substitute Variable
                           </button>
-                        </>
-                      ) : !alreadySubstituted ? (
-                        <button
-                          ref={(el) => {
-                            if (el) buttonRefs.current.set(index, el);
-                            else buttonRefs.current.delete(index);
-                          }}
-                          onClick={() => handleSubstituteClick(index)}
-                          className='px-2 py-0.5 bg-[rgb(19,111,176)] hover:bg-[rgb(15,90,144)] text-white text-[11px] rounded transition-colors flex items-center justify-center whitespace-nowrap font-medium'
-                        >
-                          Substitute Variable
-                        </button>
-                      ) : alreadySubstituted ? (
-                        <>
-                          <span className='px-2 py-0.5 bg-success text-success-foreground text-[11px] rounded font-mono whitespace-nowrap font-medium'>
-                            {alreadySubstituted}
-                          </span>
-                          <button
-                            onClick={() => confirmDeleteLine(index)}
-                            className='p-0.5 bg-destructive/10 hover:bg-destructive/20 rounded transition-colors'
-                            title='Remove substitution'
-                          >
-                            <Trash2 className='w-3 h-3 text-destructive' />
-                          </button>
-                        </>
-                      ) : null}
-                    </div>
-                  )}
+                        ) : null}
+                      </div>
+                    )}
 
                   {dropdownLine === index && dropdownPosition && (
                     <div
@@ -396,7 +407,7 @@ export const JsonVariableSubstitution: React.FC<
                       </div>
 
                       {/* List of variables */}
-                      <div className='max-h-48 overflow-y-auto'>
+                      <div className='max-h-48 overflow-y-auto scrollbar-thin'>
                         {filteredVariables.length > 0 ? (
                           filteredVariables.map((v) => (
                             <div

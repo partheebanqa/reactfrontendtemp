@@ -843,7 +843,7 @@ export function RequestExecutor({
                         {Object.keys(log.request.headers).length > 0 && (
                           <div>
                             <span className='font-medium'>Headers:</span>
-                            <pre className='font-mono text-muted-foreground bg-card p-2 rounded border text-xs overflow-x-auto max-h-32'>
+                            <pre className='font-mono text-muted-foreground bg-card p-2 rounded border text-xs overflow-x-auto scrollbar-thin max-h-32'>
                               {JSON.stringify(log.request.headers, null, 2)}
                             </pre>
                           </div>
@@ -851,7 +851,7 @@ export function RequestExecutor({
                         {log.request.body && (
                           <div>
                             <span className='font-medium'>Body:</span>
-                            <pre className='font-mono text-muted-foreground bg-card p-2 rounded border text-xs overflow-x-auto max-h-32'>
+                            <pre className='font-mono text-muted-foreground bg-card p-2 rounded border text-xs overflow-x-auto scrollbar-thin max-h-32'>
                               {formatResponseBody(log.request.body)}
                             </pre>
                           </div>
@@ -898,7 +898,7 @@ export function RequestExecutor({
                           </div>
                           <div>
                             <span className='font-medium'>Body:</span>
-                            <pre className='font-mono text-muted-foreground bg-card p-2 rounded border text-xs overflow-x-auto max-h-40'>
+                            <pre className='font-mono text-muted-foreground bg-card p-2 rounded border text-xs overflow-x-auto scrollbar-thin max-h-40'>
                               {formatResponseBody(
                                 log.response.body,
                                 log.response.headers['content-type']

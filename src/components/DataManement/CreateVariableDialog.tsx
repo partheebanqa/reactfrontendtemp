@@ -244,7 +244,7 @@ const VariableCreateDialog: React.FC<VariableCreateDialogProps> = ({
         <Button>Add Variable</Button>
       </DialogTrigger>
 
-      <DialogContent className='max-w-2xl max-h-[80vh] overflow-y-auto'>
+      <DialogContent className='max-w-2xl max-h-[80vh] overflow-y-auto scrollbar-thin'>
         <DialogHeader>
           <DialogTitle className='flex items-center gap-2'>
             {type === 'static' ? (

@@ -210,7 +210,7 @@ const RequestTabs: React.FC<RequestTabsProps> = ({
   return (
     <>
       <div className='flex items-center bg-white border-b border-gray-200 px-4 py-0'>
-        <div className='flex items-center overflow-x-auto'>
+        <div className='flex items-center overflow-x-auto scrollbar-thin'>
           {openedRequests.map((request) => {
             const isActive = activeRequest?.id === request.id;
             const hasUnsaved = request.id

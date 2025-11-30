@@ -97,9 +97,6 @@ interface RequestChainEditorProps {
   requestChainId?: string;
 }
 
-// Removed duplicate type definitions for Variable and DynamicVariableOverride
-// They are now imported from '@/lib/request-utils'
-
 export function RequestChainEditor({
   chain,
   onBack,
@@ -125,11 +122,30 @@ export function RequestChainEditor({
   >({});
 
   useEffect(() => {
+    try {
+      const raw = localStorage.getItem('lastExecutionByRequest');
+      if (!raw) return;
+      const map: Record<string, any> = JSON.parse(raw);
+
+      const loadedAssertions: Record<string, any[]> = {};
+      Object.entries(map).forEach(([requestId, log]: [string, any]) => {
+        if (log.assertions && Array.isArray(log.assertions)) {
+          loadedAssertions[requestId] = log.assertions;
+        }
+      });
+
+      if (Object.keys(loadedAssertions).length > 0) {
+        setAssertionsByRequest(loadedAssertions);
+      }
+    } catch (e) {
+      console.error('Failed to load persisted assertions:', e);
+    }
+  }, []);
+
+  useEffect(() => {
     if (dynamicVariables.length > 0) {
       setDynamicOverrides((prevOverrides) => {
         const updatedOverrides = [...prevOverrides];
-
-        // Check each dynamic variable and add override if missing
         dynamicVariables.forEach((d) => {
           const hasOverride = updatedOverrides.some((o) => o.name === d.name);
           if (!hasOverride) {
@@ -221,6 +237,14 @@ export function RequestChainEditor({
     }
   }, [selectedEnvironment, environments]);
 
+  useEffect(() => {
+    if (Object.keys(assertionsByRequest).length > 0) {
+      Object.entries(assertionsByRequest).forEach(([requestId, assertions]) => {
+        persistAssertionsToStorage(requestId, assertions);
+      });
+    }
+  }, [assertionsByRequest]);
+
   const handleEnvironmentChange = (environmentId: string) => {
     setSelectedEnvironment(environmentId);
     const selectedEnv = environments.find((env) => env.id === environmentId);
@@ -303,6 +327,27 @@ export function RequestChainEditor({
       });
     });
     setDynamicOverrides(newOverrides);
+  };
+
+  const handleApplyToAllRequests = (variableName: string) => {
+    if (!formData.chainRequests) return;
+
+    const updatedRequests = formData.chainRequests.map((request) => ({
+      ...request,
+      authToken: `{{${variableName}}}`,
+      authorization: {
+        ...request.authorization,
+        token: `{{${variableName}}}`,
+      },
+      authorizationType: 'bearer' as const,
+    }));
+
+    setFormData({ ...formData, chainRequests: updatedRequests });
+
+    toast({
+      title: 'Applied to All Requests',
+      description: `Variable {{${variableName}}} has been set as the Bearer Token for all ${updatedRequests.length} requests`,
+    });
   };
 
   const DynamicVariablesPanel = () => {
@@ -452,13 +497,20 @@ export function RequestChainEditor({
           key: replaceVariables(param.key, variables),
           value: replaceVariables(param.value, variables),
         })) || [],
-      authorization: {
-        token: replaceVariables(request.authToken || '', variables),
-      },
+      authToken: replaceVariables(request.authToken || '', variables),
       authUsername: replaceVariables(request.authUsername || '', variables),
       authPassword: replaceVariables(request.authPassword || '', variables),
       authApiKey: replaceVariables(request.authApiKey || '', variables),
       authApiValue: replaceVariables(request.authApiValue || '', variables),
+      authorization: request.authorization
+        ? {
+            ...request.authorization,
+            token: replaceVariables(
+              request.authorization.token || '',
+              variables
+            ),
+          }
+        : request.authorization,
     };
   };
 
@@ -585,10 +637,35 @@ export function RequestChainEditor({
   const executeSingleRequest = async (
     request: APIRequest,
     variables: Variable[],
-    requestIndex: number
+    requestIndex: number,
+    requestAssertions: any[] = []
   ): Promise<ExecutionLog> => {
     if (!request.url) {
       throw new Error('Request URL is required');
+    }
+    const preparedRequest = {
+      ...request,
+      headers: request.headers ?? [],
+      params: request.params ?? [],
+    };
+
+    // Extract auth token from either authToken or authorization.token
+    const rawToken = (
+      preparedRequest.authToken ||
+      preparedRequest.authorization?.token ||
+      ''
+    ).trim();
+
+    console.log('rawToken123:', rawToken);
+
+    // Set up authorization object if token exists
+    if (rawToken) {
+      preparedRequest.authorizationType = 'bearer';
+      preparedRequest.authorization = {
+        ...preparedRequest.authorization,
+        token: rawToken,
+      };
+      preparedRequest.authToken = rawToken;
     }
 
     request = {
@@ -607,6 +684,7 @@ export function RequestChainEditor({
         processedRequest.authorization?.token ||
         ''
       ).trim();
+
       if (token) {
         (processedRequest as any).authorizationType = 'bearer';
 
@@ -656,11 +734,13 @@ export function RequestChainEditor({
     const payload = buildRequestPayload(processedRequest, variables);
     const previewUrl = getPreviewUrl(processedRequest, variables);
     payload.request.url = previewUrl;
+    const currentAssertions =
+      assertionsByRequest[request.id] || requestAssertions || [];
+    payload.assertions = currentAssertions.filter((a) => a.enabled);
 
     try {
-      console.log('Executing request with payload:', payload);
-
       const backendData = await executeRequest(payload);
+      const asserttionResult = backendData?.data?.assertionResults || [];
 
       const result = backendData?.data?.responses?.[0];
       const formattedAssertionFormat = {
@@ -733,11 +813,11 @@ export function RequestChainEditor({
           body: result.body,
           size: result.metrics.bytesReceived,
           cookies: parseCookies(result.headers?.['set-cookie'] ?? ''),
+          assertions: asserttionResult,
         },
         extractedVariables: extractedData,
       };
 
-      // Persist execution log
       try {
         const raw = localStorage.getItem('lastExecutionByRequest');
         const map = raw ? JSON.parse(raw) : {};
@@ -796,7 +876,6 @@ export function RequestChainEditor({
       });
       return;
     }
-
     regenerateAllDynamicVariables();
 
     setIsExecuting(true);
@@ -850,11 +929,15 @@ export function RequestChainEditor({
                 allExtractedVarsInCurrentExecution
               );
 
+            const requestAssertions = assertionsByRequest[request.id] || [];
+
             log = await executeSingleRequest(
               request,
               currentAvailableVariables,
-              i
+              i,
+              requestAssertions
             );
+
             allLogs.push(log);
           }
 
@@ -950,6 +1033,7 @@ export function RequestChainEditor({
       setCurrentRequestIndex(-1);
     }
   };
+
   const handleRequestExecution = (
     requestId: string,
     executionLog: ExecutionLog
@@ -1646,7 +1730,7 @@ export function RequestChainEditor({
 
     return (
       <div
-        className='fixed z-50 bg-white border border-gray-200 rounded-md shadow-lg max-h-48 overflow-y-auto'
+        className='fixed z-50 bg-white border border-gray-200 rounded-md shadow-lg max-h-48 overflow-y-auto scrollbar-thin'
         style={{
           top: autocompleteState.position.top,
           left: autocompleteState.position.left,
@@ -1744,6 +1828,22 @@ export function RequestChainEditor({
       );
     }
   }
+
+  const persistAssertionsToStorage = (requestId: string, assertions: any[]) => {
+    try {
+      const raw = localStorage.getItem('lastExecutionByRequest');
+      const map = raw ? JSON.parse(raw) : {};
+
+      if (!map[requestId]) {
+        map[requestId] = {};
+      }
+
+      map[requestId].assertions = assertions;
+      localStorage.setItem('lastExecutionByRequest', JSON.stringify(map));
+    } catch (e) {
+      console.error('Failed to persist assertions:', e);
+    }
+  };
 
   return (
     <div className='h-full flex flex-col'>
@@ -2207,9 +2307,12 @@ export function RequestChainEditor({
                                               ...prev,
                                               [request.id]: assertions,
                                             }));
+                                            persistAssertionsToStorage(
+                                              request.id,
+                                              assertions
+                                            );
                                           }}
                                         />
-
                                         {executionLog && (
                                           <div className='border-t border-gray-200 pt-4'>
                                             {(executionLog.response != null ||
@@ -2299,6 +2402,9 @@ export function RequestChainEditor({
                                                     executionLog.error
                                                   }
                                                   executionLog={executionLog}
+                                                  onApplyToAllRequests={
+                                                    handleApplyToAllRequests
+                                                  }
                                                 />
                                               </div>
                                             )}

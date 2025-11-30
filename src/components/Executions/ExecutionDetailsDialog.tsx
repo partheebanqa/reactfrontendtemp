@@ -42,7 +42,7 @@ export const ExecutionDetailsDialog = ({ open, onClose, execution }: any) => {
 
   const renderTestSuiteReport = (data: any) => {
     return (
-      <div className='max-h-[80vh] overflow-y-auto space-y-6'>
+      <div className='max-h-[80vh] overflow-y-auto scrollbar-thin space-y-6'>
         <div className='bg-card p-6 rounded-lg border'>
           <h3 className='text-lg font-semibold mb-4'>
             {data.name || 'Test Suite Report'}
@@ -110,7 +110,7 @@ export const ExecutionDetailsDialog = ({ open, onClose, execution }: any) => {
 
   const renderRequestChainReport = (data: any) => {
     return (
-      <div className='max-h-[80vh] overflow-y-auto space-y-6'>
+      <div className='max-h-[80vh] overflow-y-auto scrollbar-thin space-y-6'>
         <div className='bg-card p-6 rounded-lg border'>
           <h3 className='text-lg font-semibold mb-4'>
             {data.name || 'Request Chain Report'}

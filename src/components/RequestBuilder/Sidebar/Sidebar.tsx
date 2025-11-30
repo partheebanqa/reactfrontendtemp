@@ -800,7 +800,7 @@ const Sidebar: React.FC = () => {
         onDragStart={handleDndDragStart}
         onDragEnd={handleDndDragEnd}
       >
-        <div className='dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 transition-all duration-300 ease-in-out w-full h-full md:w-64 overflow-auto'>
+        <div className='dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 transition-all duration-300 ease-in-out w-full h-full md:w-64 overflow-auto scrollbar-thin'>
           <div className='p-1 sm:p-2'>
             <div className='flex items-center justify-between mb-2 border-b border-gray-200 dark:border-gray-700 pb-2'>
               <h2 className='text-base sm:text-lg font-semibold text-gray-900 dark:text-white'>
@@ -966,7 +966,7 @@ const Sidebar: React.FC = () => {
                             }`}
                           >
                             {expanded && (
-                              <div className='overflow-y-auto max-h-[600px]'>
+                              <div className='overflow-y-auto scrollbar-thin max-h-[600px]'>
                                 <SortableContext
                                   items={collectionSortableIds}
                                   strategy={verticalListSortingStrategy}

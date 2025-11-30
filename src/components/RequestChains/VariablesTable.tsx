@@ -442,7 +442,7 @@ export function VariablesTable({
       </div>
 
       {/* Table */}
-      <div className='overflow-x-auto'>
+      <div className='overflow-x-auto scrollbar-thin'>
         {filteredResults.length > 0 ? (
           <>
             {/* Desktop Table */}
@@ -653,7 +653,7 @@ export function VariablesTable({
                                 <h4 className='font-medium text-gray-900'>
                                   Full Value:
                                 </h4>
-                                <pre className='bg-white p-4 rounded border text-sm font-mono overflow-x-auto max-h-64'>
+                                <pre className='bg-white p-4 rounded border text-sm font-mono overflow-x-auto scrollbar-thin max-h-64'>
                                   {typeof result.extractedValue === 'object'
                                     ? JSON.stringify(
                                         result.extractedValue,
@@ -790,7 +790,7 @@ export function VariablesTable({
                         <h5 className='font-medium text-gray-900 text-sm'>
                           Full Value:
                         </h5>
-                        <pre className='bg-white p-3 rounded border text-xs font-mono overflow-x-auto max-h-32'>
+                        <pre className='bg-white p-3 rounded border text-xs font-mono overflow-x-auto scrollbar-thin max-h-32'>
                           {typeof result.extractedValue === 'object'
                             ? JSON.stringify(result.extractedValue, null, 2)
                             : String(result.extractedValue)}

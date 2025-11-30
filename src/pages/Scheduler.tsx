@@ -96,7 +96,7 @@ const Scheduler = () => {
               <DialogContent className='max-w-3xl'>
                 <DialogHeader>
                   <DialogTitle>🚀 Guided Onboarding: Scheduler</DialogTitle>
-                  <DialogDescription className='max-h-[80vh] overflow-y-auto pr-2'>
+                  <DialogDescription className='max-h-[80vh] overflow-y-auto scrollbar-thin pr-2'>
                     <div>
                       <p className='mb-4 text-base font-medium mt-4'>
                         Here's how to get started with the Scheduler:

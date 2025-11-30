@@ -668,7 +668,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                 </div>
               </div>
 
-              <div className='flex-1 overflow-y-auto space-y-3 max-h-[50vh]'>
+              <div className='flex-1 overflow-y-auto scrollbar-thin space-y-3 max-h-[50vh]'>
                 {filteredCollections.length === 0 ? (
                   <div className='flex flex-col items-center justify-center py-12'>
                     <p className='text-muted-foreground'>
@@ -935,7 +935,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                 )}
               </div>
 
-              <div className='flex-1 overflow-y-auto space-y-3 max-h-[50vh]'>
+              <div className='flex-1 overflow-y-auto scrollbar-thin space-y-3 max-h-[50vh]'>
                 {externalRequests.length === 0 ? (
                   <div className='text-muted-foreground text-center py-12'>
                     Upload a Postman collection to view requests.

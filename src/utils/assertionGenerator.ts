@@ -357,17 +357,17 @@ export const generateAssertions = (response: ApiResponse): Assertion[] => {
   });
 
   // Add common status code range checks
-  if (response.status >= 200 && response.status < 300) {
-    assertions.push({
-      id: 'status-success-range',
-      category: 'status',
-      type: 'status_range',
-      description: 'Status code is in success range (200-299)',
-      operator: 'in_range',
-      expectedValue: { min: 200, max: 299 },
-      enabled: false,
-    });
-  }
+  // if (response.status >= 200 && response.status < 300) {
+  //   assertions.push({
+  //     id: 'status-success-range',
+  //     category: 'status',
+  //     type: 'status_range',
+  //     description: 'Status code is in success range (200-299)',
+  //     operator: 'in_range',
+  //     expectedValue: { min: 200, max: 299 },
+  //     enabled: false,
+  //   });
+  // }
 
   // Header assertions
   // Generate HeaderGuard™ security assertions
