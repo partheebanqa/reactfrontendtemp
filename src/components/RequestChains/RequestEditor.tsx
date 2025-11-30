@@ -1892,7 +1892,7 @@ export function RequestEditor({
 
     return (
       <div
-        className='fixed z-50 bg-white border border-gray-200 rounded-md shadow-lg max-h-48 overflow-y-auto'
+        className='fixed z-50 bg-white border border-gray-200 rounded-md shadow-lg max-h-48 overflow-y-auto scrollbar-thin'
         style={{
           top: autocompleteState.position.top,
           left: autocompleteState.position.left,
@@ -2064,7 +2064,7 @@ export function RequestEditor({
                     />
                   </div>
 
-                  <div className='max-h-60 overflow-y-auto'>
+                  <div className='max-h-60 overflow-y-auto scrollbar-thin'>
                     {getAllAvailableVariables()
                       .filter(
                         (item) =>

@@ -144,7 +144,7 @@ const MoveToModal: React.FC<MoveToModalProps> = ({
           </p>
         </div>
 
-        <div className='flex-1 overflow-y-auto p-4 space-y-2'>
+        <div className='flex-1 overflow-y-auto scrollbar-thin p-4 space-y-2'>
           {collections.map((collection) => {
             const isCurrentRoot = isCurrentLocation(collection.id, undefined);
             const isSelectedRoot =

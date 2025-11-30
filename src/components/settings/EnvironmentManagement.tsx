@@ -266,7 +266,7 @@ export function EnvironmentManagement() {
                 Add Environment
               </Button>
             </DialogTrigger>
-            <DialogContent className='w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto'>
+            <DialogContent className='w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto scrollbar-thin'>
               <DialogHeader>
                 <DialogTitle>
                   {editingEnvironment

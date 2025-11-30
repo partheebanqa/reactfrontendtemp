@@ -29,7 +29,7 @@ export function VariableHelpDialog({
           </button>
         </div>
 
-        <div className='p-6 overflow-y-auto max-h-[calc(90vh-100px)]'>
+        <div className='p-6 overflow-y-auto scrollbar-thin max-h-[calc(90vh-100px)]'>
           <div className='space-y-4 text-sm leading-relaxed text-gray-800'>
             <p>
               <strong>Using Variables in URL, Headers, and Body</strong>
@@ -110,7 +110,7 @@ export function VariableHelpDialog({
             <h3 className='font-semibold text-base mt-6'>
               🌐 Example: Using Variables in a URL
             </h3>
-            <pre className='bg-gray-100 text-xs p-3 rounded overflow-x-auto'>
+            <pre className='bg-gray-100 text-xs p-3 rounded overflow-x-auto scrollbar-thin'>
               {`Original URL:
 https://apibackenddev.onrender.com/executor/execution-history?page=1&limit=10&workspace_id=01415fe5-b282-4295-a386-267ece622c7b
 
@@ -121,7 +121,7 @@ https://apibackenddev.onrender.com/executor/execution-history?page=1&limit=10&wo
             <h3 className='font-semibold text-base mt-6'>
               📦 Example: Using Variables in Request Body
             </h3>
-            <pre className='bg-gray-100 text-xs p-3 rounded overflow-x-auto'>
+            <pre className='bg-gray-100 text-xs p-3 rounded overflow-x-auto scrollbar-thin'>
               {`Original Body:
 {
   "firstName": "Michael",

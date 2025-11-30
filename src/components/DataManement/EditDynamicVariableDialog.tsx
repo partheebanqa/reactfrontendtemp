@@ -244,7 +244,7 @@ const EditDynamicVariableDialog: React.FC<EditDynamicVariableDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className='max-w-2xl max-h-[80vh] overflow-y-auto'>
+      <DialogContent className='max-w-2xl max-h-[80vh] overflow-y-auto scrollbar-thin'>
         <DialogHeader>
           <DialogTitle>Edit Dynamic Variable</DialogTitle>
         </DialogHeader>

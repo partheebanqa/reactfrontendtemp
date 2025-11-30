@@ -1126,7 +1126,7 @@ message User {
             </h2>
           </div>
 
-          <div className='flex-1 overflow-y-auto'>
+          <div className='flex-1 overflow-y-auto scrollbar-thin'>
             <nav className='p-2'>
               {sections.map((section) => {
                 const Icon = section.icon;
@@ -1176,7 +1176,9 @@ message User {
             </button>
           </div>
 
-          <div className='flex-1 overflow-y-auto p-6'>{renderContent()}</div>
+          <div className='flex-1 overflow-y-auto scrollbar-thin p-6'>
+            {renderContent()}
+          </div>
         </div>
       </div>
     </div>

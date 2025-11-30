@@ -151,7 +151,7 @@ const AssertionManager: React.FC<AssertionManagerProps> = ({
             </span>
           </div>
 
-          <div className='space-y-2 mb-4 max-h-96 overflow-y-auto'>
+          <div className='space-y-2 mb-4 max-h-96 overflow-y-auto scrollbar-thin'>
             {selectedAssertions.map((assertion) => (
               <div
                 key={assertion.id}
@@ -252,7 +252,7 @@ const AssertionManager: React.FC<AssertionManagerProps> = ({
             </div>
 
             {/* Assertions List */}
-            <div className='flex-1 overflow-y-auto px-6 py-4'>
+            <div className='flex-1 overflow-y-auto scrollbar-thin px-6 py-4'>
               {Object.entries(groupedByCategory).length === 0 ? (
                 <div className='text-center py-8 text-gray-500'>
                   No assertions found

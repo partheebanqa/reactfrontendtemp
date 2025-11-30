@@ -560,7 +560,7 @@ const ResponseViewer = () => {
     <div className='flex-1 flex flex-col bg-background min-h-0 overflow-hidden'>
       <div className='bg-card border-b border-border flex-shrink-0'>
         <div className='flex items-center justify-between border-b border-border'>
-          <nav className='flex space-x-8 px-4 whitespace-nowrap overflow-x-auto no-scrollbar'>
+          <nav className='flex space-x-8 px-4 whitespace-nowrap overflow-x-auto scrollbar-thin no-scrollbar'>
             {tabs.map((tab) => {
               return (
                 <button
@@ -679,7 +679,7 @@ const ResponseViewer = () => {
               </span>
             </h4>
           </div>
-          <div className='flex flex-col gap-1.5 max-h-32 overflow-y-auto'>
+          <div className='flex flex-col gap-1.5 max-h-32 overflow-y-auto scrollbar-thin'>
             {Object.entries(extractedVariables).map(([name, value]) => (
               <div
                 key={name}
@@ -702,7 +702,7 @@ const ResponseViewer = () => {
                         )}
                       </button>
                     </div>
-                    <div className='bg-muted px-2 rounded border text-xs font-mono overflow-x-auto text-muted-foreground'>
+                    <div className='bg-muted px-2 rounded border text-xs font-mono overflow-x-auto scrollbar-thin text-muted-foreground'>
                       {typeof value === 'object'
                         ? JSON.stringify(value)
                         : String(value)}
@@ -883,7 +883,7 @@ const ResponseViewer = () => {
               <h3 className='text-sm font-semibold text-foreground mb-3'>
                 Headers:
               </h3>
-              <div className='overflow-x-auto'>
+              <div className='overflow-x-auto scrollbar-thin'>
                 <table className='w-full text-sm'>
                   <thead>
                     <tr className='border-b border-border'>
@@ -944,7 +944,7 @@ const ResponseViewer = () => {
                       <Copy className='w-4 h-4' />
                     )}
                   </button>
-                  <pre className='text-sm text-foreground font-mono overflow-x-auto'>
+                  <pre className='text-sm text-foreground font-mono overflow-x-auto scrollbar-thin'>
                     {JSON.stringify(requestDetails.body, null, 2)}
                   </pre>
                 </div>
@@ -966,7 +966,7 @@ const ResponseViewer = () => {
                 Configure how to extract and store this value
               </p>
             </div>
-            <div className='p-2 space-y-3 overflow-y-auto flex-1'>
+            <div className='p-2 space-y-3 overflow-y-auto scrollbar-thin flex-1'>
               <div>
                 <label className='block text-sm font-medium text-foreground mb-1'>
                   Variable Name
@@ -1010,7 +1010,7 @@ const ResponseViewer = () => {
                 <label className='block text-sm font-medium text-foreground mb-1'>
                   Preview Value
                 </label>
-                <div className='p-3 bg-muted rounded-lg border border-border overflow-x-auto max-h-40'>
+                <div className='p-3 bg-muted rounded-lg border border-border overflow-x-auto scrollbar-thin max-h-40'>
                   <code className='text-sm text-foreground whitespace-pre-wrap break-all'>
                     {typeof extractionModal.value === 'object'
                       ? JSON.stringify(extractionModal.value, null, 2)

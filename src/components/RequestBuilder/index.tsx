@@ -310,7 +310,7 @@ const RequestBuilder = () => {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className='max-w-5xl'>
           <DialogDescription asChild>
-            <div className='max-h-[88vh] overflow-y-auto pr-2'>
+            <div className='max-h-[88vh] overflow-y-auto scrollbar-thin pr-2'>
               <div className='rounded-xl bg-white'>
                 {/* Main content */}
                 <div className='p-2 sm:p-4'>

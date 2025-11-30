@@ -153,7 +153,7 @@ export default function AccountSettings() {
               <CardTitle className='text-lg'>Settings</CardTitle>
             </CardHeader>
             <CardContent className='p-0'>
-              <div className='overflow-x-auto'>
+              <div className='overflow-x-auto scrollbar-thin'>
                 <nav className='flex gap-2 p-2'>
                   {settingsSections.map((section) => {
                     const Icon = section.icon;

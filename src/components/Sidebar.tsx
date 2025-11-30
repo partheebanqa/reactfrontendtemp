@@ -288,7 +288,7 @@ const Sidebar: React.FC = () => {
           <nav
             className={`flex-1 ${
               collapsed ? 'px-2' : 'px-4'
-            } py-2 space-y-2 overflow-y-auto`}
+            } py-2 space-y-2 overflow-y-auto scrollbar-thin`}
           >
             <div className='space-y-1'>
               {menuItems.map((item) => (
@@ -391,7 +391,7 @@ const Sidebar: React.FC = () => {
         <nav
           className={`flex-1 ${
             collapsed ? 'px-2' : 'px-4'
-          } py-6 space-y-2 overflow-y-auto`}
+          } py-6 space-y-2 overflow-y-auto scrollbar-thin`}
         >
           <div className='space-y-1'>
             {menuItems.map((item) => (

@@ -407,7 +407,7 @@ export const JsonVariableSubstitution: React.FC<
                       </div>
 
                       {/* List of variables */}
-                      <div className='max-h-48 overflow-y-auto'>
+                      <div className='max-h-48 overflow-y-auto scrollbar-thin'>
                         {filteredVariables.length > 0 ? (
                           filteredVariables.map((v) => (
                             <div

@@ -464,7 +464,7 @@ export function ResponseExplorer({
             <p className='text-gray-600 text-sm mb-2'>
               Response is not valid JSON
             </p>
-            <pre className='text-xs text-gray-700 whitespace-pre-wrap max-h-40 overflow-y-auto'>
+            <pre className='text-xs text-gray-700 whitespace-pre-wrap max-h-40 overflow-y-auto scrollbar-thin'>
               {response?.body}
             </pre>
           </div>
@@ -832,7 +832,7 @@ export function ResponseExplorer({
                   <Copy className='w-4 h-4' />
                 </button>
               </div>
-              <pre className='text-sm text-gray-900 font-mono overflow-x-auto'>
+              <pre className='text-sm text-gray-900 font-mono overflow-x-auto scrollbar-thin'>
                 {typeof actualRequestBody === 'string'
                   ? actualRequestBody
                   : JSON.stringify(actualRequestBody, null, 2)}
@@ -979,7 +979,7 @@ export function ResponseExplorer({
                         )}
                       </div>
                       <div className='flex items-center space-x-2'>
-                        <span className='text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded border text-sm font-mono flex-1 overflow-x-auto whitespace-nowrap'>
+                        <span className='text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded border text-sm font-mono flex-1 overflow-x-auto scrollbar-thin whitespace-nowrap'>
                           {extraction?.path}
                         </span>
                         <button
@@ -994,12 +994,12 @@ export function ResponseExplorer({
                     <div className='text-sm'>
                       <p className='text-gray-600 mb-1 flex items-center gap-2'>
                         <span>Path:</span>
-                        <span className='bg-gray-50 px-2 py-1 rounded border text-sm font-mono flex-1 overflow-x-auto whitespace-nowrap'>
+                        <span className='bg-gray-50 px-2 py-1 rounded border text-sm font-mono flex-1 overflow-x-auto scrollbar-thin whitespace-nowrap'>
                           {extraction?.path}
                         </span>
                       </p>
 
-                      <div className='bg-gray-50 px-2 py-1 rounded border text-sm font-mono overflow-x-auto whitespace-nowrap'>
+                      <div className='bg-gray-50 px-2 py-1 rounded border text-sm font-mono overflow-x-auto scrollbar-thin whitespace-nowrap'>
                         {typeof value === 'object'
                           ? JSON.stringify(value)
                           : String(value)}
@@ -1013,7 +1013,7 @@ export function ResponseExplorer({
               <p className='text-sm text-blue-800'>
                 <strong>💡 Usage:</strong> Use these variables in subsequent
                 requests with the syntax:{' '}
-                <code className='bg-blue-100 px-1 rounded overflow-x-auto whitespace-nowrap inline-block'>{`{{variableName}}`}</code>
+                <code className='bg-blue-100 px-1 rounded overflow-x-auto scrollbar-thin whitespace-nowrap inline-block'>{`{{variableName}}`}</code>
               </p>
             </div>
           </div>
@@ -1039,7 +1039,7 @@ export function ResponseExplorer({
                   type='text'
                   value={variableName}
                   onChange={(e) => handleVariableNameChange(e.target.value)}
-                  className='w-full px-3 py-1.5 border border-gray-300 rounded-lg bg-gray-50 font-mono text-sm overflow-x-auto whitespace-nowrap'
+                  className='w-full px-3 py-1.5 border border-gray-300 rounded-lg bg-gray-50 font-mono text-sm overflow-x-auto scrollbar-thin whitespace-nowrap'
                   placeholder='variable_name'
                 />
                 <p className='text-xs text-gray-500 mt-1'>
@@ -1056,7 +1056,7 @@ export function ResponseExplorer({
                     .replace('_', ' ')
                     .replace(/\b\w/g, (l) => l.toUpperCase())}
                   readOnly
-                  className='flex-1 px-3 py-1.5 border border-gray-300 rounded-lg bg-gray-50 text-sm overflow-x-auto whitespace-nowrap'
+                  className='flex-1 px-3 py-1.5 border border-gray-300 rounded-lg bg-gray-50 text-sm overflow-x-auto scrollbar-thin whitespace-nowrap'
                 />
               </div>
               <div className='flex items-center space-x-2 w-full'>
@@ -1067,14 +1067,14 @@ export function ResponseExplorer({
                   type='text'
                   value={extractionModal.path}
                   readOnly
-                  className='flex-1 px-3 py-1.5 border border-gray-300 rounded-lg bg-gray-50 font-mono text-sm overflow-x-auto whitespace-nowrap'
+                  className='flex-1 px-3 py-1.5 border border-gray-300 rounded-lg bg-gray-50 font-mono text-sm overflow-x-auto scrollbar-thin whitespace-nowrap'
                 />
               </div>
               <div>
                 <label className='block text-sm font-medium text-gray-700 mb-1'>
                   Preview Value
                 </label>
-                <div className='p-2 bg-gray-50 rounded-lg border overflow-x-auto'>
+                <div className='p-2 bg-gray-50 rounded-lg border overflow-x-auto scrollbar-thin'>
                   <code className='text-sm text-gray-900 whitespace-nowrap'>
                     {typeof extractionModal.value === 'object'
                       ? JSON.stringify(extractionModal.value, null, 2)
@@ -1089,7 +1089,7 @@ export function ResponseExplorer({
                 <input
                   type='text'
                   id='transform'
-                  className='w-full px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm overflow-x-auto whitespace-nowrap'
+                  className='w-full px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm overflow-x-auto scrollbar-thin whitespace-nowrap'
                   placeholder='e.g., value.toUpperCase(), parseInt(value)'
                 />
                 <p className='text-xs text-gray-500 mt-1'>

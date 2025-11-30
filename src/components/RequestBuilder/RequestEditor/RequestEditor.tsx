@@ -2230,7 +2230,7 @@ const RequestEditor: React.FC = () => {
         </div>
 
         <div className='border-b border-gray-200 dark:border-gray-700 flex-shrink-0'>
-          <nav className='flex overflow-x-auto px-4'>
+          <nav className='flex overflow-x-auto scrollbar-thin px-4'>
             {[
               {
                 id: 'params',
