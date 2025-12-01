@@ -20,6 +20,7 @@ export interface RequestChain {
 }
 
 export interface APIRequest {
+  assertions: boolean;
   id: string;
   name: string;
   method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'HEAD' | 'OPTIONS';

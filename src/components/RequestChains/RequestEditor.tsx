@@ -60,6 +60,7 @@ import {
   parseUrlParams,
   buildUrlWithParams,
   generateDynamicValueById,
+  hasResponseChanged,
 } from '@/lib/request-utils';
 import 'codemirror/lib/codemirror.css';
 import 'codemirror/theme/material.css';
@@ -1093,34 +1094,7 @@ export function RequestEditor({
 
       const backendData = await executeRequest(payload);
 
-      console.log('backendData121:', backendData);
-
-      const responseItem = backendData?.data?.responses?.[0];
-
-      const asserttionResult = backendData?.data?.assertionResults || [];
-
-      const formattedAssertionFormat = {
-        status: responseItem?.statusCode ?? null,
-        statusText: '',
-        headers: responseItem?.headers ?? {},
-        data: (() => {
-          try {
-            return JSON.parse(responseItem?.body || '{}');
-          } catch {
-            return {};
-          }
-        })(),
-        responseTime: responseItem?.metrics?.responseTime ?? 0,
-        size: responseItem?.metrics?.bytesReceived ?? 0,
-      };
-
-      const generatedAssertion = await generateAssertions(
-        formattedAssertionFormat
-      );
-
-      setAssertions(generatedAssertion);
-      handleAssertionsUpdate(generatedAssertion);
-
+      const assertionResult = backendData?.data?.assertionResults || [];
       const result = backendData?.data?.responses?.[0];
       if (!result) throw new Error('No response from executor');
 
@@ -1140,6 +1114,80 @@ export function RequestEditor({
       const actualRequestUrl = previewUrl;
       const actualRequestBody = processedRequest.body ?? '';
       const actualRequestMethod = processedRequest.method;
+
+      // Get previous execution log to compare responses
+      let previousExecutionLog = null;
+      try {
+        const raw = localStorage.getItem('lastExecutionByRequest');
+        if (raw) {
+          const map = JSON.parse(raw);
+          previousExecutionLog = map[initialRequest.id];
+        }
+      } catch (e) {
+        console.error('Failed to read previous execution:', e);
+      }
+
+      // Check if response has changed or no assertions exist
+      const responseChanged = hasResponseChanged(
+        result,
+        previousExecutionLog?.response
+      );
+
+      let finalAssertions = assertions;
+
+      // Regenerate assertions if:
+      // 1. No assertions exist, OR
+      // 2. Response has changed significantly
+      if (assertions.length === 0 || responseChanged) {
+        const formattedAssertionFormat = {
+          status: result?.statusCode ?? null,
+          statusText: '',
+          headers: result?.headers ?? {},
+          data: (() => {
+            try {
+              return JSON.parse(result?.body || '{}');
+            } catch {
+              return {};
+            }
+          })(),
+          responseTime: result?.metrics?.responseTime ?? 0,
+          size: result?.metrics?.bytesReceived ?? 0,
+        };
+
+        const newAssertions = await generateAssertions(
+          formattedAssertionFormat
+        );
+
+        // If response changed and we have existing assertions, merge them intelligently
+        if (responseChanged && assertions.length > 0) {
+          console.log('⚠️ Response changed - regenerating assertions');
+
+          // Keep custom user-modified assertions (those with custom descriptions)
+          const customAssertions = assertions.filter(
+            (assertion) => assertion.isCustom === true
+          );
+
+          // Merge custom assertions with new auto-generated ones
+          finalAssertions = [...newAssertions, ...customAssertions];
+        } else {
+          finalAssertions = newAssertions;
+        }
+
+        setAssertions(finalAssertions);
+        handleAssertionsUpdate(finalAssertions);
+
+        console.log(
+          responseChanged
+            ? '🔄 Response changed - updated assertions'
+            : '✨ Generated new assertions',
+          {
+            requestId: initialRequest.id,
+            previousStatus: previousExecutionLog?.response?.status,
+            currentStatus: result?.statusCode,
+            assertionsCount: finalAssertions.length,
+          }
+        );
+      }
 
       const log: ExecutionLog = {
         id: Date.now().toString(),
@@ -1164,7 +1212,7 @@ export function RequestEditor({
           body: result.body,
           size: result.metrics.bytesReceived,
           cookies: parseCookies(result.headers?.['set-cookie'] ?? ''),
-          assertions: asserttionResult,
+          assertions: assertionResult,
         },
         extractedVariables: extractedData,
       };
@@ -1180,7 +1228,10 @@ export function RequestEditor({
       try {
         const raw = localStorage.getItem('lastExecutionByRequest');
         const map = raw ? JSON.parse(raw) : {};
-        map[initialRequest.id] = log;
+        map[initialRequest.id] = {
+          ...log,
+          assertions: finalAssertions,
+        };
         localStorage.setItem('lastExecutionByRequest', JSON.stringify(map));
       } catch (e) {
         console.error('Failed to persist lastExecutionByRequest:', e);
@@ -1188,7 +1239,9 @@ export function RequestEditor({
 
       toast({
         title: 'Execution Complete',
-        description: `Request completed with status ${result.statusCode}`,
+        description: `Request completed with status ${result.statusCode}${
+          responseChanged ? ' (Assertions updated due to response change)' : ''
+        }`,
         variant: log.status === 'success' ? 'default' : 'destructive',
       });
     } catch (error) {

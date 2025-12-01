@@ -84,6 +84,7 @@ import {
   calculateAutocompletePosition,
   type AutocompleteState,
   generateDynamicValueById,
+  hasResponseChanged,
 } from '@/lib/request-utils';
 import { ResponseExplorer } from './ResponseExplorer';
 import BreadCum from '../BreadCum/Breadcum';
@@ -711,22 +712,19 @@ export function RequestChainEditor({
     if (!request.url) {
       throw new Error('Request URL is required');
     }
+
     const preparedRequest = {
       ...request,
       headers: request.headers ?? [],
       params: request.params ?? [],
     };
 
-    // Extract auth token from either authToken or authorization.token
     const rawToken = (
       preparedRequest.authToken ||
       preparedRequest.authorization?.token ||
       ''
     ).trim();
 
-    console.log('rawToken123:', rawToken);
-
-    // Set up authorization object if token exists
     if (rawToken) {
       preparedRequest.authorizationType = 'bearer';
       preparedRequest.authorization = {
@@ -743,7 +741,6 @@ export function RequestChainEditor({
     };
 
     const startTime = Date.now();
-
     const processedRequest = processRequestWithVariables(request, variables);
 
     {
@@ -802,40 +799,101 @@ export function RequestChainEditor({
     const payload = buildRequestPayload(processedRequest, variables);
     const previewUrl = getPreviewUrl(processedRequest, variables);
     payload.request.url = previewUrl;
+
     const currentAssertions =
       assertionsByRequest[request.id] || requestAssertions || [];
     payload.assertions = currentAssertions.filter((a) => a.enabled);
 
     try {
       const backendData = await executeRequest(payload);
-      const asserttionResult = backendData?.data?.assertionResults || [];
-
+      const assertionResult = backendData?.data?.assertionResults || [];
       const result = backendData?.data?.responses?.[0];
-      const formattedAssertionFormat = {
-        status: result?.statusCode ?? null,
-        statusText: '',
-        headers: result?.headers ?? {},
-        data: (() => {
-          try {
-            return JSON.parse(result?.body || '{}');
-          } catch {
-            return {};
-          }
-        })(),
-        responseTime: result?.metrics?.responseTime ?? 0,
-        size: result?.metrics?.bytesReceived ?? 0,
-      };
-
-      const generatedAssertion = await generateAssertions(
-        formattedAssertionFormat
-      );
-      setAssertionsByRequest((prev) => ({
-        ...prev,
-        [request.id]: generatedAssertion,
-      }));
-      setAssertions(generatedAssertion);
 
       if (!result) throw new Error('No response from executor');
+
+      // Get previous execution log to compare responses
+      let previousExecutionLog = null;
+      try {
+        const raw = localStorage.getItem('lastExecutionByRequest');
+        if (raw) {
+          const map = JSON.parse(raw);
+          previousExecutionLog = map[request.id];
+        }
+      } catch (e) {
+        console.error('Failed to read previous execution:', e);
+      }
+
+      // Check if response has changed or no assertions exist
+      const existingAssertions =
+        assertionsByRequest[request.id] || requestAssertions || [];
+
+      const responseChanged = hasResponseChanged(
+        result,
+        previousExecutionLog?.response
+      );
+
+      let finalAssertions = existingAssertions;
+
+      // Regenerate assertions if:
+      // 1. No assertions exist, OR
+      // 2. Response has changed significantly
+      if (existingAssertions.length === 0 || responseChanged) {
+        const formattedAssertionFormat = {
+          status: result?.statusCode ?? null,
+          statusText: '',
+          headers: result?.headers ?? {},
+          data: (() => {
+            try {
+              return JSON.parse(result?.body || '{}');
+            } catch {
+              return {};
+            }
+          })(),
+          responseTime: result?.metrics?.responseTime ?? 0,
+          size: result?.metrics?.bytesReceived ?? 0,
+        };
+
+        const newAssertions = await generateAssertions(
+          formattedAssertionFormat
+        );
+
+        // If response changed and we have existing assertions, merge them intelligently
+        if (responseChanged && existingAssertions.length > 0) {
+          console.log(
+            '⚠️ Response changed - regenerating assertions for request:',
+            request.id
+          );
+
+          // Keep custom user-modified assertions (those with custom descriptions)
+          const customAssertions = existingAssertions.filter(
+            (assertion) => assertion.isCustom === true
+          );
+
+          // Merge custom assertions with new auto-generated ones
+          finalAssertions = [...newAssertions, ...customAssertions];
+        } else {
+          finalAssertions = newAssertions;
+        }
+
+        console.log(
+          responseChanged
+            ? '🔄 Response changed - updated assertions'
+            : '✨ Generated new assertions',
+          {
+            requestId: request.id,
+            previousStatus: previousExecutionLog?.response?.status,
+            currentStatus: result?.statusCode,
+            assertionsCount: finalAssertions.length,
+          }
+        );
+      }
+
+      // Update state with existing or newly generated assertions
+      setAssertionsByRequest((prev) => ({
+        ...prev,
+        [request.id]: finalAssertions,
+      }));
+      setAssertions(finalAssertions);
 
       const extractedData = extractDataFromResponse(
         {
@@ -847,16 +905,12 @@ export function RequestChainEditor({
       );
 
       const endTime = Date.now();
-
       const actualRequestHeaders = Object.fromEntries(
         processedRequest.headers.map((h) => [h.key, h.value])
       );
-
       const actualRequestUrl = previewUrl;
-
       const actualRequestBody = processedRequest.body ?? '';
       const actualRequestMethod = processedRequest.method;
-      const actualRequestParams = processedRequest.params || [];
 
       const log: ExecutionLog = {
         id: Date.now().toString(),
@@ -881,17 +935,18 @@ export function RequestChainEditor({
           body: result.body,
           size: result.metrics.bytesReceived,
           cookies: parseCookies(result.headers?.['set-cookie'] ?? ''),
-          assertions: asserttionResult,
+          assertions: assertionResult,
         },
         extractedVariables: extractedData,
       };
 
+      // Persist to localStorage
       try {
         const raw = localStorage.getItem('lastExecutionByRequest');
         const map = raw ? JSON.parse(raw) : {};
         map[request.id] = {
           ...log,
-          assertions: generatedAssertion,
+          assertions: finalAssertions,
         };
         localStorage.setItem('lastExecutionByRequest', JSON.stringify(map));
       } catch (e) {
@@ -913,7 +968,7 @@ export function RequestChainEditor({
           method: processedRequest.method,
           url: previewUrl,
           headers: {},
-          body: processedRequest.body, // Use processed body even in error case
+          body: processedRequest.body,
         },
         error: error instanceof Error ? error.message : 'Unknown error',
       };
@@ -1435,12 +1490,43 @@ export function RequestChainEditor({
 
           const isExistingRequest =
             request.id && originalRequestIds.has(request.id);
+
+          // Get assertions for this request from state or localStorage
+          let requestAssertions: any[] = [];
+
+          // First try to get from state
+          if (assertionsByRequest[request.id]) {
+            requestAssertions = assertionsByRequest[request.id];
+          } else {
+            // Fallback to localStorage if not in state
+            try {
+              const raw = localStorage.getItem('lastExecutionByRequest');
+              if (raw) {
+                const map = JSON.parse(raw);
+                if (
+                  map[request.id]?.assertions &&
+                  Array.isArray(map[request.id].assertions)
+                ) {
+                  requestAssertions = map[request.id].assertions;
+                }
+              }
+            } catch (e) {
+              console.error('Failed to read assertions from localStorage:', e);
+            }
+          }
+
+          // Filter to only include enabled assertions
+          const enabledAssertions = requestAssertions.filter(
+            (assertion) => assertion.enabled === true
+          );
+
           if (isExistingRequest) {
             return {
               ...request,
               order: index + 1,
               authorizationType,
               authorization,
+              assertions: enabledAssertions, // Only save enabled assertions
               headers:
                 request.headers?.map((h) =>
                   h.id && !h.id.startsWith('temp_')
@@ -1461,6 +1547,7 @@ export function RequestChainEditor({
               order: index + 1,
               authorizationType,
               authorization,
+              assertions: enabledAssertions, // Only save enabled assertions
               headers:
                 request.headers?.map((h) => ({ ...h, id: undefined })) || [],
               params:
@@ -1501,8 +1588,8 @@ export function RequestChainEditor({
         title: chainData.id === '' ? 'Chain Saved' : 'Chain Updated',
         description:
           chainData.id === ''
-            ? 'Your request chain has been saved successfully.'
-            : 'Your request chain has been updated successfully.',
+            ? 'Your request chain has been saved successfully with assertions.'
+            : 'Your request chain has been updated successfully with assertions.',
       });
 
       return savedChain;
@@ -1521,7 +1608,6 @@ export function RequestChainEditor({
       setIsSaving(false);
     }
   };
-
   const handleSave = async () => {
     const saved = await saveChainToAPI();
     if (saved) {
