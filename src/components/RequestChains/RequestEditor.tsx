@@ -31,7 +31,6 @@ import {
   FileText,
   Shuffle,
   HelpCircle,
-  Info,
 } from 'lucide-react';
 import type {
   APIRequest,
@@ -133,6 +132,11 @@ interface KeyValuePair {
   description?: string;
 }
 
+interface SelectedVariable {
+  name: string;
+  path?: string;
+}
+
 export function RequestEditor({
   request: initialRequest,
   onUpdate,
@@ -227,6 +231,14 @@ export function RequestEditor({
 
   const [url, setUrl] = useState(initialRequest.url || '');
   const [body, setBody] = useState(initialRequest.body || '');
+
+  console.log('body123:', body);
+
+  const [selectedVariable, setSelectedVariable] = useState<SelectedVariable[]>(
+    []
+  );
+  console.log('selectedVariable:', selectedVariable);
+
   const [headers, setHeaders] = useState<KeyValuePair[]>(
     initialRequest.headers || []
   );
@@ -546,6 +558,8 @@ export function RequestEditor({
   >(parentExtractedVariables);
   const { activeEnvironment } = useDataManagement();
 
+  console.log('extractedVariables123:', extractedVariables);
+
   const [previewUrl, setPreviewUrl] = useState('');
   const [previousExtractions, setPreviousExtractions] = useState<
     DataExtraction[]
@@ -689,13 +703,67 @@ export function RequestEditor({
   };
 
   const processRequestWithVariables = (
-    request: APIRequest,
+    request: Partial<APIRequest>,
     variables: Variable[]
-  ): APIRequest => {
+  ): Partial<APIRequest> => {
+    console.log(
+      '[v0] processRequestWithVariables - selectedVariable:',
+      selectedVariable
+    );
+    console.log('[v0] processRequestWithVariables - variables:', variables);
+
+    let processedBody = request.body || '';
+    let processedBodyRawContent = request.bodyRawContent || '';
+
+    // If we have selected variables with paths, substitute them in the JSON body
+    if (
+      selectedVariable &&
+      selectedVariable.length > 0 &&
+      (processedBody || processedBodyRawContent)
+    ) {
+      const bodyContent = processedBodyRawContent || processedBody;
+      try {
+        const parsedBody = JSON.parse(bodyContent);
+        selectedVariable.forEach((varItem) => {
+          const variable = variables.find((v) => v.name === varItem.name);
+          if (variable && varItem.path) {
+            // Set the value at the specified path
+            parsedBody[varItem.path] = variable.value || variable.initialValue;
+          }
+        });
+        processedBody = JSON.stringify(parsedBody, null, 2);
+        processedBodyRawContent = JSON.stringify(parsedBody, null, 2);
+      } catch {
+        // If JSON parsing fails, fall back to regex replacement
+        selectedVariable.forEach((varItem) => {
+          const variable = variables.find((v) => v.name === varItem.name);
+          if (variable) {
+            const regex = new RegExp(`{{${variable.name}}}`, 'g');
+            processedBody = processedBody.replace(
+              regex,
+              variable.value || variable.initialValue || ''
+            );
+            processedBodyRawContent = processedBodyRawContent.replace(
+              regex,
+              variable.value || variable.initialValue || ''
+            );
+          }
+        });
+      }
+    } else {
+      // Standard variable replacement with {{variableName}} syntax
+      processedBody = replaceVariables(processedBody, variables);
+      processedBodyRawContent = replaceVariables(
+        processedBodyRawContent,
+        variables
+      );
+    }
+
     return {
       ...request,
       url: replaceVariables(request.url, variables),
-      body: replaceVariables(request.body || '', variables),
+      body: processedBody,
+      bodyRawContent: processedBodyRawContent,
       headers:
         request.headers?.map((header) => ({
           ...header,
@@ -828,6 +896,16 @@ export function RequestEditor({
     }, 0);
 
     setAutocompleteState((prev) => ({ ...prev, show: false }));
+  };
+
+  const handleJsonVariableSelect = (variables: SelectedVariable[]) => {
+    console.log('[v0] handleJsonVariableSelect called with:', variables);
+    console.log('[v0] Current selectedVariable state:', selectedVariable);
+    setSelectedVariable(variables);
+    console.log('[v0] Updated selectedVariable to:', variables);
+    if (initialRequest.id) {
+      onUpdate({ variable: variables });
+    }
   };
 
   const handleAutocomplete = (
@@ -1076,7 +1154,6 @@ export function RequestEditor({
     setIsExecuting(true);
     try {
       const startTime = Date.now();
-
       (safeRequest as any).headers = (safeRequest.headers ?? []).filter(
         (h) => h.key?.trim() && h.value?.trim()
       );
@@ -2068,627 +2145,649 @@ export function RequestEditor({
     }
   }, [requestAssertions]);
 
-  if (compact) {
-    return (
-      <div className='space-y-4'>
-        <VariableAutocomplete />
+  const handleConfirmSubstitutions = () => {
+    const allVariables = getAllAvailableVariables();
+    const substitutedUrl = replaceVariables(url, allVariables);
+    const substitutedBody = replaceVariables(body, allVariables);
+    const substitutedHeaders = headers.map((h) => ({
+      ...h,
+      key: replaceVariables(h.key, allVariables),
+      value: replaceVariables(h.value, allVariables),
+    }));
+    const substitutedParams = params.map((p) => ({
+      ...p,
+      key: replaceVariables(p.key, allVariables),
+      value: replaceVariables(p.value, allVariables),
+    }));
 
-        <div className='flex items-center space-x-2'>
-          <Select
-            value={initialRequest.method}
-            onValueChange={(value) => onUpdate({ method: value as any })}
-          >
-            <SelectTrigger className='w-24'>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value='GET'>GET</SelectItem>
-              <SelectItem value='POST'>POST</SelectItem>
-              <SelectItem value='PUT'>PUT</SelectItem>
-              <SelectItem value='DELETE'>DELETE</SelectItem>
-              <SelectItem value='PATCH'>PATCH</SelectItem>
-              <SelectItem value='HEAD'>HEAD</SelectItem>
-              <SelectItem value='OPTIONS'>OPTIONS</SelectItem>
-            </SelectContent>
-          </Select>
-          <Input
-            value={url}
-            onChange={(e) => handleInputChange(e, setUrl)}
-            onKeyUp={(e) => handleAutocomplete(e)}
-            placeholder='Enter request URL'
-            className='flex-1'
-            name='url'
-          />
-          <Button
-            onClick={handleExecute}
-            disabled={isExecuting}
-            className='hover-scale bg-[#136fb0] text-white'
-          >
-            <Play className='w-4 h-4' />
-            {isExecuting ? 'Running...' : 'Run'}
-          </Button>
+    setUrl(substitutedUrl);
+    setBody(substitutedBody);
+    setHeaders(substitutedHeaders);
+    setParams(substitutedParams);
+    toast({
+      title: 'Variables Substituted',
+      description:
+        'All dynamic variables have been replaced with their current values.',
+    });
+  };
+
+  const compactView = (
+    <div className='space-y-4'>
+      <VariableAutocomplete />
+
+      <div className='flex items-center space-x-2'>
+        <Select
+          value={initialRequest.method}
+          onValueChange={(value) => onUpdate({ method: value as any })}
+        >
+          <SelectTrigger className='w-24'>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value='GET'>GET</SelectItem>
+            <SelectItem value='POST'>POST</SelectItem>
+            <SelectItem value='PUT'>PUT</SelectItem>
+            <SelectItem value='DELETE'>DELETE</SelectItem>
+            <SelectItem value='PATCH'>PATCH</SelectItem>
+            <SelectItem value='HEAD'>HEAD</SelectItem>
+            <SelectItem value='OPTIONS'>OPTIONS</SelectItem>
+          </SelectContent>
+        </Select>
+        <Input
+          value={url}
+          onChange={(e) => handleInputChange(e, setUrl)}
+          onKeyUp={(e) => handleAutocomplete(e)}
+          placeholder='Enter request URL'
+          className='flex-1'
+          name='url'
+        />
+        <Button
+          onClick={handleExecute}
+          disabled={isExecuting}
+          className='hover-scale bg-[#136fb0] text-white'
+        >
+          <Play className='w-4 h-4' />
+          {isExecuting ? 'Running...' : 'Run'}
+        </Button>
+      </div>
+
+      <div className='flex items-start space-x-2 mt-2 text-sm'>
+        <span className='text-gray-600 dark:text-gray-400 font-medium'>
+          Final URL Preview:
+        </span>
+        <div className='flex-1'>{renderEnhancedPreviewUrl()}</div>
+      </div>
+
+      <DynamicVariablesPanel />
+      {Object.keys(parentExtractedVariables).length > 0 && (
+        <div className='mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-sm'>
+          <strong>Available Variables:</strong>{' '}
+          {Object.keys(parentExtractedVariables)
+            .map((name) => `{{${name}}}`)
+            .join(', ')}
         </div>
+      )}
 
-        <div className='flex items-start space-x-2 mt-2 text-sm'>
-          <span className='text-gray-600 dark:text-gray-400 font-medium'>
-            Final URL Preview:
-          </span>
-          <div className='flex-1'>{renderEnhancedPreviewUrl()}</div>
+      <div className='border-b border-gray-200'>
+        <div className='flex items-center justify-between px-6 relative'>
+          <nav className='flex space-x-8'>
+            {tabs.map((tab) => {
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id as typeof activeTab)}
+                  className={`pt-4 pb-2 px-1 border-b-2 font-medium text-sm transition-colors flex items-center space-x-2 ${
+                    activeTab === tab.id
+                      ? 'border-blue-500 text-[#136fb0]'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  <span className='whitespace-nowrap'>{tab.label}</span>
+                  {tab.id === 'tests' &&
+                    initialRequest.testScripts &&
+                    initialRequest.testScripts.length > 0 && (
+                      <span className='ml-1 px-2 py-1 text-xs bg-blue-100 text-blue-600 rounded-full'>
+                        {initialRequest.testScripts.length}
+                      </span>
+                    )}
+                </button>
+              );
+            })}
+          </nav>
+
+          <div className='relative'>
+            {showVariablesPopup && (
+              <div
+                ref={variablesPopupRef}
+                className='absolute right-0 top-10 bg-white shadow-lg rounded-lg z-50 w-80 border border-gray-200'
+              >
+                <div className='p-2 border-b'>
+                  <input
+                    type='text'
+                    className='w-full px-3 py-1.5 rounded-md border border-gray-300
+                focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm'
+                    placeholder='Search variables...'
+                    autoComplete='off'
+                    autoCorrect='off'
+                    spellCheck={false}
+                    value={searchText}
+                    onChange={(e) => setSearchText(e.target.value)}
+                  />
+                </div>
+
+                <div className='max-h-60 overflow-y-auto scrollbar-thin'>
+                  {getAllAvailableVariables()
+                    .filter(
+                      (item) =>
+                        (item.name.startsWith('D_') ||
+                          item.name.startsWith('S_')) &&
+                        item.name
+                          .toLowerCase()
+                          .includes(searchText.toLowerCase())
+                    )
+                    .map((item) => (
+                      <div
+                        key={item.id}
+                        className='w-full flex justify-between items-center px-3 py-2
+                    text-sm border-b border-gray-100 hover:bg-blue-50 transition-colors'
+                        onClick={() => setShowVariablesPopup(false)}
+                      >
+                        <span className='text-gray-800 font-mono'>
+                          {item.name}
+                        </span>
+
+                        <div className='flex items-center space-x-2'>
+                          <span className='text-gray-500 truncate max-w-[120px]'>
+                            {item?.currentValue}
+                          </span>
+
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigator.clipboard.writeText(`{{${item.name}}}`);
+                              setShowVariablesPopup(false);
+                            }}
+                            className='p-1 hover:text-blue-600 transition-colors'
+                            title='Copy variable'
+                          >
+                            <Copy className='w-4 h-4' />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
+
+            <div className='flex items-center gap-2'>
+              <Button onClick={() => setShowVariablesPopup((prev) => !prev)}>
+                Variables
+              </Button>
+
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <HelpCircle
+                      size={16}
+                      strokeWidth={1.5}
+                      onClick={() => setHelpOpen(true)}
+                      className='cursor-pointer'
+                    />
+                  </TooltipTrigger>
+                  <TooltipContent>How to use variables</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+          </div>
         </div>
+      </div>
 
-        <DynamicVariablesPanel />
-        {Object.keys(parentExtractedVariables).length > 0 && (
-          <div className='mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-sm'>
-            <strong>Available Variables:</strong>{' '}
-            {Object.keys(parentExtractedVariables)
-              .map((name) => `{{${name}}}`)
-              .join(', ')}
+      <VariableHelpDialog open={helpOpen} onOpenChange={setHelpOpen} />
+
+      <div className='p-2'>
+        {activeTab === 'params' && (
+          <div className='space-y-4'>
+            <div className='flex items-center justify-between'>
+              <h3 className='text-lg font-medium text-gray-900'>
+                Query Parameters
+              </h3>
+              <button
+                onClick={addParam}
+                className='flex items-center space-x-2 px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition-colors'
+              >
+                <Plus className='w-4 h-4' color='#136fb0' />
+                <span className='text-[#136fb0]'>Add Parameter</span>
+              </button>
+            </div>
+
+            <div className='space-y-2'>
+              {params.map((param, index) => (
+                <div key={param.id} className='flex items-center space-x-2'>
+                  <input
+                    type='text'
+                    name={`param-key-${index}`}
+                    value={param.key}
+                    onChange={(e) =>
+                      handleInputChange(e, (value) => {
+                        const newParams = [...params];
+                        newParams[index] = {
+                          ...newParams[index],
+                          key: value,
+                        };
+                        setParams(newParams);
+                      })
+                    }
+                    onKeyUp={(e) => handleAutocomplete(e)}
+                    className='flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm'
+                    placeholder='Key'
+                  />
+                  <input
+                    type='text'
+                    name={`param-value-${index}`}
+                    value={param.value}
+                    onChange={(e) =>
+                      handleInputChange(e, (value) => {
+                        const newParams = [...params];
+                        newParams[index] = {
+                          ...newParams[index],
+                          value: value,
+                        };
+                        setParams(newParams);
+                      })
+                    }
+                    onKeyUp={(e) => handleAutocomplete(e)}
+                    className='flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm'
+                    placeholder='Value (use {{variableName}} or {{dynamicVar}} for variables)'
+                  />
+
+                  <button
+                    onClick={() =>
+                      updateParam(index, { enabled: !param.enabled })
+                    }
+                    className={`p-2 rounded-lg transition-colors ${
+                      param.enabled
+                        ? 'text-green-600 hover:bg-green-50'
+                        : 'text-gray-400 hover:bg-gray-50'
+                    }`}
+                  ></button>
+                  <button
+                    onClick={() => removeParam(index)}
+                    className='p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors'
+                  >
+                    <Trash2 className='w-4 h-4' />
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
-        <div className='border-b border-gray-200'>
-          <div className='flex items-center justify-between px-6 relative'>
-            <nav className='flex space-x-8'>
-              {tabs.map((tab) => {
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id as typeof activeTab)}
-                    className={`pt-4 pb-2 px-1 border-b-2 font-medium text-sm transition-colors flex items-center space-x-2 ${
-                      activeTab === tab.id
-                        ? 'border-blue-500 text-[#136fb0]'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                    }`}
-                  >
-                    <span className='whitespace-nowrap'>{tab.label}</span>
-                    {tab.id === 'tests' &&
-                      initialRequest.testScripts &&
-                      initialRequest.testScripts.length > 0 && (
-                        <span className='ml-1 px-2 py-1 text-xs bg-blue-100 text-blue-600 rounded-full'>
-                          {initialRequest.testScripts.length}
-                        </span>
-                      )}
-                  </button>
-                );
-              })}
-            </nav>
-
-            <div className='relative'>
-              {showVariablesPopup && (
-                <div
-                  ref={variablesPopupRef}
-                  className='absolute right-0 top-10 bg-white shadow-lg rounded-lg z-50 w-80 border border-gray-200'
-                >
-                  <div className='p-2 border-b'>
-                    <input
-                      type='text'
-                      className='w-full px-3 py-1.5 rounded-md border border-gray-300
-                focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm'
-                      placeholder='Search variables...'
-                      autoComplete='off'
-                      autoCorrect='off'
-                      spellCheck={false}
-                      value={searchText}
-                      onChange={(e) => setSearchText(e.target.value)}
-                    />
-                  </div>
-
-                  <div className='max-h-60 overflow-y-auto scrollbar-thin'>
-                    {getAllAvailableVariables()
-                      .filter(
-                        (item) =>
-                          (item.name.startsWith('D_') ||
-                            item.name.startsWith('S_')) &&
-                          item.name
-                            .toLowerCase()
-                            .includes(searchText.toLowerCase())
-                      )
-                      .map((item) => (
-                        <div
-                          key={item.id}
-                          className='w-full flex justify-between items-center px-3 py-2
-                    text-sm border-b border-gray-100 hover:bg-blue-50 transition-colors'
-                          onClick={() => setShowVariablesPopup(false)}
-                        >
-                          <span className='text-gray-800 font-mono'>
-                            {item.name}
-                          </span>
-
-                          <div className='flex items-center space-x-2'>
-                            <span className='text-gray-500 truncate max-w-[120px]'>
-                              {item?.currentValue}
-                            </span>
-
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                navigator.clipboard.writeText(
-                                  `{{${item.name}}}`
-                                );
-                                setShowVariablesPopup(false);
-                              }}
-                              className='p-1 hover:text-blue-600 transition-colors'
-                              title='Copy variable'
-                            >
-                              <Copy className='w-4 h-4' />
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                  </div>
-                </div>
-              )}
-
-              <div className='flex items-center gap-2'>
-                <Button onClick={() => setShowVariablesPopup((prev) => !prev)}>
-                  Variables
-                </Button>
-
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <HelpCircle
-                        size={16}
-                        strokeWidth={1.5}
-                        onClick={() => setHelpOpen(true)}
-                        className='cursor-pointer'
-                      />
-                    </TooltipTrigger>
-                    <TooltipContent>How to use variables</TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
+        {activeTab === 'headers' && (
+          <div className='space-y-4'>
+            <div className='flex items-center justify-between'>
+              <h3 className='text-lg font-medium text-gray-900'>Headers</h3>
+              <button
+                onClick={addHeader}
+                className='flex items-center space-x-2 px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition-colors'
+              >
+                <Plus className='w-4 h-4' />
+                <span>Add Header</span>
+              </button>
             </div>
-          </div>
-        </div>
 
-        <VariableHelpDialog open={helpOpen} onOpenChange={setHelpOpen} />
-
-        <div className='p-2'>
-          {activeTab === 'params' && (
-            <div className='space-y-4'>
-              <div className='flex items-center justify-between'>
-                <h3 className='text-lg font-medium text-gray-900'>
-                  Query Parameters
-                </h3>
-                <button
-                  onClick={addParam}
-                  className='flex items-center space-x-2 px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition-colors'
-                >
-                  <Plus className='w-4 h-4' color='#136fb0' />
-                  <span className='text-[#136fb0]'>Add Parameter</span>
-                </button>
-              </div>
-
-              <div className='space-y-2'>
-                {params.map((param, index) => (
-                  <div key={param.id} className='flex items-center space-x-2'>
-                    <input
-                      type='text'
-                      name={`param-key-${index}`}
-                      value={param.key}
-                      onChange={(e) =>
-                        handleInputChange(e, (value) => {
-                          const newParams = [...params];
-                          newParams[index] = {
-                            ...newParams[index],
-                            key: value,
-                          };
-                          setParams(newParams);
-                        })
-                      }
-                      onKeyUp={(e) => handleAutocomplete(e)}
-                      className='flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm'
-                      placeholder='Key'
-                    />
-                    <input
-                      type='text'
-                      name={`param-value-${index}`}
-                      value={param.value}
-                      onChange={(e) =>
-                        handleInputChange(e, (value) => {
-                          const newParams = [...params];
-                          newParams[index] = {
-                            ...newParams[index],
-                            value: value,
-                          };
-                          setParams(newParams);
-                        })
-                      }
-                      onKeyUp={(e) => handleAutocomplete(e)}
-                      className='flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm'
-                      placeholder='Value (use {{variableName}} or {{dynamicVar}} for variables)'
-                    />
-
-                    <button
-                      onClick={() =>
-                        updateParam(index, { enabled: !param.enabled })
-                      }
-                      className={`p-2 rounded-lg transition-colors ${
-                        param.enabled
-                          ? 'text-green-600 hover:bg-green-50'
-                          : 'text-gray-400 hover:bg-gray-50'
-                      }`}
-                    ></button>
-                    <button
-                      onClick={() => removeParam(index)}
-                      className='p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors'
-                    >
-                      <Trash2 className='w-4 h-4' />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'headers' && (
-            <div className='space-y-4'>
-              <div className='flex items-center justify-between'>
-                <h3 className='text-lg font-medium text-gray-900'>Headers</h3>
-                <button
-                  onClick={addHeader}
-                  className='flex items-center space-x-2 px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition-colors'
-                >
-                  <Plus className='w-4 h-4' />
-                  <span>Add Header</span>
-                </button>
-              </div>
-
-              <div className='space-y-2'>
-                {headers.map((header, index) => (
-                  <div key={header.id} className='flex items-center space-x-2'>
-                    <input
-                      type='text'
-                      name={`header-key-${index}`}
-                      value={header.key}
-                      onChange={(e) =>
-                        handleInputChange(e, (value) => {
-                          const newHeaders = [...headers];
-                          newHeaders[index] = {
-                            ...newHeaders[index],
-                            key: value,
-                          };
-                          setHeaders(newHeaders);
-                        })
-                      }
-                      onKeyUp={(e) => handleAutocomplete(e)}
-                      className='flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm'
-                      placeholder='Key'
-                    />
-                    <input
-                      type='text'
-                      name={`header-value-${index}`}
-                      value={header.value}
-                      onChange={(e) =>
-                        handleInputChange(e, (value) => {
-                          const newHeaders = [...headers];
-                          newHeaders[index] = {
-                            ...newHeaders[index],
-                            value: value,
-                          };
-                          setHeaders(newHeaders);
-                        })
-                      }
-                      onKeyUp={(e) => handleAutocomplete(e)}
-                      className='flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm'
-                      placeholder='Value (use {{variableName}} or {{dynamicVar}} for variables)'
-                    />
-                    {processedRequest.headers?.[index]?.value !==
-                      header.value &&
-                      processedRequest.headers?.[index]?.value && (
-                        <div className='flex-1 px-2 py-1 bg-blue-50 border border-blue-200 rounded text-xs font-mono'>
-                          → {processedRequest.headers[index]?.value}
-                        </div>
-                      )}
-                    <button
-                      onClick={() =>
-                        updateHeader(index, { enabled: !header.enabled })
-                      }
-                      className={`p-2 rounded-lg transition-colors ${
-                        header.enabled
-                          ? 'text-green-600 hover:bg-green-50'
-                          : 'text-gray-400 hover:bg-gray-50'
-                      }`}
-                    ></button>
-                    <button
-                      onClick={() => removeHeader(index)}
-                      className='p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors'
-                    >
-                      <Trash2 className='w-4 h-4' />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'body' && showBody && (
-            <RequestBody
-              bodyType={bodyType}
-              bodyContent={body}
-              formFields={formFields}
-              urlEncodedFields={urlEncodedFields}
-              variables={storeVariables || []}
-              initialVariable={chainVariables || []}
-              onBodyTypeChange={handleBodyTypeChange}
-              onBodyContentChange={handleBodyContentChange}
-              onBeautify={handleBeautify}
-              onVariableSelect={(variable) => {}}
-              onConfirmSubstitution={(substitutions) => {}}
-              onAddFormField={addFormField}
-              onUpdateFormField={updateFormField}
-              onRemoveFormField={removeFormField}
-              onAddUrlEncodedField={addUrlEncodedField}
-              onUpdateUrlEncodedField={updateUrlEncodedField}
-              onRemoveUrlEncodedField={removeUrlEncodedField}
-            />
-          )}
-
-          {activeTab === 'auth' && (
-            <div className='space-y-4'>
-              <h3 className='text-lg font-medium text-gray-900'>
-                Authentication
-              </h3>
-              <div className='space-y-4'>
-                <div>
-                  <label className='block text-sm font-medium text-gray-700 mb-2'>
-                    Auth Type
-                  </label>
-                  <select
-                    value='bearer'
-                    onChange={() => {}}
-                    className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-                    disabled
-                  >
-                    <option value='bearer'>Bearer Token</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className='block text-sm font-medium text-gray-700 mb-2'>
-                    Bearer Token
-                  </label>
+            <div className='space-y-2'>
+              {headers.map((header, index) => (
+                <div key={header.id} className='flex items-center space-x-2'>
                   <input
                     type='text'
-                    name='auth-token'
-                    autoComplete='off'
-                    autoCorrect='off'
-                    autoCapitalize='off'
-                    spellCheck={false}
-                    value={auth.token}
+                    name={`header-key-${index}`}
+                    value={header.key}
                     onChange={(e) =>
-                      setAuth((prev) => ({ ...prev, token: e.target.value }))
-                    }
-                    onBlur={(e) =>
-                      setAuth((prev) => ({
-                        ...prev,
-                        token: e.target.value.trim(),
-                      }))
-                    }
-                    onKeyUp={(e) => handleAutocomplete(e)}
-                    className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-                    placeholder='Enter bearer token or use {{tokenVariable}}'
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'pre-request' && (
-            <div className='space-y-4'>
-              <PrePostRequest
-                type='pre-request'
-                assertions={assertions}
-                setAssertions={setAssertions}
-                responseData={executionResult?.response}
-                showAssertions={true}
-              />
-            </div>
-          )}
-
-          {activeTab === 'post-response' && (
-            <div className='space-y-4'>
-              <PrePostRequest
-                type='post-response'
-                assertions={assertions}
-                setAssertions={setAssertions}
-                responseData={executionResult?.response}
-                showAssertions={true}
-              />
-            </div>
-          )}
-
-          {activeTab === 'settings' && (
-            <div className='space-y-4'>
-              <h3 className='text-lg font-semibold mb-4'>Request Settings</h3>
-
-              <div className='grid grid-cols-1 md:grid-cols-2 gap-6 mb-6'>
-                <div>
-                  <label className='block text-sm font-medium text-gray-700 mb-2'>
-                    Timeout (ms)
-                  </label>
-                  <input
-                    type='number'
-                    value={initialRequest.timeout}
-                    onChange={(e) =>
-                      onUpdate({
-                        timeout: Number.parseInt(e.target.value) || 5000,
+                      handleInputChange(e, (value) => {
+                        const newHeaders = [...headers];
+                        newHeaders[index] = {
+                          ...newHeaders[index],
+                          key: value,
+                        };
+                        setHeaders(newHeaders);
                       })
                     }
-                    className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-                    min='1000'
-                    max='60000'
+                    onKeyUp={(e) => handleAutocomplete(e)}
+                    className='flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm'
+                    placeholder='Key'
                   />
-                </div>
-
-                <div className='opacity-60'>
-                  <label className='block text-sm font-medium text-gray-700 mb-2'>
-                    Retries
-                  </label>
                   <input
-                    type='number'
-                    value={initialRequest.retries}
-                    disabled
-                    className='w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed'
+                    type='text'
+                    name={`header-value-${index}`}
+                    value={header.value}
+                    onChange={(e) =>
+                      handleInputChange(e, (value) => {
+                        const newHeaders = [...headers];
+                        newHeaders[index] = {
+                          ...newHeaders[index],
+                          value: value,
+                        };
+                        setHeaders(newHeaders);
+                      })
+                    }
+                    onKeyUp={(e) => handleAutocomplete(e)}
+                    className='flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm'
+                    placeholder='Value (use {{variableName}} or {{dynamicVar}} for variables)'
                   />
-                  <p className='text-xs text-gray-500 italic mt-1'>Upcoming</p>
+                  {processedRequest.headers?.[index]?.value !== header.value &&
+                    processedRequest.headers?.[index]?.value && (
+                      <div className='flex-1 px-2 py-1 bg-blue-50 border border-blue-200 rounded text-xs font-mono'>
+                        → {processedRequest.headers[index]?.value}
+                      </div>
+                    )}
+                  <button
+                    onClick={() =>
+                      updateHeader(index, { enabled: !header.enabled })
+                    }
+                    className={`p-2 rounded-lg transition-colors ${
+                      header.enabled
+                        ? 'text-green-600 hover:bg-green-50'
+                        : 'text-gray-400 hover:bg-gray-50'
+                    }`}
+                  ></button>
+                  <button
+                    onClick={() => removeHeader(index)}
+                    className='p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors'
+                  >
+                    <Trash2 className='w-4 h-4' />
+                  </button>
                 </div>
-              </div>
-
-              <div className='p-4 border border-orange-200 bg-orange-50 rounded-lg'>
-                <div className='flex items-center space-x-2 mb-3'>
-                  <AlertTriangle className='w-5 h-5 text-orange-600' />
-                  <h4 className='font-medium text-orange-900'>
-                    Error Handling
-                  </h4>
-                </div>
-                <div className='space-y-2'>
-                  <label className='flex items-center space-x-2'>
-                    <input
-                      type='radio'
-                      name='errorHandling'
-                      value='stop'
-                      checked={initialRequest.errorHandling === 'stop'}
-                      onChange={(e) =>
-                        onUpdate({
-                          errorHandling: e.target.value as
-                            | 'stop'
-                            | 'continue'
-                            | 'retry',
-                        })
-                      }
-                      className='text-orange-600'
-                    />
-                    <span className='text-sm text-orange-800'>
-                      Stop chain on failure
-                    </span>
-                  </label>
-                  <label className='flex items-center space-x-2 opacity-60'>
-                    <input
-                      type='radio'
-                      name='errorHandling'
-                      value='continue'
-                      checked={
-                        initialRequest.errorHandling === 'continue' ||
-                        !initialRequest.errorHandling
-                      }
-                      onChange={(e) =>
-                        onUpdate({
-                          errorHandling: e.target.value as
-                            | 'stop'
-                            | 'continue'
-                            | 'retry',
-                        })
-                      }
-                      className='text-orange-600'
-                    />
-                    <span className='text-sm text-orange-800'>
-                      Continue to next step
-                      <span className='text-xs italic text-gray-500'>
-                        (Upcoming)
-                      </span>
-                    </span>
-                  </label>
-
-                  <label className='flex items-center space-x-2 opacity-60'>
-                    <input
-                      type='radio'
-                      name='errorHandling'
-                      value='retry'
-                      checked={initialRequest.errorHandling === 'retry'}
-                      disabled
-                      className='text-orange-600'
-                    />
-                    <span className='text-sm text-orange-800'>
-                      Retry with backoff{' '}
-                      <span className='text-xs italic text-gray-500'>
-                        (Upcoming)
-                      </span>
-                    </span>
-                  </label>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* {showVariablePreview() && (
-          <div className='mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg'>
-            <h4 className='text-sm font-medium text-blue-900 mb-2'>
-              Variable Substitution Preview:
-            </h4>
-            <div className='space-y-2 text-xs'>
-              {(processedRequest.authToken !== initialRequest.authToken ||
-                processedRequest.authorization?.token !==
-                  initialRequest.authorization?.token) && (
-                <div>
-                  <span className='font-medium'>Auth Token:</span>
-                  <div className='font-mono bg-white p-1 rounded border max-w-full overflow-hidden text-ellipsis whitespace-nowrap'>
-                    <span className='text-gray-500'>
-                      {initialRequest.authorization?.token ||
-                        initialRequest.authToken}
-                    </span>{' '}
-                    →
-                    <span className='text-blue-600 ml-1'>
-                      {processedRequest.authorization?.token ||
-                        processedRequest.authToken}
-                    </span>
-                  </div>
-                </div>
-              )}
-              {processedRequest.url !== initialRequest.url && (
-                <div>
-                  <span className='font-medium'>URL:</span>
-                  <div className='font-mono bg-white p-1 rounded border'>
-                    <span className='text-gray-500'>{initialRequest.url}</span>{' '}
-                    →
-                    <span className='text-blue-600 ml-1'>
-                      {processedRequest.url}
-                    </span>
-                  </div>
-                </div>
-              )}
-              {processedRequest.body !== initialRequest.body &&
-                processedRequest.body && (
-                  <div>
-                    <span className='font-medium'>Body:</span>
-                    <div className='font-mono bg-white p-1 rounded border max-h-20 overflow-y-auto'>
-                      <pre className='text-blue-600'>
-                        {processedRequest.body}
-                      </pre>
-                    </div>
-                  </div>
-                )}
+              ))}
             </div>
           </div>
-        )} */}
+        )}
 
-        {hideResponseExplorer &&
-          executionResult &&
-          (executionResult.response || executionResult.error) && (
-            <div className='border-t border-gray-200 p-6'>
-              <ResponseExplorer
-                response={executionResult.response}
-                onExtractVariable={handleExtractVariable}
-                extractedVariables={extractedVariables}
-                existingExtractions={initialRequest.extractVariables}
-                onRemoveExtraction={handleRemoveExtraction}
-                handleCopy={handleCopy}
-                copied={copied}
-                chainId={chainId || requestChainId || ''}
-                actualRequestUrl={executionResult.request.url}
-                actualRequestHeaders={executionResult.request.headers}
-                actualRequestBody={executionResult.request.body}
-                actualRequestMethod={executionResult.request.method}
-                executionStatus={executionResult.status}
-                errorMessage={executionResult.error}
-              />
+        {activeTab === 'body' && showBody && (
+          <RequestBody
+            bodyType={bodyType}
+            bodyContent={body}
+            formFields={formFields}
+            urlEncodedFields={urlEncodedFields}
+            variables={storeVariables || []}
+            initialVariable={selectedVariable}
+            onBodyTypeChange={handleBodyTypeChange}
+            onBodyContentChange={handleBodyContentChange}
+            onBeautify={handleBeautify}
+            onVariableSelect={handleJsonVariableSelect}
+            onConfirmSubstitution={handleConfirmSubstitutions}
+            onAddFormField={addFormField}
+            onUpdateFormField={updateFormField}
+            onRemoveFormField={removeFormField}
+            onAddUrlEncodedField={addUrlEncodedField}
+            onUpdateUrlEncodedField={updateUrlEncodedField}
+            onRemoveUrlEncodedField={removeUrlEncodedField}
+          />
+        )}
+
+        {activeTab === 'auth' && (
+          <div className='space-y-4'>
+            <h3 className='text-lg font-medium text-gray-900'>
+              Authentication
+            </h3>
+            <div className='space-y-4'>
+              <div>
+                <label className='block text-sm font-medium text-gray-700 mb-2'>
+                  Auth Type
+                </label>
+                <select
+                  value='bearer'
+                  onChange={() => {}}
+                  className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+                  disabled
+                >
+                  <option value='bearer'>Bearer Token</option>
+                </select>
+              </div>
+
+              <div>
+                <label className='block text-sm font-medium text-gray-700 mb-2'>
+                  Bearer Token
+                </label>
+                <input
+                  type='text'
+                  name='auth-token'
+                  autoComplete='off'
+                  autoCorrect='off'
+                  autoCapitalize='off'
+                  spellCheck={false}
+                  value={auth.token}
+                  onChange={(e) =>
+                    setAuth((prev) => ({ ...prev, token: e.target.value }))
+                  }
+                  onBlur={(e) =>
+                    setAuth((prev) => ({
+                      ...prev,
+                      token: e.target.value.trim(),
+                    }))
+                  }
+                  onKeyUp={(e) => handleAutocomplete(e)}
+                  className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+                  placeholder='Enter bearer token or use {{tokenVariable}}'
+                />
+              </div>
             </div>
-          )}
+          </div>
+        )}
+
+        {activeTab === 'pre-request' && (
+          <div className='space-y-4'>
+            <PrePostRequest
+              type='pre-request'
+              assertions={assertions}
+              setAssertions={setAssertions}
+              responseData={executionResult?.response}
+              showAssertions={true}
+              selectedVariables={selectedVariable}
+            />
+          </div>
+        )}
+
+        {activeTab === 'post-response' && (
+          <div className='space-y-4'>
+            <PrePostRequest
+              type='post-response'
+              assertions={assertions}
+              setAssertions={setAssertions}
+              responseData={executionResult?.response}
+              showAssertions={true}
+            />
+          </div>
+        )}
+
+        {activeTab === 'settings' && (
+          <div className='space-y-4'>
+            <h3 className='text-lg font-semibold mb-4'>Request Settings</h3>
+
+            <div className='grid grid-cols-1 md:grid-cols-2 gap-6 mb-6'>
+              <div>
+                <label className='block text-sm font-medium text-gray-700 mb-2'>
+                  Timeout (ms)
+                </label>
+                <input
+                  type='number'
+                  value={initialRequest.timeout}
+                  onChange={(e) =>
+                    onUpdate({
+                      timeout: Number.parseInt(e.target.value) || 5000,
+                    })
+                  }
+                  className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+                  min='1000'
+                  max='60000'
+                />
+              </div>
+
+              <div className='opacity-60'>
+                <label className='block text-sm font-medium text-gray-700 mb-2'>
+                  Retries
+                </label>
+                <input
+                  type='number'
+                  value={initialRequest.retries}
+                  disabled
+                  className='w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed'
+                />
+                <p className='text-xs text-gray-500 italic mt-1'>Upcoming</p>
+              </div>
+            </div>
+
+            <div className='p-4 border border-orange-200 bg-orange-50 rounded-lg'>
+              <div className='flex items-center space-x-2 mb-3'>
+                <AlertTriangle className='w-5 h-5 text-orange-600' />
+                <h4 className='font-medium text-orange-900'>Error Handling</h4>
+              </div>
+              <div className='space-y-2'>
+                <label className='flex items-center space-x-2'>
+                  <input
+                    type='radio'
+                    name='errorHandling'
+                    value='stop'
+                    checked={initialRequest.errorHandling === 'stop'}
+                    onChange={(e) =>
+                      onUpdate({
+                        errorHandling: e.target.value as
+                          | 'stop'
+                          | 'continue'
+                          | 'retry',
+                      })
+                    }
+                    className='text-orange-600'
+                  />
+                  <span className='text-sm text-orange-800'>
+                    Stop chain on failure
+                  </span>
+                </label>
+                <label className='flex items-center space-x-2 opacity-60'>
+                  <input
+                    type='radio'
+                    name='errorHandling'
+                    value='continue'
+                    checked={
+                      initialRequest.errorHandling === 'continue' ||
+                      !initialRequest.errorHandling
+                    }
+                    onChange={(e) =>
+                      onUpdate({
+                        errorHandling: e.target.value as
+                          | 'stop'
+                          | 'continue'
+                          | 'retry',
+                      })
+                    }
+                    className='text-orange-600'
+                  />
+                  <span className='text-sm text-orange-800'>
+                    Continue to next step
+                    <span className='text-xs italic text-gray-500'>
+                      (Upcoming)
+                    </span>
+                  </span>
+                </label>
+
+                <label className='flex items-center space-x-2 opacity-60'>
+                  <input
+                    type='radio'
+                    name='errorHandling'
+                    value='retry'
+                    checked={initialRequest.errorHandling === 'retry'}
+                    disabled
+                    className='text-orange-600'
+                  />
+                  <span className='text-sm text-orange-800'>
+                    Retry with backoff{' '}
+                    <span className='text-xs italic text-gray-500'>
+                      (Upcoming)
+                    </span>
+                  </span>
+                </label>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
-    );
+
+      {showVariablePreview() && (
+        <div className='mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg'>
+          <h4 className='text-sm font-medium text-blue-900 mb-2'>
+            Variable Substitution Preview:
+          </h4>
+          <div className='space-y-2 text-xs'>
+            {(processedRequest.authToken !== initialRequest.authToken ||
+              processedRequest.authorization?.token !==
+                initialRequest.authorization?.token) && (
+              <div>
+                <span className='font-medium'>Auth Token:</span>
+                <div className='font-mono bg-white p-1 rounded border max-w-full overflow-hidden text-ellipsis whitespace-nowrap'>
+                  <span className='text-gray-500'>
+                    {initialRequest.authorization?.token ||
+                      initialRequest.authToken}
+                  </span>{' '}
+                  →
+                  <span className='text-blue-600 ml-1'>
+                    {processedRequest.authorization?.token ||
+                      processedRequest.authToken}
+                  </span>
+                </div>
+              </div>
+            )}
+            {processedRequest.url !== initialRequest.url && (
+              <div>
+                <span className='font-medium'>URL:</span>
+                <div className='font-mono bg-white p-1 rounded border'>
+                  <span className='text-gray-500'>{initialRequest.url}</span> →
+                  <span className='text-blue-600 ml-1'>
+                    {processedRequest.url}
+                  </span>
+                </div>
+              </div>
+            )}
+            {processedRequest.body !== initialRequest.body &&
+              processedRequest.body && (
+                <div>
+                  <span className='font-medium'>Body:</span>
+                  <div className='font-mono bg-white p-1 rounded border max-h-20 overflow-y-auto'>
+                    <pre className='text-blue-600'>{processedRequest.body}</pre>
+                  </div>
+                </div>
+              )}
+          </div>
+        </div>
+      )}
+
+      {hideResponseExplorer &&
+        executionResult &&
+        (executionResult.response || executionResult.error) && (
+          <div className='border-t border-gray-200 p-6'>
+            <ResponseExplorer
+              response={executionResult.response}
+              onExtractVariable={handleExtractVariable}
+              extractedVariables={extractedVariables}
+              existingExtractions={initialRequest.extractVariables}
+              onRemoveExtraction={handleRemoveExtraction}
+              handleCopy={handleCopy}
+              copied={copied}
+              chainId={chainId || requestChainId || ''}
+              actualRequestUrl={executionResult.request.url}
+              actualRequestHeaders={executionResult.request.headers}
+              actualRequestBody={executionResult.request.body}
+              actualRequestMethod={executionResult.request.method}
+              executionStatus={executionResult.status}
+              errorMessage={executionResult.error}
+            />
+          </div>
+        )}
+    </div>
+  );
+
+  if (compact) {
+    return compactView;
   }
+
   return (
     <div className='flex flex-col h-full'>
       <VariableAutocomplete />
@@ -2766,7 +2865,7 @@ export function RequestEditor({
         </CardContent>
       </Card>
 
-      {/* {showVariablePreview() && (
+      {showVariablePreview() && (
         <div className='mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg'>
           <h4 className='text-sm font-medium text-blue-900 mb-2'>
             Variable Substitution Preview:
@@ -2812,7 +2911,7 @@ export function RequestEditor({
               )}
           </div>
         </div>
-      )} */}
+      )}
       <Tabs defaultValue='params' className='w-full'>
         <TabsList className='grid w-full grid-cols-7'>
           <TabsTrigger value='params' className='gap-2'>
@@ -3169,6 +3268,7 @@ export function RequestEditor({
             setAssertions={setAssertions}
             responseData={executionResult?.response}
             showAssertions={true}
+            selectedVariables={selectedVariable}
           />
         </TabsContent>
 

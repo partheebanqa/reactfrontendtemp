@@ -91,6 +91,9 @@ export function ResponseExplorer({
     'body' | 'headers' | 'cookies' | 'actualRequest' | 'assertions'
   >('body');
 
+  console.log('extractedvariable121:', extractedVariables);
+  console.log('existingExtractions:', existingExtractions);
+
   const getValueByPath = (obj: any, path: string): any => {
     if (!obj || !path) return undefined;
 

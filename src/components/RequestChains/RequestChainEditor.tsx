@@ -64,7 +64,6 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { VariablesTable } from './VariablesTable';
-import { useDataManagement } from '@/hooks/useDataManagement';
 import { useWorkspace } from '@/hooks/useWorkspace';
 import { parseCookies } from '@/lib/cookieUtils';
 import {
@@ -90,6 +89,7 @@ import { ResponseExplorer } from './ResponseExplorer';
 import BreadCum from '../BreadCum/Breadcum';
 import { useDataManagementStore } from '@/store/dataManagementStore';
 import { generateAssertions } from '@/utils/assertionGenerator';
+import { useDataManagement } from '@/hooks/useDataManagement';
 
 interface RequestChainEditorProps {
   chain?: RequestChain;
@@ -112,6 +112,9 @@ export function RequestChainEditor({
   const { variables: storeVariables, dynamicVariables } =
     useDataManagementStore();
 
+  const { environments, activeEnvironment, setActiveEnvironment } =
+    useDataManagement();
+
   const [dynamicOverrides, setDynamicOverrides] = useState<
     DynamicVariableOverride[]
   >([]);
@@ -121,6 +124,46 @@ export function RequestChainEditor({
   const [assertionsByRequest, setAssertionsByRequest] = useState<
     Record<string, any[]>
   >({});
+
+  const [selectedEnvironment, setSelectedEnvironment] = useState<string>(
+    chain?.environmentId || activeEnvironment?.id || ''
+  );
+  const [environmentBaseUrl, setEnvironmentBaseUrl] = useState<string>(
+    chain?.environment?.baseUrl || activeEnvironment?.baseUrl || ''
+  );
+
+  useEffect(() => {
+    if (!selectedEnvironment && activeEnvironment) {
+      if (chain?.environmentId && environments.length > 0) {
+        const chainEnvironment = environments.find(
+          (env) => env.id === chain.environmentId
+        );
+        if (chainEnvironment) {
+          setSelectedEnvironment(chain.environmentId);
+          setEnvironmentBaseUrl(chainEnvironment.baseUrl || '');
+        }
+      } else {
+        setSelectedEnvironment(activeEnvironment.id);
+        setEnvironmentBaseUrl(activeEnvironment.baseUrl || '');
+      }
+    }
+  }, [
+    activeEnvironment,
+    chain?.environmentId,
+    environments,
+    selectedEnvironment,
+  ]);
+
+  useEffect(() => {
+    if (selectedEnvironment) {
+      const selectedEnv = environments.find(
+        (env) => env.id === selectedEnvironment
+      );
+      if (selectedEnv) {
+        setEnvironmentBaseUrl(selectedEnv.baseUrl || '');
+      }
+    }
+  }, [selectedEnvironment, environments]);
 
   console.log('assertionsByRequest123:', assertionsByRequest);
 
@@ -268,44 +311,6 @@ export function RequestChainEditor({
     });
   }, [formData.chainRequests]);
 
-  const { environments, activeEnvironment, setActiveEnvironment } =
-    useDataManagement();
-  const [selectedEnvironment, setSelectedEnvironment] = useState<string>('');
-  const [environmentBaseUrl, setEnvironmentBaseUrl] = useState<string>('');
-
-  useEffect(() => {
-    if (!selectedEnvironment && activeEnvironment) {
-      if (chain?.environmentId && environments.length > 0) {
-        const chainEnvironment = environments.find(
-          (env) => env.id === chain.environmentId
-        );
-        if (chainEnvironment) {
-          setSelectedEnvironment(chain.environmentId);
-          setEnvironmentBaseUrl(chainEnvironment.baseUrl || '');
-        }
-      } else {
-        setSelectedEnvironment(activeEnvironment.id);
-        setEnvironmentBaseUrl(activeEnvironment.baseUrl || '');
-      }
-    }
-  }, [
-    activeEnvironment,
-    chain?.environmentId,
-    environments,
-    selectedEnvironment,
-  ]);
-
-  useEffect(() => {
-    if (selectedEnvironment) {
-      const selectedEnv = environments.find(
-        (env) => env.id === selectedEnvironment
-      );
-      if (selectedEnv) {
-        setEnvironmentBaseUrl(selectedEnv.baseUrl || '');
-      }
-    }
-  }, [selectedEnvironment, environments]);
-
   useEffect(() => {
     if (Object.keys(assertionsByRequest).length > 0) {
       Object.entries(assertionsByRequest).forEach(([requestId, assertions]) => {
@@ -320,6 +325,9 @@ export function RequestChainEditor({
     if (selectedEnv) {
       setEnvironmentBaseUrl(selectedEnv.baseUrl || '');
     }
+    setActiveEnvironment?.(
+      environments.find((env) => env.id === environmentId) || null
+    );
   };
   const isSaveDisabled =
     !formData.name?.trim() || (formData.chainRequests?.length ?? 0) === 0;
@@ -445,7 +453,7 @@ export function RequestChainEditor({
               variant='outline'
               size='sm'
               onClick={regenerateAllDynamicVariables}
-              className='text-purple-700 border-purple-300 hover:bg-purple-100'
+              className='text-purple-700 border-purple-300 hover:bg-purple-100 bg-transparent'
             >
               <Shuffle className='w-3 h-3 mr-1' />
               Regenerate All
@@ -550,10 +558,46 @@ export function RequestChainEditor({
     request: APIRequest,
     variables: Variable[]
   ): APIRequest => {
+    let processedBody = request.body || '';
+
+    // Check if request has selectedVariable for JSON path substitution
+    if (
+      request.variable &&
+      Array.isArray(request.variable) &&
+      request.variable.length > 0
+    ) {
+      try {
+        const parsedBody = JSON.parse(processedBody);
+
+        // Replace values at specific JSON paths with variable values
+        request.variable.forEach((varItem: any) => {
+          const variable = variables.find((v) => v.name === varItem.name);
+          if (variable && varItem.path) {
+            // Set the value at the specified path
+            parsedBody[varItem.path] =
+              variable.value || variable.initialValue || '';
+          }
+        });
+
+        processedBody = JSON.stringify(parsedBody);
+      } catch (e) {
+        // If not valid JSON or parsing fails, fall back to string replacement
+        console.warn(
+          '[v0] Failed to parse body for selectedVariable substitution, using string replacement:',
+          e
+        );
+        processedBody = replaceVariables(processedBody, variables);
+      }
+    } else {
+      // No selectedVariable, use standard string replacement
+      processedBody = replaceVariables(processedBody, variables);
+    }
+
     return {
       ...request,
       url: replaceVariables(request.url, variables),
-      body: replaceVariables(request.body || '', variables),
+      body: processedBody,
+      bodyRawContent: processedBody, // Also update bodyRawContent
       headers:
         request.headers?.map((header) => ({
           ...header,
