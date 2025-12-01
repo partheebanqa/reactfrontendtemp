@@ -185,13 +185,11 @@ export function RequestChainEditor({
           }
         });
 
-        // Remove overrides for variables that no longer exist
         return updatedOverrides.filter((override) =>
           dynamicVariables.some((d) => d.name === override.name)
         );
       });
     } else {
-      // Clear overrides if no dynamic variables
       setDynamicOverrides([]);
     }
   }, [dynamicVariables]);
@@ -232,7 +230,6 @@ export function RequestChainEditor({
 
       const loadedAssertions: Record<string, any[]> = {};
 
-      // Only load assertions for requests in THIS chain
       const currentRequestIds = new Set(
         formData.chainRequests?.map((r) => r.id) || []
       );
@@ -264,7 +261,6 @@ export function RequestChainEditor({
     }
   }, [formData.chainRequests]);
 
-  // Cleanup: Remove assertions for requests no longer in the chain
   useEffect(() => {
     const currentRequestIds = new Set(
       formData.chainRequests?.map((r) => r.id) || []
@@ -409,20 +405,86 @@ export function RequestChainEditor({
   const handleApplyToAllRequests = (variableName: string) => {
     if (!formData.chainRequests) return;
 
-    const updatedRequests = formData.chainRequests.map((request) => ({
-      ...request,
-      authToken: `{{${variableName}}}`,
-      authorization: {
-        ...request.authorization,
-        token: `{{${variableName}}}`,
-      },
-      authorizationType: 'bearer' as const,
-    }));
+    const getDomain = (url: string): string | null => {
+      try {
+        if (url.startsWith('/')) {
+          return environmentBaseUrl
+            ? new URL(environmentBaseUrl).hostname
+            : null;
+        }
+        const urlObj = new URL(url);
+        return urlObj.hostname;
+      } catch {
+        return null;
+      }
+    };
 
-    setFormData({ ...formData, chainRequests: updatedRequests });
+    const sourceRequestId = Object.keys(extractedVariablesByRequest).find(
+      (reqId) => extractedVariablesByRequest[reqId][variableName] !== undefined
+    );
+
+    if (!sourceRequestId) return;
+
+    const sourceRequest = formData.chainRequests.find(
+      (r) => r.id === sourceRequestId
+    );
+    if (!sourceRequest) return;
+
+    const sourceDomain = getDomain(sourceRequest.url);
+
+    let appliedCount = 0;
+    let overwrittenCount = 0;
+    const updatedRequests = formData.chainRequests.map((request) => {
+      if (request.id === sourceRequestId) return request;
+
+      const requestDomain = getDomain(request.url);
+
+      const hasSameDomain = sourceDomain && requestDomain === sourceDomain;
+
+      if (hasSameDomain) {
+        appliedCount++;
+
+        const hasExistingAuth =
+          request.authorizationType !== 'none' ||
+          (request.authToken && request.authToken.trim() !== '') ||
+          (request.authorization?.token &&
+            request.authorization.token.trim() !== '');
+
+        if (hasExistingAuth) {
+          overwrittenCount++;
+        }
+
+        return {
+          ...request,
+          authToken: `{{${variableName}}}`,
+          authorizationType: 'bearer' as const,
+          authorization: {
+            token: `{{${variableName}}}`,
+          },
+          authUsername: '',
+          authPassword: '',
+          authApiKey: '',
+          authApiValue: '',
+          authApiLocation: 'header',
+        };
+      }
+
+      return request;
+    });
+
+    if (appliedCount === 0) {
+      toast({
+        title: 'No Requests Updated',
+        description: 'No requests found with the same domain',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setFormData({ ...formData, chainRequests: [...updatedRequests] });
 
     toast({
-      title: 'Applied to All Requests',
+      title: 'Applied to Matching Requests',
       description: `Variable {{${variableName}}} has been set as the Bearer Token for all ${updatedRequests.length} requests`,
     });
   };
@@ -560,7 +622,6 @@ export function RequestChainEditor({
   ): APIRequest => {
     let processedBody = request.body || '';
 
-    // Check if request has selectedVariable for JSON path substitution
     if (
       request.variable &&
       Array.isArray(request.variable) &&
@@ -569,11 +630,9 @@ export function RequestChainEditor({
       try {
         const parsedBody = JSON.parse(processedBody);
 
-        // Replace values at specific JSON paths with variable values
         request.variable.forEach((varItem: any) => {
           const variable = variables.find((v) => v.name === varItem.name);
           if (variable && varItem.path) {
-            // Set the value at the specified path
             parsedBody[varItem.path] =
               variable.value || variable.initialValue || '';
           }
@@ -581,7 +640,6 @@ export function RequestChainEditor({
 
         processedBody = JSON.stringify(parsedBody);
       } catch (e) {
-        // If not valid JSON or parsing fails, fall back to string replacement
         console.warn(
           '[v0] Failed to parse body for selectedVariable substitution, using string replacement:',
           e
@@ -589,7 +647,6 @@ export function RequestChainEditor({
         processedBody = replaceVariables(processedBody, variables);
       }
     } else {
-      // No selectedVariable, use standard string replacement
       processedBody = replaceVariables(processedBody, variables);
     }
 
@@ -597,7 +654,7 @@ export function RequestChainEditor({
       ...request,
       url: replaceVariables(request.url, variables),
       body: processedBody,
-      bodyRawContent: processedBody, // Also update bodyRawContent
+      bodyRawContent: processedBody,
       headers:
         request.headers?.map((header) => ({
           ...header,
@@ -855,7 +912,6 @@ export function RequestChainEditor({
 
       if (!result) throw new Error('No response from executor');
 
-      // Get previous execution log to compare responses
       let previousExecutionLog = null;
       try {
         const raw = localStorage.getItem('lastExecutionByRequest');
@@ -867,7 +923,6 @@ export function RequestChainEditor({
         console.error('Failed to read previous execution:', e);
       }
 
-      // Check if response has changed or no assertions exist
       const existingAssertions =
         assertionsByRequest[request.id] || requestAssertions || [];
 
@@ -878,9 +933,6 @@ export function RequestChainEditor({
 
       let finalAssertions = existingAssertions;
 
-      // Regenerate assertions if:
-      // 1. No assertions exist, OR
-      // 2. Response has changed significantly
       if (existingAssertions.length === 0 || responseChanged) {
         const formattedAssertionFormat = {
           status: result?.statusCode ?? null,
@@ -901,19 +953,11 @@ export function RequestChainEditor({
           formattedAssertionFormat
         );
 
-        // If response changed and we have existing assertions, merge them intelligently
         if (responseChanged && existingAssertions.length > 0) {
-          console.log(
-            '⚠️ Response changed - regenerating assertions for request:',
-            request.id
-          );
-
-          // Keep custom user-modified assertions (those with custom descriptions)
           const customAssertions = existingAssertions.filter(
             (assertion) => assertion.isCustom === true
           );
 
-          // Merge custom assertions with new auto-generated ones
           finalAssertions = [...newAssertions, ...customAssertions];
         } else {
           finalAssertions = newAssertions;
@@ -932,7 +976,6 @@ export function RequestChainEditor({
         );
       }
 
-      // Update state with existing or newly generated assertions
       setAssertionsByRequest((prev) => ({
         ...prev,
         [request.id]: finalAssertions,
@@ -984,7 +1027,6 @@ export function RequestChainEditor({
         extractedVariables: extractedData,
       };
 
-      // Persist to localStorage
       try {
         const raw = localStorage.getItem('lastExecutionByRequest');
         const map = raw ? JSON.parse(raw) : {};
@@ -1017,7 +1059,6 @@ export function RequestChainEditor({
         error: error instanceof Error ? error.message : 'Unknown error',
       };
 
-      // Persist error log
       try {
         const raw = localStorage.getItem('lastExecutionByRequest');
         const map = raw ? JSON.parse(raw) : {};
@@ -1082,10 +1123,8 @@ export function RequestChainEditor({
         setCurrentRequestIndex(i);
 
         try {
-          // Read the LATEST assertions from both localStorage and state
           let requestAssertions = [];
 
-          // Try to get from localStorage first (most recent)
           try {
             const raw = localStorage.getItem('lastExecutionByRequest');
             if (raw) {
@@ -1110,7 +1149,6 @@ export function RequestChainEditor({
             console.error('Failed to read assertions from localStorage:', e);
           }
 
-          // If no assertions found in localStorage, fall back to state
           if (!requestAssertions || requestAssertions.length === 0) {
             requestAssertions = assertionsByRequest[request.id] || [];
             if (requestAssertions.length > 0) {
@@ -1141,12 +1179,11 @@ export function RequestChainEditor({
                 allExtractedVarsInCurrentExecution
               );
 
-            // Execute request with assertions
             log = await executeSingleRequest(
               request,
               currentAvailableVariables,
               i,
-              requestAssertions // Pass the assertions here
+              requestAssertions
             );
 
             allLogs.push(log);
@@ -1535,14 +1572,11 @@ export function RequestChainEditor({
           const isExistingRequest =
             request.id && originalRequestIds.has(request.id);
 
-          // Get assertions for this request from state or localStorage
           let requestAssertions: any[] = [];
 
-          // First try to get from state
           if (assertionsByRequest[request.id]) {
             requestAssertions = assertionsByRequest[request.id];
           } else {
-            // Fallback to localStorage if not in state
             try {
               const raw = localStorage.getItem('lastExecutionByRequest');
               if (raw) {
@@ -1559,7 +1593,6 @@ export function RequestChainEditor({
             }
           }
 
-          // Filter to only include enabled assertions
           const enabledAssertions = requestAssertions.filter(
             (assertion) => assertion.enabled === true
           );
@@ -1570,7 +1603,7 @@ export function RequestChainEditor({
               order: index + 1,
               authorizationType,
               authorization,
-              assertions: enabledAssertions, // Only save enabled assertions
+              assertions: enabledAssertions,
               headers:
                 request.headers?.map((h) =>
                   h.id && !h.id.startsWith('temp_')
@@ -1591,7 +1624,7 @@ export function RequestChainEditor({
               order: index + 1,
               authorizationType,
               authorization,
-              assertions: enabledAssertions, // Only save enabled assertions
+              assertions: enabledAssertions,
               headers:
                 request.headers?.map((h) => ({ ...h, id: undefined })) || [],
               params:
@@ -1853,25 +1886,20 @@ export function RequestChainEditor({
     const currentValue = input.value;
     const cursorPos = autocompleteState.cursorPosition;
 
-    // Replace D_ or S_ with the selected variable name
     const beforePrefix = currentValue.substring(0, cursorPos - 2);
     const afterCursor = currentValue.substring(cursorPos);
     const newValue = beforePrefix + variable.name + afterCursor;
 
-    // Find which field this input belongs to and update the corresponding state
     const inputName =
       input.getAttribute('name') || input.getAttribute('data-field');
     const requestIndex = Number.parseInt(
       input.getAttribute('data-request-index') || '-1'
-    ); // Use -1 to indicate not found
+    );
 
-    // Ensure requestIndex is valid before proceeding
     if (requestIndex === -1) {
-      // Fallback: directly update input value and dispatch event if requestIndex is not found
       input.value = newValue;
       input.dispatchEvent(new Event('input', { bubbles: true }));
     } else {
-      // Use a local copy of requests to avoid direct mutation of formData.chainRequests
       const requests = [...(formData.chainRequests || [])];
 
       if (inputName === 'url') {
@@ -1933,7 +1961,7 @@ export function RequestChainEditor({
       } else if (inputName === 'auth-username') {
         requests[requestIndex] = {
           ...requests[requestIndex],
-          authUsername: newValue, // Assuming authUsername is a direct property
+          authUsername: newValue,
         };
         setFormData({ ...formData, chainRequests: requests });
       } else if (inputName === 'auth-password') {
