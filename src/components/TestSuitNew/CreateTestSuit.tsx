@@ -5,7 +5,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useParams, useLocation } from 'wouter';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
-import { Layers, Info, Download, Plus, ChevronLeft, ChevronRight, Play, Loader2 } from 'lucide-react';
+import { Layers, Info, Download, Plus, ChevronLeft, ChevronRight, Play, Loader2, KeyRound, Upload } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -123,7 +123,7 @@ const CreateTestSuit: React.FC = () => {
   const [testSuiteName, setTestSuiteName] = useState('');
   const [description, setDescription] = useState('');
   const [selectedEnvironment, setSelectedEnvironment] = useState<string>('');
-
+  const [selectedEnvName, setSelectedEnvName] = useState<string>('');
   const [requests, setRequests] = useState<Request[]>([]);
   const [originalRequestIds, setOriginalRequestIds] = useState<string[]>([]);
 
@@ -181,6 +181,15 @@ const CreateTestSuit: React.FC = () => {
       setSelectedEnvironment(activeEnvironment.id);
     }
   }, [activeEnvironment]);
+
+  useEffect(() => {
+    if (activeEnvironment) {
+      setSelectedEnvironment(activeEnvironment.id);
+      setSelectedEnvName(activeEnvironment.name)
+    }
+  }, [activeEnvironment]);
+
+  // console.log(selectedEnvName, "selectedEnvName")
 
   const handleEnvironmentChange = (environmentId: string) => {
     setSelectedEnvironment(environmentId);
@@ -266,7 +275,7 @@ const CreateTestSuit: React.FC = () => {
       });
       queryClient.invalidateQueries({ queryKey: ['testSuites'] });
       queryClient.invalidateQueries({ queryKey: ['testSuite', id] });
-      setLocation('/test-suites');
+      // setLocation('/test-suites');
     },
     onError: (error: any) => {
       toast({
@@ -747,6 +756,11 @@ const CreateTestSuit: React.FC = () => {
   const authRequest = requests.find(r => r.id === preRequestId);
   const authBaseUrl = authRequest?.url;
 
+  const isExecuteViewRoute =
+
+    currentStep === 'execute' && !isCreateMode;
+
+
   return (
     <div className="bg-gray-50">
       <BreadCum
@@ -770,7 +784,7 @@ const CreateTestSuit: React.FC = () => {
         {/* STEP INDICATOR */}
         <WorkflowStepper currentStep={currentStep} completedSteps={completedSteps} />
 
-        <div className="mt-4 space-y-6">
+        <div className="mt-2 space-y-4">
           {/* STEP 1: BASIC INFO */}
           {currentStep === 'basic-info' && (
             <Card>
@@ -781,7 +795,7 @@ const CreateTestSuit: React.FC = () => {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium mb-2">
+                  <label className="block text-sm font-medium mb-1">
                     Test Suite Name <span className="text-destructive">*</span>
                   </label>
                   <Input
@@ -792,7 +806,7 @@ const CreateTestSuit: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium mb-2">
+                  <label className="block text-sm font-medium mb-1">
                     Description (optional)
                   </label>
                   <Textarea
@@ -803,7 +817,7 @@ const CreateTestSuit: React.FC = () => {
                   />
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-1">
                   <label
                     htmlFor="environment-select"
                     className="block text-sm font-medium"
@@ -832,6 +846,9 @@ const CreateTestSuit: React.FC = () => {
                       ))}
                     </SelectContent>
                   </Select>
+                  <p className="text-xs">
+                    Select the target environment for these tests
+                  </p>
                 </div>
                 {testSuite?.name && testSuite?.environment && (
                   <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-start gap-3 mt-4">
@@ -911,14 +928,19 @@ const CreateTestSuit: React.FC = () => {
               {requests.length === 0 ? (
                 <div className="bg-gray-50 p-3 rounded-lg border border-dashed flex flex-col items-center justify-center text-center">
                   <div className="w-16 h-16 mb-6 rounded-full bg-muted flex items-center justify-center">
-                    <Download className="w-8 h-8 text-muted-foreground" />
+                    <KeyRound className="w-8 h-8 text-muted-foreground" />
                   </div>
-                  <p className="text-muted-foreground mb-6 max-w-md">
-                    If your APIs require authentication, add a pre-request API to fetch
-                    the token. Skip this step if authentication is not needed.
+                  <p className="text-muted-foreground mb-2">
+                    If your APIs require authentication, add a pre-request API to fetch the auth token.
+                  </p>
+                  <p className="text-muted-foreground mb-2">
+                    This token will be automatically used when executing your test cases.
+                  </p>
+                  <p className="text-muted-foreground mb-6">
+                    You can skip this step if authentication isn’t needed.
                   </p>
                   <Button onClick={() => setIsImportModalOpen(true)}>
-                    <Download className="w-4 h-4 mr-2" />
+                    <Upload className="w-4 h-4 mr-2" />
                     Choose Authentication Request
                   </Button>
                 </div>
@@ -960,7 +982,7 @@ const CreateTestSuit: React.FC = () => {
 
           {currentStep === 'select-apis' && (
             <div>
-              {requests.length === 0 ? (
+              {requests.length === 1 ? (
                 <div className="bg-gray-50 p-6 rounded-lg border border-dashed flex flex-col items-center justify-center text-center">
                   <div className="w-16 h-16 mb-6 rounded-full bg-muted flex items-center justify-center">
                     <Download className="w-8 h-8 text-muted-foreground" />
@@ -993,7 +1015,9 @@ const CreateTestSuit: React.FC = () => {
 
                   <div className="px-6 py-4 bg-gray-50 mt-4 border-gray-200 flex justify-between items-center">
                     <div className="text-sm text-gray-600 space-y-1">
-                      <div>Imported requests: {requests.length}</div>
+                      <div>Imported requests:
+                        {requests.filter(r => r.id !== preRequestId).length}
+                      </div>
                       {extractVariables.length > 0 && (
                         <div className="text-green-600">
                           Extracted variables: {extractVariables.length}
@@ -1115,7 +1139,7 @@ const CreateTestSuit: React.FC = () => {
 
                   <div className="px-6 py-4 bg-gray-50 mt-4 border-gray-200 flex justify-between items-center">
                     <div className="text-sm text-gray-600 space-y-1">
-                      <div>Imported requests: {requests.length}</div>
+                      <div>Imported requests: {requests.filter(r => r.id !== preRequestId).length}</div>
                       <div className="font-medium">
                         Selected Test Cases: {totalTestCases}
                       </div>
@@ -1138,13 +1162,29 @@ const CreateTestSuit: React.FC = () => {
             <div className="bg-white border border-gray-200 rounded-lg p-8 text-center">
               <Play className="w-16 h-16 text-[#136fb0] mx-auto mb-4" />
               <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                Ready to {isCreateMode ? 'Create & Execute' : 'Save & Execute'} Tests
+                {/* Ready to {isCreateMode ? 'Create & Execute' : 'Save & Execute'} Tests */}
+                Ready to Run Your Test Suite?
               </h3>
-              <p className="text-gray-600 mb-6">
-                {requests.length} request(s) with {totalTestCases} configured test case(s)
-                {preRequestId && ' using authentication from pre-request API.'}
+              <p className="text-gray-600 mb-2">
+                {/* {requests.length} request(s) with {totalTestCases}  configured test case(s) */}
+                You've configured {totalTestCases} test cases across {requests.filter(r => r.id !== preRequestId).length} requests.
               </p>
 
+              <p className="text-gray-600 mb-2">
+                {preRequestId ? "Authentication is set via your pre-request API" : "No authentication was added for pre-request API"}
+              </p>
+
+
+              {activeEnvironment &&
+                <p className="text-gray-600 mb-2">
+                  Environment is set to {selectedEnvName}
+                </p>
+              }
+              {preRequestId &&
+                <p className="text-gray-600 font-bold mb-2">
+                  Click Run Tests to execute and validate your flow
+                </p>
+              }
               <div className="flex items-center justify-center gap-4">
                 <Button
                   className="inline-flex items-center gap-2"
@@ -1185,26 +1225,25 @@ const CreateTestSuit: React.FC = () => {
           </button>
 
           <div className="flex gap-3">
-            <Button
-              onClick={handleNextStep}
-              disabled={
-                !canProceed() ||
-                (currentStep === 'select-apis' && isSaving) ||
-                isPreparingTestCases
-              }
-              className="inline-flex items-center gap-2 px-6 py-2 bg-[#136fb0] text-white rounded-lg hover:bg-[#136fb0] transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {getNextButtonText()}
+            {!isExecuteViewRoute && (
+              <Button
+                onClick={handleNextStep}
+                disabled={
+                  !canProceed() ||
+                  (currentStep === 'select-apis' && isSaving) ||
+                  isPreparingTestCases
+                }
+                className="inline-flex items-center gap-2 px-6 py-2 bg-[#136fb0] text-white rounded-lg hover:bg-[#136fb0] transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {getNextButtonText()}
 
-              {showNextLoader ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <ChevronRight className="w-4 h-4" />
-              )}
-            </Button>
-
-
-
+                {showNextLoader ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <ChevronRight className="w-4 h-4" />
+                )}
+              </Button>
+            )}
           </div>
         </div>
       </div>

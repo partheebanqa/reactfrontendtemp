@@ -14,6 +14,8 @@ import {
   FileKey,
   ChevronDown,
   ChevronRight,
+  Ticket,
+  CircleCheckBig,
 } from 'lucide-react';
 import { RequestTestDialog } from './RequestTestDialog';
 import {
@@ -135,7 +137,7 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
 
   // console.log('preRequestId:', preRequestId);
 
-  // console.log('extractVariables:', extractVariables);
+  // console.log('extractVariables:', extractVariables[0]?.path);
 
   // console.log('testSuiteId:', testSuiteId);
 
@@ -371,8 +373,14 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
   const shouldHidePreRequest =
     typeof window !== 'undefined' &&
     (
-      window.location.href.includes('create-test-suite?step=select-apis') || // step 3 (create)
-      window.location.href.includes('step=select-tests')                    // step 4 (edit or create)
+      window.location.href.includes('create-test-suite?step=select-apis') ||
+      window.location.href.includes('step=select-tests') ||
+      window.location.href.includes('step=select-api')
+    );
+  const isSelectTestsRoute =
+    typeof window !== 'undefined' &&
+    (
+      window.location.href.includes('step=select-tests')
     );
 
   return (
@@ -380,7 +388,13 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
       <CardHeader>
         <div className='flex items-center justify-between'>
 
-          <CardTitle>Requests ({requests.length})</CardTitle>
+          {shouldHidePreRequest ? (
+            <CardTitle>Requests ({requests.filter(r => r.id !== preRequestId).length})</CardTitle>
+          ) : (
+            <>
+              <CardTitle>Requests ({requests.length})</CardTitle>
+            </>
+          )}
 
           <div className='flex items-center space-x-2'>
             {onRefreshRequests && (
@@ -408,11 +422,10 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
       <CardContent>
         <div className='space-y-3'>
           {visibleRequests.map((request) => {
-
             if (shouldHidePreRequest && preRequestId === request.id) {
               return null;
             }
-            const MAX_CHAR = 105;
+            const MAX_CHAR = 95;
             const finalUrl = buildFinalUrl(request.url);
             const displayUrl = finalUrl.length > MAX_CHAR
               ? finalUrl.substring(0, MAX_CHAR) + "..."
@@ -437,12 +450,15 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
                           {request.name}
                         </h4>
                         {preRequestId === request.id && (
-                          <Badge
-                            variant='secondary'
-                            className='text-xs bg-green-100 text-green-800'
-                          >
-                            Pre-request
-                          </Badge>
+                          <>
+                            <Badge
+                              variant='secondary'
+                              className='text-xs bg-green-100 text-green-800'
+                            >
+                              Pre-request
+                            </Badge>
+                            <CircleCheckBig color='#16a34a' size={20} /><p>Auth : {extractVariables[0]?.path}</p>
+                          </>
                         )}
                       </div>
                       <p className='text-[13px] text-muted-foreground mt-1 break-all'>
@@ -464,15 +480,11 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
 
                     {testSuiteId &&
                       onUpdateTestCases &&
-                      preRequestId !== request.id && (
-                        <>
-                          <Button
-                            onClick={() =>
-                              handleConfigureTestCases(request)
-                            }>
-                            Select testcases
-                          </Button>
-                        </>
+                      preRequestId !== request.id &&
+                      isSelectTestsRoute && (
+                        <Button onClick={() => handleConfigureTestCases(request)}>
+                          Select testcases
+                        </Button>
                       )}
                     <AlertDialog>
                       <Tooltip>
@@ -514,82 +526,83 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
                     </AlertDialog>
                   </div>
                 </div>
-                {testSuiteId && preRequestId !== request.id && (
-                  <div className='mt-4'>
-                    {selectedByCategory.length === 0 && (
-                      <h5 className='text-sm font-medium mb-2'>Test Cases</h5>
-                    )}
-                    {/* <h5 className='text-sm font-medium mb-2'>Test Cases</h5> */}
-                    {selectedByCategory.length > 0 && (
-                      <div>
-                        {/* header row with toggle */}
-                        <div className='flex items-center justify-between mb-1'>
-                          <span className='text-sm font-medium mb-2'>
-                            Test Cases
-                          </span>
-                          <button
-                            onClick={() => setShowCategories(!showCategories)}
-                            className='flex items-center text-xs font-medium text-primary hover:underline'
-                          >
-                            {showCategories ? (
-                              <>
-                                <ChevronDown className='w-4 h-4 mr-1' /> Hide
-                              </>
-                            ) : (
-                              <>
-                                <ChevronRight className='w-4 h-4 mr-1' /> Show
-                              </>
-                            )}
-                          </button>
-                        </div>
+                {testSuiteId && preRequestId !== request.id &&
+                  isSelectTestsRoute && (
+                    <div className='mt-4'>
+                      {selectedByCategory.length === 0 && (
+                        <h5 className='text-sm font-medium mb-2'>Test Cases</h5>
+                      )}
+                      {/* <h5 className='text-sm font-medium mb-2'>Test Cases</h5> */}
+                      {selectedByCategory.length > 0 && (
+                        <div>
+                          {/* header row with toggle */}
+                          <div className='flex items-center justify-between mb-1'>
+                            <span className='text-sm font-medium mb-2'>
+                              Test Cases
+                            </span>
+                            <button
+                              onClick={() => setShowCategories(!showCategories)}
+                              className='flex items-center text-xs font-medium text-primary hover:underline'
+                            >
+                              {showCategories ? (
+                                <>
+                                  <ChevronDown className='w-4 h-4 mr-1' /> Hide
+                                </>
+                              ) : (
+                                <>
+                                  <ChevronRight className='w-4 h-4 mr-1' /> Show
+                                </>
+                              )}
+                            </button>
+                          </div>
 
-                        {/* collapsible category list */}
-                        <div
-                          className={`overflow-hidden transition-all duration-300 ${showCategories
-                            ? 'max-h-[1000px] opacity-100'
-                            : 'max-h-0 opacity-0'
-                            }`}
-                        >
-                          <div className='space-y-2'>
-                            {selectedByCategory.map((categoryData) => (
-                              <div
-                                key={categoryData.category}
-                                className='flex items-center justify-between text-xs'
-                              >
-                                <div className='flex items-center'>
-                                  <span className='mr-1'>
-                                    {getCategoryIcon(categoryData.category)}
-                                  </span>
-                                  <span className='capitalize text-gray-600 dark:text-gray-300'>
-                                    {categoryData.category}
+                          {/* collapsible category list */}
+                          <div
+                            className={`overflow-hidden transition-all duration-300 ${showCategories
+                              ? 'max-h-[1000px] opacity-100'
+                              : 'max-h-0 opacity-0'
+                              }`}
+                          >
+                            <div className='space-y-2'>
+                              {selectedByCategory.map((categoryData) => (
+                                <div
+                                  key={categoryData.category}
+                                  className='flex items-center justify-between text-xs'
+                                >
+                                  <div className='flex items-center'>
+                                    <span className='mr-1'>
+                                      {getCategoryIcon(categoryData.category)}
+                                    </span>
+                                    <span className='capitalize text-gray-600 dark:text-gray-300'>
+                                      {categoryData.category}
+                                    </span>
+                                  </div>
+                                  <span
+                                    className={`px-2 py-0.5 rounded-full font-medium ${getCategoryColor(
+                                      categoryData.category
+                                    )}`}
+                                  >
+                                    {categoryData.count}
                                   </span>
                                 </div>
-                                <span
-                                  className={`px-2 py-0.5 rounded-full font-medium ${getCategoryColor(
-                                    categoryData.category
-                                  )}`}
-                                >
-                                  {categoryData.count}
-                                </span>
-                              </div>
-                            ))}
+                              ))}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    )}
+                      )}
 
-                    <div className='pt-1 border-t border-gray-200 dark:border-gray-700'>
-                      <div className='flex items-center justify-between text-xs font-medium'>
-                        <span className='text-gray-700 dark:text-gray-300'>
-                          Selected:
-                        </span>
-                        <span className='text-gray-900 dark:text-gray-100'>
-                          {selectedTests ?? 0} / {totalTests ?? 0} test cases
-                        </span>
+                      <div className='pt-1 border-t border-gray-200 dark:border-gray-700'>
+                        <div className='flex items-center justify-between text-xs font-medium'>
+                          <span className='text-gray-700 dark:text-gray-300'>
+                            Selected:
+                          </span>
+                          <span className='text-gray-900 dark:text-gray-100'>
+                            {selectedTests ?? 0} / {totalTests ?? 0} test cases
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                )}
+                  )}
               </div>
             );
           })}
