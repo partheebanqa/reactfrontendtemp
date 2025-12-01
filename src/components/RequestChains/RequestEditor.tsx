@@ -472,6 +472,30 @@ export function RequestEditor({
     }
   };
 
+  useEffect(() => {
+    if (assertions.length > 0 && initialRequest.id) {
+      try {
+        const raw = localStorage.getItem('lastExecutionByRequest');
+        const map = raw ? JSON.parse(raw) : {};
+
+        if (!map[initialRequest.id]) {
+          map[initialRequest.id] = {};
+        }
+
+        map[initialRequest.id].assertions = assertions;
+        localStorage.setItem('lastExecutionByRequest', JSON.stringify(map));
+
+        console.log('Auto-persisted assertions to localStorage:', {
+          requestId: initialRequest.id,
+          count: assertions.length,
+          enabled: assertions.filter((a) => a.enabled).length,
+        });
+      } catch (e) {
+        console.error('Failed to auto-persist assertions:', e);
+      }
+    }
+  }, [assertions, initialRequest.id]);
+
   const usedDynamicVariables = useMemo(() => {
     const allTextFields = [
       initialRequest.url || '',

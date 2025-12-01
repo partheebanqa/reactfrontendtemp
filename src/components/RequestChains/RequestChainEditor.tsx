@@ -117,8 +117,6 @@ export function RequestChainEditor({
 
   const [assertions, setAssertions] = useState<any[]>([]);
 
-  console.log('assertionsInChain', assertions);
-
   const [assertionsByRequest, setAssertionsByRequest] = useState<
     Record<string, any[]>
   >({});
@@ -985,25 +983,49 @@ export function RequestChainEditor({
         setCurrentRequestIndex(i);
 
         try {
-          // Read the LATEST assertions from both state and localStorage
-          let requestAssertions = assertionsByRequest[request.id] || [];
+          // Read the LATEST assertions from both localStorage and state
+          let requestAssertions = [];
 
+          // Try to get from localStorage first (most recent)
           try {
             const raw = localStorage.getItem('lastExecutionByRequest');
             if (raw) {
               const map = JSON.parse(raw);
-              if (map[request.id]?.assertions) {
+              if (
+                map[request.id]?.assertions &&
+                Array.isArray(map[request.id].assertions)
+              ) {
                 requestAssertions = map[request.id].assertions;
                 console.log(
-                  'Using assertions from localStorage for request:',
+                  '✅ Using assertions from localStorage for request:',
                   request.id,
-                  'Count:',
-                  requestAssertions.length
+                  {
+                    total: requestAssertions.length,
+                    enabled: requestAssertions.filter((a) => a.enabled).length,
+                    assertions: requestAssertions,
+                  }
                 );
               }
             }
           } catch (e) {
             console.error('Failed to read assertions from localStorage:', e);
+          }
+
+          // If no assertions found in localStorage, fall back to state
+          if (!requestAssertions || requestAssertions.length === 0) {
+            requestAssertions = assertionsByRequest[request.id] || [];
+            if (requestAssertions.length > 0) {
+              console.log(
+                '✅ Using assertions from state for request:',
+                request.id,
+                {
+                  total: requestAssertions.length,
+                  enabled: requestAssertions.filter((a) => a.enabled).length,
+                }
+              );
+            } else {
+              console.log('⚠️ No assertions found for request:', request.id);
+            }
           }
 
           const existingLog = allLogs.find(
@@ -1020,6 +1042,7 @@ export function RequestChainEditor({
                 allExtractedVarsInCurrentExecution
               );
 
+            // Execute request with assertions
             log = await executeSingleRequest(
               request,
               currentAvailableVariables,
