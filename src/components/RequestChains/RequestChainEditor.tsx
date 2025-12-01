@@ -117,30 +117,13 @@ export function RequestChainEditor({
 
   const [assertions, setAssertions] = useState<any[]>([]);
 
+  console.log('assertionsInChain', assertions);
+
   const [assertionsByRequest, setAssertionsByRequest] = useState<
     Record<string, any[]>
   >({});
 
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem('lastExecutionByRequest');
-      if (!raw) return;
-      const map: Record<string, any> = JSON.parse(raw);
-
-      const loadedAssertions: Record<string, any[]> = {};
-      Object.entries(map).forEach(([requestId, log]: [string, any]) => {
-        if (log.assertions && Array.isArray(log.assertions)) {
-          loadedAssertions[requestId] = log.assertions;
-        }
-      });
-
-      if (Object.keys(loadedAssertions).length > 0) {
-        setAssertionsByRequest(loadedAssertions);
-      }
-    } catch (e) {
-      console.error('Failed to load persisted assertions:', e);
-    }
-  }, []);
+  console.log('assertionsByRequest123:', assertionsByRequest);
 
   useEffect(() => {
     if (dynamicVariables.length > 0) {
@@ -198,6 +181,93 @@ export function RequestChainEditor({
     variables: chain?.variables || [],
     environment: chain?.environment || 'dev',
   });
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('lastExecutionByRequest');
+      if (!raw) return;
+      const map: Record<string, any> = JSON.parse(raw);
+
+      const loadedAssertions: Record<string, any[]> = {};
+
+      // Only load assertions for requests in THIS chain
+      const currentRequestIds = new Set(
+        formData.chainRequests?.map((r) => r.id) || []
+      );
+
+      Object.entries(map).forEach(([requestId, log]: [string, any]) => {
+        if (
+          currentRequestIds.has(requestId) &&
+          log.assertions &&
+          Array.isArray(log.assertions)
+        ) {
+          loadedAssertions[requestId] = log.assertions;
+        }
+      });
+
+      if (Object.keys(loadedAssertions).length > 0) {
+        console.log('Loading assertions from localStorage:', {
+          requestIds: Object.keys(loadedAssertions),
+          counts: Object.fromEntries(
+            Object.entries(loadedAssertions).map(([id, assertions]) => [
+              id,
+              assertions.length,
+            ])
+          ),
+        });
+        setAssertionsByRequest(loadedAssertions);
+      }
+    } catch (e) {
+      console.error('Failed to load persisted assertions:', e);
+    }
+  }, [formData.chainRequests]);
+
+  // Cleanup: Remove assertions for requests no longer in the chain
+  useEffect(() => {
+    const currentRequestIds = new Set(
+      formData.chainRequests?.map((r) => r.id) || []
+    );
+
+    setAssertionsByRequest((prev) => {
+      const filtered = Object.fromEntries(
+        Object.entries(prev).filter(([requestId]) =>
+          currentRequestIds.has(requestId)
+        )
+      );
+
+      if (Object.keys(filtered).length !== Object.keys(prev).length) {
+        console.log('Cleaned up assertions for removed requests:', {
+          before: Object.keys(prev),
+          after: Object.keys(filtered),
+        });
+      }
+
+      return filtered;
+    });
+  }, [formData.chainRequests]);
+
+  useEffect(() => {
+    const currentRequestIds = new Set(
+      formData.chainRequests?.map((r) => r.id) || []
+    );
+
+    setAssertionsByRequest((prev) => {
+      const filtered = Object.fromEntries(
+        Object.entries(prev).filter(([requestId]) =>
+          currentRequestIds.has(requestId)
+        )
+      );
+
+      if (Object.keys(filtered).length !== Object.keys(prev).length) {
+        console.log('Cleaned up assertions for removed requests:', {
+          before: Object.keys(prev),
+          after: Object.keys(filtered),
+        });
+      }
+
+      return filtered;
+    });
+  }, [formData.chainRequests]);
 
   const { environments, activeEnvironment, setActiveEnvironment } =
     useDataManagement();
@@ -915,6 +985,27 @@ export function RequestChainEditor({
         setCurrentRequestIndex(i);
 
         try {
+          // Read the LATEST assertions from both state and localStorage
+          let requestAssertions = assertionsByRequest[request.id] || [];
+
+          try {
+            const raw = localStorage.getItem('lastExecutionByRequest');
+            if (raw) {
+              const map = JSON.parse(raw);
+              if (map[request.id]?.assertions) {
+                requestAssertions = map[request.id].assertions;
+                console.log(
+                  'Using assertions from localStorage for request:',
+                  request.id,
+                  'Count:',
+                  requestAssertions.length
+                );
+              }
+            }
+          } catch (e) {
+            console.error('Failed to read assertions from localStorage:', e);
+          }
+
           const existingLog = allLogs.find(
             (log) => log.requestId === request.id
           );
@@ -929,13 +1020,11 @@ export function RequestChainEditor({
                 allExtractedVarsInCurrentExecution
               );
 
-            const requestAssertions = assertionsByRequest[request.id] || [];
-
             log = await executeSingleRequest(
               request,
               currentAvailableVariables,
               i,
-              requestAssertions
+              requestAssertions // Pass the assertions here
             );
 
             allLogs.push(log);
@@ -1033,7 +1122,6 @@ export function RequestChainEditor({
       setCurrentRequestIndex(-1);
     }
   };
-
   const handleRequestExecution = (
     requestId: string,
     executionLog: ExecutionLog
@@ -1821,6 +1909,7 @@ export function RequestChainEditor({
                   ...prev,
                   [request.id]: assertions,
                 }));
+                persistAssertionsToStorage(request.id, assertions);
               }}
             />
           </div>

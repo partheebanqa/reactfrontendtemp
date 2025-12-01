@@ -435,9 +435,40 @@ export function RequestEditor({
   }, [params]);
 
   const handleAssertionsUpdate = (newAssertions: any[]) => {
+    console.log('RequestEditor handleAssertionsUpdate:', {
+      requestId: initialRequest.id,
+      assertionsCount: newAssertions.length,
+      assertions: newAssertions.slice(0, 3),
+    });
+
     setAssertions(newAssertions);
+
+    if (initialRequest.id) {
+      try {
+        const raw = localStorage.getItem('lastExecutionByRequest');
+        const map = raw ? JSON.parse(raw) : {};
+
+        if (!map[initialRequest.id]) {
+          map[initialRequest.id] = {};
+        }
+
+        map[initialRequest.id].assertions = newAssertions;
+        localStorage.setItem('lastExecutionByRequest', JSON.stringify(map));
+
+        console.log('Persisted assertions to localStorage:', {
+          requestId: initialRequest.id,
+          count: newAssertions.length,
+        });
+      } catch (e) {
+        console.error('Failed to persist assertions:', e);
+      }
+    }
+
     if (onAssertionsUpdate) {
+      console.log('Calling parent onAssertionsUpdate callback');
       onAssertionsUpdate(newAssertions);
+    } else {
+      console.warn('No onAssertionsUpdate callback provided');
     }
   };
 
@@ -1955,6 +1986,7 @@ export function RequestEditor({
 
   useEffect(() => {
     if (requestAssertions && requestAssertions.length > 0) {
+      console.log('calling request assertions:', requestAssertions);
       setAssertions(requestAssertions);
     }
   }, [requestAssertions]);
