@@ -195,6 +195,8 @@ const RequestEditor: React.FC = () => {
     []
   );
 
+  const [dynamicVarTrigger, setDynamicVarTrigger] = useState(0);
+
   const [pendingSubstitutions, setPendingSubstitutions] = useState<
     PendingSubstitution[]
   >([]);
@@ -294,7 +296,7 @@ const RequestEditor: React.FC = () => {
     }
 
     return formatted;
-  }, [variables, dynamicVariables]);
+  }, [variables, dynamicVariables, dynamicVarTrigger]);
 
   const [selectedFolderId, setSelectedFolderId] = useState<string>('');
   const [folderOptions, setFolderOptions] = useState<
@@ -894,6 +896,8 @@ const RequestEditor: React.FC = () => {
 
   const handleSendRequest = async () => {
     if (!activeRequest) return;
+    setDynamicVarTrigger((prev) => prev + 1);
+
     clearError();
     setLoading(true);
     const newUrl = buildFinalUrl();

@@ -177,8 +177,41 @@ export const getExecutionLogForRequest = (
   return executionLogsreturn;
 };
 
+export const hasResponseChanged = (
+  currentResponse: any,
+  previousResponse: any
+): boolean => {
+  if (!previousResponse) return true;
+
+  if (currentResponse.statusCode !== previousResponse.status) {
+    return true;
+  }
+
+  try {
+    const currentBody = JSON.parse(currentResponse.body || '{}');
+    const previousBody = JSON.parse(previousResponse.body || '{}');
+
+    const currentKeys = Object.keys(currentBody).sort();
+    const previousKeys = Object.keys(previousBody).sort();
+
+    if (JSON.stringify(currentKeys) !== JSON.stringify(previousKeys)) {
+      return true;
+    }
+  } catch (e) {
+    if (currentResponse.body !== previousResponse.body) {
+      return true;
+    }
+  }
+
+  return false;
+};
+
 export const transformRequestForSave = (request: APIRequest): APIRequest => {
   const transformedRequest = { ...request };
+
+  if (request.assertions && Array.isArray(request.assertions)) {
+    transformedRequest.assertions = request.assertions;
+  }
 
   if (request.bodyType === 'form-data') {
     if (Array.isArray(request.bodyFormData)) {
