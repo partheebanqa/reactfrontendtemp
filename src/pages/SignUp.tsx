@@ -32,6 +32,8 @@ export default function SignUp() {
   const { toast, error: errorToast } = useToast();
   const { registerMutation } = useAuth();
 
+  const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+
   const getOS = () => {
     const userAgent = window.navigator.userAgent;
     const platform = window.navigator.platform;
@@ -129,10 +131,12 @@ export default function SignUp() {
   };
 
   const passwordsMatch = formData.password === formData.confirmPassword;
+  const isEmailValid = emailRegex.test(formData.email);
+
   const isFormValid =
     formData.firstName &&
     formData.lastName &&
-    formData.email &&
+    isEmailValid &&
     formData.password &&
     formData.confirmPassword &&
     formData.workspaceName &&
@@ -224,6 +228,12 @@ export default function SignUp() {
                     }
                   />
                 </div>
+
+                {formData.email && !isEmailValid && (
+                  <p className='text-sm text-red-600 mt-1'>
+                    Please enter a valid email address
+                  </p>
+                )}
               </div>
 
               <div>
