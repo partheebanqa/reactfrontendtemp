@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Activity, Beaker, GitBranch } from 'lucide-react';
+import { Activity, Beaker, GitBranch, Layers, Link2 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
 
 interface Execution {
@@ -52,18 +52,18 @@ const getTypeIcon = (exec: Execution) => {
 
   const icon =
     lower === 'testsuite' ? (
-      <Beaker className='text-[#136fb0]' size={16} />
+      <Layers className='text-[#136fb0]' size={16} />
     ) : lower === 'requestchain' ? (
-      <GitBranch className='text-purple-600' size={16} />
+      <Link2 className='text-purple-600' size={16} />
     ) : (
       <Activity className='text-gray-400' size={16} />
     );
 
   const label =
     lower === 'testsuite'
-      ? 'Test Suite'
+      ? 'Tests'
       : lower === 'requestchain'
-      ? 'Request Chain'
+      ? 'Chain'
       : 'Execution';
 
   const url = getExecutionUrl(exec.type, exec.entityId, exec.executionId);

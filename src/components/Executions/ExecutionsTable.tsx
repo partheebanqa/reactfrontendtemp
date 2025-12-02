@@ -17,6 +17,8 @@ import {
   Beaker,
   Repeat2,
   RefreshCcw,
+  Layers,
+  Link2,
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import {
@@ -195,9 +197,9 @@ export const ExecutionsTable = ({
               <TableCell>
                 <div className='flex items-center gap-2'>
                   {execution?.testSuite ? (
-                    <Beaker className='text-[#136fb0]' size={16} />
+                    <Layers className='text-[#136fb0]' size={16} />
                   ) : (
-                    <GitBranch className='text-purple-600' size={16} />
+                    <Link2 className='text-purple-600' size={16} />
                   )}
                   <span className='text-sm text-foreground'>
                     {execution?.executionType}

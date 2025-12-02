@@ -79,7 +79,7 @@ export default function Router() {
           <Route path='/test-suites/:id/edit' component={CreateTestSuit} />
           <Route path='/test-suites/create' component={EditTestSuite} />
           <Route path='/create-test-suite' component={CreateTestSuit} />
-          <Route path="/test-suites/:id" component={CreateTestSuit} />
+          <Route path='/test-suites/:id' component={CreateTestSuit} />
           <Route path='/scheduler' component={Scheduler} />
           <Route path='/cicd' component={CiCdIntegration} />
           <Route path='/data-management' component={DataManagement} />
@@ -97,7 +97,7 @@ export default function Router() {
           />
           <Route path='/request-chain-reports' component={RequestChainReport} />
           <Route path='/test-suite-reports' component={TestSuiteReport} />
-          <Route path='/faq' component={FAQ} />
+          <Route path='/help-support' component={FAQ} />
         </AppLayout>
       )}
       <Route path='/pricing' component={Pricing} />
