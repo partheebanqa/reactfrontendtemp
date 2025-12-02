@@ -235,10 +235,10 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
         allTestCaseIds
       ),
     onSuccess: () => {
-      toast({
-        title: 'Success',
-        description: 'Test cases saved successfully!',
-      });
+      // toast({
+      //   title: 'Success',
+      //   description: 'Test cases saved successfully!',
+      // });
       queryClient.invalidateQueries({ queryKey: ['testCases'] });
       onSelect(selectedTestCases);
       onClose();
@@ -384,7 +384,7 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
       });
   }, [testCaseCategories, categoryFilter, searchTerm]);
 
-  console.log(filteredCategoriesPreSubcat, 'filteredCategories');
+  // console.log(filteredCategoriesPreSubcat, 'filteredCategories');
 
   const totalAvailableTests = testCaseCategories.reduce(
     (sum, cat) => sum + cat.tests.length,
