@@ -14,6 +14,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Eye, EyeOff, Lock, Mail, User, Building } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import LogoFull from '../assests/images/OptraLogo.png';
 import { useToast } from '@/hooks/useToast';
 
 export default function SignUp() {
@@ -156,6 +157,10 @@ export default function SignUp() {
         </div>
 
         <Card>
+          <div className='flex justify-center items-center py-4'>
+            <img src={LogoFull} alt='Optraflow' className='w-32 h-auto' />
+          </div>
+
           <CardHeader>
             <CardTitle>Sign up for Optraflow</CardTitle>
             {/* <CardDescription>

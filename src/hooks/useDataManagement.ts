@@ -13,6 +13,7 @@ import {
   usefetchDynamicVariablesQuery,
   usegetEnvironmentQuery,
   useUpdateEnvironmentMutation,
+  useUpdatePrimaryEnvironmentMutation,
   useUpdateVariableMutation,
   useUpdateDynamicVariableMutation,
 } from '@/store/query/dataManagementQuery';
@@ -61,6 +62,8 @@ export function useDataManagement() {
   const createEnvironmentMutation = useCreateEnvironmentMutation();
   const createVariableMutation = useCreateVariableMutation();
   const updateEnvironmentMutation = useUpdateEnvironmentMutation();
+  const updatePrimaryEnvironmentMutation =
+    useUpdatePrimaryEnvironmentMutation();
   const updateVariableMutation = useUpdateVariableMutation();
   const updateDynamicVariableMutation = useUpdateDynamicVariableMutation();
   const deleteEnvironmentMutation = useDeleteEnvironmentMutation();
@@ -186,12 +189,12 @@ export function useDataManagement() {
     createEnvironmentMutation,
     createVariableMutation,
     updateEnvironmentMutation,
+    updatePrimaryEnvironmentMutation,
     updateVariableMutation,
     updateDynamicVariableMutation,
     deleteEnvironmentMutation,
     deletedVariableMutation,
     deletedDynamicVariableMutation,
-
     refetchEnvironments,
   };
 }

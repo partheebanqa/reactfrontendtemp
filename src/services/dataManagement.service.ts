@@ -97,6 +97,42 @@ export const updateEnvironment = async (environment): Promise<Environment> => {
   return response.json();
 };
 
+export const updatePrimaryEnvironment = async (
+  environment: any
+): Promise<Environment> => {
+  if (environment.setPrimary) {
+    const response = await apiRequest(
+      'PUT',
+      `${API_ENVIRONMENT}/${environment.id}/set-primary`,
+      {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+    if (!response.ok) {
+      throw new Error('Failed to set primary environment');
+    }
+    return response.json();
+  }
+
+  // Otherwise use the regular update endpoint
+  const response = await apiRequest(
+    'PUT',
+    `${API_ENVIRONMENT}/${environment.id}`,
+    {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(environment),
+    }
+  );
+  if (!response.ok) {
+    throw new Error('Failed to update environment');
+  }
+  return response.json();
+};
+
 export const deleteEnvironment = async (environmentId: string) => {
   const response = await apiRequest(
     'DELETE',
