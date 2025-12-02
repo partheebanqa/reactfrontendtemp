@@ -53,6 +53,7 @@ interface RequestBodyProps {
   onAddUrlEncodedField: () => void;
   onUpdateUrlEncodedField: (id: string, field: Partial<KeyValueField>) => void;
   onRemoveUrlEncodedField: (id: string) => void;
+  showSubstituteButton?: boolean;
 }
 
 export default function RequestBody({
@@ -73,8 +74,8 @@ export default function RequestBody({
   onAddUrlEncodedField,
   onUpdateUrlEncodedField,
   onRemoveUrlEncodedField,
+  showSubstituteButton,
 }: RequestBodyProps) {
-  console.log('bodyType123:', bodyType);
   return (
     <div className='space-y-4'>
       <div className='flex items-center justify-between'>
@@ -186,6 +187,7 @@ export default function RequestBody({
           variables={variables}
           initialVariable={initialVariable}
           readOnly={false}
+          showSubstituteButton={showSubstituteButton}
         />
       )}
 
