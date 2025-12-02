@@ -39,6 +39,7 @@ interface JsonVariableSubstitutionProps {
   variables?: Variable[];
   initialVariable?: SelectedVariable[];
   readOnly?: boolean;
+  showSubstituteButton?: boolean;
 }
 
 export const JsonVariableSubstitution: React.FC<
@@ -52,6 +53,7 @@ export const JsonVariableSubstitution: React.FC<
   variables = [],
   initialVariable = [],
   readOnly = false,
+  showSubstituteButton = true,
 }) => {
   const [deleteTargetPath, setDeleteTargetPath] = useState<string | null>(null);
   const [hoveredLine, setHoveredLine] = useState<number | null>(null);
@@ -270,7 +272,7 @@ export const JsonVariableSubstitution: React.FC<
             <div
               key={index}
               className={`h-6 text-[11px] font-mono leading-6 transition-colors ${
-                hoveredLine === index
+                showSubstituteButton && hoveredLine === index
                   ? 'text-foreground bg-primary/10 rounded'
                   : 'text-muted-foreground'
               }`}
@@ -304,11 +306,16 @@ export const JsonVariableSubstitution: React.FC<
               const alreadySubstituted = getAlreadySubstitutedVariable(index);
               const hasVariable = selectedVar || alreadySubstituted;
 
+              const shouldShowUnderline =
+                showSubstituteButton &&
+                (hoveredLine === index || hasVariable) &&
+                hasKey;
+
               return (
                 <div
                   key={`underline-${index}`}
                   className={`h-6 transition-colors ${
-                    (hoveredLine === index || hasVariable) && hasKey
+                    shouldShowUnderline
                       ? 'border-t border-b border-primary/40'
                       : ''
                   }`}
@@ -328,10 +335,15 @@ export const JsonVariableSubstitution: React.FC<
                 <div
                   key={index}
                   className='relative h-6 flex items-center pointer-events-auto'
-                  onMouseEnter={() => setHoveredLine(index)}
-                  onMouseLeave={() => setHoveredLine(null)}
+                  onMouseEnter={() =>
+                    showSubstituteButton && setHoveredLine(index)
+                  }
+                  onMouseLeave={() =>
+                    showSubstituteButton && setHoveredLine(null)
+                  }
                 >
                   {hasKey &&
+                    showSubstituteButton &&
                     (selectedVar ||
                       alreadySubstituted ||
                       hoveredLine === index) && (
@@ -385,54 +397,56 @@ export const JsonVariableSubstitution: React.FC<
                       </div>
                     )}
 
-                  {dropdownLine === index && dropdownPosition && (
-                    <div
-                      className='fixed w-72 bg-popover border border-border rounded-md shadow-lg text-sm pointer-events-auto'
-                      style={{
-                        top: `${dropdownPosition.top}px`,
-                        left: `${dropdownPosition.left}px`,
-                        zIndex: 9999,
-                      }}
-                    >
-                      {/* Search bar */}
-                      <div className='p-2 border-b border-border'>
-                        <input
-                          type='text'
-                          value={searchTerm}
-                          onChange={(e) => setSearchTerm(e.target.value)}
-                          placeholder='Search variables...'
-                          className='w-full bg-background border border-input rounded px-2 py-1 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring'
-                          autoFocus
-                        />
-                      </div>
+                  {showSubstituteButton &&
+                    dropdownLine === index &&
+                    dropdownPosition && (
+                      <div
+                        className='fixed w-72 bg-popover border border-border rounded-md shadow-lg text-sm pointer-events-auto'
+                        style={{
+                          top: `${dropdownPosition.top}px`,
+                          left: `${dropdownPosition.left}px`,
+                          zIndex: 9999,
+                        }}
+                      >
+                        {/* Search bar */}
+                        <div className='p-2 border-b border-border'>
+                          <input
+                            type='text'
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            placeholder='Search variables...'
+                            className='w-full bg-background border border-input rounded px-2 py-1 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring'
+                            autoFocus
+                          />
+                        </div>
 
-                      {/* List of variables */}
-                      <div className='max-h-48 overflow-y-auto scrollbar-thin'>
-                        {filteredVariables.length > 0 ? (
-                          filteredVariables.map((v) => (
-                            <div
-                              key={v.name}
-                              className='flex justify-between items-center px-3 py-2 hover:bg-accent cursor-pointer border-b border-border last:border-b-0'
-                              onClick={() =>
-                                handleVariableSelect(v.name, index)
-                              }
-                            >
-                              <span className='font-mono text-foreground text-xs font-medium'>
-                                {v.name}
-                              </span>
-                              <span className='text-muted-foreground text-xs truncate ml-2 max-w-[140px]'>
-                                {v.value}
-                              </span>
+                        {/* List of variables */}
+                        <div className='max-h-48 overflow-y-auto scrollbar-thin'>
+                          {filteredVariables.length > 0 ? (
+                            filteredVariables.map((v) => (
+                              <div
+                                key={v.name}
+                                className='flex justify-between items-center px-3 py-2 hover:bg-accent cursor-pointer border-b border-border last:border-b-0'
+                                onClick={() =>
+                                  handleVariableSelect(v.name, index)
+                                }
+                              >
+                                <span className='font-mono text-foreground text-xs font-medium'>
+                                  {v.name}
+                                </span>
+                                <span className='text-muted-foreground text-xs truncate ml-2 max-w-[140px]'>
+                                  {v.value}
+                                </span>
+                              </div>
+                            ))
+                          ) : (
+                            <div className='px-3 py-2 text-muted-foreground text-xs text-center'>
+                              No results found
                             </div>
-                          ))
-                        ) : (
-                          <div className='px-3 py-2 text-muted-foreground text-xs text-center'>
-                            No results found
-                          </div>
-                        )}
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
                 </div>
               );
             })}
@@ -440,33 +454,35 @@ export const JsonVariableSubstitution: React.FC<
         </div>
       </div>
 
-      <AlertDialog
-        open={confirmState.open}
-        onOpenChange={(open) => {
-          if (!open) setConfirmState({ open: false });
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {confirmState.open && confirmState.kind === 'saved'
-                ? 'Remove substituted variable?'
-                : 'Remove substitution from this line?'}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {confirmState.open &&
-              confirmState.kind === 'saved' &&
-              confirmState.path
-                ? `This will remove the variable mapping for "${confirmState.path}". This action cannot be undone.`
-                : 'This will remove the in-line substitution comment. This action cannot be undone.'}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <Button onClick={performConfirmedDelete}>Delete</Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {showSubstituteButton && (
+        <AlertDialog
+          open={confirmState.open}
+          onOpenChange={(open) => {
+            if (!open) setConfirmState({ open: false });
+          }}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                {confirmState.open && confirmState.kind === 'saved'
+                  ? 'Remove substituted variable?'
+                  : 'Remove substitution from this line?'}
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                {confirmState.open &&
+                confirmState.kind === 'saved' &&
+                confirmState.path
+                  ? `This will remove the variable mapping for "${confirmState.path}". This action cannot be undone.`
+                  : 'This will remove the in-line substitution comment. This action cannot be undone.'}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <Button onClick={performConfirmedDelete}>Delete</Button>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </div>
   );
 };

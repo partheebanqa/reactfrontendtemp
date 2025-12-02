@@ -1,6 +1,6 @@
 import { API_WORKSPACES } from '@/config/apiRoutes';
 import { apiRequest } from '@/lib/queryClient';
-import { Workspace } from '@/shared/types/workspace';
+import type { Workspace } from '@/shared/types/workspace';
 
 export const fetchWorkspaces = async () => {
   try {
@@ -61,6 +61,28 @@ export const updateWorkspace = async (workspaceData: Partial<Workspace>) => {
     return response.json();
   } catch (error) {
     console.error('Error updating workspace:', error);
+    throw error;
+  }
+};
+
+export const setPrimaryWorkspace = async (workspaceId: string) => {
+  try {
+    const response = await apiRequest(
+      'PUT',
+      `${API_WORKSPACES}/${workspaceId}/set-primary`,
+      {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error('Failed to set primary workspace');
+    }
+    return response.json();
+  } catch (error) {
+    console.error('Error setting primary workspace:', error);
     throw error;
   }
 };

@@ -14,6 +14,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Eye, EyeOff, Lock, Mail, User, Building } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import LogoFull from '../assests/images/OptraLogo.png';
 import { useToast } from '@/hooks/useToast';
 
 export default function SignUp() {
@@ -31,6 +32,8 @@ export default function SignUp() {
   });
   const { toast, error: errorToast } = useToast();
   const { registerMutation } = useAuth();
+
+  const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
   const getOS = () => {
     const userAgent = window.navigator.userAgent;
@@ -129,10 +132,12 @@ export default function SignUp() {
   };
 
   const passwordsMatch = formData.password === formData.confirmPassword;
+  const isEmailValid = emailRegex.test(formData.email);
+
   const isFormValid =
     formData.firstName &&
     formData.lastName &&
-    formData.email &&
+    isEmailValid &&
     formData.password &&
     formData.confirmPassword &&
     formData.workspaceName &&
@@ -152,6 +157,10 @@ export default function SignUp() {
         </div>
 
         <Card>
+          <div className='flex justify-center items-center py-4'>
+            <img src={LogoFull} alt='Optraflow' className='w-32 h-auto' />
+          </div>
+
           <CardHeader>
             <CardTitle>Sign up for Optraflow</CardTitle>
             {/* <CardDescription>
@@ -224,6 +233,12 @@ export default function SignUp() {
                     }
                   />
                 </div>
+
+                {formData.email && !isEmailValid && (
+                  <p className='text-sm text-red-600 mt-1'>
+                    Please enter a valid email address
+                  </p>
+                )}
               </div>
 
               <div>

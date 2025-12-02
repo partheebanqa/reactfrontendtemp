@@ -2339,6 +2339,7 @@ const RequestEditor: React.FC = () => {
               method={method}
               variables={formattedVariables}
               initialVariable={selectedVariable}
+              showSubstituteButton={true}
               onBodyTypeChange={(newBodyType) => {
                 setBodyType(newBodyType);
 

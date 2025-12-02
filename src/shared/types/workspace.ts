@@ -11,10 +11,10 @@ export const initialWorkspaceState: WorkspaceState = {
   isLoading: false,
 };
 
-
 export interface Workspace {
   id: string;
   tenantId?: string;
+  isPrimary: string;
   name: string;
   description?: string;
   createdAt?: string;

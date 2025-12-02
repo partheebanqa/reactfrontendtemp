@@ -11,6 +11,7 @@ import {
   updateVariable,
   updateDynamicVariable,
   deleteDynamicVariable,
+  updatePrimaryEnvironment,
 } from '@/services/dataManagement.service';
 import { workspaceStore } from '../workspaceStore';
 import { useMutation, useQuery } from '@tanstack/react-query';
@@ -179,6 +180,22 @@ export const useUpdateEnvironmentMutation = () => {
   });
 };
 
+export const useUpdatePrimaryEnvironmentMutation = () => {
+  const workspaceId = workspaceStore.state.currentWorkspace?.id;
+
+  return useMutation({
+    mutationFn: updatePrimaryEnvironment,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ['environments', workspaceId],
+      });
+    },
+    onError: (error) => {
+      console.error('Error updating environment:', error);
+    },
+  });
+};
+
 export const useDeleteEnvironmentMutation = () => {
   const workspaceId = workspaceStore.state.currentWorkspace?.id;
 
@@ -298,6 +315,7 @@ const filterEnvironment = (environment: ResponseEnvironment): Environment => {
     deletedAt: environment.DeletedAt,
     baseUrl: environment?.environmentVariables?.[0]?.InitialValue ?? '',
     isDefault: false,
+    isPrimary: environment?.IsPrimary,
   };
 };
 

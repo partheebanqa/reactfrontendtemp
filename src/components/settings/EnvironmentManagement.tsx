@@ -42,7 +42,16 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { Settings, Plus, Globe, Lock, Trash2, Copy, Edit } from 'lucide-react';
+import {
+  Settings,
+  Plus,
+  Globe,
+  Lock,
+  Trash2,
+  Copy,
+  Edit,
+  Star,
+} from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useDataManagement } from '@/hooks/useDataManagement';
 import { Environment } from '@/shared/types/datamanagement';
@@ -83,6 +92,7 @@ export function EnvironmentManagement() {
     createEnvironmentMutation,
     updateEnvironmentMutation,
     deleteEnvironmentMutation,
+    updatePrimaryEnvironmentMutation,
   } = useDataManagement();
   const { workspaces } = useWorkspace();
 
@@ -96,7 +106,6 @@ export function EnvironmentManagement() {
     },
   });
 
-  // Effect to populate form when editing an environment
   React.useEffect(() => {
     if (editingEnvironment) {
       form.reset({
@@ -116,7 +125,6 @@ export function EnvironmentManagement() {
       defaultVariables: {
         baseUrl: data.baseUrl || undefined,
       },
-      // baseUrl: data.baseUrl || undefined,
       isDefault: false,
     };
 
@@ -176,34 +184,29 @@ export function EnvironmentManagement() {
     }
   };
 
-  const handleToggleActive = (environment: Environment) => {
-    // If clicking on the currently active environment, make it inactive
-    // and activate the fallback environment (one without baseUrl)
-    if (environment.id === activeEnvironment?.id) {
-      const fallbackEnvironment = environments.find(
-        (env) => !env.baseUrl && env.id !== environment.id
-      );
-
-      if (fallbackEnvironment) {
-        setActiveEnvironment(fallbackEnvironment);
-        toast({
-          title: 'Environment switched',
-          description: `${environment.name} is now inactive. ${fallbackEnvironment.name} is now active.`,
-        });
-      } else {
-        toast({
-          title: 'Cannot deactivate',
-          description:
-            'No fallback environment available. At least one environment must be active.',
-          variant: 'destructive',
-        });
-      }
-    } else {
-      // If clicking on an inactive environment, make it active
-      setActiveEnvironment(environment);
+  const handleSetPrimary = async (environment: Environment) => {
+    if (environment.isPrimary) {
       toast({
-        title: 'Environment activated',
-        description: `${environment.name} is now active.`,
+        title: 'Already primary',
+        description: `${environment.name} is already the primary environment.`,
+      });
+      return;
+    }
+
+    try {
+      await updatePrimaryEnvironmentMutation.mutateAsync({
+        id: environment.id,
+        setPrimary: true,
+      });
+      toast({
+        title: 'Primary environment updated',
+        description: `${environment.name} is now the primary environment.`,
+      });
+    } catch (error) {
+      toast({
+        title: 'Error setting primary environment',
+        description: 'There was a problem updating the primary environment.',
+        variant: 'destructive',
       });
     }
   };
@@ -422,6 +425,14 @@ export function EnvironmentManagement() {
                             Default
                           </Badge>
                         )}
+                        {environment.isPrimary && (
+                          <Badge
+                            variant='default'
+                            className='text-xs bg-blue-600'
+                          >
+                            Primary
+                          </Badge>
+                        )}
                       </div>
                       {environment.description && (
                         <p className='text-sm text-gray-600 mb-2 line-clamp-2'>
@@ -441,15 +452,22 @@ export function EnvironmentManagement() {
                     {/* Mobile: Action buttons */}
                     {environment.name != 'No Environment' && (
                       <div className='flex items-center gap-2 sm:hidden'>
-                        {/* <div className='flex items-center gap-1'>
-                          <Switch
-                            checked={environment.id === activeEnvironment?.id}
-                            onCheckedChange={() =>
-                              handleToggleActive(environment)
-                            }
-                            className='data-[state=checked]:bg-green-600'
+                        <Button
+                          variant='outline'
+                          size='sm'
+                          onClick={() => handleSetPrimary(environment)}
+                          className={`px-2 py-1 ${
+                            environment.isPrimary ? 'bg-blue-50' : ''
+                          }`}
+                        >
+                          <Star
+                            className={`h-3 w-3 ${
+                              environment.isPrimary
+                                ? 'fill-blue-600 text-blue-600'
+                                : ''
+                            }`}
                           />
-                        </div> */}
+                        </Button>
                         <Button
                           variant='outline'
                           size='sm'
@@ -492,7 +510,6 @@ export function EnvironmentManagement() {
                                 <AlertDialogCancel>Cancel</AlertDialogCancel>
                                 <Button
                                   onClick={() => handleDelete(environment)}
-                                  // className='bg-red-600 text-white hover:bg-red-700'
                                 >
                                   Delete
                                 </Button>
@@ -502,22 +519,69 @@ export function EnvironmentManagement() {
                         )}
                       </div>
                     )}
+
+                    {environment.name === 'No Environment' && (
+                      <div className='hidden sm:flex items-center gap-3'>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant='outline'
+                                size='sm'
+                                onClick={() => handleSetPrimary(environment)}
+                                className={
+                                  environment.isPrimary ? 'bg-blue-50' : ''
+                                }
+                              >
+                                <Star
+                                  className={`h-4 w-4 ${
+                                    environment.isPrimary
+                                      ? 'fill-blue-600 text-blue-600'
+                                      : ''
+                                  }`}
+                                />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              {environment.isPrimary
+                                ? 'Primary Environment'
+                                : 'Set as Primary'}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
+                    )}
+
+                    {/* Desktop: Action buttons */}
                     {environment.name != 'No Environment' && (
                       <div className='hidden sm:flex items-center gap-3'>
-                        {/* <div className='flex items-center gap-2'>
-                          <Switch
-                            checked={environment.id === activeEnvironment?.id}
-                            onCheckedChange={() =>
-                              handleToggleActive(environment)
-                            }
-                            className='data-[state=checked]:bg-green-600'
-                          />
-                          <span className='text-sm text-gray-600'>
-                            {environment.id === activeEnvironment?.id
-                              ? 'Active'
-                              : 'Inactive'}
-                          </span>
-                        </div> */}
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant='outline'
+                                size='sm'
+                                onClick={() => handleSetPrimary(environment)}
+                                className={
+                                  environment.isPrimary ? 'bg-blue-50' : ''
+                                }
+                              >
+                                <Star
+                                  className={`h-4 w-4 ${
+                                    environment.isPrimary
+                                      ? 'fill-blue-600 text-blue-600'
+                                      : ''
+                                  }`}
+                                />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              {environment.isPrimary
+                                ? 'Primary Environment'
+                                : 'Set as Primary'}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
@@ -581,7 +645,6 @@ export function EnvironmentManagement() {
                                 <AlertDialogCancel>Cancel</AlertDialogCancel>
                                 <Button
                                   onClick={() => handleDelete(environment)}
-                                  // className='bg-red-600 text-white hover:bg-red-700'
                                 >
                                   Delete
                                 </Button>

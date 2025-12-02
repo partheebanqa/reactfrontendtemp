@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+'use client';
+
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,14 +22,14 @@ import {
   Settings,
   Trash2,
   Crown,
-  ExternalLink,
   LogOut,
   Edit,
+  Star,
 } from 'lucide-react';
 import { useToast } from '@/hooks/useToast';
 import { useWorkspace } from '@/hooks/useWorkspace';
 import { useAuth } from '@/hooks/useAuth';
-import { Workspace as BaseWorkspace } from '@/shared/types/workspace';
+import type { Workspace as BaseWorkspace } from '@/shared/types/workspace';
 import WorkspaceModal from '../WorkspaceModal';
 import {
   Tooltip,
@@ -49,6 +51,7 @@ import {
 interface Workspace extends BaseWorkspace {
   role: 'owner' | 'admin' | 'member';
   memberCount: number;
+  isPrimary?: boolean;
 }
 
 export function WorkspaceManagement() {
@@ -70,7 +73,10 @@ export function WorkspaceManagement() {
     createWorkspaceMutation,
     updateWorkspaceMutation,
     deleteWorkspaceMutation,
+    updatePrimaryWorkspaceMutation,
   } = useWorkspace();
+
+  console.log('workspaces111:', workspaces);
 
   const handleCreateWorkspace = () => {
     if (!newWorkspaceName.trim()) {
@@ -109,6 +115,31 @@ export function WorkspaceManagement() {
         },
       }
     );
+  };
+
+  const handleSetPrimary = async (workspace: Workspace) => {
+    if (workspace.isPrimary) {
+      toast({
+        title: 'Already primary',
+        description: `${workspace.name} is already the primary workspace.`,
+      });
+      return;
+    }
+
+    try {
+      await updatePrimaryWorkspaceMutation.mutateAsync(workspace.id);
+      toast({
+        title: 'Primary workspace updated',
+        description: `${workspace.name} is now the primary workspace.`,
+      });
+      refreshWorkspaces();
+    } catch (error) {
+      toast({
+        title: 'Error setting primary workspace',
+        description: 'There was a problem updating the primary workspace.',
+        variant: 'destructive',
+      });
+    }
   };
 
   // Function to handle saving workspace (create or update)
@@ -244,7 +275,6 @@ export function WorkspaceManagement() {
       admin: 'secondary',
       member: 'outline',
     } as const;
-
     return (
       <Badge
         variant={variants[role as keyof typeof variants]}
@@ -340,8 +370,8 @@ export function WorkspaceManagement() {
             ...workspace,
             role: (workspace as any).role || 'member',
             memberCount: (workspace as any).memberCount || 0,
+            isPrimary: (workspace as any).isPrimary || false,
           };
-
           return (
             <Card key={enrichedWorkspace.id}>
               <CardContent className='p-4 sm:p-6'>
@@ -361,7 +391,6 @@ export function WorkspaceManagement() {
                             .join('') || 'W'}
                         </AvatarFallback>
                       </Avatar>
-
                       <div className='flex-1 min-w-0'>
                         <div className='flex flex-wrap items-center gap-2 mb-1'>
                           <h3 className='font-semibold text-gray-900 truncate'>
@@ -369,14 +398,20 @@ export function WorkspaceManagement() {
                           </h3>
                           {getRoleIcon(enrichedWorkspace.role)}
                           {getRoleBadge(enrichedWorkspace.role)}
+                          {enrichedWorkspace.isPrimary && (
+                            <Badge
+                              variant='default'
+                              className='text-xs bg-blue-600'
+                            >
+                              Primary
+                            </Badge>
+                          )}
                         </div>
-
                         {enrichedWorkspace.description && (
                           <p className='text-sm text-gray-600 mb-2 line-clamp-2'>
                             {enrichedWorkspace.description}
                           </p>
                         )}
-
                         <div className='flex flex-wrap items-center gap-4 text-xs text-gray-500'>
                           <div className='flex items-center gap-1'>
                             <Users className='h-3 w-3' />
@@ -393,11 +428,41 @@ export function WorkspaceManagement() {
                         </div>
                       </div>
                     </div>
-
                     {/* Actions */}
                     <div className='flex items-center gap-2'>
-                      {/* {enrichedWorkspace.role === 'owner' || enrichedWorkspace.role === 'admin' ? ( */}
                       <>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant='outline'
+                                size='sm'
+                                onClick={() =>
+                                  handleSetPrimary(enrichedWorkspace)
+                                }
+                                className={
+                                  enrichedWorkspace.isPrimary
+                                    ? 'bg-blue-50'
+                                    : ''
+                                }
+                              >
+                                <Star
+                                  className={`h-3 w-3 sm:h-4 sm:w-4 ${
+                                    enrichedWorkspace.isPrimary
+                                      ? 'fill-blue-600 text-blue-600'
+                                      : ''
+                                  }`}
+                                />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              {enrichedWorkspace.isPrimary
+                                ? 'Primary Workspace'
+                                : 'Set as Primary'}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
@@ -430,7 +495,7 @@ export function WorkspaceManagement() {
                             <TooltipContent>Edit</TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
-                        {/* {enrichedWorkspace.role === 'owner' && ( */}
+
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
@@ -439,30 +504,26 @@ export function WorkspaceManagement() {
                                   <Button
                                     variant='outline'
                                     size='sm'
-                                    className='text-red-600 hover:text-red-700'
+                                    className='text-red-600 hover:text-red-700 bg-transparent'
                                   >
                                     <Trash2 className='h-3 w-3 sm:h-4 sm:w-4' />
                                   </Button>
                                 </AlertDialogTrigger>
-
                                 <AlertDialogContent>
                                   <AlertDialogHeader>
                                     <AlertDialogTitle>
                                       Delete Workspace?
                                     </AlertDialogTitle>
-
                                     <AlertDialogDescription>
-                                      This will permanently delete “
-                                      <b>{enrichedWorkspace.name}</b>”. This
+                                      This will permanently delete "
+                                      <b>{enrichedWorkspace.name}</b>". This
                                       action cannot be undone.
                                     </AlertDialogDescription>
                                   </AlertDialogHeader>
-
                                   <AlertDialogFooter>
                                     <AlertDialogCancel>
                                       Cancel
                                     </AlertDialogCancel>
-
                                     <Button
                                       onClick={() =>
                                         handleDeleteWorkspace(
@@ -480,29 +541,27 @@ export function WorkspaceManagement() {
                             <TooltipContent>Delete</TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
-                        {/* ) : null} */}
-                      </>
-                      {/* ) : null} */}
 
-                      {enrichedWorkspace.role !== 'owner' && (
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant='outline'
-                                size='sm'
-                                onClick={() =>
-                                  handleLeaveWorkspace(enrichedWorkspace)
-                                }
-                                className='text-red-600 hover:text-red-700'
-                              >
-                                <LogOut className='h-3 w-3 sm:h-4 sm:w-4 ' />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>Leave</TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      )}
+                        {enrichedWorkspace.role !== 'owner' && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant='outline'
+                                  size='sm'
+                                  onClick={() =>
+                                    handleLeaveWorkspace(enrichedWorkspace)
+                                  }
+                                  className='text-red-600 hover:text-red-700'
+                                >
+                                  <LogOut className='h-3 w-3 sm:h-4 sm:w-4 ' />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Leave</TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
+                      </>
                     </div>
                   </div>
 
@@ -533,34 +592,6 @@ export function WorkspaceManagement() {
         })}
       </div>
 
-      {/* Quick Actions */}
-      {/* <Card>
-        <CardHeader>
-          <CardTitle>Quick Actions</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="">
-            <Button variant="outline" className="h-auto p-4 flex-col w-full">
-              <Plus className="h-5 w-5" />
-              <span className="font-medium">Create Workspace</span>
-              <span className="text-xs text-gray-600">Start a new project</span>
-            </Button>
-            
-            <Button variant="outline" className="h-auto p-4 flex-col gap-2">
-              <Users className="h-5 w-5" />
-              <span className="font-medium">Join Workspace</span>
-              <span className="text-xs text-gray-600">Use invitation code</span>
-            </Button>
-            
-            <Button variant="outline" className="h-auto p-4 flex-col gap-2">
-              <Settings className="h-5 w-5" />
-              <span className="font-medium">Workspace Settings</span>
-              <span className="text-xs text-gray-600">Manage permissions</span>
-            </Button>
-          </div>
-        </CardContent>
-      </Card> */}
-
       {/* Information */}
       <Card>
         <CardHeader>
@@ -590,7 +621,6 @@ export function WorkspaceManagement() {
                 </div>
               </div>
             </div>
-
             <div className='bg-gray-50 p-4 rounded-lg'>
               <h4 className='font-medium text-gray-900 mb-2'>
                 Workspace Limits

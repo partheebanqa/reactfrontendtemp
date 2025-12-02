@@ -2510,6 +2510,7 @@ export function RequestEditor({
             urlEncodedFields={urlEncodedFields}
             variables={storeVariables || []}
             initialVariable={selectedVariable}
+            showSubstituteButton={false}
             onBodyTypeChange={handleBodyTypeChange}
             onBodyContentChange={handleBodyContentChange}
             onBeautify={handleBeautify}

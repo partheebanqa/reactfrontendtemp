@@ -21,6 +21,7 @@ export interface ResponseEnvironment {
   CreatedBy: string;
   UpdatedAt: string;
   UpdatedBy: string;
+  IsPrimary: boolean;
   DeletedAt: string | null;
   environmentVariables: EnvironmentVariable[] | null;
 }
@@ -39,6 +40,7 @@ export interface Environment {
   defaultVariables?: {
     baseUrl?: string;
   };
+  isPrimary?: boolean;
   baseUrl?: string;
   isDefault: boolean;
 }
