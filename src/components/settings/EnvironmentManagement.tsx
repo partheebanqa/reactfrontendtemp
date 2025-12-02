@@ -96,8 +96,6 @@ export function EnvironmentManagement() {
   } = useDataManagement();
   const { workspaces } = useWorkspace();
 
-  console.log('environments:', environments);
-
   const form = useForm<EnvironmentFormData>({
     resolver: zodResolver(environmentSchema),
     defaultValues: {
@@ -108,7 +106,6 @@ export function EnvironmentManagement() {
     },
   });
 
-  // Effect to populate form when editing an environment
   React.useEffect(() => {
     if (editingEnvironment) {
       form.reset({

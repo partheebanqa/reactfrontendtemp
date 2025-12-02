@@ -35,6 +35,7 @@ export default function EnvironmentDropdown({
     environments,
     activeEnvironment,
     setActiveEnvironment,
+    updatePrimaryEnvironmentMutation,
     isLoading,
     isEnvironmentsLoading,
   } = useDataManagement();
@@ -53,6 +54,23 @@ export default function EnvironmentDropdown({
       return '#9333ea';
     } else {
       return '#06090eff';
+    }
+  };
+
+  const handleEnvironmentSelect = async (environment: Environment) => {
+    // First set the active environment
+    setActiveEnvironment(environment);
+
+    // Then set it as primary if it's not already
+    if (!environment.isPrimary) {
+      try {
+        await updatePrimaryEnvironmentMutation.mutateAsync({
+          id: environment.id,
+          setPrimary: true,
+        });
+      } catch (error) {
+        console.error('Error setting primary environment:', error);
+      }
     }
   };
 
@@ -143,7 +161,7 @@ export default function EnvironmentDropdown({
                   return (
                     <DropdownMenuItem
                       key={environment?.id}
-                      onClick={() => setActiveEnvironment(environment)}
+                      onClick={() => handleEnvironmentSelect(environment)}
                       className={`justify-between text-xs sm:text-sm py-2 rounded-md ${
                         isSelected
                           ? 'bg-gray-50 text-gray-800 border border-gray-200 shadow-sm'
