@@ -88,7 +88,7 @@ const menuItems: MenuItem[] = [
     feature: 'request_chains',
   },
   {
-    label: 'Data Management',
+    label: 'Variables',
     path: '/data-management',
     icon: Database,
     feature: 'test_suites',
@@ -100,7 +100,7 @@ const menuItems: MenuItem[] = [
     feature: 'scheduler',
   },
   {
-    label: 'CI/CD Integration',
+    label: 'CI/CD',
     path: '/cicd-configuration',
     icon: Workflow,
     feature: 'cicd_integrations',
@@ -112,7 +112,7 @@ const menuItems: MenuItem[] = [
     icon: ChartColumn,
     feature: 'executions',
   },
-  { label: 'FAQ', path: '/faq', icon: HelpCircle, feature: 'faqs' },
+  // { label: 'FAQ', path: '/faq', icon: HelpCircle, feature: 'faqs' },
 ];
 
 const utilsItems: MenuItem[] = [
@@ -307,7 +307,7 @@ const Sidebar: React.FC = () => {
                     onClick={() => setUtilsExpanded(!utilsExpanded)}
                   >
                     <Wrench className='w-4 h-4 mr-3' />
-                    <span className='flex-1 text-left text-md'>Utilities</span>
+                    <span className='flex-1 text-left text-md'>Tools</span>
                     {utilsExpanded ? (
                       <ChevronDown className='w-4 h-4' />
                     ) : (
@@ -344,27 +344,26 @@ const Sidebar: React.FC = () => {
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button
-                      variant='outline'
-                      size='icon'
-                      className='w-full h-10'
-                      onClick={() => setShowHelpModal(true)}
-                    >
-                      <HelpCircle className='h-5 w-5' />
-                    </Button>
+                    <Link href='/help-support'>
+                      <Button
+                        variant='outline'
+                        size='icon'
+                        className='w-full h-10'
+                      >
+                        <HelpCircle className='h-5 w-5' />
+                      </Button>
+                    </Link>
                   </TooltipTrigger>
                   <TooltipContent side='right'>Help & Support</TooltipContent>
                 </Tooltip>
               </TooltipProvider>
             ) : (
-              <Button
-                variant='outline'
-                className='w-full justify-start'
-                onClick={() => setShowHelpModal(true)}
-              >
-                <HelpCircle className='mr-2 h-4 w-4' />
-                Help & Support
-              </Button>
+              <Link href='/help-support'>
+                <Button variant='outline' className='w-full justify-start'>
+                  <HelpCircle className='mr-2 h-4 w-4' />
+                  Help & Support
+                </Button>
+              </Link>
             )}
           </div>
         </div>

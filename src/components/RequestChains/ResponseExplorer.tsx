@@ -886,9 +886,7 @@ export function ResponseExplorer({
               <span>{executionLog.duration}ms</span>
 
               {/* Size */}
-              <span>
-                {(executionLog.response?.size || 0 / 1024).toFixed(2)} KB
-              </span>
+              <span>{executionLog.response?.size || 0 / 1024} KB</span>
             </div>
           )}
         </div>

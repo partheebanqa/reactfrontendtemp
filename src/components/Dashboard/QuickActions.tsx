@@ -36,7 +36,7 @@ export default function QuickActions() {
           </Button>
 
           <Button
-            onClick={() => setLocation('/test-suites/create')}
+            onClick={() => setLocation('/create-test-suite')}
             variant='ghost'
             className='w-full justify-start h-auto p-4 border border-slate-200 hover:bg-slate-50 transition-colors'
           >

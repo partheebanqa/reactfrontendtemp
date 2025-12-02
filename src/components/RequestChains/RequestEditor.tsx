@@ -2763,7 +2763,7 @@ export function RequestEditor({
       {hideResponseExplorer &&
         executionResult &&
         (executionResult.response || executionResult.error) && (
-          <div className='border-t border-gray-200 p-6'>
+          <div className='border-t border-gray-200 p-2'>
             <ResponseExplorer
               response={executionResult.response}
               onExtractVariable={handleExtractVariable}

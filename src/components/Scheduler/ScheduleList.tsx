@@ -18,6 +18,8 @@ import {
   RefreshCw,
   Beaker,
   Pencil,
+  Layers,
+  Link2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -108,8 +110,6 @@ interface ScheduleListProps {
   schedulesLoading: boolean;
   onRefresh: () => void;
   onEdit: (schedule: Schedule) => void;
-
-
 }
 
 export default function ScheduleList({
@@ -196,9 +196,9 @@ export default function ScheduleList({
 
   const getTargetTypeIcon = (target: number) => {
     return target === 1 ? (
-      <Beaker className='h-4 w-4 text-[#136fb0]' />
+      <Layers className='h-4 w-4 text-[#136fb0]' />
     ) : (
-      <GitBranch className='h-4 w-4 text-purple-600' />
+      <Link2 className='h-4 w-4 text-purple-600' />
     );
   };
 
@@ -212,7 +212,9 @@ export default function ScheduleList({
         // 🧠 If one-time → show full date + time
         // 🕐 Otherwise → show only time (with timezone)
         const dateText = schedule.isOneTime
-          ? `${format(date, 'MMM dd, yyyy')} at ${format(date, 'HH:mm')} (${schedule.timezone || 'UTC'})`
+          ? `${format(date, 'MMM dd, yyyy')} at ${format(date, 'HH:mm')} (${
+              schedule.timezone || 'UTC'
+            })`
           : `${format(date, 'HH:mm')} (${schedule.timezone || 'UTC'})`;
 
         // Calculate days left
@@ -225,7 +227,9 @@ export default function ScheduleList({
         } else if (diffDays === 0) {
           daysLeftText = `Today`;
         } else {
-          daysLeftText = `${Math.abs(diffDays)} day${Math.abs(diffDays) > 1 ? 's' : ''} ago`;
+          daysLeftText = `${Math.abs(diffDays)} day${
+            Math.abs(diffDays) > 1 ? 's' : ''
+          } ago`;
         }
 
         return { dateText, daysLeftText };
@@ -240,7 +244,9 @@ export default function ScheduleList({
 
         // 🧠 Recurring schedules show only time
         const dateText = schedule.isOneTime
-          ? `${format(date, 'MMM dd, yyyy')} at ${format(date, 'HH:mm')} (${schedule.timezone || 'UTC'})`
+          ? `${format(date, 'MMM dd, yyyy')} at ${format(date, 'HH:mm')} (${
+              schedule.timezone || 'UTC'
+            })`
           : `${format(date, 'HH:mm')} (${schedule.timezone || 'UTC'})`;
 
         return {
@@ -255,47 +261,46 @@ export default function ScheduleList({
     return { dateText: 'Not scheduled', daysLeftText: '' };
   };
 
-
   // Filter schedules based on search and filters
   const filteredSchedules = Array.isArray(schedules)
     ? schedules.filter((schedule: Schedule) => {
-      const matchesSearch =
-        schedule.scheduleName
-          ?.toLowerCase()
-          .includes(searchQuery.toLowerCase()) ||
-        schedule.description
-          ?.toLowerCase()
-          .includes(searchQuery.toLowerCase());
+        const matchesSearch =
+          schedule.scheduleName
+            ?.toLowerCase()
+            .includes(searchQuery.toLowerCase()) ||
+          schedule.description
+            ?.toLowerCase()
+            .includes(searchQuery.toLowerCase());
 
-      const matchesType =
-        typeFilter === 'all' ||
-        (typeFilter === 'test-suite' && schedule.target === 1) ||
-        (typeFilter === 'request-chain' && schedule.target === 2);
+        const matchesType =
+          typeFilter === 'all' ||
+          (typeFilter === 'test-suite' && schedule.target === 1) ||
+          (typeFilter === 'request-chain' && schedule.target === 2);
 
-      const matchesExecutionMode =
-        executionModeFilter === 'all' ||
-        (executionModeFilter === 'one-time' && schedule.isOneTime) ||
-        (executionModeFilter === 'recurring' && !schedule.isOneTime);
+        const matchesExecutionMode =
+          executionModeFilter === 'all' ||
+          (executionModeFilter === 'one-time' && schedule.isOneTime) ||
+          (executionModeFilter === 'recurring' && !schedule.isOneTime);
 
-      const scheduleStatus = schedule.isActive ? 'active' : 'disabled';
-      const matchesStatus =
-        statusFilter === 'all' || scheduleStatus === statusFilter;
+        const scheduleStatus = schedule.isActive ? 'active' : 'disabled';
+        const matchesStatus =
+          statusFilter === 'all' || scheduleStatus === statusFilter;
 
-      const matchesDateRange =
-        !dateRange.from ||
-        !dateRange.to ||
-        (schedule.scheduledTime &&
-          new Date(schedule.scheduledTime) >= dateRange.from &&
-          new Date(schedule.scheduledTime) <= dateRange.to);
+        const matchesDateRange =
+          !dateRange.from ||
+          !dateRange.to ||
+          (schedule.scheduledTime &&
+            new Date(schedule.scheduledTime) >= dateRange.from &&
+            new Date(schedule.scheduledTime) <= dateRange.to);
 
-      return (
-        matchesSearch &&
-        matchesType &&
-        matchesExecutionMode &&
-        matchesStatus &&
-        matchesDateRange
-      );
-    })
+        return (
+          matchesSearch &&
+          matchesType &&
+          matchesExecutionMode &&
+          matchesStatus &&
+          matchesDateRange
+        );
+      })
     : [];
 
   // Helper function to get execution mode icon based on backend data
@@ -341,8 +346,9 @@ export default function ScheduleList({
     if (schedule.scheduledTime) {
       try {
         const date = new Date(schedule.scheduledTime);
-        return `${format(date, 'MMM dd, yyyy')} at ${format(date, 'HH:mm')} (${schedule.timezone || 'UTC'
-          })`;
+        return `${format(date, 'MMM dd, yyyy')} at ${format(date, 'HH:mm')} (${
+          schedule.timezone || 'UTC'
+        })`;
       } catch (error) {
         return 'Invalid date';
       }
@@ -486,7 +492,9 @@ export default function ScheduleList({
         filteredSchedules.length === 0 ? (
           <div className='bg-white rounded-lg border border-slate-200 p-12 text-center'>
             <Clock className='mx-auto h-12 w-12 text-slate-400' />
-            <h3 className='mt-2 text-sm font-medium text-slate-900'>No schedules</h3>
+            <h3 className='mt-2 text-sm font-medium text-slate-900'>
+              No schedules
+            </h3>
             <p className='mt-1 text-sm text-slate-500'>
               {schedules.length === 0
                 ? 'Get started by creating a new schedule.'
@@ -700,8 +708,8 @@ export default function ScheduleList({
             {totalPages > 1 && (
               <div className='flex items-center justify-between px-2'>
                 <div className='text-sm text-slate-700'>
-                  Showing {startIndex + 1} to {Math.min(endIndex, totalItems)} of{' '}
-                  {totalItems} results
+                  Showing {startIndex + 1} to {Math.min(endIndex, totalItems)}{' '}
+                  of {totalItems} results
                 </div>
                 <div className='flex items-center space-x-2'>
                   <Button
@@ -745,12 +753,10 @@ export default function ScheduleList({
               </div>
             )}
           </>
-
         )
       ) : (
         <Loader message='Loading Schedules' />
       )}
-
 
       {/* Advanced Filter Dialog */}
       <Dialog open={advancedFilterOpen} onOpenChange={setAdvancedFilterOpen}>
@@ -781,8 +787,9 @@ export default function ScheduleList({
                     <Button
                       id='date'
                       variant='outline'
-                      className={`w-full justify-start text-left font-normal ${!dateRange.from && 'text-muted-foreground'
-                        }`}
+                      className={`w-full justify-start text-left font-normal ${
+                        !dateRange.from && 'text-muted-foreground'
+                      }`}
                     >
                       <CalendarIcon className='mr-2 h-4 w-4' />
                       {dateRange.from ? (

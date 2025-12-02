@@ -2584,10 +2584,10 @@ export function RequestChainEditor({
                                           }}
                                         />
                                         {executionLog && (
-                                          <div className='border-t border-gray-200 pt-4'>
+                                          <div>
                                             {(executionLog.response != null ||
                                               executionLog.error) && (
-                                              <div className='border-t border-gray-200 p-6'>
+                                              <div className='border-t border-gray-200 p-2'>
                                                 <div className='flex items-center gap-2 mb-4'>
                                                   <h3 className='text-lg font-medium text-gray-900'>
                                                     Extract Variables from
