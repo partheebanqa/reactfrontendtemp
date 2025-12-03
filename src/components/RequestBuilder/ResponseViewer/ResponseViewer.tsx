@@ -560,7 +560,7 @@ const ResponseViewer = () => {
     <div className='flex-1 flex flex-col bg-background min-h-0 overflow-hidden'>
       <div className='bg-card border-b border-border flex-shrink-0'>
         <div className='flex items-center justify-between border-b border-border'>
-          <nav className='flex space-x-8 px-4 whitespace-nowrap overflow-x-auto scrollbar-thin no-scrollbar'>
+          <nav className='flex space-x-6 px-4 whitespace-nowrap overflow-x-auto scrollbar-thin no-scrollbar'>
             {tabs.map((tab) => {
               return (
                 <button

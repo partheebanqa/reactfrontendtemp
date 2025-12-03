@@ -189,7 +189,7 @@ export default function Header({ isDrawerOpen, toggleDrawer }: HeaderProps) {
         </div>
 
         <div className='flex items-center gap-2 sm:gap-4'>
-          <h5 className='hidden md:flex text-md font-semibold text-gray-800 dark:text-gray-200'>
+          <h5 className='hidden md:flex text-md font-medium text-gray-800 dark:text-gray-200'>
             Workspace :
           </h5>
           <WorkspaceDropdown
@@ -201,7 +201,7 @@ export default function Header({ isDrawerOpen, toggleDrawer }: HeaderProps) {
         <div className='flex items-center gap-1 sm:gap-4 min-w-0'>
           {!shouldHideEnvironment && (
             <div className='flex items-center gap-2 sm:gap-4'>
-              <h5 className='hidden md:flex text-md font-semibold text-gray-800 dark:text-gray-200'>
+              <h5 className='hidden md:flex text-md font-medium text-gray-800 dark:text-gray-200'>
                 Environment :
               </h5>
               <EnvironmentDropdown

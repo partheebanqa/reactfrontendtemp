@@ -81,9 +81,9 @@ export default function RequestBody({
       <div className='flex items-center justify-between'>
         <TooltipProvider>
           <div className='flex items-center gap-2'>
-            <h3 className='text-base sm:text-lg font-medium text-gray-900 dark:text-white'>
+            <h4 className='text-base sm:text-lg font-medium text-gray-900 dark:text-white'>
               Request Body
-            </h3>
+            </h4>
             <Tooltip>
               <TooltipTrigger asChild>
                 <button

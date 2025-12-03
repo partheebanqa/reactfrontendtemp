@@ -119,28 +119,7 @@ export default function EnvironmentDropdown({
             <p className='text-xs'>Switch between environments</p>
           </TooltipContent>
 
-          <DropdownMenuContent className='w-72 sm:w-80 max-h-[60vh] overflow-y-auto scrollbar-thin custom-scrollbar p-2 shadow-md rounded-md border border-gray-200'>
-            <div className='mb-3 pb-2 border-b border-gray-100'>
-              <h3 className='text-sm text-gray-800 font-semibold mb-1'>
-                Environments
-              </h3>
-              <p className='text-xs text-gray-500'>
-                Select environment to use variables
-              </p>
-            </div>
-
-            <div className='mb-3'>
-              <DropdownMenuItem
-                onClick={() =>
-                  setLocation('/settings/account?tab=environments')
-                }
-                className='text-gray-600 font-medium text-xs sm:text-sm py-2 hover:bg-gray-50 rounded-md border border-gray-100 shadow-sm'
-              >
-                <Settings className='mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4' />
-                Manage Environments
-              </DropdownMenuItem>
-            </div>
-
+          <DropdownMenuContent className='w-72 sm:w-64 max-h-[60vh] overflow-y-auto scrollbar-thin custom-scrollbar p-2 shadow-md rounded-md border border-gray-200'>
             <DropdownMenuSeparator className='my-2' />
 
             {isEnvironmentsLoading ? (
@@ -162,20 +141,22 @@ export default function EnvironmentDropdown({
                     <DropdownMenuItem
                       key={environment?.id}
                       onClick={() => handleEnvironmentSelect(environment)}
-                      className={`justify-between text-xs sm:text-sm py-2 rounded-md ${
+                      className={`group justify-between text-xs sm:text-sm py-2 rounded-md ${
                         isSelected
-                          ? 'bg-gray-50 text-gray-800 border border-gray-200 shadow-sm'
+                          ? 'bg-blue-50 text-blue-700 border border-blue-200 shadow-sm'
                           : 'hover:bg-gray-50 border border-transparent hover:border-gray-100'
                       }`}
                     >
-                      <div className='flex items-center'>
+                      <div className='flex items-center gap-2'>
+                        {' '}
                         <div
                           className='h-3 w-3 rounded-full mr-2 flex-shrink-0'
                           style={{
                             backgroundColor: getEnvironmentColor(environment),
                           }}
                         />
-                        <span className='font-medium truncate mr-2'>
+                        <span className='font-medium truncate text-gray-500 group-hover:text-gray-700'>
+                          {' '}
                           {environment?.name}
                         </span>
                       </div>

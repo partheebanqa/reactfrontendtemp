@@ -2017,7 +2017,7 @@ const RequestEditor: React.FC = () => {
             onCurlImport={handleCurlImport}
           />
 
-          <div className='border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex-shrink-0'>
+          <div className='border-gray-200 dark:border-gray-700 px-4 pt-3 flex-shrink-0'>
             <div className='flex items-center justify-between'>
               <div className='flex items-center text-sm space-x-1'>
                 <span className='text-gray-500 dark:text-gray-400'>
@@ -2065,7 +2065,7 @@ const RequestEditor: React.FC = () => {
           </div>
         </div>
 
-        <div className='border-b border-gray-200 dark:border-gray-700 p-4 flex-shrink-0'>
+        <div className='border-gray-200 dark:border-gray-700 px-4 pt-4 flex-shrink-0'>
           <div className='flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-2'>
             <select
               value={method}
@@ -2312,7 +2312,7 @@ const RequestEditor: React.FC = () => {
               onUpdate={updateParam}
               onRemove={removeParam}
               title='Query Parameters'
-              addButtonLabel='Add Parameter'
+              addButtonLabel='Add Parameters'
               emptyMessage='No query parameters added yet.'
             />
           )}
@@ -2394,9 +2394,9 @@ const RequestEditor: React.FC = () => {
           {activeTab === 'auth' && (
             <div className='space-y-4'>
               <div className='flex items-center justify-between'>
-                <h3 className='text-base sm:text-lg font-medium text-gray-900 dark:text-white'>
+                <h4 className='text-base sm:text-lg font-medium text-gray-900 dark:text-white'>
                   Authorization
-                </h3>
+                </h4>
                 <select
                   value='bearer'
                   disabled
@@ -2460,9 +2460,9 @@ const RequestEditor: React.FC = () => {
 
           {activeTab === 'settings' && (
             <div className='space-y-5'>
-              <h3 className='text-base sm:text-lg font-medium text-gray-900 dark:text-white'>
+              <h4 className='text-base sm:text-lg font-medium text-gray-900 dark:text-white'>
                 Request Settings
-              </h3>
+              </h4>
 
               <div className='space-y-4'>
                 <ToggleSwitch

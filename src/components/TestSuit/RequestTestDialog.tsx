@@ -542,8 +542,9 @@ export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
       setResponse(parsedBody);
       setResponseHeaders(firstResponse?.headers || {});
     } catch (error) {
-      const errorMessage = `Error: ${error instanceof Error ? error.message : 'Unknown error'
-        }`;
+      const errorMessage = `Error: ${
+        error instanceof Error ? error.message : 'Unknown error'
+      }`;
       setResponse(errorMessage);
       setResponseHeaders({});
     } finally {
@@ -563,21 +564,21 @@ export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
           typeof field.value === 'string'
             ? 'string'
             : typeof field.value === 'number'
-              ? 'number'
-              : typeof field.value === 'boolean'
-                ? 'boolean'
-                : Array.isArray(field.value)
-                  ? 'array'
-                  : typeof field.value === 'object'
-                    ? 'object'
-                    : 'string',
+            ? 'number'
+            : typeof field.value === 'boolean'
+            ? 'boolean'
+            : Array.isArray(field.value)
+            ? 'array'
+            : typeof field.value === 'object'
+            ? 'object'
+            : 'string',
       })
     );
 
     // ✅ Build a consistent request info object
     const reqInfo = {
-      id: request?.id || 'auth-pre-request',               // fallback id
-      name: request?.name || 'Authentication API',         // fallback name
+      id: request?.id || 'auth-pre-request', // fallback id
+      name: request?.name || 'Authentication API', // fallback name
       method: method || request?.method || 'POST',
       url: url || request?.url || '',
     };
@@ -591,7 +592,6 @@ export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
     setExtractedFields([]);
     onClose();
   };
-
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -612,20 +612,20 @@ export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
                 align='start'
                 className='max-w-sm text-xs p-2 leading-relaxed text-gray-600'
               >
-                <p>
-                  Step 1: Send the request with your login credentials.</p>
+                <p>Step 1: Send the request with your login credentials.</p>
                 <p>
                   {/* Step 2: On a successful response, you'll get the option to
                   extract the authorization token from the request body or
                   header. */}
-                  Step 2: On a successful response, you'll get the option to extract
-                  the authorization token from the response body
+                  Step 2: On a successful response, you'll get the option to
+                  extract the authorization token from the response body
                 </p>
                 <p>Step 3: Save the extracted variables.</p>
                 <p>
                   {/* Note: This token will be used for other api's in the test
                   suite to execute the functional testcases. */}
-                  Note: This token will be used for all api's while executing the test cases.
+                  Note: This token will be used for all api's while executing
+                  the test cases.
                 </p>
               </TooltipContent>
             </Tooltip>

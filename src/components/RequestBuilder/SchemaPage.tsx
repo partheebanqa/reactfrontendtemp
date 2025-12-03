@@ -116,7 +116,7 @@ const SchemaPage: React.FC = () => {
       <Card>
         <CardHeader className='flex flex-row items-center justify-between space-y-0'>
           <div>
-            <h3 className='text-base sm:text-lg font-medium text-gray-900 dark:text-white flex items-center gap-2'>
+            <h4 className='text-base sm:text-lg font-medium text-gray-900 dark:text-white flex items-center gap-2'>
               API Schemas
               {/* Show Dot if schemaCount > 0 */}
               {schemaCount > 0 && (
@@ -134,7 +134,7 @@ const SchemaPage: React.FC = () => {
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
-            </h3>
+            </h4>
           </div>
 
           <div className='flex space-x-2'>
@@ -203,9 +203,9 @@ const SchemaPage: React.FC = () => {
       {canCompare && (
         <Card>
           <CardHeader>
-            <h3 className='text-base sm:text-lg font-medium text-gray-900 dark:text-white'>
+            <h4 className='text-base sm:text-lg font-medium text-gray-900 dark:text-white'>
               Schema Comparison
-            </h3>
+            </h4>
           </CardHeader>
           <CardContent>
             <SchemaComparer schemaIds={selectedSchemas} />
@@ -220,9 +220,9 @@ const SchemaPage: React.FC = () => {
             <div className='p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center'>
               <div className='flex items-center space-x-2'>
                 <Server size={20} className='text-indigo-600' />
-                <h3 className='text-base sm:text-lg font-medium text-gray-900 dark:text-white'>
+                <h4 className='text-base sm:text-lg font-medium text-gray-900 dark:text-white'>
                   {viewSchema.name}
-                </h3>
+                </h4>
               </div>
               <Button
                 variant='ghost'
