@@ -91,9 +91,6 @@ export function ResponseExplorer({
     'body' | 'headers' | 'cookies' | 'actualRequest' | 'assertions'
   >('body');
 
-  console.log('extractedvariable121:', extractedVariables);
-  console.log('existingExtractions:', existingExtractions);
-
   const getValueByPath = (obj: any, path: string): any => {
     if (!obj || !path) return undefined;
 
@@ -851,26 +848,74 @@ export function ResponseExplorer({
     <div className='space-y-6'>
       <div className='bg-white border border-gray-200 rounded-lg'>
         <div className='border-b border-gray-200 flex items-center justify-between px-6'>
-          <nav className='flex space-x-8'>
+          <nav className='flex space-x-6'>
             {[
-              { id: 'body', label: 'Response Body' },
-              { id: 'headers', label: 'Headers' },
-              { id: 'cookies', label: 'Cookies' },
-              { id: 'actualRequest', label: 'Actual Request' },
-              { id: 'assertions', label: 'Assertions(R)' },
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as typeof activeTab)}
-                className={`pt-4 pb-2 px-1 border-b-2 font-medium text-sm transition-colors flex items-center space-x-2 whitespace-nowrap ${
-                  activeTab === tab.id
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                <span>{tab.label}</span>
-              </button>
-            ))}
+              {
+                id: 'body',
+                label: 'Response Body',
+                count: 0,
+              },
+              {
+                id: 'headers',
+                label: 'Headers',
+                count:
+                  response?.headers && typeof response?.headers === 'object'
+                    ? Object.keys(response.headers).length
+                    : 0,
+              },
+              {
+                id: 'cookies',
+                label: 'Cookies',
+                count:
+                  response?.cookies && typeof response?.cookies === 'object'
+                    ? Object.keys(response.cookies).length
+                    : 0,
+              },
+              {
+                id: 'actualRequest',
+                label: 'Actual Request',
+                count: 0,
+              },
+              {
+                id: 'assertions',
+                label: 'Assertions(R)',
+                count: response?.assertions ? response.assertions.length : 0,
+              },
+            ].map((tab) => {
+              const count = tab.count ?? 0;
+              const showBlueDot = ['assertions'].includes(tab.id) && count > 0;
+              const showCountBadge =
+                ['headers', 'cookies'].includes(tab.id) && count > 0;
+
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id as typeof activeTab)}
+                  className={`pt-4 pb-2 px-1 border-b-2 font-medium text-sm transition-colors flex items-center space-x-2 whitespace-nowrap ${
+                    activeTab === tab.id
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  <span>{tab.label}</span>
+
+                  {/* Blue dot for headers and cookies when count > 0 */}
+                  {showBlueDot && (
+                    <span
+                      className='inline-block w-1.5 h-1.5 rounded-full bg-[#136fb0]'
+                      aria-label={`${count} item${count !== 1 ? 's' : ''}`}
+                    />
+                  )}
+
+                  {/* Count badge for assertions */}
+                  {showCountBadge && (
+                    <span className='ml-1 bg-gray-100 text-gray-600 rounded-full px-2 py-0.5 text-xs'>
+                      {count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </nav>
 
           {/* RIGHT: Status panel */}
@@ -886,10 +931,11 @@ export function ResponseExplorer({
               <span>{executionLog.duration}ms</span>
 
               {/* Size */}
-              <span>{executionLog.response?.size || 0 / 1024} KB</span>
+              <span>{(executionLog.response?.size || 0) / 1024} KB</span>
             </div>
           )}
         </div>
+
         <div className='p-6 max-h-96 overflow-auto'>
           {activeTab === 'body' &&
             (executionStatus === 'error' && errorMessage ? (
