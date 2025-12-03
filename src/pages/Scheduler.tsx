@@ -59,9 +59,9 @@ const Scheduler = () => {
   return (
     <>
       {/* Header */}
-      <header className='border border-gray-200 bg-background rounded-lg px-4 py-4 animate-fade-in mb-2'>
-        <div className='flex items-center justify-between'>
-          <div className='flex items-center justify-between gap-4'>
+      <header className='border border-gray-200 bg-background rounded-lg px-3 py-3 sm:px-4 sm:py-4 animate-fade-in'>
+        <div className='flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between'>
+          <div className='flex items-start gap-3 sm:items-center'>
             <div>
               <CalendarClock
                 className='bg-[#f9e3fc] p-2 rounded'
@@ -70,13 +70,13 @@ const Scheduler = () => {
               />
             </div>
             <div>
-              <h2 className='text-2xl font-bold text-foreground'>Scheduler</h2>
-              <p className='text-muted-foreground text-md'>
+              <h2 className='text-md font-bold text-foreground sm:text-xl'>Scheduler</h2>
+              <p className='text-[12px] text-muted-foreground sm:text-[14px]'>
                 Configure automated test execution schedules
               </p>
             </div>
           </div>
-          <div className='flex items-center space-x-4'>
+          <div className='mt-1 flex w-full gap-2 sm:mt-0 sm:w-auto sm:justify-end'>
             <ScheduleCreate
               testSuites={testSuites}
               requestChains={requestChains}
@@ -169,7 +169,7 @@ const Scheduler = () => {
       </header>
 
       {/* Main Content */}
-      <div className='space-y-2'>
+      <div className='space-y-2 mt-2'>
         <ScheduleList
           schedules={schedules}
           schedulesLoading={schedulesLoading}

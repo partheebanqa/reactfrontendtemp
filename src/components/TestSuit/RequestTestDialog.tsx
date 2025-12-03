@@ -542,9 +542,8 @@ export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
       setResponse(parsedBody);
       setResponseHeaders(firstResponse?.headers || {});
     } catch (error) {
-      const errorMessage = `Error: ${
-        error instanceof Error ? error.message : 'Unknown error'
-      }`;
+      const errorMessage = `Error: ${error instanceof Error ? error.message : 'Unknown error'
+        }`;
       setResponse(errorMessage);
       setResponseHeaders({});
     } finally {
@@ -564,14 +563,14 @@ export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
           typeof field.value === 'string'
             ? 'string'
             : typeof field.value === 'number'
-            ? 'number'
-            : typeof field.value === 'boolean'
-            ? 'boolean'
-            : Array.isArray(field.value)
-            ? 'array'
-            : typeof field.value === 'object'
-            ? 'object'
-            : 'string',
+              ? 'number'
+              : typeof field.value === 'boolean'
+                ? 'boolean'
+                : Array.isArray(field.value)
+                  ? 'array'
+                  : typeof field.value === 'object'
+                    ? 'object'
+                    : 'string',
       })
     );
 
@@ -614,16 +613,12 @@ export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
               >
                 <p>Step 1: Send the request with your login credentials.</p>
                 <p>
-                  {/* Step 2: On a successful response, you'll get the option to
-                  extract the authorization token from the request body or
-                  header. */}
+
                   Step 2: On a successful response, you'll get the option to
                   extract the authorization token from the response body
                 </p>
                 <p>Step 3: Save the extracted variables.</p>
                 <p>
-                  {/* Note: This token will be used for other api's in the test
-                  suite to execute the functional testcases. */}
                   Note: This token will be used for all api's while executing
                   the test cases.
                 </p>
