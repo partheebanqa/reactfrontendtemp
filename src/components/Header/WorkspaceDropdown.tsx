@@ -92,31 +92,7 @@ export default function WorkspaceDropdown({
             <p className='text-xs'>Switch between workspaces</p>
           </TooltipContent>
 
-          <DropdownMenuContent className='w-64 sm:w-72 max-h-[60vh] overflow-y-auto scrollbar-thin custom-scrollbar p-2 shadow-md rounded-md border border-gray-200'>
-            <div className='mb-3 pb-2 border-b border-gray-100'>
-              <h3 className='text-sm text-gray-800 font-semibold mb-1'>
-                Workspaces
-              </h3>
-              <p className='text-xs text-gray-500'>
-                Manage your project workspaces
-              </p>
-            </div>
-
-            <DropdownMenuSeparator className='my-2' />
-
-            <DropdownMenuItem
-              className='text-gray-600 font-medium text-xs sm:text-sm py-2 hover:bg-gray-50 rounded-md border border-gray-100 shadow-sm'
-              onClick={() =>
-                setLocation('/settings/account?tab=workspaces', {
-                  replace: true,
-                })
-              }
-            >
-              <Settings className='mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4' />
-              Manage Workspaces
-            </DropdownMenuItem>
-            <DropdownMenuSeparator className='my-2' />
-
+          <DropdownMenuContent className='w-64 sm:w-64 max-h-[60vh] overflow-y-auto scrollbar-thin custom-scrollbar p-2 shadow-md rounded-md border border-gray-200'>
             {isLoading ? (
               <div className='flex items-center justify-center py-4'>
                 <Loader2 className='h-5 w-5 animate-spin text-gray-400' />
@@ -137,16 +113,17 @@ export default function WorkspaceDropdown({
                     <DropdownMenuItem
                       key={workspace.id}
                       onClick={() => handleWorkspaceSelect(workspace)}
-                      className={`justify-between text-xs sm:text-sm py-2 rounded-md ${
+                      className={`group justify-between text-xs sm:text-sm py-2 rounded-md ${
                         isSelected
                           ? 'bg-blue-50 text-blue-700 border border-blue-200 shadow-sm'
                           : 'hover:bg-gray-50 border border-transparent hover:border-gray-100'
                       }`}
                     >
                       <div className='flex items-center gap-2'>
-                        <span className='font-medium truncate'>
+                        <span className='font-medium truncate text-gray-500 group-hover:text-gray-700'>
                           {workspace.name}
                         </span>
+
                         {isPrimary && (
                           <Star className='h-3 w-3 fill-yellow-500 text-yellow-500 flex-shrink-0' />
                         )}

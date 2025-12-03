@@ -874,7 +874,7 @@ export function ResponseExplorer({
               {
                 id: 'actualRequest',
                 label: 'Actual Request',
-                count: 0,
+                count: actualRequestBody?.length,
               },
               {
                 id: 'assertions',
@@ -883,7 +883,8 @@ export function ResponseExplorer({
               },
             ].map((tab) => {
               const count = tab.count ?? 0;
-              const showBlueDot = ['assertions'].includes(tab.id) && count > 0;
+              const showBlueDot =
+                ['assertions', 'actualRequest'].includes(tab.id) && count > 0;
               const showCountBadge =
                 ['headers', 'cookies'].includes(tab.id) && count > 0;
 
@@ -931,7 +932,9 @@ export function ResponseExplorer({
               <span>{executionLog.duration}ms</span>
 
               {/* Size */}
-              <span>{(executionLog.response?.size || 0) / 1024} KB</span>
+              <span>
+                {((executionLog.response?.size || 0) / 1024).toFixed(2)} KB
+              </span>
             </div>
           )}
         </div>

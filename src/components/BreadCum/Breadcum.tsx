@@ -47,32 +47,34 @@ const BreadCum: React.FC<ReportsHeaderProps> = ({
   const [open, setOpen] = useState(false);
 
   return (
-    <header className="border border-gray-200 bg-background rounded-lg px-3 py-3 sm:px-4 sm:py-4 animate-fade-in">
+    <header className='border border-gray-200 bg-background rounded-lg px-3 py-3 sm:px-4 sm:py-4 animate-fade-in'>
       {/* column on mobile, row on desktop */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className='flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between'>
         {/* Left section */}
-        <div className="flex items-start gap-3 sm:items-center">
-          <div className={`flex items-center justify-center rounded ${iconBgClass}`}>
-            <Icon className="p-2" color={iconColor} size={iconSize} />
+        <div className='flex items-start gap-3 sm:items-center'>
+          <div
+            className={`flex items-center justify-center rounded ${iconBgClass}`}
+          >
+            <Icon className='p-2' color={iconColor} size={iconSize} />
           </div>
           <div>
-            <h2 className="text-md font-bold text-foreground sm:text-2xl">
+            <h2 className='text-md font-bold text-foreground sm:text-xl'>
               {title}
             </h2>
-            <p className="text-[12px] text-muted-foreground sm:text-[14px]">
+            <p className='text-[12px] text-muted-foreground sm:text-[14px]'>
               {subtitle}
             </p>
           </div>
         </div>
 
         {/* Right section: always a single row of 2 buttons */}
-        <div className="mt-1 flex w-full gap-2 sm:mt-0 sm:w-auto sm:justify-end">
+        <div className='mt-1 flex w-full gap-2 sm:mt-0 sm:w-auto sm:justify-end'>
           {showCreateButton && (
             <Button
-              className="hover-scale bg-[#136fb0] text-white flex-1 sm:flex-none"
+              className='hover-scale bg-[#136fb0] text-white flex-1 sm:flex-none'
               onClick={onClickCreateNew}
             >
-              <Plus className="mr-2" size={16} />
+              <Plus className='mr-2' size={16} />
               {buttonTitle}
             </Button>
           )}
@@ -80,8 +82,8 @@ const BreadCum: React.FC<ReportsHeaderProps> = ({
           {showQuickGuide && (
             <>
               <Button
-                variant="outline"
-                className="hover-scale flex-none min-w-[120px]"
+                variant='outline'
+                className='hover-scale flex-none min-w-[120px]'
                 onClick={() => {
                   onClickQuickGuide?.();
                   setOpen(true);

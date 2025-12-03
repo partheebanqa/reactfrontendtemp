@@ -1,6 +1,6 @@
 'use client';
 
-import { Trash2 } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 import type React from 'react';
 import TooltipContainer from './tooltip-container';
 import { Button } from './button';
@@ -64,16 +64,17 @@ const KeyValueEditor: React.FC<KeyValueEditorProps> = ({
   return (
     <div className='space-y-4'>
       <div className='flex items-center justify-between'>
-        <h3 className='text-base sm:text-lg font-medium text-gray-900 dark:text-white'>
+        <h4 className='text-base sm:text-lg font-medium text-gray-900 dark:text-white'>
           {title}
-        </h3>
-        <Button
+        </h4>
+        <button
           onClick={onAdd}
-          className='bg-[#136fb0] text-white px-3 sm:px-4 py-2 rounded-md text-sm'
+          className='flex items-center space-x-2 px-3 py-1 text-sm text-[#136fb0] hover:bg-blue-50 rounded-lg transition-colors'
         >
+          <Plus className='w-4 h-4' color='#136fb0' />
           <span className='hidden sm:inline'>{addButtonLabel}</span>
           <span className='sm:hidden'>Add</span>
-        </Button>
+        </button>
       </div>
 
       {items.length > 0 ? (

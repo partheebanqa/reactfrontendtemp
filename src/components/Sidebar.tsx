@@ -185,7 +185,7 @@ const Sidebar: React.FC = () => {
           lockedByFeatureGate || item.upcoming || isDisabled
             ? 'opacity-50 cursor-not-allowed'
             : ''
-        } text-[15px]`}
+        } text-[13px]`}
         disabled={lockedByFeatureGate || item.upcoming || isDisabled}
       >
         <Icon className='w-10 h-10' />
@@ -236,7 +236,7 @@ const Sidebar: React.FC = () => {
     <>
       <aside
         className={`hidden md:flex ${
-          collapsed ? 'w-16' : 'w-64'
+          collapsed ? 'w-16' : 'w-48'
         } bg-white flex-col border-r transition-all duration-300 h-full`}
       >
         <div
@@ -354,14 +354,14 @@ const Sidebar: React.FC = () => {
                       </Button>
                     </Link>
                   </TooltipTrigger>
-                  <TooltipContent side='right'>Help & Support</TooltipContent>
+                  <TooltipContent side='right'>Help</TooltipContent>
                 </Tooltip>
               </TooltipProvider>
             ) : (
               <Link href='/help-support'>
                 <Button variant='outline' className='w-full justify-start'>
                   <HelpCircle className='mr-2 h-4 w-4' />
-                  Help & Support
+                  Help
                 </Button>
               </Link>
             )}

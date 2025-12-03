@@ -19,6 +19,7 @@ import {
   RefreshCcw,
   Layers,
   Link2,
+  RotateCw,
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import {
@@ -299,7 +300,7 @@ export const ExecutionsTable = ({
                           variant='outline'
                           onClick={() => handleReTest(execution)}
                         >
-                          <RefreshCcw size={14} />
+                          <RotateCw size={14} />
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent>Re-Test</TooltipContent>
