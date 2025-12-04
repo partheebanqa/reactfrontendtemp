@@ -16,6 +16,8 @@ import {
   ChevronRight,
   Ticket,
   CircleCheckBig,
+  Info,
+
 } from 'lucide-react';
 import { RequestTestDialog } from './RequestTestDialog';
 import {
@@ -42,6 +44,7 @@ import {
   RequestParam,
 } from '@/shared/types/TestSuite.model';
 import { ExtractedVariable } from '@/shared/types/requestChain.model';
+
 
 interface Request {
   id: string;
@@ -383,41 +386,100 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
       window.location.href.includes('step=select-tests')
     );
 
+
+  const isCreateTestSuitePrereqRoute =
+    typeof window !== 'undefined' &&
+    (
+      window.location.href.includes('create-test-suite?step=prerequisites')
+    );
+
+  const hasImportedPreRequest =
+    isCreateTestSuitePrereqRoute && requests.length > 0;
+
+
+  const hasExtractedValues = (extractVariables?.length ?? 0) > 0;
+
+
+
   return (
     <Card>
       <CardHeader>
         <div className='flex items-center justify-between'>
-
           {shouldHidePreRequest ? (
-            <CardTitle>Requests ({requests.filter(r => r.id !== preRequestId).length})</CardTitle>
+            <CardTitle>
+              Requests ({requests.filter((r) => r.id !== preRequestId).length})
+            </CardTitle>
           ) : (
-            <>
-              <CardTitle>Requests ({requests.length})</CardTitle>
-            </>
+            <CardTitle>
+              <div className='flex items-center gap-2'>
+                <span> Requests ({requests.length})</span>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className='w-4 h-4 text-gray-500 cursor-pointer' />
+                  </TooltipTrigger>
+                  <TooltipContent
+                    side='bottom'
+                    align='start'
+                    className='max-w-sm text-xs p-2 leading-relaxed text-gray-600'
+                  >
+                    <p>Step 1: Send the request with your login credentials.</p>
+                    <p>
+
+                      Step 2: On a successful response, you'll get the option to
+                      extract the authorization token from the response body
+                    </p>
+                    <p>Step 3: Save the extracted variables.</p>
+                    <p>
+                      Note: This token will be used for all api's while executing
+                      the test cases.
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+            </CardTitle>
+          )}
+
+          {!hasExtractedValues && (
+            <p className="text-xs text-amber-600 flex items-center gap-1">
+              <Info className="w-3 h-3" />
+              <span>
+                Auth request added. Please click
+                <span className="font-semibold"> Capture Auth</span> and save the
+                extracted values before proceeding.
+              </span>
+            </p>
           )}
 
           <div className='flex items-center space-x-2'>
-            {onRefreshRequests && (
+
+            {onRefreshRequests && !hasImportedPreRequest && (
               <Button
                 variant='outline'
                 onClick={handleRefresh}
                 disabled={refreshing}
               >
                 <RefreshCcw
-                  className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`}
+                  className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''
+                    }`}
                 />
                 {refreshing ? 'Refreshing...' : 'Refresh'}
               </Button>
             )}
+
             {onImport && (
-              <Button variant='outline' onClick={onImport}>
+              <Button
+                variant='outline'
+                onClick={!hasImportedPreRequest ? onImport : undefined}
+                disabled={hasImportedPreRequest}
+              >
                 <Download className='w-4 h-4 mr-2' />
-                Import  Requests
+                Import Requests
               </Button>
             )}
           </div>
         </div>
       </CardHeader>
+
 
       <CardContent>
         <div className='space-y-3'>

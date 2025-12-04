@@ -764,7 +764,8 @@ const CreateTestSuit: React.FC = () => {
   return (
     <div className="bg-gray-50">
       <BreadCum
-        title={isCreateMode ? 'Create Test Suite' : 'Edit Test Suite'}
+        title={isCreateMode ? 'Create Test Suite' : `Edit Test Suite - ${testSuiteName}`}
+
         subtitle={
           !isCreateMode
             ? `Test Suite ID: ${id}`
