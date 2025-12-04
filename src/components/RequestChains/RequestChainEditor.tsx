@@ -427,7 +427,6 @@ export function RequestChainEditor({
         behavior: 'smooth',
         block: 'center',
       });
-      // Add a brief highlight effect
       runAllButtonRef.current.classList.add(
         'ring-2',
         'ring-primary',
@@ -1125,6 +1124,9 @@ export function RequestChainEditor({
       });
       return;
     }
+
+    setExpandedRequests(new Set());
+
     regenerateAllDynamicVariables();
 
     setIsExecuting(true);
