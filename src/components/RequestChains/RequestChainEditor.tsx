@@ -342,6 +342,10 @@ export function RequestChainEditor({
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('requests');
   const [isSaving, setIsSaving] = useState(false);
+  const runAllButtonRef = useRef<HTMLButtonElement>(null);
+  const [showRunAllHint, setShowRunAllHint] = useState(false);
+  const [showScrollToRun, setShowScrollToRun] = useState(false);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const [autocompleteState, setAutocompleteState] = useState<AutocompleteState>(
     {
@@ -400,6 +404,43 @@ export function RequestChainEditor({
       });
     });
     setDynamicOverrides(newOverrides);
+  };
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (scrollContainerRef.current) {
+        const scrollTop = scrollContainerRef.current.scrollTop;
+        setShowScrollToRun(scrollTop > 300);
+      }
+    };
+
+    const scrollContainer = scrollContainerRef.current;
+    if (scrollContainer) {
+      scrollContainer.addEventListener('scroll', handleScroll);
+      return () => scrollContainer.removeEventListener('scroll', handleScroll);
+    }
+  }, []);
+
+  const scrollToRunAllButton = () => {
+    if (runAllButtonRef.current) {
+      runAllButtonRef.current.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
+      // Add a brief highlight effect
+      runAllButtonRef.current.classList.add(
+        'ring-2',
+        'ring-primary',
+        'ring-offset-2'
+      );
+      setTimeout(() => {
+        runAllButtonRef.current?.classList.remove(
+          'ring-2',
+          'ring-primary',
+          'ring-offset-2'
+        );
+      }, 2000);
+    }
   };
 
   const handleApplyToAllRequests = (variableName: string) => {
@@ -2115,6 +2156,25 @@ export function RequestChainEditor({
     }
   };
 
+  useEffect(() => {
+    const hasRequests = (formData.chainRequests?.length ?? 0) > 0;
+    const hasExecutionLogs = executionLogs.length > 0;
+
+    let timer: NodeJS.Timeout | null = null;
+
+    if (hasRequests && !hasExecutionLogs && !isExecuting) {
+      timer = setTimeout(() => {
+        setShowRunAllHint(true);
+      }, 1000);
+    } else {
+      setShowRunAllHint(false);
+    }
+
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
+  }, [formData.chainRequests, executionLogs, isExecuting]);
+
   return (
     <div className='h-full flex flex-col'>
       <BreadCum
@@ -2132,7 +2192,10 @@ export function RequestChainEditor({
 
       <VariableAutocomplete />
 
-      <div className='flex-1 border border-gray-200 rounded-lg bg-background mt-3'>
+      <div
+        className='flex-1 border border-gray-200 rounded-lg bg-background mt-3 overflow-auto'
+        ref={scrollContainerRef}
+      >
         <div className='p-6 space-y-6'>
           <Card>
             <CardHeader>
@@ -2258,32 +2321,35 @@ export function RequestChainEditor({
                     <div className='p-4 sm:p-6 border-b border-border'>
                       <div className='flex items-center justify-between mb-4'>
                         <h3 className='text-lg font-medium'>Request Chain</h3>
-                        <div className='flex items-center gap-2'>
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant='outline'
-                                  onClick={handleRunAll}
-                                  disabled={
-                                    isExecuting ||
-                                    !formData.chainRequests?.length
-                                  }
-                                  className='gap-2 bg-transparent'
-                                >
-                                  {isExecuting ? (
-                                    <Loader2 className='w-4 h-4 animate-spin' />
-                                  ) : (
-                                    <PlayCircle className='w-4 h-4' />
-                                  )}
-                                  {isExecuting ? 'Running...' : 'Run All'}
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>Run all requests before execution</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
+                        <div className='flex items-center gap-2 relative'>
+                          <div className='relative'>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    ref={runAllButtonRef}
+                                    variant='outline'
+                                    onClick={handleRunAll}
+                                    disabled={
+                                      isExecuting ||
+                                      !formData.chainRequests?.length
+                                    }
+                                    className='gap-2 bg-transparent'
+                                  >
+                                    {isExecuting ? (
+                                      <Loader2 className='w-4 h-4 animate-spin' />
+                                    ) : (
+                                      <PlayCircle className='w-4 h-4' />
+                                    )}
+                                    {isExecuting ? 'Running...' : 'Run All'}
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Run all requests before execution</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </div>
 
                           <Button
                             variant='outline'
@@ -2598,8 +2664,8 @@ export function RequestChainEditor({
                                                     <Info className='w-4 h-4 text-gray-400 cursor-pointer' />
 
                                                     <div
-                                                      className='absolute left-0 mt-2 w-56 p-2 text-xs text-gray-700 bg-white border 
-                    border-gray-200 rounded shadow-lg opacity-0 group-hover:opacity-100 
+                                                      className='absolute left-0 mt-2 w-56 p-2 text-xs text-gray-700 bg-white border
+                    border-gray-200 rounded shadow-lg opacity-0 group-hover:opacity-100
                     pointer-events-none transition-opacity z-50'
                                                     >
                                                       Mouse over on element and
@@ -2774,6 +2840,18 @@ export function RequestChainEditor({
           </Card>
         </div>
       </div>
+      {showScrollToRun && (
+        <button
+          onClick={scrollToRunAllButton}
+          className='fixed bottom-8 right-8 w-14 h-14 bg-white rounded-full shadow-lg flex items-center justify-center border-2 border-gray-200 hover:border-primary transition-all duration-300 hover:scale-110 z-50 group'
+          aria-label='Scroll to Run All button'
+        >
+          <ChevronUp className='w-6 h-6 text-gray-600 group-hover:text-primary transition-colors' />
+          <div className='absolute -top-10 right-0 bg-gray-800 text-white text-xs px-3 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none'>
+            Go to Run All
+          </div>
+        </button>
+      )}
 
       <ImportModal
         isOpen={isImportModalOpen}
