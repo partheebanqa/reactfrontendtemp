@@ -788,12 +788,15 @@ export function RequestChainEditor({
     const previouslyExtractedVars: Variable[] = [];
     for (let i = 0; i < requestIndex; i++) {
       const reqId = formData.chainRequests?.[i]?.id;
+      const reqName = formData.chainRequests?.[i]?.name || `Request ${i + 1}`;
+
       if (reqId && extractedVariablesByRequest[reqId]) {
         Object.entries(extractedVariablesByRequest[reqId]).forEach(
           ([name, value]) => {
+            // Only add if not already added (avoid duplicates)
             if (!previouslyExtractedVars.some((v) => v.name === name)) {
               previouslyExtractedVars.push({
-                id: `extracted_${name}`,
+                id: `extracted_${name}_from_req_${i}`,
                 name,
                 value: String(value),
                 initialValue: String(value),
@@ -803,6 +806,7 @@ export function RequestChainEditor({
                     : typeof value === 'boolean'
                     ? 'boolean'
                     : 'string',
+                description: `From: ${reqName}`,
               });
             }
           }
@@ -837,7 +841,7 @@ export function RequestChainEditor({
           !storeVariables.some((sv) => sv.name === ev.name) &&
           !dynamicStructured.some((dv) => dv.name === ev.name)
       ),
-      ...previouslyExtractedVars,
+      ...previouslyExtractedVars, // Variables from previous requests
       ...globalExtractedVars.filter(
         (gv) => !previouslyExtractedVars.some((pv) => pv.name === gv.name)
       ),
@@ -1548,6 +1552,12 @@ export function RequestChainEditor({
     }
   };
 
+  const getRequestPosition = (requestId: string): number => {
+    return (
+      (formData.chainRequests?.findIndex((r) => r.id === requestId) ?? -1) + 1
+    );
+  };
+
   const addNewRequest = () => {
     const tempId = `temp_${Date.now()}_${Math.random()
       .toString(36)
@@ -2042,7 +2052,7 @@ export function RequestChainEditor({
 
     return (
       <div
-        className='fixed z-50 bg-white border border-gray-200 rounded-md shadow-lg max-h-48 overflow-y-auto scrollbar-thin'
+        className='fixed z-50 bg-white border border-gray-200 rounded-md shadow-lg max-h-64 overflow-y-auto scrollbar-thin'
         style={{
           top: autocompleteState.position.top,
           left: autocompleteState.position.left,
@@ -2058,19 +2068,28 @@ export function RequestChainEditor({
         {autocompleteState.suggestions.map((variable) => (
           <button
             key={variable.id}
-            className='w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center justify-between'
+            className='w-full text-left px-3 py-2 hover:bg-gray-100 border-b border-gray-100 last:border-b-0'
             onClick={() => handleVariableSelect(variable)}
           >
-            <span className='font-mono text-sm'>{variable.name}</span>
-            <span className='text-xs text-gray-400 ml-2'>
+            <div className='flex items-center justify-between'>
+              <span className='font-mono text-sm font-medium'>
+                {variable.name}
+              </span>
+              {variable.description && (
+                <span className='text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded'>
+                  {variable.description}
+                </span>
+              )}
+            </div>
+            <div className='text-xs text-gray-500 mt-1 truncate'>
               {String(variable.value || variable.initialValue || '').substring(
                 0,
-                20
+                40
               )}
-              {String(variable.value || variable.initialValue || '').length > 20
+              {String(variable.value || variable.initialValue || '').length > 40
                 ? '...'
                 : ''}
-            </span>
+            </div>
           </button>
         ))}
       </div>
@@ -2624,9 +2643,35 @@ export function RequestChainEditor({
                                               executionLog
                                             )
                                           }
-                                          extractedVariables={
-                                            extractedVariables
-                                          }
+                                          extractedVariables={(() => {
+                                            // Build extracted variables from all previous requests
+                                            const varsUpToThisPoint: Record<
+                                              string,
+                                              any
+                                            > = {};
+                                            for (
+                                              let i = 0;
+                                              i < requestIndex;
+                                              i++
+                                            ) {
+                                              const prevReqId =
+                                                formData.chainRequests?.[i]?.id;
+                                              if (
+                                                prevReqId &&
+                                                extractedVariablesByRequest[
+                                                  prevReqId
+                                                ]
+                                              ) {
+                                                Object.assign(
+                                                  varsUpToThisPoint,
+                                                  extractedVariablesByRequest[
+                                                    prevReqId
+                                                  ]
+                                                );
+                                              }
+                                            }
+                                            return varsUpToThisPoint;
+                                          })()}
                                           chainVariables={
                                             formData.variables || []
                                           }
@@ -2656,12 +2701,35 @@ export function RequestChainEditor({
                                             {(executionLog.response != null ||
                                               executionLog.error) && (
                                               <div className='border-t border-gray-200 p-2'>
+                                                <div className='mb-3 p-2 bg-blue-50 border border-blue-200 rounded'>
+                                                  <p className='text-xs text-blue-800'>
+                                                    <strong>ℹ️ Note:</strong>{' '}
+                                                    Variables extracted from{' '}
+                                                    <span className='font-semibold'>
+                                                      "
+                                                      {request.name ||
+                                                        `Request ${
+                                                          requestIndex + 1
+                                                        }`}
+                                                      "
+                                                    </span>{' '}
+                                                    will be available in all
+                                                    subsequent requests (
+                                                    {requestIndex + 2 <=
+                                                    (formData.chainRequests
+                                                      ?.length || 0)
+                                                      ? `Request #${
+                                                          requestIndex + 2
+                                                        } onwards`
+                                                      : 'future requests'}
+                                                    ).
+                                                  </p>
+                                                </div>
                                                 <div className='flex items-center gap-2 mb-4'>
                                                   <h3 className='text-lg font-medium text-gray-900'>
                                                     Extract Variables from
                                                     Response
                                                   </h3>
-
                                                   <div className='relative group inline-block'>
                                                     <Info className='w-4 h-4 text-gray-400 cursor-pointer' />
 
