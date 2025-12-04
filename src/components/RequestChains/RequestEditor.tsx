@@ -31,6 +31,7 @@ import {
   FileText,
   Shuffle,
   HelpCircle,
+  CheckCircle,
 } from 'lucide-react';
 import type {
   APIRequest,

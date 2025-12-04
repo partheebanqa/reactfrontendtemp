@@ -342,6 +342,10 @@ export function RequestChainEditor({
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('requests');
   const [isSaving, setIsSaving] = useState(false);
+  const runAllButtonRef = useRef<HTMLButtonElement>(null);
+  const [showRunAllHint, setShowRunAllHint] = useState(false);
+  const [showScrollToRun, setShowScrollToRun] = useState(false);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const [autocompleteState, setAutocompleteState] = useState<AutocompleteState>(
     {
@@ -400,6 +404,42 @@ export function RequestChainEditor({
       });
     });
     setDynamicOverrides(newOverrides);
+  };
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (scrollContainerRef.current) {
+        const scrollTop = scrollContainerRef.current.scrollTop;
+        setShowScrollToRun(scrollTop > 300);
+      }
+    };
+
+    const scrollContainer = scrollContainerRef.current;
+    if (scrollContainer) {
+      scrollContainer.addEventListener('scroll', handleScroll);
+      return () => scrollContainer.removeEventListener('scroll', handleScroll);
+    }
+  }, []);
+
+  const scrollToRunAllButton = () => {
+    if (runAllButtonRef.current) {
+      runAllButtonRef.current.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
+      runAllButtonRef.current.classList.add(
+        'ring-2',
+        'ring-primary',
+        'ring-offset-2'
+      );
+      setTimeout(() => {
+        runAllButtonRef.current?.classList.remove(
+          'ring-2',
+          'ring-primary',
+          'ring-offset-2'
+        );
+      }, 2000);
+    }
   };
 
   const handleApplyToAllRequests = (variableName: string) => {
@@ -748,12 +788,15 @@ export function RequestChainEditor({
     const previouslyExtractedVars: Variable[] = [];
     for (let i = 0; i < requestIndex; i++) {
       const reqId = formData.chainRequests?.[i]?.id;
+      const reqName = formData.chainRequests?.[i]?.name || `Request ${i + 1}`;
+
       if (reqId && extractedVariablesByRequest[reqId]) {
         Object.entries(extractedVariablesByRequest[reqId]).forEach(
           ([name, value]) => {
+            // Only add if not already added (avoid duplicates)
             if (!previouslyExtractedVars.some((v) => v.name === name)) {
               previouslyExtractedVars.push({
-                id: `extracted_${name}`,
+                id: `extracted_${name}_from_req_${i}`,
                 name,
                 value: String(value),
                 initialValue: String(value),
@@ -763,6 +806,7 @@ export function RequestChainEditor({
                     : typeof value === 'boolean'
                     ? 'boolean'
                     : 'string',
+                description: `From: ${reqName}`,
               });
             }
           }
@@ -797,7 +841,7 @@ export function RequestChainEditor({
           !storeVariables.some((sv) => sv.name === ev.name) &&
           !dynamicStructured.some((dv) => dv.name === ev.name)
       ),
-      ...previouslyExtractedVars,
+      ...previouslyExtractedVars, // Variables from previous requests
       ...globalExtractedVars.filter(
         (gv) => !previouslyExtractedVars.some((pv) => pv.name === gv.name)
       ),
@@ -1084,6 +1128,9 @@ export function RequestChainEditor({
       });
       return;
     }
+
+    setExpandedRequests(new Set());
+
     regenerateAllDynamicVariables();
 
     setIsExecuting(true);
@@ -1503,6 +1550,12 @@ export function RequestChainEditor({
         chainRequests: [...(formData.chainRequests || []), duplicated],
       });
     }
+  };
+
+  const getRequestPosition = (requestId: string): number => {
+    return (
+      (formData.chainRequests?.findIndex((r) => r.id === requestId) ?? -1) + 1
+    );
   };
 
   const addNewRequest = () => {
@@ -1999,7 +2052,7 @@ export function RequestChainEditor({
 
     return (
       <div
-        className='fixed z-50 bg-white border border-gray-200 rounded-md shadow-lg max-h-48 overflow-y-auto scrollbar-thin'
+        className='fixed z-50 bg-white border border-gray-200 rounded-md shadow-lg max-h-64 overflow-y-auto scrollbar-thin'
         style={{
           top: autocompleteState.position.top,
           left: autocompleteState.position.left,
@@ -2015,19 +2068,28 @@ export function RequestChainEditor({
         {autocompleteState.suggestions.map((variable) => (
           <button
             key={variable.id}
-            className='w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center justify-between'
+            className='w-full text-left px-3 py-2 hover:bg-gray-100 border-b border-gray-100 last:border-b-0'
             onClick={() => handleVariableSelect(variable)}
           >
-            <span className='font-mono text-sm'>{variable.name}</span>
-            <span className='text-xs text-gray-400 ml-2'>
+            <div className='flex items-center justify-between'>
+              <span className='font-mono text-sm font-medium'>
+                {variable.name}
+              </span>
+              {variable.description && (
+                <span className='text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded'>
+                  {variable.description}
+                </span>
+              )}
+            </div>
+            <div className='text-xs text-gray-500 mt-1 truncate'>
               {String(variable.value || variable.initialValue || '').substring(
                 0,
-                20
+                40
               )}
-              {String(variable.value || variable.initialValue || '').length > 20
+              {String(variable.value || variable.initialValue || '').length > 40
                 ? '...'
                 : ''}
-            </span>
+            </div>
           </button>
         ))}
       </div>
@@ -2115,6 +2177,25 @@ export function RequestChainEditor({
     }
   };
 
+  useEffect(() => {
+    const hasRequests = (formData.chainRequests?.length ?? 0) > 0;
+    const hasExecutionLogs = executionLogs.length > 0;
+
+    let timer: NodeJS.Timeout | null = null;
+
+    if (hasRequests && !hasExecutionLogs && !isExecuting) {
+      timer = setTimeout(() => {
+        setShowRunAllHint(true);
+      }, 1000);
+    } else {
+      setShowRunAllHint(false);
+    }
+
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
+  }, [formData.chainRequests, executionLogs, isExecuting]);
+
   return (
     <div className='h-full flex flex-col'>
       <BreadCum
@@ -2132,7 +2213,10 @@ export function RequestChainEditor({
 
       <VariableAutocomplete />
 
-      <div className='flex-1 border border-gray-200 rounded-lg bg-background mt-3'>
+      <div
+        className='flex-1 border border-gray-200 rounded-lg bg-background mt-3 overflow-auto'
+        ref={scrollContainerRef}
+      >
         <div className='p-6 space-y-6'>
           <Card>
             <CardHeader>
@@ -2258,32 +2342,35 @@ export function RequestChainEditor({
                     <div className='p-4 sm:p-6 border-b border-border'>
                       <div className='flex items-center justify-between mb-4'>
                         <h3 className='text-lg font-medium'>Request Chain</h3>
-                        <div className='flex items-center gap-2'>
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant='outline'
-                                  onClick={handleRunAll}
-                                  disabled={
-                                    isExecuting ||
-                                    !formData.chainRequests?.length
-                                  }
-                                  className='gap-2 bg-transparent'
-                                >
-                                  {isExecuting ? (
-                                    <Loader2 className='w-4 h-4 animate-spin' />
-                                  ) : (
-                                    <PlayCircle className='w-4 h-4' />
-                                  )}
-                                  {isExecuting ? 'Running...' : 'Run All'}
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>Run all requests before execution</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
+                        <div className='flex items-center gap-2 relative'>
+                          <div className='relative'>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    ref={runAllButtonRef}
+                                    variant='outline'
+                                    onClick={handleRunAll}
+                                    disabled={
+                                      isExecuting ||
+                                      !formData.chainRequests?.length
+                                    }
+                                    className='gap-2 bg-transparent'
+                                  >
+                                    {isExecuting ? (
+                                      <Loader2 className='w-4 h-4 animate-spin' />
+                                    ) : (
+                                      <PlayCircle className='w-4 h-4' />
+                                    )}
+                                    {isExecuting ? 'Running...' : 'Run All'}
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Run all requests before execution</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </div>
 
                           <Button
                             variant='outline'
@@ -2556,9 +2643,35 @@ export function RequestChainEditor({
                                               executionLog
                                             )
                                           }
-                                          extractedVariables={
-                                            extractedVariables
-                                          }
+                                          extractedVariables={(() => {
+                                            // Build extracted variables from all previous requests
+                                            const varsUpToThisPoint: Record<
+                                              string,
+                                              any
+                                            > = {};
+                                            for (
+                                              let i = 0;
+                                              i < requestIndex;
+                                              i++
+                                            ) {
+                                              const prevReqId =
+                                                formData.chainRequests?.[i]?.id;
+                                              if (
+                                                prevReqId &&
+                                                extractedVariablesByRequest[
+                                                  prevReqId
+                                                ]
+                                              ) {
+                                                Object.assign(
+                                                  varsUpToThisPoint,
+                                                  extractedVariablesByRequest[
+                                                    prevReqId
+                                                  ]
+                                                );
+                                              }
+                                            }
+                                            return varsUpToThisPoint;
+                                          })()}
                                           chainVariables={
                                             formData.variables || []
                                           }
@@ -2588,18 +2701,41 @@ export function RequestChainEditor({
                                             {(executionLog.response != null ||
                                               executionLog.error) && (
                                               <div className='border-t border-gray-200 p-2'>
+                                                <div className='mb-3 p-2 bg-blue-50 border border-blue-200 rounded'>
+                                                  <p className='text-xs text-blue-800'>
+                                                    <strong>ℹ️ Note:</strong>{' '}
+                                                    Variables extracted from{' '}
+                                                    <span className='font-semibold'>
+                                                      "
+                                                      {request.name ||
+                                                        `Request ${
+                                                          requestIndex + 1
+                                                        }`}
+                                                      "
+                                                    </span>{' '}
+                                                    will be available in all
+                                                    subsequent requests (
+                                                    {requestIndex + 2 <=
+                                                    (formData.chainRequests
+                                                      ?.length || 0)
+                                                      ? `Request #${
+                                                          requestIndex + 2
+                                                        } onwards`
+                                                      : 'future requests'}
+                                                    ).
+                                                  </p>
+                                                </div>
                                                 <div className='flex items-center gap-2 mb-4'>
                                                   <h3 className='text-lg font-medium text-gray-900'>
                                                     Extract Variables from
                                                     Response
                                                   </h3>
-
                                                   <div className='relative group inline-block'>
                                                     <Info className='w-4 h-4 text-gray-400 cursor-pointer' />
 
                                                     <div
-                                                      className='absolute left-0 mt-2 w-56 p-2 text-xs text-gray-700 bg-white border 
-                    border-gray-200 rounded shadow-lg opacity-0 group-hover:opacity-100 
+                                                      className='absolute left-0 mt-2 w-56 p-2 text-xs text-gray-700 bg-white border
+                    border-gray-200 rounded shadow-lg opacity-0 group-hover:opacity-100
                     pointer-events-none transition-opacity z-50'
                                                     >
                                                       Mouse over on element and
@@ -2774,6 +2910,18 @@ export function RequestChainEditor({
           </Card>
         </div>
       </div>
+      {showScrollToRun && (
+        <button
+          onClick={scrollToRunAllButton}
+          className='fixed bottom-8 right-8 w-14 h-14 bg-white rounded-full shadow-lg flex items-center justify-center border-2 border-gray-200 hover:border-primary transition-all duration-300 hover:scale-110 z-50 group'
+          aria-label='Scroll to Run All button'
+        >
+          <ChevronUp className='w-6 h-6 text-gray-600 group-hover:text-primary transition-colors' />
+          <div className='absolute -top-10 right-0 bg-gray-800 text-white text-xs px-3 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none'>
+            Go to Run All
+          </div>
+        </button>
+      )}
 
       <ImportModal
         isOpen={isImportModalOpen}
