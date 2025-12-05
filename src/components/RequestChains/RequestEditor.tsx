@@ -2767,54 +2767,6 @@ export function RequestEditor({
         )}
       </div>
 
-      {showVariablePreview() && (
-        <div className='mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg'>
-          <h4 className='text-sm font-medium text-blue-900 mb-2'>
-            Variable Substitution Preview:
-          </h4>
-          <div className='space-y-2 text-xs'>
-            {(processedRequest.authToken !== initialRequest.authToken ||
-              processedRequest.authorization?.token !==
-                initialRequest.authorization?.token) && (
-              <div>
-                <span className='font-medium'>Auth Token:</span>
-                <div className='font-mono bg-white p-1 rounded border max-w-full overflow-hidden text-ellipsis whitespace-nowrap'>
-                  <span className='text-gray-500'>
-                    {initialRequest.authorization?.token ||
-                      initialRequest.authToken}
-                  </span>{' '}
-                  →
-                  <span className='text-blue-600 ml-1'>
-                    {processedRequest.authorization?.token ||
-                      processedRequest.authToken}
-                  </span>
-                </div>
-              </div>
-            )}
-            {processedRequest.url !== initialRequest.url && (
-              <div>
-                <span className='font-medium'>URL:</span>
-                <div className='font-mono bg-white p-1 rounded border'>
-                  <span className='text-gray-500'>{initialRequest.url}</span> →
-                  <span className='text-blue-600 ml-1'>
-                    {processedRequest.url}
-                  </span>
-                </div>
-              </div>
-            )}
-            {processedRequest.body !== initialRequest.body &&
-              processedRequest.body && (
-                <div>
-                  <span className='font-medium'>Body:</span>
-                  <div className='font-mono bg-white p-1 rounded border max-h-20 overflow-y-auto'>
-                    <pre className='text-blue-600'>{processedRequest.body}</pre>
-                  </div>
-                </div>
-              )}
-          </div>
-        </div>
-      )}
-
       {hideResponseExplorer &&
         executionResult &&
         (executionResult.response || executionResult.error) && (
@@ -2921,53 +2873,6 @@ export function RequestEditor({
         </CardContent>
       </Card>
 
-      {showVariablePreview() && (
-        <div className='mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg'>
-          <h4 className='text-sm font-medium text-blue-900 mb-2'>
-            Variable Substitution Preview:
-          </h4>
-          <div className='space-y-2 text-xs'>
-            {(processedRequest.authToken !== initialRequest.authToken ||
-              processedRequest.authorization?.token !==
-                initialRequest.authorization?.token) && (
-              <div>
-                <span className='font-medium'>Auth Token:</span>
-                <div className='font-mono bg-white p-1 rounded border'>
-                  <span className='text-gray-500'>
-                    {initialRequest.authorization?.token ||
-                      initialRequest.authToken}
-                  </span>{' '}
-                  →
-                  <span className='text-blue-600 ml-1'>
-                    {processedRequest.authorization?.token ||
-                      processedRequest.authToken}
-                  </span>
-                </div>
-              </div>
-            )}
-            {processedRequest.url !== initialRequest.url && (
-              <div>
-                <span className='font-medium'>URL:</span>
-                <div className='font-mono bg-white p-1 rounded border'>
-                  <span className='text-gray-500'>{initialRequest.url}</span> →
-                  <span className='text-blue-600 ml-1'>
-                    {processedRequest.url}
-                  </span>
-                </div>
-              </div>
-            )}
-            {processedRequest.body !== initialRequest.body &&
-              processedRequest.body && (
-                <div>
-                  <span className='font-medium'>Body:</span>
-                  <div className='font-mono bg-white p-1 rounded border max-h-20 overflow-y-auto'>
-                    <pre className='text-blue-600'>{processedRequest.body}</pre>
-                  </div>
-                </div>
-              )}
-          </div>
-        </div>
-      )}
       <Tabs defaultValue='params' className='w-full'>
         <TabsList className='grid w-full grid-cols-7'>
           <TabsTrigger value='params' className='gap-2'>

@@ -2679,30 +2679,6 @@ export function RequestChainEditor({
                                             {(executionLog.response != null ||
                                               executionLog.error) && (
                                               <div className='border-t border-gray-200 p-2'>
-                                                <div className='mb-3 p-2 bg-blue-50 border border-blue-200 rounded'>
-                                                  <p className='text-xs text-blue-800'>
-                                                    <strong>ℹ️ Note:</strong>{' '}
-                                                    Variables extracted from{' '}
-                                                    <span className='font-semibold'>
-                                                      "
-                                                      {request.name ||
-                                                        `Request ${
-                                                          requestIndex + 1
-                                                        }`}
-                                                      "
-                                                    </span>{' '}
-                                                    will be available in all
-                                                    subsequent requests (
-                                                    {requestIndex + 2 <=
-                                                    (formData.chainRequests
-                                                      ?.length || 0)
-                                                      ? `Request #${
-                                                          requestIndex + 2
-                                                        } onwards`
-                                                      : 'future requests'}
-                                                    ).
-                                                  </p>
-                                                </div>
                                                 <div className='flex items-center gap-2 mb-4'>
                                                   <h3 className='text-lg font-medium text-gray-900'>
                                                     Extract Variables from
