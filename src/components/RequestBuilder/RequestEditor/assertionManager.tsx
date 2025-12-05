@@ -92,7 +92,17 @@ const AssertionManager: React.FC<AssertionManagerProps> = ({
       );
     }
 
-    return filtered;
+    const uniqueFiltered = filtered.filter(
+      (assertion, index, self) =>
+        index ===
+        self.findIndex(
+          (a) =>
+            a.description === assertion.description &&
+            a.category === assertion.category
+        )
+    );
+
+    return uniqueFiltered;
   }, [assertions, selectedCategory, searchTerm]);
 
   const groupedByCategory = useMemo(() => {
@@ -128,7 +138,6 @@ const AssertionManager: React.FC<AssertionManagerProps> = ({
 
   return (
     <div className='w-full'>
-      {/* Main Display Area */}
       {selectedAssertions.length > 0 ? (
         <div className='bg-white rounded-xl border border-gray-200 p-6'>
           <div className='flex items-center justify-between mb-4'>
@@ -196,11 +205,9 @@ const AssertionManager: React.FC<AssertionManagerProps> = ({
         </div>
       )}
 
-      {/* Dialog */}
       {showDialog && (
         <div className='fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4'>
           <div className='bg-white rounded-2xl shadow-xl w-full max-w-3xl max-h-[85vh] flex flex-col'>
-            {/* Header */}
             <div className='px-6 py-4 border-b border-gray-200 flex items-center justify-between flex-shrink-0'>
               <h2 className='text-lg font-semibold text-gray-900'>
                 Select Assertions to Include
@@ -213,7 +220,6 @@ const AssertionManager: React.FC<AssertionManagerProps> = ({
               </button>
             </div>
 
-            {/* Search & Filter */}
             <div className='px-6 py-4 border-b border-gray-200 flex-shrink-0'>
               <div className='flex gap-3'>
                 <div className='flex-1 relative'>
@@ -251,7 +257,6 @@ const AssertionManager: React.FC<AssertionManagerProps> = ({
               </div>
             </div>
 
-            {/* Assertions List */}
             <div className='flex-1 overflow-y-auto scrollbar-thin px-6 py-4'>
               {Object.entries(groupedByCategory).length === 0 ? (
                 <div className='text-center py-8 text-gray-500'>
@@ -325,7 +330,6 @@ const AssertionManager: React.FC<AssertionManagerProps> = ({
               )}
             </div>
 
-            {/* Footer */}
             <div className='px-6 py-4 border-t border-gray-200 flex items-center justify-between flex-shrink-0 bg-gray-50'>
               <p className='text-sm text-gray-600'>
                 {selectedAssertions.length} of {totalCount} assertions selected

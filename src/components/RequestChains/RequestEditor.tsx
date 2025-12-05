@@ -2312,16 +2312,68 @@ export function RequestEditor({
           </nav>
 
           <div className='relative'>
-            {/* Variables popup and help button code remains the same */}
             {showVariablesPopup && (
               <div
                 ref={variablesPopupRef}
                 className='absolute right-0 top-10 bg-white shadow-lg rounded-lg z-50 w-80 border border-gray-200'
               >
-                {/* ... existing popup code ... */}
+                <div className='p-2 border-b'>
+                  <input
+                    type='text'
+                    className='w-full px-3 py-1.5 rounded-md border border-gray-300
+                          focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm'
+                    placeholder='Search variables...'
+                    autoComplete='off'
+                    autoCorrect='off'
+                    spellCheck={false}
+                    value={searchText}
+                    onChange={(e) => setSearchText(e.target.value)}
+                  />
+                </div>
+
+                <div className='max-h-60 overflow-y-auto scrollbar-thin'>
+                  {getAllAvailableVariables()
+                    .filter(
+                      (item) =>
+                        (item.name.startsWith('D_') ||
+                          item.name.startsWith('S_')) &&
+                        item.name
+                          .toLowerCase()
+                          .includes(searchText.toLowerCase())
+                    )
+                    .map((item) => (
+                      <div
+                        key={item.id}
+                        className='w-full flex justify-between items-center px-3 py-2
+                              text-sm border-b border-gray-100 hover:bg-blue-50 transition-colors'
+                        onClick={() => setShowVariablesPopup(false)}
+                      >
+                        <span className='text-gray-800 font-mono'>
+                          {item.name}
+                        </span>
+
+                        <div className='flex items-center space-x-2'>
+                          <span className='text-gray-500 truncate max-w-[120px]'>
+                            {item?.currentValue}
+                          </span>
+
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigator.clipboard.writeText(`{{${item.name}}}`);
+                              setShowVariablesPopup(false);
+                            }}
+                            className='p-1 hover:text-blue-600 transition-colors'
+                            title='Copy variable'
+                          >
+                            <Copy className='w-4 h-4' />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                </div>
               </div>
             )}
-
             <div className='flex items-center gap-2'>
               <Button onClick={() => setShowVariablesPopup((prev) => !prev)}>
                 Variables

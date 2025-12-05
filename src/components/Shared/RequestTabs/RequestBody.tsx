@@ -132,19 +132,6 @@ export default function RequestBody({
         </div>
       )}
 
-      {/* {bodyType === 'json' && (
-        <JsonVariableSubstitution
-          onChange={onBodyContentChange}
-          value={bodyContent}
-          onVariableSelect={onVariableSelect}
-          onConfirmSubstitution={onConfirmSubstitution}
-          mode='json'
-          variables={variables}
-          initialVariable={initialVariable}
-          readOnly={false}
-        />
-      )} */}
-
       {bodyType === 'form-data' && (
         <>
           <div className='mb-2 text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 p-3 rounded-md border border-gray-200 dark:border-gray-700'>
