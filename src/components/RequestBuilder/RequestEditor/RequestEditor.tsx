@@ -978,7 +978,15 @@ const RequestEditor: React.FC = () => {
       };
 
       const enabledAssertions = Array.isArray(assertions)
-        ? assertions.filter((assertion) => assertion.enabled)
+        ? assertions
+            .filter((assertion) => assertion.enabled)
+            .map((a) => ({
+              ...a,
+              expectedValue:
+                a.expectedValue !== undefined && a.expectedValue !== null
+                  ? String(a.expectedValue)
+                  : '',
+            }))
         : [];
 
       const payload = buildRequestPayload(
