@@ -1181,15 +1181,6 @@ export function RequestChainEditor({
                 Array.isArray(map[request.id].assertions)
               ) {
                 requestAssertions = map[request.id].assertions;
-                console.log(
-                  '✅ Using assertions from localStorage for request:',
-                  request.id,
-                  {
-                    total: requestAssertions.length,
-                    enabled: requestAssertions.filter((a) => a.enabled).length,
-                    assertions: requestAssertions,
-                  }
-                );
               }
             }
           } catch (e) {
@@ -1198,18 +1189,6 @@ export function RequestChainEditor({
 
           if (!requestAssertions || requestAssertions.length === 0) {
             requestAssertions = assertionsByRequest[request.id] || [];
-            if (requestAssertions.length > 0) {
-              console.log(
-                '✅ Using assertions from state for request:',
-                request.id,
-                {
-                  total: requestAssertions.length,
-                  enabled: requestAssertions.filter((a) => a.enabled).length,
-                }
-              );
-            } else {
-              console.log('⚠️ No assertions found for request:', request.id);
-            }
           }
 
           const existingLog = allLogs.find(
@@ -1592,7 +1571,6 @@ export function RequestChainEditor({
   };
 
   const saveChainToAPI = async (): Promise<RequestChain | null> => {
-    console.log('save chain is called...');
     if (!formData.name?.trim()) {
       toast({
         title: 'Validation Error',
