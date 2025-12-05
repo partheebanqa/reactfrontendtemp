@@ -119,11 +119,19 @@ export function RequestChainEditor({
     DynamicVariableOverride[]
   >([]);
 
-  const [assertions, setAssertions] = useState<any[]>([]);
-
   const [assertionsByRequest, setAssertionsByRequest] = useState<
     Record<string, any[]>
-  >({});
+  >(() => {
+    const initial: Record<string, any[]> = {};
+
+    (chain?.chainRequests || []).forEach((req) => {
+      if (Array.isArray(req.assertions) && req.assertions.length > 0) {
+        initial[req.id] = req.assertions;
+      }
+    });
+
+    return initial;
+  });
 
   const [selectedEnvironment, setSelectedEnvironment] = useState<string>(
     chain?.environmentId || activeEnvironment?.id || ''
@@ -206,6 +214,7 @@ export function RequestChainEditor({
     { id: '2', name: 'apiKey', value: 'your-api-key', type: 'string' },
     { id: '3', name: 'timeout', value: '5000', type: 'number' },
   ]);
+
   const [formData, setFormData] = useState<Partial<RequestChain>>({
     name: chain?.name || '',
     description: chain?.description || '',
@@ -216,6 +225,7 @@ export function RequestChainEditor({
         ...req,
         body: req.body || req.bodyRawContent || '',
         bodyType: req.bodyType || (req.bodyRawContent ? 'raw' : 'none'),
+        assertions: req.assertions || [],
       })
     ),
     variables: chain?.variables || [],
@@ -224,36 +234,39 @@ export function RequestChainEditor({
 
   useEffect(() => {
     try {
-      const raw = localStorage.getItem('lastExecutionByRequest');
-      if (!raw) return;
-      const map: Record<string, any> = JSON.parse(raw);
-
       const loadedAssertions: Record<string, any[]> = {};
 
-      const currentRequestIds = new Set(
-        formData.chainRequests?.map((r) => r.id) || []
-      );
-
-      Object.entries(map).forEach(([requestId, log]: [string, any]) => {
+      formData.chainRequests?.forEach((request) => {
         if (
-          currentRequestIds.has(requestId) &&
-          log.assertions &&
-          Array.isArray(log.assertions)
+          request.assertions &&
+          Array.isArray(request.assertions) &&
+          request.assertions.length > 0
         ) {
-          loadedAssertions[requestId] = log.assertions;
+          loadedAssertions[request.id] = request.assertions;
         }
       });
 
-      if (Object.keys(loadedAssertions).length > 0) {
-        console.log('Loading assertions from localStorage:', {
-          requestIds: Object.keys(loadedAssertions),
-          counts: Object.fromEntries(
-            Object.entries(loadedAssertions).map(([id, assertions]) => [
-              id,
-              assertions.length,
-            ])
-          ),
+      const raw = localStorage.getItem('lastExecutionByRequest');
+      if (raw) {
+        const map: Record<string, any> = JSON.parse(raw);
+        const currentRequestIds = new Set(
+          formData.chainRequests?.map((r) => r.id) || []
+        );
+
+        Object.entries(map).forEach(([requestId, log]: [string, any]) => {
+          if (
+            currentRequestIds.has(requestId) &&
+            log.assertions &&
+            Array.isArray(log.assertions) &&
+            log.assertions.length > 0 &&
+            !loadedAssertions[requestId] // Only load if not already loaded from chainRequest
+          ) {
+            loadedAssertions[requestId] = log.assertions;
+          }
         });
+      }
+
+      if (Object.keys(loadedAssertions).length > 0) {
         setAssertionsByRequest(loadedAssertions);
       }
     } catch (e) {
@@ -1586,6 +1599,24 @@ export function RequestChainEditor({
         chain?.chainRequests?.map((r) => r.id) || []
       );
 
+      const allStoredAssertions: Record<string, any[]> = {};
+      try {
+        const raw = localStorage.getItem('lastExecutionByRequest');
+        if (raw) {
+          const map = JSON.parse(raw);
+          Object.keys(map).forEach((requestId) => {
+            if (
+              map[requestId]?.assertions &&
+              Array.isArray(map[requestId].assertions)
+            ) {
+              allStoredAssertions[requestId] = map[requestId].assertions;
+            }
+          });
+        }
+      } catch (e) {
+        console.error('Failed to read stored assertions:', e);
+      }
+
       const chainDataForBackend = {
         ...formData,
         chainRequests: formData.chainRequests?.map((request, index) => {
@@ -1605,28 +1636,24 @@ export function RequestChainEditor({
 
           let requestAssertions: any[] = [];
 
-          if (assertionsByRequest[request.id]) {
+          if (
+            assertionsByRequest[request.id] &&
+            assertionsByRequest[request.id].length > 0
+          ) {
             requestAssertions = assertionsByRequest[request.id];
-          } else {
-            try {
-              const raw = localStorage.getItem('lastExecutionByRequest');
-              if (raw) {
-                const map = JSON.parse(raw);
-                if (
-                  map[request.id]?.assertions &&
-                  Array.isArray(map[request.id].assertions)
-                ) {
-                  requestAssertions = map[request.id].assertions;
-                }
-              }
-            } catch (e) {
-              console.error('Failed to read assertions from localStorage:', e);
-            }
+          } else if (
+            allStoredAssertions[request.id] &&
+            allStoredAssertions[request.id].length > 0
+          ) {
+            requestAssertions = allStoredAssertions[request.id];
           }
 
-          const enabledAssertions = requestAssertions.filter(
-            (assertion) => assertion.enabled === true
-          );
+          const allAssertions = requestAssertions
+            .filter((a) => a.enabled !== false)
+            .map((assertion) => ({
+              ...assertion,
+              enabled: true,
+            }));
 
           if (isExistingRequest) {
             return {
@@ -1634,7 +1661,7 @@ export function RequestChainEditor({
               order: index + 1,
               authorizationType,
               authorization,
-              assertions: enabledAssertions,
+              assertions: allAssertions,
               headers:
                 request.headers?.map((h) =>
                   h.id && !h.id.startsWith('temp_')
@@ -1655,7 +1682,7 @@ export function RequestChainEditor({
               order: index + 1,
               authorizationType,
               authorization,
-              assertions: enabledAssertions,
+              assertions: allAssertions,
               headers:
                 request.headers?.map((h) => ({ ...h, id: undefined })) || [],
               params:
@@ -1716,6 +1743,7 @@ export function RequestChainEditor({
       setIsSaving(false);
     }
   };
+
   const handleSave = async () => {
     const saved = await saveChainToAPI();
     if (saved) {
@@ -2659,10 +2687,12 @@ export function RequestChainEditor({
                                           onRegenerateDynamicVariable={
                                             regenerateDynamicVariableLocal
                                           }
-                                          requestAssertions={
-                                            assertionsByRequest[request.id] ||
-                                            []
-                                          }
+                                          requestAssertions={(() => {
+                                            const assertions =
+                                              assertionsByRequest[request.id] ||
+                                              [];
+                                            return assertions;
+                                          })()}
                                           onAssertionsUpdate={(assertions) => {
                                             setAssertionsByRequest((prev) => ({
                                               ...prev,

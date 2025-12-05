@@ -2173,10 +2173,29 @@ export function RequestEditor({
 
   useEffect(() => {
     if (requestAssertions && requestAssertions.length > 0) {
-      console.log('calling request assertions:', requestAssertions);
       setAssertions(requestAssertions);
+    } else {
+      try {
+        const raw = localStorage.getItem('lastExecutionByRequest');
+        if (raw && initialRequest.id) {
+          const map = JSON.parse(raw);
+          const saved = map?.[initialRequest.id];
+          if (
+            saved?.assertions &&
+            Array.isArray(saved.assertions) &&
+            saved.assertions.length > 0
+          ) {
+            setAssertions(saved.assertions);
+            if (onAssertionsUpdate) {
+              onAssertionsUpdate(saved.assertions);
+            }
+          }
+        }
+      } catch (e) {
+        console.error('Failed to load assertions from localStorage:', e);
+      }
     }
-  }, [requestAssertions]);
+  }, [requestAssertions, initialRequest.id]);
 
   const handleConfirmSubstitutions = () => {
     const allVariables = getAllAvailableVariables();
