@@ -150,11 +150,31 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
   const [showOverwriteDialog, setShowOverwriteDialog] = useState(false);
 
   const visibleRequests = useMemo(() => {
-    if (!filterMethod) return requests;
-    return requests.filter(
-      (r) => r.method?.toUpperCase() === filterMethod.toUpperCase()
-    );
+    let list = requests;
+
+    if (filterMethod) {
+      list = list.filter(
+        (r) => r.method?.toUpperCase() === filterMethod.toUpperCase()
+      );
+    }
+
+    if (
+      typeof window !== 'undefined' &&
+      window.location.href.includes('step=prerequisites')
+    ) {
+      list = list.filter((r) => {
+        const url = (r.url || '').toLowerCase();
+        return (
+          url.includes('/login') ||
+          url.includes('/sign-in') ||
+          url.includes('/signin')
+        );
+      });
+    }
+
+    return list;
   }, [requests, filterMethod]);
+
 
   const mapCategoryData = (meta: any) => {
     if (!meta)
@@ -380,25 +400,68 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
       window.location.href.includes('step=select-tests') ||
       window.location.href.includes('step=select-api')
     );
+
   const isSelectTestsRoute =
     typeof window !== 'undefined' &&
-    (
-      window.location.href.includes('step=select-tests')
-    );
-
+    window.location.href.includes('step=select-tests');
 
   const isCreateTestSuitePrereqRoute =
     typeof window !== 'undefined' &&
-    (
-      window.location.href.includes('create-test-suite?step=prerequisites')
-    );
+    window.location.href.includes('step=prerequisites');
+
+  /**
+   * Header count:
+   * - On "prerequisites": only count the auth pre-request (if set)
+
+   */
+  const headerRequestsCount = useMemo(() => {
+    if (isCreateTestSuitePrereqRoute) {
+      if (!preRequestId) return 0;
+      return requests.some((r) => r.id === preRequestId) ? 1 : 0;
+    }
+
+    return requests.filter((r) => r.id !== preRequestId).length;
+  }, [isCreateTestSuitePrereqRoute, preRequestId, requests]);
+
 
   const hasImportedPreRequest =
-    isCreateTestSuitePrereqRoute && requests.length > 0;
-
+    isCreateTestSuitePrereqRoute && visibleRequests.length > 0;
 
   const hasExtractedValues = (extractVariables?.length ?? 0) > 0;
 
+  const hasImportedAuthCandidate =
+    isCreateTestSuitePrereqRoute && visibleRequests.length > 0;
+
+  const showAuthWarning =
+    isCreateTestSuitePrereqRoute &&
+    hasImportedAuthCandidate &&
+    !hasExtractedValues;
+
+
+  const hasGeneratedAnyTests = useMemo(
+    () =>
+      requests.some((r) => {
+        const totalFromMeta = r.meta?.totalTests ?? 0;
+        const totalFromLocal = r.testCases?.total ?? 0;
+        return (totalFromMeta || totalFromLocal) > 0;
+      }),
+    [requests]
+  );
+
+  // ✅ At least one request has selected test cases
+  const hasAnySelectedTests = useMemo(
+    () =>
+      requests.some((r) => {
+        if (preRequestId && r.id === preRequestId) return false; // ignore pre-request
+        const fromMeta = r.meta?.selectedTests ?? 0;
+        const fromLocal = r.selectedTestCases?.length ?? 0;
+        return (fromMeta || fromLocal) > 0;
+      }),
+    [requests, preRequestId]
+  );
+
+  const showTestcaseHint =
+    isSelectTestsRoute && hasGeneratedAnyTests && !hasAnySelectedTests;
 
 
   return (
@@ -407,48 +470,60 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
         <div className='flex items-center justify-between'>
           {shouldHidePreRequest ? (
             <CardTitle>
-              Requests ({requests.filter((r) => r.id !== preRequestId).length})
+              <div className="flex items-center gap-4">
+                Requests ({headerRequestsCount})
+                {showTestcaseHint && (
+                  <p className="text-xs text-amber-600 flex items-center gap-1">
+                    <span>
+                      Testcases are generated. Please select
+                      <span className="font-semibold"> testcases</span> before proceeding.
+                    </span>
+                  </p>
+                )}
+              </div>
             </CardTitle>
           ) : (
             <CardTitle>
-              <div className='flex items-center gap-2'>
-                <span> Requests ({requests.length})</span>
+              <div className="flex items-center gap-4">
+                <span>Requests ({headerRequestsCount})</span>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Info className='w-4 h-4 text-gray-500 cursor-pointer' />
+                    <Info className="w-4 h-4 text-gray-500 cursor-pointer" />
                   </TooltipTrigger>
                   <TooltipContent
-                    side='bottom'
-                    align='start'
-                    className='max-w-sm text-xs p-2 leading-relaxed text-gray-600'
+                    side="bottom"
+                    align="start"
+                    className="max-w-sm text-xs p-2 leading-relaxed text-gray-600"
                   >
                     <p>Step 1: Send the request with your login credentials.</p>
                     <p>
-
-                      Step 2: On a successful response, you'll get the option to
-                      extract the authorization token from the response body
+                      Step 2: On a successful response, you'll get the option to extract
+                      the authorization token from the response body
                     </p>
                     <p>Step 3: Save the extracted variables.</p>
                     <p>
-                      Note: This token will be used for all api's while executing
-                      the test cases.
+                      Note: This token will be used for all api's while executing the test
+                      cases.
                     </p>
                   </TooltipContent>
                 </Tooltip>
+
+                {showAuthWarning && (
+                  <p className="text-xs text-amber-600 flex items-center gap-1">
+                    <span>
+                      Auth request added. Please click
+                      <span className="font-semibold"> Capture Auth</span> and save the
+                      extracted values before proceeding.
+                    </span>
+                  </p>
+                )}
               </div>
             </CardTitle>
           )}
 
-          {!hasExtractedValues && (
-            <p className="text-xs text-amber-600 flex items-center gap-1">
-              <Info className="w-3 h-3" />
-              <span>
-                Auth request added. Please click
-                <span className="font-semibold"> Capture Auth</span> and save the
-                extracted values before proceeding.
-              </span>
-            </p>
-          )}
+
+
+
 
           <div className='flex items-center space-x-2'>
 
