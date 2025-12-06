@@ -232,7 +232,7 @@ const SchemaPage: React.FC = () => {
                 <X className='h-5 w-5' />
               </Button>
             </div>
-            <div className='p-4 overflow-auto max-h-[calc(90vh-8rem)]'>
+            <div className='p-4 overflow-auto scrollbar-thin max-h-[calc(90vh-8rem)]'>
               <JsonTreeViewer json={viewSchema.schema} />
             </div>
             <div className='p-4 border-t border-gray-200 dark:border-gray-700 flex justify-end'>

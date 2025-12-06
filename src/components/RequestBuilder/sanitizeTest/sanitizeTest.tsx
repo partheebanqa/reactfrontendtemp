@@ -1023,7 +1023,7 @@ Max Response Time: ${
               </div>
             </div>
 
-            <div className='flex-1 overflow-auto'>
+            <div className='flex-1 overflow-auto scrollbar-thin'>
               <div className='p-3'>
                 <DndContext
                   sensors={sensors}
@@ -1097,7 +1097,7 @@ Max Response Time: ${
         </Panel>
         <PanelResizeHandle className='w-1 bg-border hover:bg-primary transition-colors cursor-col-resize' />
         <Panel defaultSize={35} minSize={20}>
-          <div className='h-full bg-muted/30 overflow-auto relative'>
+          <div className='h-full bg-muted/30 overflow-auto scrollbar-thin relative'>
             <div className='sticky top-0 bg-background border-b border-border p-4 z-10'>
               <div className='flex items-start justify-between mb-3'>
                 <div className='flex-1'>

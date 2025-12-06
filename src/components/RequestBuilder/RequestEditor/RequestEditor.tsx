@@ -2312,7 +2312,7 @@ const RequestEditor: React.FC = () => {
           </nav>
         </div>
 
-        <div className='flex-1 overflow-auto p-4'>
+        <div className='flex-1 overflow-auto scrollbar-thin p-4'>
           {activeTab === 'params' && (
             <KeyValueEditor
               items={params}

@@ -2133,7 +2133,7 @@ export function RequestChainEditor({
               </div>
             </div>
           </div>
-          <div className='flex-1 overflow-auto p-6'>
+          <div className='flex-1 overflow-auto scrollbar-thin p-6'>
             <RequestEditor
               request={request}
               onUpdate={(updates) => updateRequest(editingRequestId, updates)}
@@ -2220,7 +2220,7 @@ export function RequestChainEditor({
       <VariableAutocomplete />
 
       <div
-        className='flex-1 border border-gray-200 rounded-lg bg-background mt-3 overflow-auto'
+        className='flex-1 border border-gray-200 rounded-lg bg-background mt-3 overflow-auto scrollbar-thin'
         ref={scrollContainerRef}
       >
         <div className='p-6 space-y-6'>

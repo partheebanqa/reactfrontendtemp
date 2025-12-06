@@ -52,7 +52,7 @@ const JsonViewer: React.FC<JsonViewerProps> = ({
             {/* <h4 className="font-medium text-red-800 dark:text-red-200 mb-2">
               {error.message}
             </h4> */}
-            <pre className='text-sm font-mono text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-800 p-3 rounded overflow-auto whitespace-pre-wrap'>
+            <pre className='text-sm font-mono text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-800 p-3 rounded overflow-auto scrollbar-thin whitespace-pre-wrap'>
               {formatJson(errorData, view)}
             </pre>
 
@@ -79,7 +79,7 @@ const JsonViewer: React.FC<JsonViewerProps> = ({
                 <summary className='text-sm font-medium text-red-800 dark:text-red-200 cursor-pointer'>
                   Technical Details
                 </summary>
-                <pre className='mt-2 text-xs text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/30 p-2 rounded overflow-auto'>
+                <pre className='mt-2 text-xs text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/30 p-2 rounded scrollbar-thin overflow-auto'>
                   {error.originalError}
                 </pre>
               </details>
@@ -109,7 +109,7 @@ const JsonViewer: React.FC<JsonViewerProps> = ({
   };
 
   return (
-    <div className='h-full overflow-auto'>
+    <div className='h-full overflow-auto scrollbar-thin'>
       {isError ? renderErrorResponse(data) : renderSuccessResponse(data)}
     </div>
   );

@@ -299,11 +299,10 @@ const ResponseViewer = () => {
   };
   const requestDetails = parseRequestFromCurl();
 
-  const renderJsonValue = (node: JsonNode) => {
+  const renderJsonValue = (node: JsonNode, index: number) => {
     const isExpanded = expandedNodes.has(node.path);
     const hasChildren = node.type === 'object' || node.type === 'array';
     const isAlreadyExtracted = !hasChildren && isValueExtracted(node.value);
-
     if (searchQuery) {
       const searchLower = searchQuery.toLowerCase();
       const matchesKey = node.key.toLowerCase().includes(searchLower);
@@ -319,12 +318,16 @@ const ResponseViewer = () => {
     return (
       <div
         key={node.path}
-        className='group hover:bg-accent transition-colors rounded'
-        style={{ marginLeft: `${node.level * 20}px` }}
+        className='group hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors relative'
       >
-        <div className='flex items-center py-0.5 px-2 font-mono text-sm border-l-2 border-transparent hover:border-blue-500'>
-          {' '}
-          <div className='flex items-center flex-1 min-w-0'>
+        <div className='flex items-center py-1 pr-2 font-mono text-sm border-l-2 border-transparent hover:border-blue-500'>
+          <span className='text-gray-400 dark:text-gray-600 select-none text-xs w-12 text-center flex-shrink-0 absolute left-0'>
+            {index + 1}
+          </span>
+          <div
+            className='flex items-center flex-1 min-w-0'
+            style={{ marginLeft: `${48 + node.level * 20}px` }}
+          >
             {hasChildren && (
               <button
                 onClick={() => toggleNode(node.path)}
@@ -382,23 +385,6 @@ const ResponseViewer = () => {
                   <Copy className='w-3 h-3' />
                 )}
               </button>
-              {/* {isAlreadyExtracted ? (
-                <div className='flex items-center space-x-1 px-2 py-1 bg-success/10 text-success rounded text-xs whitespace-nowrap'>
-                  <CheckCircle className='w-3 h-3' />
-                  <span>Extracted</span>
-                </div>
-              ) : (
-                <button
-                  onClick={() =>
-                    handleExtractClick('response_body', node.path, node.value)
-                  }
-                  className='px-2 py-1 bg-primary text-primary-foreground rounded text-xs hover:bg-primary/90 transition-colors whitespace-nowrap flex items-center'
-                  title='Extract as variable'
-                >
-                  <Plus className='w-3 h-3 mr-1' />
-                  Extract
-                </button>
-              )} */}
             </div>
           )}
         </div>
@@ -504,7 +490,7 @@ const ResponseViewer = () => {
           </div>
 
           <div className='max-h-[600px] overflow-y-auto scrollbar-thin'>
-            {visibleNodes.map((node) => renderJsonValue(node))}
+            {visibleNodes.map((node, index) => renderJsonValue(node, index))}
           </div>
         </div>
       );
@@ -856,7 +842,7 @@ const ResponseViewer = () => {
         )}
 
         {activeTab === 'schema' && (
-          <div className='p-4 overflow-auto h-full'>
+          <div className='p-4 overflow-auto scrollbar-thin h-full'>
             {responseData.schemaValidation ? (
               <div className='space-y-4'>
                 <div
