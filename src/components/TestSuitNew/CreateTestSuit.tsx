@@ -1,11 +1,19 @@
-
-
 import type React from 'react';
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, useLocation } from 'wouter';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-
-import { Layers, Info, Download, Plus, ChevronLeft, ChevronRight, Play, Loader2, KeyRound, Upload } from 'lucide-react';
+import {
+  Layers,
+  Info,
+  Download,
+  Plus,
+  ChevronLeft,
+  ChevronRight,
+  Play,
+  Loader2,
+  KeyRound,
+  Upload,
+} from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -37,12 +45,8 @@ import { getCollectionsWithRequests } from '@/services/collection.service';
 import { ManageRequests } from '@/components/TestSuit/ManageRequests';
 import { ImportModal } from '@/components/TestSuit/ImportModal';
 
-
-// If you already have WorkflowStep in "@/types", import from there instead
-// type WorkflowStep = 'basic-info' | 'prerequisites' | 'select-apis' | 'generate-tests' | 'select-tests' | 'execute';
 import type { WorkflowStep } from '@/types';
 import { RequestTestDialog } from '../TestSuit/RequestTestDialog';
-// import { ManageRequestsImportPOST } from './Components/ManageRequestsImportPOST';
 
 interface Request {
   id: string;
@@ -113,13 +117,15 @@ const CreateTestSuit: React.FC = () => {
   };
 
 
+
+
   // ------- GLOBAL HOOKS -------
   const { toast } = useToast();
   const { currentWorkspace } = useWorkspace();
   const queryClient = useQueryClient();
   const { environments, activeEnvironment } = useDataManagement();
 
-  // ------- OLD LOGIC STATE (mapped into steps) -------
+  // ------- STATE -------
   const [testSuiteName, setTestSuiteName] = useState('');
   const [description, setDescription] = useState('');
   const [selectedEnvironment, setSelectedEnvironment] = useState<string>('');
@@ -131,9 +137,27 @@ const CreateTestSuit: React.FC = () => {
 
   const [preRequestId, setPreRequestId] = useState<string | null>(null);
 
-  const [extractVariables, setExtractVariables] = useState<ExtractedVariable[]>([]);
+  const [extractVariables, setExtractVariables] = useState<ExtractedVariable[]>(
+    []
+  );
 
   const [isTestDialogOpen, setIsTestDialogOpen] = useState(false);
+
+  const [preRequestInfo, setPreRequestInfo] = useState<{
+    id: string;
+    name: string;
+    method: string;
+    url: string;
+  } | null>(null);
+
+
+  const mainRequests = useMemo(
+    () => requests.filter((r) => r.id !== preRequestId),
+    [requests, preRequestId]
+  );
+
+  const mainRequestsCount = mainRequests.length;
+
 
   // ------- QUERIES -------
   const {
@@ -150,7 +174,7 @@ const CreateTestSuit: React.FC = () => {
 
   const { data: collectionsWithRequests } = useQuery({
     queryKey: ['collectionsWithRequests'],
-    queryFn: () => getCollectionsWithRequests(""),
+    queryFn: () => getCollectionsWithRequests(''),
   });
 
   const { data: collectionsData } = useQuery({
@@ -185,17 +209,15 @@ const CreateTestSuit: React.FC = () => {
   useEffect(() => {
     if (activeEnvironment) {
       setSelectedEnvironment(activeEnvironment.id);
-      setSelectedEnvName(activeEnvironment.name)
+      setSelectedEnvName(activeEnvironment.name);
     }
   }, [activeEnvironment]);
-
-  // console.log(selectedEnvName, "selectedEnvName")
 
   const handleEnvironmentChange = (environmentId: string) => {
     setSelectedEnvironment(environmentId);
   };
 
-  // ------- MUTATIONS (old logic) -------
+  // ------- MUTATIONS -------
   const createMutation = useMutation({
     mutationFn: (data: {
       name: string;
@@ -208,20 +230,21 @@ const CreateTestSuit: React.FC = () => {
     onMutate: () => {
       toast({
         title: 'Generating test cases…',
-        description: 'Test cases are being generated, please wait for some time.',
+        description:
+          'Test cases are being generated, please wait for some time.',
         variant: 'default',
       });
     },
     onSuccess: () => {
       toast({
         title: 'Testcase are getting generated ',
-        description: 'Wait for testcase generation status and select the testcases',
-        variant: 'success'
+        description:
+          'Wait for testcase generation status and select the testcases',
+        variant: 'success',
       });
       queryClient.invalidateQueries({
         queryKey: ['/api/test-suites', currentWorkspace?.id],
       });
-      // setLocation('/test-suites');
     },
     onError: (error: any) => {
       toast({
@@ -231,7 +254,6 @@ const CreateTestSuit: React.FC = () => {
       });
     },
   });
-
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -245,8 +267,6 @@ const CreateTestSuit: React.FC = () => {
       setCompletedSteps(steps.slice(0, stepIndex));
     }
   }, [location]);
-
-
 
   const updateMutation = useMutation({
     mutationFn: (data: {
@@ -275,7 +295,6 @@ const CreateTestSuit: React.FC = () => {
       });
       queryClient.invalidateQueries({ queryKey: ['testSuites'] });
       queryClient.invalidateQueries({ queryKey: ['testSuite', id] });
-      // setLocation('/test-suites');
     },
     onError: (error: any) => {
       toast({
@@ -286,18 +305,18 @@ const CreateTestSuit: React.FC = () => {
     },
   });
 
-
   const executeSuiteMutation = useMutation({
     mutationFn: executeTestSuite,
     onSuccess: () => {
       toast({
         title: 'Queued',
-        description: 'Test suite has been added to the queue for execution.',
+        description:
+          'Test suite has been added to the queue for execution.',
       });
       queryClient.invalidateQueries({ queryKey: ['testSuites'] });
       setLocation('/test-suites');
     },
-    onError: (error: any) => {
+    onError: () => {
       toast({
         title: 'Execute failed',
         description: 'Execution failed. Please try again later.',
@@ -308,14 +327,12 @@ const CreateTestSuit: React.FC = () => {
 
   const isExecuting = executeSuiteMutation.isPending;
 
-
   const handleExecuteSuite = (id: string) => {
     if (!id) return;
     executeSuiteMutation.mutate({ testSuiteId: id });
   };
 
-
-  // ------- TRANSFORM REQUEST (old) -------
+  // ------- TRANSFORM REQUEST -------
   const transformRequestData = (req: any): Request => {
     return {
       id: req.id,
@@ -372,8 +389,8 @@ const CreateTestSuit: React.FC = () => {
     if (testSuite && !isCreateMode) {
       setTestSuiteName(testSuite.name || '');
       setDescription(testSuite.description || '');
-      if (testSuite.environmentId) {
-        setSelectedEnvironment(testSuite.environmentId);
+      if (testSuite.environment?.id) {
+        setSelectedEnvironment(testSuite.environment?.id);
       }
 
       if (Array.isArray(testSuite.requests) && testSuite.requests.length > 0) {
@@ -384,7 +401,8 @@ const CreateTestSuit: React.FC = () => {
           const imported = importedRequestMap[req.id];
           if (!imported) return req;
 
-          const hasHeaders = Array.isArray(req.headers) && req.headers.length > 0;
+          const hasHeaders =
+            Array.isArray(req.headers) && req.headers.length > 0;
           const hasParams = Array.isArray(req.params) && req.params.length > 0;
           const hasBody =
             typeof req.bodyRawContent === 'string'
@@ -430,7 +448,10 @@ const CreateTestSuit: React.FC = () => {
         setPreRequestId(testSuite.preRequestId);
       }
 
-      if (testSuite.extractVariables && Array.isArray(testSuite.extractVariables)) {
+      if (
+        testSuite.extractVariables &&
+        Array.isArray(testSuite.extractVariables)
+      ) {
         setExtractVariables(testSuite.extractVariables);
       }
     }
@@ -447,7 +468,7 @@ const CreateTestSuit: React.FC = () => {
     }
   }, [isError, error, toast, isCreateMode]);
 
-  // ------- IMPORT REQUESTS (old) -------
+  // ------- IMPORT REQUESTS -------
   const handleImportRequests = (selectedRequests: any[]) => {
     const transformedRequests: Request[] = selectedRequests.map((extReq) => ({
       ...extReq,
@@ -493,20 +514,19 @@ const CreateTestSuit: React.FC = () => {
   };
 
   const handleSaveExtractVariables = (
-
     request: { id: string; name: string; method: string; url: string },
     variables: ExtractedVariable[]
   ) => {
     setPreRequestId(request.id);
     setPreRequestInfo(request);
     setExtractVariables(variables);
-    console.log("Extracted variables:", request?.id);
     toast({
       title: 'Variables extracted',
       description: `${variables?.length} variable(s) extracted and will be saved with the test suite`,
     });
   };
 
+  // ------- REQUEST DIFF (for CTA + updateMutation) -------
   const calculateRequestChanges = () => {
     const currentRequestIds = requests.map((req) => req.id);
     const addRequestIds = currentRequestIds.filter(
@@ -518,7 +538,48 @@ const CreateTestSuit: React.FC = () => {
     return { addRequestIds, removeRequestIds };
   };
 
-  // ------- SAVE (called on final step) -------
+  // 🔹 CTA config for Select APIs step
+  const getRequestsCTAConfig = () => {
+    const { addRequestIds, removeRequestIds } = calculateRequestChanges();
+
+    const hasAddedNew = addRequestIds.length > 0;
+    const hasRemoved = removeRequestIds.length > 0;
+
+    // NOTE: With diff-vs-original logic, "re-added" nets to no change,
+    // so we don't have a separate re-added state here.
+
+    if (hasAddedNew && !hasRemoved) {
+      return {
+        text: 'Generate Test Cases',
+        description: 'Generate test cases for new requests',
+        color: 'bg-[#136fb0] hover:bg-[#136fb0]',
+      };
+    }
+
+    if (hasRemoved && !hasAddedNew) {
+      return {
+        text: 'Select Test Cases',
+        description: 'Select or modify existing test cases',
+        color: 'bg-[#136fb0] hover:bg-[#136fb0]',
+      };
+    }
+
+    if (hasAddedNew && hasRemoved) {
+      return {
+        text: 'Generate Test Cases',
+        description: 'Generate test cases for new requests',
+        color: 'bg-[#136fb0] hover:bg-[#136fb0]',
+      };
+    }
+
+    return {
+      text: 'Select requests',
+      description: 'No changes made to requests',
+      color: 'bg-[#136fb0] hover:bg-[#136fb0]',
+    };
+  };
+
+  // ------- SAVE (called on final step / select-apis) -------
   const handleSaveChanges = (opts?: { goToNextAfterSave?: boolean }) => {
     if (!testSuiteName.trim()) {
       toast({
@@ -547,10 +608,9 @@ const CreateTestSuit: React.FC = () => {
       if (currentIndex < steps.length - 1) {
         const nextStep = steps[currentIndex + 1];
         setCurrentStep(nextStep);
-        navigateToStep(nextStep); // ✅ URL sync here too
+        navigateToStep(nextStep);
       }
     };
-
 
     if (isCreateMode) {
       // CREATE FLOW
@@ -561,20 +621,16 @@ const CreateTestSuit: React.FC = () => {
           environmentId: selectedEnvironment,
           requestIds: requests.map((r) => r.id),
           preRequestId: preRequestId || undefined,
-          extractVariables: extractVariables.length ? extractVariables : undefined,
+          extractVariables: extractVariables.length
+            ? extractVariables
+            : undefined,
         },
         opts?.goToNextAfterSave
           ? {
             onSuccess: (created: any) => {
-              // ✅ default global onSuccess (toast + invalidate) still runs
-              // ✅ then our local success handler runs
-
-              // If backend returns id, navigate to edit route with step param
               if (created?.id) {
-                // adjust this path to match your routes
                 setLocation(`/test-suites/${created.id}?step=select-tests`);
               } else {
-                // fallback: just move step in-place
                 moveToNextStep();
               }
             },
@@ -582,7 +638,6 @@ const CreateTestSuit: React.FC = () => {
           : undefined
       );
     } else {
-      // UPDATE FLOW
       const { addRequestIds, removeRequestIds } = calculateRequestChanges();
 
       updateMutation.mutate(
@@ -594,7 +649,9 @@ const CreateTestSuit: React.FC = () => {
           addRequestIds: addRequestIds.length ? addRequestIds : undefined,
           removeRequestIds: removeRequestIds.length ? removeRequestIds : undefined,
           preRequestId: preRequestId || undefined,
-          extractVariables: extractVariables.length ? extractVariables : undefined,
+          extractVariables: extractVariables.length
+            ? extractVariables
+            : undefined,
         },
         opts?.goToNextAfterSave
           ? {
@@ -606,7 +663,6 @@ const CreateTestSuit: React.FC = () => {
       );
     }
   };
-
 
   const handleBackToList = () => {
     setLocation('/test-suites');
@@ -651,7 +707,7 @@ const CreateTestSuit: React.FC = () => {
       case 'prerequisites':
         return true;
       case 'select-apis':
-        return requests.length > 1;
+        return mainRequestsCount > 0;
       case 'generate-tests':
         return requests.length > 0;
       case 'select-tests':
@@ -686,40 +742,43 @@ const CreateTestSuit: React.FC = () => {
       setCurrentStep(nextStep);
       navigateToStep(nextStep);
     } else if (currentStep === 'execute') {
-
+      // nothing for now
     }
   };
-
-
 
   const handleBackStep = () => {
     const currentIndex = steps.indexOf(currentStep);
     if (currentIndex > 0) {
       const prevStep = steps[currentIndex - 1];
       setCurrentStep(prevStep);
-      navigateToStep(prevStep); // ✅ sync URL when going back
+      navigateToStep(prevStep);
     } else {
       handleBackToList();
     }
   };
 
-
-
-  const [preRequestInfo, setPreRequestInfo] = useState<{
-    id: string;
-    name: string;
-    method: string;
-    url: string;
-  } | null>(null);
+  const isPreparingTestCases =
+    currentStep === 'select-tests' &&
+    totalTestCases === 0 &&
+    requests.length > 0;
 
   const getNextButtonText = () => {
-
-
     if (isPreparingTestCases) {
-      return 'Preparing test cases...';
+      return 'Select test cases';
     }
+
     if (isSaving) {
-      return 'Generating test cases...';
+      if (currentStep === 'select-apis') {
+        const cta = getRequestsCTAConfig();
+        if (cta.text === 'Generate Test Cases') {
+          return 'Generating test cases...';
+        }
+        if (cta.text === 'Select Test Cases') {
+          return 'Saving changes...';
+        }
+        return 'Processing...';
+      }
+      return 'Saving...';
     }
 
     switch (currentStep) {
@@ -727,8 +786,10 @@ const CreateTestSuit: React.FC = () => {
         return 'Continue to Prerequisites';
       case 'prerequisites':
         return 'Continue to Select APIs';
-      case 'select-apis':
-        return 'Generate Test Cases';
+      case 'select-apis': {
+        const cta = getRequestsCTAConfig();
+        return cta.text;
+      }
       case 'select-tests':
         return 'Continue to Execute';
       case 'execute':
@@ -738,34 +799,42 @@ const CreateTestSuit: React.FC = () => {
     }
   };
 
-
-
-  const isPreparingTestCases =
-    currentStep === 'select-tests' &&
-    totalTestCases === 0 &&
-    requests.length > 0;
-
-
-
-
   const showNextLoader =
-    (currentStep === 'select-apis' && isSaving) ||
-    isPreparingTestCases;
+    (currentStep === 'select-apis' && isSaving);
 
-
-  const authRequest = requests.find(r => r.id === preRequestId);
+  const authRequest = requests.find((r) => r.id === preRequestId);
   const authBaseUrl = authRequest?.url;
 
-  const isExecuteViewRoute =
+  const isExecuteViewRoute = currentStep === 'execute' && !isCreateMode;
 
-    currentStep === 'execute' && !isCreateMode;
+  const isSelectApisStep = currentStep === 'select-apis';
+  const selectApisCTA = isSelectApisStep ? getRequestsCTAConfig() : null;
+
+
+  // ✅ In CreateTestSuit, just above the return JSX
+  const hasPrereqAuthCandidates = useMemo(() => {
+    // In prerequisites step we only care about POST login-like APIs
+    return requests.some((r) => {
+      if (!r.url) return false;
+      const url = r.url.toLowerCase();
+      const isLoginLike =
+        url.includes('/login') ||
+        url.includes('/sign-in') ||
+        url.includes('/signin');
+
+      const isPost = (r.method || '').toUpperCase() === 'POST';
+      return isLoginLike && isPost;
+    });
+  }, [requests]);
+
 
 
   return (
     <div className="bg-gray-50">
       <BreadCum
-        title={isCreateMode ? 'Create Test Suite' : `Edit Test Suite - ${testSuiteName}`}
-
+        title={
+          isCreateMode ? 'Create Test Suite' : `Edit Test Suite - ${testSuiteName}`
+        }
         subtitle={
           !isCreateMode
             ? `Test Suite ID: ${id}`
@@ -783,7 +852,10 @@ const CreateTestSuit: React.FC = () => {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-6 py-8 border border-gray-200 bg-background rounded-lg mt-3">
         {/* STEP INDICATOR */}
-        <WorkflowStepper currentStep={currentStep} completedSteps={completedSteps} />
+        <WorkflowStepper
+          currentStep={currentStep}
+          completedSteps={completedSteps}
+        />
 
         <div className="mt-2 space-y-4">
           {/* STEP 1: BASIC INFO */}
@@ -851,10 +923,15 @@ const CreateTestSuit: React.FC = () => {
                     Select the target environment for these tests
                   </p>
                 </div>
+
                 {testSuite?.name && testSuite?.environment && (
                   <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-start gap-3 mt-4">
                     <div className="w-5 h-5 rounded-full bg-green-600 text-white flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                      <svg
+                        className="w-3 h-3"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
                         <path
                           fillRule="evenodd"
                           d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
@@ -881,61 +958,27 @@ const CreateTestSuit: React.FC = () => {
             <>
               {preRequestInfo && (
                 <div className="bg-gray-50 p-3 rounded-lg border border-dashed flex flex-col items-center justify-center text-center">
-
                   <div className="w-full text-left">
                     <p className="text-sm text-muted-foreground text-center">
-                      This authentication API will run before your test suite and its token can
-                      be used in all imported requests.
+                      This authentication API will run before your test suite and its
+                      token can be used in all imported requests.
                     </p>
-
-
-                    {/* <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                          {preRequestInfo.method}
-                        </span>
-                        <span className="text-[13px] text-gray-500">
-                          ID: {preRequestInfo.id}
-                        </span>
-                      </div>
-                      <h4 className="text-md font-semibold text-gray-900">
-                        {preRequestInfo.name}
-                      </h4>
-                      <p className="text-sm text-gray-600 mt-1 break-all">
-                        {preRequestInfo.url}
-                      </p>
-
-                      {extractVariables?.length > 0 && (
-                        <p className="text-sm text-green-700 mt-3">
-                          {extractVariables?.length} variable
-                          {extractVariables?.length > 1 ? 's' : ''} extracted from response
-                        </p>
-                      )}
-
-                      <div className="mt-4 flex justify-end">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setIsTestDialogOpen(true)}
-                        >
-                          Edit Authentication API
-                        </Button>
-                      </div>
-                    </div> */}
                   </div>
                 </div>
               )}
 
-              {requests.length === 0 ? (
+              {!hasPrereqAuthCandidates ? (
                 <div className="bg-gray-50 p-3 rounded-lg border border-dashed flex flex-col items-center justify-center text-center">
                   <div className="w-16 h-16 mb-6 rounded-full bg-muted flex items-center justify-center">
                     <KeyRound className="w-8 h-8 text-muted-foreground" />
                   </div>
                   <p className="text-muted-foreground mb-2">
-                    If your APIs require authentication, add a pre-request API to fetch the auth token.
+                    If your APIs require authentication, add a pre-request API to
+                    fetch the auth token.
                   </p>
                   <p className="text-muted-foreground mb-2">
-                    This token will be automatically used when executing your test cases.
+                    This token will be automatically used when executing your test
+                    cases.
                   </p>
                   <p className="text-muted-foreground mb-6">
                     You can skip this step if authentication isn’t needed.
@@ -962,14 +1005,6 @@ const CreateTestSuit: React.FC = () => {
                     filterMethod="POST"
                     showAuthCapture={true}
                   />
-                  {/* {preRequestInfo && (
-                      <div className="px-6 py-4 bg-gray-50 mt-4 border-gray-200 flex justify-between items-center">
-                        <div className="text-sm text-gray-600 space-y-1">
-
-                         
-                        </div>
-                      </div>
-                    )} */}
                 </>
               )}
 
@@ -981,9 +1016,10 @@ const CreateTestSuit: React.FC = () => {
             </>
           )}
 
+          {/* STEP 3: SELECT APIS */}
           {currentStep === 'select-apis' && (
             <div>
-              {requests.length === 1 ? (
+              {mainRequestsCount === 0 ? (
                 <div className="bg-gray-50 p-6 rounded-lg border border-dashed flex flex-col items-center justify-center text-center">
                   <div className="w-16 h-16 mb-6 rounded-full bg-muted flex items-center justify-center">
                     <Download className="w-8 h-8 text-muted-foreground" />
@@ -1016,8 +1052,9 @@ const CreateTestSuit: React.FC = () => {
 
                   <div className="px-6 py-4 bg-gray-50 mt-4 border-gray-200 flex justify-between items-center">
                     <div className="text-sm text-gray-600 space-y-1">
-                      <div>Imported requests:
-                        {requests.filter(r => r.id !== preRequestId).length}
+                      <div>
+                        Imported requests:{' '}
+                        {mainRequestsCount}
                       </div>
                       {extractVariables.length > 0 && (
                         <div className="text-green-600">
@@ -1031,66 +1068,13 @@ const CreateTestSuit: React.FC = () => {
             </div>
           )}
 
-
-          {/* {currentStep === 'select-tests' && (
-            <Card>
-              <CardContent>
-                {requests.length === 0 ? (
-                  <div className="bg-gray-50 p-6 rounded-lg border border-dashed flex flex-col items-center justify-center text-center">
-                    <div className="w-16 h-16 mb-6 rounded-full bg-muted flex items-center justify-center">
-                      <Download className="w-8 h-8 text-muted-foreground" />
-                    </div>
-                    <p className="text-muted-foreground mb-6 max-w-md">
-                      Start by importing API requests from your collections. You can
-                      then configure specific test cases for each request.
-                    </p>
-                    <Button onClick={() => setIsImportModalOpen(true)}>
-                      <Download className="w-4 h-4 mr-2" />
-                      Import Your First Request
-                    </Button>
-                  </div>
-                ) : (
-                  <>
-                    <ManageRequests
-                      requests={requests}
-                      testSuiteId={id || ''}
-                      onImport={() => setIsImportModalOpen(true)}
-                      onDeleteRequest={handleDeleteRequest}
-                      onUpdateTestCases={handleUpdateTestCases}
-                      onRefreshRequests={async () => {
-                        await refetchRequests();
-                      }}
-                      onSaveExtractVariables={handleSaveExtractVariables}
-                      preRequestId={preRequestId}
-                      extractVariables={extractVariables}
-                    />
-
-                    <div className="px-6 py-4 bg-gray-50 mt-4 border-gray-200 flex justify-between items-center">
-                      <div className="text-sm text-gray-600 space-y-1">
-                        <div>Imported requests: {requests.length}</div>
-                        <div className="font-medium">
-                          Selected Test Cases: {totalTestCases}
-                        </div>
-                        {extractVariables.length > 0 && (
-                          <div className="text-green-600">
-                            Extracted variables: {extractVariables.length}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </>
-                )}
-              </CardContent>
-            </Card>
-          )} */}
-
+          {/* STEP 4: SELECT TESTS */}
           {currentStep === 'select-tests' && (
-            <div >
+            <div>
               {isLoading ? (
                 <div className="space-y-4">
                   {/* title skeleton */}
                   <div className="h-4 w-1/3 bg-gray-200 rounded animate-pulse" />
-
                   {/* row 1 */}
                   <div className="flex items-center gap-4 p-4 border rounded-lg bg-gray-100 animate-pulse">
                     <div className="w-10 h-10 rounded bg-gray-300"></div>
@@ -1099,7 +1083,6 @@ const CreateTestSuit: React.FC = () => {
                       <div className="h-3 w-1/3 bg-gray-300 rounded"></div>
                     </div>
                   </div>
-
                   {/* row 2 */}
                   <div className="flex items-center gap-4 p-4 border rounded-lg bg-gray-100 animate-pulse">
                     <div className="w-10 h-10 rounded bg-gray-300"></div>
@@ -1110,7 +1093,6 @@ const CreateTestSuit: React.FC = () => {
                   </div>
                 </div>
               ) : requests.length === 0 ? (
-
                 <div className="bg-gray-50 p-6 rounded-lg border border-dashed flex flex-col items-center justify-center text-center">
                   <div className="w-16 h-16 mb-6 rounded-full bg-muted flex items-center justify-center">
                     <Download className="w-8 h-8 text-muted-foreground" />
@@ -1119,8 +1101,8 @@ const CreateTestSuit: React.FC = () => {
                     No requests found in this test suite.
                   </p>
                   <p className="text-xs text-gray-500 max-w-md">
-                    Go back to <span className="font-semibold">“Select APIs”</span> and import APIs
-                    before selecting test cases.
+                    Go back to <span className="font-semibold">“Select APIs”</span>{' '}
+                    and import APIs before selecting test cases.
                   </p>
                 </div>
               ) : (
@@ -1140,7 +1122,10 @@ const CreateTestSuit: React.FC = () => {
 
                   <div className="px-6 py-4 bg-gray-50 mt-4 border-gray-200 flex justify-between items-center">
                     <div className="text-sm text-gray-600 space-y-1">
-                      <div>Imported requests: {requests.filter(r => r.id !== preRequestId).length}</div>
+                      <div>
+                        Imported requests:{' '}
+                        {mainRequestsCount}
+                      </div>
                       <div className="font-medium">
                         Selected Test Cases: {totalTestCases}
                       </div>
@@ -1153,39 +1138,38 @@ const CreateTestSuit: React.FC = () => {
                   </div>
                 </>
               )}
-
             </div>
           )}
 
-
-          {/* STEP 6: EXECUTE / FINAL SUMMARY */}
+          {/* STEP 5: EXECUTE / FINAL SUMMARY */}
           {currentStep === 'execute' && (
             <div className="bg-white border border-gray-200 rounded-lg p-8 text-center">
               <Play className="w-16 h-16 text-[#136fb0] mx-auto mb-4" />
               <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                {/* Ready to {isCreateMode ? 'Create & Execute' : 'Save & Execute'} Tests */}
                 Ready to Run Your Test Suite?
               </h3>
               <p className="text-gray-600 mb-2">
-                {/* {requests.length} request(s) with {totalTestCases}  configured test case(s) */}
-                You've configured {totalTestCases} test cases across {requests.filter(r => r.id !== preRequestId).length} requests.
+                You've configured {totalTestCases} test cases across{' '}
+                {requests.filter((r) => r.id !== preRequestId).length} requests.
               </p>
-
               <p className="text-gray-600 mb-2">
-                {preRequestId ? "Authentication is set via your pre-request API" : "No authentication was added for pre-request API"}
+                {preRequestId
+                  ? 'Authentication is set via your pre-request API'
+                  : 'No authentication was added for pre-request API'}
               </p>
 
-
-              {activeEnvironment &&
+              {activeEnvironment && (
                 <p className="text-gray-600 mb-2">
                   Environment is set to {selectedEnvName}
                 </p>
-              }
-              {preRequestId &&
+              )}
+
+              {preRequestId && (
                 <p className="text-gray-600 font-bold mb-2">
                   Click Run Tests to execute and validate your flow
                 </p>
-              }
+              )}
+
               <div className="flex items-center justify-center gap-4">
                 <Button
                   className="inline-flex items-center gap-2"
@@ -1212,7 +1196,6 @@ const CreateTestSuit: React.FC = () => {
               </div>
             </div>
           )}
-
         </div>
 
         {/* BOTTOM NAVIGATION */}
@@ -1225,7 +1208,7 @@ const CreateTestSuit: React.FC = () => {
             Back
           </button>
 
-          <div className="flex gap-3">
+          <div className="flex flex-col items-end gap-1">
             {!isExecuteViewRoute && (
               <Button
                 onClick={handleNextStep}
@@ -1234,7 +1217,12 @@ const CreateTestSuit: React.FC = () => {
                   (currentStep === 'select-apis' && isSaving) ||
                   isPreparingTestCases
                 }
-                className="inline-flex items-center gap-2 px-6 py-2 bg-[#136fb0] text-white rounded-lg hover:bg-[#136fb0] transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                className={[
+                  'inline-flex items-center gap-2 px-6 py-2 text-white rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed',
+                  isSelectApisStep
+                    ? selectApisCTA?.color ?? 'bg-[#136fb0] hover:bg-[#136fb0]'
+                    : 'bg-[#136fb0] hover:bg-[#136fb0]',
+                ].join(' ')}
               >
                 {getNextButtonText()}
 
@@ -1244,6 +1232,12 @@ const CreateTestSuit: React.FC = () => {
                   <ChevronRight className="w-4 h-4" />
                 )}
               </Button>
+            )}
+
+            {isSelectApisStep && selectApisCTA?.description && (
+              <p className="text-xs text-gray-500 text-right">
+                {selectApisCTA.description}
+              </p>
             )}
           </div>
         </div>
@@ -1255,7 +1249,7 @@ const CreateTestSuit: React.FC = () => {
         onClose={() => setIsImportModalOpen(false)}
         onImport={handleImportRequests}
         importedRequestIds={importedRequestIds}
-        // @ts-ignore: if your ImportModal accepts "requests" / "collections", pass them here
+        // @ts-ignore
         requests={importableRequests}
         authBaseUrl={authBaseUrl}
       />
