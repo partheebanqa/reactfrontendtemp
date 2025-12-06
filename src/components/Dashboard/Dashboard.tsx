@@ -86,7 +86,7 @@ export default function Dashboard() {
       />
 
       {/* Dashboard Content */}
-      <div className='flex-1 overflow-auto mt-3'>
+      <div className='flex-1 overflow-auto mt-3 scrollbar-thin'>
         {/* Stats Overview */}
         <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-3'>
           <StatsCard

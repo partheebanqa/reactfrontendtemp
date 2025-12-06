@@ -69,8 +69,9 @@ const DetailedTestResults = ({
             {/* Category Header */}
             <button
               onClick={() => toggleCategory(cat.name)}
-              className={`w-full px-5 py-4 flex items-center justify-between text-left text-sm font-medium rounded-lg ${isOpen ? 'bg-gray-50' : 'bg-white'
-                } hover:bg-gray-100 transition`}
+              className={`w-full px-5 py-4 flex items-center justify-between text-left text-sm font-medium rounded-lg ${
+                isOpen ? 'bg-gray-50' : 'bg-white'
+              } hover:bg-gray-100 transition`}
             >
               <div className='flex items-center gap-2 text-base text-black font-semibold'>
                 {cat.icon}
@@ -100,8 +101,9 @@ const DetailedTestResults = ({
                           </p>
                           <div className='flex items-center text-xs text-muted-foreground gap-2 mt-1'>
                             <span
-                              className={`px-2 py-0.5 rounded-full font-medium ${methodColors[test.method]
-                                }`}
+                              className={`px-2 py-0.5 rounded-full font-medium ${
+                                methodColors[test.method]
+                              }`}
                             >
                               {test.method}
                             </span>
@@ -156,48 +158,48 @@ const DetailedTestResults = ({
                             </TabsTrigger>
                           </TabsList>
 
-                          <TabsContent value="request">
-                            <div className="mt-4 p-3 bg-gray-900 rounded max-h-96 overflow-auto text-xs text-white">
+                          <TabsContent value='request'>
+                            <div className='mt-4 p-3 bg-gray-900 rounded max-h-96 scrollbar-thin overflow-auto text-xs text-white'>
                               <JsonView
                                 dark
                                 enableClipboard
-                                onAdd={() => { }}
-                                onDelete={() => { }}
-                                onEdit={() => { }}
+                                onAdd={() => {}}
+                                onDelete={() => {}}
+                                onEdit={() => {}}
                                 src={
                                   test?.requestCurl?.trim()
                                     ? { curl: test.requestCurl }
                                     : {}
                                 }
-                                theme="default"
+                                theme='default'
                               />
-
                             </div>
                           </TabsContent>
 
-
                           <TabsContent value='response'>
-                            <div className='mt-4 p-3 bg-gray-900 rounded max-h-96 overflow-auto text-xs text-white'>
+                            <div className='mt-4 p-3 bg-gray-900 rounded max-h-96 scrollbar-thin overflow-auto text-xs text-white'>
                               <JsonView
                                 dark
                                 enableClipboard
-                                onAdd={() => { }}
-                                onDelete={() => { }}
-                                onEdit={() => { }}
-                                src={test.response ? JSON.parse(test.response) : {}}
+                                onAdd={() => {}}
+                                onDelete={() => {}}
+                                onEdit={() => {}}
+                                src={
+                                  test.response ? JSON.parse(test.response) : {}
+                                }
                                 theme='default'
                               />
                             </div>
                           </TabsContent>
 
                           <TabsContent value='assertions'>
-                            <div className='mt-4 p-3 bg-gray-900 rounded max-h-96 overflow-auto text-xs text-white'>
+                            <div className='mt-4 p-3 bg-gray-900 rounded max-h-96 scrollbar-thin overflow-auto text-xs text-white'>
                               <JsonView
                                 dark
                                 enableClipboard
-                                onAdd={() => { }}
-                                onDelete={() => { }}
-                                onEdit={() => { }}
+                                onAdd={() => {}}
+                                onDelete={() => {}}
+                                onEdit={() => {}}
                                 src={test}
                                 theme='default'
                               />
@@ -205,13 +207,13 @@ const DetailedTestResults = ({
                           </TabsContent>
 
                           <TabsContent value='result'>
-                            <div className='mt-4 p-3 bg-gray-900 rounded max-h-96 overflow-auto text-xs text-white'>
+                            <div className='mt-4 p-3 bg-gray-900 rounded max-h-96 scrollbar-thin overflow-auto text-xs text-white'>
                               <JsonView
                                 dark
                                 enableClipboard
-                                onAdd={() => { }}
-                                onDelete={() => { }}
-                                onEdit={() => { }}
+                                onAdd={() => {}}
+                                onDelete={() => {}}
+                                onEdit={() => {}}
                                 src={test}
                                 theme='default'
                               />

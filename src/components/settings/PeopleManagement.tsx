@@ -635,7 +635,7 @@ export function PeopleManagement() {
                     <ul
                       role='listbox'
                       aria-label='Existing matching users'
-                      className='absolute z-10 mt-1 w-full bg-background border rounded-md shadow-md max-h-60 overflow-auto'
+                      className='absolute z-10 mt-1 w-full bg-background border rounded-md shadow-md max-h-60 overflow-auto scrollbar-thin'
                     >
                       {emailSuggestions.map((u) => (
                         <li key={u.id} role='option' aria-selected='false'>

@@ -1186,7 +1186,7 @@ const JsonParser: FC = () => {
               </div>
             </div>
 
-            <div className='bg-gray-900 text-gray-100 rounded-lg p-4 max-h-96 overflow-auto'>
+            <div className='bg-gray-900 text-gray-100 rounded-lg p-4 max-h-96 overflow-auto scrollbar-thin'>
               {displayJson !== null ? (
                 <pre
                   className='text-sm font-mono whitespace-pre-wrap'

@@ -9,7 +9,7 @@ export default function Reports() {
     <div className='min-h-screen bg-background'>
       <ReportsHeader />
 
-      <div className='flex-1 overflow-auto p-6'>
+      <div className='flex-1 overflow-auto scrollbar-thin p-6'>
         <Tabs defaultValue='analytics' className='space-y-6'>
           <TabsList className='grid w-full grid-cols-3'>
             <TabsTrigger value='analytics' className='hover-scale'>

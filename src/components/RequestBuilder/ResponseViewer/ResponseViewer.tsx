@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   Copy,
   Download,
@@ -18,6 +18,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import { useRequest } from '@/hooks/useRequest';
+import { FixedSizeList } from 'react-window';
 
 interface JsonNode {
   key: string;
@@ -26,6 +27,7 @@ interface JsonNode {
   type: 'object' | 'array' | 'string' | 'number' | 'boolean' | 'null';
   level: number;
   parentPath: string;
+  childCount?: number;
 }
 
 const ResponseViewer = () => {
@@ -56,6 +58,30 @@ const ResponseViewer = () => {
   } | null>(null);
   const [variableName, setVariableName] = useState<string>('');
   const [copiedItem, setCopiedItem] = useState<string>('');
+
+  useEffect(() => {
+    if (responseData?.body) {
+      const allPaths = new Set<string>();
+      const collectPaths = (obj: any, path = 'root') => {
+        allPaths.add(path);
+        if (obj && typeof obj === 'object') {
+          if (Array.isArray(obj)) {
+            obj.forEach((_, idx) => {
+              const newPath = path === 'root' ? `[${idx}]` : `${path}[${idx}]`;
+              collectPaths(obj[idx], newPath);
+            });
+          } else {
+            Object.keys(obj).forEach((key) => {
+              const newPath = path === 'root' ? key : `${path}.${key}`;
+              collectPaths(obj[key], newPath);
+            });
+          }
+        }
+      };
+      collectPaths(responseData.body);
+      setExpandedNodes(allPaths);
+    }
+  }, [responseData?.body]);
 
   const getStatusColor = (status: number) => {
     if (status >= 200 && status < 300) return 'text-success';
@@ -103,11 +129,23 @@ const ResponseViewer = () => {
   };
 
   const sanitizeVariableName = (name: string): string => {
-    return name
+    const reserved = ['await', 'break', 'case', 'catch', 'class' /* ... */];
+    let sanitized = name
       .replace(/\s+/g, '_')
       .replace(/[^a-zA-Z0-9_]/g, '')
-      .replace(/^_+|_+$/g, '')
-      .replace(/_+/g, '_');
+      .replace(/^[0-9]/, '_$&');
+
+    if (reserved.includes(sanitized)) {
+      sanitized = `_${sanitized}`;
+    }
+    return sanitized;
+  };
+
+  const getChildCount = (obj: any): number => {
+    console.log('childCount:', obj);
+    if (Array.isArray(obj)) return obj.length;
+    if (obj && typeof obj === 'object') return Object.keys(obj).length;
+    return 0;
   };
 
   const parseJsonToNodes = (
@@ -146,6 +184,7 @@ const ResponseViewer = () => {
           type: itemType as JsonNode['type'],
           level,
           parentPath,
+          childCount: getChildCount(item),
         });
         if (typeof item === 'object' && item !== null) {
           nodes.push(...parseJsonToNodes(item, currentPath, level + 1));
@@ -169,12 +208,14 @@ const ResponseViewer = () => {
           type: valueType as JsonNode['type'],
           level,
           parentPath,
+          childCount: getChildCount(value),
         });
         if (typeof value === 'object' && value !== null) {
           nodes.push(...parseJsonToNodes(value, currentPath, level + 1));
         }
       });
     }
+
     return nodes;
   };
 
@@ -258,11 +299,10 @@ const ResponseViewer = () => {
   };
   const requestDetails = parseRequestFromCurl();
 
-  const renderJsonValue = (node: JsonNode) => {
+  const renderJsonValue = (node: JsonNode, index: number) => {
     const isExpanded = expandedNodes.has(node.path);
     const hasChildren = node.type === 'object' || node.type === 'array';
     const isAlreadyExtracted = !hasChildren && isValueExtracted(node.value);
-
     if (searchQuery) {
       const searchLower = searchQuery.toLowerCase();
       const matchesKey = node.key.toLowerCase().includes(searchLower);
@@ -278,11 +318,16 @@ const ResponseViewer = () => {
     return (
       <div
         key={node.path}
-        className='group hover:bg-accent transition-colors rounded'
-        style={{ marginLeft: `${node.level * 20}px` }}
+        className='group hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors relative'
       >
-        <div className='flex items-center px-2'>
-          <div className='flex items-center flex-1 min-w-0'>
+        <div className='flex items-center py-1 pr-2 font-mono text-sm border-l-2 border-transparent hover:border-blue-500'>
+          <span className='text-gray-400 dark:text-gray-600 select-none text-xs w-12 text-center flex-shrink-0 absolute left-0'>
+            {index + 1}
+          </span>
+          <div
+            className='flex items-center flex-1 min-w-0'
+            style={{ marginLeft: `${48 + node.level * 20}px` }}
+          >
             {hasChildren && (
               <button
                 onClick={() => toggleNode(node.path)}
@@ -300,6 +345,7 @@ const ResponseViewer = () => {
             <span className='text-primary font-medium mr-2 text-sm flex-shrink-0'>
               {node.key}:
             </span>
+
             {hasChildren ? (
               <span className='text-muted-foreground text-sm'>
                 {node.type === 'array'
@@ -339,23 +385,6 @@ const ResponseViewer = () => {
                   <Copy className='w-3 h-3' />
                 )}
               </button>
-              {/* {isAlreadyExtracted ? (
-                <div className='flex items-center space-x-1 px-2 py-1 bg-success/10 text-success rounded text-xs whitespace-nowrap'>
-                  <CheckCircle className='w-3 h-3' />
-                  <span>Extracted</span>
-                </div>
-              ) : (
-                <button
-                  onClick={() =>
-                    handleExtractClick('response_body', node.path, node.value)
-                  }
-                  className='px-2 py-1 bg-primary text-primary-foreground rounded text-xs hover:bg-primary/90 transition-colors whitespace-nowrap flex items-center'
-                  title='Extract as variable'
-                >
-                  <Plus className='w-3 h-3 mr-1' />
-                  Extract
-                </button>
-              )} */}
             </div>
           )}
         </div>
@@ -410,9 +439,59 @@ const ResponseViewer = () => {
         return expandedNodes.has(node.parentPath);
       });
 
+      const totalRows = jsonNodes.filter((n) => n.level === 0).length;
+
       return (
-        <div className='space-y-1 bg-card p-2 rounded-lg border border-border'>
-          {visibleNodes.map((node) => renderJsonValue(node))}
+        <div className='bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden '>
+          <div className='bg-gray-50 dark:bg-gray-800 px-3 py-2 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between'>
+            <span className='text-xs font-medium text-gray-600 dark:text-gray-400'>
+              {totalRows} {totalRows === 1 ? 'row' : 'rows'}
+            </span>
+            <div className='flex items-center gap-2'>
+              <button
+                onClick={() => {
+                  const allPaths = new Set<string>();
+
+                  const collectPaths = (obj: any, path = 'root') => {
+                    allPaths.add(path);
+
+                    if (obj && typeof obj === 'object') {
+                      if (Array.isArray(obj)) {
+                        obj.forEach((_, idx) => {
+                          const newPath =
+                            path === 'root' ? `[${idx}]` : `${path}[${idx}]`;
+                          collectPaths(obj[idx], newPath);
+                        });
+                      } else {
+                        Object.keys(obj).forEach((key) => {
+                          const newPath =
+                            path === 'root' ? key : `${path}.${key}`;
+                          collectPaths(obj[key], newPath);
+                        });
+                      }
+                    }
+                  };
+
+                  collectPaths(responseData?.body);
+                  setExpandedNodes(allPaths);
+                }}
+                className='text-xs text-blue-600 dark:text-blue-400 hover:underline'
+              >
+                Expand All
+              </button>
+
+              <button
+                onClick={() => setExpandedNodes(new Set())}
+                className='text-xs text-blue-600 dark:text-blue-400 hover:underline'
+              >
+                Collapse All
+              </button>
+            </div>
+          </div>
+
+          <div className='max-h-[600px] overflow-y-auto scrollbar-thin'>
+            {visibleNodes.map((node, index) => renderJsonValue(node, index))}
+          </div>
         </div>
       );
     } catch (error) {
@@ -591,7 +670,6 @@ const ResponseViewer = () => {
           </div>
         </div>
 
-        {/* View toggles and action buttons */}
         <div className='flex items-center justify-between px-4 py-1'>
           <div className='flex items-center space-x-4'>
             <button className='flex items-center space-x-2 text-sm font-medium text-primary'>
@@ -722,13 +800,8 @@ const ResponseViewer = () => {
         </div>
       )}
 
-      <div className='flex-1 overflow-auto p-2'>
-        {activeTab === 'body' && (
-          <div>
-            <div className='flex items-center justify-between mb-2'></div>
-            {renderJsonTree()}
-          </div>
-        )}
+      <div className='flex-1 overflow-auto p-2 scrollbar-thin'>
+        {activeTab === 'body' && <div>{renderJsonTree()}</div>}
 
         {activeTab === 'headers' && renderHeadersTab()}
 
@@ -769,7 +842,7 @@ const ResponseViewer = () => {
         )}
 
         {activeTab === 'schema' && (
-          <div className='p-4 overflow-auto h-full'>
+          <div className='p-4 overflow-auto scrollbar-thin h-full'>
             {responseData.schemaValidation ? (
               <div className='space-y-4'>
                 <div

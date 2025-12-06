@@ -939,7 +939,7 @@ export function ResponseExplorer({
           )}
         </div>
 
-        <div className='p-6 max-h-96 overflow-auto'>
+        <div className='p-6 max-h-96 overflow-auto scrollbar-thin'>
           {activeTab === 'body' &&
             (executionStatus === 'error' && errorMessage ? (
               <div className='flex items-start space-x-3 text-red-600'>
