@@ -573,7 +573,7 @@ const CreateTestSuit: React.FC = () => {
     }
 
     return {
-      text: 'Select requests',
+      text: 'Select Test Cases',
       description: 'No changes made to requests',
       color: 'bg-[#136fb0] hover:bg-[#136fb0]',
     };
