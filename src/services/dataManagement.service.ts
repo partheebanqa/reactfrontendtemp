@@ -100,26 +100,32 @@ export const updateEnvironment = async (environment): Promise<Environment> => {
 export const updatePrimaryEnvironment = async (
   environment: any
 ): Promise<Environment> => {
-  if (environment.setPrimary) {
+  const { id, ws, setPrimary } = environment;
+
+  if (!id || !ws) {
+    throw new Error('Environment ID and workspaceId (ws) are required');
+  }
+
+  if (setPrimary) {
     const response = await apiRequest(
       'PUT',
-      `${API_ENVIRONMENT}/${environment.id}/set-primary`,
+      `${API_ENVIRONMENT}/${id}/set-primary?ws=${ws}`,
       {
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
       }
     );
+
     if (!response.ok) {
       throw new Error('Failed to set primary environment');
     }
+
     return response.json();
   }
 
-  // Otherwise use the regular update endpoint
+  // Otherwise update normally
   const response = await apiRequest(
     'PUT',
-    `${API_ENVIRONMENT}/${environment.id}`,
+    `${API_ENVIRONMENT}/${id}?ws=${ws}`,
     {
       headers: {
         'Content-Type': 'application/json',
@@ -127,9 +133,11 @@ export const updatePrimaryEnvironment = async (
       body: JSON.stringify(environment),
     }
   );
+
   if (!response.ok) {
     throw new Error('Failed to update environment');
   }
+
   return response.json();
 };
 

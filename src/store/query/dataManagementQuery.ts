@@ -43,21 +43,15 @@ export const usegetEnvironmentQuery = (enabled = true) => {
 
       const response = await fetchEnvironments(workspaceId);
 
-      if (response?.environments?.length) {
+      if (response?.environments) {
         const filteredEnvironments = response.environments.map(
           (env: ResponseEnvironment) => filterEnvironment(env)
         );
 
-        // Update the environments list in store
         dataManagementActions.setEnvironments(filteredEnvironments);
-
-        // DON'T set active environment here - let useDataManagement handle it
-        // This prevents race conditions and duplicate logic
-
         return filteredEnvironments;
       } else {
         dataManagementActions.setEnvironments([]);
-        // Only clear if there are truly no environments
         const currentActive = dataManagementStore.state.activeEnvironment;
         if (currentActive) {
           dataManagementActions.setActiveEnvironment(null);
@@ -67,7 +61,6 @@ export const usegetEnvironmentQuery = (enabled = true) => {
     },
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
-    // Prevent automatic refetching that could cause state resets
     refetchOnWindowFocus: false,
     refetchOnMount: true,
   });

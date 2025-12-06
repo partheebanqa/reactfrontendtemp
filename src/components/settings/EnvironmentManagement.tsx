@@ -94,7 +94,7 @@ export function EnvironmentManagement() {
     deleteEnvironmentMutation,
     updatePrimaryEnvironmentMutation,
   } = useDataManagement();
-  const { workspaces } = useWorkspace();
+  const { currentWorkspace, workspaces } = useWorkspace();
 
   const form = useForm<EnvironmentFormData>({
     resolver: zodResolver(environmentSchema),
@@ -196,8 +196,10 @@ export function EnvironmentManagement() {
     try {
       await updatePrimaryEnvironmentMutation.mutateAsync({
         id: environment.id,
+        ws: currentWorkspace?.id,
         setPrimary: true,
       });
+
       toast({
         title: 'Primary environment updated',
         description: `${environment.name} is now the primary environment.`,

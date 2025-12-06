@@ -177,6 +177,7 @@ const RequestEditor: React.FC = () => {
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [newCollectionName, setNewCollectionName] = useState('');
   const [url, setUrl] = useState('');
+
   const [urlAtOpen, setUrlAtOpen] = useState('');
   const [method, setMethod] = useState<RequestMethod>('GET');
   const [params, setParams] = useState<Param[]>([]);
@@ -901,6 +902,7 @@ const RequestEditor: React.FC = () => {
     clearError();
     setLoading(true);
     const newUrl = buildFinalUrl();
+
     let substitutedBodyContent = bodyContent;
     try {
       let effectiveAuthType = authType;
@@ -1725,26 +1727,33 @@ const RequestEditor: React.FC = () => {
 
   const buildFinalUrl = (): string => {
     if (!url) return '';
+
+    if (
+      activeEnvironment?.name === 'No Environment' ||
+      !activeEnvironment?.baseUrl
+    ) {
+      return url;
+    }
+
     let finalUrl = url;
+
     finalUrl = substituteVariables(finalUrl);
-    const envBaseUrl = activeEnvironment?.baseUrl || '';
-    if (envBaseUrl) {
-      try {
-        const originalUrl = new URL(finalUrl);
-        const pathAndQuery =
-          originalUrl.pathname + originalUrl.search + originalUrl.hash;
-        const baseUrl = envBaseUrl.replace(/\/$/, '');
-        finalUrl = `${baseUrl}${pathAndQuery}`;
-      } catch (error) {
-        if (
-          !finalUrl.startsWith('http://') &&
-          !finalUrl.startsWith('https://')
-        ) {
-          finalUrl = finalUrl.startsWith('/') ? finalUrl : `/${finalUrl}`;
-          finalUrl = `${envBaseUrl.replace(/\/$/, '')}${finalUrl}`;
-        }
+
+    const envBaseUrl = activeEnvironment.baseUrl.replace(/\/$/, '');
+
+    try {
+      const originalUrl = new URL(finalUrl);
+      const pathAndQuery =
+        originalUrl.pathname + originalUrl.search + originalUrl.hash;
+
+      finalUrl = `${envBaseUrl}${pathAndQuery}`;
+    } catch (error) {
+      if (!finalUrl.startsWith('http://') && !finalUrl.startsWith('https://')) {
+        finalUrl = finalUrl.startsWith('/') ? finalUrl : `/${finalUrl}`;
+        finalUrl = `${envBaseUrl}${finalUrl}`;
       }
     }
+
     return finalUrl;
   };
 

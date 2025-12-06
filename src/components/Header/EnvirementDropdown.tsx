@@ -17,6 +17,7 @@ import {
 import { Environment } from '@/shared/types/datamanagement';
 import { useDataManagement } from '@/hooks/useDataManagement';
 import { useLocation } from 'wouter';
+import { useWorkspace } from '@/hooks/useWorkspace';
 
 interface EnvironmentDropdownProps {
   setEnvironmentModalState: (state: {
@@ -42,6 +43,8 @@ export default function EnvironmentDropdown({
 
   const [_, setLocation] = useLocation();
 
+  const { currentWorkspace } = useWorkspace();
+
   const getEnvironmentColor = (environment: Environment) => {
     const env = environment?.name?.toLowerCase();
     if (env?.includes('prod')) {
@@ -58,19 +61,22 @@ export default function EnvironmentDropdown({
   };
 
   const handleEnvironmentSelect = async (environment: Environment) => {
-    // First set the active environment
     setActiveEnvironment(environment);
+    if (environment.isPrimary) return;
 
-    // Then set it as primary if it's not already
-    if (!environment.isPrimary) {
-      try {
-        await updatePrimaryEnvironmentMutation.mutateAsync({
-          id: environment.id,
-          setPrimary: true,
-        });
-      } catch (error) {
-        console.error('Error setting primary environment:', error);
-      }
+    try {
+      await updatePrimaryEnvironmentMutation.mutateAsync({
+        id: environment.id,
+        ws: currentWorkspace?.id,
+        setPrimary: true,
+      });
+
+      setActiveEnvironment({
+        ...environment,
+        isPrimary: true,
+      });
+    } catch (error) {
+      console.error('Error setting primary environment:', error);
     }
   };
 
