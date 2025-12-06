@@ -1037,7 +1037,7 @@ export function RequestChainEditor({
         ...prev,
         [request.id]: finalAssertions,
       }));
-      setAssertions(finalAssertions);
+      // setAssertions(finalAssertions);
 
       const extractedData = extractDataFromResponse(
         {
