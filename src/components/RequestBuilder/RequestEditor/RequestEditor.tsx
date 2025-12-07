@@ -669,8 +669,9 @@ const RequestEditor: React.FC = () => {
       setAuthType('bearer');
       setSelectedVariable([]);
       setPendingSubstitutions([]);
+      setResponseData(null);
     }
-    setResponseData(null);
+    // setResponseData(null);
   }, [activeRequest, isSaving]);
 
   useEffect(() => {
@@ -680,6 +681,19 @@ const RequestEditor: React.FC = () => {
       }
     }
   }, [activeEnvironment]);
+
+  useEffect(() => {
+    if (activeRequest?.id) {
+      const storedResponse = collectionActions.getRequestResponse(
+        activeRequest.id
+      );
+      if (storedResponse) {
+        setResponseData(storedResponse);
+      } else {
+        setResponseData(null);
+      }
+    }
+  }, [activeRequest?.id]);
 
   const formatBackendResponse = (result: any): FormattedResponse => {
     const importantHeaders = [
@@ -837,8 +851,6 @@ const RequestEditor: React.FC = () => {
       if (parsedRequest.bodyType === 'form-data' && parsedRequest.formData) {
         newRequest.bodyFormData = parsedRequest.formData;
       }
-
-      setResponseData(null);
 
       if (activeCollection) {
         newRequest.collectionId = activeCollection.id;
@@ -1091,6 +1103,14 @@ const RequestEditor: React.FC = () => {
         };
 
         setResponseData(normalizedResponse);
+
+        if (activeRequest.id) {
+          collectionActions.setRequestResponse(
+            activeRequest.id,
+            normalizedResponse
+          );
+        }
+
         const formattedResponse = formatBackendResponse(normalizedResponse);
         const generatedAssertions = generateAssertions(formattedResponse);
         const existingIds = new Set(assertions.map((a) => a.id));
@@ -1143,6 +1163,13 @@ const RequestEditor: React.FC = () => {
       };
 
       setResponseData(normalizedResponse);
+
+      if (activeRequest.id) {
+        collectionActions.setRequestResponse(
+          activeRequest.id,
+          normalizedResponse
+        );
+      }
       toast({
         title: 'Error',
         description: backendErrorMessage,

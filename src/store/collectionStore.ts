@@ -3,6 +3,20 @@
 import { Store, useStore } from '@tanstack/react-store';
 import type { Collection, CollectionRequest } from '@/shared/types/collection';
 
+export interface RequestResponse {
+  status: number;
+  statusCode: number;
+  statusText?: string;
+  headers: Record<string, string>;
+  requestCurl?: any;
+  actualRequest?: any;
+  body: any;
+  rawBody?: any;
+  metrics?: any;
+  assertionLogs?: any[];
+  schemaValidation?: any;
+}
+
 export interface CollectionState {
   responseLayout: 'bottom' | 'right';
   activeRequest: CollectionRequest | null;
@@ -14,6 +28,7 @@ export interface CollectionState {
   error: string | null;
   openedRequests: CollectionRequest[];
   unsavedChanges: Set<string>;
+  requestResponses: Map<string, RequestResponse>;
   sanitizeTestRunner: {
     isOpen: boolean;
     collectionId: string | null;
@@ -31,6 +46,7 @@ export const initialCollectionState: CollectionState = {
   error: null,
   openedRequests: [],
   unsavedChanges: new Set(),
+  requestResponses: new Map(),
   sanitizeTestRunner: {
     isOpen: false,
     collectionId: null,
@@ -113,6 +129,9 @@ export const collectionActions = {
       const updatedUnsaved = new Set(state.unsavedChanges);
       updatedUnsaved.delete(requestId);
 
+      const newResponses = new Map(state.requestResponses);
+      newResponses.delete(requestId);
+
       let newActiveRequest = state.activeRequest;
       if (state.activeRequest?.id === requestId) {
         newActiveRequest = updatedOpened[updatedOpened.length - 1] || null;
@@ -123,6 +142,7 @@ export const collectionActions = {
         openedRequests: updatedOpened,
         unsavedChanges: updatedUnsaved,
         activeRequest: newActiveRequest,
+        requestResponses: newResponses,
       };
     });
   },
@@ -434,6 +454,39 @@ export const collectionActions = {
         isOpen: false,
         collectionId: null,
       },
+    }));
+  },
+
+  setRequestResponse: (requestId: string, response: RequestResponse) => {
+    collectionStore.setState((state) => {
+      const newResponses = new Map(state.requestResponses);
+      newResponses.set(requestId, response);
+      return {
+        ...state,
+        requestResponses: newResponses,
+      };
+    });
+  },
+
+  getRequestResponse: (requestId: string): RequestResponse | undefined => {
+    return collectionStore.state.requestResponses.get(requestId);
+  },
+
+  clearRequestResponse: (requestId: string) => {
+    collectionStore.setState((state) => {
+      const newResponses = new Map(state.requestResponses);
+      newResponses.delete(requestId);
+      return {
+        ...state,
+        requestResponses: newResponses,
+      };
+    });
+  },
+
+  clearAllResponses: () => {
+    collectionStore.setState((state) => ({
+      ...state,
+      requestResponses: new Map(),
     }));
   },
 };
