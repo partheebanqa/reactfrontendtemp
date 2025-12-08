@@ -1053,12 +1053,12 @@ const CreateTestSuit: React.FC = () => {
                   <div className="px-6 py-4 bg-gray-50 mt-4 border-gray-200 flex justify-between items-center">
                     <div className="text-sm text-gray-600 space-y-1">
                       <div>
-                        Imported requests:{' '}
+                        Total requests:{' '}
                         {mainRequestsCount}
                       </div>
                       {extractVariables.length > 0 && (
                         <div className="text-green-600">
-                          Extracted variables: {extractVariables.length}
+                          Extracted Auth: {extractVariables.length}
                         </div>
                       )}
                     </div>
@@ -1123,7 +1123,7 @@ const CreateTestSuit: React.FC = () => {
                   <div className="px-6 py-4 bg-gray-50 mt-4 border-gray-200 flex justify-between items-center">
                     <div className="text-sm text-gray-600 space-y-1">
                       <div>
-                        Imported requests:{' '}
+                        Total requests:{' '}
                         {mainRequestsCount}
                       </div>
                       <div className="font-medium">
@@ -1131,7 +1131,7 @@ const CreateTestSuit: React.FC = () => {
                       </div>
                       {extractVariables.length > 0 && (
                         <div className="text-green-600">
-                          Extracted variables: {extractVariables.length}
+                          Extracted Auth: {extractVariables.length}
                         </div>
                       )}
                     </div>
