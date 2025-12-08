@@ -989,7 +989,7 @@ export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
                     Extracted Fields ({extractedFields.length})
                   </Label>
                   <Button size='sm' onClick={handleSaveVariables}>
-                    Save Variables
+                    Save Authorization
                   </Button>
                 </div>
                 <div className='mt-2 space-y-2'>

@@ -67,6 +67,13 @@ export function WorkspaceManagement() {
   );
 
   // Get workspaces and mutations from the custom hook
+
+  const { currentWorkspace } = useWorkspace();
+
+  console.log(currentWorkspace, "currentWorkspace");
+
+  console.log(user, "user");
+
   const {
     workspaces,
     refreshWorkspaces,
@@ -76,7 +83,7 @@ export function WorkspaceManagement() {
     updatePrimaryWorkspaceMutation,
   } = useWorkspace();
 
-  console.log('workspaces111:', workspaces);
+  // console.log('workspaces111:', workspaces);
 
   const handleCreateWorkspace = () => {
     if (!newWorkspaceName.trim()) {
@@ -421,8 +428,8 @@ export function WorkspaceManagement() {
                             Created{' '}
                             {enrichedWorkspace.createdAt
                               ? new Date(
-                                  enrichedWorkspace.createdAt
-                                ).toLocaleDateString()
+                                enrichedWorkspace.createdAt
+                              ).toLocaleDateString()
                               : 'N/A'}
                           </div>
                         </div>
@@ -447,11 +454,10 @@ export function WorkspaceManagement() {
                                 }
                               >
                                 <Star
-                                  className={`h-3 w-3 sm:h-4 sm:w-4 ${
-                                    enrichedWorkspace.isPrimary
-                                      ? 'fill-blue-600 text-blue-600'
-                                      : ''
-                                  }`}
+                                  className={`h-3 w-3 sm:h-4 sm:w-4 ${enrichedWorkspace.isPrimary
+                                    ? 'fill-blue-600 text-blue-600'
+                                    : ''
+                                    }`}
                                 />
                               </Button>
                             </TooltipTrigger>
