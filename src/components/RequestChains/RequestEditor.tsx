@@ -123,6 +123,9 @@ interface RequestEditorProps {
   onRegenerateDynamicVariable?: (variableName: string) => void;
   requestAssertions?: any[];
   onAssertionsUpdate?: (assertions: any[]) => void;
+  requestIndex?: number;
+  formData?: any;
+  extractedVariablesByRequest?: Record<string, Record<string, any>>;
 }
 
 interface KeyValuePair {
@@ -158,6 +161,9 @@ export function RequestEditor({
   onRegenerateDynamicVariable,
   requestAssertions,
   onAssertionsUpdate,
+  requestIndex = 0,
+  formData,
+  extractedVariablesByRequest = {},
 }: RequestEditorProps) {
   const isSyncingRef = useRef(false);
   const isInitialMount = useRef(true);
@@ -2272,11 +2278,58 @@ export function RequestEditor({
 
       <DynamicVariablesPanel />
       {Object.keys(parentExtractedVariables).length > 0 && (
-        <div className='mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-sm'>
-          <strong>Available Variables:</strong>{' '}
-          {Object.keys(parentExtractedVariables)
-            .map((name) => `{{${name}}}`)
-            .join(', ')}
+        <div className='mt-2 p-2 bg-blue-50 border border-blue-200 rounded'>
+          <div className='flex items-center flex-wrap gap-2'>
+            <span className='font-semibold text-sm text-blue-900'>
+              Available Variables:
+            </span>
+
+            {Object.keys(parentExtractedVariables).map((variableName) => {
+              let sourceRequestIndex = -1;
+              let sourceRequestName = '';
+              if (formData?.chainRequests) {
+                for (let i = 0; i < requestIndex; i++) {
+                  const reqId = formData.chainRequests[i]?.id;
+                  if (
+                    reqId &&
+                    extractedVariablesByRequest[reqId]?.[variableName] !==
+                      undefined
+                  ) {
+                    sourceRequestIndex = i + 1;
+                    sourceRequestName =
+                      formData.chainRequests[i]?.name || `Request ${i + 1}`;
+                    break;
+                  }
+                }
+              }
+
+              return (
+                <div
+                  key={variableName}
+                  className='inline-flex items-center gap-1.5 px-2.5 py-1 bg-white border border-blue-300 rounded-md shadow-sm'
+                >
+                  <code className='text-sm font-mono text-blue-700'>
+                    {`{{${variableName}}}`}
+                  </code>
+
+                  {sourceRequestIndex > 0 && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className='text-xs font-semibold text-blue-600 bg-blue-100 px-1.5 py-0.5 rounded'>
+                            #{sourceRequestIndex}
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>From: {sourceRequestName}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 
@@ -2882,11 +2935,60 @@ export function RequestEditor({
           <DynamicVariablesPanel />
 
           {Object.keys(parentExtractedVariables).length > 0 && (
-            <div className='mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-sm'>
-              <strong>Available Variables:</strong>{' '}
-              {Object.keys(parentExtractedVariables)
-                .map((name) => `{{${name}}}`)
-                .join(', ')}
+            <div className='mt-2 p-2 bg-blue-50 border border-blue-200 rounded'>
+              <div className='flex items-center flex-wrap gap-2'>
+                <span className='font-semibold text-sm text-blue-900'>
+                  Available Variables:
+                </span>
+
+                {Object.keys(parentExtractedVariables).map((variableName) => {
+                  let sourceRequestIndex = -1;
+                  let sourceRequestName = '';
+
+                  if (formData?.chainRequests) {
+                    for (let i = 0; i < requestIndex; i++) {
+                      const reqId = formData.chainRequests[i]?.id;
+
+                      if (
+                        reqId &&
+                        extractedVariablesByRequest[reqId]?.[variableName] !==
+                          undefined
+                      ) {
+                        sourceRequestIndex = i + 1;
+                        sourceRequestName =
+                          formData.chainRequests[i]?.name || `Request ${i + 1}`;
+                        break;
+                      }
+                    }
+                  }
+
+                  return (
+                    <div
+                      key={variableName}
+                      className='inline-flex items-center gap-1.5 px-2.5 py-1 bg-white border border-blue-300 rounded-md shadow-sm'
+                    >
+                      <code className='text-sm font-mono text-blue-700'>
+                        {`{{${variableName}}}`}
+                      </code>
+
+                      {sourceRequestIndex > 0 && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className='text-xs font-semibold text-blue-600 bg-blue-100 px-1.5 py-0.5 rounded'>
+                                #{sourceRequestIndex}
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>From: {sourceRequestName}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           )}
         </CardContent>
