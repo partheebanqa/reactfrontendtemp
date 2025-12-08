@@ -1,6 +1,10 @@
 'use client';
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { TooltipContent } from '@/components/ui/tooltip';
+import {
+  analyzeRequestChain,
+  type AnalyzedRequest,
+} from '@/lib/postman-analysis';
 
 import type React from 'react';
 
@@ -26,6 +30,7 @@ import {
   Check,
   Shuffle,
   Edit3,
+  AlertTriangle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -139,6 +144,7 @@ export function RequestChainEditor({
   const [environmentBaseUrl, setEnvironmentBaseUrl] = useState<string>(
     chain?.environment?.baseUrl || activeEnvironment?.baseUrl || ''
   );
+  const [analysisResults, setAnalysisResults] = useState<AnalyzedRequest[]>([]);
 
   useEffect(() => {
     if (!selectedEnvironment && activeEnvironment) {
@@ -2160,6 +2166,9 @@ export function RequestChainEditor({
                 }));
                 persistAssertionsToStorage(request.id, assertions);
               }}
+              requestIndex={requestIndex}
+              formData={formData}
+              extractedVariablesByRequest={extractedVariablesByRequest}
             />
           </div>
         </div>
@@ -2201,6 +2210,18 @@ export function RequestChainEditor({
       if (timer) clearTimeout(timer);
     };
   }, [formData.chainRequests, executionLogs, isExecuting]);
+
+  useEffect(() => {
+    if (formData.chainRequests && formData.chainRequests.length > 0) {
+      const logsMap: Record<string, any> = {};
+      executionLogs.forEach((log) => {
+        logsMap[log.requestId] = log;
+      });
+
+      const results = analyzeRequestChain(formData.chainRequests, logsMap);
+      setAnalysisResults(results);
+    }
+  }, [formData.chainRequests, executionLogs]);
 
   return (
     <div className='h-full flex flex-col'>
@@ -2625,6 +2646,88 @@ export function RequestChainEditor({
                                       </TooltipProvider>
                                     </div>
 
+                                    {analysisResults[requestIndex] && (
+                                      <div className='mt-2 space-y-2'>
+                                        {analysisResults[requestIndex]
+                                          .hasAuthWarning && (
+                                          <div className='flex items-start gap-2 p-2 bg-amber-50 border border-amber-200 rounded text-xs'>
+                                            <AlertTriangle className='w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5' />
+                                            <div className='flex-1'>
+                                              <p className='font-medium text-amber-900'>
+                                                Auth Token Not Found
+                                              </p>
+                                              <p className='text-amber-700'>
+                                                Token is used but not found in
+                                                previous responses.
+                                              </p>
+                                              {analysisResults[requestIndex]
+                                                .suggestedAuthSource && (
+                                                <p className='mt-1 text-amber-700'>
+                                                  <strong>Suggestion:</strong>{' '}
+                                                  Extract token from "
+                                                  {
+                                                    analysisResults[
+                                                      requestIndex
+                                                    ].suggestedAuthSource
+                                                      ?.apiName
+                                                  }
+                                                  "
+                                                </p>
+                                              )}
+                                            </div>
+                                          </div>
+                                        )}
+
+                                        {analysisResults[requestIndex]
+                                          .authSource && (
+                                          <div className='flex items-start gap-2 p-2 bg-green-50 border border-green-200 rounded text-xs'>
+                                            <CheckCircle className='w-4 h-4 text-green-600 flex-shrink-0 mt-0.5' />
+                                            <div>
+                                              <p className='text-green-900'>
+                                                <strong>Auth Token:</strong>{' '}
+                                                From "
+                                                {
+                                                  analysisResults[requestIndex]
+                                                    .authSource?.apiName
+                                                }
+                                                " at{' '}
+                                                <code className='bg-green-100 px-1 rounded'>
+                                                  {
+                                                    analysisResults[
+                                                      requestIndex
+                                                    ].authSource?.path
+                                                  }
+                                                </code>
+                                              </p>
+                                            </div>
+                                          </div>
+                                        )}
+
+                                        {analysisResults[
+                                          requestIndex
+                                        ].queryParams
+                                          .filter((p) => p.source)
+                                          .map((param, idx) => (
+                                            <div
+                                              key={idx}
+                                              className='flex items-start gap-2 p-2 bg-blue-50 border border-blue-200 rounded text-xs'
+                                            >
+                                              <Link2 className='w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5' />
+                                              <div>
+                                                <p className='text-blue-900'>
+                                                  <strong>{param.name}:</strong>{' '}
+                                                  From "{param.source?.apiName}"
+                                                  at{' '}
+                                                  <code className='bg-blue-100 px-1 rounded'>
+                                                    {param.source?.path}
+                                                  </code>
+                                                </p>
+                                              </div>
+                                            </div>
+                                          ))}
+                                      </div>
+                                    )}
+
                                     {expandedRequests.has(request.id) && (
                                       <div className='mt-4 pt-4 border-t space-y-4'>
                                         <RequestEditor
@@ -2703,6 +2806,11 @@ export function RequestChainEditor({
                                               assertions
                                             );
                                           }}
+                                          requestIndex={requestIndex}
+                                          formData={formData}
+                                          extractedVariablesByRequest={
+                                            extractedVariablesByRequest
+                                          }
                                         />
                                         {executionLog && (
                                           <div>
