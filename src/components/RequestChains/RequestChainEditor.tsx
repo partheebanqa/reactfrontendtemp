@@ -95,6 +95,7 @@ import BreadCum from '../BreadCum/Breadcum';
 import { useDataManagementStore } from '@/store/dataManagementStore';
 import { generateAssertions } from '@/utils/assertionGenerator';
 import { useDataManagement } from '@/hooks/useDataManagement';
+import { RequestAnalyzer } from './RequestAnalyzer';
 
 interface RequestChainEditorProps {
   chain?: RequestChain;
@@ -1447,6 +1448,9 @@ export function RequestChainEditor({
   const [copiedStates, setCopiedStates] = useState<Record<string, boolean>>({});
   const [editingNameId, setEditingNameId] = useState<string | null>(null);
   const [tempName, setTempName] = useState<string>('');
+  const [isAnalyzerOpen, setIsAnalyzerOpen] = useState(false);
+
+  console.log('isAnalyzerOpen:', isAnalyzerOpen);
 
   const handleCopyForRequest = async (requestId: string, value: string) => {
     try {
@@ -2399,6 +2403,28 @@ export function RequestChainEditor({
                             </TooltipProvider>
                           </div>
 
+                          {executionLogs.length > 0 && (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant='outline'
+                                    onClick={() => setIsAnalyzerOpen(true)}
+                                    className='gap-2 bg-transparent'
+                                  >
+                                    <AlertTriangle className='w-4 h-4' />
+                                    Analyzer
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>
+                                    Analyze request dependencies and patterns
+                                  </p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
+
                           <Button
                             variant='outline'
                             onClick={() => setIsImportModalOpen(true)}
@@ -2958,6 +2984,20 @@ export function RequestChainEditor({
                   />
                 </TabsContent>
               </Tabs>
+
+              <RequestAnalyzer
+                requests={formData.chainRequests || []}
+                executionLogs={executionLogs}
+                analysisResults={analysisResults}
+                extractedVariablesByRequest={extractedVariablesByRequest}
+                isExecuting={isExecuting}
+                onRunAll={handleRunAll}
+                onCopyVariable={(requestId, variableName) => {
+                  handleCopyForRequest(requestId, variableName);
+                }}
+                open={isAnalyzerOpen}
+                onOpenChange={setIsAnalyzerOpen}
+              />
             </CardContent>
           </Card>
 
