@@ -109,7 +109,7 @@ const CreateTestSuit: React.FC = () => {
   const navigateToStep = (step: WorkflowStep) => {
     if (isCreateMode) {
       // create mode
-      setLocation(`/create-test-suite?step=${step}`);
+      setLocation(`test-suites/create?step=${step}`);
     } else if (id) {
       // edit mode
       setLocation(`/test-suites/${id}?step=${step}`);
