@@ -160,7 +160,6 @@ export function RequestAnalyzer({
                 key={request.id}
                 className='border rounded-lg overflow-hidden hover:shadow-md transition-shadow'
               >
-                {/* Request Header */}
                 <div className='bg-gray-50 px-4 py-3 border-b flex items-center justify-between'>
                   <div className='flex items-center gap-3 flex-1 min-w-0'>
                     <div className='w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-medium flex-shrink-0'>
