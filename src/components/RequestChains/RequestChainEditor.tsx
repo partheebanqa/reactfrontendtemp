@@ -96,6 +96,7 @@ import { useDataManagementStore } from '@/store/dataManagementStore';
 import { generateAssertions } from '@/utils/assertionGenerator';
 import { useDataManagement } from '@/hooks/useDataManagement';
 import { RequestAnalyzer } from './RequestAnalyzer';
+import { AddRequestMenu } from './AddRequestMenu';
 
 interface RequestChainEditorProps {
   chain?: RequestChain;
@@ -2369,7 +2370,8 @@ export function RequestChainEditor({
                 </TabsList>
 
                 <TabsContent value='requests' className='space-y-4'>
-                  <div className='bg-card rounded-xl border border-border overflow-hidden'>
+                  <div className='bg-card rounded-xl border border-border overflow-visible'>
+                    {' '}
                     <div className='p-4 sm:p-6 border-b border-border'>
                       <div className='flex items-center justify-between mb-4'>
                         <h3 className='text-lg font-medium'>Request Chain</h3>
@@ -2425,18 +2427,10 @@ export function RequestChainEditor({
                             </TooltipProvider>
                           )}
 
-                          <Button
-                            variant='outline'
-                            onClick={() => setIsImportModalOpen(true)}
-                            className='gap-2'
-                          >
-                            <Download className='w-4 h-4' />
-                            Import
-                          </Button>
-                          <Button onClick={addNewRequest} className='gap-2'>
-                            <Plus className='w-4 h-4' />
-                            Request
-                          </Button>
+                          <AddRequestMenu
+                            onAddRequest={addNewRequest}
+                            onImport={() => setIsImportModalOpen(true)}
+                          />
                         </div>
                       </div>
 
