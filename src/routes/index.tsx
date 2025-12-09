@@ -77,8 +77,8 @@ export default function Router() {
           <Route path='/request-chains/:id/edit' component={RequestChainEdit} />
           <Route path='/test-suites' component={TestSuites} />
           <Route path='/test-suites/:id/edit' component={CreateTestSuit} />
-          <Route path='/test-suites/create' component={EditTestSuite} />
-          <Route path='/create-test-suite' component={CreateTestSuit} />
+          <Route path='/test-suites/creates' component={EditTestSuite} />
+          <Route path='test-suites/create-new' component={CreateTestSuit} />
           <Route path='/test-suites/:id' component={CreateTestSuit} />
           <Route path='/scheduler' component={Scheduler} />
           <Route path='/cicd' component={CiCdIntegration} />

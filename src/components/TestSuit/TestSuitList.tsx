@@ -161,7 +161,7 @@ const TestSuites: React.FC = () => {
   };
 
   const handleCreateSuite = () => {
-    setLocation('/create-test-suite');
+    setLocation('/test-suites/create');
   };
 
   const envOptions = useMemo(() => {
