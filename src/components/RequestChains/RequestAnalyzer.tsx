@@ -12,6 +12,7 @@ import {
   ChevronDown,
   ChevronUp,
   Plus,
+  Zap,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -41,6 +42,7 @@ interface RequestAnalyzerProps {
     path: string,
     suggestedName: string
   ) => void;
+  onApplyToAllRequests?: (variableName: string) => void;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -54,6 +56,7 @@ export function RequestAnalyzer({
   onRunAll,
   onCopyVariable,
   onExtractVariable,
+  onApplyToAllRequests,
   open,
   onOpenChange,
 }: RequestAnalyzerProps) {
@@ -61,6 +64,10 @@ export function RequestAnalyzer({
   const [expandedResponses, setExpandedResponses] = useState<Set<string>>(
     new Set()
   );
+  const [justExtractedVariable, setJustExtractedVariable] = useState<{
+    requestId: string;
+    variableName: string;
+  } | null>(null);
 
   const getMethodColor = (method: string) => {
     const colors = {
@@ -119,6 +126,36 @@ export function RequestAnalyzer({
     }
   };
 
+  const handleExtractClick = (
+    sourceRequest: APIRequest,
+    path: string,
+    suggestedName: string
+  ) => {
+    if (!onExtractVariable) return;
+
+    console.log('Extracting variable:', {
+      requestId: sourceRequest.id,
+      requestName: sourceRequest.name,
+      path,
+      suggestedName,
+    });
+
+    onExtractVariable(sourceRequest.id, path, suggestedName);
+
+    // Set the just extracted variable to show "Apply to All" button
+    setJustExtractedVariable({
+      requestId: sourceRequest.id,
+      variableName: `E_${suggestedName}`,
+    });
+  };
+
+  const handleApplyToAll = () => {
+    if (!justExtractedVariable || !onApplyToAllRequests) return;
+
+    onApplyToAllRequests(justExtractedVariable.variableName);
+    setJustExtractedVariable(null);
+  };
+
   const successCount = executionLogs.filter(
     (log) => log.status === 'success'
   ).length;
@@ -129,8 +166,8 @@ export function RequestAnalyzer({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className='max-w-6xl max-h-[90vh] overflow-y-auto'>
-        <DialogHeader>
+      <DialogContent className='max-w-6xl h-[90vh] flex flex-col'>
+        <DialogHeader className='flex-shrink-0'>
           <DialogTitle className='flex items-center gap-2'>
             <AlertTriangle className='w-5 h-5 text-orange-600' />
             Chain Analysis
@@ -141,7 +178,7 @@ export function RequestAnalyzer({
           </DialogDescription>
         </DialogHeader>
 
-        <div className='flex items-center gap-4 text-sm mb-4'>
+        <div className='flex items-center gap-4 text-sm mb-4 flex-shrink-0'>
           <div className='flex items-center gap-2'>
             <CheckCircle className='w-4 h-4 text-green-600' />
             <span className='font-medium'>{successCount} Success</span>
@@ -154,7 +191,41 @@ export function RequestAnalyzer({
           )}
         </div>
 
-        <div className='space-y-4'>
+        {/* Success notification for extraction */}
+        {justExtractedVariable && (
+          <div className='flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg mb-4 flex-shrink-0'>
+            <div className='flex items-center gap-2'>
+              <CheckCircle className='w-5 h-5 text-green-600' />
+              <div>
+                <p className='font-medium text-green-900 text-sm'>
+                  Variable Extracted Successfully!
+                </p>
+                <p className='text-xs text-green-700'>
+                  {justExtractedVariable.variableName} is now available
+                </p>
+              </div>
+            </div>
+            <div className='flex gap-2'>
+              <Button
+                size='sm'
+                onClick={handleApplyToAll}
+                className='bg-green-600 hover:bg-green-700 text-white'
+              >
+                <Zap className='w-4 h-4 mr-2' />
+                Apply to All Requests
+              </Button>
+              <Button
+                size='sm'
+                variant='ghost'
+                onClick={() => setJustExtractedVariable(null)}
+              >
+                Dismiss
+              </Button>
+            </div>
+          </div>
+        )}
+
+        <div className='flex-1 overflow-y-auto space-y-4 min-h-0'>
           {requests.map((request, index) => {
             const analysis = analysisResults[index];
             const executionLog = executionLogs.find(
@@ -261,14 +332,6 @@ export function RequestAnalyzer({
                                       'Source request not found at index:',
                                       sourceRequestIndex
                                     );
-                                    console.log(
-                                      'Available requests:',
-                                      requests.map((r, i) => ({
-                                        index: i,
-                                        id: r.id,
-                                        name: r.name,
-                                      }))
-                                    );
                                     return;
                                   }
 
@@ -287,16 +350,8 @@ export function RequestAnalyzer({
                                     pathParts[pathParts.length - 1] ||
                                     'authToken';
 
-                                  console.log('Extracting variable:', {
-                                    requestId: sourceRequest.id,
-                                    requestName: sourceRequest.name,
-                                    requestIndex: sourceRequestIndex,
-                                    path: analysis.suggestedAuthSource.path,
-                                    suggestedName,
-                                  });
-
-                                  onExtractVariable(
-                                    sourceRequest.id,
+                                  handleExtractClick(
+                                    sourceRequest,
                                     analysis.suggestedAuthSource.path,
                                     suggestedName
                                   );

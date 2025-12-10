@@ -466,6 +466,8 @@ export function RequestChainEditor({
   const handleApplyToAllRequests = (variableName: string) => {
     if (!formData.chainRequests) return;
 
+    setIsAnalyzerOpen(false);
+
     const getDomain = (url: string): string | null => {
       try {
         if (url.startsWith('/')) {
@@ -1452,8 +1454,6 @@ export function RequestChainEditor({
   const [editingNameId, setEditingNameId] = useState<string | null>(null);
   const [tempName, setTempName] = useState<string>('');
   const [isAnalyzerOpen, setIsAnalyzerOpen] = useState(false);
-
-  console.log('isAnalyzerOpen:', isAnalyzerOpen);
 
   const handleCopyForRequest = async (requestId: string, value: string) => {
     try {
@@ -2892,7 +2892,6 @@ export function RequestChainEditor({
 
                   handleExtractVariableForRequest(requestId, extraction);
 
-                  // Expand the request to show the extraction
                   const newExpanded = new Set(expandedRequests);
                   newExpanded.add(requestId);
                   setExpandedRequests(newExpanded);
@@ -2901,10 +2900,8 @@ export function RequestChainEditor({
                     title: 'Variable Extraction Added',
                     description: `Variable "E_${suggestedName}" will be extracted from ${path}. Run the request again to see the extracted value.`,
                   });
-
-                  // Close the analyzer after extraction
-                  setIsAnalyzerOpen(false);
                 }}
+                onApplyToAllRequests={handleApplyToAllRequests}
                 open={isAnalyzerOpen}
                 onOpenChange={setIsAnalyzerOpen}
               />
