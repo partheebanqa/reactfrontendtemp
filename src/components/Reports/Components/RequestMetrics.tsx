@@ -241,7 +241,7 @@ export const RequestMetrics: React.FC<RequestMetricsProps> = ({ metrics }) => {
                         Slowest Requests
                     </h3>
                     <div className="space-y-3">
-                        {metrics.slowestRequests.slice(0, 5).map((request, index) => (
+                        {metrics.slowestRequests.slice(0, 1).map((request, index) => (
                             <div
                                 key={request.id}
                                 className="flex items-center justify-between p-3 bg-red-50 rounded-lg"
@@ -270,7 +270,7 @@ export const RequestMetrics: React.FC<RequestMetricsProps> = ({ metrics }) => {
                         Fastest Requests
                     </h3>
                     <div className="space-y-3">
-                        {metrics.fastestRequests.slice(0, 5).map((request, index) => (
+                        {metrics.fastestRequests.slice(0, 1).map((request, index) => (
                             <div
                                 key={request.id}
                                 className="flex items-center justify-between p-3 bg-green-50 rounded-lg"

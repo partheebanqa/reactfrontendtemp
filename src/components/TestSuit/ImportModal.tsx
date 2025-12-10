@@ -415,7 +415,8 @@ export const ImportModal: React.FC<ImportModalProps> = ({
 
   const isCreateTestSuiteSelectApisRoute =
     typeof window !== 'undefined' &&
-    window.location.href.includes('/test-suites/create?step=select-apis');
+
+    window.location.href.includes('step=select-apis');
 
   const allowedDomain = React.useMemo(() => {
     if (!authBaseUrl || !isCreateTestSuiteSelectApisRoute) return null;
@@ -427,10 +428,10 @@ export const ImportModal: React.FC<ImportModalProps> = ({
   }, [authBaseUrl, isCreateTestSuiteSelectApisRoute]);
 
   const isUrlOnAllowedDomain = (urlStr?: string | null) => {
-    if (!allowedDomain || !isCreateTestSuiteSelectApisRoute) return true; // no lock
+    if (!allowedDomain || !isCreateTestSuiteSelectApisRoute) return true;
     if (!urlStr) return false;
     try {
-      const u = new URL(urlStr, allowedDomain); // supports relative URLs
+      const u = new URL(urlStr, allowedDomain);
       return u.origin === allowedDomain;
     } catch {
       return false;
@@ -477,7 +478,6 @@ export const ImportModal: React.FC<ImportModalProps> = ({
 
         // 💡 Extra filtering ONLY on prerequisites route
         if (isCreateTestSuitePrereqRoute) {
-          // 1) Only POST requests
           if (request.method?.toUpperCase() !== 'POST') {
             return false;
           }

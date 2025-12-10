@@ -1,12 +1,12 @@
 // src/utils/exportUtilsSameUi.ts
 // Export the report with the same UI (Tailwind + Lucide) and Prism code theme.
 // Provides HTML + PDF exporters. Requires: html2canvas, jspdf in your app.
-import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
 
 /* ---------------- Types (trimmed) ---------------- */
-type Status = 'passed' | 'failed' | 'skipped';
-type Severity = 'low' | 'medium' | 'high' | 'critical';
+type Status = "passed" | "failed" | "skipped";
+type Severity = "low" | "medium" | "high" | "critical";
 
 type TestCase = {
   id: string;
@@ -70,7 +70,7 @@ declare global {
 
 /* ---------------- Public API ---------------- */
 type ExportOpts = {
-  codeTheme?: 'dark' | 'light'; // Prism theme. default: dark
+  codeTheme?: "dark" | "light"; // Prism theme. default: dark
 };
 
 export const downloadAsHTMLSameUI = (
@@ -80,16 +80,16 @@ export const downloadAsHTMLSameUI = (
 ) => {
   const data = window.__REPORT_DATA__;
   if (!data) {
-    alert('Report data not available for export');
+    alert("Report data not available for export");
     return;
   }
   const html = buildHTML(data, elementId, {
     includeButtons: false,
-    codeTheme: opts.codeTheme ?? 'dark',
+    codeTheme: opts.codeTheme ?? "dark",
   });
-  const blob = new Blob([html], { type: 'text/html' });
+  const blob = new Blob([html], { type: "text/html" });
   const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
+  const a = document.createElement("a");
   a.href = url;
   a.download = filename;
   document.body.appendChild(a);
@@ -105,21 +105,21 @@ export const downloadAsPDFSameUI = async (
 ) => {
   const data = window.__REPORT_DATA__;
   if (!data) {
-    alert('Report data not available for export');
+    alert("Report data not available for export");
     return;
   }
 
   // Build same HTML in an offscreen iframe (same origin)
   const html = buildHTML(data, elementId, {
     includeButtons: false,
-    codeTheme: opts.codeTheme ?? 'dark',
+    codeTheme: opts.codeTheme ?? "dark",
   });
-  const iframe = document.createElement('iframe');
-  iframe.style.position = 'fixed';
-  iframe.style.left = '-99999px';
-  iframe.style.top = '0';
-  iframe.width = '1200';
-  iframe.height = '10';
+  const iframe = document.createElement("iframe");
+  iframe.style.position = "fixed";
+  iframe.style.left = "-99999px";
+  iframe.style.top = "0";
+  iframe.width = "1200";
+  iframe.height = "10";
   document.body.appendChild(iframe);
 
   const doc = iframe.contentDocument!;
@@ -136,12 +136,12 @@ export const downloadAsPDFSameUI = async (
   const scale = opts.scale ?? 2;
   const canvas = await html2canvas(doc.body, {
     scale,
-    backgroundColor: '#ffffff',
+    backgroundColor: "#ffffff",
     useCORS: true,
   });
 
-  const imgData = canvas.toDataURL('image/png');
-  const pdf = new jsPDF('p', 'mm', 'a4');
+  const imgData = canvas.toDataURL("image/png");
+  const pdf = new jsPDF("p", "mm", "a4");
   const pageW = pdf.internal.pageSize.getWidth();
   const pageH = pdf.internal.pageSize.getHeight();
   const imgW = pageW;
@@ -150,13 +150,13 @@ export const downloadAsPDFSameUI = async (
   let heightLeft = imgH;
   let position = 0;
 
-  pdf.addImage(imgData, 'PNG', 0, 0, imgW, imgH);
+  pdf.addImage(imgData, "PNG", 0, 0, imgW, imgH);
   heightLeft -= pageH;
 
   while (heightLeft > 0) {
     position = heightLeft - imgH;
     pdf.addPage();
-    pdf.addImage(imgData, 'PNG', 0, position, imgW, imgH);
+    pdf.addImage(imgData, "PNG", 0, position, imgW, imgH);
     heightLeft -= pageH;
   }
 
@@ -168,10 +168,10 @@ export const downloadAsPDFSameUI = async (
 const waitForDOMContentLoaded = (iframe: HTMLIFrameElement) =>
   new Promise<void>((resolve) => {
     const doc = iframe.contentDocument!;
-    if (doc.readyState === 'complete' || doc.readyState === 'interactive') {
+    if (doc.readyState === "complete" || doc.readyState === "interactive") {
       setTimeout(resolve, 120);
     } else {
-      doc.addEventListener('DOMContentLoaded', () => setTimeout(resolve, 120), {
+      doc.addEventListener("DOMContentLoaded", () => setTimeout(resolve, 120), {
         once: true,
       });
     }
@@ -199,16 +199,16 @@ const expandAllBlocks = (iframe: HTMLIFrameElement) => {
   const doc = iframe.contentDocument!;
   doc
     .querySelectorAll<HTMLElement>('[id^="url-"]')
-    .forEach((el) => el.classList.remove('hidden'));
+    .forEach((el) => el.classList.remove("hidden"));
   doc
     .querySelectorAll<HTMLElement>('.toggle-icon[data-for^="url-"]')
-    .forEach((i) => i.setAttribute('data-lucide', 'chevron-down'));
+    .forEach((i) => i.setAttribute("data-lucide", "chevron-down"));
   doc
     .querySelectorAll<HTMLElement>('[id^="tc-"]')
-    .forEach((el) => el.classList.remove('hidden'));
+    .forEach((el) => el.classList.remove("hidden"));
   doc
     .querySelectorAll<HTMLElement>('.toggle-icon[data-for^="tc-"]')
-    .forEach((i) => i.setAttribute('data-lucide', 'chevron-down'));
+    .forEach((i) => i.setAttribute("data-lucide", "chevron-down"));
   const win = iframe.contentWindow as any;
   try {
     win?.lucide?.createIcons?.();
@@ -217,14 +217,14 @@ const expandAllBlocks = (iframe: HTMLIFrameElement) => {
 
 /* ---------------- HTML builder (same UI + Prism) ---------------- */
 const escapeHtml = (s: any) =>
-  String(s ?? '')
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;');
+  String(s ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
 
 const prettyJsonMaybe = (input: any) => {
-  if (input == null) return '';
-  if (typeof input === 'object') {
+  if (input == null) return "";
+  if (typeof input === "object") {
     try {
       return JSON.stringify(input, null, 2);
     } catch {
@@ -237,53 +237,53 @@ const prettyJsonMaybe = (input: any) => {
     return String(input);
   }
 };
-const fmtDate = (d: string) => (d ? new Date(d).toLocaleString() : '');
+const fmtDate = (d: string) => (d ? new Date(d).toLocaleString() : "");
 const fmtDuration = (ms: number) => `${((ms ?? 0) / 1000).toFixed(2)}s`;
 const fmtBytes = (bytes: number) => {
-  if (!bytes) return '0 B';
+  if (!bytes) return "0 B";
   const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB'];
+  const sizes = ["B", "KB", "MB", "GB"];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
 };
 
 const methodChip = (method: string) => {
   const m: Record<string, string> = {
-    GET: 'bg-blue-100 text-blue-800 border-blue-200',
-    POST: 'bg-green-100 text-green-800 border-green-200',
-    PUT: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-    DELETE: 'bg-red-100 text-red-800 border-red-200',
-    PATCH: 'bg-purple-100 text-purple-800 border-purple-200',
-    OPTIONS: 'bg-gray-100 text-gray-800 border-gray-200',
+    GET: "bg-blue-100 text-blue-800 border-blue-200",
+    POST: "bg-green-100 text-green-800 border-green-200",
+    PUT: "bg-yellow-100 text-yellow-800 border-yellow-200",
+    DELETE: "bg-red-100 text-red-800 border-red-200",
+    PATCH: "bg-purple-100 text-purple-800 border-purple-200",
+    OPTIONS: "bg-gray-100 text-gray-800 border-gray-200",
   };
-  return m[(method || '').toUpperCase()] || m.OPTIONS;
+  return m[(method || "").toUpperCase()] || m.OPTIONS;
 };
 const statusChip = (status: Status) => {
   const m: Record<Status, string> = {
-    passed: 'bg-green-100 text-green-800 border-green-200',
-    failed: 'bg-red-100 text-red-800 border-red-200',
-    skipped: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+    passed: "bg-green-100 text-green-800 border-green-200",
+    failed: "bg-red-100 text-red-800 border-red-200",
+    skipped: "bg-yellow-100 text-yellow-800 border-yellow-200",
   };
-  return m[status] || 'bg-gray-100 text-gray-800 border-gray-200';
+  return m[status] || "bg-gray-100 text-gray-800 border-gray-200";
 };
 const severityChip = (sev: Severity) => {
   const m: Record<Severity, string> = {
-    critical: 'bg-red-600 text-white',
-    high: 'bg-orange-600 text-white',
-    medium: 'bg-yellow-600 text-white',
-    low: 'bg-blue-600 text-white',
+    critical: "bg-red-600 text-white",
+    high: "bg-orange-600 text-white",
+    medium: "bg-yellow-600 text-white",
+    low: "bg-blue-600 text-white",
   };
-  return m[sev] || 'bg-gray-600 text-white';
+  return m[sev] || "bg-gray-600 text-white";
 };
 
 const normalizeUrlKey = (raw: string) => {
   try {
     const u = new URL(raw);
     const origin = `${u.protocol}//${u.host.toLowerCase()}`;
-    const path = u.pathname.replace(/\/$/, '');
+    const path = u.pathname.replace(/\/$/, "");
     return `${origin}${path}${u.search}`;
   } catch {
-    return (raw || '').trim().replace(/\/$/, '');
+    return (raw || "").trim().replace(/\/$/, "");
   }
 };
 
@@ -300,13 +300,13 @@ const collectTestCases = (data: TestSuiteData): TestCase[] => {
   if (cats.length) return cats;
 
   const groups = [
-    'positiveTests',
-    'negativeTests',
-    'functionalTests',
-    'semanticTests',
-    'edgeCaseTests',
-    'securityTests',
-    'advancedSecurityTests',
+    "positiveTests",
+    "negativeTests",
+    "functionalTests",
+    "semanticTests",
+    "edgeCaseTests",
+    "securityTests",
+    "advancedSecurityTests",
   ] as const;
   const rows: TestCase[] = [];
   for (const req of data.requests ?? []) {
@@ -346,7 +346,7 @@ const groupByUrlThenMethod = (tcs: TestCase[]) => {
   };
   const groups: Record<string, UrlGroup> = {};
   for (const tc of tcs) {
-    const key = normalizeUrlKey(tc.url || '');
+    const key = normalizeUrlKey(tc.url || "");
     if (!groups[key])
       groups[key] = {
         key,
@@ -359,7 +359,7 @@ const groupByUrlThenMethod = (tcs: TestCase[]) => {
         avgDuration: 0,
       };
     const g = groups[key];
-    const m = (tc.method || '').toUpperCase();
+    const m = (tc.method || "").toUpperCase();
     if (!g.methods[m])
       g.methods[m] = {
         method: m,
@@ -373,13 +373,13 @@ const groupByUrlThenMethod = (tcs: TestCase[]) => {
     const mb = g.methods[m];
     mb.testCases.push(tc);
     mb.total++;
-    if (tc.status === 'passed') mb.passed++;
-    else if (tc.status === 'failed') mb.failed++;
-    else if (tc.status === 'skipped') mb.skipped++;
+    if (tc.status === "passed") mb.passed++;
+    else if (tc.status === "failed") mb.failed++;
+    else if (tc.status === "skipped") mb.skipped++;
     g.total++;
-    if (tc.status === 'passed') g.passed++;
-    else if (tc.status === 'failed') g.failed++;
-    else if (tc.status === 'skipped') g.skipped++;
+    if (tc.status === "passed") g.passed++;
+    else if (tc.status === "failed") g.failed++;
+    else if (tc.status === "skipped") g.skipped++;
   }
   Object.values(groups).forEach((g) => {
     Object.values(g.methods).forEach((mb) => {
@@ -445,7 +445,7 @@ const buildRequestMetricsFromCases = (tcs: TestCase[]): RequestMetricsShape => {
 
   const requestsByMethod: Record<string, number> = {};
   tcs.forEach((t) => {
-    const m = (t.method || '').toUpperCase();
+    const m = (t.method || "").toUpperCase();
     requestsByMethod[m] = (requestsByMethod[m] || 0) + 1;
   });
 
@@ -460,8 +460,8 @@ const buildRequestMetricsFromCases = (tcs: TestCase[]): RequestMetricsShape => {
   // You can refine this if you have richer error typing in your data
   const errorTypes: Record<string, number> = {};
   tcs.forEach((t) => {
-    if (t.status === 'failed') {
-      const key = t.category || 'Failed';
+    if (t.status === "failed") {
+      const key = t.category || "Failed";
       errorTypes[key] = (errorTypes[key] || 0) + 1;
     }
   });
@@ -520,7 +520,7 @@ const buildRequestMetricsSection = (m: RequestMetricsShape) => {
       </div>
     </div>`
     )
-    .join('');
+    .join("");
 
   const statusHtml = Object.entries(m.statusCodeDistribution)
     .map(
@@ -529,12 +529,12 @@ const buildRequestMetricsSection = (m: RequestMetricsShape) => {
       <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
         // simple color bucketing
         parseInt(code, 10) >= 500
-          ? 'bg-red-100 text-red-800'
+          ? "bg-red-100 text-red-800"
           : parseInt(code, 10) >= 400
-          ? 'bg-yellow-100 text-yellow-800'
+          ? "bg-yellow-100 text-yellow-800"
           : parseInt(code, 10) >= 300
-          ? 'bg-blue-100 text-blue-800'
-          : 'bg-green-100 text-green-800'
+          ? "bg-blue-100 text-blue-800"
+          : "bg-green-100 text-green-800"
       }">${code}</span>
       <div class="flex items-center space-x-2">
         <div class="w-20 bg-gray-200 rounded-full h-2">
@@ -546,7 +546,7 @@ const buildRequestMetricsSection = (m: RequestMetricsShape) => {
       </div>
     </div>`
     )
-    .join('');
+    .join("");
 
   const errorTotal = Object.values(m.errorTypes).reduce((a, b) => a + b, 0);
   const errorHtml =
@@ -575,10 +575,10 @@ const buildRequestMetricsSection = (m: RequestMetricsShape) => {
               </div>
             </div>`
             )
-            .join('')}
+            .join("")}
         </div>
       </div>`
-      : '';
+      : "";
 
   const slowHtml = m.slowestRequests
     .map(
@@ -598,7 +598,7 @@ const buildRequestMetricsSection = (m: RequestMetricsShape) => {
       </div>
     </div>`
     )
-    .join('');
+    .join("");
 
   const fastHtml = m.fastestRequests
     .map(
@@ -618,7 +618,7 @@ const buildRequestMetricsSection = (m: RequestMetricsShape) => {
       </div>
     </div>`
     )
-    .join('');
+    .join("");
 
   return `
   <div class="space-y-6">
@@ -756,7 +756,7 @@ const buildHeader = (d: TestSuiteData, logoSrc: string | null) => `
           ? `<img src="${escapeHtml(
               logoSrc
             )}" alt="Optraflow logo" style="width:100%;height:50px" />`
-          : ''
+          : ""
       }
           </div>
     </div>
@@ -792,36 +792,36 @@ const buildHeader = (d: TestSuiteData, logoSrc: string | null) => `
 const buildMetricCards = (d: TestSuiteData, tcs: TestCase[]) => {
   const total = tcs.length || Number(d.totalTestCases || 0);
   const passed =
-    (tcs.length ? tcs.filter((t) => t.status === 'passed').length : 0) ||
+    (tcs.length ? tcs.filter((t) => t.status === "passed").length : 0) ||
     Number(d.successfulTestCases || 0);
   const failed =
-    (tcs.length ? tcs.filter((t) => t.status === 'failed').length : 0) ||
+    (tcs.length ? tcs.filter((t) => t.status === "failed").length : 0) ||
     Number(d.failedTestCases || 0);
   const successRate = total
     ? Math.round((passed / total) * 100)
     : d.successRate || 0;
   const rateColor =
     successRate >= 80
-      ? 'text-green-600 bg-green-100'
+      ? "text-green-600 bg-green-100"
       : successRate >= 60
-      ? 'text-yellow-600 bg-yellow-100'
-      : 'text-red-600 bg-red-100';
+      ? "text-yellow-600 bg-yellow-100"
+      : "text-red-600 bg-red-100";
   return `
   <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mb-3 mt-3">
-    ${metricCard('Success Rate', `${successRate}%`, 'trending-up', rateColor)}
+    ${metricCard("Success Rate", `${successRate}%`, "trending-up", rateColor)}
     ${metricCard(
-      'Total Test Cases',
+      "Total Test Cases",
       `${total}`,
-      'clock',
-      'text-blue-600 bg-blue-100'
+      "clock",
+      "text-blue-600 bg-blue-100"
     )}
     ${metricCard(
-      'Passed',
+      "Passed",
       `${passed}`,
-      'check-circle',
-      'text-green-600 bg-green-100'
+      "check-circle",
+      "text-green-600 bg-green-100"
     )}
-    ${metricCard('Failed', `${failed}`, 'x-circle', 'text-red-600 bg-red-100')}
+    ${metricCard("Failed", `${failed}`, "x-circle", "text-red-600 bg-red-100")}
   </div>`;
 };
 const metricCard = (
@@ -885,15 +885,15 @@ const buildTestCaseDetail = (tc: TestCase) => {
       <div class="space-y-4">
         <div>
           <h4 class="font-medium text-gray-900 mb-2">Endpoint</h4>
-          ${codePanel('http', `${(tc.method || '').toUpperCase()} ${tc.url}`)}
+          ${codePanel("http", `${(tc.method || "").toUpperCase()} ${tc.url}`)}
         </div>
         <div>
           <h4 class="font-medium text-gray-900 mb-2">Request cURL</h4>
-          ${codePanel('bash', tc.requestCurl)}
+          ${codePanel("bash", tc.requestCurl)}
         </div>
         <div>
           <h4 class="font-medium text-gray-900 mb-2">Response</h4>
-          ${codePanel('json', prettyJsonMaybe(tc.response))}
+          ${codePanel("json", prettyJsonMaybe(tc.response))}
         </div>
       </div>
     </div>
@@ -904,10 +904,10 @@ const buildUrlGroup = (g: ReturnType<typeof groupByUrlThenMethod>[number]) => {
   const rate = successPct(g.passed, g.total);
   const rateColor =
     rate >= 80
-      ? 'text-green-600'
+      ? "text-green-600"
       : rate >= 60
-      ? 'text-yellow-600'
-      : 'text-red-600';
+      ? "text-yellow-600"
+      : "text-red-600";
   const rowId = `url-${hash(g.key)}`;
 
   const methods = Object.values(g.methods)
@@ -920,11 +920,11 @@ const buildUrlGroup = (g: ReturnType<typeof groupByUrlThenMethod>[number]) => {
         )}">${mb.method}</span>
       </div>
       <div class="space-y-3">
-        ${mb.testCases.map((tc) => buildTestCaseDetail(tc)).join('')}
+        ${mb.testCases.map((tc) => buildTestCaseDetail(tc)).join("")}
       </div>
     </div>`
     )
-    .join('');
+    .join("");
 
   return `
   <div class="border border-gray-200 rounded-lg overflow-hidden">
@@ -937,7 +937,7 @@ const buildUrlGroup = (g: ReturnType<typeof groupByUrlThenMethod>[number]) => {
               g.endpoint
             )}">${escapeHtml(g.endpoint)}</p>
             <p class="text-sm text-gray-500">${g.total} test case${
-    g.total === 1 ? '' : 's'
+    g.total === 1 ? "" : "s"
   }</p>
           </div>
         </div>
@@ -951,7 +951,7 @@ const buildUrlGroup = (g: ReturnType<typeof groupByUrlThenMethod>[number]) => {
           ${
             g.skipped
               ? `<div class="flex items-center space-x-1 text-yellow-600"><i data-lucide="alert-triangle" class="w-4 h-4"></i><span>${g.skipped}</span></div>`
-              : ''
+              : ""
           }
           <div class="flex items-center space-x-1 text-gray-500"><i data-lucide="clock" class="w-4 h-4"></i><span>${
             g.avgDuration
@@ -978,7 +978,7 @@ const buildGroupingSection = (tcs: TestCase[]) => {
         </h2>
         <div class="space-y-4">${groups
           .map((g) => buildUrlGroup(g))
-          .join('')}</div>
+          .join("")}</div>
       </div>
     </div>`;
 };
@@ -992,7 +992,7 @@ const hash = (s: string) => {
 const buildHTML = (
   data: TestSuiteData,
   sourceElementId: string,
-  opts: { includeButtons?: boolean; codeTheme: 'dark' | 'light' }
+  opts: { includeButtons?: boolean; codeTheme: "dark" | "light" }
 ) => {
   // reuse on-screen logo if present
   let logoSrc: string | null = null;
@@ -1005,9 +1005,9 @@ const buildHTML = (
   const tcs = collectTestCases(data);
   const requestMetrics = buildRequestMetricsFromCases(tcs); // <-- NEW
   const prismCss =
-    opts.codeTheme === 'dark'
-      ? 'https://unpkg.com/prismjs@1/themes/prism-okaidia.css'
-      : 'https://unpkg.com/prismjs@1/themes/prism.css';
+    opts.codeTheme === "dark"
+      ? "https://unpkg.com/prismjs@1/themes/prism-okaidia.css"
+      : "https://unpkg.com/prismjs@1/themes/prism.css";
 
   return `<!doctype html>
 <html>

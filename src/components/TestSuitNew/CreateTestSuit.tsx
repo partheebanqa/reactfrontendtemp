@@ -842,9 +842,211 @@ const CreateTestSuit: React.FC = () => {
         }
         buttonTitle="Create Test suite"
         showCreateButton={false}
-        showQuickGuide={false}
+        showQuickGuide={true}
+        quickGuideTitle='🚀 Guided Onboarding: Create Test Suites'
         onClickQuickGuide={() => console.log('Quick guide')}
         icon={Layers}
+        quickGuideContent={
+          <div>
+            <div>
+
+              <div className="px-2 py-2 space-y-2">
+                <div className="space-y-4">
+                  <h3 className="font-semibold text-gray-900 text-lg">Workflow Steps</h3>
+                  <div className="space-y-4">
+                    <div className="border border-gray-200 rounded-lg p-4">
+                      <div className="flex items-start gap-3">
+                        <div className="w-6 h-6 rounded-full bg-[#136fb0] text-white flex items-center justify-center text-sm font-semibold flex-shrink-0">
+                          1
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-gray-900 mb-2">Provide Basic Information</h4>
+                          <p className="text-sm text-gray-600 mb-2">
+                            Start by giving your test suite a meaningful name and selecting the target environment.
+                          </p>
+                          <ul className="text-sm text-gray-600 space-y-1 ml-4">
+                            <li className="flex items-start gap-2">
+                              <ChevronRight className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                              <span>Enter a descriptive test suite name</span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                              <ChevronRight className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                              <span>Add an optional description</span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                              <ChevronRight className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                              <span>Select the environment (Development, Staging, Production, etc.)</span>
+                            </li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="border border-gray-200 rounded-lg p-4">
+                      <div className="flex items-start gap-3">
+                        <div className="w-6 h-6 rounded-full bg-[#136fb0] text-white flex items-center justify-center text-sm font-semibold flex-shrink-0">
+                          2
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-gray-900 mb-2">Configure Prerequisites</h4>
+                          <p className="text-sm text-gray-600 mb-2">
+                            If your APIs require authentication, add a pre-request API that will fetch the authentication token.
+                          </p>
+                          <ul className="text-sm text-gray-600 space-y-1 ml-4">
+                            <li className="flex items-start gap-2">
+                              <ChevronRight className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                              <span>Add the login/auth endpoint details</span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                              <ChevronRight className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                              <span>Specify where the token appears in the response</span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                              <ChevronRight className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                              <span>Skip this step if no authentication is needed</span>
+                            </li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="border border-gray-200 rounded-lg p-4">
+                      <div className="flex items-start gap-3">
+                        <div className="w-6 h-6 rounded-full bg-[#136fb0] text-white flex items-center justify-center text-sm font-semibold flex-shrink-0">
+                          3
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-gray-900 mb-2">Import & Select APIs</h4>
+                          <p className="text-sm text-gray-600 mb-2">
+                            Import API requests from your collections and select which ones to test.
+                          </p>
+                          <ul className="text-sm text-gray-600 space-y-1 ml-4">
+                            <li className="flex items-start gap-2">
+                              <ChevronRight className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                              <span>Import from Postman, Insomnia, or add manually</span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                              <ChevronRight className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                              <span>Check which APIs require authentication</span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                              <ChevronRight className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                              <span>Select the APIs you want to test</span>
+                            </li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="border border-gray-200 rounded-lg p-4">
+                      <div className="flex items-start gap-3">
+                        <div className="w-6 h-6 rounded-full bg-[#136fb0] text-white flex items-center justify-center text-sm font-semibold flex-shrink-0">
+                          4
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-gray-900 mb-2">Generate Test Cases</h4>
+                          <p className="text-sm text-gray-600 mb-2">
+                            The system will automatically generate comprehensive test cases for each selected API.
+                          </p>
+                          <ul className="text-sm text-gray-600 space-y-1 ml-4">
+                            <li className="flex items-start gap-2">
+                              <ChevronRight className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                              <span>Status code validation</span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                              <ChevronRight className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                              <span>Response structure verification</span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                              <ChevronRight className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                              <span>Error handling scenarios</span>
+                            </li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="border border-gray-200 rounded-lg p-4">
+                      <div className="flex items-start gap-3">
+                        <div className="w-6 h-6 rounded-full bg-[#136fb0] text-white flex items-center justify-center text-sm font-semibold flex-shrink-0">
+                          5
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-gray-900 mb-2">Select Test Cases</h4>
+                          <p className="text-sm text-gray-600 mb-2">
+                            Review and select which test cases to execute.
+                          </p>
+                          <ul className="text-sm text-gray-600 space-y-1 ml-4">
+                            <li className="flex items-start gap-2">
+                              <ChevronRight className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                              <span>Review generated test cases</span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                              <ChevronRight className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                              <span>Select all or choose specific tests</span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                              <ChevronRight className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                              <span>Customize test parameters if needed</span>
+                            </li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="border border-gray-200 rounded-lg p-4">
+                      <div className="flex items-start gap-3">
+                        <div className="w-6 h-6 rounded-full bg-[#136fb0] text-white flex items-center justify-center text-sm font-semibold flex-shrink-0">
+                          6
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-gray-900 mb-2">Execute Tests</h4>
+                          <p className="text-sm text-gray-600 mb-2">
+                            Run the selected test cases and view detailed results.
+                          </p>
+                          <ul className="text-sm text-gray-600 space-y-1 ml-4">
+                            <li className="flex items-start gap-2">
+                              <ChevronRight className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                              <span>Tests will run with authentication if configured</span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                              <ChevronRight className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                              <span>View pass/fail status for each test</span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                              <ChevronRight className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                              <span>Export results for reporting</span>
+                            </li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                  <h3 className="font-semibold text-yellow-900 mb-2">Pro Tips</h3>
+                  <ul className="text-sm text-yellow-800 space-y-1">
+                    <li className="flex items-start gap-2">
+                      <ChevronRight className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                      <span>Save your test suite to reuse it later</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <ChevronRight className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                      <span>You can edit generated test cases before execution</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <ChevronRight className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                      <span>Authentication tokens are automatically injected into requests</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+
+
+            </div>
+          </div>
+        }
         iconBgClass="bg-green-100"
         iconColor="#0f766e"
         iconSize={36}
@@ -1004,7 +1206,6 @@ const CreateTestSuit: React.FC = () => {
                     extractVariables={extractVariables}
                     filterMethod="POST"
                     showAuthCapture={true}
-
                   />
                 </>
               )}
@@ -1167,7 +1368,7 @@ const CreateTestSuit: React.FC = () => {
 
               {preRequestId && (
                 <p className="text-gray-600 font-bold mb-2">
-                  Click Run Tests to execute and validate your flow
+                  Click Run Tests to execute and verify the selected test cases.
                 </p>
               )}
 

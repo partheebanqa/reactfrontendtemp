@@ -464,6 +464,10 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
     isSelectTestsRoute && hasGeneratedAnyTests && !hasAnySelectedTests;
 
 
+  const isSelectApisRoute =
+    typeof window !== 'undefined' &&
+    window.location.href.includes('step=select-apis');
+
   return (
     <Card>
       <CardHeader>
@@ -630,13 +634,17 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <AlertDialogTrigger asChild>
-                            <Button
-                              variant='ghost'
-                              size='sm'
-                              className='text-red-600 hover:text-red-700 hover:bg-red-100 dark:hover:bg-red-900'
-                            >
-                              <Trash2 className='w-4 h-4' />
-                            </Button>
+                            {isSelectApisRoute && (
+                              <>
+                                <Button
+                                  variant='ghost'
+                                  size='sm'
+                                  className='text-red-600 hover:text-red-700 hover:bg-red-100 dark:hover:bg-red-900'
+                                >
+                                  <Trash2 className='w-4 h-4' />
+                                </Button>
+                              </>
+                            )}
                           </AlertDialogTrigger>
                         </TooltipTrigger>
                         <TooltipContent>Delete Request</TooltipContent>
