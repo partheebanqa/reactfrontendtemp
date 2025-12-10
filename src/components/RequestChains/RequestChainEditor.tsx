@@ -468,6 +468,22 @@ export function RequestChainEditor({
 
     setIsAnalyzerOpen(false);
 
+    const sourceRequestIndex = formData.chainRequests.findIndex((req) => {
+      const reqId = req.id;
+      return extractedVariablesByRequest[reqId]?.[variableName] !== undefined;
+    });
+
+    if (sourceRequestIndex === -1) {
+      toast({
+        title: 'Error',
+        description: 'Unable to determine the source request',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const sourceRequest = formData.chainRequests[sourceRequestIndex];
+
     const getDomain = (url: string): string | null => {
       try {
         if (url.startsWith('/')) {
@@ -482,26 +498,15 @@ export function RequestChainEditor({
       }
     };
 
-    const sourceRequestId = Object.keys(extractedVariablesByRequest).find(
-      (reqId) => extractedVariablesByRequest[reqId][variableName] !== undefined
-    );
-
-    if (!sourceRequestId) return;
-
-    const sourceRequest = formData.chainRequests.find(
-      (r) => r.id === sourceRequestId
-    );
-    if (!sourceRequest) return;
-
     const sourceDomain = getDomain(sourceRequest.url);
 
     let appliedCount = 0;
     let overwrittenCount = 0;
-    const updatedRequests = formData.chainRequests.map((request) => {
-      if (request.id === sourceRequestId) return request;
+
+    const updatedRequests = formData.chainRequests.map((request, index) => {
+      if (index <= sourceRequestIndex) return request;
 
       const requestDomain = getDomain(request.url);
-
       const hasSameDomain = sourceDomain && requestDomain === sourceDomain;
 
       if (hasSameDomain) {
@@ -538,7 +543,7 @@ export function RequestChainEditor({
     if (appliedCount === 0) {
       toast({
         title: 'No Requests Updated',
-        description: 'No requests found with the same domain',
+        description: `No subsequent requests found with matching domain "${sourceDomain}"`,
         variant: 'destructive',
       });
       return;
@@ -547,8 +552,12 @@ export function RequestChainEditor({
     setFormData({ ...formData, chainRequests: [...updatedRequests] });
 
     toast({
-      title: 'Applied to Matching Requests',
-      description: `Variable {{${variableName}}} has been set as the Bearer Token for all ${updatedRequests.length} requests`,
+      title: 'Applied to Subsequent Requests',
+      description: `Variable {{${variableName}}} applied as Bearer Token to ${appliedCount} request(s) after request #${
+        sourceRequestIndex + 1
+      } with matching domain "${sourceDomain}"${
+        overwrittenCount > 0 ? ` (${overwrittenCount} overwritten)` : ''
+      }`,
     });
   };
 
