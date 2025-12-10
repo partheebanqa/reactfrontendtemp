@@ -1354,6 +1354,8 @@ export function RequestChainEditor({
     requestId: string,
     extraction: DataExtraction
   ) => {
+    console.log('calling handle extract variable');
+
     const request = formData.chainRequests.find((r) => r.id === requestId);
     if (!request) return;
 
@@ -2618,30 +2620,34 @@ export function RequestChainEditor({
                                               )
                                             }
                                             extractedVariables={(() => {
-                                              const vars: Record<string, any> =
-                                                {};
+                                              // Build extracted variables from all previous requests
+                                              const varsUpToThisPoint: Record<
+                                                string,
+                                                any
+                                              > = {};
                                               for (
                                                 let i = 0;
                                                 i < requestIndex;
                                                 i++
                                               ) {
-                                                const prevId =
-                                                  formData.chainRequests[i]?.id;
+                                                const prevReqId =
+                                                  formData.chainRequests?.[i]
+                                                    ?.id;
                                                 if (
-                                                  prevId &&
+                                                  prevReqId &&
                                                   extractedVariablesByRequest[
-                                                    prevId
+                                                    prevReqId
                                                   ]
                                                 ) {
                                                   Object.assign(
-                                                    vars,
+                                                    varsUpToThisPoint,
                                                     extractedVariablesByRequest[
-                                                      prevId
+                                                      prevReqId
                                                     ]
                                                   );
                                                 }
                                               }
-                                              return vars;
+                                              return varsUpToThisPoint;
                                             })()}
                                             chainVariables={
                                               formData.variables || []
@@ -2652,10 +2658,13 @@ export function RequestChainEditor({
                                             onRegenerateDynamicVariable={
                                               regenerateDynamicVariableLocal
                                             }
-                                            requestAssertions={
-                                              assertionsByRequest[request.id] ||
-                                              []
-                                            }
+                                            requestAssertions={(() => {
+                                              const assertions =
+                                                assertionsByRequest[
+                                                  request.id
+                                                ] || [];
+                                              return assertions;
+                                            })()}
                                             onAssertionsUpdate={(
                                               assertions
                                             ) => {
@@ -2676,6 +2685,105 @@ export function RequestChainEditor({
                                               extractedVariablesByRequest
                                             }
                                           />
+                                          {executionLog && (
+                                            <div>
+                                              {(executionLog.response != null ||
+                                                executionLog.error) && (
+                                                <div className='border-t border-gray-200 p-2'>
+                                                  <div className='flex items-center gap-2 mb-4'>
+                                                    <h3 className='text-lg font-medium text-gray-900'>
+                                                      Extract Variables from
+                                                      Response
+                                                    </h3>
+                                                    <div className='relative group inline-block'>
+                                                      <Info className='w-4 h-4 text-gray-400 cursor-pointer' />
+
+                                                      <div
+                                                        className='absolute left-0 mt-2 w-56 p-2 text-xs text-gray-700 bg-white border
+                    border-gray-200 rounded shadow-lg opacity-0 group-hover:opacity-100
+                    pointer-events-none transition-opacity z-50'
+                                                      >
+                                                        Mouse over on element
+                                                        and click on "extract"
+                                                        button to extract
+                                                        variable.
+                                                      </div>
+                                                    </div>
+                                                  </div>
+
+                                                  <ResponseExplorer
+                                                    response={
+                                                      executionLog.response
+                                                    }
+                                                    onExtractVariable={(
+                                                      extraction
+                                                    ) =>
+                                                      handleExtractVariableForRequest(
+                                                        executionLog.requestId,
+                                                        extraction
+                                                      )
+                                                    }
+                                                    extractedVariables={
+                                                      extractedVariablesByRequest[
+                                                        executionLog.requestId
+                                                      ] || {}
+                                                    }
+                                                    existingExtractions={
+                                                      formData.chainRequests.find(
+                                                        (r) =>
+                                                          r.id ===
+                                                          executionLog.requestId
+                                                      )?.extractVariables || []
+                                                    }
+                                                    onRemoveExtraction={(
+                                                      variableName
+                                                    ) =>
+                                                      handleRemoveExtractionForRequest(
+                                                        executionLog.requestId,
+                                                        variableName
+                                                      )
+                                                    }
+                                                    handleCopy={(value) =>
+                                                      handleCopyForRequest(
+                                                        executionLog.requestId,
+                                                        value
+                                                      )
+                                                    }
+                                                    chainId={chain?.id ?? ''}
+                                                    copied={
+                                                      copiedStates[
+                                                        executionLog.requestId
+                                                      ] || false
+                                                    }
+                                                    actualRequestUrl={
+                                                      executionLog.request.url
+                                                    }
+                                                    actualRequestHeaders={
+                                                      executionLog.request
+                                                        .headers
+                                                    }
+                                                    actualRequestBody={
+                                                      executionLog.request.body
+                                                    }
+                                                    actualRequestMethod={
+                                                      executionLog.request
+                                                        .method
+                                                    }
+                                                    executionStatus={
+                                                      executionLog.status
+                                                    }
+                                                    errorMessage={
+                                                      executionLog.error
+                                                    }
+                                                    executionLog={executionLog}
+                                                    onApplyToAllRequests={
+                                                      handleApplyToAllRequests
+                                                    }
+                                                  />
+                                                </div>
+                                              )}
+                                            </div>
+                                          )}
                                         </div>
                                       )}
                                     </CardContent>
@@ -2714,11 +2822,10 @@ export function RequestChainEditor({
                                   className='gap-2 bg-transparent'
                                 >
                                   <AlertTriangle className='w-4 h-4' />
-                                  Analyzer
+                                  Chain Analyzer
                                 </Button>
                               )}
 
-                              {/* ADD REQUEST */}
                               <AddRequestMenu
                                 onAddRequest={addNewRequest}
                                 onImport={() => setIsImportModalOpen(true)}
@@ -2727,7 +2834,6 @@ export function RequestChainEditor({
                           </div>
                         </>
                       ) : (
-                        /* Empty State */
                         <div className='text-center py-12'>
                           <div className='w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4'>
                             <Code className='w-8 h-8 text-gray-400' />
@@ -2739,20 +2845,10 @@ export function RequestChainEditor({
                             Get started by adding your first request or
                             importing from a collection
                           </p>
-                          <div className='flex items-center justify-center space-x-3'>
-                            <Button
-                              variant='outline'
-                              onClick={() => setIsImportModalOpen(true)}
-                              className='gap-2'
-                            >
-                              <Download className='w-4 h-4' />
-                              Import from Collection
-                            </Button>
-                            <Button onClick={addNewRequest} className='gap-2'>
-                              <Plus className='w-4 h-4' />
-                              Add First Request
-                            </Button>
-                          </div>
+                          <AddRequestMenu
+                            onAddRequest={addNewRequest}
+                            onImport={() => setIsImportModalOpen(true)}
+                          />
                         </div>
                       )}
                     </div>
@@ -2779,6 +2875,36 @@ export function RequestChainEditor({
                 onRunAll={handleRunAll}
                 onCopyVariable={(requestId, variableName) => {
                   handleCopyForRequest(requestId, variableName);
+                }}
+                onExtractVariable={(requestId, path, suggestedName) => {
+                  // Create extraction for the specified request
+                  const extraction: DataExtraction = {
+                    variableName: `E_${suggestedName}`,
+                    name: `E_${suggestedName}`,
+                    source: 'response_body',
+                    path: path,
+                  };
+
+                  console.log(
+                    'Adding extraction to request:',
+                    requestId,
+                    extraction
+                  );
+
+                  handleExtractVariableForRequest(requestId, extraction);
+
+                  // Expand the request to show the extraction
+                  const newExpanded = new Set(expandedRequests);
+                  newExpanded.add(requestId);
+                  setExpandedRequests(newExpanded);
+
+                  toast({
+                    title: 'Variable Extraction Added',
+                    description: `Variable "E_${suggestedName}" will be extracted from ${path}. Run the request again to see the extracted value.`,
+                  });
+
+                  // Close the analyzer after extraction
+                  setIsAnalyzerOpen(false);
                 }}
                 open={isAnalyzerOpen}
                 onOpenChange={setIsAnalyzerOpen}

@@ -11,6 +11,7 @@ import {
   Loader2,
   ChevronDown,
   ChevronUp,
+  Plus,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -35,6 +36,11 @@ interface RequestAnalyzerProps {
   isExecuting: boolean;
   onRunAll: () => void;
   onCopyVariable?: (requestId: string, variableName: string) => void;
+  onExtractVariable?: (
+    requestId: string,
+    path: string,
+    suggestedName: string
+  ) => void;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -47,6 +53,7 @@ export function RequestAnalyzer({
   isExecuting,
   onRunAll,
   onCopyVariable,
+  onExtractVariable,
   open,
   onOpenChange,
 }: RequestAnalyzerProps) {
@@ -126,7 +133,7 @@ export function RequestAnalyzer({
         <DialogHeader>
           <DialogTitle className='flex items-center gap-2'>
             <AlertTriangle className='w-5 h-5 text-orange-600' />
-            Request Chain Analysis
+            Chain Analysis
           </DialogTitle>
           <DialogDescription>
             {requests.length} requests analyzed • {extractionCount} requests
@@ -225,13 +232,81 @@ export function RequestAnalyzer({
                             responses
                           </p>
                           {analysis.suggestedAuthSource && (
-                            <p className='text-xs text-amber-700 mt-1'>
-                              💡 <strong>Suggestion:</strong> Extract token from
-                              "{analysis.suggestedAuthSource.apiName}" at{' '}
-                              <code className='bg-amber-100 px-1 rounded'>
-                                {analysis.suggestedAuthSource.path}
-                              </code>
-                            </p>
+                            <div className='mt-2 flex items-start gap-2'>
+                              <div className='flex-1'>
+                                <p className='text-xs text-amber-700'>
+                                  💡 <strong>Suggestion:</strong> Extract token
+                                  from "{analysis.suggestedAuthSource.apiName}"
+                                  at{' '}
+                                  <code className='bg-amber-100 px-1 rounded'>
+                                    {analysis.suggestedAuthSource.path}
+                                  </code>
+                                </p>
+                              </div>
+                              <button
+                                onClick={() => {
+                                  if (
+                                    !analysis.suggestedAuthSource ||
+                                    !onExtractVariable
+                                  )
+                                    return;
+
+                                  const sourceRequestIndex =
+                                    analysis.suggestedAuthSource.apiIndex;
+                                  const sourceRequest =
+                                    requests[sourceRequestIndex];
+
+                                  if (!sourceRequest) {
+                                    console.error(
+                                      'Source request not found at index:',
+                                      sourceRequestIndex
+                                    );
+                                    console.log(
+                                      'Available requests:',
+                                      requests.map((r, i) => ({
+                                        index: i,
+                                        id: r.id,
+                                        name: r.name,
+                                      }))
+                                    );
+                                    return;
+                                  }
+
+                                  if (!analysis.suggestedAuthSource.path) {
+                                    console.error(
+                                      'No path specified for extraction'
+                                    );
+                                    return;
+                                  }
+
+                                  const pathParts =
+                                    analysis.suggestedAuthSource.path.split(
+                                      '.'
+                                    );
+                                  const suggestedName =
+                                    pathParts[pathParts.length - 1] ||
+                                    'authToken';
+
+                                  console.log('Extracting variable:', {
+                                    requestId: sourceRequest.id,
+                                    requestName: sourceRequest.name,
+                                    requestIndex: sourceRequestIndex,
+                                    path: analysis.suggestedAuthSource.path,
+                                    suggestedName,
+                                  });
+
+                                  onExtractVariable(
+                                    sourceRequest.id,
+                                    analysis.suggestedAuthSource.path,
+                                    suggestedName
+                                  );
+                                }}
+                                className='px-3 py-1 bg-amber-600 text-white rounded text-xs hover:bg-amber-700 transition-colors flex items-center gap-1 whitespace-nowrap'
+                              >
+                                <Plus className='w-3 h-3' />
+                                Extract Now
+                              </button>
+                            </div>
                           )}
                         </div>
                       </div>

@@ -14,6 +14,7 @@ export interface AnalyzedRequest {
   suggestedAuthSource?: {
     apiIndex: number;
     apiName: string;
+    path: string;
     reason: string;
   };
   queryParams: Array<{
@@ -170,13 +171,93 @@ export function analyzeRequestChain(
 
         for (let j = i - 1; j >= 0; j--) {
           const prevRequest = requests[j];
+          const prevLog = executionLogs[prevRequest.id];
 
           if (isAuthEndpoint(prevRequest.name, prevRequest.url)) {
+            let tokenPath: string | null = null;
+
+            if (prevLog?.response?.body) {
+              try {
+                const parsed = JSON.parse(prevLog.response.body);
+
+                const commonPaths = [
+                  'token',
+                  'accessToken',
+                  'access_token',
+                  'authToken',
+                  'auth_token',
+                  'data.token',
+                  'data.accessToken',
+                  'data.access_token',
+                  'result.token',
+                  'result.accessToken',
+                ];
+
+                const getNestedValue = (obj: any, path: string): any => {
+                  return path
+                    .split('.')
+                    .reduce((current, key) => current?.[key], obj);
+                };
+
+                const looksLikeJWT = (value: any): boolean => {
+                  if (typeof value !== 'string') return false;
+                  const parts = value.split('.');
+                  return (
+                    parts.length === 3 && parts.every((part) => part.length > 0)
+                  );
+                };
+
+                for (const path of commonPaths) {
+                  const value = getNestedValue(parsed, path);
+                  if (
+                    value &&
+                    (looksLikeJWT(value) ||
+                      (typeof value === 'string' && value.length > 20))
+                  ) {
+                    tokenPath = path;
+                    break;
+                  }
+                }
+
+                if (!tokenPath) {
+                  const findJWTPath = (
+                    obj: any,
+                    currentPath: string = ''
+                  ): string | null => {
+                    if (looksLikeJWT(obj)) {
+                      return currentPath;
+                    }
+
+                    if (typeof obj === 'object' && obj !== null) {
+                      for (const key in obj) {
+                        const newPath = currentPath
+                          ? `${currentPath}.${key}`
+                          : key;
+                        const result = findJWTPath(obj[key], newPath);
+                        if (result) return result;
+                      }
+                    }
+
+                    return null;
+                  };
+
+                  tokenPath = findJWTPath(parsed);
+                }
+              } catch (e) {
+                console.error(
+                  'Failed to parse response for token detection:',
+                  e
+                );
+              }
+            }
+
             suggestedAuthSource = {
               apiIndex: j,
               apiName: prevRequest.name,
-              reason:
-                'This appears to be an authentication endpoint. Consider extracting the auth token from its response.',
+              path: tokenPath || 'data.token',
+              reason: tokenPath
+                ? `Found potential auth token at path: ${tokenPath}`
+                : 'This appears to be an authentication endpoint. Consider extracting the auth token from its response.',
             };
             break;
           }

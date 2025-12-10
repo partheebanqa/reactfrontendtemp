@@ -115,15 +115,18 @@ export const AddRequestMenu: React.FC<AddRequestMenuProps> = ({
   }, [isMenuOpen]);
 
   return (
-    <div className='relative' ref={menuRef}>
+    <div className='relative inline-block' ref={menuRef}>
       {isMenuOpen && (
         <div
           ref={dropdownRef}
           onMouseEnter={handleMenuMouseEnter}
           onMouseLeave={handleMenuMouseLeave}
-          className={`absolute right-0 w-56 bg-white rounded-lg shadow-lg border border-gray-200 z-[9999] animate-in fade-in slide-in-from-bottom-2 duration-200 ${
+          className={`absolute right-0 w-56 bg-white rounded-lg shadow-lg border border-gray-200 z-[9999] ${
             dropdownPosition === 'top' ? 'bottom-full mb-2' : 'top-full mt-2'
           }`}
+          style={{
+            animation: 'fadeIn 0.2s ease-out',
+          }}
         >
           <div className='py-1'>
             <button
@@ -161,7 +164,7 @@ export const AddRequestMenu: React.FC<AddRequestMenuProps> = ({
         className='gap-2'
       >
         <Plus className='w-4 h-4' />
-        Request
+        Add Step
       </Button>
     </div>
   );
