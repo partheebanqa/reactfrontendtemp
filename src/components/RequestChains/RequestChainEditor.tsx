@@ -2877,7 +2877,6 @@ export function RequestChainEditor({
                   handleCopyForRequest(requestId, variableName);
                 }}
                 onExtractVariable={(requestId, path, suggestedName) => {
-                  // Create extraction for the specified request
                   const extraction: DataExtraction = {
                     variableName: `E_${suggestedName}`,
                     name: `E_${suggestedName}`,
