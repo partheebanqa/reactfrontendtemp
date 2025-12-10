@@ -42,6 +42,7 @@ import { RequestReportMetrics } from '../Reports/Components/RequestReportMetrics
 type RouteParams = {
   type: 'test_suite' | 'request_chain';
   entityId: string;
+
 };
 
 const useQueryParams = () => {
@@ -176,7 +177,16 @@ const TestSuiteReport: React.FC<TestSuiteReportProps> = ({ data }) => {
     },
   ];
 
-  const handleShare = () => shareReport(data.name);
+
+
+  const search = new URLSearchParams(window.location.search);
+  const executionId = search.get("executionId");
+
+  const { type, entityId, } = useParams<RouteParams>();
+
+  const handleShare = () => {
+    shareReport(entityId, executionId || "");
+  };
   const handleDownloadPDF = () =>
     downloadAsPDFSameUI('report-content', `${data.name}_report.pdf`);
   const handleDownloadHTML = () =>
@@ -643,7 +653,7 @@ const RequestChainReport: React.FC<RequestChainReportProps> = ({ data, environme
 // ----------------- Page component -----------------
 
 const ExecutionReportPage: React.FC = () => {
-  const { type, entityId } = useParams<RouteParams>();
+  const { type, entityId, } = useParams<RouteParams>();
   const qs = useQueryParams();
   const environment = qs.get('env') || 'Unknown';
   const started = qs.get('started');
