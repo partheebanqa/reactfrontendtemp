@@ -1,7 +1,6 @@
-'use client';
 
 import type React from 'react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import {
   Dialog,
@@ -59,6 +58,7 @@ interface ExtractedVariable {
   path: string;
   source: string;
   type: string;
+  sampleValue?: string;
 }
 
 interface RequestTestDialogProps {
@@ -69,6 +69,7 @@ interface RequestTestDialogProps {
     request: { id: string; name: string; method: string; url: string },
     extractVariables: ExtractedVariable[]
   ) => void;
+  existingExtractedVariables?: ExtractedVariable[];
 }
 
 export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
@@ -76,6 +77,7 @@ export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
   onClose,
   request,
   onSaveExtractVariables,
+  existingExtractedVariables
 }) => {
   const { currentWorkspace } = useWorkspace();
   const [url, setUrl] = useState(request?.url);
@@ -122,6 +124,47 @@ export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [extractedFields, setExtractedFields] = useState<ExtractedField[]>([]);
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set());
+
+
+
+  useEffect(() => {
+    if (!request) return;
+
+    setUrl(request.url);
+    setMethod(request.method);
+    setBody(request.bodyRawContent);
+    setBodyType(request.bodyType);
+    setAuthType(request.authorizationType);
+    setAuthToken(request.authorization?.token || '');
+
+    const existingHeaders =
+      request.headers?.length && request.headers.length > 0
+        ? request.headers
+        : [{ key: '', value: '', enabled: true }];
+
+    const hasContentType = existingHeaders.some(
+      (h) => h.key.toLowerCase() === 'content-type'
+    );
+
+    setHeaders(
+      hasContentType
+        ? existingHeaders
+        : [{ key: 'Content-Type', value: 'application/json', enabled: true }, ...existingHeaders]
+    );
+
+    setParams(
+      request.params?.length
+        ? request.params
+        : [{ key: '', value: '', enabled: true }]
+    );
+
+    // Reset response & extracted fields on open
+    setResponse(null);
+    setResponseHeaders({});
+    setExtractedFields([]);
+    setExpandedPaths(new Set());
+  }, [request, isOpen]);
+
 
   const addHeader = () => {
     setHeaders([...headers, { key: '', value: '', enabled: true }]);
@@ -571,6 +614,11 @@ export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
                   : typeof field.value === 'object'
                     ? 'object'
                     : 'string',
+        sampleValue:
+          typeof field.value === 'string'
+            ? field.value
+            : JSON.stringify(field.value),
+
       })
     );
 
@@ -626,6 +674,26 @@ export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
             </Tooltip>
           </div>
         </DialogHeader>
+        {existingExtractedVariables && existingExtractedVariables.length > 0 && (
+          <div className="mb-3 border border-blue-100 bg-blue-50 rounded-md p-3">
+            <Label className="text-xs font-semibold text-blue-900 mb-1 block">
+              Saved Auth Variables
+            </Label>
+            <div className="space-y-1 text-xs">
+              {existingExtractedVariables.map((v, idx) => (
+                <div
+                  key={`${v.name}-${idx}`}
+                  className="flex flex-wrap gap-2 items-baseline"
+                >
+                  <span className="font-semibold text-blue-900">{v.name}</span>
+                  <span className="text-gray-600">({v.type})</span>
+                  <span className="text-gray-500">• source: {v.source}</span>
+                  <span className="text-gray-500 break-all">• path: {v.path}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className='flex-1 flex flex-col min-h-0 overflow-hidden'>
           <div className='flex gap-2 mb-3 items-center'>
