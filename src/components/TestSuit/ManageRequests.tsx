@@ -396,7 +396,7 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
   const shouldHidePreRequest =
     typeof window !== 'undefined' &&
     (
-      window.location.href.includes('create-test-suite?step=select-apis') ||
+      window.location.href.includes('/test-suites/create?step=select-apis') ||
       window.location.href.includes('step=select-tests') ||
       window.location.href.includes('step=select-api')
     );
@@ -568,6 +568,9 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
               : finalUrl;
             const { totalTests, selectedTests, selectedByCategory } =
               mapCategoryData(request.meta);
+            const isPreRequest = preRequestId === request.id;
+            const hasAuthVariables =
+              isPreRequest && (extractVariables?.length ?? 0) > 0;
 
             return (
               <div
@@ -609,8 +612,9 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
                     {showAuthCapture && request.method === 'POST' && (
                       <Button
                         onClick={() => handleTestRequest(request)}
+                        variant={hasAuthVariables ? 'outline' : 'default'}
                       >
-                        Capture Auth
+                        {hasAuthVariables ? 'Edit Auth' : 'Capture Auth'}
                       </Button>
                     )}
 
