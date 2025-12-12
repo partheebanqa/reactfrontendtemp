@@ -336,6 +336,82 @@ export function RequestChainEditor({
     }
   }, [assertionsByRequest]);
 
+  useEffect(() => {
+    const syncAssertionsFromStorage = () => {
+      try {
+        const raw = localStorage.getItem('lastExecutionByRequest');
+        if (!raw) return;
+
+        const map: Record<string, any> = JSON.parse(raw);
+        const currentRequestIds = new Set(
+          formData.chainRequests?.map((r) => r.id) || []
+        );
+
+        let hasChanges = false;
+        const updatedRequests = formData.chainRequests?.map((request) => {
+          if (
+            currentRequestIds.has(request.id) &&
+            map[request.id]?.assertions
+          ) {
+            const storageAssertions = map[request.id].assertions;
+            const currentAssertions = request.assertions || [];
+
+            // Check if assertions have changed
+            if (
+              JSON.stringify(storageAssertions) !==
+              JSON.stringify(currentAssertions)
+            ) {
+              hasChanges = true;
+              console.log(
+                'Syncing assertions from storage for request:',
+                request.id,
+                {
+                  old: currentAssertions.length,
+                  new: storageAssertions.length,
+                }
+              );
+
+              // Also update the assertionsByRequest state
+              setAssertionsByRequest((prev) => ({
+                ...prev,
+                [request.id]: storageAssertions,
+              }));
+
+              return {
+                ...request,
+                assertions: storageAssertions,
+              };
+            }
+          }
+          return request;
+        });
+
+        if (hasChanges && updatedRequests) {
+          setFormData((prev) => ({
+            ...prev,
+            chainRequests: updatedRequests,
+          }));
+        }
+      } catch (e) {
+        console.error('Failed to sync assertions from localStorage:', e);
+      }
+    };
+
+    // Initial sync
+    syncAssertionsFromStorage();
+
+    // Listen for storage changes (for cross-tab updates)
+    window.addEventListener('storage', syncAssertionsFromStorage);
+
+    // Poll for changes every 500ms to catch same-tab updates
+    const intervalId = setInterval(syncAssertionsFromStorage, 500);
+
+    return () => {
+      window.removeEventListener('storage', syncAssertionsFromStorage);
+      clearInterval(intervalId);
+    };
+  }, [formData.chainRequests]);
+
   const handleEnvironmentChange = (environmentId: string) => {
     setSelectedEnvironment(environmentId);
     const selectedEnv = environments.find((env) => env.id === environmentId);
@@ -1150,6 +1226,8 @@ export function RequestChainEditor({
       throw errorLog;
     }
   };
+  // Replace the handleRunAll function in RequestChainEditor.tsx
+  // Starting around line 796
 
   const handleRunAll = async () => {
     if (!formData.chainRequests || formData.chainRequests.length === 0) {
@@ -1162,7 +1240,6 @@ export function RequestChainEditor({
     }
 
     setExpandedRequests(new Set());
-
     regenerateAllDynamicVariables();
 
     setIsExecuting(true);
@@ -1202,26 +1279,64 @@ export function RequestChainEditor({
         setCurrentRequestIndex(i);
 
         try {
-          let requestAssertions = [];
+          // ✅ FIX: Prioritize assertionsByRequest state over localStorage
+          let requestAssertions: any[] = [];
 
-          try {
-            const raw = localStorage.getItem('lastExecutionByRequest');
-            if (raw) {
-              const map = JSON.parse(raw);
-              if (
-                map[request.id]?.assertions &&
-                Array.isArray(map[request.id].assertions)
-              ) {
-                requestAssertions = map[request.id].assertions;
+          // 1. First, check the current state (most up-to-date)
+          if (
+            assertionsByRequest[request.id] &&
+            Array.isArray(assertionsByRequest[request.id]) &&
+            assertionsByRequest[request.id].length > 0
+          ) {
+            requestAssertions = assertionsByRequest[request.id];
+            console.log('✅ Using assertions from state:', {
+              requestId: request.id,
+              count: requestAssertions.length,
+            });
+          }
+          // 2. If not in state, check request object itself
+          else if (
+            request.assertions &&
+            Array.isArray(request.assertions) &&
+            request.assertions.length > 0
+          ) {
+            requestAssertions = request.assertions;
+            console.log('✅ Using assertions from request object:', {
+              requestId: request.id,
+              count: requestAssertions.length,
+            });
+          }
+          // 3. Finally, fall back to localStorage (might be stale)
+          else {
+            try {
+              const raw = localStorage.getItem('lastExecutionByRequest');
+              if (raw) {
+                const map = JSON.parse(raw);
+                if (
+                  map[request.id]?.assertions &&
+                  Array.isArray(map[request.id].assertions) &&
+                  map[request.id].assertions.length > 0
+                ) {
+                  requestAssertions = map[request.id].assertions;
+                  console.log('⚠️ Using assertions from localStorage:', {
+                    requestId: request.id,
+                    count: requestAssertions.length,
+                  });
+                }
               }
+            } catch (e) {
+              console.error('Failed to read assertions from localStorage:', e);
             }
-          } catch (e) {
-            console.error('Failed to read assertions from localStorage:', e);
           }
 
-          if (!requestAssertions || requestAssertions.length === 0) {
-            requestAssertions = assertionsByRequest[request.id] || [];
-          }
+          // Log the final assertions being used
+          console.log('📋 Final assertions for execution:', {
+            requestId: request.id,
+            requestName: request.name,
+            assertionsCount: requestAssertions.length,
+            enabled: requestAssertions.filter((a) => a.enabled).length,
+            assertions: requestAssertions.slice(0, 3), // Log first 3 for debugging
+          });
 
           const existingLog = allLogs.find(
             (log) => log.requestId === request.id
@@ -1241,7 +1356,7 @@ export function RequestChainEditor({
               request,
               currentAvailableVariables,
               i,
-              requestAssertions
+              requestAssertions // ✅ Pass the correctly retrieved assertions
             );
 
             allLogs.push(log);
@@ -1339,6 +1454,7 @@ export function RequestChainEditor({
       setCurrentRequestIndex(-1);
     }
   };
+
   const handleRequestExecution = (
     requestId: string,
     executionLog: ExecutionLog

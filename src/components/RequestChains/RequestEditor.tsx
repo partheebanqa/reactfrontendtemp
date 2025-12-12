@@ -461,8 +461,16 @@ export function RequestEditor({
       assertions: newAssertions.slice(0, 3),
     });
 
-    setAssertions(newAssertions);
+    // Update state
+    setAssertions((prev) => {
+      const updated = newAssertions.map((newA) => {
+        const oldA = prev?.find((p) => p.id === newA.id);
+        return oldA ? { ...oldA, ...newA } : newA;
+      });
+      return updated;
+    });
 
+    // Persist to localStorage
     if (initialRequest.id) {
       try {
         const raw = localStorage.getItem('lastExecutionByRequest');
@@ -473,6 +481,7 @@ export function RequestEditor({
         }
 
         map[initialRequest.id].assertions = newAssertions;
+
         localStorage.setItem('lastExecutionByRequest', JSON.stringify(map));
 
         console.log('Persisted assertions to localStorage:', {
@@ -484,6 +493,7 @@ export function RequestEditor({
       }
     }
 
+    // Trigger parent callback
     if (onAssertionsUpdate) {
       console.log('Calling parent onAssertionsUpdate callback');
       onAssertionsUpdate(newAssertions);
