@@ -1,8 +1,8 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef } from "react";
 import {
   dataManagementActions,
   useDataManagementStore,
-} from '@/store/dataManagementStore';
+} from "@/store/dataManagementStore";
 import {
   useCreateEnvironmentMutation,
   useCreateVariableMutation,
@@ -16,9 +16,9 @@ import {
   useUpdatePrimaryEnvironmentMutation,
   useUpdateVariableMutation,
   useUpdateDynamicVariableMutation,
-} from '@/store/query/dataManagementQuery';
-import { useWorkspace } from './useWorkspace';
-import { Environment } from '@/shared/types/datamanagement';
+} from "@/store/query/dataManagementQuery";
+import { useWorkspace } from "./useWorkspace";
+import { Environment } from "@/shared/types/datamanagement";
 
 export function useDataManagement() {
   const {

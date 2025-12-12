@@ -1,6 +1,6 @@
 import type React from 'react';
 import { useState, useEffect, useMemo } from 'react';
-import { useParams, useLocation } from 'wouter';
+import { useParams, useLocation, Link } from 'wouter';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Layers,
@@ -921,10 +921,10 @@ const CreateTestSuit: React.FC = () => {
                             Import API requests from your collections and select which ones to test.
                           </p>
                           <ul className="text-sm text-gray-600 space-y-1 ml-4">
-                            <li className="flex items-start gap-2">
+                            {/* <li className="flex items-start gap-2">
                               <ChevronRight className="w-4 h-4 mt-0.5 flex-shrink-0" />
                               <span>Import from Postman, Insomnia, or add manually</span>
-                            </li>
+                            </li> */}
                             <li className="flex items-start gap-2">
                               <ChevronRight className="w-4 h-4 mt-0.5 flex-shrink-0" />
                               <span>Check which APIs require authentication</span>
@@ -1016,6 +1016,10 @@ const CreateTestSuit: React.FC = () => {
                             <li className="flex items-start gap-2">
                               <ChevronRight className="w-4 h-4 mt-0.5 flex-shrink-0" />
                               <span>Export results for reporting</span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                              <ChevronRight className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                              <span>  View execution results in <Link style={{ color: '#136fb0' }} to='/executions'>“Executions”</Link></span>
                             </li>
                           </ul>
                         </div>
