@@ -29,6 +29,9 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '../ui/alert-dialog';
+import { UserRoleData } from './WorkspaceManagement';
+import { useWorkspace } from '@/hooks/useWorkspace';
+import { getWorkSpaceRole } from '@/services/workspace.service';
 
 type ApiWorkspace = { id: string; name: string };
 type ApiUser = {
@@ -94,6 +97,17 @@ export default function UserManagement() {
     queryKey: ['userList'],
     queryFn: getUserList,
   });
+
+
+  const { currentWorkspace } = useWorkspace();
+
+
+  const { data: userRole, isLoading } = useQuery<UserRoleData>({
+    queryKey: ["workspace-role", currentWorkspace?.id],
+    enabled: !!currentWorkspace?.id,
+    queryFn: () => getWorkSpaceRole(currentWorkspace!.id),
+  });
+
 
   const { data: rolesResp, isLoading: isLoadingRoles } =
     useQuery<RolesResponse>({
@@ -209,9 +223,9 @@ export default function UserManagement() {
           const rf =
             roleFilter === 'all' ||
             norm(r.roleLabel) ===
-              norm(
-                roles.find((rr) => rr.id === roleFilter)?.name || roleFilter
-              );
+            norm(
+              roles.find((rr) => rr.id === roleFilter)?.name || roleFilter
+            );
           return wf && rf;
         });
 
@@ -239,6 +253,9 @@ export default function UserManagement() {
       <div className='p-6 border rounded-lg text-gray-500'>Loading users…</div>
     );
   }
+
+
+
 
   return (
     <div className='border bg-white rounded-lg p-6 space-y-4'>
@@ -359,9 +376,10 @@ export default function UserManagement() {
                           <Button
                             variant='outline'
                             size='icon'
-                            disabled={
-                              !r.workspaceId || isRemoving || isUpdating
-                            }
+                            // disabled={
+                            //   !r.workspaceId || isRemoving || isUpdating
+                            // }
+                            disabled={!(userRole?.role === "Org Admin" || userRole?.role === "Admin")}
                             className='text-red-600 hover:text-red-700'
                           >
                             <Trash2 className='w-4 h-4' />

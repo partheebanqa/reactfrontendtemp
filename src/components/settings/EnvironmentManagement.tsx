@@ -51,6 +51,7 @@ import {
   Copy,
   Edit,
   Star,
+  Loader2,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useDataManagement } from '@/hooks/useDataManagement';
@@ -62,6 +63,9 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { useQuery } from '@tanstack/react-query';
+import { UserRoleData } from './WorkspaceManagement';
+import { getWorkSpaceRole } from '@/services/workspace.service';
 
 const environmentSchema = z.object({
   name: z.string().min(1, 'Environment name is required'),
@@ -142,9 +146,8 @@ export function EnvironmentManagement() {
         title: editingEnvironment
           ? 'Environment updated'
           : 'Environment created',
-        description: `Environment "${data.name}" has been ${
-          editingEnvironment ? 'updated' : 'created'
-        } successfully.`,
+        description: `Environment "${data.name}" has been ${editingEnvironment ? 'updated' : 'created'
+          } successfully.`,
       });
 
       setIsCreateDialogOpen(false);
@@ -247,6 +250,12 @@ export function EnvironmentManagement() {
     });
   };
 
+  const { data: userRole, isLoading } = useQuery<UserRoleData>({
+    queryKey: ["workspace-role", currentWorkspace?.id],
+    enabled: !!currentWorkspace?.id,
+    queryFn: () => getWorkSpaceRole(currentWorkspace!.id),
+  });
+
   return (
     <Card>
       <CardHeader>
@@ -266,7 +275,9 @@ export function EnvironmentManagement() {
             }}
           >
             <DialogTrigger asChild>
-              <Button onClick={() => setIsCreateDialogOpen(true)}>
+              <Button
+                disabled={!(userRole?.role === "Org Admin" || userRole?.role === "Admin")}
+                onClick={() => setIsCreateDialogOpen(true)}>
                 <Plus className='h-4 w-4 mr-2' />
                 Add Environment
               </Button>
@@ -404,7 +415,8 @@ export function EnvironmentManagement() {
               <p className='text-gray-500 mb-4'>
                 Create your first environment to get started.
               </p>
-              <Button onClick={() => setIsCreateDialogOpen(true)}>
+              <Button
+                onClick={() => setIsCreateDialogOpen(true)}>
                 <Plus className='h-4 w-4 mr-2' />
                 Create Environment
               </Button>
@@ -458,16 +470,14 @@ export function EnvironmentManagement() {
                           variant='outline'
                           size='sm'
                           onClick={() => handleSetPrimary(environment)}
-                          className={`px-2 py-1 ${
-                            environment.isPrimary ? 'bg-blue-50' : ''
-                          }`}
+                          className={`px-2 py-1 ${environment.isPrimary ? 'bg-blue-50' : ''
+                            }`}
                         >
                           <Star
-                            className={`h-3 w-3 ${
-                              environment.isPrimary
-                                ? 'fill-blue-600 text-blue-600'
-                                : ''
-                            }`}
+                            className={`h-3 w-3 ${environment.isPrimary
+                              ? 'fill-blue-600 text-blue-600'
+                              : ''
+                              }`}
                           />
                         </Button>
                         <Button
@@ -483,6 +493,7 @@ export function EnvironmentManagement() {
                           size='sm'
                           onClick={() => setEditingEnvironment(environment)}
                           className='px-2 py-1'
+                          disabled={!(userRole?.role === "Org Admin" || userRole?.role === "Admin")}
                         >
                           <Edit className='h-3 w-3' />
                         </Button>
@@ -490,6 +501,7 @@ export function EnvironmentManagement() {
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
                               <Button
+                                disabled={!(userRole?.role === "Org Admin" || userRole?.role === "Admin")}
                                 variant='outline'
                                 size='sm'
                                 className='text-red-600 hover:text-red-700 px-2 py-1'
@@ -512,8 +524,16 @@ export function EnvironmentManagement() {
                                 <AlertDialogCancel>Cancel</AlertDialogCancel>
                                 <Button
                                   onClick={() => handleDelete(environment)}
+                                  disabled={deleteEnvironmentMutation.isPending}
                                 >
-                                  Delete
+                                  {deleteEnvironmentMutation.isPending ? (
+                                    <span className="flex items-center gap-2">
+                                      <Loader2 className="h-4 w-4 animate-spin" />
+                                      Deleting...
+                                    </span>
+                                  ) : (
+                                    "Delete"
+                                  )}
                                 </Button>
                               </AlertDialogFooter>
                             </AlertDialogContent>
@@ -536,11 +556,10 @@ export function EnvironmentManagement() {
                                 }
                               >
                                 <Star
-                                  className={`h-4 w-4 ${
-                                    environment.isPrimary
-                                      ? 'fill-blue-600 text-blue-600'
-                                      : ''
-                                  }`}
+                                  className={`h-4 w-4 ${environment.isPrimary
+                                    ? 'fill-blue-600 text-blue-600'
+                                    : ''
+                                    }`}
                                 />
                               </Button>
                             </TooltipTrigger>
@@ -569,11 +588,10 @@ export function EnvironmentManagement() {
                                 }
                               >
                                 <Star
-                                  className={`h-4 w-4 ${
-                                    environment.isPrimary
-                                      ? 'fill-blue-600 text-blue-600'
-                                      : ''
-                                  }`}
+                                  className={`h-4 w-4 ${environment.isPrimary
+                                    ? 'fill-blue-600 text-blue-600'
+                                    : ''
+                                    }`}
                                 />
                               </Button>
                             </TooltipTrigger>
@@ -607,6 +625,7 @@ export function EnvironmentManagement() {
                                 onClick={() =>
                                   setEditingEnvironment(environment)
                                 }
+                                disabled={!(userRole?.role === "Org Admin" || userRole?.role === "Admin")}
                               >
                                 <Edit className='h-4 w-4' />
                               </Button>
@@ -616,44 +635,52 @@ export function EnvironmentManagement() {
                         </TooltipProvider>
                         {!environment.isDefault && (
                           <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <AlertDialogTrigger asChild>
                                     <Button
-                                      variant='outline'
-                                      size='sm'
-                                      className='text-red-600 hover:text-red-700'
+                                      variant="outline"
+                                      size="sm"
+                                      className="text-red-600 hover:text-red-700"
+                                      disabled={!(userRole?.role === "Org Admin" || userRole?.role === "Admin")}
                                     >
-                                      <Trash2 className='h-4 w-4' />
+                                      <Trash2 className="h-4 w-4" />
                                     </Button>
-                                  </TooltipTrigger>
-                                  <TooltipContent>Delete</TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                            </AlertDialogTrigger>
+                                  </AlertDialogTrigger>
+                                </TooltipTrigger>
+                                <TooltipContent>Delete</TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+
                             <AlertDialogContent>
                               <AlertDialogHeader>
-                                <AlertDialogTitle>
-                                  Delete this environment?
-                                </AlertDialogTitle>
+                                <AlertDialogTitle>Delete this environment?</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                  This will permanently delete "
-                                  {environment.name}". This action cannot be
-                                  undone.
+                                  This will permanently delete "{environment.name}". This action cannot be undone.
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
+
                               <AlertDialogFooter>
                                 <AlertDialogCancel>Cancel</AlertDialogCancel>
                                 <Button
                                   onClick={() => handleDelete(environment)}
+                                  disabled={deleteEnvironmentMutation.isPending}
                                 >
-                                  Delete
+                                  {deleteEnvironmentMutation.isPending ? (
+                                    <span className="flex items-center gap-2">
+                                      <Loader2 className="h-4 w-4 animate-spin" />
+                                      Deleting...
+                                    </span>
+                                  ) : (
+                                    "Delete"
+                                  )}
                                 </Button>
                               </AlertDialogFooter>
                             </AlertDialogContent>
                           </AlertDialog>
                         )}
+
                       </div>
                     )}
                   </div>

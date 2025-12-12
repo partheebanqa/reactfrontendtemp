@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -47,12 +47,24 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '../ui/alert-dialog';
+import { useQuery } from '@tanstack/react-query';
+import { getWorkSpaceRole } from '@/services/workspace.service';
+import { userInfo } from 'os';
 
 interface Workspace extends BaseWorkspace {
   role: 'owner' | 'admin' | 'member';
   memberCount: number;
   isPrimary?: boolean;
 }
+
+
+export interface UserRoleData {
+  firstName: string;
+  lastName: string;
+  email: string;
+  role: string;
+}
+
 
 export function WorkspaceManagement() {
   const { toast } = useToast();
@@ -70,9 +82,17 @@ export function WorkspaceManagement() {
 
   const { currentWorkspace } = useWorkspace();
 
-  console.log(currentWorkspace, "currentWorkspace");
 
-  console.log(user, "user");
+  const { data: userRole, isLoading } = useQuery<UserRoleData>({
+    queryKey: ["workspace-role", currentWorkspace?.id],
+    enabled: !!currentWorkspace?.id,
+    queryFn: () => getWorkSpaceRole(currentWorkspace!.id),
+  });
+
+
+
+
+  // console.log(userRole?.role, "apiData");
 
   const {
     workspaces,
@@ -307,7 +327,8 @@ export function WorkspaceManagement() {
               onOpenChange={setIsCreateDialogOpen}
             >
               <DialogTrigger asChild>
-                <Button>
+                <Button
+                  disabled={userRole?.role !== 'Org Admin'}>
                   <Plus className='h-4 w-4 mr-2' />
                   <span className='hidden sm:inline'>Create Workspace</span>
                   <span className='sm:hidden'>Create</span>
@@ -469,10 +490,11 @@ export function WorkspaceManagement() {
                           </Tooltip>
                         </TooltipProvider>
 
-                        <TooltipProvider>
+                        {/* <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <Button
+                                disabled={userRole?.role !== 'Org Admin'}
                                 variant='outline'
                                 size='sm'
                                 onClick={() =>
@@ -484,12 +506,13 @@ export function WorkspaceManagement() {
                             </TooltipTrigger>
                             <TooltipContent>Settings</TooltipContent>
                           </Tooltip>
-                        </TooltipProvider>
+                        </TooltipProvider> */}
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <Button
                                 variant='outline'
+                                disabled={userRole?.role !== 'Org Admin'}
                                 size='sm'
                                 onClick={() =>
                                   handleEditWorkspace(enrichedWorkspace)
@@ -508,6 +531,7 @@ export function WorkspaceManagement() {
                               <AlertDialog>
                                 <AlertDialogTrigger asChild>
                                   <Button
+                                    disabled={userRole?.role !== 'Org Admin'}
                                     variant='outline'
                                     size='sm'
                                     className='text-red-600 hover:text-red-700 bg-transparent'
@@ -553,6 +577,7 @@ export function WorkspaceManagement() {
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <Button
+                                  disabled={userRole?.role !== 'Org Admin'}
                                   variant='outline'
                                   size='sm'
                                   onClick={() =>

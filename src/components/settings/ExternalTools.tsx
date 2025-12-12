@@ -59,6 +59,9 @@ import {
   AlertDialogTrigger,
 } from '../ui/alert-dialog';
 import { useCurrentPlan } from '@/context/CurrentPlanContext';
+import { getWorkSpaceRole } from '@/services/workspace.service';
+import { UserRoleData } from './WorkspaceManagement';
+import { useQuery } from '@tanstack/react-query';
 
 const integrationSchema = z.object({
   name: z.string().min(1, 'Integration name is required'),
@@ -403,6 +406,15 @@ export function ExternalTools() {
 
   const { currentPlan } = useCurrentPlan();
 
+
+
+  const { data: userRole, isLoading } = useQuery<UserRoleData>({
+    queryKey: ["workspace-role", currentWorkspace?.id],
+    enabled: !!currentWorkspace?.id,
+    queryFn: () => getWorkSpaceRole(currentWorkspace!.id),
+  });
+
+
   return (
     <Card>
       <CardHeader>
@@ -421,7 +433,9 @@ export function ExternalTools() {
             }}
           >
             <DialogTrigger asChild>
-              <Button onClick={() => setIsCreateDialogOpen(true)}>
+              <Button
+                disabled={!(userRole?.role === "Org Admin" || userRole?.role === "Admin")}
+                onClick={() => setIsCreateDialogOpen(true)}>
                 <Plus className='h-4 w-4 mr-2' />
                 Add Integration
               </Button>
@@ -582,7 +596,9 @@ export function ExternalTools() {
               <p className='text-gray-500 mb-4'>
                 Connect external tools to receive notifications.
               </p>
-              <Button onClick={() => setIsCreateDialogOpen(true)}>
+              <Button
+                disabled={!(userRole?.role === "Org Admin" || userRole?.role === "Admin")}
+                onClick={() => setIsCreateDialogOpen(true)}>
                 <Plus className='h-4 w-4 mr-2' /> Add Integration
               </Button>
             </div>
@@ -642,6 +658,7 @@ export function ExternalTools() {
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Button
+                              disabled={!(userRole?.role === "Org Admin" || userRole?.role === "Admin")}
                               variant='outline'
                               size='sm'
                               className='px-2 py-1'
@@ -659,6 +676,7 @@ export function ExternalTools() {
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <Button
+                            disabled={!(userRole?.role === "Org Admin" || userRole?.role === "Admin")}
                             variant='outline'
                             size='sm'
                             className='text-red-600 hover:text-red-700'
@@ -724,6 +742,7 @@ export function ExternalTools() {
                               onClick={() =>
                                 handleEdit(integration as WorkSpaceIntegration)
                               }
+                              disabled={!(userRole?.role === "Org Admin" || userRole?.role === "Admin")}
                             >
                               <Edit className='h-4 w-4' />
                             </Button>
@@ -737,6 +756,7 @@ export function ExternalTools() {
                             variant='outline'
                             size='sm'
                             className='text-red-600 hover:text-red-700'
+                            disabled={!(userRole?.role === "Org Admin" || userRole?.role === "Admin")}
                           >
                             <Trash2 className='w-4 h-4' />
                           </Button>
