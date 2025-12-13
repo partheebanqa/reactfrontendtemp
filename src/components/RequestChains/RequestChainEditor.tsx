@@ -412,8 +412,8 @@ export function RequestChainEditor({
   const [isSaving, setIsSaving] = useState(false);
   const runAllButtonRef = useRef<HTMLButtonElement>(null);
   const [showRunAllHint, setShowRunAllHint] = useState(false);
-  const [showScrollToRun, setShowScrollToRun] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const requestsTopRef = useRef<HTMLDivElement>(null);
 
   const [autocompleteState, setAutocompleteState] = useState<AutocompleteState>(
     {
@@ -473,21 +473,6 @@ export function RequestChainEditor({
     });
     setDynamicOverrides(newOverrides);
   };
-
-  useEffect(() => {
-    const handleScroll = () => {
-      if (scrollContainerRef.current) {
-        const scrollTop = scrollContainerRef.current.scrollTop;
-        setShowScrollToRun(scrollTop > 300);
-      }
-    };
-
-    const scrollContainer = scrollContainerRef.current;
-    if (scrollContainer) {
-      scrollContainer.addEventListener('scroll', handleScroll);
-      return () => scrollContainer.removeEventListener('scroll', handleScroll);
-    }
-  }, []);
 
   const scrollToRunAllButton = () => {
     if (runAllButtonRef.current) {
@@ -682,7 +667,6 @@ export function RequestChainEditor({
 
     handleExtractVariableForRequest(sourceRequest.id, extraction);
 
-    // Expand the source request to show the extraction was added
     const newExpanded = new Set(expandedRequests);
     newExpanded.add(sourceRequest.id);
     setExpandedRequests(newExpanded);
@@ -1278,6 +1262,12 @@ export function RequestChainEditor({
       return;
     }
 
+    setActiveTab('requests');
+
+    setTimeout(() => {
+      scrollToRequestsTop();
+    }, 100);
+
     setExpandedRequests(new Set());
     regenerateAllDynamicVariables();
 
@@ -1286,7 +1276,6 @@ export function RequestChainEditor({
     setExecutionLogs([]);
     setExtractedVariables({});
     setExtractedVariablesByRequest({});
-    setActiveTab('requests');
 
     const allLogs: ExecutionLog[] = [];
 
@@ -2365,6 +2354,15 @@ export function RequestChainEditor({
     }
   }, [formData.chainRequests, executionLogs]);
 
+  const scrollToRequestsTop = () => {
+    if (requestsTopRef.current) {
+      requestsTopRef.current.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    }
+  };
+
   return (
     <div className='h-full flex flex-col'>
       <BreadCum
@@ -2508,7 +2506,10 @@ export function RequestChainEditor({
 
                 <TabsContent value='requests' className='space-y-4'>
                   <div className='bg-card rounded-xl border border-border overflow-visible'>
-                    <div className='p-4 sm:p-6 border-b border-border'>
+                    <div
+                      ref={requestsTopRef}
+                      className='p-4 sm:p-6 border-b border-border'
+                    >
                       {formData.chainRequests &&
                       formData.chainRequests.length > 0 ? (
                         <>
@@ -3078,18 +3079,6 @@ export function RequestChainEditor({
           </Card>
         </div>
       </div>
-      {showScrollToRun && (
-        <button
-          onClick={scrollToRunAllButton}
-          className='fixed bottom-8 right-8 w-14 h-14 bg-white rounded-full shadow-lg flex items-center justify-center border-2 border-gray-200 hover:border-primary transition-all duration-300 hover:scale-110 z-50 group'
-          aria-label='Scroll to Run All button'
-        >
-          <ChevronUp className='w-6 h-6 text-gray-600 group-hover:text-primary transition-colors' />
-          <div className='absolute -top-10 right-0 bg-gray-800 text-white text-xs px-3 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none'>
-            Go to Run All
-          </div>
-        </button>
-      )}
 
       <ImportModal
         isOpen={isImportModalOpen}
