@@ -54,6 +54,8 @@ export interface SavedFilter {
 interface ExecutionsFiltersProps {
   searchQuery: string;
   setSearchQuery: (value: string) => void;
+  suiteOrChainIdQuery: string;                             // 👈 NEW
+  setSuiteOrChainIdQuery: (value: string) => void;
   environmentFilter: string;
   setEnvironmentFilter: (value: string) => void;
   typeFilter: string;
@@ -112,6 +114,8 @@ export const ExecutionsFilters = ({
   handleDeleteEnvironment,
   onRefresh,
   refreshing,
+  suiteOrChainIdQuery,              // 👈 NEW
+  setSuiteOrChainIdQuery,
 }: ExecutionsFiltersProps) => {
   const { environments } = useDataManagement();
   const envOptions = useMemo(() => {
@@ -176,13 +180,21 @@ export const ExecutionsFilters = ({
         {/* Search */}
         <div className='flex-1 max-w-md relative'>
           <Input
-            placeholder='Search by test suite name or execution ID...'
+            placeholder='Search by name or execution ID...'
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className='pl-4'
           />
         </div>
 
+        <div className='flex-1 max-w-md relative'>
+          <Input
+            placeholder='Search by test suite ID or request chain ID...'
+            value={suiteOrChainIdQuery}                                  // 👈 CHANGED
+            onChange={(e) => setSuiteOrChainIdQuery(e.target.value)}
+            className='pl-4'
+          />
+        </div>
         {/* Dropdowns */}
         <div className='flex flex-wrap gap-3 items-center'>
           {/* <Select
@@ -240,10 +252,13 @@ export const ExecutionsFilters = ({
             onOpenChange={setShowAdvancedSearch}
           >
             <DialogTrigger asChild>
-              <Button variant='outline' size='sm'>
-                <Filter size={14} className='mr-2' />
-                Advanced
+              <Button
+                size='sm'
+                variant='outline'
+              >
+                <Filter size={14} />
               </Button>
+
             </DialogTrigger>
             <DialogContent className='max-w-lg'>
               <DialogHeader>
@@ -262,16 +277,16 @@ export const ExecutionsFilters = ({
                         className={cn(
                           'w-full justify-start text-left font-normal',
                           !dateRange.from &&
-                            !dateRange.to &&
-                            'text-muted-foreground'
+                          !dateRange.to &&
+                          'text-muted-foreground'
                         )}
                       >
                         <Calendar size={14} className='mr-2' />
                         {dateRange.from && dateRange.to
                           ? `${format(
-                              dateRange.from,
-                              'MMM d, yyyy'
-                            )} - ${format(dateRange.to, 'MMM d, yyyy')}`
+                            dateRange.from,
+                            'MMM d, yyyy'
+                          )} - ${format(dateRange.to, 'MMM d, yyyy')}`
                           : 'Select date range'}
                       </Button>
                     </PopoverTrigger>
@@ -409,7 +424,7 @@ export const ExecutionsFilters = ({
           </Button> */}
 
           {/* Saved Filters */}
-          {savedFilters.length > 0 && (
+          {/* {savedFilters.length > 0 && (
             <Select
               onValueChange={(value) => {
                 const filter = savedFilters.find(
@@ -429,7 +444,7 @@ export const ExecutionsFilters = ({
                 ))}
               </SelectContent>
             </Select>
-          )}
+          )} */}
 
           <Button
             variant='default'

@@ -38,6 +38,7 @@ import { buildRequestMetrics } from '@/types/report';
 import ExportHTMLButton from '../Reports/Components/ExportHTMLButton';
 import ExportPDFButton from '../Reports/Components/ExportPDFButton';
 import { RequestReportMetrics } from '../Reports/Components/RequestReportMetrics';
+import { downloadAsPDF } from '@/utils/exportUtilsNew';
 
 type RouteParams = {
   type: 'test_suite' | 'request_chain';
@@ -187,10 +188,17 @@ const TestSuiteReport: React.FC<TestSuiteReportProps> = ({ data }) => {
   const handleShare = () => {
     shareReport(entityId, executionId || "");
   };
-  const handleDownloadPDF = () =>
-    downloadAsPDFSameUI('report-content', `${data.name}_report.pdf`);
+  const handleDownloadPDF = async () => {
+    (window as any).__REPORT_DATA__ = data;
+    await downloadAsPDF('report-content', `${data.name}_report.pdf`);
+  };
+
   const handleDownloadHTML = () =>
     downloadAsHTMLSameUI('report-content', `${data.name}_report.html`);
+
+
+
+
 
   return (
     <div id="report-content">
@@ -239,6 +247,8 @@ const TestSuiteReport: React.FC<TestSuiteReportProps> = ({ data }) => {
             </div>
           </div>
         </div>
+
+
 
         <div className="flex items-center gap-4">
           <TooltipProvider>
