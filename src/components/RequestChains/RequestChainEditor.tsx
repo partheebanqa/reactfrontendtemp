@@ -608,6 +608,93 @@ export function RequestChainEditor({
     });
   };
 
+  const handleApplyToRequest = (requestId: string, variableName: string) => {
+    if (!formData.chainRequests) return;
+
+    setIsAnalyzerOpen(false);
+
+    const targetRequestIndex = formData.chainRequests.findIndex(
+      (req) => req.id === requestId
+    );
+
+    if (targetRequestIndex === -1) {
+      toast({
+        title: 'Error',
+        description: 'Unable to find the target request',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const targetRequest = formData.chainRequests[targetRequestIndex];
+
+    const hasExistingAuth =
+      targetRequest.authorizationType !== 'none' ||
+      (targetRequest.authToken && targetRequest.authToken.trim() !== '') ||
+      (targetRequest.authorization?.token &&
+        targetRequest.authorization.token.trim() !== '');
+
+    const updatedRequests = formData.chainRequests.map((request, index) => {
+      if (index !== targetRequestIndex) return request;
+
+      return {
+        ...request,
+        authToken: `{{${variableName}}}`,
+        authorizationType: 'bearer' as const,
+        authorization: {
+          token: `{{${variableName}}}`,
+        },
+        authUsername: '',
+        authPassword: '',
+        authApiKey: '',
+        authApiValue: '',
+        authApiLocation: 'header',
+      };
+    });
+
+    setFormData({ ...formData, chainRequests: [...updatedRequests] });
+
+    toast({
+      title: 'Applied to Request',
+      description: `Variable {{${variableName}}} applied as Bearer Token to request #${
+        targetRequestIndex + 1
+      }${hasExistingAuth ? ' (existing auth overwritten)' : ''}`,
+    });
+  };
+
+  const handleExtractFromDependency = (
+    sourceRequestIndex: number,
+    path: string,
+    suggestedName: string
+  ) => {
+    const sourceRequest = formData.chainRequests?.[sourceRequestIndex];
+    if (!sourceRequest) {
+      console.error('Source request not found at index:', sourceRequestIndex);
+      return;
+    }
+
+    const extraction: DataExtraction = {
+      variableName: `E_${suggestedName}`,
+      name: `E_${suggestedName}`,
+      source: 'response_body',
+      path: path,
+    };
+
+    handleExtractVariableForRequest(sourceRequest.id, extraction);
+
+    // Expand the source request to show the extraction was added
+    const newExpanded = new Set(expandedRequests);
+    newExpanded.add(sourceRequest.id);
+    setExpandedRequests(newExpanded);
+
+    toast({
+      title: 'Variable Extraction Added',
+      description: `Variable "E_${suggestedName}" will be extracted from ${path} in request #${
+        sourceRequestIndex + 1
+      }. Run the request again to see the extracted value.`,
+    });
+  };
+
   const DynamicVariablesPanel = () => {
     if (usedDynamicVariables.length === 0) return null;
 
@@ -2943,6 +3030,7 @@ export function RequestChainEditor({
                   });
                 }}
                 onApplyToAllRequests={handleApplyToAllRequests}
+                onApplyToRequest={handleApplyToRequest}
                 open={isAnalyzerOpen}
                 onOpenChange={setIsAnalyzerOpen}
               />
