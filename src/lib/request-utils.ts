@@ -538,7 +538,7 @@ export const calculateAutocompletePosition = (
   };
 };
 
-function generateDynamicValueById(id: string, params: any = {}): string {
+export function generateDynamicValueById(id: string, params: any = {}): string {
   const randInt = (min: number, max: number) =>
     Math.floor(Math.random() * (max - min + 1)) + min;
 
@@ -1117,5 +1117,3 @@ export const buildUrlWithParams = (
     return baseUrl;
   }
 };
-
-export { generateDynamicValueById };

@@ -23,16 +23,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import type {
-  APIRequest,
-  ExecutionLog,
-} from '@/shared/types/requestChain.model';
-import type { AnalyzedRequest } from '@/lib/postman-analysis';
 
 interface RequestAnalyzerProps {
-  requests: APIRequest[];
-  executionLogs: ExecutionLog[];
-  analysisResults: AnalyzedRequest[];
+  requests: any[];
+  executionLogs: any[];
+  analysisResults: any[];
   extractedVariablesByRequest: Record<string, Record<string, any>>;
   isExecuting: boolean;
   onRunAll: () => void;
@@ -43,6 +38,7 @@ interface RequestAnalyzerProps {
     suggestedName: string
   ) => void;
   onApplyToAllRequests?: (variableName: string) => void;
+  onApplyToRequest?: (requestId: string, variableName: string) => void;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -57,6 +53,7 @@ export function RequestAnalyzer({
   onCopyVariable,
   onExtractVariable,
   onApplyToAllRequests,
+  onApplyToRequest,
   open,
   onOpenChange,
 }: RequestAnalyzerProps) {
@@ -127,7 +124,7 @@ export function RequestAnalyzer({
   };
 
   const handleExtractClick = (
-    sourceRequest: APIRequest,
+    sourceRequest: any,
     path: string,
     suggestedName: string
   ) => {
@@ -138,6 +135,20 @@ export function RequestAnalyzer({
     setJustExtractedVariable({
       requestId: sourceRequest.id,
       variableName: `E_${suggestedName}`,
+    });
+  };
+
+  const handleApplyToThisRequest = (
+    requestId: string,
+    variableName: string
+  ) => {
+    if (onApplyToRequest) {
+      onApplyToRequest(requestId, variableName);
+    }
+
+    setJustExtractedVariable({
+      requestId: requestId,
+      variableName: variableName,
     });
   };
 
@@ -155,6 +166,25 @@ export function RequestAnalyzer({
     (log) => log.status === 'error'
   ).length;
   const extractionCount = Object.keys(extractedVariablesByRequest).length;
+  const availableAuthToken = (() => {
+    for (const [requestId, variables] of Object.entries(
+      extractedVariablesByRequest
+    )) {
+      const authVar = Object.entries(variables).find(([key, value]) => {
+        if (!value || typeof value !== 'string') return false;
+        const looksLikeJWT =
+          /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(
+            value as string
+          );
+        const looksLikeToken = (value as string).length > 20;
+        return looksLikeJWT || looksLikeToken;
+      });
+      if (authVar) {
+        return { requestId, variableName: authVar[0] };
+      }
+    }
+    return null;
+  })();
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -184,23 +214,31 @@ export function RequestAnalyzer({
         </div>
 
         {/* Success notification for extraction */}
-        {justExtractedVariable && (
+        {(justExtractedVariable || availableAuthToken) && (
           <div className='flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg mb-4 flex-shrink-0'>
             <div className='flex items-center gap-2'>
               <CheckCircle className='w-5 h-5 text-green-600' />
               <div>
                 <p className='font-medium text-green-900 text-sm'>
-                  Variable Extracted Successfully!
+                  Variable Ready to Apply!
                 </p>
                 <p className='text-xs text-green-700'>
-                  {justExtractedVariable.variableName} is now available
+                  {(justExtractedVariable || availableAuthToken)?.variableName}{' '}
+                  can be applied to all requests
                 </p>
               </div>
             </div>
             <div className='flex gap-2'>
               <Button
                 size='sm'
-                onClick={handleApplyToAll}
+                onClick={() => {
+                  const varName = (justExtractedVariable || availableAuthToken)
+                    ?.variableName;
+                  if (varName && onApplyToAllRequests) {
+                    onApplyToAllRequests(varName);
+                  }
+                  setJustExtractedVariable(null);
+                }}
                 className='bg-green-600 hover:bg-green-700 text-white'
               >
                 <Zap className='w-4 h-4 mr-2' />
@@ -306,53 +344,114 @@ export function RequestAnalyzer({
                                   </code>
                                 </p>
                               </div>
-                              <button
-                                onClick={() => {
-                                  if (
-                                    !analysis.suggestedAuthSource ||
-                                    !onExtractVariable
-                                  )
-                                    return;
+                              {(() => {
+                                const sourceRequestIndex =
+                                  analysis.suggestedAuthSource.apiIndex;
+                                const sourceRequest =
+                                  requests[sourceRequestIndex];
+                                const extractedVars =
+                                  extractedVariablesByRequest[
+                                    sourceRequest?.id
+                                  ] || {};
 
-                                  const sourceRequestIndex =
-                                    analysis.suggestedAuthSource.apiIndex;
-                                  const sourceRequest =
-                                    requests[sourceRequestIndex];
-
-                                  if (!sourceRequest) {
-                                    console.error(
-                                      'Source request not found at index:',
-                                      sourceRequestIndex
+                                const extractedAuthVar = Object.entries(
+                                  extractedVars
+                                ).find(([key, value]) => {
+                                  if (!value || typeof value !== 'string')
+                                    return false;
+                                  const looksLikeJWT =
+                                    /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(
+                                      value as string
                                     );
-                                    return;
-                                  }
+                                  const looksLikeToken =
+                                    (value as string).length > 20;
+                                  return looksLikeJWT || looksLikeToken;
+                                });
 
-                                  if (!analysis.suggestedAuthSource.path) {
-                                    console.error(
-                                      'No path specified for extraction'
-                                    );
-                                    return;
-                                  }
-
-                                  const pathParts =
-                                    analysis.suggestedAuthSource.path.split(
-                                      '.'
-                                    );
-                                  const suggestedName =
-                                    pathParts[pathParts.length - 1] ||
-                                    'authToken';
-
-                                  handleExtractClick(
-                                    sourceRequest,
-                                    analysis.suggestedAuthSource.path,
-                                    suggestedName
+                                if (extractedAuthVar) {
+                                  return (
+                                    <div className='flex gap-2'>
+                                      <button
+                                        onClick={() => {
+                                          if (onApplyToRequest) {
+                                            onApplyToRequest(
+                                              request.id,
+                                              extractedAuthVar[0]
+                                            );
+                                          }
+                                        }}
+                                        className='px-3 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700 transition-colors flex items-center gap-1 whitespace-nowrap'
+                                      >
+                                        <Zap className='w-3 h-3' />
+                                        Apply to This Request
+                                      </button>
+                                      <button
+                                        onClick={() => {
+                                          if (onApplyToAllRequests) {
+                                            onApplyToAllRequests(
+                                              extractedAuthVar[0]
+                                            );
+                                          }
+                                        }}
+                                        className='px-3 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 transition-colors flex items-center gap-1 whitespace-nowrap'
+                                      >
+                                        <Zap className='w-3 h-3' />
+                                        Apply to All
+                                      </button>
+                                    </div>
                                   );
-                                }}
-                                className='px-3 py-1 bg-amber-600 text-white rounded text-xs hover:bg-amber-700 transition-colors flex items-center gap-1 whitespace-nowrap'
-                              >
-                                <Plus className='w-3 h-3' />
-                                Extract Now
-                              </button>
+                                }
+
+                                return (
+                                  <button
+                                    onClick={() => {
+                                      if (
+                                        !analysis.suggestedAuthSource ||
+                                        !onExtractVariable
+                                      )
+                                        return;
+
+                                      const sourceRequestIndex =
+                                        analysis.suggestedAuthSource.apiIndex;
+                                      const sourceRequest =
+                                        requests[sourceRequestIndex];
+
+                                      if (!sourceRequest) {
+                                        console.error(
+                                          'Source request not found at index:',
+                                          sourceRequestIndex
+                                        );
+                                        return;
+                                      }
+
+                                      if (!analysis.suggestedAuthSource.path) {
+                                        console.error(
+                                          'No path specified for extraction'
+                                        );
+                                        return;
+                                      }
+
+                                      const pathParts =
+                                        analysis.suggestedAuthSource.path.split(
+                                          '.'
+                                        );
+                                      const suggestedName =
+                                        pathParts[pathParts.length - 1] ||
+                                        'authToken';
+
+                                      handleExtractClick(
+                                        sourceRequest,
+                                        analysis.suggestedAuthSource.path,
+                                        suggestedName
+                                      );
+                                    }}
+                                    className='px-3 py-1 bg-amber-600 text-white rounded text-xs hover:bg-amber-700 transition-colors flex items-center gap-1 whitespace-nowrap'
+                                  >
+                                    <Plus className='w-3 h-3' />
+                                    Extract Now
+                                  </button>
+                                );
+                              })()}
                             </div>
                           )}
                         </div>
@@ -383,7 +482,7 @@ export function RequestAnalyzer({
                         Query Parameters ({analysis.queryParams.length})
                       </h4>
                       <div className='space-y-1'>
-                        {analysis.queryParams.map((param, idx) => (
+                        {analysis.queryParams.map((param: any, idx: number) => (
                           <div
                             key={idx}
                             className={`flex items-start gap-2 p-2 rounded border text-xs ${
@@ -474,14 +573,14 @@ export function RequestAnalyzer({
                           Assertions (
                           {
                             executionLog.response.assertions.filter(
-                              (a) => a.status === 'passed'
+                              (a: any) => a.status === 'passed'
                             ).length
                           }
                           /{executionLog.response.assertions.length} passed)
                         </h4>
                         <div className='space-y-1'>
                           {executionLog.response.assertions.map(
-                            (assertion, idx) => (
+                            (assertion: any, idx: number) => (
                               <div
                                 key={idx}
                                 className={`flex items-center gap-2 p-2 rounded text-xs ${
