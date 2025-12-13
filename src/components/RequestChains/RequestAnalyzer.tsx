@@ -133,16 +133,8 @@ export function RequestAnalyzer({
   ) => {
     if (!onExtractVariable) return;
 
-    console.log('Extracting variable:', {
-      requestId: sourceRequest.id,
-      requestName: sourceRequest.name,
-      path,
-      suggestedName,
-    });
-
     onExtractVariable(sourceRequest.id, path, suggestedName);
 
-    // Set the just extracted variable to show "Apply to All" button
     setJustExtractedVariable({
       requestId: sourceRequest.id,
       variableName: `E_${suggestedName}`,

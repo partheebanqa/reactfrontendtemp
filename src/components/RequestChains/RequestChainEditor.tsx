@@ -181,8 +181,6 @@ export function RequestChainEditor({
     }
   }, [selectedEnvironment, environments]);
 
-  console.log('assertionsByRequest123:', assertionsByRequest);
-
   useEffect(() => {
     if (dynamicVariables.length > 0) {
       setDynamicOverrides((prevOverrides) => {
@@ -267,7 +265,7 @@ export function RequestChainEditor({
             log.assertions &&
             Array.isArray(log.assertions) &&
             log.assertions.length > 0 &&
-            !loadedAssertions[requestId] // Only load if not already loaded from chainRequest
+            !loadedAssertions[requestId]
           ) {
             loadedAssertions[requestId] = log.assertions;
           }
@@ -294,13 +292,6 @@ export function RequestChainEditor({
         )
       );
 
-      if (Object.keys(filtered).length !== Object.keys(prev).length) {
-        console.log('Cleaned up assertions for removed requests:', {
-          before: Object.keys(prev),
-          after: Object.keys(filtered),
-        });
-      }
-
       return filtered;
     });
   }, [formData.chainRequests]);
@@ -316,13 +307,6 @@ export function RequestChainEditor({
           currentRequestIds.has(requestId)
         )
       );
-
-      if (Object.keys(filtered).length !== Object.keys(prev).length) {
-        console.log('Cleaned up assertions for removed requests:', {
-          before: Object.keys(prev),
-          after: Object.keys(filtered),
-        });
-      }
 
       return filtered;
     });
@@ -356,22 +340,12 @@ export function RequestChainEditor({
             const storageAssertions = map[request.id].assertions;
             const currentAssertions = request.assertions || [];
 
-            // Check if assertions have changed
             if (
               JSON.stringify(storageAssertions) !==
               JSON.stringify(currentAssertions)
             ) {
               hasChanges = true;
-              console.log(
-                'Syncing assertions from storage for request:',
-                request.id,
-                {
-                  old: currentAssertions.length,
-                  new: storageAssertions.length,
-                }
-              );
 
-              // Also update the assertionsByRequest state
               setAssertionsByRequest((prev) => ({
                 ...prev,
                 [request.id]: storageAssertions,
@@ -397,13 +371,10 @@ export function RequestChainEditor({
       }
     };
 
-    // Initial sync
     syncAssertionsFromStorage();
 
-    // Listen for storage changes (for cross-tab updates)
     window.addEventListener('storage', syncAssertionsFromStorage);
 
-    // Poll for changes every 500ms to catch same-tab updates
     const intervalId = setInterval(syncAssertionsFromStorage, 500);
 
     return () => {
@@ -693,9 +664,6 @@ export function RequestChainEditor({
 
                         updateDynamicOverride(variable.name, newValue);
                       }}
-                      onFocus={(e) => {
-                        console.log('Focused on:', variable.name);
-                      }}
                       className='h-8 text-sm'
                       placeholder='Enter value'
                       data-dynamic-variable={variable.name}
@@ -901,7 +869,6 @@ export function RequestChainEditor({
       if (reqId && extractedVariablesByRequest[reqId]) {
         Object.entries(extractedVariablesByRequest[reqId]).forEach(
           ([name, value]) => {
-            // Only add if not already added (avoid duplicates)
             if (!previouslyExtractedVars.some((v) => v.name === name)) {
               previouslyExtractedVars.push({
                 id: `extracted_${name}_from_req_${i}`,
@@ -949,7 +916,7 @@ export function RequestChainEditor({
           !storeVariables.some((sv) => sv.name === ev.name) &&
           !dynamicStructured.some((dv) => dv.name === ev.name)
       ),
-      ...previouslyExtractedVars, // Variables from previous requests
+      ...previouslyExtractedVars,
       ...globalExtractedVars.filter(
         (gv) => !previouslyExtractedVars.some((pv) => pv.name === gv.name)
       ),
@@ -1114,25 +1081,12 @@ export function RequestChainEditor({
         } else {
           finalAssertions = newAssertions;
         }
-
-        console.log(
-          responseChanged
-            ? '🔄 Response changed - updated assertions'
-            : '✨ Generated new assertions',
-          {
-            requestId: request.id,
-            previousStatus: previousExecutionLog?.response?.status,
-            currentStatus: result?.statusCode,
-            assertionsCount: finalAssertions.length,
-          }
-        );
       }
 
       setAssertionsByRequest((prev) => ({
         ...prev,
         [request.id]: finalAssertions,
       }));
-      // setAssertions(finalAssertions);
 
       const extractedData = extractDataFromResponse(
         {
@@ -1226,8 +1180,6 @@ export function RequestChainEditor({
       throw errorLog;
     }
   };
-  // Replace the handleRunAll function in RequestChainEditor.tsx
-  // Starting around line 796
 
   const handleRunAll = async () => {
     if (!formData.chainRequests || formData.chainRequests.length === 0) {
@@ -1279,35 +1231,21 @@ export function RequestChainEditor({
         setCurrentRequestIndex(i);
 
         try {
-          // ✅ FIX: Prioritize assertionsByRequest state over localStorage
           let requestAssertions: any[] = [];
 
-          // 1. First, check the current state (most up-to-date)
           if (
             assertionsByRequest[request.id] &&
             Array.isArray(assertionsByRequest[request.id]) &&
             assertionsByRequest[request.id].length > 0
           ) {
             requestAssertions = assertionsByRequest[request.id];
-            console.log('✅ Using assertions from state:', {
-              requestId: request.id,
-              count: requestAssertions.length,
-            });
-          }
-          // 2. If not in state, check request object itself
-          else if (
+          } else if (
             request.assertions &&
             Array.isArray(request.assertions) &&
             request.assertions.length > 0
           ) {
             requestAssertions = request.assertions;
-            console.log('✅ Using assertions from request object:', {
-              requestId: request.id,
-              count: requestAssertions.length,
-            });
-          }
-          // 3. Finally, fall back to localStorage (might be stale)
-          else {
+          } else {
             try {
               const raw = localStorage.getItem('lastExecutionByRequest');
               if (raw) {
@@ -1318,25 +1256,12 @@ export function RequestChainEditor({
                   map[request.id].assertions.length > 0
                 ) {
                   requestAssertions = map[request.id].assertions;
-                  console.log('⚠️ Using assertions from localStorage:', {
-                    requestId: request.id,
-                    count: requestAssertions.length,
-                  });
                 }
               }
             } catch (e) {
               console.error('Failed to read assertions from localStorage:', e);
             }
           }
-
-          // Log the final assertions being used
-          console.log('📋 Final assertions for execution:', {
-            requestId: request.id,
-            requestName: request.name,
-            assertionsCount: requestAssertions.length,
-            enabled: requestAssertions.filter((a) => a.enabled).length,
-            assertions: requestAssertions.slice(0, 3), // Log first 3 for debugging
-          });
 
           const existingLog = allLogs.find(
             (log) => log.requestId === request.id
@@ -1356,7 +1281,7 @@ export function RequestChainEditor({
               request,
               currentAvailableVariables,
               i,
-              requestAssertions // ✅ Pass the correctly retrieved assertions
+              requestAssertions
             );
 
             allLogs.push(log);
@@ -1481,8 +1406,6 @@ export function RequestChainEditor({
     requestId: string,
     extraction: DataExtraction
   ) => {
-    console.log('calling handle extract variable');
-
     const request = formData.chainRequests.find((r) => r.id === requestId);
     if (!request) return;
 
@@ -2745,7 +2668,6 @@ export function RequestChainEditor({
                                               )
                                             }
                                             extractedVariables={(() => {
-                                              // Build extracted variables from all previous requests
                                               const varsUpToThisPoint: Record<
                                                 string,
                                                 any
@@ -3008,12 +2930,6 @@ export function RequestChainEditor({
                     source: 'response_body',
                     path: path,
                   };
-
-                  console.log(
-                    'Adding extraction to request:',
-                    requestId,
-                    extraction
-                  );
 
                   handleExtractVariableForRequest(requestId, extraction);
 
