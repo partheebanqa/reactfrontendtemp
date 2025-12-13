@@ -1,5 +1,5 @@
-import { API_EXECUTOR, API_REPORTS } from '@/config/apiRoutes';
-import { apiRequest } from '@/lib/queryClient';
+import { API_EXECUTOR, API_REPORTS } from "@/config/apiRoutes";
+import { apiRequest } from "@/lib/queryClient";
 
 export interface ApiExecutionItem {
   executionType: string;
@@ -27,8 +27,8 @@ export interface ApiExecutionResponse {
 export interface MappedExecution {
   id: string;
   entityId: string;
-  testSuite?: { name: string };
-  requestChain?: { name: string };
+  testSuite?: { name: string; id?: string };
+  requestChain?: { name: string; id?: string };
   status: string;
   startTime: number;
   duration: number;
@@ -74,16 +74,15 @@ const fetchExecutionHistory = async (params: {
   const limit = params?.limit ?? 10;
   const workspaceId = params.workspaceId;
 
-
   const url = `${API_EXECUTOR}/execution-history?page=${encodeURIComponent(
     page
   )}&limit=${encodeURIComponent(limit)}&workspace_id=${encodeURIComponent(
     workspaceId
   )}`;
 
-  const res = await apiRequest('GET', url);
+  const res = await apiRequest("GET", url);
   if (!res.ok) {
-    const text = await res.text().catch(() => '');
+    const text = await res.text().catch(() => "");
     throw new Error(
       `Failed to fetch execution history (${res.status}): ${text}`
     );
@@ -94,13 +93,13 @@ const fetchExecutionHistory = async (params: {
 // Report API functions
 const getTestSuiteReport = async (testSuiteId: string, executionId: string) => {
   const response = await apiRequest(
-    'GET',
+    "GET",
     `${API_REPORTS}/test-suites/${testSuiteId}?execution_id=${executionId}`
   );
   // console.log(response?.json(), "response")
 
   if (!response.ok) {
-    throw new Error('Failed to fetch test suite report');
+    throw new Error("Failed to fetch test suite report");
   }
   return response.json();
 };
@@ -110,11 +109,11 @@ const getRequestChainReport = async (
   executionId: string
 ) => {
   const response = await apiRequest(
-    'GET',
+    "GET",
     `${API_REPORTS}/request-chains/${requestChainId}?execution_id=${executionId}`
   );
   if (!response.ok) {
-    throw new Error('Failed to fetch request chain report');
+    throw new Error("Failed to fetch request chain report");
   }
   return response.json();
 };
@@ -125,7 +124,7 @@ export const mapExecutionData = (
   const executions: MappedExecution[] = apiResponse.items.map((item) => ({
     id: item.executionId,
     entityId: item.entityId,
-    ...(item.executionType === 'test_suite'
+    ...(item.executionType === "test_suite"
       ? { testSuite: { name: item.name } }
       : { requestChain: { name: item.name } }),
     status: item.status,
@@ -137,7 +136,7 @@ export const mapExecutionData = (
       total: item.results.passed + item.results.failed,
     },
     scheduleId:
-      item.source === 'scheduled' ? `schedule-${item.entityId}` : undefined,
+      item.source === "scheduled" ? `schedule-${item.entityId}` : undefined,
     environment: item.environment,
     source: item.source,
     executionType: item.executionType,

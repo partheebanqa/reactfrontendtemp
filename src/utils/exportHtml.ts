@@ -3,18 +3,18 @@ import type {
   TestSuiteData,
   TestCategory,
   TestCase,
-} from '@/components/Reports/Components/TestCaseDetail';
+} from "@/components/Reports/Components/TestCaseDetail";
 
 // ---- helpers you already have (trimmed to essentials) ----
 const generateTestCaseHTML = (testCase: TestCase): string => {
   const getStatusBadge = (status: string) => {
     const colors = {
       passed:
-        'background-color: #dcfce7; color: #166534; border: 1px solid #bbf7d0;',
+        "background-color: #dcfce7; color: #166534; border: 1px solid #bbf7d0;",
       failed:
-        'background-color: #fef2f2; color: #991b1b; border: 1px solid #fecaca;',
+        "background-color: #fef2f2; color: #991b1b; border: 1px solid #fecaca;",
       skipped:
-        'background-color: #fefce8; color: #92400e; border: 1px solid #fde68a;',
+        "background-color: #fefce8; color: #92400e; border: 1px solid #fde68a;",
     };
     return `<span style="display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 9999px; font-size: 12px; font-weight: 500; ${
       colors[status as keyof typeof colors] || colors.failed
@@ -23,10 +23,10 @@ const generateTestCaseHTML = (testCase: TestCase): string => {
 
   const getSeverityBadge = (severity: string) => {
     const colors = {
-      critical: 'background-color: #dc2626; color: white;',
-      high: 'background-color: #ea580c; color: white;',
-      medium: 'background-color: #ca8a04; color: white;',
-      low: 'background-color: #2563eb; color: white;',
+      critical: "background-color: #dc2626; color: white;",
+      high: "background-color: #ea580c; color: white;",
+      medium: "background-color: #ca8a04; color: white;",
+      low: "background-color: #2563eb; color: white;",
     };
     return `<span style="display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 500; ${
       colors[severity as keyof typeof colors] || colors.medium
@@ -126,9 +126,9 @@ const groupTestCasesByEndpoint = (
       endpointGroups[key].testCases.push({ ...testCase, category: title });
       endpointGroups[key].totalTests++;
 
-      if (testCase.status === 'passed') endpointGroups[key].passedTests++;
-      else if (testCase.status === 'failed') endpointGroups[key].failedTests++;
-      else if (testCase.status === 'skipped')
+      if (testCase.status === "passed") endpointGroups[key].passedTests++;
+      else if (testCase.status === "failed") endpointGroups[key].failedTests++;
+      else if (testCase.status === "skipped")
         endpointGroups[key].skippedTests++;
     });
   });
@@ -173,10 +173,10 @@ const generateEndpointGroupHTML = (
             );
             const successRateColor =
               successRate >= 80
-                ? '#059669'
+                ? "#059669"
                 : successRate >= 60
-                ? '#d97706'
-                : '#dc2626';
+                ? "#d97706"
+                : "#dc2626";
 
             return `
             <div style="border: 1px solid #e5e7eb; border-radius: 8px; margin-bottom: 24px; overflow: hidden;">
@@ -192,7 +192,7 @@ const generateEndpointGroupHTML = (
                       }</h3>
                       <p style="font-size: 14px; color: #6b7280; margin: 4px 0 0 0;">${
                         group.totalTests
-                      } test case${group.totalTests !== 1 ? 's' : ''}</p>
+                      } test case${group.totalTests !== 1 ? "s" : ""}</p>
                     </div>
                   </div>
                   
@@ -213,7 +213,7 @@ const generateEndpointGroupHTML = (
                       <span>${group.skippedTests}</span>
                     </div>
                     `
-                        : ''
+                        : ""
                     }
                     <div style="display: flex; align-items: center; gap: 4px; color: #6b7280;">
                       <span>⏱️</span>
@@ -229,12 +229,12 @@ const generateEndpointGroupHTML = (
               <div style="padding: 20px;">
                 ${group.testCases
                   .map((testCase) => generateCollapsibleTestCaseHTML(testCase))
-                  .join('')}
+                  .join("")}
               </div>
             </div>
           `;
           })
-          .join('')}
+          .join("")}
       </div>
     </div>
   `;
@@ -242,17 +242,17 @@ const generateEndpointGroupHTML = (
 
 const getMethodBadgeStyle = (method: string): string => {
   const styles = {
-    GET: 'background-color: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe;',
-    POST: 'background-color: #dcfce7; color: #166534; border: 1px solid #bbf7d0;',
-    PUT: 'background-color: #fef3c7; color: #92400e; border: 1px solid #fde68a;',
+    GET: "background-color: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe;",
+    POST: "background-color: #dcfce7; color: #166534; border: 1px solid #bbf7d0;",
+    PUT: "background-color: #fef3c7; color: #92400e; border: 1px solid #fde68a;",
     DELETE:
-      'background-color: #fef2f2; color: #991b1b; border: 1px solid #fecaca;',
+      "background-color: #fef2f2; color: #991b1b; border: 1px solid #fecaca;",
     PATCH:
-      'background-color: #f3e8ff; color: #7c2d12; border: 1px solid #e9d5ff;',
+      "background-color: #f3e8ff; color: #7c2d12; border: 1px solid #e9d5ff;",
     OPTIONS:
-      'background-color: #f3f4f6; color: #374151; border: 1px solid #d1d5db;',
+      "background-color: #f3f4f6; color: #374151; border: 1px solid #d1d5db;",
   };
-  return styles[method as keyof typeof styles] || styles['OPTIONS'];
+  return styles[method as keyof typeof styles] || styles["OPTIONS"];
 };
 
 const generateCollapsibleTestCaseHTML = (
@@ -261,26 +261,26 @@ const generateCollapsibleTestCaseHTML = (
   const getStatusBadge = (status: string) => {
     const colors = {
       passed:
-        'background-color: #dcfce7; color: #166534; border: 1px solid #bbf7d0;',
+        "background-color: #dcfce7; color: #166534; border: 1px solid #bbf7d0;",
       failed:
-        'background-color: #fef2f2; color: #991b1b; border: 1px solid #fecaca;',
+        "background-color: #fef2f2; color: #991b1b; border: 1px solid #fecaca;",
       skipped:
-        'background-color: #fefce8; color: #92400e; border: 1px solid #fde68a;',
+        "background-color: #fefce8; color: #92400e; border: 1px solid #fde68a;",
     };
-    const icons = { passed: '✅', failed: '❌', skipped: '⚠️' };
+    const icons = { passed: "✅", failed: "❌", skipped: "⚠️" };
     return `<span style="display: inline-flex; align-items: center; padding: 4px 8px; border-radius: 9999px; font-size: 12px; font-weight: 500; gap: 4px; ${
       colors[status as keyof typeof colors] || colors.failed
     }">${
-      icons[status as keyof typeof icons] || '❓'
+      icons[status as keyof typeof icons] || "❓"
     } ${status.toUpperCase()}</span>`;
   };
 
   const getSeverityBadge = (severity: string) => {
     const colors = {
-      critical: 'background-color: #dc2626; color: white;',
-      high: 'background-color: #ea580c; color: white;',
-      medium: 'background-color: #ca8a04; color: white;',
-      low: 'background-color: #2563eb; color: white;',
+      critical: "background-color: #dc2626; color: white;",
+      high: "background-color: #ea580c; color: white;",
+      medium: "background-color: #ca8a04; color: white;",
+      low: "background-color: #2563eb; color: white;",
     };
     return `<span style="display: inline-flex; align-items: center; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 500; ${
       colors[severity as keyof typeof colors] || colors.medium
@@ -324,7 +324,7 @@ const generateCollapsibleTestCaseHTML = (
               ${
                 testCase.statusCode
                   ? `<span>🔢 ${testCase.statusCode}</span>`
-                  : ''
+                  : ""
               }
             </div>
           </div>
@@ -358,11 +358,11 @@ const generateRequestMetricsHTML = (data: TestSuiteData): string => {
   const metrics = data.requestMetrics;
 
   const formatBytes = (bytes: number) => {
-    if (bytes === 0) return '0 B';
+    if (bytes === 0) return "0 B";
     const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const sizes = ["B", "KB", "MB", "GB"];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
   };
 
   const formatDuration = (ms: number) => `${ms.toFixed(0)}ms`;
@@ -432,14 +432,14 @@ const generateRequestMetricsHTML = (data: TestSuiteData): string => {
               .map(([method, count]) => {
                 const percentage = (count / metrics.totalRequests) * 100;
                 const methodColors: { [key: string]: string } = {
-                  GET: '#2563eb',
-                  POST: '#059669',
-                  PUT: '#d97706',
-                  DELETE: '#dc2626',
-                  PATCH: '#7c3aed',
-                  OPTIONS: '#6b7280',
+                  GET: "#2563eb",
+                  POST: "#059669",
+                  PUT: "#d97706",
+                  DELETE: "#dc2626",
+                  PATCH: "#7c3aed",
+                  OPTIONS: "#6b7280",
                 };
-                const color = methodColors[method] || '#6b7280';
+                const color = methodColors[method] || "#6b7280";
 
                 return `
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
@@ -453,7 +453,7 @@ const generateRequestMetricsHTML = (data: TestSuiteData): string => {
                 </div>
               `;
               })
-              .join('')}
+              .join("")}
           </div>
         </div>
 
@@ -464,11 +464,11 @@ const generateRequestMetricsHTML = (data: TestSuiteData): string => {
               .map(([statusCode, count]) => {
                 const percentage = (count / metrics.totalRequests) * 100;
                 const code = parseInt(statusCode);
-                let color = '#6b7280';
-                if (code >= 200 && code < 300) color = '#059669';
-                else if (code >= 300 && code < 400) color = '#2563eb';
-                else if (code >= 400 && code < 500) color = '#d97706';
-                else if (code >= 500) color = '#dc2626';
+                let color = "#6b7280";
+                if (code >= 200 && code < 300) color = "#059669";
+                else if (code >= 300 && code < 400) color = "#2563eb";
+                else if (code >= 400 && code < 500) color = "#d97706";
+                else if (code >= 500) color = "#dc2626";
 
                 return `
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
@@ -482,7 +482,7 @@ const generateRequestMetricsHTML = (data: TestSuiteData): string => {
                 </div>
               `;
               })
-              .join('')}
+              .join("")}
           </div>
 
           ${
@@ -510,10 +510,10 @@ const generateRequestMetricsHTML = (data: TestSuiteData): string => {
                 </div>
               `;
               })
-              .join('')}
+              .join("")}
           </div>
           `
-              : ''
+              : ""
           }
         </div>
       </div>
@@ -526,7 +526,7 @@ export const downloadAsHTML = (elementId: string, filename: string) => {
   const reportData = (window as any).__REPORT_DATA__;
 
   if (!reportData) {
-    alert('Report data not available for export');
+    alert("Report data not available for export");
     return;
   }
 
@@ -540,14 +540,14 @@ export const downloadAsHTML = (elementId: string, filename: string) => {
     };
 
     const categories = [
-      { title: 'Positive Tests', category: reportData.positiveTests },
-      { title: 'Negative Tests', category: reportData.negativeTests },
-      { title: 'Functional Tests', category: reportData.functionalTests },
-      { title: 'Semantic Tests', category: reportData.semanticTests },
-      { title: 'Edge Case Tests', category: reportData.edgeCaseTests },
-      { title: 'Security Tests', category: reportData.securityTests },
+      { title: "Positive Tests", category: reportData.positiveTests },
+      { title: "Negative Tests", category: reportData.negativeTests },
+      { title: "Functional Tests", category: reportData.functionalTests },
+      { title: "Semantic Tests", category: reportData.semanticTests },
+      { title: "Edge Case Tests", category: reportData.edgeCaseTests },
+      { title: "Security Tests", category: reportData.securityTests },
       {
-        title: 'Advanced Security Tests',
+        title: "Advanced Security Tests",
         category: reportData.advancedSecurityTests,
       },
     ];
@@ -676,17 +676,17 @@ export const downloadAsHTML = (elementId: string, filename: string) => {
                 </div>
                 <div style="width: 48px; height: 48px; background-color: ${
                   reportData.successRate >= 80
-                    ? '#dcfce7'
+                    ? "#dcfce7"
                     : reportData.successRate >= 60
-                    ? '#fef3c7'
-                    : '#fef2f2'
+                    ? "#fef3c7"
+                    : "#fef2f2"
                 }; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
                   <span style="font-size: 24px;">${
                     reportData.successRate >= 80
-                      ? '📈'
+                      ? "📈"
                       : reportData.successRate >= 60
-                      ? '📊'
-                      : '📉'
+                      ? "📊"
+                      : "📉"
                   }</span>
                 </div>
               </div>
@@ -748,9 +748,9 @@ export const downloadAsHTML = (elementId: string, filename: string) => {
       </html>
     `;
 
-    const blob = new Blob([htmlContent], { type: 'text/html' });
+    const blob = new Blob([htmlContent], { type: "text/html" });
     const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
+    const link = document.createElement("a");
     link.href = url;
     link.download = filename;
     document.body.appendChild(link);
@@ -758,7 +758,7 @@ export const downloadAsHTML = (elementId: string, filename: string) => {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
   } catch (error) {
-    console.error('Error generating HTML:', error);
-    alert('Failed to generate HTML. Please try again.');
+    console.error("Error generating HTML:", error);
+    alert("Failed to generate HTML. Please try again.");
   }
 };
