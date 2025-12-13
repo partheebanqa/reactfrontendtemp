@@ -138,27 +138,6 @@ export function RequestAnalyzer({
     });
   };
 
-  const handleApplyToThisRequest = (
-    requestId: string,
-    variableName: string
-  ) => {
-    if (onApplyToRequest) {
-      onApplyToRequest(requestId, variableName);
-    }
-
-    setJustExtractedVariable({
-      requestId: requestId,
-      variableName: variableName,
-    });
-  };
-
-  const handleApplyToAll = () => {
-    if (!justExtractedVariable || !onApplyToAllRequests) return;
-
-    onApplyToAllRequests(justExtractedVariable.variableName);
-    setJustExtractedVariable(null);
-  };
-
   const successCount = executionLogs.filter(
     (log) => log.status === 'success'
   ).length;
@@ -213,7 +192,6 @@ export function RequestAnalyzer({
           )}
         </div>
 
-        {/* Success notification for extraction */}
         {(justExtractedVariable || availableAuthToken) && (
           <div className='flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg mb-4 flex-shrink-0'>
             <div className='flex items-center gap-2'>
@@ -312,15 +290,12 @@ export function RequestAnalyzer({
                   )}
                 </div>
 
-                {/* Analysis Content */}
                 <div className='p-4 space-y-3'>
-                  {/* Dependencies Section */}
                   <div className='space-y-2'>
                     <h4 className='text-sm font-semibold text-gray-700 uppercase tracking-wide'>
                       Dependencies
                     </h4>
 
-                    {/* Auth Token Analysis */}
                     {analysis?.hasAuthWarning && (
                       <div className='flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded'>
                         <AlertTriangle className='w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5' />
@@ -474,8 +449,6 @@ export function RequestAnalyzer({
                       </div>
                     )}
                   </div>
-
-                  {/* Query Parameters Analysis */}
                   {analysis?.queryParams && analysis.queryParams.length > 0 && (
                     <div className='space-y-2'>
                       <h4 className='text-sm font-medium text-gray-900'>
@@ -502,6 +475,59 @@ export function RequestAnalyzer({
                                       {param.source.path}
                                     </code>
                                   </p>
+
+                                  {(() => {
+                                    const sourceRequest =
+                                      requests[param.source.apiIndex];
+                                    const extractedVars =
+                                      extractedVariablesByRequest[
+                                        sourceRequest?.id
+                                      ] || {};
+                                    const alreadyExtracted = Object.entries(
+                                      extractedVars
+                                    ).find(
+                                      ([key, value]) => value === param.value
+                                    );
+
+                                    if (alreadyExtracted) {
+                                      return (
+                                        <div className='mt-1 flex items-center gap-2'>
+                                          <span className='text-xs text-green-700'>
+                                            ✓ Already extracted as:{' '}
+                                            <strong>
+                                              {alreadyExtracted[0]}
+                                            </strong>
+                                          </span>
+                                        </div>
+                                      );
+                                    }
+
+                                    return (
+                                      <div className='mt-1'>
+                                        <button
+                                          onClick={() => {
+                                            if (onExtractVariable) {
+                                              const pathParts =
+                                                param.source.path.split('.');
+                                              const suggestedName =
+                                                pathParts[
+                                                  pathParts.length - 1
+                                                ] || param.name;
+                                              onExtractVariable(
+                                                sourceRequest.id,
+                                                param.source.path,
+                                                suggestedName
+                                              );
+                                            }
+                                          }}
+                                          className='px-2 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 transition-colors flex items-center gap-1'
+                                        >
+                                          <Plus className='w-3 h-3' />
+                                          Extract from Source
+                                        </button>
+                                      </div>
+                                    );
+                                  })()}
                                 </div>
                               </>
                             ) : (
@@ -520,7 +546,6 @@ export function RequestAnalyzer({
                     </div>
                   )}
 
-                  {/* Response Data Extractions */}
                   {executionLog?.extractedVariables &&
                     Object.keys(executionLog.extractedVariables).length > 0 && (
                       <div className='space-y-2'>
@@ -565,7 +590,6 @@ export function RequestAnalyzer({
                       </div>
                     )}
 
-                  {/* Assertions Summary */}
                   {executionLog?.response?.assertions &&
                     executionLog.response.assertions.length > 0 && (
                       <div className='space-y-2'>
@@ -607,7 +631,6 @@ export function RequestAnalyzer({
                       </div>
                     )}
 
-                  {/* Response Preview Section */}
                   {executionLog?.response && (
                     <div className='border-t pt-3'>
                       <button
@@ -638,7 +661,6 @@ export function RequestAnalyzer({
             );
           })}
 
-          {/* Empty States */}
           {(!requests || requests.length === 0) && (
             <div className='text-center py-12'>
               <AlertTriangle className='w-12 h-12 text-gray-300 mx-auto mb-3' />

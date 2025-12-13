@@ -662,6 +662,39 @@ export function RequestChainEditor({
     });
   };
 
+  const handleExtractFromDependency = (
+    sourceRequestIndex: number,
+    path: string,
+    suggestedName: string
+  ) => {
+    const sourceRequest = formData.chainRequests?.[sourceRequestIndex];
+    if (!sourceRequest) {
+      console.error('Source request not found at index:', sourceRequestIndex);
+      return;
+    }
+
+    const extraction: DataExtraction = {
+      variableName: `E_${suggestedName}`,
+      name: `E_${suggestedName}`,
+      source: 'response_body',
+      path: path,
+    };
+
+    handleExtractVariableForRequest(sourceRequest.id, extraction);
+
+    // Expand the source request to show the extraction was added
+    const newExpanded = new Set(expandedRequests);
+    newExpanded.add(sourceRequest.id);
+    setExpandedRequests(newExpanded);
+
+    toast({
+      title: 'Variable Extraction Added',
+      description: `Variable "E_${suggestedName}" will be extracted from ${path} in request #${
+        sourceRequestIndex + 1
+      }. Run the request again to see the extracted value.`,
+    });
+  };
+
   const DynamicVariablesPanel = () => {
     if (usedDynamicVariables.length === 0) return null;
 
