@@ -239,12 +239,9 @@ export function RequestEditor({
   const [url, setUrl] = useState(initialRequest.url || '');
   const [body, setBody] = useState(initialRequest.body || '');
 
-  console.log('body123:', body);
-
   const [selectedVariable, setSelectedVariable] = useState<SelectedVariable[]>(
     []
   );
-  console.log('selectedVariable:', selectedVariable);
 
   const [headers, setHeaders] = useState<KeyValuePair[]>(
     initialRequest.headers || []
@@ -455,13 +452,13 @@ export function RequestEditor({
   }, [params]);
 
   const handleAssertionsUpdate = (newAssertions: any[]) => {
-    console.log('RequestEditor handleAssertionsUpdate:', {
-      requestId: initialRequest.id,
-      assertionsCount: newAssertions.length,
-      assertions: newAssertions.slice(0, 3),
+    setAssertions((prev) => {
+      const updated = newAssertions.map((newA) => {
+        const oldA = prev?.find((p) => p.id === newA.id);
+        return oldA ? { ...oldA, ...newA } : newA;
+      });
+      return updated;
     });
-
-    setAssertions(newAssertions);
 
     if (initialRequest.id) {
       try {
@@ -473,19 +470,14 @@ export function RequestEditor({
         }
 
         map[initialRequest.id].assertions = newAssertions;
-        localStorage.setItem('lastExecutionByRequest', JSON.stringify(map));
 
-        console.log('Persisted assertions to localStorage:', {
-          requestId: initialRequest.id,
-          count: newAssertions.length,
-        });
+        localStorage.setItem('lastExecutionByRequest', JSON.stringify(map));
       } catch (e) {
         console.error('Failed to persist assertions:', e);
       }
     }
 
     if (onAssertionsUpdate) {
-      console.log('Calling parent onAssertionsUpdate callback');
       onAssertionsUpdate(newAssertions);
     } else {
       console.warn('No onAssertionsUpdate callback provided');
@@ -504,12 +496,6 @@ export function RequestEditor({
 
         map[initialRequest.id].assertions = assertions;
         localStorage.setItem('lastExecutionByRequest', JSON.stringify(map));
-
-        console.log('Auto-persisted assertions to localStorage:', {
-          requestId: initialRequest.id,
-          count: assertions.length,
-          enabled: assertions.filter((a) => a.enabled).length,
-        });
       } catch (e) {
         console.error('Failed to auto-persist assertions:', e);
       }
@@ -564,8 +550,6 @@ export function RequestEditor({
     Record<string, any>
   >(parentExtractedVariables);
   const { activeEnvironment } = useDataManagement();
-
-  console.log('extractedVariables123:', extractedVariables);
 
   const [previewUrl, setPreviewUrl] = useState('');
   const [previousExtractions, setPreviousExtractions] = useState<
@@ -713,16 +697,9 @@ export function RequestEditor({
     request: Partial<APIRequest>,
     variables: Variable[]
   ): Partial<APIRequest> => {
-    console.log(
-      '[v0] processRequestWithVariables - selectedVariable:',
-      selectedVariable
-    );
-    console.log('[v0] processRequestWithVariables - variables:', variables);
-
     let processedBody = request.body || '';
     let processedBodyRawContent = request.bodyRawContent || '';
 
-    // If we have selected variables with paths, substitute them in the JSON body
     if (
       selectedVariable &&
       selectedVariable.length > 0 &&
@@ -734,14 +711,12 @@ export function RequestEditor({
         selectedVariable.forEach((varItem) => {
           const variable = variables.find((v) => v.name === varItem.name);
           if (variable && varItem.path) {
-            // Set the value at the specified path
             parsedBody[varItem.path] = variable.value || variable.initialValue;
           }
         });
         processedBody = JSON.stringify(parsedBody, null, 2);
         processedBodyRawContent = JSON.stringify(parsedBody, null, 2);
       } catch {
-        // If JSON parsing fails, fall back to regex replacement
         selectedVariable.forEach((varItem) => {
           const variable = variables.find((v) => v.name === varItem.name);
           if (variable) {
@@ -758,7 +733,6 @@ export function RequestEditor({
         });
       }
     } else {
-      // Standard variable replacement with {{variableName}} syntax
       processedBody = replaceVariables(processedBody, variables);
       processedBodyRawContent = replaceVariables(
         processedBodyRawContent,
@@ -906,10 +880,7 @@ export function RequestEditor({
   };
 
   const handleJsonVariableSelect = (variables: SelectedVariable[]) => {
-    console.log('[v0] handleJsonVariableSelect called with:', variables);
-    console.log('[v0] Current selectedVariable state:', selectedVariable);
     setSelectedVariable(variables);
-    console.log('[v0] Updated selectedVariable to:', variables);
     if (initialRequest.id) {
       onUpdate({ variable: variables });
     }
@@ -1199,7 +1170,6 @@ export function RequestEditor({
       const actualRequestBody = processedRequest.body ?? '';
       const actualRequestMethod = processedRequest.method;
 
-      // Get previous execution log to compare responses
       let previousExecutionLog = null;
       try {
         const raw = localStorage.getItem('lastExecutionByRequest');
@@ -1211,17 +1181,12 @@ export function RequestEditor({
         console.error('Failed to read previous execution:', e);
       }
 
-      // Check if response has changed or no assertions exist
       const responseChanged = hasResponseChanged(
         result,
         previousExecutionLog?.response
       );
 
       let finalAssertions = assertions;
-
-      // Regenerate assertions if:
-      // 1. No assertions exist, OR
-      // 2. Response has changed significantly
       if (assertions.length === 0 || responseChanged) {
         const formattedAssertionFormat = {
           status: result?.statusCode ?? null,
@@ -1242,16 +1207,11 @@ export function RequestEditor({
           formattedAssertionFormat
         );
 
-        // If response changed and we have existing assertions, merge them intelligently
         if (responseChanged && assertions.length > 0) {
-          console.log('⚠️ Response changed - regenerating assertions');
-
-          // Keep custom user-modified assertions (those with custom descriptions)
           const customAssertions = assertions.filter(
             (assertion) => assertion.isCustom === true
           );
 
-          // Merge custom assertions with new auto-generated ones
           finalAssertions = [...newAssertions, ...customAssertions];
         } else {
           finalAssertions = newAssertions;
@@ -1259,18 +1219,6 @@ export function RequestEditor({
 
         setAssertions(finalAssertions);
         handleAssertionsUpdate(finalAssertions);
-
-        console.log(
-          responseChanged
-            ? '🔄 Response changed - updated assertions'
-            : '✨ Generated new assertions',
-          {
-            requestId: initialRequest.id,
-            previousStatus: previousExecutionLog?.response?.status,
-            currentStatus: result?.statusCode,
-            assertionsCount: finalAssertions.length,
-          }
-        );
       }
 
       const log: ExecutionLog = {
