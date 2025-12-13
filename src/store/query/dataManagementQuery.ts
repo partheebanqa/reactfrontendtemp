@@ -1,4 +1,4 @@
-import { queryClient } from '@/lib/queryClient';
+import { queryClient } from "@/lib/queryClient";
 import {
   createEnvironment,
   createVariable,
@@ -12,13 +12,13 @@ import {
   updateDynamicVariable,
   deleteDynamicVariable,
   updatePrimaryEnvironment,
-} from '@/services/dataManagement.service';
-import { workspaceStore } from '../workspaceStore';
-import { useMutation, useQuery } from '@tanstack/react-query';
+} from "@/services/dataManagement.service";
+import { workspaceStore } from "../workspaceStore";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   dataManagementActions,
   dataManagementStore,
-} from '../dataManagementStore';
+} from "../dataManagementStore";
 import {
   Environment,
   ResponseEnvironment,
@@ -26,20 +26,20 @@ import {
   ResponseDynamicVariable,
   Variable,
   DynamicVariable,
-} from '@/shared/types/datamanagement';
+} from "@/shared/types/datamanagement";
 import {
   getSavedEnvironmentId,
   saveActiveEnvironment,
-} from '@/utils/environmentStorage';
+} from "@/utils/environmentStorage";
 
 export const usegetEnvironmentQuery = (enabled = true) => {
   const workspaceId = workspaceStore.state.currentWorkspace?.id;
 
   return useQuery({
-    queryKey: ['environments', workspaceId],
+    queryKey: ["environments", workspaceId],
     enabled: !!workspaceId && enabled,
     queryFn: async () => {
-      if (!workspaceId) throw new Error('Workspace ID is missing');
+      if (!workspaceId) throw new Error("Workspace ID is missing");
 
       const response = await fetchEnvironments(workspaceId);
 
@@ -71,23 +71,23 @@ export const usefetchVariablesQuery = (enabled = true) => {
   const workspaceId = workspaceStore.state.currentWorkspace?.id;
 
   return useQuery({
-    queryKey: ['variables', workspaceId, activeEnvironment?.id],
+    queryKey: ["variables", workspaceId, activeEnvironment?.id],
     enabled: !!workspaceId && !!activeEnvironment?.id && enabled,
     queryFn: async () => {
-      if (!workspaceId) throw new Error('Workspace ID is missing');
+      if (!workspaceId) throw new Error("Workspace ID is missing");
       const response = await fetchVariables(workspaceId);
       if (response.items.length > 0) {
         const filteredVariables = response.items.map(filterVariable);
         dataManagementActions.setVariables(filteredVariables);
 
         const baseUrlVar = filteredVariables.find(
-          (v) => v.name.toLowerCase() === 'baseurl'
+          (v) => v.name.toLowerCase() === "baseurl"
         );
 
         if (baseUrlVar && activeEnvironment) {
           const updatedEnvironment = {
             ...activeEnvironment,
-            baseUrl: baseUrlVar.initialValue || '',
+            baseUrl: baseUrlVar.initialValue || "",
           };
           dataManagementActions.setActiveEnvironment(updatedEnvironment);
         }
@@ -107,10 +107,10 @@ export const usefetchDynamicVariablesQuery = (enabled = true) => {
   const workspaceId = workspaceStore.state.currentWorkspace?.id;
 
   return useQuery({
-    queryKey: ['dynamicVariables', workspaceId, activeEnvironment?.id],
+    queryKey: ["dynamicVariables", workspaceId, activeEnvironment?.id],
     enabled: !!workspaceId && !!activeEnvironment?.id && enabled,
     queryFn: async () => {
-      if (!workspaceId) throw new Error('Workspace ID is missing');
+      if (!workspaceId) throw new Error("Workspace ID is missing");
 
       const response = await fetchDynamicVariables(workspaceId);
 
@@ -120,13 +120,13 @@ export const usefetchDynamicVariablesQuery = (enabled = true) => {
         dataManagementActions.setDynamicVariables(mappedDynamicVariables);
 
         const baseUrlVar = mappedDynamicVariables.find(
-          (v: any) => v.name.toLowerCase() === 'baseurl'
+          (v: any) => v.name.toLowerCase() === "baseurl"
         );
 
         if (baseUrlVar && activeEnvironment) {
           const updatedEnvironment = {
             ...activeEnvironment,
-            baseUrl: baseUrlVar.parameters?.url ?? '',
+            baseUrl: baseUrlVar.parameters?.url ?? "",
           };
           dataManagementActions.setActiveEnvironment(updatedEnvironment);
         }
@@ -148,11 +148,11 @@ export const useCreateEnvironmentMutation = () => {
     mutationFn: createEnvironment,
     onSuccess: async () => {
       await queryClient.invalidateQueries({
-        queryKey: ['environments', workspaceId],
+        queryKey: ["environments", workspaceId],
       });
     },
     onError: (error) => {
-      console.error('Error creating environment:', error);
+      console.error("Error creating environment:", error);
     },
   });
 };
@@ -164,11 +164,11 @@ export const useUpdateEnvironmentMutation = () => {
     mutationFn: updateEnvironment,
     onSuccess: async () => {
       await queryClient.invalidateQueries({
-        queryKey: ['environments', workspaceId],
+        queryKey: ["environments", workspaceId],
       });
     },
     onError: (error) => {
-      console.error('Error updating environment:', error);
+      console.error("Error updating environment:", error);
     },
   });
 };
@@ -180,11 +180,11 @@ export const useUpdatePrimaryEnvironmentMutation = () => {
     mutationFn: updatePrimaryEnvironment,
     onSuccess: async () => {
       await queryClient.invalidateQueries({
-        queryKey: ['environments', workspaceId],
+        queryKey: ["environments", workspaceId],
       });
     },
     onError: (error) => {
-      console.error('Error updating environment:', error);
+      console.error("Error updating environment:", error);
     },
   });
 };
@@ -196,11 +196,11 @@ export const useDeleteEnvironmentMutation = () => {
     mutationFn: deleteEnvironment,
     onSuccess: async () => {
       await queryClient.invalidateQueries({
-        queryKey: ['environments', workspaceId],
+        queryKey: ["environments", workspaceId],
       });
     },
     onError: (error) => {
-      console.error('Error deleting environment:', error);
+      console.error("Error deleting environment:", error);
     },
   });
 };
@@ -214,15 +214,15 @@ export const useCreateVariableMutation = () => {
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({
-          queryKey: ['variables', workspaceId, activeEnvironment?.id],
+          queryKey: ["variables", workspaceId, activeEnvironment?.id],
         }),
         queryClient.invalidateQueries({
-          queryKey: ['dynamicVariables', workspaceId, activeEnvironment?.id],
+          queryKey: ["dynamicVariables", workspaceId, activeEnvironment?.id],
         }),
       ]);
     },
     onError: (error) => {
-      console.error('Error creating variable:', error);
+      console.error("Error creating variable:", error);
     },
   });
 };
@@ -235,11 +235,11 @@ export const useUpdateVariableMutation = () => {
     mutationFn: updateVariable,
     onSuccess: async () => {
       await queryClient.invalidateQueries({
-        queryKey: ['variables', workspaceId, activeEnvironment?.id],
+        queryKey: ["variables", workspaceId, activeEnvironment?.id],
       });
     },
     onError: (error) => {
-      console.error('Error updating variable:', error);
+      console.error("Error updating variable:", error);
     },
   });
 };
@@ -252,11 +252,11 @@ export const useUpdateDynamicVariableMutation = () => {
     mutationFn: updateDynamicVariable,
     onSuccess: async () => {
       await queryClient.invalidateQueries({
-        queryKey: ['dynamicVariables', workspaceId, activeEnvironment?.id],
+        queryKey: ["dynamicVariables", workspaceId, activeEnvironment?.id],
       });
     },
     onError: (error) => {
-      console.error('Error updating dynamic variable:', error);
+      console.error("Error updating dynamic variable:", error);
     },
   });
 };
@@ -269,11 +269,11 @@ export const useDeleteVariableMutation = () => {
     mutationFn: deleteVariable,
     onSuccess: async () => {
       await queryClient.invalidateQueries({
-        queryKey: ['variables', workspaceId, activeEnvironment?.id],
+        queryKey: ["variables", workspaceId, activeEnvironment?.id],
       });
     },
     onError: (error) => {
-      console.error('Error deleting variable:', error);
+      console.error("Error deleting variable:", error);
     },
   });
 };
@@ -286,11 +286,11 @@ export const useDeleteDynamicVariableMutation = () => {
     mutationFn: deleteDynamicVariable,
     onSuccess: async () => {
       await queryClient.invalidateQueries({
-        queryKey: ['dynamicVariables', workspaceId, activeEnvironment?.id],
+        queryKey: ["dynamicVariables", workspaceId, activeEnvironment?.id],
       });
     },
     onError: (error) => {
-      console.error('Error deleting variable:', error);
+      console.error("Error deleting variable:", error);
     },
   });
 };
@@ -306,7 +306,7 @@ const filterEnvironment = (environment: ResponseEnvironment): Environment => {
     updatedBy: environment.UpdatedBy,
     createdBy: environment.CreatedBy,
     deletedAt: environment.DeletedAt,
-    baseUrl: environment?.environmentVariables?.[0]?.InitialValue ?? '',
+    baseUrl: environment?.environmentVariables?.[0]?.InitialValue ?? "",
     isDefault: false,
     isPrimary: environment?.IsPrimary,
   };
@@ -325,7 +325,7 @@ const filterVariable = (variable: ResponseVariable): Variable => {
     updatedAt: variable.UpdatedAt,
     deletedAt: variable.DeletedAt,
     value: variable.CurrentValue || variable.InitialValue,
-    scope: 'environment' as const,
+    scope: "environment" as const,
     isGlobal: false,
     isSecret: false,
   };
