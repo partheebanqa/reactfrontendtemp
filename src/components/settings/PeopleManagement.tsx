@@ -60,6 +60,8 @@ import {
   TooltipTrigger,
 } from '../ui/tooltip';
 import UserManagement from './UserManagement';
+import { getWorkSpaceRole } from '@/services/workspace.service';
+import { UserRoleData } from './WorkspaceManagement';
 
 interface TeamMember {
   id: string;
@@ -495,6 +497,16 @@ export function PeopleManagement() {
     }
   };
 
+
+
+
+  const { data: userRole, isLoading } = useQuery<UserRoleData>({
+    queryKey: ["workspace-role", currentWorkspace?.id],
+    enabled: !!currentWorkspace?.id,
+    queryFn: () => getWorkSpaceRole(currentWorkspace!.id),
+  });
+
+
   const inviteWorkspaces = useMemo(() => workspaces ?? [], [workspaces]);
   return (
     <div className='space-y-3'>
@@ -835,7 +847,12 @@ export function PeopleManagement() {
           <div className='flex justify-end mt-4'>
             <Button
               onClick={handleInviteUser}
-              disabled={!canInvite || isPending}
+              disabled={
+                !canInvite ||
+                isPending ||
+                !(userRole?.role === "Org Admin" || userRole?.role === "Admin")
+              }
+
               className='flex items-center gap-2'
             >
               <Mail className='h-4 w-4' />
