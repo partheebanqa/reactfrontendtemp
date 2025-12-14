@@ -172,7 +172,7 @@ const RequestEditor: React.FC = () => {
     | 'schemas'
   >('params');
 
-  const { schemas } = useSchema();
+  const { schemas, fetchSchemas, isLoading: isSchemasLoading } = useSchema();
 
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [newCollectionName, setNewCollectionName] = useState('');
@@ -2311,7 +2311,13 @@ const RequestEditor: React.FC = () => {
             ].map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
+                onClick={() => {
+                  setActiveTab(tab.id as any);
+
+                  if (tab.id === 'schemas') {
+                    fetchSchemas();
+                  }
+                }}
                 className={`
                     pt-4 pb-2 px-2 sm:px-4 border-b-2 font-medium text-sm transition-colors whitespace-nowrap
                   ${
