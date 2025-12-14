@@ -345,6 +345,7 @@ export default function UserManagement() {
                     </div>
                     <div className='flex items-center gap-2'>
                       <Select
+                        disabled={!(userRole?.role === "Org Admin" || userRole?.role === "Admin")}
                         onValueChange={(newRoleId) =>
                           handleChangeRole(u.id, r.workspaceId, newRoleId)
                         }

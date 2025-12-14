@@ -133,7 +133,7 @@ export const ExecutionsTable = ({
           <TableHead>Type</TableHead>
           <TableHead>Environment</TableHead>
           <TableHead>Status</TableHead>
-          <TableHead>Started</TableHead>
+          {/* <TableHead>Started</TableHead> */}
           <TableHead>Duration</TableHead>
           <TableHead>Results</TableHead>
           <TableHead>Trigger</TableHead>
@@ -218,8 +218,8 @@ export const ExecutionsTable = ({
                     execution.status === 'success'
                       ? 'active'
                       : execution.status === 'failed'
-                      ? 'destructive'
-                      : 'secondary'
+                        ? 'destructive'
+                        : 'secondary'
                   }
                 >
                   <span className='mr-1'>
@@ -228,7 +228,7 @@ export const ExecutionsTable = ({
                   {execution.status.toUpperCase()}
                 </Badge>
               </TableCell>
-              <TableCell>
+              {/* <TableCell>
                 <div>
                   <p className='text-xs text-muted-foreground'>
                     {formatDistanceToNow(new Date(execution.startTime), {
@@ -236,7 +236,7 @@ export const ExecutionsTable = ({
                     })}
                   </p>
                 </div>
-              </TableCell>
+              </TableCell> */}
               <TableCell className='text-sm text-foreground'>
                 {formatDuration(execution.duration)}
               </TableCell>

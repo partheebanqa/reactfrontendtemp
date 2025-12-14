@@ -27,6 +27,7 @@ const Executions = () => {
 
   // Filter states
   const [searchQuery, setSearchQuery] = useState('');
+  const [suiteOrChainIdQuery, setSuiteOrChainIdQuery] = useState('');
   const [environmentFilter, setEnvironmentFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -105,12 +106,15 @@ const Executions = () => {
     enabled: !!workspaceId, // 👈 only run when workspaceId is available
   });
 
+  // console.log('executionData', executionData);
+
   // Filter executions based on current filters
   const filteredExecutions = useMemo(() => {
     if (!executionData?.executions) return [];
 
     const q = searchQuery.trim().toLowerCase();
     const idFilter = executionIdFilter.trim().toLowerCase();
+    const suiteOrChainIdFilter = suiteOrChainIdQuery.trim().toLowerCase();
 
     return executionData.executions.filter((execution) => {
       // Search filter
@@ -123,6 +127,15 @@ const Executions = () => {
         return false;
       }
 
+
+      if (suiteOrChainIdFilter) {
+        const suiteId = (execution.entityId ?? '').toLowerCase();
+        if (
+          !suiteId.includes(suiteOrChainIdFilter)
+        ) {
+          return false;
+        }
+      }
       // Environment filter
       if (
         environmentFilter !== 'all' &&
@@ -181,6 +194,7 @@ const Executions = () => {
     executionIdFilter,
     dateRange,
     durationRange,
+    suiteOrChainIdQuery
   ]);
 
   // Helper functions
@@ -405,6 +419,8 @@ const Executions = () => {
         handleDeleteEnvironment={handleDeleteEnvironment}
         onRefresh={refetch}
         refreshing={isFetching}
+        suiteOrChainIdQuery={suiteOrChainIdQuery}                // 👈 NEW
+        setSuiteOrChainIdQuery={setSuiteOrChainIdQuery}
       />
 
       <div className='bg-card rounded-lg shadow-sm border border-border'>

@@ -25,8 +25,8 @@ export const downloadAsPDF = async (elementId: string, filename: string) => {
   const imgData = canvas.toDataURL("image/png");
   const pdf = new jsPDF("p", "mm", "a4");
 
-  const pdfW = pdf.internal.pageSize.getWidth(); // 210mm
-  const pdfH = pdf.internal.pageSize.getHeight(); // 297mm
+  const pdfW = pdf.internal.pageSize.getWidth();
+  const pdfH = pdf.internal.pageSize.getHeight();
 
   const imgW = pdfW;
   const imgH = (canvas.height * imgW) / canvas.width;
