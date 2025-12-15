@@ -1,5 +1,5 @@
-import { useEffect } from "react";
-import { useAuthStore, authActions } from "@/store/authStore";
+import { useEffect } from 'react';
+import { useAuthStore, authActions } from '@/store/authStore';
 import {
   useUserQuery,
   useLoginMutation,
@@ -7,7 +7,7 @@ import {
   useRegisterMutation,
   useUpdateProfileMutation,
   useChangePasswordMutation,
-} from "@/store/query/authQuery";
+} from '@/store/query/authQuery';
 
 export function useAuth() {
   // Get state from auth store

@@ -1,8 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Plus } from 'lucide-react';
 import AssertionManager from '@/components/RequestBuilder/RequestEditor/assertionManager';
+import ManualAssertionBuilder from '@/components/Shared/RequestTabs/manualAssertions';
 import {
   AlertDialog,
   AlertDialogContent,
@@ -56,11 +57,21 @@ export function PrePostRequest({
   );
   const [deleteTargetPath, setDeleteTargetPath] = useState<string | null>(null);
 
+  const [showManualAssertionModal, setShowManualAssertionModal] =
+    useState(false);
+
   const handleDeleteVariable = (path: string) => {
     if (onRemoveVariable) {
       onRemoveVariable(path);
     }
     setDeleteTargetPath(null);
+  };
+
+  const handleAddManualAssertion = (newAssertion: any) => {
+    if (setAssertions) {
+      setAssertions([...assertions, newAssertion]);
+    }
+    setShowManualAssertionModal(false);
   };
 
   return (
@@ -157,16 +168,31 @@ export function PrePostRequest({
           {activeSubTab === 'assertions' && (
             <>
               {showAssertions && (
-                <AssertionManager
-                  assertions={assertions}
-                  setAssertions={setAssertions}
-                  responseData={responseData}
-                  activeRequest={activeRequest}
-                  currentWorkspace={currentWorkspace}
-                  updateRequestMutation={updateRequestMutation}
-                  toggleAssertion={toggleAssertion}
-                  onSaveAssertions={onSaveAssertions}
-                />
+                <div>
+                  {/* <div className='flex items-center justify-between mb-4 px-4'>
+                    <h4 className='text-base font-medium text-gray-900 dark:text-white'>
+                      Test Assertions
+                    </h4>
+                    <button
+                      onClick={() => setShowManualAssertionModal(true)}
+                      className='px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-md flex items-center gap-2 transition-colors'
+                    >
+                      <Plus className='w-4 h-4' />
+                      Add Manual Assertion
+                    </button>
+                  </div> */}
+
+                  <AssertionManager
+                    assertions={assertions}
+                    setAssertions={setAssertions}
+                    responseData={responseData}
+                    activeRequest={activeRequest}
+                    currentWorkspace={currentWorkspace}
+                    updateRequestMutation={updateRequestMutation}
+                    toggleAssertion={toggleAssertion}
+                    onSaveAssertions={onSaveAssertions}
+                  />
+                </div>
               )}
 
               {!showAssertions && (
@@ -238,6 +264,14 @@ export function PrePostRequest({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {showManualAssertionModal && (
+        <ManualAssertionBuilder
+          onAdd={handleAddManualAssertion}
+          responseData={responseData}
+          onClose={() => setShowManualAssertionModal(false)}
+        />
+      )}
     </div>
   );
 }

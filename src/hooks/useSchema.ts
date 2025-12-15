@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 import { useSchemaStore, schemaActions } from '@/store/schemaStore';
 import { Schema, SchemaValidationResult } from '@/shared/types/schema';
 import {
@@ -11,7 +10,6 @@ import { useCollection } from './useCollection';
 import { useToast } from './use-toast';
 
 export function useSchema() {
-  // Get schema state from store
   const { schemas, primarySchema, primarySchemaValidation, isLoading } =
     useSchemaStore();
   const { toast } = useToast();
@@ -20,21 +18,18 @@ export function useSchema() {
   const setPrimarySchemaMutation = useSetPrimarySchemaMutation();
   const deleteSchemaMutation = useDeleteSchemaMutation();
 
-  // Initialize schemas from localStorage on component mount
-  useEffect(() => {
-    if (activeRequest?.id) {
-      fetchSchema.mutate(activeRequest?.id);
-    }
-  }, [activeRequest]);
-
-  // Helper function to get schema by ID
   const getSchemaById = (id: string): Schema | null => {
     return schemas.find((schema) => schema.id === id) || null;
   };
 
   const uploadSchemaMutation = useUploadRequestSchemaMutation();
 
-  // Wrapper functions that call the API
+  const fetchSchemas = () => {
+    if (activeRequest?.id) {
+      fetchSchema.mutate(activeRequest.id);
+    }
+  };
+
   const setPrimarySchema = (schemaId: string) => {
     if (activeRequest?.id) {
       setPrimarySchemaMutation.mutate(
@@ -61,6 +56,7 @@ export function useSchema() {
       );
     }
   };
+
   const deleteSchema = (schemaId: string) => {
     if (activeRequest?.id) {
       deleteSchemaMutation.mutate(
@@ -89,20 +85,16 @@ export function useSchema() {
   };
 
   return {
-    // State
     schemas,
     primarySchema,
     primarySchemaValidation,
     isLoading,
-
-    // Actions
     addSchema: schemaActions.addSchema,
     deleteSchema,
     setPrimarySchema,
     validateResponseAgainstPrimarySchema:
       schemaActions.validateResponseAgainstPrimarySchema,
-
-    // Helpers
+    fetchSchemas,
     getSchemaById,
     uploadSchemaMutation,
     fetchSchema,

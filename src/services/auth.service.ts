@@ -8,11 +8,18 @@ import {
   API_RESET_PASSWORD,
   API_PROFILE,
 } from '@/config/apiRoutes';
+import { USER_COOKIE_NAME } from '@/lib/constants';
+import { getEncryptedCookie } from '@/lib/cookieUtils';
 import { apiRequest } from '@/lib/queryClient';
 import { ILoginResponse, SingUpForm, User } from '@/shared/types/auth';
 
 export const refreshUserData = async () => {
   try {
+    const cookieData = getEncryptedCookie(USER_COOKIE_NAME);
+    if (!cookieData?.token) {
+      return null;
+    }
+
     const res = await apiRequest('GET', API_GET_USER);
     if (!res.ok) {
       throw new Error(`${res.status}: ${res.statusText}`);
