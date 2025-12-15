@@ -90,6 +90,69 @@ const fetchExecutionHistory = async (params: {
   return res.json();
 };
 
+const fetchExecutionFilterSuiteHistory = async ({
+  page = 1,
+  limit = 10,
+  workspaceId,
+  suiteId,
+}: {
+  page?: number;
+  limit?: number;
+  workspaceId: string;
+  suiteId: string;
+}): Promise<ApiExecutionResponse> => {
+  const params = new URLSearchParams({
+    page: String(page),
+    limit: String(limit),
+    workspace_id: workspaceId,
+    suite_id: suiteId,
+  });
+
+  const url = `${API_EXECUTOR}/execution-history?${params.toString()}`;
+
+  const res = await apiRequest("GET", url);
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(
+      `Failed to fetch execution history (${res.status}): ${text}`
+    );
+  }
+
+  return res.json();
+};
+
+const fetchExecutionFilterChainHistory = async ({
+  page = 1,
+  limit = 10,
+  workspaceId,
+  chainId,
+}: {
+  page?: number;
+  limit?: number;
+  workspaceId: string;
+  chainId: string;
+}): Promise<ApiExecutionResponse> => {
+  const params = new URLSearchParams({
+    page: String(page),
+    limit: String(limit),
+    workspace_id: workspaceId,
+    chain_id: chainId,
+  });
+
+  const url = `${API_EXECUTOR}/execution-history?${params.toString()}`;
+
+  const res = await apiRequest("GET", url);
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(
+      `Failed to fetch execution history (${res.status}): ${text}`
+    );
+  }
+
+  return res.json();
+};
 // Report API functions
 const getTestSuiteReport = async (testSuiteId: string, executionId: string) => {
   const response = await apiRequest(
@@ -155,4 +218,6 @@ export const executionService = {
   mapData: mapExecutionData,
   getTestSuiteReport,
   getRequestChainReport,
+  getExecutionFilterSuiteHistory: fetchExecutionFilterSuiteHistory,
+  getExecutionFilterChainHistory: fetchExecutionFilterChainHistory,
 };

@@ -19,6 +19,21 @@ import { MappedExecution, SavedFilter } from '@/shared/types/execution';
 import { useWorkspace } from '@/hooks/useWorkspace';
 import BreadCum from '@/components/BreadCum/Breadcum';
 import { Loader } from '@/components/Loader';
+import { useLocation } from 'wouter';
+
+
+
+const useQueryParams = () => {
+  const [location] = useLocation(); // only pathname, e.g. "/executions/report"
+
+  // 🔥 Use window.location.search to get query string
+  return useMemo(() => {
+    if (typeof window === "undefined") {
+      return new URLSearchParams("");
+    }
+    return new URLSearchParams(window.location.search);
+  }, [location]); // re-run when route changes
+};
 
 const Executions = () => {
   // Pagination state
@@ -50,6 +65,13 @@ const Executions = () => {
     null
   );
 
+  const queryParams = useQueryParams();
+  const suiteIdFromUrl = queryParams.get("suiteId") ?? "";
+  const chainIdFromUrl = queryParams.get("chainId") ?? "";
+
+  console.log("suiteIdFromUrl", suiteIdFromUrl);
+
+
   // Saved filters (mock data for now)
   const [savedFilters] = useState<SavedFilter[]>([
     {
@@ -67,6 +89,10 @@ const Executions = () => {
       },
     },
   ]);
+
+
+
+
 
   // Mock schedules data
   const schedules = [
@@ -87,6 +113,7 @@ const Executions = () => {
 
   // console.log("workspaceId", workspaceId);
 
+
   const {
     data: executionData,
     isLoading,
@@ -94,17 +121,58 @@ const Executions = () => {
     refetch,
     isFetching,
   } = useQuery({
-    queryKey: ['executions', currentPage, itemsPerPage, workspaceId],
-    queryFn: () =>
-      executionService
+    queryKey: [
+      "executions",
+      currentPage,
+      itemsPerPage,
+      workspaceId,
+      suiteIdFromUrl, // 🔥 depends on URL param
+    ],
+
+    queryFn: () => {
+      if (!workspaceId) return Promise.resolve(null);
+
+      // 🔥 CASE 1: Filter by suiteId
+      if (suiteIdFromUrl) {
+        return executionService
+          .getExecutionFilterSuiteHistory({
+            page: currentPage,
+            limit: itemsPerPage,
+            workspaceId,
+            suiteId: suiteIdFromUrl,
+          })
+          .then(executionService.mapData);
+      }
+
+      // 🔥 CASE 2: Filter by chainId
+      if (chainIdFromUrl) {
+        return executionService
+          .getExecutionFilterChainHistory({
+            page: currentPage,
+            limit: itemsPerPage,
+            workspaceId,
+            chainId: chainIdFromUrl,
+          })
+          .then(executionService.mapData);
+      }
+
+      // 🔥 CASE 3: No filter → fetch ALL executions
+      return executionService
         .getExecutionHistory({
           page: currentPage,
           limit: itemsPerPage,
-          workspaceId: workspaceId!, // safe since we only enable when it's truthy
+          workspaceId,
         })
-        .then(executionService.mapData),
-    enabled: !!workspaceId, // 👈 only run when workspaceId is available
+        .then(executionService.mapData);
+    },
+
+
+    enabled: !!workspaceId, // prevents running before workspace is loaded
   });
+
+
+
+
 
   // console.log('executionData', executionData);
 
@@ -336,12 +404,30 @@ const Executions = () => {
     }
   };
 
+  const isSuiteFiltered = !!suiteIdFromUrl;
+  const isChainFiltered = !!chainIdFromUrl;
+
+
+  const breadCrumbTitle = (() => {
+    if (isSuiteFiltered) return 'Executions · Test Suite';
+    if (isChainFiltered) return 'Executions · Request Chain';
+    return 'Executions';
+  })();
+
+  const breadCrumbSubtitle = (() => {
+    if (isSuiteFiltered)
+      return 'Showing execution history filtered for this Test Suite.';
+    if (isChainFiltered)
+      return 'Showing execution history filtered for this Request Chain.';
+    return 'Get execution results of test suites and request chains.';
+  })();
+
   return (
     <>
       {/* <ExecutionsHeader /> */}
       <BreadCum
-        title='Executions'
-        subtitle='Get execution results of test suite and request chain'
+        title={breadCrumbTitle}
+        subtitle={breadCrumbSubtitle}
         showCreateButton={false}
         buttonTitle='Run Execution'
         onClickCreateNew={() => console.log('Create execution')}

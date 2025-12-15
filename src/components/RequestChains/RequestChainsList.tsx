@@ -16,6 +16,7 @@ import {
   Eye,
   EllipsisVertical,
   RefreshCw,
+  ChartNoAxesCombined,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -56,6 +57,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { RequestChainPreviewDialog } from './RequestChainPreview';
 import { Loader } from '../Loader';
+import { navigate } from 'wouter/use-browser-location';
 
 interface RequestChainsListProps {
   chains: RequestChain[];
@@ -211,6 +213,11 @@ export function RequestChainsList({
       <Link2 className='bg-[#f9e3fc] p-2 rounded' color='#660275' size={32} />
     );
   };
+
+
+  const handleClickReport = (chainId: string) => {
+    navigate(`/executions/report?chainId=${chainId}`);
+  }
 
   return (
     <div className='space-y-3 px-2 md:px-0'>
@@ -561,8 +568,8 @@ export function RequestChainsList({
                             <Badge
                               variant={chain.enabled ? 'default' : 'secondary'}
                               className={`text-xs ${chain.enabled
-                                  ? 'bg-green-100 text-green-800'
-                                  : ''
+                                ? 'bg-green-100 text-green-800'
+                                : ''
                                 }`}
                             >
                               {chain.enabled ? 'Enabled' : 'Disabled'}
@@ -633,8 +640,8 @@ export function RequestChainsList({
                               size='sm'
                               onClick={() => onToggleChain(chain?.id)}
                               className={`h-8 w-8 p-0 ${chain.enabled
-                                  ? 'text-green-600 hover:text-green-700'
-                                  : 'text-muted-foreground hover:text-foreground'
+                                ? 'text-green-600 hover:text-green-700'
+                                : 'text-muted-foreground hover:text-foreground'
                                 }`}
                             >
                               {chain.enabled ? (
@@ -738,6 +745,11 @@ export function RequestChainsList({
                                     </AlertDialogFooter>
                                   </AlertDialogContent>
                                 </AlertDialog>
+                                <DropdownMenuItem
+                                  onClick={() => handleClickReport(chain.id)}
+                                >
+                                  <ChartNoAxesCombined className='w-4 h-4 mr-2' /> Reports
+                                </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </TooltipTrigger>
