@@ -132,7 +132,6 @@ const TestSuites: React.FC = () => {
       toast({
         title: 'Queued',
         description: 'Test suite has been added to the queue for execution.',
-        type: 'success',
       });
       queryClient.invalidateQueries({ queryKey: ['testSuites'] });
     },
