@@ -139,6 +139,45 @@ export function analyzeRequestChain(
 ): AnalyzedRequest[] {
   const analyzed: AnalyzedRequest[] = [];
 
+  const valueToFirstSource = new Map<
+    string,
+    { apiIndex: number; apiName: string; path: string }
+  >();
+
+  for (let i = 0; i < requests.length; i++) {
+    const request = requests[i];
+    const log = executionLogs[request.id];
+
+    if (log?.response?.body) {
+      try {
+        const parsed = JSON.parse(log.response.body);
+
+        const recordValues = (obj: any, currentPath: string = '') => {
+          if (typeof obj !== 'object' || obj === null) {
+            const valueStr = String(obj);
+            if (!valueToFirstSource.has(valueStr)) {
+              valueToFirstSource.set(valueStr, {
+                apiIndex: i,
+                apiName: request.name,
+                path: currentPath,
+              });
+            }
+            return;
+          }
+
+          for (const key in obj) {
+            const newPath = currentPath ? `${currentPath}.${key}` : key;
+            recordValues(obj[key], newPath);
+          }
+        };
+
+        recordValues(parsed);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+  }
+
   for (let i = 0; i < requests.length; i++) {
     const request = requests[i];
     const authToken = extractAuthToken(request);
@@ -149,27 +188,14 @@ export function analyzeRequestChain(
     let hasAuthWarning = false;
 
     if (authToken && !authToken.startsWith('{{')) {
-      for (let j = i - 1; j >= 0; j--) {
-        const prevRequest = requests[j];
-        const prevLog = executionLogs[prevRequest.id];
+      const firstOccurrence = valueToFirstSource.get(authToken);
 
-        if (prevLog?.response?.body) {
-          const path = searchInResponse(prevLog.response.body, authToken);
-          if (path) {
-            authSource = {
-              apiIndex: j,
-              apiName: prevRequest.name,
-              path,
-            };
-            break;
-          }
-        }
-      }
-
-      if (!authSource) {
+      if (firstOccurrence && firstOccurrence.apiIndex < i) {
+        authSource = firstOccurrence;
+      } else if (!firstOccurrence) {
         hasAuthWarning = true;
 
-        for (let j = i - 1; j >= 0; j--) {
+        for (let j = 0; j < i; j++) {
           const prevRequest = requests[j];
           const prevLog = executionLogs[prevRequest.id];
 
@@ -272,21 +298,10 @@ export function analyzeRequestChain(
         return { ...param, source };
       }
 
-      for (let j = i - 1; j >= 0; j--) {
-        const prevRequest = requests[j];
-        const prevLog = executionLogs[prevRequest.id];
+      const firstOccurrence = valueToFirstSource.get(param.value);
 
-        if (prevLog?.response?.body) {
-          const path = searchInResponse(prevLog.response.body, param.value);
-          if (path) {
-            source = {
-              apiIndex: j,
-              apiName: prevRequest.name,
-              path,
-            };
-            break;
-          }
-        }
+      if (firstOccurrence && firstOccurrence.apiIndex < i) {
+        source = firstOccurrence;
       }
 
       return { ...param, source };
