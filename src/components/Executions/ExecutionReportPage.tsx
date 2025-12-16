@@ -38,7 +38,7 @@ import { buildRequestMetrics } from '@/types/report';
 import ExportHTMLButton from '../Reports/Components/ExportHTMLButton';
 import ExportPDFButton from '../Reports/Components/ExportPDFButton';
 import { RequestReportMetrics } from '../Reports/Components/RequestReportMetrics';
-import { downloadAsPDF } from '@/utils/exportUtilsNew';
+import { downloadAsPDF, mapBackendSuiteReportToTestSuiteData } from '@/utils/exportUtilsNew';
 import { convertDateStamp, convertTimestamp, isValidTimestamp } from '@/utils/exportDate';
 
 type RouteParams = {
@@ -190,8 +190,14 @@ const TestSuiteReport: React.FC<TestSuiteReportProps> = ({ data }) => {
     shareReport(entityId, executionId || "");
   };
   const handleDownloadPDF = async () => {
-    (window as any).__REPORT_DATA__ = data;
-    await downloadAsPDF('report-content', `${data.name}_report.pdf`);
+    // 1. Map raw backend response to TestSuiteData
+    const mappedSuite = mapBackendSuiteReportToTestSuiteData(data);
+
+    // 2. Expose this to the PDF util
+    (window as any).__REPORT_DATA__ = mappedSuite;
+
+    // 3. Trigger PDF generation
+    await downloadAsPDF("report-content", `${mappedSuite.name}_report.pdf`);
   };
 
   const handleDownloadHTML = () =>
