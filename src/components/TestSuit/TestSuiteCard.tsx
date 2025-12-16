@@ -13,6 +13,7 @@ import {
   Link2,
   Layers,
   EllipsisVertical,
+  ChartNoAxesCombined,
 } from 'lucide-react';
 import { useToast } from '@/hooks/useToast';
 import { formatDate } from '@/utils/formatDate';
@@ -41,6 +42,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu';
+import { navigate } from 'wouter/use-browser-location';
 
 interface TestSuite {
   requests: boolean;
@@ -145,6 +147,10 @@ const TestSuiteCard: React.FC<TestSuiteCardProps> = ({
     }
   };
 
+
+  const handleClickReport = () => {
+    navigate(`/executions/report?suiteId=${suite.id}`);
+  }
   return (
     <div className='bg-white rounded-lg border mb-3 p-4'>
       <div className='flex items-center justify-between gap-4'>
@@ -263,7 +269,6 @@ const TestSuiteCard: React.FC<TestSuiteCardProps> = ({
                         title: 'Oops!',
                         description:
                           'You haven’t selected any test cases yet. Pick a few and let’s run them.',
-                        type: 'error',
                       });
                       return;
                     }
@@ -355,6 +360,10 @@ const TestSuiteCard: React.FC<TestSuiteCardProps> = ({
                         </AlertDialogFooter>
                       </AlertDialogContent>
                     </AlertDialog>
+                    <Button variant='ghost' size='lg'
+                      onClick={handleClickReport}>
+                      <ChartNoAxesCombined className='w-4 h-4 mr-2' /> Reports
+                    </Button>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </TooltipTrigger>
