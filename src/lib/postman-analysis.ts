@@ -77,7 +77,7 @@ function extractQueryParams(
         }
       });
     } catch (e) {
-      // Invalid URL, skip
+      console.error(e);
     }
   }
 
@@ -139,37 +139,82 @@ export function analyzeRequestChain(
 ): AnalyzedRequest[] {
   const analyzed: AnalyzedRequest[] = [];
 
+  const valueToFirstSource = new Map<
+    string,
+    { apiIndex: number; apiName: string; path: string }
+  >();
+
+  for (let i = 0; i < requests.length; i++) {
+    const request = requests[i];
+    const log = executionLogs[request.id];
+
+    if (log?.response?.body) {
+      try {
+        const parsed = JSON.parse(log.response.body);
+
+        const recordValues = (obj: any, currentPath: string = '') => {
+          if (typeof obj !== 'object' || obj === null) {
+            const valueStr = String(obj);
+            if (valueStr.trim() && !valueToFirstSource.has(valueStr)) {
+              valueToFirstSource.set(valueStr, {
+                apiIndex: i,
+                apiName: request.name,
+                path: currentPath,
+              });
+            }
+            return;
+          }
+
+          for (const key in obj) {
+            const newPath = currentPath ? `${currentPath}.${key}` : key;
+            recordValues(obj[key], newPath);
+          }
+        };
+
+        recordValues(parsed);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+  }
+
   for (let i = 0; i < requests.length; i++) {
     const request = requests[i];
     const authToken = extractAuthToken(request);
     const queryParams = extractQueryParams(request);
+
+    const pathSegments: Array<{ segment: string; position: number }> = [];
+    try {
+      const urlPath = request.url.includes('?')
+        ? request.url.split('?')[0]
+        : request.url;
+
+      const pathOnly = urlPath.replace(/^https?:\/\/[^\/]+/, '');
+
+      const segments = pathOnly.split('/').filter((s) => s.trim() !== '');
+
+      segments.forEach((segment, index) => {
+        if (!segment.startsWith('{{') && segment.length > 0) {
+          pathSegments.push({ segment, position: index });
+        }
+      });
+    } catch (e) {
+      console.error(e);
+    }
 
     let authSource: AnalyzedRequest['authSource'] | undefined;
     let suggestedAuthSource: AnalyzedRequest['suggestedAuthSource'] | undefined;
     let hasAuthWarning = false;
 
     if (authToken && !authToken.startsWith('{{')) {
-      for (let j = i - 1; j >= 0; j--) {
-        const prevRequest = requests[j];
-        const prevLog = executionLogs[prevRequest.id];
+      const firstOccurrence = valueToFirstSource.get(authToken);
 
-        if (prevLog?.response?.body) {
-          const path = searchInResponse(prevLog.response.body, authToken);
-          if (path) {
-            authSource = {
-              apiIndex: j,
-              apiName: prevRequest.name,
-              path,
-            };
-            break;
-          }
-        }
-      }
-
-      if (!authSource) {
+      if (firstOccurrence && firstOccurrence.apiIndex < i) {
+        authSource = firstOccurrence;
+      } else if (!firstOccurrence) {
         hasAuthWarning = true;
 
-        for (let j = i - 1; j >= 0; j--) {
+        for (let j = 0; j < i; j++) {
           const prevRequest = requests[j];
           const prevLog = executionLogs[prevRequest.id];
 
@@ -272,25 +317,39 @@ export function analyzeRequestChain(
         return { ...param, source };
       }
 
-      for (let j = i - 1; j >= 0; j--) {
-        const prevRequest = requests[j];
-        const prevLog = executionLogs[prevRequest.id];
+      const firstOccurrence = valueToFirstSource.get(param.value);
 
-        if (prevLog?.response?.body) {
-          const path = searchInResponse(prevLog.response.body, param.value);
-          if (path) {
-            source = {
-              apiIndex: j,
-              apiName: prevRequest.name,
-              path,
-            };
-            break;
-          }
-        }
+      if (firstOccurrence && firstOccurrence.apiIndex < i) {
+        source = firstOccurrence;
       }
 
       return { ...param, source };
     });
+
+    const analyzedPathSegments = pathSegments
+      .map((pathSeg) => {
+        let source: AnalyzedRequest['queryParams'][0]['source'] | undefined;
+
+        const firstOccurrence = valueToFirstSource.get(pathSeg.segment);
+
+        if (firstOccurrence && firstOccurrence.apiIndex < i) {
+          source = firstOccurrence;
+          return {
+            name: `path segment [${pathSeg.position}]`,
+            value: pathSeg.segment,
+            source,
+          };
+        }
+
+        return null;
+      })
+      .filter(Boolean) as Array<{
+      name: string;
+      value: string;
+      source: AnalyzedRequest['queryParams'][0]['source'];
+    }>;
+
+    const allParams = [...analyzedParams, ...analyzedPathSegments];
 
     analyzed.push({
       index: i,
@@ -300,7 +359,7 @@ export function analyzeRequestChain(
       authToken,
       authSource,
       suggestedAuthSource,
-      queryParams: analyzedParams,
+      queryParams: allParams,
       hasAuthWarning,
     });
   }

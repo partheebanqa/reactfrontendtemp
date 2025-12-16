@@ -613,37 +613,132 @@ export function RequestChainEditor({
 
     const targetRequest = formData.chainRequests[targetRequestIndex];
 
-    const hasExistingAuth =
-      targetRequest.authorizationType !== 'none' ||
-      (targetRequest.authToken && targetRequest.authToken.trim() !== '') ||
-      (targetRequest.authorization?.token &&
-        targetRequest.authorization.token.trim() !== '');
+    let extractedValue: string | undefined;
+    for (const [reqId, vars] of Object.entries(extractedVariablesByRequest)) {
+      if (vars[variableName]) {
+        extractedValue = String(vars[variableName]);
+        break;
+      }
+    }
+
+    if (!extractedValue) {
+      toast({
+        title: 'Error',
+        description: 'Could not find the extracted variable value',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const variablePattern = `{{${variableName}}}`;
+    let applicationsCount = 0;
+    const applications: string[] = [];
 
     const updatedRequests = formData.chainRequests.map((request, index) => {
       if (index !== targetRequestIndex) return request;
 
-      return {
-        ...request,
-        authToken: `{{${variableName}}}`,
-        authorizationType: 'bearer' as const,
-        authorization: {
-          token: `{{${variableName}}}`,
-        },
-        authUsername: '',
-        authPassword: '',
-        authApiKey: '',
-        authApiValue: '',
-        authApiLocation: 'header',
-      };
+      const updated = { ...request };
+
+      if (updated.url.includes(extractedValue)) {
+        updated.url = updated.url.replace(
+          new RegExp(extractedValue, 'g'),
+          variablePattern
+        );
+        applicationsCount++;
+        applications.push('URL');
+      }
+
+      if (updated.params) {
+        updated.params = updated.params.map((param) => {
+          if (param.value.includes(extractedValue)) {
+            applicationsCount++;
+            applications.push(`param: ${param.key}`);
+            return {
+              ...param,
+              value: param.value.replace(
+                new RegExp(extractedValue, 'g'),
+                variablePattern
+              ),
+            };
+          }
+          return param;
+        });
+      }
+
+      if (updated.headers) {
+        updated.headers = updated.headers.map((header) => {
+          if (header.value.includes(extractedValue)) {
+            applicationsCount++;
+            applications.push(`header: ${header.key}`);
+            return {
+              ...header,
+              value: header.value.replace(
+                new RegExp(extractedValue, 'g'),
+                variablePattern
+              ),
+            };
+          }
+          return header;
+        });
+      }
+
+      if (updated.body && updated.body.includes(extractedValue)) {
+        updated.body = updated.body.replace(
+          new RegExp(extractedValue, 'g'),
+          variablePattern
+        );
+        applicationsCount++;
+        applications.push('body');
+      }
+
+      if (updated.authToken && updated.authToken.includes(extractedValue)) {
+        updated.authToken = updated.authToken.replace(
+          new RegExp(extractedValue, 'g'),
+          variablePattern
+        );
+        applicationsCount++;
+        applications.push('auth token');
+      }
+
+      if (
+        updated.authorization?.token &&
+        updated.authorization.token.includes(extractedValue)
+      ) {
+        updated.authorization = {
+          ...updated.authorization,
+          token: updated.authorization.token.replace(
+            new RegExp(extractedValue, 'g'),
+            variablePattern
+          ),
+        };
+        if (!applications.includes('auth token')) {
+          applicationsCount++;
+          applications.push('auth token');
+        }
+      }
+
+      return updated;
     });
+
+    if (applicationsCount === 0) {
+      toast({
+        title: 'No Changes Made',
+        description: `The value "${extractedValue.substring(
+          0,
+          20
+        )}..." was not found in request #${targetRequestIndex + 1}`,
+        variant: 'destructive',
+      });
+      return;
+    }
 
     setFormData({ ...formData, chainRequests: [...updatedRequests] });
 
     toast({
-      title: 'Applied to Request',
-      description: `Variable {{${variableName}}} applied as Bearer Token to request #${
+      title: 'Variable Applied',
+      description: `{{${variableName}}} applied to ${applicationsCount} location(s) in request #${
         targetRequestIndex + 1
-      }${hasExistingAuth ? ' (existing auth overwritten)' : ''}`,
+      }: ${applications.join(', ')}`,
     });
   };
 
@@ -1363,13 +1458,6 @@ export function RequestChainEditor({
             allLogs.push(log);
           }
 
-          setExecutionLogs((prev) => {
-            const filtered = prev.filter(
-              (existingLog) => existingLog.requestId !== log.requestId
-            );
-            return [...filtered, log];
-          });
-
           if (log.extractedVariables) {
             variablesByRequest[log.requestId] = { ...log.extractedVariables };
             setExtractedVariablesByRequest((prev) => ({
@@ -1383,6 +1471,8 @@ export function RequestChainEditor({
             );
             updateExtractedVariables(allExtractedVarsInCurrentExecution);
           }
+
+          setExecutionLogs([...allLogs]);
 
           if (i < formData.chainRequests.length - 1) {
             await new Promise((resolve) => setTimeout(resolve, 500));
@@ -1399,12 +1489,7 @@ export function RequestChainEditor({
             allLogs.push(errorLog);
           }
 
-          setExecutionLogs((prev) => {
-            const filtered = prev.filter(
-              (existingLog) => existingLog.requestId !== errorLog.requestId
-            );
-            return [...filtered, errorLog];
-          });
+          setExecutionLogs([...allLogs]);
 
           toast({
             title: `Request ${i + 1} Failed`,
@@ -1432,6 +1517,13 @@ export function RequestChainEditor({
 
       setExecutionLogs(allLogs);
       setExtractedVariables(allExtractedVarsInCurrentExecution);
+
+      const logsMap: Record<string, any> = {};
+      allLogs.forEach((log) => {
+        logsMap[log.requestId] = log;
+      });
+      const results = analyzeRequestChain(formData.chainRequests, logsMap);
+      setAnalysisResults(results);
 
       const successCount = allLogs.filter(
         (log) => log.status === 'success'
@@ -2343,7 +2435,12 @@ export function RequestChainEditor({
   }, [formData.chainRequests, executionLogs, isExecuting]);
 
   useEffect(() => {
-    if (formData.chainRequests && formData.chainRequests.length > 0) {
+    if (
+      formData.chainRequests &&
+      formData.chainRequests.length > 0 &&
+      !isExecuting &&
+      executionLogs.length > 0
+    ) {
       const logsMap: Record<string, any> = {};
       executionLogs.forEach((log) => {
         logsMap[log.requestId] = log;
@@ -2352,7 +2449,7 @@ export function RequestChainEditor({
       const results = analyzeRequestChain(formData.chainRequests, logsMap);
       setAnalysisResults(results);
     }
-  }, [formData.chainRequests, executionLogs]);
+  }, [formData.chainRequests, executionLogs, isExecuting]);
 
   const scrollToRequestsTop = () => {
     if (requestsTopRef.current) {
@@ -2728,7 +2825,6 @@ export function RequestChainEditor({
                                         </div>
                                       </div>
 
-                                      {/* Expandable Request Editor */}
                                       {expandedRequests.has(request.id) && (
                                         <div className='mt-4 pt-4 border-t space-y-4'>
                                           <RequestEditor
@@ -2928,10 +3024,8 @@ export function RequestChainEditor({
                             )}
                           </div>
 
-                          {/* ⭐ BOTTOM-RIGHT ACTION BUTTONS ⭐ */}
                           <div className='flex justify-end mt-6'>
                             <div className='flex items-center gap-3'>
-                              {/* RUN ALL */}
                               <Button
                                 ref={runAllButtonRef}
                                 variant='outline'
@@ -2949,17 +3043,19 @@ export function RequestChainEditor({
                                 {isExecuting ? 'Running...' : 'Run All'}
                               </Button>
 
-                              {/* ANALYZER */}
-                              {executionLogs.length > 0 && (
-                                <Button
-                                  variant='outline'
-                                  onClick={() => setIsAnalyzerOpen(true)}
-                                  className='gap-2 bg-transparent'
-                                >
-                                  <AlertTriangle className='w-4 h-4' />
-                                  Chain Analyzer
-                                </Button>
-                              )}
+                              {executionLogs.length > 0 &&
+                                executionLogs.length ===
+                                  formData.chainRequests?.length &&
+                                !isExecuting && (
+                                  <Button
+                                    variant='outline'
+                                    onClick={() => setIsAnalyzerOpen(true)}
+                                    className='gap-2 bg-transparent'
+                                  >
+                                    <AlertTriangle className='w-4 h-4' />
+                                    Chain Analyzer
+                                  </Button>
+                                )}
 
                               <AddRequestMenu
                                 onAddRequest={addNewRequest}

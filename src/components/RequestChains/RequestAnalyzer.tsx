@@ -498,6 +498,21 @@ export function RequestAnalyzer({
                                               {alreadyExtracted[0]}
                                             </strong>
                                           </span>
+                                          <button
+                                            onClick={() => {
+                                              if (onApplyToRequest) {
+                                                onApplyToRequest(
+                                                  request.id,
+                                                  alreadyExtracted[0]
+                                                );
+                                              }
+                                            }}
+                                            className='px-2 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700 transition-colors flex items-center gap-1'
+                                            title='Apply this variable to current request'
+                                          >
+                                            <Zap className='w-3 h-3' />
+                                            Apply
+                                          </button>
                                         </div>
                                       );
                                     }
