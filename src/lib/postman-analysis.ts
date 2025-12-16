@@ -77,7 +77,7 @@ function extractQueryParams(
         }
       });
     } catch (e) {
-      // Invalid URL, skip
+      console.error(e);
     }
   }
 
@@ -155,7 +155,7 @@ export function analyzeRequestChain(
         const recordValues = (obj: any, currentPath: string = '') => {
           if (typeof obj !== 'object' || obj === null) {
             const valueStr = String(obj);
-            if (!valueToFirstSource.has(valueStr)) {
+            if (valueStr.trim() && !valueToFirstSource.has(valueStr)) {
               valueToFirstSource.set(valueStr, {
                 apiIndex: i,
                 apiName: request.name,
@@ -182,6 +182,25 @@ export function analyzeRequestChain(
     const request = requests[i];
     const authToken = extractAuthToken(request);
     const queryParams = extractQueryParams(request);
+
+    const pathSegments: Array<{ segment: string; position: number }> = [];
+    try {
+      const urlPath = request.url.includes('?')
+        ? request.url.split('?')[0]
+        : request.url;
+
+      const pathOnly = urlPath.replace(/^https?:\/\/[^\/]+/, '');
+
+      const segments = pathOnly.split('/').filter((s) => s.trim() !== '');
+
+      segments.forEach((segment, index) => {
+        if (!segment.startsWith('{{') && segment.length > 0) {
+          pathSegments.push({ segment, position: index });
+        }
+      });
+    } catch (e) {
+      console.error(e);
+    }
 
     let authSource: AnalyzedRequest['authSource'] | undefined;
     let suggestedAuthSource: AnalyzedRequest['suggestedAuthSource'] | undefined;
@@ -307,6 +326,31 @@ export function analyzeRequestChain(
       return { ...param, source };
     });
 
+    const analyzedPathSegments = pathSegments
+      .map((pathSeg) => {
+        let source: AnalyzedRequest['queryParams'][0]['source'] | undefined;
+
+        const firstOccurrence = valueToFirstSource.get(pathSeg.segment);
+
+        if (firstOccurrence && firstOccurrence.apiIndex < i) {
+          source = firstOccurrence;
+          return {
+            name: `path segment [${pathSeg.position}]`,
+            value: pathSeg.segment,
+            source,
+          };
+        }
+
+        return null;
+      })
+      .filter(Boolean) as Array<{
+      name: string;
+      value: string;
+      source: AnalyzedRequest['queryParams'][0]['source'];
+    }>;
+
+    const allParams = [...analyzedParams, ...analyzedPathSegments];
+
     analyzed.push({
       index: i,
       name: request.name,
@@ -315,7 +359,7 @@ export function analyzeRequestChain(
       authToken,
       authSource,
       suggestedAuthSource,
-      queryParams: analyzedParams,
+      queryParams: allParams,
       hasAuthWarning,
     });
   }

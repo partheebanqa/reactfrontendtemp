@@ -613,7 +613,6 @@ export function RequestChainEditor({
 
     const targetRequest = formData.chainRequests[targetRequestIndex];
 
-    // Get the actual value of the extracted variable
     let extractedValue: string | undefined;
     for (const [reqId, vars] of Object.entries(extractedVariablesByRequest)) {
       if (vars[variableName]) {
@@ -635,13 +634,11 @@ export function RequestChainEditor({
     let applicationsCount = 0;
     const applications: string[] = [];
 
-    // Update the request - replace hardcoded values with variable
     const updatedRequests = formData.chainRequests.map((request, index) => {
       if (index !== targetRequestIndex) return request;
 
       const updated = { ...request };
 
-      // Replace in URL
       if (updated.url.includes(extractedValue)) {
         updated.url = updated.url.replace(
           new RegExp(extractedValue, 'g'),
@@ -651,7 +648,6 @@ export function RequestChainEditor({
         applications.push('URL');
       }
 
-      // Replace in query params
       if (updated.params) {
         updated.params = updated.params.map((param) => {
           if (param.value.includes(extractedValue)) {
@@ -669,7 +665,6 @@ export function RequestChainEditor({
         });
       }
 
-      // Replace in headers
       if (updated.headers) {
         updated.headers = updated.headers.map((header) => {
           if (header.value.includes(extractedValue)) {
@@ -687,7 +682,6 @@ export function RequestChainEditor({
         });
       }
 
-      // Replace in body
       if (updated.body && updated.body.includes(extractedValue)) {
         updated.body = updated.body.replace(
           new RegExp(extractedValue, 'g'),
@@ -697,7 +691,6 @@ export function RequestChainEditor({
         applications.push('body');
       }
 
-      // Replace in auth token
       if (updated.authToken && updated.authToken.includes(extractedValue)) {
         updated.authToken = updated.authToken.replace(
           new RegExp(extractedValue, 'g'),
@@ -3050,16 +3043,19 @@ export function RequestChainEditor({
                                 {isExecuting ? 'Running...' : 'Run All'}
                               </Button>
 
-                              {executionLogs.length > 0 && (
-                                <Button
-                                  variant='outline'
-                                  onClick={() => setIsAnalyzerOpen(true)}
-                                  className='gap-2 bg-transparent'
-                                >
-                                  <AlertTriangle className='w-4 h-4' />
-                                  Chain Analyzer
-                                </Button>
-                              )}
+                              {executionLogs.length > 0 &&
+                                executionLogs.length ===
+                                  formData.chainRequests?.length &&
+                                !isExecuting && (
+                                  <Button
+                                    variant='outline'
+                                    onClick={() => setIsAnalyzerOpen(true)}
+                                    className='gap-2 bg-transparent'
+                                  >
+                                    <AlertTriangle className='w-4 h-4' />
+                                    Chain Analyzer
+                                  </Button>
+                                )}
 
                               <AddRequestMenu
                                 onAddRequest={addNewRequest}
