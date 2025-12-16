@@ -3,6 +3,7 @@ import { Download, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ExtractedVariable, Variable } from "@/shared/types/requestChain.model";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { convertDateStamp } from "@/utils/exportDate";
 
 
 export interface RequestExecution {
@@ -382,7 +383,7 @@ export default function ExportHTMLButton({ reportData }: ExportHTMLButtonProps) 
         </div>
         <div class="meta-item">
           <div class="meta-label">Execution Date</div>
-          <div class="meta-value">${esc(new Date(reportData.lastExecutionDate).toLocaleString())}</div>
+          <div class="meta-value">${convertDateStamp(Date.parse(reportData.lastExecutionDate)).dateTime}</div>
         </div>
         <div class="meta-item">
           <div class="meta-label">Total Duration</div>
