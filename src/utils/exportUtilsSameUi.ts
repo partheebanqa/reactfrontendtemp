@@ -3,6 +3,7 @@
 // Provides HTML + PDF exporters. Requires: html2canvas, jspdf in your app.
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
+import { convertDateStamp } from "./exportDate";
 
 /* ---------------- Types (trimmed) ---------------- */
 type Status = "passed" | "failed" | "skipped";
@@ -237,7 +238,7 @@ const prettyJsonMaybe = (input: any) => {
     return String(input);
   }
 };
-const fmtDate = (d: string) => (d ? new Date(d).toLocaleString() : "");
+// const fmtDate = (d: string) => (d ? new Date(d).toLocaleString() : "");
 const fmtDuration = (ms: number) => `${((ms ?? 0) / 1000).toFixed(2)}s`;
 const fmtBytes = (bytes: number) => {
   if (!bytes) return "0 B";
@@ -763,9 +764,9 @@ const buildHeader = (d: TestSuiteData, logoSrc: string | null) => `
     <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mb-3">
       <div class="flex items-center space-x-3">
         <i data-lucide="calendar" class="w-5 h-5 text-blue-500"></i>
-        <div><p class="text-sm text-gray-500">Execution Date</p><p class="font-semibold">${fmtDate(
-          d.lastExecutionDate
-        )}</p></div>
+        <div><p class="text-sm text-gray-500">Execution Date</p><p class="font-semibold">${
+          convertDateStamp(Date.parse(d.lastExecutionDate)).dateTime
+        }</p></div>
       </div>
       <div class="flex items-center space-x-3">
         <i data-lucide="clock" class="w-5 h-5 text-green-500"></i>

@@ -80,7 +80,10 @@ type TestCaseCategory = {
   tests: TestCase[];
 };
 
-type SubcatChip = { name: string; count: number };
+type SubcatChip = {
+  name: string; count: number,
+
+};
 
 type TestCaseSelectionModalProps = {
   isOpen: boolean;
@@ -235,10 +238,7 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
         allTestCaseIds
       ),
     onSuccess: () => {
-      // toast({
-      //   title: 'Success',
-      //   description: 'Test cases saved successfully!',
-      // });
+
       queryClient.invalidateQueries({ queryKey: ['testCases'] });
       onSelect(selectedTestCases);
       onClose();
@@ -474,6 +474,20 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
     return chips.concat(rest);
   }, [filteredCategoriesPreSubcat]);
 
+
+  const categoryTestMap = React.useMemo(() => {
+    const map: Record<string, string[]> = {};
+
+    filteredCategories.forEach((cat) => {
+      map[cat.category] = cat.tests
+        .map((t) => t.id)
+        .filter(Boolean) as string[];
+    });
+
+    return map;
+  }, [filteredCategories]);
+
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className='max-w-6xl max-h-[90vh] overflow-hidden flex flex-col p-0 justify-center'>
@@ -536,34 +550,65 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
           </DialogHeader>
         </div>
 
-        <div className='px-3'>
-          <div className='flex flex-wrap gap-2 justify-center'>
+        <div className="px-3">
+          <div className="flex flex-wrap gap-2 justify-center">
             {subcatChips.map((chip) => {
               const active = subcatFilter === chip.name;
+
+              const categoryTestIds = categoryTestMap[chip.name] ?? [];
+              const selectedInCategory = categoryTestIds.filter((id) =>
+                selectedTestCases.includes(id)
+              ).length;
+
+              const hasSelection = selectedInCategory > 0;
+
               return (
                 <button
                   key={chip.name}
-                  onClick={
-                    () => setSubcatFilter(active ? '' : chip.name) // toggle
-                  }
-                  className={`inline-flex items-center rounded-md border px-2 py-1 text-xs ${active
-                    ? 'bg-[#136fb0] text-white border-[#136fb0]'
-                    : 'bg-transparent text-foreground border-muted-foreground/30 hover:bg-muted/40'
-                    }`}
+                  onClick={() => setSubcatFilter(active ? "" : chip.name)}
+                  className={`
+            relative inline-flex items-center rounded-md border px-2 py-1 text-xs
+            ${active
+                      ? "bg-[#136fb0] text-white border-[#136fb0]"
+                      : "bg-transparent text-foreground border-muted-foreground/30 hover:bg-muted/40"
+                    }
+          `}
                   title={chip.name}
                 >
-                  <span className='mr-1 capitalize'>{chip.name}</span>
+                  {/* 🔵 DOT when some tests selected */}
+                  {hasSelection && !active && (
+                    <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-green-600" />
+                  )}
+
+                  <span className="mr-1 capitalize">{chip.name}</span>
+
                   <span
-                    className={`ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[#136fb0] ${active ? 'bg-white/20 text-[#ffffff]' : 'bg-muted'
-                      }`}
+                    className={`
+              ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1
+              ${active
+                        ? "bg-white/20 text-white"
+                        : "bg-muted text-[#136fb0]"
+                      }
+            `}
                   >
                     {chip.count}
                   </span>
+
+                  {/* optional x/y */}
+                  {hasSelection && (
+                    <span
+                      className={`ml-1 text-[10px] font-medium ${active ? "text-white/90" : "text-[#136fb0]"
+                        }`}
+                    >
+                      {selectedInCategory}/{categoryTestIds.length}
+                    </span>
+                  )}
                 </button>
               );
             })}
           </div>
         </div>
+
 
         {/* Main Content */}
         <div className='flex-1 flex overflow-hidden flex-col md:flex-row'>
@@ -858,70 +903,8 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
             </div>
           </div>
 
-          {/* Right Panel - Selected Tests */}
-          {/* <div className='flex-1 bg-muted/20 overflow-y-auto'>
-            <div className='p-4'>
-              <h3 className='font-medium mb-4'>
-                Selected testcases ({selectedTestCases.length})
-              </h3>
 
-              {selectedTestCases.length === 0 ? (
-                <p className='text-sm text-muted-foreground text-center py-8'>
-                  No test cases selected
-                </p>
-              ) : (
-                <div className='space-y-2'>
-                  {selectedTestCases.map((testId) => {
-                    const testInfo = getTestById(testId);
-                    if (!testInfo) return null;
 
-                    return (
-                      <div
-                        key={testId}
-                        className='bg-white rounded-lg p-3 border'
-                      >
-                        <div className='flex items-start justify-between'>
-                          <div className='flex-1 min-w-0'>
-                            <div className='flex items-center'>
-                              <span className='mr-2'>
-                                {getCategoryIcon(testInfo.category)}
-                              </span>
-                              <h5 className='text-sm font-medium text-gray-900'>
-                                {testInfo.name}
-                              </h5>
-                            </div>
-                            <p className='text-xs text-gray-500 mt-1'>
-                              {testInfo.description}
-                            </p>
-                            <span
-                              className={`inline-block mt-2 px-2 py-0.5 rounded-full text-xs font-medium ${
-                                testInfo.category === 'Functional'
-                                  ? 'bg-blue-100 text-blue-800'
-                                  : testInfo.category === 'Performance'
-                                  ? 'bg-purple-100 text-purple-800'
-                                  : 'bg-orange-100 text-orange-800'
-                              }`}
-                            >
-                              {testInfo.category.charAt(0).toUpperCase() +
-                                testInfo.category.slice(1)}
-                            </span>
-                          </div>
-                          <Button
-                            variant='ghost'
-                            size='sm'
-                            onClick={() => removeSelectedTest(testId)}
-                            className='h-6 w-6 p-0 text-muted-foreground hover:text-destructive ml-2'
-                          >
-                            <X className='h-3 w-3' />
-                          </Button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          </div> */}
         </div>
         <div className='flex items-center justify-between p-6 border-t bg-muted/20'>
           <span className='text-sm text-muted-foreground'>

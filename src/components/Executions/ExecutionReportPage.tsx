@@ -39,6 +39,7 @@ import ExportHTMLButton from '../Reports/Components/ExportHTMLButton';
 import ExportPDFButton from '../Reports/Components/ExportPDFButton';
 import { RequestReportMetrics } from '../Reports/Components/RequestReportMetrics';
 import { downloadAsPDF } from '@/utils/exportUtilsNew';
+import { convertDateStamp, convertTimestamp, isValidTimestamp } from '@/utils/exportDate';
 
 type RouteParams = {
   type: 'test_suite' | 'request_chain';
@@ -219,7 +220,7 @@ const TestSuiteReport: React.FC<TestSuiteReportProps> = ({ data }) => {
             <Calendar className="w-5 h-5 text-blue-500" />
             <div>
               <p className="text-sm text-gray-500">Execution Date</p>
-              <p className="font-semibold">{formatDate(data.lastExecutionDate)}</p>
+              <p className="font-semibold">{convertDateStamp(data.lastExecutionDate).dateTime}</p>
             </div>
           </div>
 
@@ -530,7 +531,7 @@ const RequestChainReport: React.FC<RequestChainReportProps> = ({ data, environme
             <Calendar className="w-5 h-5 text-blue-500" />
             <div>
               <p className="text-sm text-gray-500">Execution Date</p>
-              <p className="font-semibold">{format(new Date(data?.lastExecutionDate), 'MM/dd/yyyy, h:mm:ss a')}</p>
+              <p className="font-semibold">{convertDateStamp(data?.lastExecutionDate).dateTime}</p>
             </div>
           </div>
 

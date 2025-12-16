@@ -6,6 +6,7 @@ import { jsPDF } from "jspdf";
 import { format } from "date-fns";
 import { ExtractedVariable, Variable } from "@/shared/types/requestChain.model";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { convertDateStamp } from "@/utils/exportDate";
 
 
 export interface RequestExecution {
@@ -52,7 +53,7 @@ export default function ExportPDFButton({ reportData }: ExportPDFButtonProps) {
 
   const handleExport = () => {
     try {
-      console.log("Starting PDF export...");
+      // console.log("Starting PDF export...");
 
       const doc = new jsPDF();
       const pageWidth = doc.internal.pageSize.getWidth();
@@ -84,7 +85,7 @@ export default function ExportPDFButton({ reportData }: ExportPDFButtonProps) {
       doc.setFontSize(10);
       doc.setFont("helvetica", "normal");
       const summaryData = [
-        `Execution Date: ${format(new Date(reportData.lastExecutionDate), "MM/dd/yyyy, h:mm:ss a")}`,
+        `Execution Date: ${convertDateStamp(Date.parse(reportData.lastExecutionDate)).dateTime}`,
         `Duration: ${reportData.duration < 1000 ? `${reportData.duration}ms` : `${(reportData.duration / 1000).toFixed(2)}s`}`,
         `Executed By: ${reportData.executedBy}`,
         `Environment: ${reportData.environment}`,
@@ -222,7 +223,7 @@ export default function ExportPDFButton({ reportData }: ExportPDFButtonProps) {
       const fileName = `${reportData.name.replace(/[^a-z0-9]/gi, '_')}_Summary_${Date.now()}.pdf`;
       doc.save(fileName);
 
-      console.log("PDF exported successfully:", fileName);
+      // console.log("PDF exported successfully:", fileName);
       toast({
         title: "PDF Summary Ready",
         description: `${fileName} has been downloaded.`,

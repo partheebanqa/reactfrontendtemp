@@ -34,6 +34,7 @@ import { executeTestSuite } from '@/services/testSuites.service';
 import { toast } from '@/hooks/use-toast';
 import { queryClient } from '@/lib/queryClientWithErrorDetail';
 import { useExecuteRequestChain } from '@/shared/hooks/requestChain';
+import { convertTimestamp } from '@/utils/exportDate';
 
 export const ExecutionsTable = ({
   executions,
@@ -123,17 +124,17 @@ export const ExecutionsTable = ({
     );
   };
 
-  console.log(executions, 'executions');
+  // console.log(executions, 'executions');
 
   return (
     <Table>
       <TableHeader>
         <TableRow>
           <TableHead>Execution ID</TableHead>
-          <TableHead>Type</TableHead>
+          <TableHead className='whitespace-nowrap'>Date & Time</TableHead>
+          {/* <TableHead>Type</TableHead> */}
           <TableHead>Environment</TableHead>
           <TableHead>Status</TableHead>
-          {/* <TableHead>Started</TableHead> */}
           <TableHead>Duration</TableHead>
           <TableHead>Results</TableHead>
           <TableHead>Trigger</TableHead>
@@ -155,47 +156,85 @@ export const ExecutionsTable = ({
               <TableCell>
                 <div>
                   {execution.testSuite ? (
-                    <p
-                      className='font-medium text-[#136fb0] hover:text-primary/80 cursor-pointer'
-                      onClick={() =>
-                        setLocation(`/test-suites/${execution?.entityId}/edit`)
-                      }
-                    >
-                      {execution.testSuite.name}
-                    </p>
+                    <>
+                      <div className='flex items-center gap-2'>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Layers className='text-[#136fb0] cursor-pointer' size={20} />
+                            </TooltipTrigger>
+                            <TooltipContent>Test Suite</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                        <p
+                          className='font-medium text-[#136fb0] hover:text-primary/80 cursor-pointer'
+                          onClick={() =>
+                            setLocation(`/test-suites/${execution?.entityId}/edit`)
+                          }
+                        >
+                          {execution.testSuite.name}
+                        </p>
+                      </div>
+                    </>
                   ) : (
-                    <p
-                      className='font-medium text-[#136fb0] hover:text-primary/80 cursor-pointer'
-                      onClick={() =>
-                        setLocation(
-                          `/request-chains/${execution?.entityId}/edit`
-                        )
-                      }
-                    >
-                      {execution.requestChain?.name || 'Request Chain'}
-                    </p>
+                    <>
+                      <div className='flex items-center gap-2'>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Link2 className='text-purple-600 cursor-pointer' size={20} />
+                            </TooltipTrigger>
+                            <TooltipContent>Request Chain</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                        <p
+                          className='font-medium text-[#136fb0] hover:text-primary/80 cursor-pointer'
+                          onClick={() =>
+                            setLocation(
+                              `/request-chains/${execution?.entityId}/edit`
+                            )
+                          }
+                        >
+                          {execution.requestChain?.name || 'Request Chain'}
+                        </p>
+                      </div>
+                    </>
                   )}
-                  <div className='flex items-center gap-2 mt-1'>
-                    <p className='text-sm text-muted-foreground'>
+                  <div className="group flex items-center gap-2 mt-1 max-w-full">
+                    <p className="text-sm text-muted-foreground truncate max-w-[190px]">
                       {execution.id}
                     </p>
+
                     <Button
-                      variant='ghost'
-                      size='sm'
-                      className='h-5 w-5 p-0'
+                      variant="ghost"
+                      size="sm"
+                      className="h-5 w-5 p-0 flex-shrink-0 
+               opacity-0 group-hover:opacity-100 
+               transition-opacity"
                       onClick={() =>
-                        copyToClipboard(execution.id.toString(), 'Execution ID')
+                        copyToClipboard(execution.id.toString(), "Execution ID")
                       }
                     >
                       <Copy
                         size={12}
-                        className='text-muted-foreground hover:text-foreground'
+                        className="text-muted-foreground hover:text-foreground"
                       />
                     </Button>
                   </div>
+
                 </div>
               </TableCell>
               <TableCell>
+                <div>
+                  <p className='text-sm text-foreground'>
+                    {/* {formatDistanceToNow(new Date(execution.startTime), {
+                      addSuffix: true,
+                    })} */}
+                    {convertTimestamp(execution.startTime).dateTime}
+                  </p>
+                </div>
+              </TableCell>
+              {/* <TableCell>
                 <div className='flex items-center gap-2'>
                   {execution?.testSuite ? (
                     <Layers className='text-[#136fb0]' size={16} />
@@ -206,9 +245,9 @@ export const ExecutionsTable = ({
                     {execution?.executionType}
                   </span>
                 </div>
-              </TableCell>
+              </TableCell> */}
               <TableCell>
-                <span className='text-sm text-foreground capitalize'>
+                <span className='text-sm text-foreground capitalize whitespace-nowrap'>
                   {environment}
                 </span>
               </TableCell>
@@ -228,15 +267,7 @@ export const ExecutionsTable = ({
                   {execution.status.toUpperCase()}
                 </Badge>
               </TableCell>
-              {/* <TableCell>
-                <div>
-                  <p className='text-xs text-muted-foreground'>
-                    {formatDistanceToNow(new Date(execution.startTime), {
-                      addSuffix: true,
-                    })}
-                  </p>
-                </div>
-              </TableCell> */}
+
               <TableCell className='text-sm text-foreground'>
                 {formatDuration(execution.duration)}
               </TableCell>
@@ -258,15 +289,14 @@ export const ExecutionsTable = ({
               <TableCell>
                 <div className='flex items-center gap-2'>
                   {execution.source === 'scheduled' && (
-                    <Calendar className='text-blue-600' size={12} />
+                    <Calendar className='text-blue-600' size={20} />
                   )}
                   {execution.source === 'manual' && (
-                    <Play className='text-muted-foreground' size={12} />
+                    <Play className='text-muted-foreground' size={20} />
                   )}
                   {execution.source === 'cicd' && (
-                    <GitBranch className='text-green-600' size={12} />
+                    <GitBranch className='text-green-600' size={20} />
                   )}
-
                   <span className='text-sm text-foreground capitalize'>
                     {execution.source || 'N/A'}
                   </span>
