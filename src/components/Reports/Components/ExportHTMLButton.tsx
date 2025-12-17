@@ -383,7 +383,14 @@ export default function ExportHTMLButton({ reportData }: ExportHTMLButtonProps) 
         </div>
         <div class="meta-item">
           <div class="meta-label">Execution Date</div>
-          <div class="meta-value">${convertDateStamp(Date.parse(reportData.lastExecutionDate)).dateTime}</div>
+          <div class="meta-value">
+          ${(() => {
+        const { dateTime, tz } = convertDateStamp(
+          Date.parse(reportData.lastExecutionDate)
+        );
+        return `${dateTime}, ${tz}`;
+      })()}
+         </div>
         </div>
         <div class="meta-item">
           <div class="meta-label">Total Duration</div>

@@ -85,7 +85,12 @@ export default function ExportPDFButton({ reportData }: ExportPDFButtonProps) {
       doc.setFontSize(10);
       doc.setFont("helvetica", "normal");
       const summaryData = [
-        `Execution Date: ${convertDateStamp(Date.parse(reportData.lastExecutionDate)).dateTime}`,
+        `Execution Date:  ${(() => {
+          const { dateTime, tz } = convertDateStamp(
+            Date.parse(reportData.lastExecutionDate)
+          );
+          return `${dateTime}, ${tz}`;
+        })()}`,
         `Duration: ${reportData.duration < 1000 ? `${reportData.duration}ms` : `${(reportData.duration / 1000).toFixed(2)}s`}`,
         `Executed By: ${reportData.executedBy}`,
         `Environment: ${reportData.environment}`,

@@ -764,9 +764,13 @@ const buildHeader = (d: TestSuiteData, logoSrc: string | null) => `
     <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mb-3">
       <div class="flex items-center space-x-3">
         <i data-lucide="calendar" class="w-5 h-5 text-blue-500"></i>
-        <div><p class="text-sm text-gray-500">Execution Date</p><p class="font-semibold">${
-          convertDateStamp(Date.parse(d.lastExecutionDate)).dateTime
-        }</p></div>
+        <div><p class="text-sm text-gray-500">Execution Date</p><p class="font-semibold">
+          ${(() => {
+            const { dateTime, tz } = convertDateStamp(
+              Date.parse(d.lastExecutionDate)
+            );
+            return `${dateTime}, ${tz}`;
+          })()}</p></div>
       </div>
       <div class="flex items-center space-x-3">
         <i data-lucide="clock" class="w-5 h-5 text-green-500"></i>

@@ -230,7 +230,11 @@ export const ExecutionsTable = ({
                     {/* {formatDistanceToNow(new Date(execution.startTime), {
                       addSuffix: true,
                     })} */}
-                    {convertTimestamp(execution.startTime).dateTime}
+                    {(() => {
+                      const { dateTime, tz } = convertTimestamp(execution.startTime);
+                      return `${dateTime}, ${tz}`;
+                    })()}
+
                   </p>
                 </div>
               </TableCell>

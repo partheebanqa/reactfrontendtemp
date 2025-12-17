@@ -226,7 +226,11 @@ const TestSuiteReport: React.FC<TestSuiteReportProps> = ({ data }) => {
             <Calendar className="w-5 h-5 text-blue-500" />
             <div>
               <p className="text-sm text-gray-500">Execution Date</p>
-              <p className="font-semibold">{convertDateStamp(data.lastExecutionDate).dateTime}</p>
+              <p className="text-sm font-semibold">
+                {(() => {
+                  const { dateTime, tz } = convertDateStamp(data.lastExecutionDate);
+                  return `${dateTime}, ${tz}`;
+                })()}</p>
             </div>
           </div>
 
@@ -537,7 +541,11 @@ const RequestChainReport: React.FC<RequestChainReportProps> = ({ data, environme
             <Calendar className="w-5 h-5 text-blue-500" />
             <div>
               <p className="text-sm text-gray-500">Execution Date</p>
-              <p className="font-semibold">{convertDateStamp(data?.lastExecutionDate).dateTime}</p>
+              <p className="text-sm font-semibold">
+                {(() => {
+                  const { dateTime, tz } = convertDateStamp(data.lastExecutionDate);
+                  return `${dateTime}, ${tz}`;
+                })()}</p>
             </div>
           </div>
 
