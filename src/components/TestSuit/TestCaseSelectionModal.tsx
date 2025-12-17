@@ -488,6 +488,27 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
   }, [filteredCategories]);
 
 
+
+  const subCategoryTestMap = React.useMemo(() => {
+    const map: Record<string, string[]> = {};
+
+    filteredCategories.forEach((category) => {
+      category.tests.forEach((test) => {
+        if (!test.subCategory || !test.id) return;
+
+        if (!map[test.subCategory]) {
+          map[test.subCategory] = [];
+        }
+
+        map[test.subCategory].push(test.id);
+      });
+    });
+
+    return map;
+  }, [filteredCategories]);
+
+
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className='max-w-6xl max-h-[90vh] overflow-hidden flex flex-col p-0 justify-center'>
@@ -555,27 +576,28 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
             {subcatChips.map((chip) => {
               const active = subcatFilter === chip.name;
 
-              const categoryTestIds = categoryTestMap[chip.name] ?? [];
-              const selectedInCategory = categoryTestIds.filter((id) =>
+              const subCategoryTestIds = subCategoryTestMap[chip.name] ?? [];
+
+              const selectedInSubCategory = subCategoryTestIds.filter((id) =>
                 selectedTestCases.includes(id)
               ).length;
 
-              const hasSelection = selectedInCategory > 0;
+              const hasSelection = selectedInSubCategory > 0;
 
               return (
                 <button
                   key={chip.name}
                   onClick={() => setSubcatFilter(active ? "" : chip.name)}
                   className={`
-            relative inline-flex items-center rounded-md border px-2 py-1 text-xs
-            ${active
+        relative inline-flex items-center rounded-md border px-2 py-1 text-xs
+        ${active
                       ? "bg-[#136fb0] text-white border-[#136fb0]"
                       : "bg-transparent text-foreground border-muted-foreground/30 hover:bg-muted/40"
                     }
-          `}
+      `}
                   title={chip.name}
                 >
-                  {/* 🔵 DOT when some tests selected */}
+                  {/* 🔵 DOT if any test selected in this sub-category */}
                   {hasSelection && !active && (
                     <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-green-600" />
                   )}
@@ -584,12 +606,12 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
 
                   <span
                     className={`
-              ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1
-              ${active
+          ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1
+          ${active
                         ? "bg-white/20 text-white"
                         : "bg-muted text-[#136fb0]"
                       }
-            `}
+        `}
                   >
                     {chip.count}
                   </span>
@@ -600,12 +622,13 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
                       className={`ml-1 text-[10px] font-medium ${active ? "text-white/90" : "text-[#136fb0]"
                         }`}
                     >
-                      {selectedInCategory}/{categoryTestIds.length}
+                      {selectedInSubCategory}/{subCategoryTestIds.length}
                     </span>
                   )}
                 </button>
               );
             })}
+
           </div>
         </div>
 
