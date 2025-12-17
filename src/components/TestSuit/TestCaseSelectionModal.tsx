@@ -475,17 +475,6 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
   }, [filteredCategoriesPreSubcat]);
 
 
-  const categoryTestMap = React.useMemo(() => {
-    const map: Record<string, string[]> = {};
-
-    filteredCategories.forEach((cat) => {
-      map[cat.category] = cat.tests
-        .map((t) => t.id)
-        .filter(Boolean) as string[];
-    });
-
-    return map;
-  }, [filteredCategories]);
 
 
 
