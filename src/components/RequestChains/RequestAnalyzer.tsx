@@ -13,6 +13,7 @@ import {
   ChevronUp,
   Plus,
   Zap,
+  ArrowRight,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -42,6 +43,70 @@ interface RequestAnalyzerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
+
+// Utility functions for variable substitution
+const hasVariablePattern = (text: string): boolean => {
+  if (!text) return false;
+  return /\{\{[^}]+\}\}/.test(text);
+};
+
+const substituteVariables = (
+  text: string,
+  extractedVariablesByRequest: Record<string, Record<string, any>>
+): string => {
+  if (!text) return text;
+
+  let result = text;
+
+  // Substitute all extracted variables
+  Object.values(extractedVariablesByRequest).forEach((variables) => {
+    Object.entries(variables).forEach(([name, value]) => {
+      const regex = new RegExp(`\\{\\{${name}\\}\\}`, 'g');
+      result = result.replace(regex, String(value));
+    });
+  });
+
+  return result;
+};
+
+const UrlDisplay = ({
+  url,
+  extractedVariablesByRequest,
+}: {
+  url: string;
+  extractedVariablesByRequest: Record<string, Record<string, any>>;
+}) => {
+  const hasVariables = hasVariablePattern(url);
+  const substitutedUrl = hasVariables
+    ? substituteVariables(url, extractedVariablesByRequest)
+    : url;
+
+  if (!hasVariables) {
+    return <p className='text-xs text-muted-foreground mt-1 truncate'>{url}</p>;
+  }
+
+  return (
+    <div className='mt-1 space-y-1'>
+      <div className='flex items-start gap-2'>
+        <span className='text-xs text-purple-600 font-medium whitespace-nowrap'>
+          Substituted Url:
+        </span>
+        <code className='text-xs font-mono text-purple-700 bg-purple-50 px-2 py-0.5 rounded break-all flex-1'>
+          {url}
+        </code>
+      </div>
+      {/* <div className='flex items-start gap-2'>
+        <span className='text-xs text-green-600 font-medium whitespace-nowrap flex items-center gap-1'>
+          <ArrowRight className='w-3 h-3' />
+          Resolved:
+        </span>
+        <code className='text-xs font-mono text-green-700 bg-green-50 px-2 py-0.5 rounded break-all flex-1'>
+          {substitutedUrl}
+        </code>
+      </div> */}
+    </div>
+  );
+};
 
 export function RequestAnalyzer({
   requests,
@@ -260,9 +325,12 @@ export function RequestAnalyzer({
                           {request.name || request.url || 'Unnamed Request'}
                         </span>
                       </div>
-                      <p className='text-xs text-muted-foreground mt-1 truncate'>
-                        {request.url}
-                      </p>
+                      <UrlDisplay
+                        url={request.url}
+                        extractedVariablesByRequest={
+                          extractedVariablesByRequest
+                        }
+                      />
                     </div>
                   </div>
                   {executionLog && (
