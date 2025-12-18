@@ -214,10 +214,9 @@ export function RequestChainsList({
     );
   };
 
-
   const handleClickReport = (chainId: string) => {
     navigate(`/executions/report?chainId=${chainId}`);
-  }
+  };
 
   return (
     <div className='space-y-3 px-2 md:px-0'>
@@ -510,55 +509,63 @@ export function RequestChainsList({
                               variant='outline'
                               className={`
                                 flex items-center gap-1 text-xs
-                                ${chain.environment?.name
-                                  ?.toLowerCase()
-                                  .includes('prod')
-                                  ? 'bg-green-100 text-green-800 border-green-200'
-                                  : ''
+                                ${
+                                  chain.environment?.name
+                                    ?.toLowerCase()
+                                    .includes('prod')
+                                    ? 'bg-green-100 text-green-800 border-green-200'
+                                    : ''
                                 }
-                                ${chain.environment?.name
-                                  ?.toLowerCase()
-                                  .includes('stage')
-                                  ? 'bg-yellow-100 text-yellow-800 border-yellow-200'
-                                  : ''
+                                ${
+                                  chain.environment?.name
+                                    ?.toLowerCase()
+                                    .includes('stage')
+                                    ? 'bg-yellow-100 text-yellow-800 border-yellow-200'
+                                    : ''
                                 }
-                                ${chain.environment?.name
-                                  ?.toLowerCase()
-                                  .includes('dev')
-                                  ? 'bg-blue-100 text-blue-800 border-blue-200'
-                                  : ''
+                                ${
+                                  chain.environment?.name
+                                    ?.toLowerCase()
+                                    .includes('dev')
+                                    ? 'bg-blue-100 text-blue-800 border-blue-200'
+                                    : ''
                                 }
-                                ${!chain.environment?.name ||
+                                ${
+                                  !chain.environment?.name ||
                                   chain.environment?.name === 'No Environment'
-                                  ? 'bg-gray-100 text-gray-700 border-gray-200'
-                                  : ''
+                                    ? 'bg-gray-100 text-gray-700 border-gray-200'
+                                    : ''
                                 }
                               `}
                             >
                               <span
                                 className={`h-2 w-2 rounded-full 
-                                  ${chain.environment?.name
-                                    ?.toLowerCase()
-                                    .includes('prod')
-                                    ? 'bg-green-600'
-                                    : ''
+                                  ${
+                                    chain.environment?.name
+                                      ?.toLowerCase()
+                                      .includes('prod')
+                                      ? 'bg-green-600'
+                                      : ''
                                   }
-                                  ${chain.environment?.name
-                                    ?.toLowerCase()
-                                    .includes('stage')
-                                    ? 'bg-yellow-600'
-                                    : ''
+                                  ${
+                                    chain.environment?.name
+                                      ?.toLowerCase()
+                                      .includes('stage')
+                                      ? 'bg-yellow-600'
+                                      : ''
                                   }
-                                  ${chain.environment?.name
-                                    ?.toLowerCase()
-                                    .includes('dev')
-                                    ? 'bg-blue-600'
-                                    : ''
+                                  ${
+                                    chain.environment?.name
+                                      ?.toLowerCase()
+                                      .includes('dev')
+                                      ? 'bg-blue-600'
+                                      : ''
                                   }
-                                  ${!chain.environment?.name ||
+                                  ${
+                                    !chain.environment?.name ||
                                     chain.environment?.name === 'No Environment'
-                                    ? 'bg-gray-500'
-                                    : ''
+                                      ? 'bg-gray-500'
+                                      : ''
                                   }
                                 `}
                               />
@@ -567,10 +574,11 @@ export function RequestChainsList({
 
                             <Badge
                               variant={chain.enabled ? 'default' : 'secondary'}
-                              className={`text-xs ${chain.enabled
-                                ? 'bg-green-100 text-green-800'
-                                : ''
-                                }`}
+                              className={`text-xs ${
+                                chain.enabled
+                                  ? 'bg-green-100 text-green-800'
+                                  : ''
+                              }`}
                             >
                               {chain.enabled ? 'Enabled' : 'Disabled'}
                             </Badge>
@@ -590,12 +598,12 @@ export function RequestChainsList({
                           <span className='font-[500] text-[#64748b] line-clamp-1'>
                             {chain.chainRequests.length > 3
                               ? chain.chainRequests
-                                .slice(0, 3)
-                                .map((r) => r.name)
-                                .join(' → ') + ' → ...'
+                                  .slice(0, 3)
+                                  .map((r) => r.name)
+                                  .join(' → ') + ' → ...'
                               : chain.chainRequests
-                                .map((r) => r.name)
-                                .join(' → ')}
+                                  .map((r) => r.name)
+                                  .join(' → ')}
                           </span>
                         </div>
 
@@ -639,10 +647,11 @@ export function RequestChainsList({
                               variant='ghost'
                               size='sm'
                               onClick={() => onToggleChain(chain?.id)}
-                              className={`h-8 w-8 p-0 ${chain.enabled
-                                ? 'text-green-600 hover:text-green-700'
-                                : 'text-muted-foreground hover:text-foreground'
-                                }`}
+                              className={`h-8 w-8 p-0 ${
+                                chain.enabled
+                                  ? 'text-green-600 hover:text-green-700'
+                                  : 'text-muted-foreground hover:text-foreground'
+                              }`}
                             >
                               {chain.enabled ? (
                                 <Play className='w-4 h-4' />
@@ -738,7 +747,6 @@ export function RequestChainsList({
                                       </AlertDialogCancel>
                                       <Button
                                         onClick={() => onDeleteChain(chain.id)}
-                                        variant='destructive'
                                       >
                                         Delete
                                       </Button>
@@ -748,7 +756,8 @@ export function RequestChainsList({
                                 <DropdownMenuItem
                                   onClick={() => handleClickReport(chain.id)}
                                 >
-                                  <ChartNoAxesCombined className='w-4 h-4 mr-2' /> Reports
+                                  <ChartNoAxesCombined className='w-4 h-4 mr-2' />{' '}
+                                  Reports
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>

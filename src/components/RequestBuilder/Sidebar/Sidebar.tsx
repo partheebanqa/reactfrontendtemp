@@ -61,6 +61,17 @@ import {
 import SortableRequest from './sortable-request';
 import SortableFolder from './sortable-folder';
 import SortableCollection from './sortable-collection';
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { Button } from '@/components/ui/button';
 
 const Sidebar: React.FC = () => {
   const { currentWorkspace } = useWorkspace();
@@ -122,6 +133,9 @@ const Sidebar: React.FC = () => {
     'request'
   );
   const [moveItemName, setMoveItemName] = useState('');
+  const [showDeleteCollectionDialog, setShowDeleteCollectionDialog] =
+    useState(false);
+  const [showDeleteRequestDialog, setShowDeleteRequestDialog] = useState(false);
 
   const { mutateAsync: addFolder, loading: addingFolder } = useAddFolder();
 
@@ -144,7 +158,7 @@ const Sidebar: React.FC = () => {
   ) => {
     try {
       setResponseData(null);
-    } catch { }
+    } catch {}
     setActiveCollection(parentCollection);
     setActiveRequest(req);
     collectionActions.openRequest(req);
@@ -451,6 +465,7 @@ const Sidebar: React.FC = () => {
         description: 'The collection has been successfully deleted',
         variant: 'success',
       });
+      setShowDeleteCollectionDialog(false);
     } catch (error) {
       console.error('Error deleting collection:', error);
       toast({
@@ -554,14 +569,14 @@ const Sidebar: React.FC = () => {
         collections.map((col) =>
           col.id === selectedCollection?.id
             ? {
-              ...col,
-              requests: col.requests,
-              folders: removeRequestAtIndexFromFolderTree(
-                (col as any).folders || [],
-                selectedFolder.id,
-                requestIndex
-              ),
-            }
+                ...col,
+                requests: col.requests,
+                folders: removeRequestAtIndexFromFolderTree(
+                  (col as any).folders || [],
+                  selectedFolder.id,
+                  requestIndex
+                ),
+              }
             : col
         )
       );
@@ -570,11 +585,11 @@ const Sidebar: React.FC = () => {
         collections.map((col) =>
           col.id === selectedCollection.id
             ? {
-              ...col,
-              requests: col.requests.filter(
-                (_, index) => index !== requestIndex
-              ),
-            }
+                ...col,
+                requests: col.requests.filter(
+                  (_, index) => index !== requestIndex
+                ),
+              }
             : col
         )
       );
@@ -690,8 +705,9 @@ const Sidebar: React.FC = () => {
         </SortableFolder>
 
         <div
-          className={`ml-4 transition-all ${isOpen ? 'max-h-[1000px]' : 'max-h-0 overflow-hidden'
-            }`}
+          className={`ml-4 transition-all ${
+            isOpen ? 'max-h-[1000px]' : 'max-h-0 overflow-hidden'
+          }`}
         >
           <SortableContext
             items={sortableIds}
@@ -707,10 +723,11 @@ const Sidebar: React.FC = () => {
                     collectionId={parentCollection.id}
                   >
                     <div
-                      className={`group flex items-center justify-between p-[6px] rounded-md cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 ${activeRequest?.id === request.id
-                        ? 'bg-blue-50 dark:bg-blue-900/20'
-                        : ''
-                        }`}
+                      className={`group flex items-center justify-between p-[6px] rounded-md cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 ${
+                        activeRequest?.id === request.id
+                          ? 'bg-blue-50 dark:bg-blue-900/20'
+                          : ''
+                      }`}
                     >
                       <div
                         className='flex items-center space-x-2 flex-1 min-w-0'
@@ -922,10 +939,11 @@ const Sidebar: React.FC = () => {
                                       }
                                     >
                                       <Star
-                                        className={`h-4 w-4 ${collection.isImportant
-                                          ? 'fill-yellow-400 text-yellow-500'
-                                          : ''
-                                          }`}
+                                        className={`h-4 w-4 ${
+                                          collection.isImportant
+                                            ? 'fill-yellow-400 text-yellow-500'
+                                            : ''
+                                        }`}
                                       />
                                     </button>
                                   }
@@ -954,12 +972,13 @@ const Sidebar: React.FC = () => {
                           </div>
 
                           <div
-                            className={`ml-4 sm:ml-6 overflow-hidden ${expanded
-                              ? isSearching
-                                ? 'max-h-none'
-                                : 'max-h-[1000px]'
-                              : 'max-h-0'
-                              }`}
+                            className={`ml-4 sm:ml-6 overflow-hidden ${
+                              expanded
+                                ? isSearching
+                                  ? 'max-h-none'
+                                  : 'max-h-[1000px]'
+                                : 'max-h-0'
+                            }`}
                           >
                             {expanded && (
                               <div className='overflow-y-auto scrollbar-thin max-h-[600px]'>
@@ -977,10 +996,11 @@ const Sidebar: React.FC = () => {
                                         collectionId={collection.id}
                                       >
                                         <div
-                                          className={`flex items-center justify-between p-[6px] rounded-md cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 ${activeRequest?.id === request.id
-                                            ? 'bg-blue-50 dark:bg-blue-900/20'
-                                            : ''
-                                            }`}
+                                          className={`flex items-center justify-between p-[6px] rounded-md cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 ${
+                                            activeRequest?.id === request.id
+                                              ? 'bg-blue-50 dark:bg-blue-900/20'
+                                              : ''
+                                          }`}
                                         >
                                           <div
                                             className='flex items-center space-x-2 flex-1 min-w-0'
@@ -1228,17 +1248,19 @@ const Sidebar: React.FC = () => {
                       <Edit className='h-4 w-4 mr-2' />
                       Rename
                     </button>
+
                     <button
-                      className='flex items-center w-full px-4 py-1 text-sm text-left text-red-500 hover:bg-gray-100 dark:hover:bg-gray-700'
                       onClick={() => {
-                        handleDeleteCollection();
+                        setShowDeleteCollectionDialog(true);
                         setShowMenu(null);
                         setMenuPosition(null);
                       }}
+                      className='flex items-center w-full px-4 py-1 text-sm text-left text-red-500 hover:bg-gray-100 dark:hover:bg-gray-700'
                     >
                       <Trash2 className='h-4 w-4 mr-2' />
                       Delete
                     </button>
+
                     {/* <div className='border-t border-gray-200 dark:border-gray-700 my-1'></div>
                     <button
                       className='flex items-center w-full px-4 py-1 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
@@ -1288,16 +1310,12 @@ const Sidebar: React.FC = () => {
                       Move to
                     </button> */}
                     <button
-                      className='flex items-center w-full px-4 py-1 text-sm text-left text-red-500 hover:bg-gray-100 dark:hover:bg-gray-700'
                       onClick={() => {
-                        if (selectedRequest.id) {
-                          handleDeleteRequest(selectedRequest.id);
-                        } else {
-                          handleDeleteNewRequest();
-                        }
+                        setShowDeleteRequestDialog(true);
                         setShowMenu(null);
                         setMenuPosition(null);
                       }}
+                      className='flex items-center w-full px-4 py-1 text-sm text-left text-red-500 hover:bg-gray-100 dark:hover:bg-gray-700'
                     >
                       <Trash2 className='h-4 w-4 mr-2' />
                       Delete
@@ -1473,6 +1491,90 @@ const Sidebar: React.FC = () => {
             itemType={moveItemType}
             itemName={moveItemName}
           />
+
+          <AlertDialog
+            open={showDeleteCollectionDialog}
+            onOpenChange={setShowDeleteCollectionDialog}
+          >
+            <AlertDialogTrigger asChild></AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>
+                  Delete "{selectedCollection?.name}"?
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                  This action will permanently delete the collection and all its
+                  requests. This cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <Button
+                  variant='destructive'
+                  onClick={() => handleDeleteCollection()}
+                >
+                  Delete Collection
+                </Button>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+
+          <AlertDialog
+            open={showDeleteCollectionDialog}
+            onOpenChange={setShowDeleteCollectionDialog}
+          >
+            <AlertDialogTrigger asChild></AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>
+                  Delete "{selectedCollection?.name}"?
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                  This action will permanently delete the collection and all its
+                  requests. This cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <Button onClick={() => handleDeleteCollection()}>
+                  Delete Collection
+                </Button>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+
+          <AlertDialog
+            open={showDeleteRequestDialog}
+            onOpenChange={setShowDeleteRequestDialog}
+          >
+            <AlertDialogTrigger asChild></AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>
+                  Delete "{selectedRequest?.name}"?
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                  This action will permanently delete this request. This cannot
+                  be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <Button
+                  onClick={async () => {
+                    if (selectedRequest?.id) {
+                      await handleDeleteRequest(selectedRequest.id);
+                    } else {
+                      handleDeleteNewRequest();
+                    }
+                    setShowDeleteRequestDialog(false);
+                  }}
+                >
+                  Delete Request
+                </Button>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
 
         <DragOverlay>
@@ -1487,12 +1589,16 @@ const Sidebar: React.FC = () => {
                   >
                     {activeDragItem?.request?.method}
                   </span>
-                  <span className='text-sm'>{activeDragItem?.request?.name}</span>
+                  <span className='text-sm'>
+                    {activeDragItem?.request?.name}
+                  </span>
                 </div>
               ) : (
                 <div className='flex items-center space-x-2'>
                   <Folder className='h-4 w-4 text-orange-500' />
-                  <span className='text-sm'>{activeDragItem?.folder?.name}</span>
+                  <span className='text-sm'>
+                    {activeDragItem?.folder?.name}
+                  </span>
                 </div>
               )}
             </div>

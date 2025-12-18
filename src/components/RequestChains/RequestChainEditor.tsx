@@ -596,8 +596,6 @@ export function RequestChainEditor({
   const handleApplyToRequest = (requestId: string, variableName: string) => {
     if (!formData.chainRequests) return;
 
-    setIsAnalyzerOpen(false);
-
     const targetRequestIndex = formData.chainRequests.findIndex(
       (req) => req.id === requestId
     );
@@ -2732,22 +2730,36 @@ export function RequestChainEditor({
                                                     request.url ||
                                                     'New Request'}
                                                 </p>
-                                                <Button
-                                                  variant='ghost'
-                                                  size='icon'
-                                                  onClick={() => {
-                                                    setEditingNameId(
-                                                      request.id
-                                                    );
-                                                    setTempName(
-                                                      request.name ||
-                                                        request.url ||
-                                                        ''
-                                                    );
-                                                  }}
-                                                >
-                                                  <Edit className='w-4 h-4' />
-                                                </Button>
+
+                                                <TooltipProvider>
+                                                  <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                      <Button
+                                                        variant='ghost'
+                                                        size='icon'
+                                                        onClick={() => {
+                                                          setEditingNameId(
+                                                            request.id
+                                                          );
+                                                          setTempName(
+                                                            request.name ||
+                                                              request.url ||
+                                                              ''
+                                                          );
+                                                        }}
+                                                        disabled={isExecuting}
+                                                      >
+                                                        <Edit className='w-4 h-4' />
+                                                      </Button>
+                                                    </TooltipTrigger>
+
+                                                    <TooltipContent>
+                                                      {isExecuting
+                                                        ? 'Cannot edit during execution'
+                                                        : 'Edit'}
+                                                    </TooltipContent>
+                                                  </Tooltip>
+                                                </TooltipProvider>
                                               </div>
                                             )}
                                           </div>
@@ -2784,28 +2796,51 @@ export function RequestChainEditor({
                                           </div>
                                         </div>
 
-                                        {/* Actions: Duplicate / Delete / Expand */}
                                         <div className='flex items-center space-x-2 ml-4'>
-                                          <Button
-                                            variant='ghost'
-                                            size='sm'
-                                            onClick={() =>
-                                              duplicateRequest(request.id)
-                                            }
-                                          >
-                                            <Copy className='w-4 h-4' />
-                                          </Button>
+                                          <TooltipProvider>
+                                            <Tooltip>
+                                              <TooltipTrigger asChild>
+                                                <Button
+                                                  variant='ghost'
+                                                  size='sm'
+                                                  onClick={() =>
+                                                    duplicateRequest(request.id)
+                                                  }
+                                                  disabled={isExecuting}
+                                                >
+                                                  <Copy className='w-4 h-4' />
+                                                </Button>
+                                              </TooltipTrigger>
+                                              <TooltipContent>
+                                                {isExecuting
+                                                  ? 'Cannot duplicate during execution'
+                                                  : 'clone'}
+                                              </TooltipContent>
+                                            </Tooltip>
+                                          </TooltipProvider>
 
-                                          <Button
-                                            variant='ghost'
-                                            size='sm'
-                                            onClick={() =>
-                                              removeRequest(request.id)
-                                            }
-                                            className='text-red-600 hover:text-red-700'
-                                          >
-                                            <Trash2 className='w-4 h-4' />
-                                          </Button>
+                                          <TooltipProvider>
+                                            <Tooltip>
+                                              <TooltipTrigger asChild>
+                                                <Button
+                                                  variant='ghost'
+                                                  size='sm'
+                                                  onClick={() =>
+                                                    removeRequest(request.id)
+                                                  }
+                                                  className='text-red-600 hover:text-red-700'
+                                                  disabled={isExecuting}
+                                                >
+                                                  <Trash2 className='w-4 h-4' />
+                                                </Button>
+                                              </TooltipTrigger>
+                                              <TooltipContent>
+                                                {isExecuting
+                                                  ? 'Cannot delete during execution'
+                                                  : 'Delete request'}
+                                              </TooltipContent>
+                                            </Tooltip>
+                                          </TooltipProvider>
 
                                           <Button
                                             variant='ghost'
