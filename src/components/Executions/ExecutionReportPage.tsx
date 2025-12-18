@@ -38,7 +38,8 @@ import { buildRequestMetrics } from '@/types/report';
 import ExportHTMLButton from '../Reports/Components/ExportHTMLButton';
 import ExportPDFButton from '../Reports/Components/ExportPDFButton';
 import { RequestReportMetrics } from '../Reports/Components/RequestReportMetrics';
-import { downloadAsPDF } from '@/utils/exportUtilsNew';
+import { downloadAsPDF, mapBackendSuiteReportToTestSuiteData } from '@/utils/exportUtilsNew';
+import { convertDateStamp, convertTimestamp, isValidTimestamp } from '@/utils/exportDate';
 
 type RouteParams = {
   type: 'test_suite' | 'request_chain';
@@ -189,8 +190,14 @@ const TestSuiteReport: React.FC<TestSuiteReportProps> = ({ data }) => {
     shareReport(entityId, executionId || "");
   };
   const handleDownloadPDF = async () => {
-    (window as any).__REPORT_DATA__ = data;
-    await downloadAsPDF('report-content', `${data.name}_report.pdf`);
+    // 1. Map raw backend response to TestSuiteData
+    const mappedSuite = mapBackendSuiteReportToTestSuiteData(data);
+
+    // 2. Expose this to the PDF util
+    (window as any).__REPORT_DATA__ = mappedSuite;
+
+    // 3. Trigger PDF generation
+    await downloadAsPDF("report-content", `${mappedSuite.name}_report.pdf`);
   };
 
   const handleDownloadHTML = () =>
@@ -219,7 +226,11 @@ const TestSuiteReport: React.FC<TestSuiteReportProps> = ({ data }) => {
             <Calendar className="w-5 h-5 text-blue-500" />
             <div>
               <p className="text-sm text-gray-500">Execution Date</p>
-              <p className="font-semibold">{formatDate(data.lastExecutionDate)}</p>
+              <p className="text-sm font-semibold">
+                {(() => {
+                  const { dateTime, tz } = convertDateStamp(data.lastExecutionDate);
+                  return `${dateTime}, ${tz}`;
+                })()}</p>
             </div>
           </div>
 
@@ -530,7 +541,11 @@ const RequestChainReport: React.FC<RequestChainReportProps> = ({ data, environme
             <Calendar className="w-5 h-5 text-blue-500" />
             <div>
               <p className="text-sm text-gray-500">Execution Date</p>
-              <p className="font-semibold">{format(new Date(data?.lastExecutionDate), 'MM/dd/yyyy, h:mm:ss a')}</p>
+              <p className="text-sm font-semibold">
+                {(() => {
+                  const { dateTime, tz } = convertDateStamp(data.lastExecutionDate);
+                  return `${dateTime}, ${tz}`;
+                })()}</p>
             </div>
           </div>
 

@@ -6,7 +6,145 @@ import {
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 
-// Lightweight PDF generation with modern design
+const makeEmptyCategory = (): TestCategory => ({
+  total: 0,
+  passed: 0,
+  failed: 0,
+  skipped: 0,
+  apis: [],
+});
+
+const mergeCategoryFromBackend = (
+  target: TestCategory,
+  source?: {
+    total: number;
+    passed: number;
+    failed: number;
+    skipped: number;
+    testCases?: any[];
+  }
+) => {
+  if (!source) return;
+
+  target.total += source.total ?? 0;
+  target.passed += source.passed ?? 0;
+  target.failed += source.failed ?? 0;
+  target.skipped += source.skipped ?? 0;
+
+  if (Array.isArray(source.testCases)) {
+    source.testCases.forEach((tc) => {
+      const mapped: TestCase = {
+        id: tc.id,
+        name: tc.name,
+        method: tc.method,
+        url: tc.url,
+        status: tc.status,
+        severity: tc.severity,
+        duration: tc.duration,
+        responseSize: tc.responseSize,
+        requestCurl: tc.requestCurl,
+        response: tc.response,
+      };
+      target.apis.push(mapped);
+    });
+  }
+};
+
+export const mapBackendSuiteReportToTestSuiteData = (
+  raw: any
+): TestSuiteData => {
+  const positiveTests = makeEmptyCategory();
+  const negativeTests = makeEmptyCategory();
+  const functionalTests = makeEmptyCategory();
+  const semanticTests = makeEmptyCategory();
+  const edgeCaseTests = makeEmptyCategory();
+  const securityTests = makeEmptyCategory();
+  const advancedSecurityTests = makeEmptyCategory();
+
+  let totalTestCases = 0;
+  let successfulTestCases = 0;
+  let failedTestCases = 0;
+  let skippedTestCases = 0;
+
+  (raw.requests ?? []).forEach((req: any) => {
+    totalTestCases += req.totalTestCases ?? 0;
+    successfulTestCases += req.successfulTestCases ?? 0;
+    failedTestCases += req.failedTestCases ?? 0;
+    skippedTestCases += req.skippedTestCases ?? 0;
+
+    mergeCategoryFromBackend(positiveTests, req.positiveTests);
+    mergeCategoryFromBackend(negativeTests, req.negativeTests);
+    mergeCategoryFromBackend(functionalTests, req.functionalTests);
+    mergeCategoryFromBackend(semanticTests, req.semanticTests);
+    mergeCategoryFromBackend(edgeCaseTests, req.edgeCaseTests);
+    mergeCategoryFromBackend(securityTests, req.securityTests);
+    mergeCategoryFromBackend(advancedSecurityTests, req.advancedSecurityTests);
+  });
+
+  const allApis: TestCase[] = [
+    ...positiveTests.apis,
+    ...negativeTests.apis,
+    ...functionalTests.apis,
+    ...semanticTests.apis,
+    ...edgeCaseTests.apis,
+    ...securityTests.apis,
+    ...advancedSecurityTests.apis,
+  ];
+
+  const durations = allApis.map((t) => t.duration ?? 0);
+  const sizes = allApis.map((t) => t.responseSize ?? 0);
+
+  const minResponseTime = durations.length ? Math.min(...durations) : 0;
+  const maxResponseTime = durations.length ? Math.max(...durations) : 0;
+  const averageResponseTime = durations.length
+    ? durations.reduce((a, b) => a + b, 0) / durations.length
+    : 0;
+
+  const totalDataTransferred = sizes.reduce((a, b) => a + b, 0);
+  const uniqueEndpoints = new Set(allApis.map((t) => `${t.method} ${t.url}`))
+    .size;
+
+  const successRate =
+    totalTestCases > 0
+      ? Math.round((successfulTestCases / totalTestCases) * 100)
+      : 0;
+
+  const mapped: TestSuiteData = {
+    id: raw.id,
+    name: raw.name,
+    description: raw.description ?? "",
+    environment: raw.environment ?? raw.environmentId ?? "Unknown",
+    lastExecutionDate: raw.lastExecutionDate,
+    duration: raw.duration ?? 0,
+    executedBy: raw.executedBy ?? "Unknown",
+
+    successRate,
+    totalTestCases,
+    successfulTestCases,
+    failedTestCases,
+    skippedTestCases,
+
+    requestMetrics: {
+      minResponseTime,
+      maxResponseTime,
+      averageResponseTime,
+      totalRequests: allApis.length,
+      totalDataTransferred,
+      uniqueEndpoints,
+    },
+
+    positiveTests,
+    negativeTests,
+    functionalTests,
+    semanticTests,
+    edgeCaseTests,
+    securityTests,
+    advancedSecurityTests,
+  };
+
+  return mapped;
+};
+
 const generateLightweightPDFContent = (data: TestSuiteData): string => {
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {
@@ -427,7 +565,7 @@ const generateTestCaseHTML = (testCase: TestCase): string => {
 
 // Group test cases by API endpoint
 const groupTestCasesByEndpoint = (
-  categories: { title: string; category: TestCategory }[]
+  categories: { title: string; category: TestCategory | any }[]
 ) => {
   const endpointGroups: {
     [key: string]: {
@@ -443,7 +581,12 @@ const groupTestCasesByEndpoint = (
   } = {};
 
   categories?.forEach(({ title, category }) => {
-    category?.apis?.forEach((testCase) => {
+    if (!category) return;
+
+    const testCases: TestCase[] =
+      (category.apis as TestCase[]) ?? (category.testCases as TestCase[]) ?? [];
+
+    testCases.forEach((testCase) => {
       const key = `${testCase.method} ${testCase.url}`;
 
       if (!endpointGroups[key]) {
@@ -469,13 +612,14 @@ const groupTestCasesByEndpoint = (
     });
   });
 
-  // Calculate average duration for each group
   Object.values(endpointGroups).forEach((group) => {
     const totalDuration = group.testCases.reduce(
-      (sum, tc) => sum + tc.duration,
+      (sum, tc) => sum + (tc.duration ?? 0),
       0
     );
-    group.avgDuration = Math.round(totalDuration / group.testCases.length);
+    group.avgDuration = group.testCases.length
+      ? Math.round(totalDuration / group.testCases.length)
+      : 0;
   });
 
   return endpointGroups;
