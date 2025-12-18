@@ -14,6 +14,7 @@ import {
   Plus,
   Zap,
   ArrowRight,
+  Database,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -26,6 +27,7 @@ import {
 } from '@/components/ui/dialog';
 
 interface RequestAnalyzerProps {
+  chainName: string;
   requests: any[];
   executionLogs: any[];
   analysisResults: any[];
@@ -44,7 +46,6 @@ interface RequestAnalyzerProps {
   onOpenChange: (open: boolean) => void;
 }
 
-// Utility functions for variable substitution
 const hasVariablePattern = (text: string): boolean => {
   if (!text) return false;
   return /\{\{[^}]+\}\}/.test(text);
@@ -58,7 +59,6 @@ const substituteVariables = (
 
   let result = text;
 
-  // Substitute all extracted variables
   Object.values(extractedVariablesByRequest).forEach((variables) => {
     Object.entries(variables).forEach(([name, value]) => {
       const regex = new RegExp(`\\{\\{${name}\\}\\}`, 'g');
@@ -95,20 +95,12 @@ const UrlDisplay = ({
           {url}
         </code>
       </div>
-      {/* <div className='flex items-start gap-2'>
-        <span className='text-xs text-green-600 font-medium whitespace-nowrap flex items-center gap-1'>
-          <ArrowRight className='w-3 h-3' />
-          Resolved:
-        </span>
-        <code className='text-xs font-mono text-green-700 bg-green-50 px-2 py-0.5 rounded break-all flex-1'>
-          {substitutedUrl}
-        </code>
-      </div> */}
     </div>
   );
 };
 
 export function RequestAnalyzer({
+  chainName,
   requests,
   executionLogs,
   analysisResults,
@@ -210,6 +202,34 @@ export function RequestAnalyzer({
     (log) => log.status === 'error'
   ).length;
   const extractionCount = Object.keys(extractedVariablesByRequest).length;
+
+  const totalExtractedVariables = Object.values(
+    extractedVariablesByRequest
+  ).reduce((sum, vars) => sum + Object.keys(vars).length, 0);
+
+  const substitutedCount = requests.reduce((count, request) => {
+    const variablePattern = /\{\{([^}]+)\}\}/g;
+    let matches = 0;
+
+    matches += (request.url.match(variablePattern) || []).length;
+
+    request.headers?.forEach((header: any) => {
+      matches += (header.key.match(variablePattern) || []).length;
+      matches += (header.value.match(variablePattern) || []).length;
+    });
+
+    request.params?.forEach((param: any) => {
+      matches += (param.key.match(variablePattern) || []).length;
+      matches += (param.value.match(variablePattern) || []).length;
+    });
+
+    if (request.body) {
+      matches += (request.body.match(variablePattern) || []).length;
+    }
+
+    return count + matches;
+  }, 0);
+
   const availableAuthToken = (() => {
     for (const [requestId, variables] of Object.entries(
       extractedVariablesByRequest
@@ -236,7 +256,7 @@ export function RequestAnalyzer({
         <DialogHeader className='flex-shrink-0'>
           <DialogTitle className='flex items-center gap-2'>
             <AlertTriangle className='w-5 h-5 text-orange-600' />
-            Chain Analysis
+            Chain Analysis: {chainName}
           </DialogTitle>
           <DialogDescription>
             {requests.length} requests analyzed • {extractionCount} requests
@@ -244,7 +264,7 @@ export function RequestAnalyzer({
           </DialogDescription>
         </DialogHeader>
 
-        <div className='flex items-center gap-4 text-sm mb-4 flex-shrink-0'>
+        <div className='flex items-center gap-6 text-sm mb-4 flex-shrink-0 flex-wrap'>
           <div className='flex items-center gap-2'>
             <CheckCircle className='w-4 h-4 text-green-600' />
             <span className='font-medium'>{successCount} Success</span>
@@ -255,6 +275,18 @@ export function RequestAnalyzer({
               <span className='font-medium'>{failedCount} Failed</span>
             </div>
           )}
+          <div className='flex items-center gap-2'>
+            <Database className='w-4 h-4 text-blue-600' />
+            <span className='font-medium'>
+              {totalExtractedVariables} Variables Extracted
+            </span>
+          </div>
+          <div className='flex items-center gap-2'>
+            <Zap className='w-4 h-4 text-purple-600' />
+            <span className='font-medium'>
+              {substitutedCount} Variables Substituted
+            </span>
+          </div>
         </div>
 
         {(justExtractedVariable || availableAuthToken) && (

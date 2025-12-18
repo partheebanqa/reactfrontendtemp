@@ -5,11 +5,13 @@ import { Button } from '@/components/ui/button';
 interface AddRequestMenuProps {
   onAddRequest: () => void;
   onImport: () => void;
+  disabled?: boolean; // Add disabled prop
 }
 
 export const AddRequestMenu: React.FC<AddRequestMenuProps> = ({
   onAddRequest,
   onImport,
+  disabled = false, // Default to false
 }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [dropdownPosition, setDropdownPosition] = useState<'top' | 'bottom'>(
@@ -21,6 +23,8 @@ export const AddRequestMenu: React.FC<AddRequestMenuProps> = ({
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleMouseEnter = () => {
+    if (disabled) return; // Don't open menu if disabled
+
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
     }
@@ -58,16 +62,20 @@ export const AddRequestMenu: React.FC<AddRequestMenuProps> = ({
   };
 
   const handleAddRequest = () => {
+    if (disabled) return; // Prevent action if disabled
     onAddRequest();
     setIsMenuOpen(false);
   };
 
   const handleImport = () => {
+    if (disabled) return; // Prevent action if disabled
     onImport();
     setIsMenuOpen(false);
   };
 
   const handleButtonClick = () => {
+    if (disabled) return; // Don't open menu if disabled
+
     if (!isMenuOpen && buttonRef.current) {
       const buttonRect = buttonRef.current.getBoundingClientRect();
       const dropdownHeight = 130;
@@ -114,9 +122,16 @@ export const AddRequestMenu: React.FC<AddRequestMenuProps> = ({
     };
   }, [isMenuOpen]);
 
+  // Close menu when component becomes disabled
+  useEffect(() => {
+    if (disabled && isMenuOpen) {
+      setIsMenuOpen(false);
+    }
+  }, [disabled, isMenuOpen]);
+
   return (
     <div className='relative inline-block' ref={menuRef}>
-      {isMenuOpen && (
+      {isMenuOpen && !disabled && (
         <div
           ref={dropdownRef}
           onMouseEnter={handleMenuMouseEnter}
@@ -161,6 +176,7 @@ export const AddRequestMenu: React.FC<AddRequestMenuProps> = ({
         onClick={handleButtonClick}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
+        disabled={disabled}
         className='gap-2'
       >
         <Plus className='w-4 h-4' />
