@@ -1981,15 +1981,15 @@ export function RequestChainEditor({
 
   const getMethodColor = (method: string) => {
     const colors = {
-      GET: 'bg-green-100 text-green-800',
-      POST: 'bg-blue-100 text-blue-800',
-      PUT: 'bg-orange-100 text-orange-800',
-      DELETE: 'bg-red-100 text-red-800',
-      PATCH: 'bg-purple-100 text-purple-800',
-      HEAD: 'bg-gray-100 text-gray-800',
-      OPTIONS: 'bg-yellow-100 text-yellow-800',
+      GET: 'text-green-600',
+      POST: 'text-orange-600',
+      PUT: 'text-blue-600',
+      DELETE: 'text-red-600',
+      PATCH: 'text-purple-600',
+      HEAD: 'text-gray-600',
+      OPTIONS: 'text-gray-600',
     };
-    return colors[method as keyof typeof colors] || 'bg-gray-100 text-gray-800';
+    return colors[method as keyof typeof colors] || 'text-gray-600';
   };
 
   const handleImportRequests = async (importedRequests: ExtendedRequest[]) => {
@@ -2619,7 +2619,7 @@ export function RequestChainEditor({
                                 return (
                                   <Card
                                     key={request.id}
-                                    className={`hover:shadow-sm transition-shadow ${
+                                    className={`hover:shadow-sm transition-shadow group ${
                                       currentRequestIndex === requestIndex
                                         ? 'ring-2 ring-primary'
                                         : ''
@@ -2627,7 +2627,6 @@ export function RequestChainEditor({
                                   >
                                     <CardContent className='p-2'>
                                       <div className='flex items-center'>
-                                        {/* Drag Handle */}
                                         <div className='flex items-center space-x-3'>
                                           <TooltipProvider>
                                             <Tooltip>
@@ -2656,7 +2655,6 @@ export function RequestChainEditor({
                                             </Tooltip>
                                           </TooltipProvider>
 
-                                          {/* Index circle */}
                                           <div
                                             className={`w-8 h-8 ${
                                               currentRequestIndex ===
@@ -2674,15 +2672,14 @@ export function RequestChainEditor({
                                           </div>
                                         </div>
 
-                                        {/* Name + Method */}
                                         <div className='flex-1 flex items-center space-x-4 ml-3'>
-                                          <Badge
-                                            className={getMethodColor(
+                                          <span
+                                            className={`py-1 px-2 text-xs font-semibold ${getMethodColor(
                                               request.method
-                                            )}
+                                            )}`}
                                           >
                                             {request.method}
-                                          </Badge>
+                                          </span>
 
                                           <div className='flex-1'>
                                             {editingNameId === request.id ? (
@@ -2731,40 +2728,42 @@ export function RequestChainEditor({
                                                     'New Request'}
                                                 </p>
 
-                                                <TooltipProvider>
-                                                  <Tooltip>
-                                                    <TooltipTrigger asChild>
-                                                      <Button
-                                                        variant='ghost'
-                                                        size='icon'
-                                                        onClick={() => {
-                                                          setEditingNameId(
-                                                            request.id
-                                                          );
-                                                          setTempName(
-                                                            request.name ||
-                                                              request.url ||
-                                                              ''
-                                                          );
-                                                        }}
-                                                        disabled={isExecuting}
-                                                      >
-                                                        <Edit className='w-4 h-4' />
-                                                      </Button>
-                                                    </TooltipTrigger>
+                                                <div className='opacity-0 group-hover:opacity-100 transition-opacity'>
+                                                  <TooltipProvider>
+                                                    <Tooltip>
+                                                      <TooltipTrigger asChild>
+                                                        <Button
+                                                          variant='ghost'
+                                                          size='icon'
+                                                          onClick={() => {
+                                                            setEditingNameId(
+                                                              request.id
+                                                            );
+                                                            setTempName(
+                                                              request.name ||
+                                                                request.url ||
+                                                                ''
+                                                            );
+                                                          }}
+                                                          disabled={isExecuting}
+                                                          className='h-6 w-6 p-0'
+                                                        >
+                                                          <Edit className='w-3 h-3' />
+                                                        </Button>
+                                                      </TooltipTrigger>
 
-                                                    <TooltipContent>
-                                                      {isExecuting
-                                                        ? 'Cannot edit during execution'
-                                                        : 'Edit'}
-                                                    </TooltipContent>
-                                                  </Tooltip>
-                                                </TooltipProvider>
+                                                      <TooltipContent>
+                                                        {isExecuting
+                                                          ? 'Cannot edit during execution'
+                                                          : 'Edit'}
+                                                      </TooltipContent>
+                                                    </Tooltip>
+                                                  </TooltipProvider>
+                                                </div>
                                               </div>
                                             )}
                                           </div>
 
-                                          {/* Status Icons */}
                                           <div className='flex items-center space-x-2'>
                                             {executionLog && (
                                               <div className='flex items-center space-x-1'>
@@ -2797,57 +2796,58 @@ export function RequestChainEditor({
                                         </div>
 
                                         <div className='flex items-center space-x-2 ml-4'>
-                                          <TooltipProvider>
-                                            <Tooltip>
-                                              <TooltipTrigger asChild>
-                                                <Button
-                                                  variant='ghost'
-                                                  size='sm'
-                                                  onClick={() =>
-                                                    duplicateRequest(request.id)
-                                                  }
-                                                  disabled={isExecuting}
-                                                >
-                                                  <Copy className='w-4 h-4' />
-                                                </Button>
-                                              </TooltipTrigger>
-                                              <TooltipContent>
-                                                {isExecuting
-                                                  ? 'Cannot duplicate during execution'
-                                                  : 'clone'}
-                                              </TooltipContent>
-                                            </Tooltip>
-                                          </TooltipProvider>
+                                          <div className='flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity'>
+                                            <TooltipProvider>
+                                              <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                  <button
+                                                    onClick={() =>
+                                                      duplicateRequest(
+                                                        request.id
+                                                      )
+                                                    }
+                                                    disabled={isExecuting}
+                                                    className='p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700'
+                                                    aria-label='Clone'
+                                                  >
+                                                    <Copy className='w-4 h-4' />
+                                                  </button>
+                                                </TooltipTrigger>
+                                                <TooltipContent>
+                                                  Duplicate request
+                                                </TooltipContent>
+                                              </Tooltip>
+                                            </TooltipProvider>
 
-                                          <TooltipProvider>
-                                            <Tooltip>
-                                              <TooltipTrigger asChild>
-                                                <Button
-                                                  variant='ghost'
-                                                  size='sm'
-                                                  onClick={() =>
-                                                    removeRequest(request.id)
-                                                  }
-                                                  className='text-red-600 hover:text-red-700'
-                                                  disabled={isExecuting}
-                                                >
-                                                  <Trash2 className='w-4 h-4' />
-                                                </Button>
-                                              </TooltipTrigger>
-                                              <TooltipContent>
-                                                {isExecuting
-                                                  ? 'Cannot delete during execution'
-                                                  : 'Delete request'}
-                                              </TooltipContent>
-                                            </Tooltip>
-                                          </TooltipProvider>
+                                            <TooltipProvider>
+                                              <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                  <button
+                                                    onClick={() =>
+                                                      removeRequest(request.id)
+                                                    }
+                                                    className='p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-red-600 hover:text-red-700'
+                                                    disabled={isExecuting}
+                                                    aria-label='Delete request'
+                                                  >
+                                                    <Trash2 className='w-4 h-4' />
+                                                  </button>
+                                                </TooltipTrigger>
+                                                <TooltipContent>
+                                                  Delete request
+                                                </TooltipContent>
+                                              </Tooltip>
+                                            </TooltipProvider>
+                                          </div>
 
+                                          {/* Expand/Collapse - Always visible */}
                                           <Button
                                             variant='ghost'
                                             size='sm'
                                             onClick={() =>
                                               toggleRequestExpanded(request.id)
                                             }
+                                            className='h-8 w-8 p-0'
                                           >
                                             {expandedRequests.has(
                                               request.id
@@ -3095,6 +3095,7 @@ export function RequestChainEditor({
                               <AddRequestMenu
                                 onAddRequest={addNewRequest}
                                 onImport={() => setIsImportModalOpen(true)}
+                                disabled={isExecuting}
                               />
                             </div>
                           </div>
@@ -3114,6 +3115,7 @@ export function RequestChainEditor({
                           <AddRequestMenu
                             onAddRequest={addNewRequest}
                             onImport={() => setIsImportModalOpen(true)}
+                            disabled={isExecuting}
                           />
                         </div>
                       )}
@@ -3133,6 +3135,7 @@ export function RequestChainEditor({
               </Tabs>
 
               <RequestAnalyzer
+                chainName={formData.name || 'Unnamed Chain'}
                 requests={formData.chainRequests || []}
                 executionLogs={executionLogs}
                 analysisResults={analysisResults}
@@ -3205,6 +3208,7 @@ export function RequestChainEditor({
                 onPreExecute={saveChainToAPI}
                 chainName={formData?.name}
                 chainId={chain?.id}
+                isRunAllExecuting={isExecuting}
               />
             </CardContent>
           </Card>

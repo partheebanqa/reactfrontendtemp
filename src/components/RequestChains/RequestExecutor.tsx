@@ -56,6 +56,7 @@ interface RequestExecutorProps {
   onPostExecute?: () => void;
   request?: APIRequest;
   onResponse?: (response: any) => void;
+  isRunAllExecuting?: boolean;
 }
 
 export function RequestExecutor({
@@ -70,6 +71,7 @@ export function RequestExecutor({
   chainId,
   request,
   onResponse,
+  isRunAllExecuting,
 }: RequestExecutorProps) {
   const [location, setLocation] = useLocation();
   const [isExecuting, setIsExecuting] = useState(false);
@@ -709,6 +711,8 @@ export function RequestExecutor({
                   onClick={handleExecuteChain}
                   disabled={
                     processedRequests.filter((r) => r.enabled).length === 0 ||
+                    isExecuting ||
+                    isRunAllExecuting ||
                     (!savedChainId && !chainId)
                   }
                   className={`hover-scale ${
@@ -726,7 +730,9 @@ export function RequestExecutor({
               {chainId && (
                 <Button
                   onClick={handleUpdateChain}
-                  disabled={!chainName?.trim()}
+                  disabled={
+                    !chainName?.trim() || isExecuting || isRunAllExecuting
+                  }
                   className={`hover-scale ${
                     !chainName?.trim()
                       ? 'bg-gray-300 text-gray-600 cursor-not-allowed hover:bg-gray-300 py-4'
