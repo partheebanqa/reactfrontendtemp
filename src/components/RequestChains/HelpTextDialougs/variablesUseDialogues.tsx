@@ -112,10 +112,10 @@ export function VariableHelpDialog({
             </h3>
             <pre className='bg-gray-100 text-xs p-3 rounded overflow-x-auto scrollbar-thin'>
               {`Original URL:
-https://apibackenddev.onrender.com/executor/execution-history?page=1&limit=10&workspace_id=01415fe5-b282-4295-a386-267ece622c7b
+https://apibackenddev.onrender.com/v1/executor/execution-history?page=1&limit=10&workspace_id=01415fe5-b282-4295-a386-267ece622c7b
 
 With Extracted Variable:
-https://apibackenddev.onrender.com/executor/execution-history?page=1&limit=10&workspace_id={{E_WORKSPACEID}}`}
+https://apibackenddev.onrender.com/v1/executor/execution-history?page=1&limit=10&workspace_id={{E_WORKSPACEID}}`}
             </pre>
 
             <h3 className='font-semibold text-base mt-6'>
