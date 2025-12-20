@@ -40,7 +40,7 @@ export default function CICDConfiguration() {
   const [showApiKey, setShowApiKey] = useState(false);
 
   const [exampleCode, setExampleCode] =
-    useState(`curl -X POST "https://apibackenddev.onrender.com/test-suites/execute" \\
+    useState(`curl -X POST "https://apibackenddev.onrender.com/v1/test-suites/execute" \\
   -H "Content-Type: application/json" \\
   -H "X-API-Key: YOUR_API_KEY" \\
   -H "X-Workspace-ID: YOUR_WORKSPACE_ID" \\
@@ -49,7 +49,7 @@ export default function CICDConfiguration() {
   }'`);
 
   const [requestChainCode, setRequestChainCode] =
-    useState(`curl -X POST "https://apibackenddev.onrender.com/request-chains/execute" \\
+    useState(`curl -X POST "https://apibackenddev.onrender.com/v1/request-chains/execute" \\
   -H "Content-Type: application/json" \\
   -H "X-API-Key: YOUR_API_KEY" \\
   -H "X-Workspace-ID: YOUR_WORKSPACE_ID" \\
@@ -58,14 +58,14 @@ export default function CICDConfiguration() {
   }`);
 
   const [requestChainGet, setRequestChainGet] =
-    useState(`curl -X GET "https://apibackenddev.onrender.com/cicd/request-chains/REQUEST_CHAIN_ID/executionstatus" \\
+    useState(`curl -X GET "https://apibackenddev.onrender.com/v1/cicd/request-chains/REQUEST_CHAIN_ID/executionstatus" \\
   -H "Content-Type: application/json" \\
   -H "X-API-Key: YOUR_API_KEY" \\
   -H "X-Workspace-ID: YOUR_WORKSPACE_ID" \\
   -d '{}'`);
 
   const [testSuitGet, settestSuitGet] =
-    useState(`curl -X GET "https://apibackenddev.onrender.com/cicd/test-suites/TEST_SUITE_ID/executionstatus" \\
+    useState(`curl -X GET "https://apibackenddev.onrender.com/v1/cicd/test-suites/TEST_SUITE_ID/executionstatus" \\
   -H "Content-Type: application/json" \\
   -H "X-API-Key: YOUR_API_KEY" \\
   -H "X-Workspace-ID: YOUR_WORKSPACE_ID" \\
