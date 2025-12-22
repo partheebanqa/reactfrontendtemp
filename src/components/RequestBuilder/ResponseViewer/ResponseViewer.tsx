@@ -237,11 +237,55 @@ const ResponseViewer = () => {
         )
       );
     } else {
+      let description = '';
+
+      if (config?.isGeneral) {
+        switch (assertionType) {
+          case 'response-time':
+            description = `Response time should be ${
+              config.comparison === 'less' ? 'less than' : 'more than'
+            } ${config.value}ms`;
+            break;
+          case 'payload-size':
+            description = `Payload size should be ${
+              config.comparison === 'less' ? 'less than' : 'more than'
+            } ${config.value}KB`;
+            break;
+          case 'status-success':
+            description = 'Response status should be successful (2xx)';
+            break;
+          case 'contains-static':
+            description = `Response should contain static value: "${config.value}"`;
+            break;
+          case 'contains-dynamic':
+            description = `Response should contain dynamic variable: ${config.value}`;
+            break;
+          case 'contains-extracted':
+            description = `Response should contain extracted variable: ${config.value}`;
+            break;
+          default:
+            description = `General assertion: ${assertionType}`;
+        }
+      } else {
+        const operatorLabels: Record<string, string> = {
+          equals: 'equals',
+          'not-equals': 'does not equal',
+          'greater-than': 'is greater than',
+          'less-than': 'is less than',
+          contains: 'contains',
+          'not-contains': 'does not contain',
+          'array-length': 'has length',
+        };
+
+        const operatorText = operatorLabels[config.operator] || config.operator;
+        description = `${activeFieldPath} ${operatorText} "${config.value}"`;
+      }
+
       const newAssertion = {
         id: `manual-${Date.now()}`,
         type: assertionType,
-        category: 'manual',
-        description: `Manual assertion for ${activeFieldPath}`,
+        category: 'body',
+        description,
         field: activeFieldPath,
         value: activeFieldValue,
         enabled: true,

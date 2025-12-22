@@ -1,3 +1,4 @@
+import { Button } from '@/components/ui/button';
 import {
   Activity,
   CheckCircle,
@@ -36,9 +37,6 @@ function AssertionModal({
   const [generalValue, setGeneralValue] = useState<string>('');
   const [generalComparison, setGeneralComparison] = useState<string>('less');
 
-  console.log('selectedOperator123:', selectedOperator);
-  console.log('manualValue123:', manualValue);
-
   useEffect(() => {
     if (!isOpen) return;
 
@@ -56,14 +54,11 @@ function AssertionModal({
 
   if (!isOpen) return null;
 
-  // Filter assertions from assertionManager that match this specific field
   const suggestedAssertions = allAssertions
     .filter((assertion) => {
-      // Only show body category assertions that match the current field path
       return assertion.category === 'body' && assertion.field === fieldPath;
     })
     .map((assertion) => {
-      // Map assertion types to display format
       let label = '';
       let description = '';
       let icon = CheckCircle;
@@ -130,7 +125,7 @@ function AssertionModal({
         label,
         description,
         icon,
-        assertion, // Keep original assertion for selection
+        assertion,
       };
     });
 
@@ -211,7 +206,9 @@ function AssertionModal({
   ];
 
   const handleSuggestedClick = (assertionItem: any) => {
-    // Pass the entire assertion object back
+    const isAlreadyEnabled = assertionItem.assertion.enabled;
+    if (isAlreadyEnabled) return;
+
     onSelect('suggested', { assertion: assertionItem.assertion });
   };
 
@@ -258,35 +255,35 @@ function AssertionModal({
 
   return (
     <div
-      className='fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4'
+      className='fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4'
       onClick={onClose}
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className='bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col border border-gray-200 dark:border-gray-700'
+        className='bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[85vh] overflow-hidden flex flex-col'
       >
-        <div className='p-4 border-b border-gray-200 dark:border-gray-700 flex items-start justify-between'>
+        <div className='px-6 py-4 border-b border-gray-200 flex items-center justify-between flex-shrink-0'>
           <div className='flex-1'>
-            <h2 className='text-lg font-semibold text-gray-900 dark:text-gray-100'>
+            <h2 className='text-lg font-semibold text-gray-900'>
               Add Assertion
             </h2>
             <p className='text-xs text-gray-500 mt-1 font-mono'>{fieldPath}</p>
           </div>
           <button
             onClick={onClose}
-            className='text-gray-400 hover:text-gray-600 transition-colors ml-2'
+            className='p-1 text-gray-400 hover:text-gray-600 rounded hover:bg-gray-100 transition-colors ml-2'
           >
             <X className='w-5 h-5' />
           </button>
         </div>
 
-        <div className='flex border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800'>
+        <div className='flex border-b border-gray-200 bg-gray-50'>
           <button
             onClick={() => setActiveTab('suggested')}
             className={`flex-1 px-4 py-3 text-sm font-medium transition-all ${
               activeTab === 'suggested'
-                ? 'text-blue-600 border-b-2 border-blue-600 bg-white dark:bg-gray-900'
-                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                ? 'text-blue-600 border-b-2 border-blue-600 bg-white'
+                : 'text-gray-600 hover:text-gray-900'
             }`}
           >
             <div className='flex items-center justify-center gap-2'>
@@ -298,8 +295,8 @@ function AssertionModal({
             onClick={() => setActiveTab('manual')}
             className={`flex-1 px-4 py-3 text-sm font-medium transition-all ${
               activeTab === 'manual'
-                ? 'text-blue-600 border-b-2 border-blue-600 bg-white dark:bg-gray-900'
-                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                ? 'text-blue-600 border-b-2 border-blue-600 bg-white'
+                : 'text-gray-600 hover:text-gray-900'
             }`}
           >
             <div className='flex items-center justify-center gap-2'>
@@ -311,8 +308,8 @@ function AssertionModal({
             onClick={() => setActiveTab('general')}
             className={`flex-1 px-4 py-3 text-sm font-medium transition-all ${
               activeTab === 'general'
-                ? 'text-blue-600 border-b-2 border-blue-600 bg-white dark:bg-gray-900'
-                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                ? 'text-blue-600 border-b-2 border-blue-600 bg-white'
+                : 'text-gray-600 hover:text-gray-900'
             }`}
           >
             <div className='flex items-center justify-center gap-2'>
@@ -322,7 +319,7 @@ function AssertionModal({
           </button>
         </div>
 
-        <div className='flex-1 overflow-y-auto p-6'>
+        <div className='flex-1 overflow-y-auto scrollbar-thin px-6 py-4'>
           {activeTab === 'general' && (
             <div className='space-y-2'>
               {!generalType ? (
@@ -333,13 +330,13 @@ function AssertionModal({
                       <button
                         key={a.id}
                         onClick={() => handleGeneralClick(a.id)}
-                        className='w-full flex items-start gap-4 p-4 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all text-left group'
+                        className='w-full flex items-start gap-4 p-4 rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-all text-left group'
                       >
-                        <div className='w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-800 group-hover:bg-blue-100 dark:group-hover:bg-blue-900/30 flex items-center justify-center flex-shrink-0 transition-colors'>
-                          <Icon className='w-5 h-5 text-gray-600 dark:text-gray-400 group-hover:text-blue-600 transition-colors' />
+                        <div className='w-10 h-10 rounded-lg bg-gray-100 group-hover:bg-blue-100 flex items-center justify-center flex-shrink-0 transition-colors'>
+                          <Icon className='w-5 h-5 text-gray-600 group-hover:text-blue-600 transition-colors' />
                         </div>
                         <div className='flex-1 min-w-0'>
-                          <div className='text-sm font-medium text-gray-900 dark:text-gray-100 group-hover:text-blue-900 dark:group-hover:text-blue-300'>
+                          <div className='text-sm font-medium text-gray-900 group-hover:text-blue-900'>
                             {a.label}
                           </div>
                           <div className='text-xs text-gray-500 mt-1'>
@@ -353,7 +350,7 @@ function AssertionModal({
               ) : (
                 <div className='space-y-4'>
                   <div className='flex items-center justify-between'>
-                    <h3 className='text-sm font-semibold text-gray-900 dark:text-gray-100'>
+                    <h3 className='text-sm font-semibold text-gray-900'>
                       {
                         generalAssertions.find((a) => a.id === generalType)
                           ?.label
@@ -372,28 +369,28 @@ function AssertionModal({
                   {generalAssertions.find((a) => a.id === generalType)
                     ?.hasComparison && (
                     <div>
-                      <label className='block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2'>
+                      <label className='block text-sm font-semibold text-gray-900 mb-2'>
                         Comparison
                       </label>
                       <div className='grid grid-cols-2 gap-2'>
                         {['less', 'more'].map((c) => (
-                          <button
+                          <Button
                             key={c}
                             onClick={() => setGeneralComparison(c)}
                             className={`px-4 py-2 text-sm rounded-lg border font-medium transition-all ${
                               generalComparison === c
-                                ? 'bg-blue-600 border-blue-600 text-white'
-                                : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-blue-300'
+                                ? ' border-blue-600 text-white'
+                                : 'bg-white border-gray-200 text-gray-700 hover:border-blue-300'
                             }`}
                           >
                             {c === 'less' ? 'Less than' : 'More than'}
-                          </button>
+                          </Button>
                         ))}
                       </div>
                     </div>
                   )}
                   <div>
-                    <label className='block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2'>
+                    <label className='block text-sm font-semibold text-gray-900 mb-2'>
                       {
                         generalAssertions.find((a) => a.id === generalType)
                           ?.inputLabel
@@ -410,7 +407,7 @@ function AssertionModal({
                         generalAssertions.find((a) => a.id === generalType)
                           ?.inputLabel
                       }`}
-                      className='w-full px-4 py-3 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm'
+                      className='w-full px-4 py-3 border border-gray-300 bg-white text-gray-900 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm'
                       autoFocus
                     />
                   </div>
@@ -431,24 +428,55 @@ function AssertionModal({
               ) : (
                 suggestedAssertions.map((assertionItem) => {
                   const Icon = assertionItem.icon;
+                  const isAlreadyEnabled = assertionItem.assertion.enabled;
+
                   return (
-                    <button
+                    <div
                       key={assertionItem.id}
-                      onClick={() => handleSuggestedClick(assertionItem)}
-                      className='w-full flex items-start gap-4 p-4 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all text-left group'
+                      onClick={() =>
+                        !isAlreadyEnabled && handleSuggestedClick(assertionItem)
+                      }
+                      className={`w-full flex items-start gap-4 p-4 rounded-lg border transition-all text-left group ${
+                        isAlreadyEnabled
+                          ? 'border-blue-300 bg-blue-50 dark:bg-blue-900/20 cursor-default opacity-75'
+                          : 'border-gray-200 dark:border-gray-700 hover:border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer'
+                      }`}
                     >
-                      <div className='w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-800 group-hover:bg-blue-100 dark:group-hover:bg-blue-900/30 flex items-center justify-center flex-shrink-0 transition-colors'>
-                        <Icon className='w-5 h-5 text-gray-600 dark:text-gray-400 group-hover:text-blue-600 transition-colors' />
+                      <div
+                        className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors ${
+                          isAlreadyEnabled
+                            ? 'bg-blue-100 dark:bg-blue-900/30'
+                            : 'bg-gray-100 dark:bg-gray-800 group-hover:bg-blue-100 dark:group-hover:bg-blue-900/30'
+                        }`}
+                      >
+                        <Icon
+                          className={`w-5 h-5 transition-colors ${
+                            isAlreadyEnabled
+                              ? 'text-blue-600'
+                              : 'text-gray-600 dark:text-gray-400 group-hover:text-blue-600'
+                          }`}
+                        />
                       </div>
                       <div className='flex-1 min-w-0'>
-                        <div className='text-sm font-medium text-gray-900 dark:text-gray-100 group-hover:text-blue-900 dark:group-hover:text-blue-300'>
+                        <div
+                          className={`text-sm font-medium ${
+                            isAlreadyEnabled
+                              ? 'text-blue-700 dark:text-blue-400'
+                              : 'text-gray-900 dark:text-gray-100 group-hover:text-blue-900 dark:group-hover:text-blue-300'
+                          }`}
+                        >
                           {assertionItem.label}
+                          {isAlreadyEnabled && (
+                            <span className='ml-2 text-xs px-2 py-0.5 bg-blue-200 dark:bg-blue-800 text-blue-800 dark:text-blue-200 rounded-full'>
+                              Added
+                            </span>
+                          )}
                         </div>
                         <div className='text-xs text-gray-500 mt-1'>
                           {assertionItem.description}
                         </div>
                       </div>
-                    </button>
+                    </div>
                   );
                 })
               )}
@@ -458,29 +486,29 @@ function AssertionModal({
           {activeTab === 'manual' && (
             <div className='space-y-6'>
               <div>
-                <label className='block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3'>
+                <label className='block text-sm font-semibold text-gray-900 mb-3'>
                   Operator
                 </label>
                 <div className='grid grid-cols-3 gap-2'>
                   {operators.map((op) => (
-                    <button
+                    <Button
                       key={op.id}
                       onClick={() => setSelectedOperator(op.id)}
                       title={op.description}
                       className={`px-3 py-2 rounded-lg text-sm font-medium transition-all border ${
                         selectedOperator === op.id
-                          ? 'bg-blue-600 text-white border-blue-600'
-                          : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:border-blue-300'
+                          ? ' text-white border-blue-600'
+                          : 'bg-white text-gray-700 border-gray-200 hover:border-blue-300'
                       }`}
                     >
                       {op.label}
-                    </button>
+                    </Button>
                   ))}
                 </div>
               </div>
 
               <div>
-                <label className='block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2'>
+                <label className='block text-sm font-semibold text-gray-900 mb-2'>
                   Expected Value
                 </label>
                 <input
@@ -488,20 +516,18 @@ function AssertionModal({
                   value={manualValue}
                   onChange={(e) => setManualValue(e.target.value)}
                   placeholder='Enter the expected value'
-                  className='w-full px-4 py-3 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm'
+                  className='w-full px-4 py-3 border border-gray-300 bg-white text-gray-900 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm'
                   autoFocus
                 />
               </div>
 
-              <div className='bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3'>
-                <p className='text-sm text-gray-700 dark:text-gray-300'>
-                  <span className='font-mono text-blue-700 dark:text-blue-400'>
-                    {fieldPath}
-                  </span>
-                  <span className='text-gray-600 dark:text-gray-400 mx-2'>
+              <div className='bg-blue-50 border border-blue-200 rounded-lg p-3'>
+                <p className='text-sm text-gray-700'>
+                  <span className='font-mono text-blue-700'>{fieldPath}</span>
+                  <span className='text-gray-600 mx-2'>
                     {operators.find((o) => o.id === selectedOperator)?.label}
                   </span>
-                  <span className='font-mono text-blue-700 dark:text-blue-400'>
+                  <span className='font-mono text-blue-700'>
                     {manualValue || '...'}
                   </span>
                 </p>
@@ -510,10 +536,10 @@ function AssertionModal({
           )}
         </div>
 
-        <div className='p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex gap-2'>
+        <div className='px-6 py-4 border-t border-gray-200 flex items-center justify-between flex-shrink-0 bg-gray-50'>
           <button
             onClick={onClose}
-            className='flex-1 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors'
+            className='px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg text-sm font-medium transition-colors'
           >
             Cancel
           </button>
@@ -523,13 +549,13 @@ function AssertionModal({
             </p>
           )}
           {activeTab === 'general' && generalType && (
-            <button
+            <Button
               onClick={handleGeneralSubmit}
               disabled={!generalValue}
-              className='flex-1 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
+              className='px-4 py-2 text-sm font-medium text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
             >
               Add Assertion
-            </button>
+            </Button>
           )}
           {activeTab === 'suggested' && (
             <p className='flex-1 text-sm text-gray-500 text-center py-2'>
@@ -537,13 +563,13 @@ function AssertionModal({
             </p>
           )}
           {activeTab === 'manual' && (
-            <button
+            <Button
               onClick={handleManualSubmit}
               disabled={!manualValue}
-              className='flex-1 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
+              className='px-4 py-2 text-sm font-medium text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
             >
               Add Assertion
-            </button>
+            </Button>
           )}
         </div>
       </div>
