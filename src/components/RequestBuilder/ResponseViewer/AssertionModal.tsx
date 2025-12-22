@@ -18,23 +18,26 @@ function AssertionModal({
   isOpen,
   onSelect,
   onClose,
+  allAssertions = [],
 }: {
   fieldPath: string;
   fieldValue: any;
   isOpen: boolean;
   onSelect: (assertionType: string, config?: any) => void;
   onClose: () => void;
+  allAssertions?: any[];
 }) {
   const [activeTab, setActiveTab] = useState<
     'suggested' | 'manual' | 'general'
   >('suggested');
   const [selectedOperator, setSelectedOperator] = useState<string>('equals');
   const [manualValue, setManualValue] = useState('');
-  const [nlpInput, setNlpInput] = useState('');
-  const [nlpParsed, setNlpParsed] = useState<any>(null);
   const [generalType, setGeneralType] = useState<string>('');
   const [generalValue, setGeneralValue] = useState<string>('');
   const [generalComparison, setGeneralComparison] = useState<string>('less');
+
+  console.log('selectedOperator123:', selectedOperator);
+  console.log('manualValue123:', manualValue);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -53,51 +56,83 @@ function AssertionModal({
 
   if (!isOpen) return null;
 
-  const getValueType = (value: any): string => {
-    if (value === null) return 'null';
-    if (Array.isArray(value)) return 'array';
-    return typeof value;
-  };
+  // Filter assertions from assertionManager that match this specific field
+  const suggestedAssertions = allAssertions
+    .filter((assertion) => {
+      // Only show body category assertions that match the current field path
+      return assertion.category === 'body' && assertion.field === fieldPath;
+    })
+    .map((assertion) => {
+      // Map assertion types to display format
+      let label = '';
+      let description = '';
+      let icon = CheckCircle;
 
-  const valueType = getValueType(fieldValue);
-  const isArray = Array.isArray(fieldValue);
+      switch (assertion.type) {
+        case 'field_present':
+          label = 'Field Exists';
+          description = assertion.description;
+          icon = CheckCircle;
+          break;
+        case 'field_type':
+          label = 'Check Data Type';
+          description = assertion.description;
+          icon = Type;
+          break;
+        case 'field_not_empty':
+          label = 'Not Empty';
+          description = assertion.description;
+          icon = CheckCircle;
+          break;
+        case 'field_equals':
+          label = 'Equals Value';
+          description = assertion.description;
+          icon = CheckCircle;
+          break;
+        case 'field_contains':
+          label = 'Contains';
+          description = assertion.description;
+          icon = Code;
+          break;
+        case 'field_pattern':
+          label = 'Matches Pattern';
+          description = assertion.description;
+          icon = Code;
+          break;
+        case 'field_range':
+          label = 'Range Check';
+          description = assertion.description;
+          icon = CheckCircle;
+          break;
+        case 'field_null':
+          label = 'Is Null';
+          description = assertion.description;
+          icon = XCircle;
+          break;
+        case 'array_length':
+          label = 'Array Length';
+          description = assertion.description;
+          icon = List;
+          break;
+        case 'array_present':
+          label = 'Array Present';
+          description = assertion.description;
+          icon = List;
+          break;
+        default:
+          label = assertion.type.replace(/_/g, ' ');
+          description = assertion.description;
+          icon = CheckCircle;
+      }
 
-  const suggestedAssertions = [
-    {
-      id: 'exists',
-      label: 'Field Exists',
-      icon: CheckCircle,
-      description: 'Assert that this field exists in response',
-    },
-    {
-      id: 'not-exists',
-      label: 'Field Not Present',
-      icon: XCircle,
-      description: 'Assert that this field does not exist',
-    },
-    {
-      id: 'data-type',
-      label: 'Check Data Type',
-      icon: Type,
-      description: `Assert field is of type: ${valueType}`,
-    },
-    {
-      id: 'not-null',
-      label: 'Not Null',
-      icon: CheckCircle,
-      description: 'Assert field value is not null',
-    },
-    ...(isArray
-      ? [
-          {
-            id: 'is-array',
-            label: 'Is Array',
-            icon: List,
-            description: 'Assert field is an array',
-          },
-        ]
-      : []),
-  ];
+      return {
+        id: assertion.id,
+        label,
+        description,
+        icon,
+        assertion, // Keep original assertion for selection
+      };
+    });
 
   const generalAssertions = [
     {
@@ -150,6 +185,15 @@ function AssertionModal({
     },
   ];
 
+  const getValueType = (value: any): string => {
+    if (value === null) return 'null';
+    if (Array.isArray(value)) return 'array';
+    return typeof value;
+  };
+
+  const valueType = getValueType(fieldValue);
+  const isArray = Array.isArray(fieldValue);
+
   const operators = [
     { id: 'equals', label: '=', description: 'Equals' },
     { id: 'not-equals', label: '≠', description: 'Not equals' },
@@ -166,12 +210,9 @@ function AssertionModal({
       : []),
   ];
 
-  const handleSuggestedClick = (id: string) => {
-    const config: any = {};
-    if (id === 'data-type') {
-      config.expectedType = valueType;
-    }
-    onSelect(id, config);
+  const handleSuggestedClick = (assertionItem: any) => {
+    // Pass the entire assertion object back
+    onSelect('suggested', { assertion: assertionItem.assertion });
   };
 
   const handleManualSubmit = () => {
@@ -250,7 +291,7 @@ function AssertionModal({
           >
             <div className='flex items-center justify-center gap-2'>
               <CheckCircle className='w-4 h-4' />
-              Suggested
+              Suggested ({suggestedAssertions.length})
             </div>
           </button>
           <button
@@ -380,28 +421,37 @@ function AssertionModal({
 
           {activeTab === 'suggested' && (
             <div className='space-y-2'>
-              {suggestedAssertions.map((assertion) => {
-                const Icon = assertion.icon;
-                return (
-                  <button
-                    key={assertion.id}
-                    onClick={() => handleSuggestedClick(assertion.id)}
-                    className='w-full flex items-start gap-4 p-4 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all text-left group'
-                  >
-                    <div className='w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-800 group-hover:bg-blue-100 dark:group-hover:bg-blue-900/30 flex items-center justify-center flex-shrink-0 transition-colors'>
-                      <Icon className='w-5 h-5 text-gray-600 dark:text-gray-400 group-hover:text-blue-600 transition-colors' />
-                    </div>
-                    <div className='flex-1 min-w-0'>
-                      <div className='text-sm font-medium text-gray-900 dark:text-gray-100 group-hover:text-blue-900 dark:group-hover:text-blue-300'>
-                        {assertion.label}
+              {suggestedAssertions.length === 0 ? (
+                <div className='text-center py-8 text-gray-500'>
+                  <p className='mb-2'>No suggested assertions for this field</p>
+                  <p className='text-sm'>
+                    Try the Manual or General tabs to create custom assertions
+                  </p>
+                </div>
+              ) : (
+                suggestedAssertions.map((assertionItem) => {
+                  const Icon = assertionItem.icon;
+                  return (
+                    <button
+                      key={assertionItem.id}
+                      onClick={() => handleSuggestedClick(assertionItem)}
+                      className='w-full flex items-start gap-4 p-4 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all text-left group'
+                    >
+                      <div className='w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-800 group-hover:bg-blue-100 dark:group-hover:bg-blue-900/30 flex items-center justify-center flex-shrink-0 transition-colors'>
+                        <Icon className='w-5 h-5 text-gray-600 dark:text-gray-400 group-hover:text-blue-600 transition-colors' />
                       </div>
-                      <div className='text-xs text-gray-500 mt-1'>
-                        {assertion.description}
+                      <div className='flex-1 min-w-0'>
+                        <div className='text-sm font-medium text-gray-900 dark:text-gray-100 group-hover:text-blue-900 dark:group-hover:text-blue-300'>
+                          {assertionItem.label}
+                        </div>
+                        <div className='text-xs text-gray-500 mt-1'>
+                          {assertionItem.description}
+                        </div>
                       </div>
-                    </div>
-                  </button>
-                );
-              })}
+                    </button>
+                  );
+                })
+              )}
             </div>
           )}
 

@@ -1,7 +1,6 @@
 'use client';
 
 import type React from 'react';
-
 import { useState, useMemo, useEffect } from 'react';
 import {
   Copy,
@@ -16,18 +15,9 @@ import {
   Code,
   Hash,
   Cookie,
-  Trash2,
-  Shield,
-  Type,
-  List,
-  XCircle,
-  Wand2,
-  Code2,
-  Activity,
 } from 'lucide-react';
 import { useRequest } from '@/hooks/useRequest';
 import AssertionModal from './AssertionModal';
-import { AssertionsPanel } from './AssertionsPanel';
 
 interface JsonNode {
   key: string;
@@ -39,23 +29,8 @@ interface JsonNode {
   childCount?: number;
 }
 
-export interface Assertion {
-  id: number;
-  type: string;
-  path: string;
-  value: any;
-  operator?: string;
-  expectedType?: string;
-  originalText?: string;
-  isGeneral?: boolean;
-  expectedTime?: string;
-  expectedSize?: string;
-  comparison?: string;
-}
-
 const ResponseViewer = () => {
-  const { responseData } = useRequest();
-
+  const { responseData, assertions, setAssertions } = useRequest();
   const [activeTab, setActiveTab] = useState<
     | 'body'
     | 'headers'
@@ -74,8 +49,6 @@ const ResponseViewer = () => {
   const [showAssertionModal, setShowAssertionModal] = useState(false);
   const [activeFieldPath, setActiveFieldPath] = useState<string>('');
   const [activeFieldValue, setActiveFieldValue] = useState<any>(null);
-  const [assertions, setAssertions] = useState<Assertion[]>([]);
-  const [assertionIdCounter, setAssertionIdCounter] = useState(1);
 
   useEffect(() => {
     if (responseData?.body) {
@@ -256,20 +229,27 @@ const ResponseViewer = () => {
   };
 
   const handleAssertionSelect = (assertionType: string, config?: any) => {
-    const newAssertion: Assertion = {
-      id: assertionIdCounter,
-      type: assertionType,
-      path: activeFieldPath,
-      value: activeFieldValue,
-      ...config,
-    };
-    setAssertions([...assertions, newAssertion]);
-    setAssertionIdCounter(assertionIdCounter + 1);
+    if (assertionType === 'suggested' && config?.assertion) {
+      const assertion = config.assertion;
+      setAssertions(
+        assertions.map((a: any) =>
+          a.id === assertion.id ? { ...a, enabled: true } : a
+        )
+      );
+    } else {
+      const newAssertion = {
+        id: `manual-${Date.now()}`,
+        type: assertionType,
+        category: 'manual',
+        description: `Manual assertion for ${activeFieldPath}`,
+        field: activeFieldPath,
+        value: activeFieldValue,
+        enabled: true,
+        ...config,
+      };
+      setAssertions([...assertions, newAssertion]);
+    }
     handleModalClose();
-  };
-
-  const handleRemoveAssertion = (id: number) => {
-    setAssertions(assertions.filter((a) => a.id !== id));
   };
 
   const parseRequestFromCurl = () => {
@@ -541,7 +521,7 @@ const ResponseViewer = () => {
               {copiedItem === `header-${key}` ? (
                 <CheckCircle className='w-4 h-4 text-green-600' />
               ) : (
-                <Copy className='w-4 h-4' />
+                <Copy className='w-4 w-4' />
               )}
             </button>
           </div>
@@ -582,14 +562,8 @@ const ResponseViewer = () => {
   };
 
   const tabs = [
-    {
-      id: 'body',
-      label: 'Body',
-    },
-    {
-      id: 'headers',
-      label: 'Headers',
-    },
+    { id: 'body', label: 'Body' },
+    { id: 'headers', label: 'Headers' },
     { id: 'cookies', label: 'Cookies' },
     {
       id: 'test-results',
@@ -627,341 +601,338 @@ const ResponseViewer = () => {
   }
 
   return (
-    <div className='flex h-screen bg-gray-50 dark:bg-gray-950'>
-      <div className='flex-1 flex flex-col bg-white dark:bg-gray-900 min-h-0 overflow-hidden'>
-        <div className='bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex-shrink-0'>
-          <div className='flex items-center justify-between border-b border-gray-200 dark:border-gray-700'>
-            <nav className='flex space-x-6 px-4 whitespace-nowrap overflow-x-auto scrollbar-thin no-scrollbar'>
-              {tabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id as any)}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors flex items-center space-x-2 ${
-                    activeTab === tab.id
-                      ? 'border-blue-600 text-blue-600'
-                      : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
-                  }`}
-                >
-                  <span>{tab.label}</span>
-                  {tab.hasIndicator && (
-                    <span className='w-1.5 h-1.5 bg-blue-500 rounded-full' />
-                  )}
-                </button>
-              ))}
-            </nav>
-
-            <div className='px-4'>
-              <StatusSummary />
-            </div>
-          </div>
-
-          <div className='flex items-center justify-between px-4 py-1'>
-            <div className='flex items-center space-x-4'>
-              <button className='flex items-center space-x-2 text-sm font-medium text-blue-600'>
-                <CheckCircle className='w-4 h-4' />
-                <span>Pretty</span>
-              </button>
-              <button className='flex items-center space-x-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'>
-                <Code className='w-4 h-4' />
-                <span>Raw</span>
-              </button>
-            </div>
-
-            <div className='flex items-center space-x-2'>
+    <div className='flex-1 flex flex-col bg-white dark:bg-gray-900 h-full overflow-hidden'>
+      <div className='bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex-shrink-0'>
+        <div className='flex items-center justify-between border-b border-gray-200 dark:border-gray-700'>
+          <nav className='flex space-x-6 px-4 whitespace-nowrap overflow-x-auto scrollbar-thin no-scrollbar'>
+            {tabs.map((tab) => (
               <button
-                onClick={() => setShowSearch(!showSearch)}
-                className='p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400'
-                title='Search in response'
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors flex items-center space-x-2 ${
+                  activeTab === tab.id
+                    ? 'border-blue-600 text-blue-600'
+                    : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                }`}
               >
-                <Search className='h-4 w-4' />
-              </button>
-              <button
-                onClick={() =>
-                  handleCopy(
-                    JSON.stringify(responseData.body, null, 2),
-                    'full-response'
-                  )
-                }
-                className='p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400'
-                title='Copy response'
-              >
-                {copiedItem === 'full-response' ? (
-                  <CheckCircle className='h-4 w-4 text-green-600' />
-                ) : (
-                  <Copy className='h-4 w-4' />
+                <span>{tab.label}</span>
+                {tab.hasIndicator && (
+                  <span className='w-1.5 h-1.5 bg-blue-500 rounded-full' />
                 )}
               </button>
+            ))}
+          </nav>
+
+          <div className='px-4'>
+            <StatusSummary />
+          </div>
+        </div>
+
+        <div className='flex items-center justify-between px-4 py-1'>
+          <div className='flex items-center space-x-4'>
+            <button className='flex items-center space-x-2 text-sm font-medium text-blue-600'>
+              <CheckCircle className='w-4 h-4' />
+              <span>Pretty</span>
+            </button>
+            <button className='flex items-center space-x-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'>
+              <Code className='w-4 h-4' />
+              <span>Raw</span>
+            </button>
+          </div>
+
+          <div className='flex items-center space-x-2'>
+            <button
+              onClick={() => setShowSearch(!showSearch)}
+              className='p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400'
+              title='Search in response'
+            >
+              <Search className='h-4 w-4' />
+            </button>
+            <button
+              onClick={() =>
+                handleCopy(
+                  JSON.stringify(responseData.body, null, 2),
+                  'full-response'
+                )
+              }
+              className='p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400'
+              title='Copy response'
+            >
+              {copiedItem === 'full-response' ? (
+                <CheckCircle className='h-4 w-4 text-green-600' />
+              ) : (
+                <Copy className='h-4 w-4' />
+              )}
+            </button>
+            <button
+              onClick={downloadResponse}
+              className='p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400'
+              title='Download response'
+            >
+              <Download className='h-4 w-4' />
+            </button>
+          </div>
+        </div>
+
+        {showSearch && (
+          <div className='px-4 py-2 border-b border-gray-200 dark:border-gray-700'>
+            <div className='flex items-center space-x-2'>
+              <div className='flex-1 relative'>
+                <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-600 dark:text-gray-400' />
+                <input
+                  type='text'
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder='Search in response...'
+                  className='w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm'
+                  autoFocus
+                />
+              </div>
               <button
-                onClick={downloadResponse}
+                onClick={() => {
+                  setShowSearch(false);
+                  setSearchQuery('');
+                }}
                 className='p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400'
-                title='Download response'
               >
-                <Download className='h-4 w-4' />
+                <X className='h-4 w-4' />
               </button>
             </div>
           </div>
+        )}
+      </div>
 
-          {showSearch && (
-            <div className='px-4 py-2 border-b border-gray-200 dark:border-gray-700'>
-              <div className='flex items-center space-x-2'>
-                <div className='flex-1 relative'>
-                  <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-600 dark:text-gray-400' />
-                  <input
-                    type='text'
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder='Search in response...'
-                    className='w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm'
-                    autoFocus
-                  />
-                </div>
-                <button
-                  onClick={() => {
-                    setShowSearch(false);
-                    setSearchQuery('');
-                  }}
-                  className='p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400'
-                >
-                  <X className='h-4 w-4' />
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
+      <div className='flex-1 overflow-auto p-4 scrollbar-thin'>
+        {activeTab === 'body' && renderJsonTree()}
+        {activeTab === 'headers' && renderHeadersTab()}
+        {activeTab === 'cookies' && (
+          <div className='text-center py-8 text-gray-600 dark:text-gray-400'>
+            <Cookie className='w-12 h-12 text-gray-400 mx-auto mb-3' />
+            <p>No cookies found in response</p>
+          </div>
+        )}
 
-        <div className='flex-1 overflow-auto p-4 scrollbar-thin'>
-          {activeTab === 'body' && <div>{renderJsonTree()}</div>}
-          {activeTab === 'headers' && renderHeadersTab()}
-          {activeTab === 'cookies' && (
-            <div className='text-center py-8 text-gray-600 dark:text-gray-400'>
-              <Cookie className='w-12 h-12 text-gray-400 mx-auto mb-3' />
-              <p>No cookies found in response</p>
-            </div>
-          )}
-
-          {activeTab === 'test-results' &&
-            Array.isArray(responseData.assertionLogs) && (
-              <div className='space-y-2'>
-                {responseData.assertionLogs.map((assertion: any) => (
-                  <div
-                    key={assertion.id}
-                    className={`border rounded-lg p-3 ${
-                      assertion.status === 'passed'
-                        ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
-                        : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
-                    }`}
-                  >
-                    <div className='flex items-center space-x-2'>
-                      {assertion.status === 'passed' ? (
-                        <CheckCircle className='h-5 w-5 text-green-600 dark:text-green-400' />
-                      ) : (
-                        <X className='h-5 w-5 text-red-600 dark:text-red-400' />
-                      )}
-                      <h4 className='font-medium text-gray-900 dark:text-gray-100'>
-                        {assertion.description}
-                      </h4>
-                    </div>
-                    {assertion.errorMessage && (
-                      <p className='mt-2 text-sm text-red-600 dark:text-red-400'>
-                        {assertion.errorMessage}
-                      </p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-
-          {activeTab === 'schema' && (
-            <div className='p-4 overflow-auto scrollbar-thin h-full'>
-              {responseData.schemaValidation ? (
-                <div className='space-y-4'>
-                  <div
-                    className={`border rounded-lg p-4 ${
-                      responseData.schemaValidation.passed
-                        ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
-                        : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
-                    }`}
-                  >
-                    <div className='flex items-center space-x-2'>
-                      {responseData.schemaValidation.passed ? (
-                        <CheckCircle className='h-5 w-5 text-green-600 flex-shrink-0' />
-                      ) : (
-                        <X className='h-5 w-5 text-red-600 flex-shrink-0' />
-                      )}
-                      <div>
-                        <h3
-                          className={`font-medium ${
-                            responseData.schemaValidation.passed
-                              ? 'text-green-800 dark:text-green-300'
-                              : 'text-red-800 dark:text-red-300'
-                          }`}
-                        >
-                          Schema Validation{' '}
-                          {responseData.schemaValidation.passed
-                            ? 'Passed'
-                            : 'Failed'}
-                        </h3>
-                        <p className='text-sm text-gray-600 dark:text-gray-400 mt-1'>
-                          Schema: {responseData.schemaValidation.name}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {!responseData.schemaValidation.passed &&
-                    responseData.schemaValidation.results?.length > 0 && (
-                      <div className='border rounded-lg p-4 bg-white dark:bg-gray-900'>
-                        <h4 className='font-medium text-sm mb-3 text-red-700 dark:text-red-400'>
-                          Validation Errors:
-                        </h4>
-                        <ul className='space-y-2 text-sm'>
-                          {responseData.schemaValidation.results.map(
-                            (issue: any, idx: number) => (
-                              <li
-                                key={idx}
-                                className='flex flex-col border-l-2 border-red-400 pl-2'
-                              >
-                                <span className='font-medium text-gray-800 dark:text-gray-200'>
-                                  {issue.field}
-                                </span>
-                                <span className='text-gray-600 dark:text-gray-400'>
-                                  {issue.description}
-                                </span>
-                                {issue.value !== undefined &&
-                                  issue.value !== null && (
-                                    <span className='text-xs text-gray-400'>
-                                      Value: {String(issue.value)}
-                                    </span>
-                                  )}
-                              </li>
-                            )
-                          )}
-                        </ul>
-                      </div>
-                    )}
+        {activeTab === 'test-results' &&
+          Array.isArray(responseData.assertionLogs) && (
+            <div className='space-y-2'>
+              {responseData.assertionLogs.length === 0 ? (
+                <div className='text-center py-8 text-gray-500'>
+                  <p>No test results available</p>
                 </div>
               ) : (
-                <div className='text-center py-8'>
-                  <div className='text-gray-500 dark:text-gray-400 mb-2'>
-                    No schema validation results
-                  </div>
-                  <div className='text-sm text-gray-400'>
-                    Schema validation will appear here when available
-                  </div>
-                </div>
+                responseData.assertionLogs.map(
+                  (assertion: any, idx: number) => (
+                    <div
+                      key={idx}
+                      className={`border rounded-lg p-3 ${
+                        assertion.status === 'passed'
+                          ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
+                          : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
+                      }`}
+                    >
+                      <div className='flex items-center space-x-2'>
+                        {assertion.status === 'passed' ? (
+                          <CheckCircle className='h-5 w-5 text-green-600 dark:text-green-400' />
+                        ) : (
+                          <X className='h-5 w-5 text-red-600 dark:text-red-400' />
+                        )}
+                        <h4 className='font-medium text-gray-900 dark:text-gray-100'>
+                          {assertion.description}
+                        </h4>
+                      </div>
+                      {assertion.errorMessage && (
+                        <p className='mt-2 text-sm text-red-600 dark:text-red-400'>
+                          {assertion.errorMessage}
+                        </p>
+                      )}
+                    </div>
+                  )
+                )
               )}
             </div>
           )}
 
-          {activeTab === 'actual-request' && requestDetails && (
-            <div className='space-y-4'>
+        {activeTab === 'schema' && (
+          <div className='p-4 overflow-auto scrollbar-thin h-full'>
+            {responseData.schemaValidation ? (
+              <div className='space-y-4'>
+                <div
+                  className={`border rounded-lg p-4 ${
+                    responseData.schemaValidation.passed
+                      ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
+                      : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
+                  }`}
+                >
+                  <div className='flex items-center space-x-2'>
+                    {responseData.schemaValidation.passed ? (
+                      <CheckCircle className='h-5 w-5 text-green-600 flex-shrink-0' />
+                    ) : (
+                      <X className='h-5 w-5 text-red-600 flex-shrink-0' />
+                    )}
+                    <div>
+                      <h3
+                        className={`font-medium ${
+                          responseData.schemaValidation.passed
+                            ? 'text-green-800 dark:text-green-300'
+                            : 'text-red-800 dark:text-red-300'
+                        }`}
+                      >
+                        Schema Validation{' '}
+                        {responseData.schemaValidation.passed
+                          ? 'Passed'
+                          : 'Failed'}
+                      </h3>
+                      <p className='text-sm text-gray-600 dark:text-gray-400 mt-1'>
+                        Schema: {responseData.schemaValidation.name}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {!responseData.schemaValidation.passed &&
+                  responseData.schemaValidation.results?.length > 0 && (
+                    <div className='border rounded-lg p-4 bg-white dark:bg-gray-900'>
+                      <h4 className='font-medium text-sm mb-3 text-red-700 dark:text-red-400'>
+                        Validation Errors:
+                      </h4>
+                      <ul className='space-y-2 text-sm'>
+                        {responseData.schemaValidation.results.map(
+                          (issue: any, idx: number) => (
+                            <li
+                              key={idx}
+                              className='flex flex-col border-l-2 border-red-400 pl-2'
+                            >
+                              <span className='font-medium text-gray-800 dark:text-gray-200'>
+                                {issue.field}
+                              </span>
+                              <span className='text-gray-600 dark:text-gray-400'>
+                                {issue.description}
+                              </span>
+                              {issue.value !== undefined &&
+                                issue.value !== null && (
+                                  <span className='text-xs text-gray-400'>
+                                    Value: {String(issue.value)}
+                                  </span>
+                                )}
+                            </li>
+                          )
+                        )}
+                      </ul>
+                    </div>
+                  )}
+              </div>
+            ) : (
+              <div className='text-center py-8'>
+                <div className='text-gray-500 dark:text-gray-400 mb-2'>
+                  No schema validation results
+                </div>
+                <div className='text-sm text-gray-400'>
+                  Schema validation will appear here when available
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'actual-request' && requestDetails && (
+          <div className='space-y-4'>
+            <div className='bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4'>
+              <h3 className='text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3'>
+                Request URL:
+              </h3>
+              <div className='flex items-center space-x-3'>
+                <span className='px-3 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 rounded font-semibold text-sm'>
+                  {requestDetails.method}
+                </span>
+                <span className='text-sm text-gray-900 dark:text-gray-100 font-mono flex-1 truncate'>
+                  {requestDetails.url}
+                </span>
+                <button
+                  onClick={() => handleCopy(requestDetails.url, 'request-url')}
+                  className='p-1 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 rounded'
+                  title='Copy URL'
+                >
+                  {copiedItem === 'request-url' ? (
+                    <CheckCircle className='w-4 h-4 text-green-600' />
+                  ) : (
+                    <Copy className='w-4 h-4' />
+                  )}
+                </button>
+              </div>
+            </div>
+
+            <div className='bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4'>
+              <h3 className='text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3'>
+                Headers:
+              </h3>
+              <div className='overflow-x-auto scrollbar-thin'>
+                <table className='w-full text-sm'>
+                  <thead>
+                    <tr className='border-b border-gray-200 dark:border-gray-700'>
+                      <th className='text-left py-2 px-3 text-gray-600 dark:text-gray-400 font-semibold'>
+                        Name
+                      </th>
+                      <th className='text-left py-2 px-3 text-gray-600 dark:text-gray-400 font-semibold'>
+                        Value
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {Object.entries(requestDetails.headers).map(
+                      ([name, value]) => (
+                        <tr
+                          key={name}
+                          className='border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors'
+                        >
+                          <td className='py-2 px-3 text-gray-900 dark:text-gray-100 font-medium'>
+                            {name}
+                          </td>
+                          <td className='py-2 px-3 text-gray-600 dark:text-gray-400 font-mono'>
+                            {String(value)}
+                          </td>
+                        </tr>
+                      )
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {requestDetails.body && (
               <div className='bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4'>
-                <h3 className='text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3'>
-                  Request URL:
-                </h3>
-                <div className='flex items-center space-x-3'>
-                  <span className='px-3 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 rounded font-semibold text-sm'>
-                    {requestDetails.method}
+                <div className='flex items-center justify-between mb-3'>
+                  <h3 className='text-sm font-semibold text-gray-900 dark:text-gray-100'>
+                    Body:
+                  </h3>
+                  <span className='text-xs text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded'>
+                    Body Type: application/json
                   </span>
-                  <span className='text-sm text-gray-900 dark:text-gray-100 font-mono flex-1 truncate'>
-                    {requestDetails.url}
-                  </span>
+                </div>
+                <div className='bg-gray-100 dark:bg-gray-800 rounded-lg p-3 relative'>
                   <button
                     onClick={() =>
-                      handleCopy(requestDetails.url, 'request-url')
+                      handleCopy(
+                        JSON.stringify(requestDetails.body, null, 2),
+                        'request-body'
+                      )
                     }
-                    className='p-1 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 rounded'
-                    title='Copy URL'
+                    className='absolute top-2 right-2 p-1 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 rounded'
+                    title='Copy body'
                   >
-                    {copiedItem === 'request-url' ? (
+                    {copiedItem === 'request-body' ? (
                       <CheckCircle className='w-4 h-4 text-green-600' />
                     ) : (
                       <Copy className='w-4 h-4' />
                     )}
                   </button>
+                  <pre className='text-sm text-gray-900 dark:text-gray-100 font-mono overflow-x-auto scrollbar-thin'>
+                    {JSON.stringify(requestDetails.body, null, 2)}
+                  </pre>
                 </div>
               </div>
-
-              <div className='bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4'>
-                <h3 className='text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3'>
-                  Headers:
-                </h3>
-                <div className='overflow-x-auto scrollbar-thin'>
-                  <table className='w-full text-sm'>
-                    <thead>
-                      <tr className='border-b border-gray-200 dark:border-gray-700'>
-                        <th className='text-left py-2 px-3 text-gray-600 dark:text-gray-400 font-semibold'>
-                          Name
-                        </th>
-                        <th className='text-left py-2 px-3 text-gray-600 dark:text-gray-400 font-semibold'>
-                          Value
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {Object.entries(requestDetails.headers).map(
-                        ([name, value]) => (
-                          <tr
-                            key={name}
-                            className='border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors'
-                          >
-                            <td className='py-2 px-3 text-gray-900 dark:text-gray-100 font-medium'>
-                              {name}
-                            </td>
-                            <td className='py-2 px-3 text-gray-600 dark:text-gray-400 font-mono'>
-                              {String(value) as React.ReactNode}
-                            </td>
-                          </tr>
-                        )
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {requestDetails.body && (
-                <div className='bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4'>
-                  <div className='flex items-center justify-between mb-3'>
-                    <h3 className='text-sm font-semibold text-gray-900 dark:text-gray-100'>
-                      Body:
-                    </h3>
-                    <span className='text-xs text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded'>
-                      Body Type: application/json
-                    </span>
-                  </div>
-                  <div className='bg-gray-100 dark:bg-gray-800 rounded-lg p-3 relative'>
-                    <button
-                      onClick={() =>
-                        handleCopy(
-                          JSON.stringify(requestDetails.body, null, 2),
-                          'request-body'
-                        )
-                      }
-                      className='absolute top-2 right-2 p-1 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 rounded'
-                      title='Copy body'
-                    >
-                      {copiedItem === 'request-body' ? (
-                        <CheckCircle className='w-4 h-4 text-green-600' />
-                      ) : (
-                        <Copy className='w-4 h-4' />
-                      )}
-                    </button>
-                    <pre className='text-sm text-gray-900 dark:text-gray-100 font-mono overflow-x-auto scrollbar-thin'>
-                      {JSON.stringify(requestDetails.body, null, 2)}
-                    </pre>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div className='w-80 flex-shrink-0'>
-        <AssertionsPanel
-          assertions={assertions}
-          onRemoveAssertion={handleRemoveAssertion}
-        />
+            )}
+          </div>
+        )}
       </div>
 
       <AssertionModal
@@ -970,6 +941,7 @@ const ResponseViewer = () => {
         isOpen={showAssertionModal}
         onSelect={handleAssertionSelect}
         onClose={handleModalClose}
+        allAssertions={assertions}
       />
     </div>
   );

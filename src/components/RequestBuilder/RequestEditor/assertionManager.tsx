@@ -27,6 +27,8 @@ const AssertionManager: React.FC<AssertionManagerProps> = ({
   setAssertions,
   onSaveAssertions,
 }) => {
+  console.log('assertionsinManager:', assertions);
+
   const [showDialog, setShowDialog] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('All Categories');
   const [searchTerm, setSearchTerm] = useState('');
