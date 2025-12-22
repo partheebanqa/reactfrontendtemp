@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { Trash2, Plus } from 'lucide-react';
 import AssertionManager from '@/components/RequestBuilder/RequestEditor/assertionManager';
-import ManualAssertionBuilder from '@/components/Shared/RequestTabs/manualAssertions';
 import {
   AlertDialog,
   AlertDialogContent,
@@ -264,14 +263,6 @@ export function PrePostRequest({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      {showManualAssertionModal && (
-        <ManualAssertionBuilder
-          onAdd={handleAddManualAssertion}
-          responseData={responseData}
-          onClose={() => setShowManualAssertionModal(false)}
-        />
-      )}
     </div>
   );
 }

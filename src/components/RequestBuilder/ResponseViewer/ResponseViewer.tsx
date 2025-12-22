@@ -1,5 +1,6 @@
 'use client';
 
+import type React from 'react';
 import { useState, useMemo, useEffect } from 'react';
 import {
   Copy,
@@ -11,19 +12,12 @@ import {
   HardDrive,
   ChevronDown,
   ChevronRight,
-  Plus,
   Code,
   Hash,
   Cookie,
-  Trash2,
-  Shield,
-  Type,
-  List,
-  XCircle,
-  Wand2,
-  Code2,
 } from 'lucide-react';
 import { useRequest } from '@/hooks/useRequest';
+import AssertionModal from './AssertionModal';
 
 interface JsonNode {
   key: string;
@@ -35,556 +29,8 @@ interface JsonNode {
   childCount?: number;
 }
 
-interface Assertion {
-  id: number;
-  type: string;
-  path: string;
-  value: any;
-  operator?: string;
-  expectedType?: string;
-  originalText?: string;
-}
-
-function AssertionModal({
-  fieldPath,
-  fieldValue,
-  isOpen,
-  onSelect,
-  onClose,
-}: {
-  fieldPath: string;
-  fieldValue: any;
-  isOpen: boolean;
-  onSelect: (assertionType: string, config?: any) => void;
-  onClose: () => void;
-}) {
-  const [activeTab, setActiveTab] = useState<'suggested' | 'manual' | 'nlp'>(
-    'suggested'
-  );
-  const [selectedOperator, setSelectedOperator] = useState<string>('equals');
-  const [manualValue, setManualValue] = useState('');
-  const [nlpInput, setNlpInput] = useState('');
-  const [nlpParsed, setNlpParsed] = useState<any>(null);
-
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        onClose();
-      }
-    };
-
-    document.addEventListener('keydown', handleEscape);
-    return () => {
-      document.removeEventListener('keydown', handleEscape);
-    };
-  }, [isOpen, onClose]);
-
-  if (!isOpen) return null;
-
-  const getValueType = (value: any): string => {
-    if (value === null) return 'null';
-    if (Array.isArray(value)) return 'array';
-    return typeof value;
-  };
-
-  const valueType = getValueType(fieldValue);
-  const isArray = Array.isArray(fieldValue);
-
-  const suggestedAssertions = [
-    {
-      id: 'exists',
-      label: 'Field Exists',
-      icon: CheckCircle,
-      description: 'Assert that this field exists in response',
-    },
-    {
-      id: 'not-exists',
-      label: 'Field Not Present',
-      icon: XCircle,
-      description: 'Assert that this field does not exist',
-    },
-    {
-      id: 'data-type',
-      label: 'Check Data Type',
-      icon: Type,
-      description: `Assert field is of type: ${valueType}`,
-    },
-    {
-      id: 'not-null',
-      label: 'Not Null',
-      icon: CheckCircle,
-      description: 'Assert field value is not null',
-    },
-    ...(isArray
-      ? [
-          {
-            id: 'is-array',
-            label: 'Is Array',
-            icon: List,
-            description: 'Assert field is an array',
-          },
-        ]
-      : []),
-  ];
-
-  const operators = [
-    { id: 'equals', label: '=', description: 'Equals' },
-    { id: 'not-equals', label: '≠', description: 'Not equals' },
-    { id: 'greater-than', label: '>', description: 'Greater than' },
-    { id: 'less-than', label: '<', description: 'Less than' },
-    { id: 'contains', label: 'contains', description: 'Contains' },
-    {
-      id: 'not-contains',
-      label: 'not contains',
-      description: 'Does not contain',
-    },
-    ...(isArray
-      ? [{ id: 'array-length', label: 'length', description: 'Array length' }]
-      : []),
-  ];
-
-  const handleSuggestedClick = (id: string) => {
-    const config: any = {};
-    if (id === 'data-type') {
-      config.expectedType = valueType;
-    }
-    onSelect(id, config);
-  };
-
-  const handleManualSubmit = () => {
-    if (!manualValue) return;
-    const config: any = {
-      operator: selectedOperator,
-      value: manualValue,
-    };
-    onSelect('manual', config);
-  };
-
-  const parseNLPAssertion = (text: string) => {
-    const lowerText = text.toLowerCase();
-
-    const patterns = [
-      {
-        regex: /(\w+)\s*(?:is|should be)?\s*([<>≤≥=!]*)\s*(.+?)(?:\s|$)/i,
-        groups: { field: 1, op: 2, value: 3 },
-      },
-      {
-        regex: /([<>])\s*(\d+)\s*(kb|ms|k|bytes)?/i,
-        groups: { op: 1, value: 2, unit: 3 },
-      },
-      {
-        regex: /(contains|includes|has)\s+(.+?)(?:\s|$)/i,
-        groups: { op: 1, value: 2 },
-      },
-    ];
-
-    for (const pattern of patterns) {
-      const match = text.match(pattern.regex);
-      if (match) {
-        let operator = 'equals';
-        let value = match[3] || match[2];
-
-        if (match[2] === '<' || lowerText.includes('less'))
-          operator = 'less-than';
-        else if (
-          match[2] === '>' ||
-          lowerText.includes('greater') ||
-          lowerText.includes('more')
-        )
-          operator = 'greater-than';
-        else if (
-          lowerText.includes('contains') ||
-          lowerText.includes('includes')
-        )
-          operator = 'contains';
-        else if (lowerText.includes('not') && lowerText.includes('contains'))
-          operator = 'not-contains';
-
-        return {
-          parsed: true,
-          text: `${fieldPath} ${
-            operators.find((o) => o.id === operator)?.label || '='
-          } ${value}`,
-          operator,
-          value,
-        };
-      }
-    }
-
-    return { parsed: false, text: '', operator: 'equals', value: '' };
-  };
-
-  const handleNLPChange = (text: string) => {
-    setNlpInput(text);
-    if (text.trim()) {
-      setNlpParsed(parseNLPAssertion(text));
-    } else {
-      setNlpParsed(null);
-    }
-  };
-
-  const handleNLPSubmit = () => {
-    if (!nlpParsed || !nlpParsed.parsed || !nlpParsed.value) return;
-    const config: any = {
-      operator: nlpParsed.operator,
-      value: nlpParsed.value,
-      originalText: nlpInput,
-    };
-    onSelect('nlp', config);
-  };
-
-  return (
-    <div
-      className='fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4'
-      onClick={onClose}
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        className='bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col border border-gray-200 dark:border-gray-700'
-      >
-        <div className='p-4 border-b border-gray-200 dark:border-gray-700 flex items-start justify-between'>
-          <div className='flex-1'>
-            <h2 className='text-lg font-semibold text-gray-900 dark:text-gray-100'>
-              Add Assertion
-            </h2>
-            <p className='text-xs text-gray-500 mt-1 font-mono'>{fieldPath}</p>
-          </div>
-          <button
-            onClick={onClose}
-            className='text-gray-400 hover:text-gray-600 transition-colors ml-2'
-          >
-            <X className='w-5 h-5' />
-          </button>
-        </div>
-
-        <div className='flex border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800'>
-          <button
-            onClick={() => setActiveTab('suggested')}
-            className={`flex-1 px-4 py-3 text-sm font-medium transition-all ${
-              activeTab === 'suggested'
-                ? 'text-blue-600 border-b-2 border-blue-600 bg-white dark:bg-gray-900'
-                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
-            }`}
-          >
-            <div className='flex items-center justify-center gap-2'>
-              <CheckCircle className='w-4 h-4' />
-              Suggested
-            </div>
-          </button>
-          <button
-            onClick={() => setActiveTab('manual')}
-            className={`flex-1 px-4 py-3 text-sm font-medium transition-all ${
-              activeTab === 'manual'
-                ? 'text-blue-600 border-b-2 border-blue-600 bg-white dark:bg-gray-900'
-                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
-            }`}
-          >
-            <div className='flex items-center justify-center gap-2'>
-              <Code2 className='w-4 h-4' />
-              Manual
-            </div>
-          </button>
-          <button
-            onClick={() => setActiveTab('nlp')}
-            className={`flex-1 px-4 py-3 text-sm font-medium transition-all ${
-              activeTab === 'nlp'
-                ? 'text-blue-600 border-b-2 border-blue-600 bg-white dark:bg-gray-900'
-                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
-            }`}
-          >
-            <div className='flex items-center justify-center gap-2'>
-              <Wand2 className='w-4 h-4' />
-              Plain English
-            </div>
-          </button>
-        </div>
-
-        <div className='flex-1 overflow-y-auto p-6'>
-          {activeTab === 'suggested' && (
-            <div className='space-y-2'>
-              {suggestedAssertions.map((assertion) => {
-                const Icon = assertion.icon;
-                return (
-                  <button
-                    key={assertion.id}
-                    onClick={() => handleSuggestedClick(assertion.id)}
-                    className='w-full flex items-start gap-4 p-4 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all text-left group'
-                  >
-                    <div className='w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-800 group-hover:bg-blue-100 dark:group-hover:bg-blue-900/30 flex items-center justify-center flex-shrink-0 transition-colors'>
-                      <Icon className='w-5 h-5 text-gray-600 dark:text-gray-400 group-hover:text-blue-600 transition-colors' />
-                    </div>
-                    <div className='flex-1 min-w-0'>
-                      <div className='text-sm font-medium text-gray-900 dark:text-gray-100 group-hover:text-blue-900 dark:group-hover:text-blue-300'>
-                        {assertion.label}
-                      </div>
-                      <div className='text-xs text-gray-500 mt-1'>
-                        {assertion.description}
-                      </div>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          )}
-
-          {activeTab === 'manual' && (
-            <div className='space-y-6'>
-              <div>
-                <label className='block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3'>
-                  Operator
-                </label>
-                <div className='grid grid-cols-3 gap-2'>
-                  {operators.map((op) => (
-                    <button
-                      key={op.id}
-                      onClick={() => setSelectedOperator(op.id)}
-                      title={op.description}
-                      className={`px-3 py-2 rounded-lg text-sm font-medium transition-all border ${
-                        selectedOperator === op.id
-                          ? 'bg-blue-600 text-white border-blue-600'
-                          : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:border-blue-300'
-                      }`}
-                    >
-                      {op.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <label className='block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2'>
-                  Expected Value
-                </label>
-                <input
-                  type='text'
-                  value={manualValue}
-                  onChange={(e) => setManualValue(e.target.value)}
-                  placeholder='Enter the expected value'
-                  className='w-full px-4 py-3 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm'
-                  autoFocus
-                />
-              </div>
-
-              <div className='bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3'>
-                <p className='text-sm text-gray-700 dark:text-gray-300'>
-                  <span className='font-mono text-blue-700 dark:text-blue-400'>
-                    {fieldPath}
-                  </span>
-                  <span className='text-gray-600 dark:text-gray-400 mx-2'>
-                    {operators.find((o) => o.id === selectedOperator)?.label}
-                  </span>
-                  <span className='font-mono text-blue-700 dark:text-blue-400'>
-                    {manualValue || '...'}
-                  </span>
-                </p>
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'nlp' && (
-            <div className='space-y-4'>
-              <div>
-                <label className='block text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2'>
-                  Describe your assertion in plain English
-                </label>
-                <textarea
-                  value={nlpInput}
-                  onChange={(e) => handleNLPChange(e.target.value)}
-                  placeholder='e.g., response time is less than 500ms&#10;or email field contains @example.com&#10;or payload size greater than 200kb'
-                  className='w-full px-4 py-3 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm resize-none h-24'
-                  autoFocus
-                />
-              </div>
-
-              {nlpParsed && nlpParsed.parsed && (
-                <div className='bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4'>
-                  <div className='text-xs font-semibold text-green-700 dark:text-green-400 uppercase tracking-wide mb-2'>
-                    Parsed Assertion
-                  </div>
-                  <div className='bg-white dark:bg-gray-900 rounded px-3 py-2 font-mono text-sm text-gray-700 dark:text-gray-300 border border-green-200 dark:border-green-800'>
-                    {nlpParsed.text}
-                  </div>
-                </div>
-              )}
-
-              {nlpInput && !nlpParsed?.parsed && (
-                <div className='bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4'>
-                  <div className='text-sm text-yellow-800 dark:text-yellow-300'>
-                    Could not parse your assertion. Try using keywords like
-                    "less than", "greater than", "contains", or specific
-                    operators like "&lt;", "&gt;".
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        <div className='p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex gap-2'>
-          <button
-            onClick={onClose}
-            className='flex-1 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors'
-          >
-            Cancel
-          </button>
-          {activeTab === 'suggested' && (
-            <p className='flex-1 text-sm text-gray-500 text-center py-2'>
-              Click on any assertion above to add it
-            </p>
-          )}
-          {activeTab === 'manual' && (
-            <button
-              onClick={handleManualSubmit}
-              disabled={!manualValue}
-              className='flex-1 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
-            >
-              Add Assertion
-            </button>
-          )}
-          {activeTab === 'nlp' && (
-            <button
-              onClick={handleNLPSubmit}
-              disabled={!nlpParsed?.parsed || !nlpParsed?.value}
-              className='flex-1 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
-            >
-              Add Assertion
-            </button>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function AssertionsPanel({
-  assertions,
-  onRemoveAssertion,
-}: {
-  assertions: Assertion[];
-  onRemoveAssertion: (id: number) => void;
-}) {
-  const getAssertionLabel = (assertion: Assertion): string => {
-    switch (assertion.type) {
-      case 'exists':
-        return 'Field exists';
-      case 'not-exists':
-        return 'Field not present';
-      case 'data-type':
-        return `Type is ${assertion.expectedType}`;
-      case 'not-null':
-        return 'Not null';
-      case 'is-array':
-        return 'Is array';
-      case 'manual':
-        return `${getOperatorLabel(assertion.operator!)} ${assertion.value}`;
-      case 'nlp':
-        return assertion.originalText!;
-      default:
-        return assertion.type;
-    }
-  };
-
-  const getOperatorLabel = (op: string): string => {
-    const operators: { [key: string]: string } = {
-      equals: '=',
-      'not-equals': '≠',
-      'greater-than': '>',
-      'less-than': '<',
-      contains: 'contains',
-      'not-contains': 'not contains',
-      'array-length': 'length',
-    };
-    return operators[op] || op;
-  };
-
-  return (
-    <div className='flex flex-col h-full bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700'>
-      <div className='p-4 border-b border-gray-200 dark:border-gray-700'>
-        <h2 className='text-lg font-semibold text-gray-900 dark:text-gray-100'>
-          Active Assertions
-        </h2>
-        <p className='text-sm text-gray-500 mt-1'>
-          {assertions.length} assertion{assertions.length !== 1 ? 's' : ''}{' '}
-          configured
-        </p>
-      </div>
-
-      <div className='flex-1 overflow-y-auto'>
-        {assertions.length === 0 ? (
-          <div className='flex flex-col items-center justify-center h-full p-8 text-center'>
-            <div className='w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-4'>
-              <Shield className='w-8 h-8 text-gray-400' />
-            </div>
-            <p className='text-sm font-medium text-gray-900 dark:text-gray-100 mb-1'>
-              No assertions yet
-            </p>
-            <p className='text-xs text-gray-500'>
-              Hover over any field in the response to add assertions
-            </p>
-          </div>
-        ) : (
-          <div className='p-4 space-y-2'>
-            {assertions.map((assertion) => {
-              const bgColor =
-                assertion.type === 'nlp'
-                  ? 'bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800 hover:border-purple-300'
-                  : assertion.type === 'manual'
-                  ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800 hover:border-indigo-300'
-                  : 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 hover:border-blue-300';
-              const textColor =
-                assertion.type === 'nlp'
-                  ? 'text-purple-600 dark:text-purple-400'
-                  : assertion.type === 'manual'
-                  ? 'text-indigo-600 dark:text-indigo-400'
-                  : 'text-blue-600 dark:text-blue-400';
-
-              return (
-                <div
-                  key={assertion.id}
-                  className={`group ${bgColor} border rounded-lg p-3 transition-colors`}
-                >
-                  <div className='flex items-start justify-between gap-2'>
-                    <div className='flex-1 min-w-0'>
-                      <div
-                        className={`text-xs font-mono ${textColor} mb-1 truncate`}
-                      >
-                        {assertion.path}
-                      </div>
-                      <div className='text-sm font-medium text-gray-900 dark:text-gray-100'>
-                        {getAssertionLabel(assertion)}
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => onRemoveAssertion(assertion.id)}
-                      className='opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-600 transition-all flex-shrink-0'
-                      title='Remove assertion'
-                    >
-                      <Trash2 className='w-4 h-4' />
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      {assertions.length > 0 && (
-        <div className='p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800'>
-          <button className='w-full px-4 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors'>
-            Run All Assertions ({assertions.length})
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
-
 const ResponseViewer = () => {
-  const { responseData } = useRequest();
-
+  const { responseData, assertions, setAssertions } = useRequest();
   const [activeTab, setActiveTab] = useState<
     | 'body'
     | 'headers'
@@ -603,8 +49,6 @@ const ResponseViewer = () => {
   const [showAssertionModal, setShowAssertionModal] = useState(false);
   const [activeFieldPath, setActiveFieldPath] = useState<string>('');
   const [activeFieldValue, setActiveFieldValue] = useState<any>(null);
-  const [assertions, setAssertions] = useState<Assertion[]>([]);
-  const [assertionIdCounter, setAssertionIdCounter] = useState(1);
 
   useEffect(() => {
     if (responseData?.body) {
@@ -785,20 +229,71 @@ const ResponseViewer = () => {
   };
 
   const handleAssertionSelect = (assertionType: string, config?: any) => {
-    const newAssertion: Assertion = {
-      id: assertionIdCounter,
-      type: assertionType,
-      path: activeFieldPath,
-      value: activeFieldValue,
-      ...config,
-    };
-    setAssertions([...assertions, newAssertion]);
-    setAssertionIdCounter(assertionIdCounter + 1);
-    handleModalClose();
-  };
+    if (assertionType === 'suggested' && config?.assertion) {
+      const assertion = config.assertion;
+      setAssertions(
+        assertions.map((a: any) =>
+          a.id === assertion.id ? { ...a, enabled: true } : a
+        )
+      );
+    } else {
+      let description = '';
 
-  const handleRemoveAssertion = (id: number) => {
-    setAssertions(assertions.filter((a) => a.id !== id));
+      if (config?.isGeneral) {
+        switch (assertionType) {
+          case 'response-time':
+            description = `Response time should be ${
+              config.comparison === 'less' ? 'less than' : 'more than'
+            } ${config.value}ms`;
+            break;
+          case 'payload-size':
+            description = `Payload size should be ${
+              config.comparison === 'less' ? 'less than' : 'more than'
+            } ${config.value}KB`;
+            break;
+          case 'status-success':
+            description = 'Response status should be successful (2xx)';
+            break;
+          case 'contains-static':
+            description = `Response should contain static value: "${config.value}"`;
+            break;
+          case 'contains-dynamic':
+            description = `Response should contain dynamic variable: ${config.value}`;
+            break;
+          case 'contains-extracted':
+            description = `Response should contain extracted variable: ${config.value}`;
+            break;
+          default:
+            description = `General assertion: ${assertionType}`;
+        }
+      } else {
+        const operatorLabels: Record<string, string> = {
+          equals: 'equals',
+          'not-equals': 'does not equal',
+          'greater-than': 'is greater than',
+          'less-than': 'is less than',
+          contains: 'contains',
+          'not-contains': 'does not contain',
+          'array-length': 'has length',
+        };
+
+        const operatorText = operatorLabels[config.operator] || config.operator;
+        description = `${activeFieldPath} ${operatorText} "${config.value}"`;
+      }
+
+      const newAssertion = {
+        id: `manual-${Date.now()}`,
+        type: assertionType,
+        category: 'body',
+        description,
+        field: activeFieldPath,
+        value: activeFieldValue,
+        enabled: true,
+        ...config,
+      };
+      setAssertions([...assertions, newAssertion]);
+    }
+    handleModalClose();
   };
 
   const parseRequestFromCurl = () => {
@@ -940,7 +435,7 @@ const ResponseViewer = () => {
 
   const renderJsonTree = () => {
     try {
-      let nodesToShow = new Set<string>();
+      const nodesToShow = new Set<string>();
       if (searchQuery) {
         const searchLower = searchQuery.toLowerCase();
         jsonNodes.forEach((node) => {
@@ -1070,7 +565,7 @@ const ResponseViewer = () => {
               {copiedItem === `header-${key}` ? (
                 <CheckCircle className='w-4 h-4 text-green-600' />
               ) : (
-                <Copy className='w-4 h-4' />
+                <Copy className='w-4 w-4' />
               )}
             </button>
           </div>
@@ -1111,14 +606,8 @@ const ResponseViewer = () => {
   };
 
   const tabs = [
-    {
-      id: 'body',
-      label: 'Body',
-    },
-    {
-      id: 'headers',
-      label: 'Headers',
-    },
+    { id: 'body', label: 'Body' },
+    { id: 'headers', label: 'Headers' },
     { id: 'cookies', label: 'Cookies' },
     {
       id: 'test-results',
@@ -1156,340 +645,338 @@ const ResponseViewer = () => {
   }
 
   return (
-    <div className='flex h-screen bg-gray-50 dark:bg-gray-950'>
-      <div className='flex-1 flex flex-col bg-white dark:bg-gray-900 min-h-0 overflow-hidden'>
-        <div className='bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex-shrink-0'>
-          <div className='flex items-center justify-between border-b border-gray-200 dark:border-gray-700'>
-            <nav className='flex space-x-6 px-4 whitespace-nowrap overflow-x-auto scrollbar-thin no-scrollbar'>
-              {tabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id as any)}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors flex items-center space-x-2 ${
-                    activeTab === tab.id
-                      ? 'border-blue-600 text-blue-600'
-                      : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
-                  }`}
-                >
-                  <span>{tab.label}</span>
-                  {tab.hasIndicator && (
-                    <span className='w-1.5 h-1.5 bg-blue-500 rounded-full' />
-                  )}
-                </button>
-              ))}
-            </nav>
-
-            <div className='px-4'>
-              <StatusSummary />
-            </div>
-          </div>
-
-          <div className='flex items-center justify-between px-4 py-1'>
-            <div className='flex items-center space-x-4'>
-              <button className='flex items-center space-x-2 text-sm font-medium text-blue-600'>
-                <CheckCircle className='w-4 h-4' />
-                <span>Pretty</span>
-              </button>
-              <button className='flex items-center space-x-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'>
-                <Code className='w-4 h-4' />
-                <span>Raw</span>
-              </button>
-            </div>
-
-            <div className='flex items-center space-x-2'>
+    <div className='flex-1 flex flex-col bg-white dark:bg-gray-900 h-full overflow-hidden'>
+      <div className='bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex-shrink-0'>
+        <div className='flex items-center justify-between border-b border-gray-200 dark:border-gray-700'>
+          <nav className='flex space-x-6 px-4 whitespace-nowrap overflow-x-auto scrollbar-thin no-scrollbar'>
+            {tabs.map((tab) => (
               <button
-                onClick={() => setShowSearch(!showSearch)}
-                className='p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400'
-                title='Search in response'
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors flex items-center space-x-2 ${
+                  activeTab === tab.id
+                    ? 'border-blue-600 text-blue-600'
+                    : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                }`}
               >
-                <Search className='h-4 w-4' />
-              </button>
-              <button
-                onClick={() =>
-                  handleCopy(
-                    JSON.stringify(responseData.body, null, 2),
-                    'full-response'
-                  )
-                }
-                className='p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400'
-                title='Copy response'
-              >
-                {copiedItem === 'full-response' ? (
-                  <CheckCircle className='h-4 w-4 text-green-600' />
-                ) : (
-                  <Copy className='h-4 w-4' />
+                <span>{tab.label}</span>
+                {tab.hasIndicator && (
+                  <span className='w-1.5 h-1.5 bg-blue-500 rounded-full' />
                 )}
               </button>
+            ))}
+          </nav>
+
+          <div className='px-4'>
+            <StatusSummary />
+          </div>
+        </div>
+
+        <div className='flex items-center justify-between px-4 py-1'>
+          <div className='flex items-center space-x-4'>
+            <button className='flex items-center space-x-2 text-sm font-medium text-blue-600'>
+              <CheckCircle className='w-4 h-4' />
+              <span>Pretty</span>
+            </button>
+            <button className='flex items-center space-x-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'>
+              <Code className='w-4 h-4' />
+              <span>Raw</span>
+            </button>
+          </div>
+
+          <div className='flex items-center space-x-2'>
+            <button
+              onClick={() => setShowSearch(!showSearch)}
+              className='p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400'
+              title='Search in response'
+            >
+              <Search className='h-4 w-4' />
+            </button>
+            <button
+              onClick={() =>
+                handleCopy(
+                  JSON.stringify(responseData.body, null, 2),
+                  'full-response'
+                )
+              }
+              className='p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400'
+              title='Copy response'
+            >
+              {copiedItem === 'full-response' ? (
+                <CheckCircle className='h-4 w-4 text-green-600' />
+              ) : (
+                <Copy className='h-4 w-4' />
+              )}
+            </button>
+            <button
+              onClick={downloadResponse}
+              className='p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400'
+              title='Download response'
+            >
+              <Download className='h-4 w-4' />
+            </button>
+          </div>
+        </div>
+
+        {showSearch && (
+          <div className='px-4 py-2 border-b border-gray-200 dark:border-gray-700'>
+            <div className='flex items-center space-x-2'>
+              <div className='flex-1 relative'>
+                <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-600 dark:text-gray-400' />
+                <input
+                  type='text'
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder='Search in response...'
+                  className='w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm'
+                  autoFocus
+                />
+              </div>
               <button
-                onClick={downloadResponse}
+                onClick={() => {
+                  setShowSearch(false);
+                  setSearchQuery('');
+                }}
                 className='p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400'
-                title='Download response'
               >
-                <Download className='h-4 w-4' />
+                <X className='h-4 w-4' />
               </button>
             </div>
           </div>
+        )}
+      </div>
 
-          {showSearch && (
-            <div className='px-4 py-2 border-b border-gray-200 dark:border-gray-700'>
-              <div className='flex items-center space-x-2'>
-                <div className='flex-1 relative'>
-                  <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-600 dark:text-gray-400' />
-                  <input
-                    type='text'
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder='Search in response...'
-                    className='w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-700 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm'
-                    autoFocus
-                  />
-                </div>
-                <button
-                  onClick={() => {
-                    setShowSearch(false);
-                    setSearchQuery('');
-                  }}
-                  className='p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400'
-                >
-                  <X className='h-4 w-4' />
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
+      <div className='flex-1 overflow-auto p-4 scrollbar-thin'>
+        {activeTab === 'body' && renderJsonTree()}
+        {activeTab === 'headers' && renderHeadersTab()}
+        {activeTab === 'cookies' && (
+          <div className='text-center py-8 text-gray-600 dark:text-gray-400'>
+            <Cookie className='w-12 h-12 text-gray-400 mx-auto mb-3' />
+            <p>No cookies found in response</p>
+          </div>
+        )}
 
-        <div className='flex-1 overflow-auto p-4 scrollbar-thin'>
-          {activeTab === 'body' && <div>{renderJsonTree()}</div>}
-          {activeTab === 'headers' && renderHeadersTab()}
-          {activeTab === 'cookies' && (
-            <div className='text-center py-8 text-gray-600 dark:text-gray-400'>
-              <Cookie className='w-12 h-12 text-gray-400 mx-auto mb-3' />
-              <p>No cookies found in response</p>
-            </div>
-          )}
-
-          {activeTab === 'test-results' && responseData.assertionLogs && (
+        {activeTab === 'test-results' &&
+          Array.isArray(responseData.assertionLogs) && (
             <div className='space-y-2'>
-              {responseData.assertionLogs.map((assertion) => (
+              {responseData.assertionLogs.length === 0 ? (
+                <div className='text-center py-8 text-gray-500'>
+                  <p>No test results available</p>
+                </div>
+              ) : (
+                responseData.assertionLogs.map(
+                  (assertion: any, idx: number) => (
+                    <div
+                      key={idx}
+                      className={`border rounded-lg p-3 ${
+                        assertion.status === 'passed'
+                          ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
+                          : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
+                      }`}
+                    >
+                      <div className='flex items-center space-x-2'>
+                        {assertion.status === 'passed' ? (
+                          <CheckCircle className='h-5 w-5 text-green-600 dark:text-green-400' />
+                        ) : (
+                          <X className='h-5 w-5 text-red-600 dark:text-red-400' />
+                        )}
+                        <h4 className='font-medium text-gray-900 dark:text-gray-100'>
+                          {assertion.description}
+                        </h4>
+                      </div>
+                      {assertion.errorMessage && (
+                        <p className='mt-2 text-sm text-red-600 dark:text-red-400'>
+                          {assertion.errorMessage}
+                        </p>
+                      )}
+                    </div>
+                  )
+                )
+              )}
+            </div>
+          )}
+
+        {activeTab === 'schema' && (
+          <div className='p-4 overflow-auto scrollbar-thin h-full'>
+            {responseData.schemaValidation ? (
+              <div className='space-y-4'>
                 <div
-                  key={assertion.id}
-                  className={`border rounded-lg p-3 ${
-                    assertion.status === 'passed'
+                  className={`border rounded-lg p-4 ${
+                    responseData.schemaValidation.passed
                       ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
                       : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
                   }`}
                 >
                   <div className='flex items-center space-x-2'>
-                    {assertion.status === 'passed' ? (
-                      <CheckCircle className='h-5 w-5 text-green-600 dark:text-green-400' />
+                    {responseData.schemaValidation.passed ? (
+                      <CheckCircle className='h-5 w-5 text-green-600 flex-shrink-0' />
                     ) : (
-                      <X className='h-5 w-5 text-red-600 dark:text-red-400' />
+                      <X className='h-5 w-5 text-red-600 flex-shrink-0' />
                     )}
-                    <h4 className='font-medium text-gray-900 dark:text-gray-100'>
-                      {assertion.description}
-                    </h4>
-                  </div>
-                  {assertion.errorMessage && (
-                    <p className='mt-2 text-sm text-red-600 dark:text-red-400'>
-                      {assertion.errorMessage}
-                    </p>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-
-          {activeTab === 'schema' && (
-            <div className='p-4 overflow-auto scrollbar-thin h-full'>
-              {responseData.schemaValidation ? (
-                <div className='space-y-4'>
-                  <div
-                    className={`border rounded-lg p-4 ${
-                      responseData.schemaValidation.passed
-                        ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
-                        : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
-                    }`}
-                  >
-                    <div className='flex items-center space-x-2'>
-                      {responseData.schemaValidation.passed ? (
-                        <CheckCircle className='h-5 w-5 text-green-600 flex-shrink-0' />
-                      ) : (
-                        <X className='h-5 w-5 text-red-600 flex-shrink-0' />
-                      )}
-                      <div>
-                        <h3
-                          className={`font-medium ${
-                            responseData.schemaValidation.passed
-                              ? 'text-green-800 dark:text-green-300'
-                              : 'text-red-800 dark:text-red-300'
-                          }`}
-                        >
-                          Schema Validation{' '}
-                          {responseData.schemaValidation.passed
-                            ? 'Passed'
-                            : 'Failed'}
-                        </h3>
-                        <p className='text-sm text-gray-600 dark:text-gray-400 mt-1'>
-                          Schema: {responseData.schemaValidation.name}
-                        </p>
-                      </div>
+                    <div>
+                      <h3
+                        className={`font-medium ${
+                          responseData.schemaValidation.passed
+                            ? 'text-green-800 dark:text-green-300'
+                            : 'text-red-800 dark:text-red-300'
+                        }`}
+                      >
+                        Schema Validation{' '}
+                        {responseData.schemaValidation.passed
+                          ? 'Passed'
+                          : 'Failed'}
+                      </h3>
+                      <p className='text-sm text-gray-600 dark:text-gray-400 mt-1'>
+                        Schema: {responseData.schemaValidation.name}
+                      </p>
                     </div>
                   </div>
+                </div>
 
-                  {!responseData.schemaValidation.passed &&
-                    responseData.schemaValidation.results?.length > 0 && (
-                      <div className='border rounded-lg p-4 bg-white dark:bg-gray-900'>
-                        <h4 className='font-medium text-sm mb-3 text-red-700 dark:text-red-400'>
-                          Validation Errors:
-                        </h4>
-                        <ul className='space-y-2 text-sm'>
-                          {responseData.schemaValidation.results.map(
-                            (issue: any, idx: number) => (
-                              <li
-                                key={idx}
-                                className='flex flex-col border-l-2 border-red-400 pl-2'
-                              >
-                                <span className='font-medium text-gray-800 dark:text-gray-200'>
-                                  {issue.field}
-                                </span>
-                                <span className='text-gray-600 dark:text-gray-400'>
-                                  {issue.description}
-                                </span>
-                                {issue.value !== undefined &&
-                                  issue.value !== null && (
-                                    <span className='text-xs text-gray-400'>
-                                      Value: {String(issue.value)}
-                                    </span>
-                                  )}
-                              </li>
-                            )
-                          )}
-                        </ul>
-                      </div>
-                    )}
+                {!responseData.schemaValidation.passed &&
+                  responseData.schemaValidation.results?.length > 0 && (
+                    <div className='border rounded-lg p-4 bg-white dark:bg-gray-900'>
+                      <h4 className='font-medium text-sm mb-3 text-red-700 dark:text-red-400'>
+                        Validation Errors:
+                      </h4>
+                      <ul className='space-y-2 text-sm'>
+                        {responseData.schemaValidation.results.map(
+                          (issue: any, idx: number) => (
+                            <li
+                              key={idx}
+                              className='flex flex-col border-l-2 border-red-400 pl-2'
+                            >
+                              <span className='font-medium text-gray-800 dark:text-gray-200'>
+                                {issue.field}
+                              </span>
+                              <span className='text-gray-600 dark:text-gray-400'>
+                                {issue.description}
+                              </span>
+                              {issue.value !== undefined &&
+                                issue.value !== null && (
+                                  <span className='text-xs text-gray-400'>
+                                    Value: {String(issue.value)}
+                                  </span>
+                                )}
+                            </li>
+                          )
+                        )}
+                      </ul>
+                    </div>
+                  )}
+              </div>
+            ) : (
+              <div className='text-center py-8'>
+                <div className='text-gray-500 dark:text-gray-400 mb-2'>
+                  No schema validation results
                 </div>
-              ) : (
-                <div className='text-center py-8'>
-                  <div className='text-gray-500 dark:text-gray-400 mb-2'>
-                    No schema validation results
-                  </div>
-                  <div className='text-sm text-gray-400'>
-                    Schema validation will appear here when available
-                  </div>
+                <div className='text-sm text-gray-400'>
+                  Schema validation will appear here when available
                 </div>
-              )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'actual-request' && requestDetails && (
+          <div className='space-y-4'>
+            <div className='bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4'>
+              <h3 className='text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3'>
+                Request URL:
+              </h3>
+              <div className='flex items-center space-x-3'>
+                <span className='px-3 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 rounded font-semibold text-sm'>
+                  {requestDetails.method}
+                </span>
+                <span className='text-sm text-gray-900 dark:text-gray-100 font-mono flex-1 truncate'>
+                  {requestDetails.url}
+                </span>
+                <button
+                  onClick={() => handleCopy(requestDetails.url, 'request-url')}
+                  className='p-1 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 rounded'
+                  title='Copy URL'
+                >
+                  {copiedItem === 'request-url' ? (
+                    <CheckCircle className='w-4 h-4 text-green-600' />
+                  ) : (
+                    <Copy className='w-4 h-4' />
+                  )}
+                </button>
+              </div>
             </div>
-          )}
 
-          {activeTab === 'actual-request' && requestDetails && (
-            <div className='space-y-4'>
+            <div className='bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4'>
+              <h3 className='text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3'>
+                Headers:
+              </h3>
+              <div className='overflow-x-auto scrollbar-thin'>
+                <table className='w-full text-sm'>
+                  <thead>
+                    <tr className='border-b border-gray-200 dark:border-gray-700'>
+                      <th className='text-left py-2 px-3 text-gray-600 dark:text-gray-400 font-semibold'>
+                        Name
+                      </th>
+                      <th className='text-left py-2 px-3 text-gray-600 dark:text-gray-400 font-semibold'>
+                        Value
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {Object.entries(requestDetails.headers).map(
+                      ([name, value]) => (
+                        <tr
+                          key={name}
+                          className='border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors'
+                        >
+                          <td className='py-2 px-3 text-gray-900 dark:text-gray-100 font-medium'>
+                            {name}
+                          </td>
+                          <td className='py-2 px-3 text-gray-600 dark:text-gray-400 font-mono'>
+                            {String(value)}
+                          </td>
+                        </tr>
+                      )
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {requestDetails.body && (
               <div className='bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4'>
-                <h3 className='text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3'>
-                  Request URL:
-                </h3>
-                <div className='flex items-center space-x-3'>
-                  <span className='px-3 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 rounded font-semibold text-sm'>
-                    {requestDetails.method}
+                <div className='flex items-center justify-between mb-3'>
+                  <h3 className='text-sm font-semibold text-gray-900 dark:text-gray-100'>
+                    Body:
+                  </h3>
+                  <span className='text-xs text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded'>
+                    Body Type: application/json
                   </span>
-                  <span className='text-sm text-gray-900 dark:text-gray-100 font-mono flex-1 truncate'>
-                    {requestDetails.url}
-                  </span>
+                </div>
+                <div className='bg-gray-100 dark:bg-gray-800 rounded-lg p-3 relative'>
                   <button
                     onClick={() =>
-                      handleCopy(requestDetails.url, 'request-url')
+                      handleCopy(
+                        JSON.stringify(requestDetails.body, null, 2),
+                        'request-body'
+                      )
                     }
-                    className='p-1 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 rounded'
-                    title='Copy URL'
+                    className='absolute top-2 right-2 p-1 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 rounded'
+                    title='Copy body'
                   >
-                    {copiedItem === 'request-url' ? (
+                    {copiedItem === 'request-body' ? (
                       <CheckCircle className='w-4 h-4 text-green-600' />
                     ) : (
                       <Copy className='w-4 h-4' />
                     )}
                   </button>
+                  <pre className='text-sm text-gray-900 dark:text-gray-100 font-mono overflow-x-auto scrollbar-thin'>
+                    {JSON.stringify(requestDetails.body, null, 2)}
+                  </pre>
                 </div>
               </div>
-
-              <div className='bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4'>
-                <h3 className='text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3'>
-                  Headers:
-                </h3>
-                <div className='overflow-x-auto scrollbar-thin'>
-                  <table className='w-full text-sm'>
-                    <thead>
-                      <tr className='border-b border-gray-200 dark:border-gray-700'>
-                        <th className='text-left py-2 px-3 text-gray-600 dark:text-gray-400 font-semibold'>
-                          Name
-                        </th>
-                        <th className='text-left py-2 px-3 text-gray-600 dark:text-gray-400 font-semibold'>
-                          Value
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {Object.entries(requestDetails.headers).map(
-                        ([name, value]) => (
-                          <tr
-                            key={name}
-                            className='border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors'
-                          >
-                            <td className='py-2 px-3 text-gray-900 dark:text-gray-100 font-medium'>
-                              {name}
-                            </td>
-                            <td className='py-2 px-3 text-gray-600 dark:text-gray-400 font-mono'>
-                              {String(value)}
-                            </td>
-                          </tr>
-                        )
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {requestDetails.body && (
-                <div className='bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4'>
-                  <div className='flex items-center justify-between mb-3'>
-                    <h3 className='text-sm font-semibold text-gray-900 dark:text-gray-100'>
-                      Body:
-                    </h3>
-                    <span className='text-xs text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded'>
-                      Body Type: application/json
-                    </span>
-                  </div>
-                  <div className='bg-gray-100 dark:bg-gray-800 rounded-lg p-3 relative'>
-                    <button
-                      onClick={() =>
-                        handleCopy(
-                          JSON.stringify(requestDetails.body, null, 2),
-                          'request-body'
-                        )
-                      }
-                      className='absolute top-2 right-2 p-1 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 rounded'
-                      title='Copy body'
-                    >
-                      {copiedItem === 'request-body' ? (
-                        <CheckCircle className='w-4 h-4 text-green-600' />
-                      ) : (
-                        <Copy className='w-4 h-4' />
-                      )}
-                    </button>
-                    <pre className='text-sm text-gray-900 dark:text-gray-100 font-mono overflow-x-auto scrollbar-thin'>
-                      {JSON.stringify(requestDetails.body, null, 2)}
-                    </pre>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div className='w-80 flex-shrink-0'>
-        <AssertionsPanel
-          assertions={assertions}
-          onRemoveAssertion={handleRemoveAssertion}
-        />
+            )}
+          </div>
+        )}
       </div>
 
       <AssertionModal
@@ -1498,6 +985,7 @@ const ResponseViewer = () => {
         isOpen={showAssertionModal}
         onSelect={handleAssertionSelect}
         onClose={handleModalClose}
+        allAssertions={assertions}
       />
     </div>
   );

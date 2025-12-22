@@ -7,6 +7,7 @@ import {
   ErrorState,
 } from '@/shared/types/request';
 import { CollectionRequest } from '@/shared/types/collection';
+import { ReactNode } from 'react';
 
 // Define the assertion type
 export interface Assertion {
