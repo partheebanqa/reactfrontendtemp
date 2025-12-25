@@ -18,6 +18,8 @@ import {
 } from 'lucide-react';
 import { useRequest } from '@/hooks/useRequest';
 import AssertionModal from './AssertionModal';
+import { useDataManagement } from '@/hooks/useDataManagement';
+import { generateDynamicValueById } from '@/lib/request-utils';
 
 interface JsonNode {
   key: string;
@@ -29,8 +31,29 @@ interface JsonNode {
   childCount?: number;
 }
 
+export interface Assertion {
+  id: string | number;
+  type: string;
+  displayType?: string;
+  category?: string;
+  description: string;
+  field?: string;
+  path?: string;
+  value?: any;
+  expectedValue?: any;
+  enabled?: boolean;
+  isGeneral?: boolean;
+  operator?: string;
+  comparison?: string;
+  expectedTime?: string;
+  expectedSize?: string;
+  scope?: 'full' | 'field';
+}
+
 const ResponseViewer = () => {
   const { responseData, assertions, setAssertions } = useRequest();
+  const { variables, dynamicVariables } = useDataManagement();
+
   const [activeTab, setActiveTab] = useState<
     | 'body'
     | 'headers'
@@ -44,11 +67,49 @@ const ResponseViewer = () => {
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(
     new Set(['root'])
   );
-  const [copiedItem, setCopiedItem] = useState<string>('');
+  const [copiedItem, setCopiedItem] = useState('');
   const [hoveredField, setHoveredField] = useState<string | null>(null);
   const [showAssertionModal, setShowAssertionModal] = useState(false);
-  const [activeFieldPath, setActiveFieldPath] = useState<string>('');
+  const [activeFieldPath, setActiveFieldPath] = useState('');
   const [activeFieldValue, setActiveFieldValue] = useState<any>(null);
+
+  const formattedVariables = useMemo(() => {
+    const formatted: Array<{ name: string; value: string }> = [];
+
+    const isValidVar = (name: string) =>
+      name.startsWith('S_') || name.startsWith('D_');
+
+    // Format static variables
+    if (Array.isArray(variables)) {
+      variables.forEach((variable: any) => {
+        const name = variable.name || variable.key || '';
+        const value =
+          variable.value ||
+          variable.initialValue ||
+          variable.currentValue ||
+          '';
+        if (name && isValidVar(name)) {
+          formatted.push({ name, value: String(value) });
+        }
+      });
+    }
+
+    // Format dynamic variables
+    if (Array.isArray(dynamicVariables)) {
+      dynamicVariables.forEach((variable: any) => {
+        const name = variable.name || '';
+        if (name && isValidVar(name)) {
+          const generatedValue = generateDynamicValueById(
+            variable.generatorId || '',
+            variable.parameters || {}
+          );
+          formatted.push({ name, value: String(generatedValue) });
+        }
+      });
+    }
+
+    return formatted;
+  }, [variables, dynamicVariables]);
 
   useEffect(() => {
     if (responseData?.body) {
@@ -229,15 +290,23 @@ const ResponseViewer = () => {
   };
 
   const handleAssertionSelect = (assertionType: string, config?: any) => {
-    if (assertionType === 'suggested' && config?.assertion) {
-      const assertion = config.assertion;
-      setAssertions(
-        assertions.map((a: any) =>
-          a.id === assertion.id ? { ...a, enabled: true } : a
-        )
+    if (assertionType === 'suggested-multiple' && config?.assertions) {
+      const assertionsToEnable = config.assertions;
+      const assertionIds = assertionsToEnable.map((a: any) => a.id);
+
+      const updatedAssertions = assertions.map((a: any) =>
+        assertionIds.includes(a.id) ? { ...a, enabled: true } : a
       );
+      setAssertions(updatedAssertions);
+    } else if (assertionType === 'suggested' && config?.assertion) {
+      const assertion = config.assertion;
+      const updatedAssertions = assertions.map((a: any) =>
+        a.id === assertion.id ? { ...a, enabled: true } : a
+      );
+      setAssertions(updatedAssertions);
     } else {
       let description = '';
+      let finalType = assertionType;
 
       if (config?.isGeneral) {
         switch (assertionType) {
@@ -251,17 +320,36 @@ const ResponseViewer = () => {
               config.comparison === 'less' ? 'less than' : 'more than'
             } ${config.value}KB`;
             break;
-          case 'status-success':
-            description = 'Response status should be successful (2xx)';
+          case 'status-code':
+            description = `Response status should be ${config.value}`;
+            break;
+          case 'contains-text':
+            description = `Response should contain text: "${config.value}"`;
+            finalType = 'contains';
+            break;
+          case 'contains-number':
+            description = `Response should contain number: ${config.value}`;
+            finalType = 'contains';
+            break;
+          case 'contains-boolean':
+            description = `Response should contain boolean: ${config.value}`;
+            finalType = 'contains';
             break;
           case 'contains-static':
-            description = `Response should contain static value: "${config.value}"`;
+            description = `Response should contain static value: "${
+              config.value
+            }"${config.scope === 'field' ? ` in ${activeFieldPath}` : ''}`;
+            finalType = 'contains';
             break;
           case 'contains-dynamic':
-            description = `Response should contain dynamic variable: ${config.value}`;
+            description = `Response should contain dynamic variable: ${
+              config.value
+            }${config.scope === 'field' ? ` in ${activeFieldPath}` : ''}`;
+            finalType = 'contains';
             break;
           case 'contains-extracted':
             description = `Response should contain extracted variable: ${config.value}`;
+            finalType = 'contains';
             break;
           default:
             description = `General assertion: ${assertionType}`;
@@ -281,16 +369,25 @@ const ResponseViewer = () => {
         description = `${activeFieldPath} ${operatorText} "${config.value}"`;
       }
 
-      const newAssertion = {
+      // Build the base assertion object
+      const baseAssertion = {
         id: `manual-${Date.now()}`,
-        type: assertionType,
+        type: finalType,
+        displayType: assertionType,
         category: 'body',
         description,
-        field: activeFieldPath,
         value: activeFieldValue,
+        expectedValue: config.value,
         enabled: true,
         ...config,
       };
+
+      // Only add field property if it's not a general assertion or if scope is 'field'
+      const newAssertion =
+        config?.isGeneral && config.scope !== 'field'
+          ? baseAssertion
+          : { ...baseAssertion, field: activeFieldPath };
+
       setAssertions([...assertions, newAssertion]);
     }
     handleModalClose();
@@ -342,18 +439,18 @@ const ResponseViewer = () => {
     return (
       <div
         key={node.path}
-        className='group hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors relative'
+        className='group flex items-center hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors'
         onMouseEnter={() => setHoveredField(node.path)}
         onMouseLeave={() => !showAssertionModal && setHoveredField(null)}
       >
-        <div className='flex items-center py-1 pr-2 font-mono text-sm border-l-2 border-transparent hover:border-blue-500'>
-          <span className='text-gray-400 dark:text-gray-600 select-none text-xs w-12 text-center flex-shrink-0 absolute left-0'>
+        <div
+          className='flex items-center flex-1 py-1 min-w-0'
+          style={{ paddingLeft: `${node.level * 16 + 8}px` }}
+        >
+          <span className='w-8 text-xs text-gray-400 dark:text-gray-500 flex-shrink-0 text-right pr-3 select-none'>
             {index + 1}
           </span>
-          <div
-            className='flex items-center flex-1 min-w-0'
-            style={{ marginLeft: `${48 + node.level * 20}px` }}
-          >
+          <div className='flex items-center flex-1 min-w-0'>
             {hasChildren && (
               <button
                 onClick={() => toggleNode(node.path)}
@@ -361,33 +458,35 @@ const ResponseViewer = () => {
                 aria-label={isExpanded ? 'Collapse' : 'Expand'}
               >
                 {isExpanded ? (
-                  <ChevronDown className='w-3 h-3 text-gray-600 dark:text-gray-400' />
+                  <ChevronDown className='w-3 h-3 text-gray-500' />
                 ) : (
-                  <ChevronRight className='w-3 h-3 text-gray-600 dark:text-gray-400' />
+                  <ChevronRight className='w-3 h-3 text-gray-500' />
                 )}
               </button>
             )}
-            {!hasChildren && <div className='w-5' />}
-            <span className='text-blue-600 dark:text-blue-400 font-medium mr-2 text-sm flex-shrink-0'>
+            {!hasChildren && <div className='w-5 flex-shrink-0' />}
+            <span className='text-blue-600 dark:text-blue-400 font-mono text-sm mr-1'>
               {node.key}:
             </span>
 
             {hasChildren ? (
-              <span className='text-gray-600 dark:text-gray-400 text-sm'>
+              <span className='text-gray-500 dark:text-gray-400 font-mono text-sm'>
                 {node.type === 'array'
                   ? `[${Array.isArray(node.value) ? node.value.length : 0}]`
                   : `{${Object.keys(node.value || {}).length}}`}
               </span>
             ) : (
               <span
-                className={`text-sm font-mono truncate ${
+                className={`font-mono text-sm truncate ${
                   node.type === 'string'
                     ? 'text-green-600 dark:text-green-400'
                     : node.type === 'number'
-                    ? 'text-purple-600 dark:text-purple-400'
-                    : node.type === 'boolean'
                     ? 'text-orange-600 dark:text-orange-400'
-                    : 'text-gray-600 dark:text-gray-400'
+                    : node.type === 'boolean'
+                    ? 'text-purple-600 dark:text-purple-400'
+                    : node.type === 'null'
+                    ? 'text-gray-500 dark:text-gray-400 italic'
+                    : 'text-gray-900 dark:text-gray-100'
                 }`}
               >
                 {node.type === 'string'
@@ -395,33 +494,33 @@ const ResponseViewer = () => {
                   : String(node.value)}
               </span>
             )}
-          </div>
-          <div className='flex items-center space-x-1 flex-shrink-0 ml-2'>
-            {!hasChildren && (
-              <button
-                onClick={() =>
-                  handleCopy(String(node.value), `copy-${node.path}`)
-                }
-                className='p-1 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 rounded opacity-0 group-hover:opacity-100 transition-opacity'
-                title='Copy value'
-              >
-                {copiedItem === `copy-${node.path}` ? (
-                  <CheckCircle className='w-3 h-3 text-green-600' />
-                ) : (
-                  <Copy className='w-3 h-3' />
-                )}
-              </button>
-            )}
-            {isHovered && (
+
+            {/* Inline action buttons - shown after value */}
+            <div className='flex items-center gap-1 ml-2 opacity-0 group-hover:opacity-100 transition-opacity'>
+              {!hasChildren && (
+                <button
+                  onClick={() =>
+                    handleCopy(String(node.value), `copy-${node.path}`)
+                  }
+                  className='p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors'
+                  title='Copy value'
+                >
+                  {copiedItem === `copy-${node.path}` ? (
+                    <CheckCircle className='w-3.5 h-3.5 text-green-500' />
+                  ) : (
+                    <Copy className='w-3.5 h-3.5' />
+                  )}
+                </button>
+              )}
               <button
                 onClick={(e) =>
                   handleAddAssertionClick(node.path, node.value, e)
                 }
-                className='px-2 py-1 text-xs font-medium text-blue-600 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 rounded border border-blue-200 dark:border-blue-800 transition-colors'
+                className='px-1.5 py-0.5 text-xs font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors'
               >
                 + Assert
               </button>
-            )}
+            </div>
           </div>
         </div>
       </div>
@@ -478,9 +577,9 @@ const ResponseViewer = () => {
       const totalRows = jsonNodes.filter((n) => n.level === 0).length;
 
       return (
-        <div className='bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden'>
-          <div className='bg-gray-50 dark:bg-gray-800 px-3 py-2 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between'>
-            <span className='text-xs font-medium text-gray-600 dark:text-gray-400'>
+        <div className='flex flex-col h-full'>
+          <div className='flex items-center justify-between px-4 py-2 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700'>
+            <span className='text-xs text-gray-500 dark:text-gray-400'>
               {totalRows} {totalRows === 1 ? 'row' : 'rows'}
             </span>
             <div className='flex items-center gap-2'>
@@ -521,7 +620,7 @@ const ResponseViewer = () => {
             </div>
           </div>
 
-          <div className='max-h-[600px] overflow-y-auto scrollbar-thin'>
+          <div className='flex-1 overflow-auto'>
             {visibleNodes.map((node, index) => renderJsonValue(node, index))}
           </div>
         </div>
@@ -529,43 +628,43 @@ const ResponseViewer = () => {
     } catch (error) {
       console.error('JSON parsing error:', error);
       return (
-        <div className='p-2 bg-gray-100 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700'>
-          <p className='text-gray-600 dark:text-gray-400 text-sm'>
+        <div className='flex items-center justify-center h-full'>
+          <div className='text-center text-gray-500 dark:text-gray-400'>
             Unable to parse response
-          </p>
+          </div>
         </div>
       );
     }
   };
 
   const renderHeadersTab = () => (
-    <div className='space-y-2'>
+    <div className='divide-y divide-gray-200 dark:divide-gray-700'>
       {Object.entries(responseData?.headers || {}).map(([key, value]) => (
         <div
           key={key}
-          className='group flex items-center justify-between p-3 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 bg-white dark:bg-gray-900'
+          className='flex items-center justify-between px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 group'
         >
-          <div className='flex-1 min-w-0 mr-4'>
-            <div className='flex items-center space-x-2'>
-              <Hash className='w-4 h-4 text-gray-600 dark:text-gray-400 flex-shrink-0' />
-              <span className='font-medium text-gray-900 dark:text-gray-100 text-sm'>
+          <div className='flex items-center gap-3 min-w-0 flex-1'>
+            <div className='flex items-center gap-2 min-w-0'>
+              <Hash className='w-4 h-4 text-gray-400 flex-shrink-0' />
+              <span className='font-medium text-gray-900 dark:text-gray-100 truncate'>
                 {key}
               </span>
             </div>
-            <p className='text-sm text-gray-600 dark:text-gray-400 font-mono mt-1 break-all'>
-              {value}
-            </p>
+            <div className='text-gray-600 dark:text-gray-400 truncate'>
+              {String(value)}
+            </div>
           </div>
-          <div className='flex items-center space-x-2 flex-shrink-0'>
+          <div className='flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity'>
             <button
               onClick={() => handleCopy(value as string, `header-${key}`)}
               className='p-1 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 rounded'
               title='Copy value'
             >
               {copiedItem === `header-${key}` ? (
-                <CheckCircle className='w-4 h-4 text-green-600' />
+                <CheckCircle className='w-4 h-4 text-green-500' />
               ) : (
-                <Copy className='w-4 w-4' />
+                <Copy className='w-4 h-4' />
               )}
             </button>
           </div>
@@ -578,26 +677,22 @@ const ResponseViewer = () => {
     if (!responseData) return null;
 
     return (
-      <div className='flex items-center space-x-4 text-sm'>
-        <div className='flex items-center space-x-1'>
-          <CheckCircle
-            className={`h-4 w-4 ${getStatusColor(responseData.status)}`}
-          />
-          <span
-            className={`font-medium ${getStatusColor(responseData.status)}`}
-          >
+      <div className='flex items-center gap-4 text-sm'>
+        <div className='flex items-center gap-1.5'>
+          <CheckCircle className='w-4 h-4 text-green-500' />
+          <span className={getStatusColor(responseData.status)}>
             {responseData.status} {responseData.statusText || ''}
           </span>
         </div>
-        <div className='flex items-center space-x-1'>
-          <Clock className='h-4 w-4 text-gray-600 dark:text-gray-400' />
-          <span className='font-medium text-gray-900 dark:text-gray-100'>
+        <div className='flex items-center gap-1.5'>
+          <Clock className='w-4 h-4 text-gray-400' />
+          <span className='text-gray-600 dark:text-gray-400'>
             {responseData.metrics?.responseTime || 0}ms
           </span>
         </div>
-        <div className='flex items-center space-x-1'>
-          <HardDrive className='h-4 w-4 text-gray-600 dark:text-gray-400' />
-          <span className='font-medium text-gray-900 dark:text-gray-100'>
+        <div className='flex items-center gap-1.5'>
+          <HardDrive className='w-4 h-4 text-gray-400' />
+          <span className='text-gray-600 dark:text-gray-400'>
             {calculateResponseSize(responseData.body)}
           </span>
         </div>
@@ -631,24 +726,24 @@ const ResponseViewer = () => {
 
   if (!responseData) {
     return (
-      <div className='flex-1 flex items-center justify-center bg-white dark:bg-gray-900 p-2'>
+      <div className='flex items-center justify-center h-full bg-gray-50 dark:bg-gray-900'>
         <div className='text-center'>
-          <p className='text-gray-600 dark:text-gray-400 mb-4'>
+          <div className='text-gray-500 dark:text-gray-400 text-lg font-medium'>
             No response yet
-          </p>
-          <p className='text-sm text-gray-500'>
+          </div>
+          <div className='text-gray-400 dark:text-gray-500 text-sm mt-1'>
             Send a request to see the response here
-          </p>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className='flex-1 flex flex-col bg-white dark:bg-gray-900 h-full overflow-hidden'>
-      <div className='bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex-shrink-0'>
-        <div className='flex items-center justify-between border-b border-gray-200 dark:border-gray-700'>
-          <nav className='flex space-x-6 px-4 whitespace-nowrap overflow-x-auto scrollbar-thin no-scrollbar'>
+    <div className='flex flex-col h-full bg-white dark:bg-gray-900'>
+      <div className='flex items-center justify-between border-b border-gray-200 dark:border-gray-700 px-4'>
+        <div className='flex items-center'>
+          <nav className='flex space-x-4'>
             {tabs.map((tab) => (
               <button
                 key={tab.id}
@@ -659,38 +754,37 @@ const ResponseViewer = () => {
                     : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
                 }`}
               >
-                <span>{tab.label}</span>
+                {tab.label}
                 {tab.hasIndicator && (
-                  <span className='w-1.5 h-1.5 bg-blue-500 rounded-full' />
+                  <span className='w-2 h-2 bg-blue-500 rounded-full ml-1' />
                 )}
               </button>
             ))}
           </nav>
-
-          <div className='px-4'>
+          <div className='ml-6'>
             <StatusSummary />
           </div>
         </div>
 
-        <div className='flex items-center justify-between px-4 py-1'>
-          <div className='flex items-center space-x-4'>
-            <button className='flex items-center space-x-2 text-sm font-medium text-blue-600'>
-              <CheckCircle className='w-4 h-4' />
-              <span>Pretty</span>
-            </button>
-            <button className='flex items-center space-x-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'>
+        <div className='flex items-center gap-2'>
+          <div className='flex items-center border border-gray-200 dark:border-gray-700 rounded-md overflow-hidden'>
+            <button className='px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100'>
               <Code className='w-4 h-4' />
-              <span>Raw</span>
+              Pretty
+            </button>
+            <button className='px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'>
+              <Code className='w-4 h-4' />
+              Raw
             </button>
           </div>
 
-          <div className='flex items-center space-x-2'>
+          <div className='flex items-center gap-1'>
             <button
               onClick={() => setShowSearch(!showSearch)}
               className='p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400'
               title='Search in response'
             >
-              <Search className='h-4 w-4' />
+              <Search className='w-4 h-4' />
             </button>
             <button
               onClick={() =>
@@ -703,9 +797,9 @@ const ResponseViewer = () => {
               title='Copy response'
             >
               {copiedItem === 'full-response' ? (
-                <CheckCircle className='h-4 w-4 text-green-600' />
+                <CheckCircle className='w-4 h-4 text-green-500' />
               ) : (
-                <Copy className='h-4 w-4' />
+                <Copy className='w-4 h-4' />
               )}
             </button>
             <button
@@ -713,16 +807,16 @@ const ResponseViewer = () => {
               className='p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400'
               title='Download response'
             >
-              <Download className='h-4 w-4' />
+              <Download className='w-4 h-4' />
             </button>
           </div>
         </div>
 
         {showSearch && (
-          <div className='px-4 py-2 border-b border-gray-200 dark:border-gray-700'>
-            <div className='flex items-center space-x-2'>
+          <div className='absolute top-full left-0 right-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 p-2 z-10'>
+            <div className='flex items-center gap-2'>
               <div className='flex-1 relative'>
-                <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-600 dark:text-gray-400' />
+                <Search className='w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400' />
                 <input
                   type='text'
                   value={searchQuery}
@@ -739,28 +833,28 @@ const ResponseViewer = () => {
                 }}
                 className='p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400'
               >
-                <X className='h-4 w-4' />
+                <X className='w-4 h-4' />
               </button>
             </div>
           </div>
         )}
       </div>
 
-      <div className='flex-1 overflow-auto p-4 scrollbar-thin'>
+      <div className='flex-1 overflow-hidden'>
         {activeTab === 'body' && renderJsonTree()}
         {activeTab === 'headers' && renderHeadersTab()}
         {activeTab === 'cookies' && (
-          <div className='text-center py-8 text-gray-600 dark:text-gray-400'>
-            <Cookie className='w-12 h-12 text-gray-400 mx-auto mb-3' />
+          <div className='flex items-center justify-center h-full text-gray-500 dark:text-gray-400'>
+            <Cookie className='w-8 h-8 mr-3 opacity-50' />
             <p>No cookies found in response</p>
           </div>
         )}
 
         {activeTab === 'test-results' &&
           Array.isArray(responseData.assertionLogs) && (
-            <div className='space-y-2'>
+            <div className='p-4 space-y-2'>
               {responseData.assertionLogs.length === 0 ? (
-                <div className='text-center py-8 text-gray-500'>
+                <div className='text-center text-gray-500 dark:text-gray-400 py-8'>
                   <p>No test results available</p>
                 </div>
               ) : (
@@ -768,26 +862,26 @@ const ResponseViewer = () => {
                   (assertion: any, idx: number) => (
                     <div
                       key={idx}
-                      className={`border rounded-lg p-3 ${
+                      className={`p-3 rounded-lg border ${
                         assertion.status === 'passed'
                           ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
                           : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
                       }`}
                     >
-                      <div className='flex items-center space-x-2'>
+                      <div className='flex items-center gap-2'>
                         {assertion.status === 'passed' ? (
-                          <CheckCircle className='h-5 w-5 text-green-600 dark:text-green-400' />
+                          <CheckCircle className='w-4 h-4 text-green-500' />
                         ) : (
-                          <X className='h-5 w-5 text-red-600 dark:text-red-400' />
+                          <X className='w-4 h-4 text-red-500' />
                         )}
-                        <h4 className='font-medium text-gray-900 dark:text-gray-100'>
+                        <span className='text-sm font-medium text-gray-900 dark:text-gray-100'>
                           {assertion.description}
-                        </h4>
+                        </span>
                       </div>
                       {assertion.errorMessage && (
-                        <p className='mt-2 text-sm text-red-600 dark:text-red-400'>
+                        <div className='mt-2 text-xs text-red-600 dark:text-red-400 pl-6'>
                           {assertion.errorMessage}
-                        </p>
+                        </div>
                       )}
                     </div>
                   )
@@ -797,80 +891,74 @@ const ResponseViewer = () => {
           )}
 
         {activeTab === 'schema' && (
-          <div className='p-4 overflow-auto scrollbar-thin h-full'>
+          <div className='p-4'>
             {responseData.schemaValidation ? (
               <div className='space-y-4'>
                 <div
-                  className={`border rounded-lg p-4 ${
+                  className={`p-4 rounded-lg border ${
                     responseData.schemaValidation.passed
                       ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
                       : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
                   }`}
                 >
-                  <div className='flex items-center space-x-2'>
+                  <div className='flex items-center gap-3'>
                     {responseData.schemaValidation.passed ? (
-                      <CheckCircle className='h-5 w-5 text-green-600 flex-shrink-0' />
+                      <CheckCircle className='w-5 h-5 text-green-500' />
                     ) : (
-                      <X className='h-5 w-5 text-red-600 flex-shrink-0' />
+                      <X className='w-5 h-5 text-red-500' />
                     )}
                     <div>
-                      <h3
-                        className={`font-medium ${
-                          responseData.schemaValidation.passed
-                            ? 'text-green-800 dark:text-green-300'
-                            : 'text-red-800 dark:text-red-300'
-                        }`}
-                      >
+                      <div className='font-medium text-gray-900 dark:text-gray-100'>
                         Schema Validation{' '}
                         {responseData.schemaValidation.passed
                           ? 'Passed'
                           : 'Failed'}
-                      </h3>
-                      <p className='text-sm text-gray-600 dark:text-gray-400 mt-1'>
+                      </div>
+                      <div className='text-sm text-gray-600 dark:text-gray-400'>
                         Schema: {responseData.schemaValidation.name}
-                      </p>
+                      </div>
                     </div>
                   </div>
                 </div>
 
                 {!responseData.schemaValidation.passed &&
                   responseData.schemaValidation.results?.length > 0 && (
-                    <div className='border rounded-lg p-4 bg-white dark:bg-gray-900'>
-                      <h4 className='font-medium text-sm mb-3 text-red-700 dark:text-red-400'>
+                    <div className='space-y-2'>
+                      <h4 className='text-sm font-medium text-gray-900 dark:text-gray-100'>
                         Validation Errors:
                       </h4>
-                      <ul className='space-y-2 text-sm'>
+                      <div className='space-y-2'>
                         {responseData.schemaValidation.results.map(
                           (issue: any, idx: number) => (
-                            <li
+                            <div
                               key={idx}
-                              className='flex flex-col border-l-2 border-red-400 pl-2'
+                              className='p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-sm'
                             >
-                              <span className='font-medium text-gray-800 dark:text-gray-200'>
+                              <span className='font-mono text-red-700 dark:text-red-400'>
                                 {issue.field}
                               </span>
-                              <span className='text-gray-600 dark:text-gray-400'>
+                              <span className='text-gray-700 dark:text-gray-300 ml-2'>
                                 {issue.description}
                               </span>
                               {issue.value !== undefined &&
                                 issue.value !== null && (
-                                  <span className='text-xs text-gray-400'>
+                                  <span className='text-gray-500 dark:text-gray-400 ml-2'>
                                     Value: {String(issue.value)}
                                   </span>
                                 )}
-                            </li>
+                            </div>
                           )
                         )}
-                      </ul>
+                      </div>
                     </div>
                   )}
               </div>
             ) : (
-              <div className='text-center py-8'>
-                <div className='text-gray-500 dark:text-gray-400 mb-2'>
+              <div className='flex flex-col items-center justify-center h-full text-gray-500 dark:text-gray-400 py-8'>
+                <div className='text-lg font-medium'>
                   No schema validation results
                 </div>
-                <div className='text-sm text-gray-400'>
+                <div className='text-sm mt-1'>
                   Schema validation will appear here when available
                 </div>
               </div>
@@ -879,16 +967,16 @@ const ResponseViewer = () => {
         )}
 
         {activeTab === 'actual-request' && requestDetails && (
-          <div className='space-y-4'>
-            <div className='bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4'>
-              <h3 className='text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3'>
+          <div className='p-4 space-y-4'>
+            <div className='space-y-2'>
+              <h4 className='text-sm font-medium text-gray-900 dark:text-gray-100'>
                 Request URL:
-              </h3>
-              <div className='flex items-center space-x-3'>
-                <span className='px-3 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 rounded font-semibold text-sm'>
+              </h4>
+              <div className='flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg'>
+                <span className='px-2 py-1 text-xs font-bold bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded'>
                   {requestDetails.method}
                 </span>
-                <span className='text-sm text-gray-900 dark:text-gray-100 font-mono flex-1 truncate'>
+                <span className='font-mono text-sm text-gray-700 dark:text-gray-300 flex-1 truncate'>
                   {requestDetails.url}
                 </span>
                 <button
@@ -897,7 +985,7 @@ const ResponseViewer = () => {
                   title='Copy URL'
                 >
                   {copiedItem === 'request-url' ? (
-                    <CheckCircle className='w-4 h-4 text-green-600' />
+                    <CheckCircle className='w-4 h-4 text-green-500' />
                   ) : (
                     <Copy className='w-4 h-4' />
                   )}
@@ -905,33 +993,30 @@ const ResponseViewer = () => {
               </div>
             </div>
 
-            <div className='bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4'>
-              <h3 className='text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3'>
+            <div className='space-y-2'>
+              <h4 className='text-sm font-medium text-gray-900 dark:text-gray-100'>
                 Headers:
-              </h3>
-              <div className='overflow-x-auto scrollbar-thin'>
+              </h4>
+              <div className='border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden'>
                 <table className='w-full text-sm'>
-                  <thead>
-                    <tr className='border-b border-gray-200 dark:border-gray-700'>
-                      <th className='text-left py-2 px-3 text-gray-600 dark:text-gray-400 font-semibold'>
+                  <thead className='bg-gray-50 dark:bg-gray-800'>
+                    <tr>
+                      <th className='px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase'>
                         Name
                       </th>
-                      <th className='text-left py-2 px-3 text-gray-600 dark:text-gray-400 font-semibold'>
+                      <th className='px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase'>
                         Value
                       </th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className='divide-y divide-gray-200 dark:divide-gray-700'>
                     {Object.entries(requestDetails.headers).map(
                       ([name, value]) => (
-                        <tr
-                          key={name}
-                          className='border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors'
-                        >
-                          <td className='py-2 px-3 text-gray-900 dark:text-gray-100 font-medium'>
+                        <tr key={name}>
+                          <td className='px-4 py-2 font-mono text-gray-700 dark:text-gray-300'>
                             {name}
                           </td>
-                          <td className='py-2 px-3 text-gray-600 dark:text-gray-400 font-mono'>
+                          <td className='px-4 py-2 font-mono text-gray-600 dark:text-gray-400'>
                             {String(value)}
                           </td>
                         </tr>
@@ -943,16 +1028,16 @@ const ResponseViewer = () => {
             </div>
 
             {requestDetails.body && (
-              <div className='bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4'>
-                <div className='flex items-center justify-between mb-3'>
-                  <h3 className='text-sm font-semibold text-gray-900 dark:text-gray-100'>
+              <div className='space-y-2'>
+                <div className='flex items-center justify-between'>
+                  <h4 className='text-sm font-medium text-gray-900 dark:text-gray-100'>
                     Body:
-                  </h3>
-                  <span className='text-xs text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded'>
+                  </h4>
+                  <span className='text-xs text-gray-500 dark:text-gray-400'>
                     Body Type: application/json
                   </span>
                 </div>
-                <div className='bg-gray-100 dark:bg-gray-800 rounded-lg p-3 relative'>
+                <div className='relative'>
                   <button
                     onClick={() =>
                       handleCopy(
@@ -964,12 +1049,12 @@ const ResponseViewer = () => {
                     title='Copy body'
                   >
                     {copiedItem === 'request-body' ? (
-                      <CheckCircle className='w-4 h-4 text-green-600' />
+                      <CheckCircle className='w-4 h-4 text-green-500' />
                     ) : (
                       <Copy className='w-4 h-4' />
                     )}
                   </button>
-                  <pre className='text-sm text-gray-900 dark:text-gray-100 font-mono overflow-x-auto scrollbar-thin'>
+                  <pre className='p-4 bg-gray-50 dark:bg-gray-800 rounded-lg font-mono text-sm text-gray-700 dark:text-gray-300 overflow-auto'>
                     {JSON.stringify(requestDetails.body, null, 2)}
                   </pre>
                 </div>
@@ -986,6 +1071,11 @@ const ResponseViewer = () => {
         onSelect={handleAssertionSelect}
         onClose={handleModalClose}
         allAssertions={assertions}
+        variables={formattedVariables.filter((v) => v.name.startsWith('S_'))}
+        dynamicVariables={formattedVariables.filter((v) =>
+          v.name.startsWith('D_')
+        )}
+        setAssertions={setAssertions}
       />
     </div>
   );

@@ -9,8 +9,10 @@ export function AssertionsPanel({
   onRemoveAssertion: (id: number) => void;
 }) {
   const getAssertionLabel = (assertion: Assertion): string => {
+    const typeToUse = assertion.displayType || assertion.type;
+
     if (assertion.isGeneral) {
-      switch (assertion.type) {
+      switch (typeToUse) {
         case 'response-time':
           return `Response Time ${assertion.comparison || 'less'} than ${
             assertion.expectedTime
@@ -21,6 +23,12 @@ export function AssertionsPanel({
           }KB`;
         case 'status-success':
           return 'Status Success (2xx)';
+        case 'contains-text':
+          return `Contains Text: "${assertion.value}"`;
+        case 'contains-number':
+          return `Contains Number: ${assertion.value}`;
+        case 'contains-boolean':
+          return `Contains Boolean: ${assertion.value}`;
         case 'contains-static':
           return `Contains Static: ${assertion.value}`;
         case 'contains-dynamic':
@@ -28,11 +36,11 @@ export function AssertionsPanel({
         case 'contains-extracted':
           return `Contains Extracted: ${assertion.value}`;
         default:
-          return assertion.type;
+          return typeToUse;
       }
     }
 
-    switch (assertion.type) {
+    switch (typeToUse) {
       case 'exists':
         return 'Field exists';
       case 'not-exists':
@@ -46,7 +54,7 @@ export function AssertionsPanel({
       case 'manual':
         return `${getOperatorLabel(assertion.operator!)} ${assertion.value}`;
       default:
-        return assertion.type;
+        return typeToUse;
     }
   };
 
