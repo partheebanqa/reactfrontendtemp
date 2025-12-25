@@ -158,6 +158,9 @@ const RequestEditor: React.FC = () => {
 
   const { variables, dynamicVariables, environments, activeEnvironment } =
     useDataManagement();
+  console.log('variables000:', variables);
+  console.log('dynamicVariables000:', dynamicVariables);
+
   const { error: showError, success: showSuccess, toast } = useToast();
   const { currentWorkspace } = useWorkspace();
   const [showCurlImport, setShowCurlImport] = useState(false);

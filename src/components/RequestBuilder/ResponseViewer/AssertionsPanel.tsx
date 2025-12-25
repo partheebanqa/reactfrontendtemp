@@ -1,5 +1,7 @@
+'use client';
+
 import { Activity, Shield, Trash2 } from 'lucide-react';
-import { Assertion } from './ResponseViewer';
+import type { Assertion } from './ResponseViewer';
 
 export function AssertionsPanel({
   assertions,
@@ -9,56 +11,64 @@ export function AssertionsPanel({
   onRemoveAssertion: (id: number) => void;
 }) {
   const getAssertionLabel = (assertion: Assertion): string => {
+    const typeToUse = assertion.displayType || assertion.type;
+
     if (assertion.isGeneral) {
-      switch (assertion.type) {
-        case 'response-time':
+      switch (typeToUse) {
+        case 'response_time':
           return `Response Time ${assertion.comparison || 'less'} than ${
             assertion.expectedTime
           }ms`;
-        case 'payload-size':
+        case 'payload_size':
           return `Payload Size ${assertion.comparison || 'less'} than ${
             assertion.expectedSize
           }KB`;
-        case 'status-success':
-          return 'Status Success (2xx)';
-        case 'contains-static':
+        case 'status_equals':
+          return `Status Code: ${assertion.value}`;
+        case 'contains_text':
+          return `Contains Text: "${assertion.value}"`;
+        case 'contains_number':
+          return `Contains Number: ${assertion.value}`;
+        case 'contains_boolean':
+          return `Contains Boolean: ${assertion.value}`;
+        case 'contains_static':
           return `Contains Static: ${assertion.value}`;
-        case 'contains-dynamic':
+        case 'contains_dynamic':
           return `Contains Dynamic: ${assertion.value}`;
-        case 'contains-extracted':
+        case 'contains_extracted':
           return `Contains Extracted: ${assertion.value}`;
         default:
-          return assertion.type;
+          return typeToUse;
       }
     }
 
-    switch (assertion.type) {
+    switch (typeToUse) {
       case 'exists':
         return 'Field exists';
-      case 'not-exists':
+      case 'field_not_present':
         return 'Field not present';
       case 'data-type':
         return `Type is ${assertion.expectedType}`;
-      case 'not-null':
+      case 'field_not_null':
         return 'Not null';
       case 'is-array':
         return 'Is array';
       case 'manual':
         return `${getOperatorLabel(assertion.operator!)} ${assertion.value}`;
       default:
-        return assertion.type;
+        return typeToUse;
     }
   };
 
   const getOperatorLabel = (op: string): string => {
     const operators: { [key: string]: string } = {
       equals: '=',
-      'not-equals': '≠',
-      'greater-than': '>',
-      'less-than': '<',
+      field_not_equals: '≠',
+      field_greater_than: '>',
+      field_less_than: '<',
       contains: 'contains',
-      'not-contains': 'not contains',
-      'array-length': 'length',
+      field_not_contains: 'not contains',
+      array_length: 'length',
     };
     return operators[op] || op;
   };

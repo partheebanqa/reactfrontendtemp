@@ -18,6 +18,9 @@ import {
 } from 'lucide-react';
 import { useRequest } from '@/hooks/useRequest';
 import AssertionModal from './AssertionModal';
+import { useDataManagement } from '@/hooks/useDataManagement';
+import { generateDynamicValueById } from '@/lib/request-utils';
+import { getCategoryForAssertionType } from '@/lib/assertion-utils';
 
 interface JsonNode {
   key: string;
@@ -29,8 +32,29 @@ interface JsonNode {
   childCount?: number;
 }
 
+export interface Assertion {
+  id: string | number;
+  type: string;
+  displayType?: string;
+  category?: string;
+  description: string;
+  field?: string;
+  path?: string;
+  value?: any;
+  expectedValue?: any;
+  enabled?: boolean;
+  isGeneral?: boolean;
+  operator?: string;
+  comparison?: string;
+  expectedTime?: string;
+  expectedSize?: string;
+  scope?: 'full' | 'field';
+}
+
 const ResponseViewer = () => {
   const { responseData, assertions, setAssertions } = useRequest();
+  const { variables, dynamicVariables } = useDataManagement();
+
   const [activeTab, setActiveTab] = useState<
     | 'body'
     | 'headers'
@@ -49,6 +73,44 @@ const ResponseViewer = () => {
   const [showAssertionModal, setShowAssertionModal] = useState(false);
   const [activeFieldPath, setActiveFieldPath] = useState<string>('');
   const [activeFieldValue, setActiveFieldValue] = useState<any>(null);
+
+  const formattedVariables = useMemo(() => {
+    const formatted: Array<{ name: string; value: string }> = [];
+
+    const isValidVar = (name: string) =>
+      name.startsWith('S_') || name.startsWith('D_');
+
+    // Format static variables
+    if (Array.isArray(variables)) {
+      variables.forEach((variable: any) => {
+        const name = variable.name || variable.key || '';
+        const value =
+          variable.value ||
+          variable.initialValue ||
+          variable.currentValue ||
+          '';
+        if (name && isValidVar(name)) {
+          formatted.push({ name, value: String(value) });
+        }
+      });
+    }
+
+    // Format dynamic variables
+    if (Array.isArray(dynamicVariables)) {
+      dynamicVariables.forEach((variable: any) => {
+        const name = variable.name || '';
+        if (name && isValidVar(name)) {
+          const generatedValue = generateDynamicValueById(
+            variable.generatorId || '',
+            variable.parameters || {}
+          );
+          formatted.push({ name, value: String(generatedValue) });
+        }
+      });
+    }
+
+    return formatted;
+  }, [variables, dynamicVariables]);
 
   useEffect(() => {
     if (responseData?.body) {
@@ -229,39 +291,66 @@ const ResponseViewer = () => {
   };
 
   const handleAssertionSelect = (assertionType: string, config?: any) => {
-    if (assertionType === 'suggested' && config?.assertion) {
-      const assertion = config.assertion;
-      setAssertions(
-        assertions.map((a: any) =>
-          a.id === assertion.id ? { ...a, enabled: true } : a
-        )
+    if (assertionType === 'suggested-multiple' && config?.assertions) {
+      const assertionsToEnable = config.assertions;
+      const assertionIds = assertionsToEnable.map((a: any) => a.id);
+
+      const updatedAssertions = assertions.map((a: any) =>
+        assertionIds.includes(a.id) ? { ...a, enabled: true } : a
       );
+      setAssertions(updatedAssertions);
+    } else if (assertionType === 'suggested' && config?.assertion) {
+      const assertion = config.assertion;
+      const updatedAssertions = assertions.map((a: any) =>
+        a.id === assertion.id ? { ...a, enabled: true } : a
+      );
+      setAssertions(updatedAssertions);
     } else {
       let description = '';
+      let finalType = assertionType;
 
       if (config?.isGeneral) {
         switch (assertionType) {
-          case 'response-time':
+          case 'response_time':
             description = `Response time should be ${
               config.comparison === 'less' ? 'less than' : 'more than'
             } ${config.value}ms`;
             break;
-          case 'payload-size':
+          case 'payload_size':
             description = `Payload size should be ${
               config.comparison === 'less' ? 'less than' : 'more than'
             } ${config.value}KB`;
             break;
-          case 'status-success':
-            description = 'Response status should be successful (2xx)';
+          case 'status_equals':
+            description = `Response status should be ${config.value}`;
             break;
-          case 'contains-static':
-            description = `Response should contain static value: "${config.value}"`;
+          case 'contains_text':
+            description = `Response should contain text: "${config.value}"`;
+            finalType = 'contains';
             break;
-          case 'contains-dynamic':
-            description = `Response should contain dynamic variable: ${config.value}`;
+          case 'contains_number':
+            description = `Response should contain number: ${config.value}`;
+            finalType = 'contains';
             break;
-          case 'contains-extracted':
+          case 'contains_boolean':
+            description = `Response should contain boolean: ${config.value}`;
+            finalType = 'contains';
+            break;
+          case 'contains_static':
+            description = `Response should contain static value: "${
+              config.value
+            }"${config.scope === 'field' ? ` in ${activeFieldPath}` : ''}`;
+            finalType = 'contains';
+            break;
+          case 'contains_dynamic':
+            description = `Response should contain dynamic variable: ${
+              config.value
+            }${config.scope === 'field' ? ` in ${activeFieldPath}` : ''}`;
+            finalType = 'contains';
+            break;
+          case 'contains_extracted':
             description = `Response should contain extracted variable: ${config.value}`;
+            finalType = 'contains';
             break;
           default:
             description = `General assertion: ${assertionType}`;
@@ -269,28 +358,35 @@ const ResponseViewer = () => {
       } else {
         const operatorLabels: Record<string, string> = {
           equals: 'equals',
-          'not-equals': 'does not equal',
-          'greater-than': 'is greater than',
-          'less-than': 'is less than',
+          field_not_equals: 'does not equal',
+          field_greater_than: 'is greater than',
+          field_less_than: 'is less than',
           contains: 'contains',
-          'not-contains': 'does not contain',
-          'array-length': 'has length',
+          field_not_contains: 'does not contain',
+          array_length: 'has length',
         };
 
         const operatorText = operatorLabels[config.operator] || config.operator;
         description = `${activeFieldPath} ${operatorText} "${config.value}"`;
       }
 
-      const newAssertion = {
+      const baseAssertion = {
         id: `manual-${Date.now()}`,
-        type: assertionType,
-        category: 'body',
+        type: finalType,
+        displayType: assertionType,
+        category: getCategoryForAssertionType(finalType),
         description,
-        field: activeFieldPath,
         value: activeFieldValue,
+        expectedValue: config.value,
         enabled: true,
         ...config,
       };
+
+      const newAssertion =
+        config?.isGeneral && config.scope !== 'field'
+          ? baseAssertion
+          : { ...baseAssertion, field: activeFieldPath };
+
       setAssertions([...assertions, newAssertion]);
     }
     handleModalClose();
@@ -395,33 +491,32 @@ const ResponseViewer = () => {
                   : String(node.value)}
               </span>
             )}
-          </div>
-          <div className='flex items-center space-x-1 flex-shrink-0 ml-2'>
-            {!hasChildren && (
-              <button
-                onClick={() =>
-                  handleCopy(String(node.value), `copy-${node.path}`)
-                }
-                className='p-1 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 rounded opacity-0 group-hover:opacity-100 transition-opacity'
-                title='Copy value'
-              >
-                {copiedItem === `copy-${node.path}` ? (
-                  <CheckCircle className='w-3 h-3 text-green-600' />
-                ) : (
-                  <Copy className='w-3 h-3' />
-                )}
-              </button>
-            )}
-            {isHovered && (
+
+            <div className='flex items-center gap-1 ml-2 opacity-0 group-hover:opacity-100 transition-opacity'>
+              {!hasChildren && (
+                <button
+                  onClick={() =>
+                    handleCopy(String(node.value), `copy-${node.path}`)
+                  }
+                  className='p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors'
+                  title='Copy value'
+                >
+                  {copiedItem === `copy-${node.path}` ? (
+                    <CheckCircle className='w-3.5 h-3.5 text-green-500' />
+                  ) : (
+                    <Copy className='w-3.5 h-3.5' />
+                  )}
+                </button>
+              )}
               <button
                 onClick={(e) =>
                   handleAddAssertionClick(node.path, node.value, e)
                 }
-                className='px-2 py-1 text-xs font-medium text-blue-600 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 rounded border border-blue-200 dark:border-blue-800 transition-colors'
+                className='px-1.5 py-0.5 text-xs font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors'
               >
                 + Assert
               </button>
-            )}
+            </div>
           </div>
         </div>
       </div>
@@ -553,7 +648,7 @@ const ResponseViewer = () => {
               </span>
             </div>
             <p className='text-sm text-gray-600 dark:text-gray-400 font-mono mt-1 break-all'>
-              {value}
+              {String(value)}
             </p>
           </div>
           <div className='flex items-center space-x-2 flex-shrink-0'>
@@ -565,7 +660,7 @@ const ResponseViewer = () => {
               {copiedItem === `header-${key}` ? (
                 <CheckCircle className='w-4 h-4 text-green-600' />
               ) : (
-                <Copy className='w-4 w-4' />
+                <Copy className='w-4 h-4' />
               )}
             </button>
           </div>
@@ -611,7 +706,7 @@ const ResponseViewer = () => {
     { id: 'cookies', label: 'Cookies' },
     {
       id: 'test-results',
-      label: 'Test Results',
+      label: 'Assertions(R)',
       hasIndicator:
         !!responseData?.assertionLogs && responseData.assertionLogs.length > 0,
     },
@@ -986,6 +1081,11 @@ const ResponseViewer = () => {
         onSelect={handleAssertionSelect}
         onClose={handleModalClose}
         allAssertions={assertions}
+        variables={formattedVariables.filter((v) => v.name.startsWith('S_'))}
+        dynamicVariables={formattedVariables.filter((v) =>
+          v.name.startsWith('D_')
+        )}
+        setAssertions={setAssertions}
       />
     </div>
   );
