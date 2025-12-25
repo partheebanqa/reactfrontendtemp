@@ -1,3 +1,6 @@
+'use client';
+
+import type React from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Activity,
@@ -13,6 +16,7 @@ import {
   XCircle,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { getCategoryForAssertionType } from '@/lib/assertion-utils';
 
 function AssertionModal({
   fieldPath,
@@ -42,13 +46,6 @@ function AssertionModal({
   const [manualValue, setManualValue] = useState('');
   const [generalType, setGeneralType] = useState<string>('');
   const [generalValue, setGeneralValue] = useState<string>('');
-  // Add these new state variables after the existing useState declarations (around line 28)
-  const [dynamicVariableScope, setDynamicVariableScope] = useState<
-    'full' | 'field'
-  >('field');
-  const [staticVariableScope, setStaticVariableScope] = useState<
-    'full' | 'field'
-  >('field');
   const [generalComparison, setGeneralComparison] = useState<string>('less');
   const [selectedSuggestedAssertions, setSelectedSuggestedAssertions] =
     useState<Set<string>>(new Set());
@@ -71,7 +68,6 @@ function AssertionModal({
     };
   }, [isOpen, onClose]);
 
-  // Reset state when modal closes
   useEffect(() => {
     if (!isOpen) {
       setAssertionsToRemove(new Set());
@@ -158,7 +154,7 @@ function AssertionModal({
 
   const allGeneralAssertions = [
     {
-      id: 'response-time',
+      id: 'response_time',
       label: 'Response Time',
       icon: Clock,
       needsInput: true,
@@ -168,7 +164,7 @@ function AssertionModal({
       showForTypes: ['all'],
     },
     {
-      id: 'payload-size',
+      id: 'payload_size',
       label: 'Payload Size',
       icon: HardDrive,
       needsInput: true,
@@ -178,7 +174,7 @@ function AssertionModal({
       showForTypes: ['all'],
     },
     {
-      id: 'status-code',
+      id: 'status_equals',
       label: 'Status Code',
       icon: Hash,
       needsInput: true,
@@ -187,7 +183,7 @@ function AssertionModal({
       showForTypes: ['all'],
     },
     {
-      id: 'contains-text',
+      id: 'contains_text',
       label: 'Contains Text',
       icon: Code,
       needsInput: true,
@@ -197,7 +193,7 @@ function AssertionModal({
       showForTypes: ['string'],
     },
     {
-      id: 'contains-number',
+      id: 'contains_number',
       label: 'Contains Number',
       icon: Hash,
       needsInput: true,
@@ -207,7 +203,7 @@ function AssertionModal({
       showForTypes: ['number'],
     },
     {
-      id: 'contains-boolean',
+      id: 'contains_boolean',
       label: 'Contains Boolean',
       icon: CheckCircle,
       needsInput: true,
@@ -221,27 +217,25 @@ function AssertionModal({
       showForTypes: ['boolean'],
     },
     {
-      id: 'contains-static',
+      id: 'contains_static',
       label: 'Contains Static Variable',
       icon: Code,
       needsInput: true,
       inputType: 'select',
       inputLabel: 'Select static variable',
-      hasScope: true,
       showForTypes: ['all'],
     },
     {
-      id: 'contains-dynamic',
+      id: 'contains_dynamic',
       label: 'Contains Dynamic Variable',
       icon: Code,
       needsInput: true,
       inputType: 'select',
       inputLabel: 'Select dynamic variable',
-      hasScope: true,
       showForTypes: ['all'],
     },
     {
-      id: 'contains-extracted',
+      id: 'contains_extracted',
       label: 'Contains Extracted Variable',
       icon: Code,
       needsInput: true,
@@ -263,9 +257,9 @@ function AssertionModal({
   const getOperatorsForType = (type: string, isArray: boolean) => {
     if (isArray) {
       return [
-        { id: 'array-length', label: 'length', description: 'Array length' },
+        { id: 'array_length', label: 'length', description: 'Array length' },
         { id: 'equals', label: '=', description: 'Equals' },
-        { id: 'not-equals', label: '≠', description: 'Not equals' },
+        { id: 'field_not_equals', label: '≠', description: 'Not equals' },
       ];
     }
 
@@ -273,33 +267,41 @@ function AssertionModal({
       case 'string':
         return [
           { id: 'equals', label: '=', description: 'Equals' },
-          { id: 'not-equals', label: '≠', description: 'Not equals' },
+          { id: 'field_not_equals', label: '≠', description: 'Not equals' },
           { id: 'contains', label: 'contains', description: 'Contains' },
           {
-            id: 'not-contains',
+            id: 'field_not_contains',
             label: 'not contains',
             description: 'Does not contain',
           },
           {
-            id: 'starts-with',
+            id: 'field_starts_with',
             label: 'starts with',
             description: 'Starts with',
           },
-          { id: 'ends-with', label: 'ends with', description: 'Ends with' },
+          {
+            id: 'field_ends_with',
+            label: 'ends with',
+            description: 'Ends with',
+          },
         ];
 
       case 'number':
         return [
           { id: 'equals', label: '=', description: 'Equals' },
-          { id: 'not-equals', label: '≠', description: 'Not equals' },
-          { id: 'greater-than', label: '>', description: 'Greater than' },
-          { id: 'less-than', label: '<', description: 'Less than' },
+          { id: 'field_not_equals', label: '≠', description: 'Not equals' },
+          { id: 'field_greater_than', label: '>', description: 'Greater than' },
+          { id: 'field_less_than', label: '<', description: 'Less than' },
           {
-            id: 'greater-equal',
+            id: 'field_greater_equal',
             label: '≥',
             description: 'Greater than or equal',
           },
-          { id: 'less-equal', label: '≤', description: 'Less than or equal' },
+          {
+            id: 'field_less_equal',
+            label: '≤',
+            description: 'Less than or equal',
+          },
           {
             id: 'between',
             label: 'between',
@@ -310,38 +312,42 @@ function AssertionModal({
       case 'boolean':
         return [
           { id: 'equals', label: '=', description: 'Equals' },
-          { id: 'not-equals', label: '≠', description: 'Not equals' },
-          { id: 'is-true', label: 'is true', description: 'Is true' },
-          { id: 'is-false', label: 'is false', description: 'Is false' },
+          { id: 'field_not_equals', label: '≠', description: 'Not equals' },
+          { id: 'field_is_true', label: 'is true', description: 'Is true' },
+          { id: 'field_is_false', label: 'is false', description: 'Is false' },
         ];
 
       case 'null':
         return [
-          { id: 'is-null', label: 'is null', description: 'Is null' },
-          { id: 'not-null', label: 'not null', description: 'Is not null' },
+          { id: 'field_null', label: 'is null', description: 'Is null' },
+          {
+            id: 'field_not_null',
+            label: 'not null',
+            description: 'Is not null',
+          },
         ];
 
       case 'object':
         return [
           { id: 'exists', label: 'exists', description: 'Field exists' },
           {
-            id: 'not-exists',
+            id: 'field_not_present',
             label: 'not exists',
             description: 'Field does not exist',
           },
           {
-            id: 'has-property',
+            id: 'field_has_property',
             label: 'has property',
             description: 'Has property',
           },
           { id: 'equals', label: '=', description: 'Equals' },
-          { id: 'not-equals', label: '≠', description: 'Not equals' },
+          { id: 'field_not_equals', label: '≠', description: 'Not equals' },
         ];
 
       default:
         return [
           { id: 'equals', label: '=', description: 'Equals' },
-          { id: 'not-equals', label: '≠', description: 'Not equals' },
+          { id: 'field_not_equals', label: '≠', description: 'Not equals' },
         ];
     }
   };
@@ -359,12 +365,10 @@ function AssertionModal({
     const isAlreadyEnabled = assertionItem.assertion.enabled;
     const isMarkedForRemoval = assertionsToRemove.has(assertionItem.id);
 
-    // If already enabled and not marked for removal, do nothing
     if (isAlreadyEnabled && !isMarkedForRemoval) {
       return;
     }
 
-    // If marked for removal, remove it from the removal set (restore it)
     if (isMarkedForRemoval) {
       const newRemoveSet = new Set(assertionsToRemove);
       newRemoveSet.delete(assertionItem.id);
@@ -372,7 +376,6 @@ function AssertionModal({
       return;
     }
 
-    // Toggle selection for non-enabled assertions
     const newSelected = new Set(selectedSuggestedAssertions);
     if (newSelected.has(assertionItem.id)) {
       newSelected.delete(assertionItem.id);
@@ -397,13 +400,10 @@ function AssertionModal({
   };
 
   const handleSuggestedSubmit = () => {
-    // Process both removals and additions
     let updatedAssertions = [...allAssertions];
 
-    // First, process removals (but skip if assertion is in selectedSuggestedAssertions)
     if (assertionsToRemove.size > 0) {
       updatedAssertions = updatedAssertions.map((a: any) => {
-        // If in removal set but also in selected set, keep it enabled
         if (
           assertionsToRemove.has(a.id) &&
           !selectedSuggestedAssertions.has(a.id)
@@ -414,7 +414,6 @@ function AssertionModal({
       });
     }
 
-    // Then, process additions
     selectedSuggestedAssertions.forEach((assertionId) => {
       const assertionItem = suggestedAssertions.find(
         (a) => a.id === assertionId
@@ -426,7 +425,6 @@ function AssertionModal({
       }
     });
 
-    // Set the updated assertions
     setAssertions(updatedAssertions);
 
     setSelectedSuggestedAssertions(new Set());
@@ -434,25 +432,82 @@ function AssertionModal({
     onClose();
   };
 
+  const getAssertionTypeForOperator = (operator: string): string => {
+    const operatorTypeMap: Record<string, string> = {
+      equals: 'field_equals',
+      field_not_equals: 'field_equals',
+      contains: 'field_contains',
+      field_not_contains: 'field_contains',
+      field_starts_with: 'field_contains',
+      field_ends_with: 'field_contains',
+      field_greater_than: 'field_range',
+      field_less_than: 'field_range',
+      field_greater_equal: 'field_range',
+      field_less_equal: 'field_range',
+      between: 'field_range',
+      field_is_true: 'field_equals',
+      field_is_false: 'field_equals',
+      field_null: 'field_null',
+      field_not_null: 'field_null',
+      array_length: 'array_length',
+      exists: 'field_present',
+      field_not_present: 'field_present',
+      field_has_property: 'field_present',
+    };
+
+    return operatorTypeMap[operator] || 'field_equals';
+  };
+
   const handleManualSubmit = () => {
     const operatorsWithoutValue = [
-      'is-null',
-      'not-null',
-      'is-true',
-      'is-false',
+      'field_null',
+      'field_not_null',
+      'field_is_true',
+      'field_is_false',
       'exists',
-      'not-exists',
+      'field_not_present',
     ];
 
     if (!operatorsWithoutValue.includes(selectedOperator) && !manualValue) {
       return;
     }
 
-    const config: any = {
-      operator: selectedOperator,
-      value: manualValue,
+    const assertionType = getAssertionTypeForOperator(selectedOperator);
+
+    const operatorLabels: Record<string, string> = {
+      equals: 'equals',
+      field_not_equals: 'does not equal',
+      field_greater_than: 'is greater than',
+      field_less_than: 'is less than',
+      contains: 'contains',
+      field_not_contains: 'does not contain',
+      array_length: 'has length',
+      field_null: 'is null',
+      field_not_null: 'is not null',
+      field_is_true: 'is true',
+      field_is_false: 'is false',
+      exists: 'exists',
+      field_not_present: 'does not exist',
     };
-    onSelect('manual', config);
+
+    const operatorText = operatorLabels[selectedOperator] || selectedOperator;
+    const description = `${fieldPath} ${operatorText}${
+      manualValue ? ` "${manualValue}"` : ''
+    }`;
+
+    const config: any = {
+      id: `manual-${Date.now()}`,
+      type: assertionType,
+      displayType: assertionType,
+      category: getCategoryForAssertionType(assertionType),
+      description,
+      operator: selectedOperator,
+      expectedValue: manualValue,
+      enabled: true,
+      field: fieldPath,
+    };
+
+    onSelect(assertionType, config);
   };
 
   const handleGeneralClick = (id: string) => {
@@ -475,31 +530,25 @@ function AssertionModal({
     const assertion = generalAssertions.find((a) => a.id === generalType);
     if (assertion?.hasComparison) {
       config.comparison = generalComparison;
-      if (generalType === 'response-time') {
+      if (generalType === 'response_time') {
         config.expectedTime = generalValue;
-      } else if (generalType === 'payload-size') {
+      } else if (generalType === 'payload_size') {
         config.expectedSize = generalValue;
       }
     }
 
-    if (generalType === 'contains-static') {
-      config.scope = staticVariableScope;
-      if (staticVariableScope === 'field') {
-        config.field = fieldPath;
-      }
-    } else if (generalType === 'contains-dynamic') {
-      config.scope = dynamicVariableScope;
-      if (dynamicVariableScope === 'field') {
-        config.field = fieldPath;
-      }
+    // Always use 'full' scope for static and dynamic variables
+    if (
+      generalType === 'contains_static' ||
+      generalType === 'contains_dynamic'
+    ) {
+      config.scope = 'full';
     }
 
     onSelect(generalType, config);
     setGeneralType('');
     setGeneralValue('');
     setGeneralComparison('less');
-    setDynamicVariableScope('field');
-    setStaticVariableScope('field');
   };
 
   const staticVariables = variables.filter((v) => v.name.startsWith('S_'));
@@ -512,21 +561,17 @@ function AssertionModal({
   const totalChanges =
     selectedSuggestedAssertions.size + assertionsToRemove.size;
 
-  // Calculate initial enabled assertions count for this field
   const initialEnabledCount = suggestedAssertions.filter(
     (a) => a.assertion.enabled
   ).length;
 
-  // Calculate final count after changes
   const finalCount =
     initialEnabledCount +
     selectedSuggestedAssertions.size -
     assertionsToRemove.size;
 
-  // Total available assertions
   const totalAssertions = suggestedAssertions.length;
 
-  // Button should be disabled only if final count equals initial count (no net change)
   const shouldDisableButton = finalCount === initialEnabledCount;
 
   return (
@@ -672,126 +717,40 @@ function AssertionModal({
                           ?.inputLabel
                       }
                     </label>
-                    {generalType === 'contains-static' ? (
-                      <div className='space-y-4'>
-                        {/* Scope Selection */}
-                        <div>
-                          <label className='block text-sm font-semibold text-gray-900 mb-2'>
-                            Search Scope
-                          </label>
-                          <div className='grid grid-cols-2 gap-2'>
-                            <Button
-                              onClick={() => setStaticVariableScope('full')}
-                              className={`px-4 py-2 text-sm rounded-lg border font-medium transition-all ${
-                                staticVariableScope === 'full'
-                                  ? 'border-blue-600 text-white'
-                                  : 'bg-white border-gray-200 text-gray-700 hover:border-blue-300'
-                              }`}
-                            >
-                              Full Response
-                            </Button>
-                            <Button
-                              onClick={() => setStaticVariableScope('field')}
-                              className={`px-4 py-2 text-sm rounded-lg border font-medium transition-all ${
-                                staticVariableScope === 'field'
-                                  ? 'border-blue-600 text-white'
-                                  : 'bg-white border-gray-200 text-gray-700 hover:border-blue-300'
-                              }`}
-                            >
-                              Current Field
-                            </Button>
-                          </div>
-                          {staticVariableScope === 'field' && (
-                            <p className='text-xs text-gray-500 mt-2'>
-                              Will search in:{' '}
-                              <span className='font-mono'>{fieldPath}</span>
-                            </p>
-                          )}
-                        </div>
-
-                        {/* Variable Selection */}
-                        <div>
-                          <label className='block text-sm font-semibold text-gray-900 mb-2'>
-                            Select Static Variable
-                          </label>
-                          <select
-                            value={generalValue}
-                            onChange={(e) => setGeneralValue(e.target.value)}
-                            className='w-full px-4 py-3 border border-gray-300 bg-white text-gray-900 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm'
-                            autoFocus
+                    {generalType === 'contains_static' ? (
+                      <select
+                        value={generalValue}
+                        onChange={(e) => setGeneralValue(e.target.value)}
+                        className='w-full px-4 py-3 border border-gray-300 bg-white text-gray-900 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm'
+                        autoFocus
+                      >
+                        <option value=''>Select static variable...</option>
+                        {staticVariables.map((variable) => (
+                          <option
+                            key={variable.name}
+                            value={`{{${variable.name}}}`}
                           >
-                            <option value=''>Select static variable...</option>
-                            {staticVariables.map((variable) => (
-                              <option
-                                key={variable.name}
-                                value={`{{${variable.name}}}`}
-                              >
-                                {variable.name} = {variable.value}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                      </div>
-                    ) : generalType === 'contains-dynamic' ? (
-                      <div className='space-y-4'>
-                        {/* Scope Selection */}
-                        <div>
-                          <label className='block text-sm font-semibold text-gray-900 mb-2'>
-                            Search Scope
-                          </label>
-                          <div className='grid grid-cols-2 gap-2'>
-                            <Button
-                              onClick={() => setDynamicVariableScope('full')}
-                              className={`px-4 py-2 text-sm rounded-lg border font-medium transition-all ${
-                                dynamicVariableScope === 'full'
-                                  ? 'border-blue-600 text-white'
-                                  : 'bg-white border-gray-200 text-gray-700 hover:border-blue-300'
-                              }`}
-                            >
-                              Full Response
-                            </Button>
-                            <Button
-                              onClick={() => setDynamicVariableScope('field')}
-                              className={`px-4 py-2 text-sm rounded-lg border font-medium transition-all ${
-                                dynamicVariableScope === 'field'
-                                  ? 'border-blue-600 text-white'
-                                  : 'bg-white border-gray-200 text-gray-700 hover:border-blue-300'
-                              }`}
-                            >
-                              Current Field
-                            </Button>
-                          </div>
-                          {dynamicVariableScope === 'field' && (
-                            <p className='text-xs text-gray-500 mt-2'>
-                              Will search in:{' '}
-                              <span className='font-mono'>{fieldPath}</span>
-                            </p>
-                          )}
-                        </div>
-
-                        {/* Variable Selection */}
-                        <div>
-                          <label className='block text-sm font-semibold text-gray-900 mb-2'>
-                            Select Dynamic Variable
-                          </label>
-                          <select
-                            value={generalValue}
-                            onChange={(e) => setGeneralValue(e.target.value)}
-                            className='w-full px-4 py-3 border border-gray-300 bg-white text-gray-900 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm'
-                            autoFocus
+                            {variable.name} = {variable.value}
+                          </option>
+                        ))}
+                      </select>
+                    ) : generalType === 'contains_dynamic' ? (
+                      <select
+                        value={generalValue}
+                        onChange={(e) => setGeneralValue(e.target.value)}
+                        className='w-full px-4 py-3 border border-gray-300 bg-white text-gray-900 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm'
+                        autoFocus
+                      >
+                        <option value=''>Select dynamic variable...</option>
+                        {filteredDynamicVariables.map((variable) => (
+                          <option
+                            key={variable.name}
+                            value={`{{${variable.name}}}`}
                           >
-                            <option value=''>Select dynamic variable...</option>
-                            {filteredDynamicVariables.map((variable) => (
-                              <option
-                                key={variable.name}
-                                value={`{{${variable.name}}}`}
-                              >
-                                {variable.name}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                      </div>
+                            {variable.name}
+                          </option>
+                        ))}
+                      </select>
                     ) : generalAssertions.find((a) => a.id === generalType)
                         ?.inputType === 'select' ? (
                       <select
@@ -851,8 +810,6 @@ function AssertionModal({
                     assertionItem.id
                   );
 
-                  // Determine if this item should show as "active/enabled" in UI
-                  // It's active if: (already enabled AND not marked for removal) OR selected
                   const isActiveInUI =
                     (isAlreadyEnabled && !isMarkedForRemoval) || isSelected;
 
@@ -946,12 +903,12 @@ function AssertionModal({
               </div>
 
               {![
-                'is-null',
-                'not-null',
-                'is-true',
-                'is-false',
+                'field_null',
+                'field_not_null',
+                'field_is_true',
+                'field_is_false',
                 'exists',
-                'not-exists',
+                'field_not_present',
               ].includes(selectedOperator) && (
                 <div>
                   <label className='block text-sm font-semibold text-gray-900 mb-2'>
@@ -975,12 +932,12 @@ function AssertionModal({
                     {operators.find((o) => o.id === selectedOperator)?.label}
                   </span>
                   {![
-                    'is-null',
-                    'not-null',
-                    'is-true',
-                    'is-false',
+                    'field_null',
+                    'field_not_null',
+                    'field_is_true',
+                    'field_is_false',
                     'exists',
-                    'not-exists',
+                    'field_not_present',
                   ].includes(selectedOperator) && (
                     <span className='font-mono text-blue-700'>
                       {manualValue || '...'}
@@ -1019,7 +976,7 @@ function AssertionModal({
               disabled={shouldDisableButton}
               className='px-4 py-2 text-sm font-medium text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
             >
-              Save Changes
+              Save Changes ({finalCount}/{suggestedAssertions.length})
             </Button>
           )}
           {activeTab === 'manual' && (

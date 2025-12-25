@@ -20,6 +20,7 @@ import { useRequest } from '@/hooks/useRequest';
 import AssertionModal from './AssertionModal';
 import { useDataManagement } from '@/hooks/useDataManagement';
 import { generateDynamicValueById } from '@/lib/request-utils';
+import { getCategoryForAssertionType } from '@/lib/assertion-utils';
 
 interface JsonNode {
   key: string;
@@ -67,10 +68,10 @@ const ResponseViewer = () => {
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(
     new Set(['root'])
   );
-  const [copiedItem, setCopiedItem] = useState('');
+  const [copiedItem, setCopiedItem] = useState<string>('');
   const [hoveredField, setHoveredField] = useState<string | null>(null);
   const [showAssertionModal, setShowAssertionModal] = useState(false);
-  const [activeFieldPath, setActiveFieldPath] = useState('');
+  const [activeFieldPath, setActiveFieldPath] = useState<string>('');
   const [activeFieldValue, setActiveFieldValue] = useState<any>(null);
 
   const formattedVariables = useMemo(() => {
@@ -310,44 +311,44 @@ const ResponseViewer = () => {
 
       if (config?.isGeneral) {
         switch (assertionType) {
-          case 'response-time':
+          case 'response_time':
             description = `Response time should be ${
               config.comparison === 'less' ? 'less than' : 'more than'
             } ${config.value}ms`;
             break;
-          case 'payload-size':
+          case 'payload_size':
             description = `Payload size should be ${
               config.comparison === 'less' ? 'less than' : 'more than'
             } ${config.value}KB`;
             break;
-          case 'status-code':
+          case 'status_equals':
             description = `Response status should be ${config.value}`;
             break;
-          case 'contains-text':
+          case 'contains_text':
             description = `Response should contain text: "${config.value}"`;
             finalType = 'contains';
             break;
-          case 'contains-number':
+          case 'contains_number':
             description = `Response should contain number: ${config.value}`;
             finalType = 'contains';
             break;
-          case 'contains-boolean':
+          case 'contains_boolean':
             description = `Response should contain boolean: ${config.value}`;
             finalType = 'contains';
             break;
-          case 'contains-static':
+          case 'contains_static':
             description = `Response should contain static value: "${
               config.value
             }"${config.scope === 'field' ? ` in ${activeFieldPath}` : ''}`;
             finalType = 'contains';
             break;
-          case 'contains-dynamic':
+          case 'contains_dynamic':
             description = `Response should contain dynamic variable: ${
               config.value
             }${config.scope === 'field' ? ` in ${activeFieldPath}` : ''}`;
             finalType = 'contains';
             break;
-          case 'contains-extracted':
+          case 'contains_extracted':
             description = `Response should contain extracted variable: ${config.value}`;
             finalType = 'contains';
             break;
@@ -357,24 +358,23 @@ const ResponseViewer = () => {
       } else {
         const operatorLabels: Record<string, string> = {
           equals: 'equals',
-          'not-equals': 'does not equal',
-          'greater-than': 'is greater than',
-          'less-than': 'is less than',
+          field_not_equals: 'does not equal',
+          field_greater_than: 'is greater than',
+          field_less_than: 'is less than',
           contains: 'contains',
-          'not-contains': 'does not contain',
-          'array-length': 'has length',
+          field_not_contains: 'does not contain',
+          array_length: 'has length',
         };
 
         const operatorText = operatorLabels[config.operator] || config.operator;
         description = `${activeFieldPath} ${operatorText} "${config.value}"`;
       }
 
-      // Build the base assertion object
       const baseAssertion = {
         id: `manual-${Date.now()}`,
         type: finalType,
         displayType: assertionType,
-        category: 'body',
+        category: getCategoryForAssertionType(finalType),
         description,
         value: activeFieldValue,
         expectedValue: config.value,
@@ -382,7 +382,6 @@ const ResponseViewer = () => {
         ...config,
       };
 
-      // Only add field property if it's not a general assertion or if scope is 'field'
       const newAssertion =
         config?.isGeneral && config.scope !== 'field'
           ? baseAssertion
@@ -439,18 +438,18 @@ const ResponseViewer = () => {
     return (
       <div
         key={node.path}
-        className='group flex items-center hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors'
+        className='group hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors relative'
         onMouseEnter={() => setHoveredField(node.path)}
         onMouseLeave={() => !showAssertionModal && setHoveredField(null)}
       >
-        <div
-          className='flex items-center flex-1 py-1 min-w-0'
-          style={{ paddingLeft: `${node.level * 16 + 8}px` }}
-        >
-          <span className='w-8 text-xs text-gray-400 dark:text-gray-500 flex-shrink-0 text-right pr-3 select-none'>
+        <div className='flex items-center py-1 pr-2 font-mono text-sm border-l-2 border-transparent hover:border-blue-500'>
+          <span className='text-gray-400 dark:text-gray-600 select-none text-xs w-12 text-center flex-shrink-0 absolute left-0'>
             {index + 1}
           </span>
-          <div className='flex items-center flex-1 min-w-0'>
+          <div
+            className='flex items-center flex-1 min-w-0'
+            style={{ marginLeft: `${48 + node.level * 20}px` }}
+          >
             {hasChildren && (
               <button
                 onClick={() => toggleNode(node.path)}
@@ -458,35 +457,33 @@ const ResponseViewer = () => {
                 aria-label={isExpanded ? 'Collapse' : 'Expand'}
               >
                 {isExpanded ? (
-                  <ChevronDown className='w-3 h-3 text-gray-500' />
+                  <ChevronDown className='w-3 h-3 text-gray-600 dark:text-gray-400' />
                 ) : (
-                  <ChevronRight className='w-3 h-3 text-gray-500' />
+                  <ChevronRight className='w-3 h-3 text-gray-600 dark:text-gray-400' />
                 )}
               </button>
             )}
-            {!hasChildren && <div className='w-5 flex-shrink-0' />}
-            <span className='text-blue-600 dark:text-blue-400 font-mono text-sm mr-1'>
+            {!hasChildren && <div className='w-5' />}
+            <span className='text-blue-600 dark:text-blue-400 font-medium mr-2 text-sm flex-shrink-0'>
               {node.key}:
             </span>
 
             {hasChildren ? (
-              <span className='text-gray-500 dark:text-gray-400 font-mono text-sm'>
+              <span className='text-gray-600 dark:text-gray-400 text-sm'>
                 {node.type === 'array'
                   ? `[${Array.isArray(node.value) ? node.value.length : 0}]`
                   : `{${Object.keys(node.value || {}).length}}`}
               </span>
             ) : (
               <span
-                className={`font-mono text-sm truncate ${
+                className={`text-sm font-mono truncate ${
                   node.type === 'string'
                     ? 'text-green-600 dark:text-green-400'
                     : node.type === 'number'
-                    ? 'text-orange-600 dark:text-orange-400'
-                    : node.type === 'boolean'
                     ? 'text-purple-600 dark:text-purple-400'
-                    : node.type === 'null'
-                    ? 'text-gray-500 dark:text-gray-400 italic'
-                    : 'text-gray-900 dark:text-gray-100'
+                    : node.type === 'boolean'
+                    ? 'text-orange-600 dark:text-orange-400'
+                    : 'text-gray-600 dark:text-gray-400'
                 }`}
               >
                 {node.type === 'string'
@@ -495,7 +492,6 @@ const ResponseViewer = () => {
               </span>
             )}
 
-            {/* Inline action buttons - shown after value */}
             <div className='flex items-center gap-1 ml-2 opacity-0 group-hover:opacity-100 transition-opacity'>
               {!hasChildren && (
                 <button
@@ -577,9 +573,9 @@ const ResponseViewer = () => {
       const totalRows = jsonNodes.filter((n) => n.level === 0).length;
 
       return (
-        <div className='flex flex-col h-full'>
-          <div className='flex items-center justify-between px-4 py-2 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700'>
-            <span className='text-xs text-gray-500 dark:text-gray-400'>
+        <div className='bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden'>
+          <div className='bg-gray-50 dark:bg-gray-800 px-3 py-2 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between'>
+            <span className='text-xs font-medium text-gray-600 dark:text-gray-400'>
               {totalRows} {totalRows === 1 ? 'row' : 'rows'}
             </span>
             <div className='flex items-center gap-2'>
@@ -620,7 +616,7 @@ const ResponseViewer = () => {
             </div>
           </div>
 
-          <div className='flex-1 overflow-auto'>
+          <div className='max-h-[600px] overflow-y-auto scrollbar-thin'>
             {visibleNodes.map((node, index) => renderJsonValue(node, index))}
           </div>
         </div>
@@ -628,41 +624,41 @@ const ResponseViewer = () => {
     } catch (error) {
       console.error('JSON parsing error:', error);
       return (
-        <div className='flex items-center justify-center h-full'>
-          <div className='text-center text-gray-500 dark:text-gray-400'>
+        <div className='p-2 bg-gray-100 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700'>
+          <p className='text-gray-600 dark:text-gray-400 text-sm'>
             Unable to parse response
-          </div>
+          </p>
         </div>
       );
     }
   };
 
   const renderHeadersTab = () => (
-    <div className='divide-y divide-gray-200 dark:divide-gray-700'>
+    <div className='space-y-2'>
       {Object.entries(responseData?.headers || {}).map(([key, value]) => (
         <div
           key={key}
-          className='flex items-center justify-between px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 group'
+          className='group flex items-center justify-between p-3 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 bg-white dark:bg-gray-900'
         >
-          <div className='flex items-center gap-3 min-w-0 flex-1'>
-            <div className='flex items-center gap-2 min-w-0'>
-              <Hash className='w-4 h-4 text-gray-400 flex-shrink-0' />
-              <span className='font-medium text-gray-900 dark:text-gray-100 truncate'>
+          <div className='flex-1 min-w-0 mr-4'>
+            <div className='flex items-center space-x-2'>
+              <Hash className='w-4 h-4 text-gray-600 dark:text-gray-400 flex-shrink-0' />
+              <span className='font-medium text-gray-900 dark:text-gray-100 text-sm'>
                 {key}
               </span>
             </div>
-            <div className='text-gray-600 dark:text-gray-400 truncate'>
+            <p className='text-sm text-gray-600 dark:text-gray-400 font-mono mt-1 break-all'>
               {String(value)}
-            </div>
+            </p>
           </div>
-          <div className='flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity'>
+          <div className='flex items-center space-x-2 flex-shrink-0'>
             <button
               onClick={() => handleCopy(value as string, `header-${key}`)}
               className='p-1 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 rounded'
               title='Copy value'
             >
               {copiedItem === `header-${key}` ? (
-                <CheckCircle className='w-4 h-4 text-green-500' />
+                <CheckCircle className='w-4 h-4 text-green-600' />
               ) : (
                 <Copy className='w-4 h-4' />
               )}
@@ -677,22 +673,26 @@ const ResponseViewer = () => {
     if (!responseData) return null;
 
     return (
-      <div className='flex items-center gap-4 text-sm'>
-        <div className='flex items-center gap-1.5'>
-          <CheckCircle className='w-4 h-4 text-green-500' />
-          <span className={getStatusColor(responseData.status)}>
+      <div className='flex items-center space-x-4 text-sm'>
+        <div className='flex items-center space-x-1'>
+          <CheckCircle
+            className={`h-4 w-4 ${getStatusColor(responseData.status)}`}
+          />
+          <span
+            className={`font-medium ${getStatusColor(responseData.status)}`}
+          >
             {responseData.status} {responseData.statusText || ''}
           </span>
         </div>
-        <div className='flex items-center gap-1.5'>
-          <Clock className='w-4 h-4 text-gray-400' />
-          <span className='text-gray-600 dark:text-gray-400'>
+        <div className='flex items-center space-x-1'>
+          <Clock className='h-4 w-4 text-gray-600 dark:text-gray-400' />
+          <span className='font-medium text-gray-900 dark:text-gray-100'>
             {responseData.metrics?.responseTime || 0}ms
           </span>
         </div>
-        <div className='flex items-center gap-1.5'>
-          <HardDrive className='w-4 h-4 text-gray-400' />
-          <span className='text-gray-600 dark:text-gray-400'>
+        <div className='flex items-center space-x-1'>
+          <HardDrive className='h-4 w-4 text-gray-600 dark:text-gray-400' />
+          <span className='font-medium text-gray-900 dark:text-gray-100'>
             {calculateResponseSize(responseData.body)}
           </span>
         </div>
@@ -706,7 +706,7 @@ const ResponseViewer = () => {
     { id: 'cookies', label: 'Cookies' },
     {
       id: 'test-results',
-      label: 'Test Results',
+      label: 'Assertions(R)',
       hasIndicator:
         !!responseData?.assertionLogs && responseData.assertionLogs.length > 0,
     },
@@ -726,24 +726,24 @@ const ResponseViewer = () => {
 
   if (!responseData) {
     return (
-      <div className='flex items-center justify-center h-full bg-gray-50 dark:bg-gray-900'>
+      <div className='flex-1 flex items-center justify-center bg-white dark:bg-gray-900 p-2'>
         <div className='text-center'>
-          <div className='text-gray-500 dark:text-gray-400 text-lg font-medium'>
+          <p className='text-gray-600 dark:text-gray-400 mb-4'>
             No response yet
-          </div>
-          <div className='text-gray-400 dark:text-gray-500 text-sm mt-1'>
+          </p>
+          <p className='text-sm text-gray-500'>
             Send a request to see the response here
-          </div>
+          </p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className='flex flex-col h-full bg-white dark:bg-gray-900'>
-      <div className='flex items-center justify-between border-b border-gray-200 dark:border-gray-700 px-4'>
-        <div className='flex items-center'>
-          <nav className='flex space-x-4'>
+    <div className='flex-1 flex flex-col bg-white dark:bg-gray-900 h-full overflow-hidden'>
+      <div className='bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex-shrink-0'>
+        <div className='flex items-center justify-between border-b border-gray-200 dark:border-gray-700'>
+          <nav className='flex space-x-6 px-4 whitespace-nowrap overflow-x-auto scrollbar-thin no-scrollbar'>
             {tabs.map((tab) => (
               <button
                 key={tab.id}
@@ -754,37 +754,38 @@ const ResponseViewer = () => {
                     : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
                 }`}
               >
-                {tab.label}
+                <span>{tab.label}</span>
                 {tab.hasIndicator && (
-                  <span className='w-2 h-2 bg-blue-500 rounded-full ml-1' />
+                  <span className='w-1.5 h-1.5 bg-blue-500 rounded-full' />
                 )}
               </button>
             ))}
           </nav>
-          <div className='ml-6'>
+
+          <div className='px-4'>
             <StatusSummary />
           </div>
         </div>
 
-        <div className='flex items-center gap-2'>
-          <div className='flex items-center border border-gray-200 dark:border-gray-700 rounded-md overflow-hidden'>
-            <button className='px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100'>
-              <Code className='w-4 h-4' />
-              Pretty
+        <div className='flex items-center justify-between px-4 py-1'>
+          <div className='flex items-center space-x-4'>
+            <button className='flex items-center space-x-2 text-sm font-medium text-blue-600'>
+              <CheckCircle className='w-4 h-4' />
+              <span>Pretty</span>
             </button>
-            <button className='px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'>
+            <button className='flex items-center space-x-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'>
               <Code className='w-4 h-4' />
-              Raw
+              <span>Raw</span>
             </button>
           </div>
 
-          <div className='flex items-center gap-1'>
+          <div className='flex items-center space-x-2'>
             <button
               onClick={() => setShowSearch(!showSearch)}
               className='p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400'
               title='Search in response'
             >
-              <Search className='w-4 h-4' />
+              <Search className='h-4 w-4' />
             </button>
             <button
               onClick={() =>
@@ -797,9 +798,9 @@ const ResponseViewer = () => {
               title='Copy response'
             >
               {copiedItem === 'full-response' ? (
-                <CheckCircle className='w-4 h-4 text-green-500' />
+                <CheckCircle className='h-4 w-4 text-green-600' />
               ) : (
-                <Copy className='w-4 h-4' />
+                <Copy className='h-4 w-4' />
               )}
             </button>
             <button
@@ -807,16 +808,16 @@ const ResponseViewer = () => {
               className='p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400'
               title='Download response'
             >
-              <Download className='w-4 h-4' />
+              <Download className='h-4 w-4' />
             </button>
           </div>
         </div>
 
         {showSearch && (
-          <div className='absolute top-full left-0 right-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 p-2 z-10'>
-            <div className='flex items-center gap-2'>
+          <div className='px-4 py-2 border-b border-gray-200 dark:border-gray-700'>
+            <div className='flex items-center space-x-2'>
               <div className='flex-1 relative'>
-                <Search className='w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400' />
+                <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-600 dark:text-gray-400' />
                 <input
                   type='text'
                   value={searchQuery}
@@ -833,28 +834,28 @@ const ResponseViewer = () => {
                 }}
                 className='p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400'
               >
-                <X className='w-4 h-4' />
+                <X className='h-4 w-4' />
               </button>
             </div>
           </div>
         )}
       </div>
 
-      <div className='flex-1 overflow-hidden'>
+      <div className='flex-1 overflow-auto p-4 scrollbar-thin'>
         {activeTab === 'body' && renderJsonTree()}
         {activeTab === 'headers' && renderHeadersTab()}
         {activeTab === 'cookies' && (
-          <div className='flex items-center justify-center h-full text-gray-500 dark:text-gray-400'>
-            <Cookie className='w-8 h-8 mr-3 opacity-50' />
+          <div className='text-center py-8 text-gray-600 dark:text-gray-400'>
+            <Cookie className='w-12 h-12 text-gray-400 mx-auto mb-3' />
             <p>No cookies found in response</p>
           </div>
         )}
 
         {activeTab === 'test-results' &&
           Array.isArray(responseData.assertionLogs) && (
-            <div className='p-4 space-y-2'>
+            <div className='space-y-2'>
               {responseData.assertionLogs.length === 0 ? (
-                <div className='text-center text-gray-500 dark:text-gray-400 py-8'>
+                <div className='text-center py-8 text-gray-500'>
                   <p>No test results available</p>
                 </div>
               ) : (
@@ -862,26 +863,26 @@ const ResponseViewer = () => {
                   (assertion: any, idx: number) => (
                     <div
                       key={idx}
-                      className={`p-3 rounded-lg border ${
+                      className={`border rounded-lg p-3 ${
                         assertion.status === 'passed'
                           ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
                           : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
                       }`}
                     >
-                      <div className='flex items-center gap-2'>
+                      <div className='flex items-center space-x-2'>
                         {assertion.status === 'passed' ? (
-                          <CheckCircle className='w-4 h-4 text-green-500' />
+                          <CheckCircle className='h-5 w-5 text-green-600 dark:text-green-400' />
                         ) : (
-                          <X className='w-4 h-4 text-red-500' />
+                          <X className='h-5 w-5 text-red-600 dark:text-red-400' />
                         )}
-                        <span className='text-sm font-medium text-gray-900 dark:text-gray-100'>
+                        <h4 className='font-medium text-gray-900 dark:text-gray-100'>
                           {assertion.description}
-                        </span>
+                        </h4>
                       </div>
                       {assertion.errorMessage && (
-                        <div className='mt-2 text-xs text-red-600 dark:text-red-400 pl-6'>
+                        <p className='mt-2 text-sm text-red-600 dark:text-red-400'>
                           {assertion.errorMessage}
-                        </div>
+                        </p>
                       )}
                     </div>
                   )
@@ -891,74 +892,80 @@ const ResponseViewer = () => {
           )}
 
         {activeTab === 'schema' && (
-          <div className='p-4'>
+          <div className='p-4 overflow-auto scrollbar-thin h-full'>
             {responseData.schemaValidation ? (
               <div className='space-y-4'>
                 <div
-                  className={`p-4 rounded-lg border ${
+                  className={`border rounded-lg p-4 ${
                     responseData.schemaValidation.passed
                       ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
                       : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
                   }`}
                 >
-                  <div className='flex items-center gap-3'>
+                  <div className='flex items-center space-x-2'>
                     {responseData.schemaValidation.passed ? (
-                      <CheckCircle className='w-5 h-5 text-green-500' />
+                      <CheckCircle className='h-5 w-5 text-green-600 flex-shrink-0' />
                     ) : (
-                      <X className='w-5 h-5 text-red-500' />
+                      <X className='h-5 w-5 text-red-600 flex-shrink-0' />
                     )}
                     <div>
-                      <div className='font-medium text-gray-900 dark:text-gray-100'>
+                      <h3
+                        className={`font-medium ${
+                          responseData.schemaValidation.passed
+                            ? 'text-green-800 dark:text-green-300'
+                            : 'text-red-800 dark:text-red-300'
+                        }`}
+                      >
                         Schema Validation{' '}
                         {responseData.schemaValidation.passed
                           ? 'Passed'
                           : 'Failed'}
-                      </div>
-                      <div className='text-sm text-gray-600 dark:text-gray-400'>
+                      </h3>
+                      <p className='text-sm text-gray-600 dark:text-gray-400 mt-1'>
                         Schema: {responseData.schemaValidation.name}
-                      </div>
+                      </p>
                     </div>
                   </div>
                 </div>
 
                 {!responseData.schemaValidation.passed &&
                   responseData.schemaValidation.results?.length > 0 && (
-                    <div className='space-y-2'>
-                      <h4 className='text-sm font-medium text-gray-900 dark:text-gray-100'>
+                    <div className='border rounded-lg p-4 bg-white dark:bg-gray-900'>
+                      <h4 className='font-medium text-sm mb-3 text-red-700 dark:text-red-400'>
                         Validation Errors:
                       </h4>
-                      <div className='space-y-2'>
+                      <ul className='space-y-2 text-sm'>
                         {responseData.schemaValidation.results.map(
                           (issue: any, idx: number) => (
-                            <div
+                            <li
                               key={idx}
-                              className='p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-sm'
+                              className='flex flex-col border-l-2 border-red-400 pl-2'
                             >
-                              <span className='font-mono text-red-700 dark:text-red-400'>
+                              <span className='font-medium text-gray-800 dark:text-gray-200'>
                                 {issue.field}
                               </span>
-                              <span className='text-gray-700 dark:text-gray-300 ml-2'>
+                              <span className='text-gray-600 dark:text-gray-400'>
                                 {issue.description}
                               </span>
                               {issue.value !== undefined &&
                                 issue.value !== null && (
-                                  <span className='text-gray-500 dark:text-gray-400 ml-2'>
+                                  <span className='text-xs text-gray-400'>
                                     Value: {String(issue.value)}
                                   </span>
                                 )}
-                            </div>
+                            </li>
                           )
                         )}
-                      </div>
+                      </ul>
                     </div>
                   )}
               </div>
             ) : (
-              <div className='flex flex-col items-center justify-center h-full text-gray-500 dark:text-gray-400 py-8'>
-                <div className='text-lg font-medium'>
+              <div className='text-center py-8'>
+                <div className='text-gray-500 dark:text-gray-400 mb-2'>
                   No schema validation results
                 </div>
-                <div className='text-sm mt-1'>
+                <div className='text-sm text-gray-400'>
                   Schema validation will appear here when available
                 </div>
               </div>
@@ -967,16 +974,16 @@ const ResponseViewer = () => {
         )}
 
         {activeTab === 'actual-request' && requestDetails && (
-          <div className='p-4 space-y-4'>
-            <div className='space-y-2'>
-              <h4 className='text-sm font-medium text-gray-900 dark:text-gray-100'>
+          <div className='space-y-4'>
+            <div className='bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4'>
+              <h3 className='text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3'>
                 Request URL:
-              </h4>
-              <div className='flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg'>
-                <span className='px-2 py-1 text-xs font-bold bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded'>
+              </h3>
+              <div className='flex items-center space-x-3'>
+                <span className='px-3 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 rounded font-semibold text-sm'>
                   {requestDetails.method}
                 </span>
-                <span className='font-mono text-sm text-gray-700 dark:text-gray-300 flex-1 truncate'>
+                <span className='text-sm text-gray-900 dark:text-gray-100 font-mono flex-1 truncate'>
                   {requestDetails.url}
                 </span>
                 <button
@@ -985,7 +992,7 @@ const ResponseViewer = () => {
                   title='Copy URL'
                 >
                   {copiedItem === 'request-url' ? (
-                    <CheckCircle className='w-4 h-4 text-green-500' />
+                    <CheckCircle className='w-4 h-4 text-green-600' />
                   ) : (
                     <Copy className='w-4 h-4' />
                   )}
@@ -993,30 +1000,33 @@ const ResponseViewer = () => {
               </div>
             </div>
 
-            <div className='space-y-2'>
-              <h4 className='text-sm font-medium text-gray-900 dark:text-gray-100'>
+            <div className='bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4'>
+              <h3 className='text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3'>
                 Headers:
-              </h4>
-              <div className='border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden'>
+              </h3>
+              <div className='overflow-x-auto scrollbar-thin'>
                 <table className='w-full text-sm'>
-                  <thead className='bg-gray-50 dark:bg-gray-800'>
-                    <tr>
-                      <th className='px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase'>
+                  <thead>
+                    <tr className='border-b border-gray-200 dark:border-gray-700'>
+                      <th className='text-left py-2 px-3 text-gray-600 dark:text-gray-400 font-semibold'>
                         Name
                       </th>
-                      <th className='px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase'>
+                      <th className='text-left py-2 px-3 text-gray-600 dark:text-gray-400 font-semibold'>
                         Value
                       </th>
                     </tr>
                   </thead>
-                  <tbody className='divide-y divide-gray-200 dark:divide-gray-700'>
+                  <tbody>
                     {Object.entries(requestDetails.headers).map(
                       ([name, value]) => (
-                        <tr key={name}>
-                          <td className='px-4 py-2 font-mono text-gray-700 dark:text-gray-300'>
+                        <tr
+                          key={name}
+                          className='border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors'
+                        >
+                          <td className='py-2 px-3 text-gray-900 dark:text-gray-100 font-medium'>
                             {name}
                           </td>
-                          <td className='px-4 py-2 font-mono text-gray-600 dark:text-gray-400'>
+                          <td className='py-2 px-3 text-gray-600 dark:text-gray-400 font-mono'>
                             {String(value)}
                           </td>
                         </tr>
@@ -1028,16 +1038,16 @@ const ResponseViewer = () => {
             </div>
 
             {requestDetails.body && (
-              <div className='space-y-2'>
-                <div className='flex items-center justify-between'>
-                  <h4 className='text-sm font-medium text-gray-900 dark:text-gray-100'>
+              <div className='bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4'>
+                <div className='flex items-center justify-between mb-3'>
+                  <h3 className='text-sm font-semibold text-gray-900 dark:text-gray-100'>
                     Body:
-                  </h4>
-                  <span className='text-xs text-gray-500 dark:text-gray-400'>
+                  </h3>
+                  <span className='text-xs text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded'>
                     Body Type: application/json
                   </span>
                 </div>
-                <div className='relative'>
+                <div className='bg-gray-100 dark:bg-gray-800 rounded-lg p-3 relative'>
                   <button
                     onClick={() =>
                       handleCopy(
@@ -1049,12 +1059,12 @@ const ResponseViewer = () => {
                     title='Copy body'
                   >
                     {copiedItem === 'request-body' ? (
-                      <CheckCircle className='w-4 h-4 text-green-500' />
+                      <CheckCircle className='w-4 h-4 text-green-600' />
                     ) : (
                       <Copy className='w-4 h-4' />
                     )}
                   </button>
-                  <pre className='p-4 bg-gray-50 dark:bg-gray-800 rounded-lg font-mono text-sm text-gray-700 dark:text-gray-300 overflow-auto'>
+                  <pre className='text-sm text-gray-900 dark:text-gray-100 font-mono overflow-x-auto scrollbar-thin'>
                     {JSON.stringify(requestDetails.body, null, 2)}
                   </pre>
                 </div>
