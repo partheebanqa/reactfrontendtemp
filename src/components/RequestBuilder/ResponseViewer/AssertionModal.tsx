@@ -77,8 +77,42 @@ function AssertionModal({
 
   if (!isOpen) return null;
 
+  const normalizeHeaderName = (name: string): string => {
+    return name
+      .toLowerCase()
+      .replace(/^headers\./, '')
+      .trim();
+  };
+
   const suggestedAssertions = allAssertions
     .filter((assertion) => {
+      const isHeaderField = fieldPath.startsWith('headers.');
+
+      if (isHeaderField) {
+        const headerName = normalizeHeaderName(fieldPath);
+
+        if (
+          assertion.category === 'HeaderGuard™' ||
+          assertion.category === 'HeaderGuard'
+        ) {
+          const assertionField = normalizeHeaderName(assertion.field || '');
+
+          const matches = assertionField === headerName;
+
+          return matches;
+        }
+
+        if (assertion.category === 'headers') {
+          const assertionField = normalizeHeaderName(assertion.field || '');
+
+          const matches = assertionField === headerName;
+
+          return matches;
+        }
+
+        return false;
+      }
+
       return assertion.category === 'body' && assertion.field === fieldPath;
     })
     .map((assertion) => {
@@ -89,6 +123,31 @@ function AssertionModal({
       switch (assertion.type) {
         case 'field_present':
           label = 'Field Exists';
+          description = assertion.description;
+          icon = CheckCircle;
+          break;
+        case 'header_present':
+          label = 'Header Exists';
+          description = assertion.description;
+          icon = CheckCircle;
+          break;
+        case 'header_equals':
+          label = 'Header Equals';
+          description = assertion.description;
+          icon = CheckCircle;
+          break;
+        case 'header_contains':
+          label = 'Header Contains';
+          description = assertion.description;
+          icon = Code;
+          break;
+        case 'header_security_present':
+          label = 'Security Header Present';
+          description = assertion.description;
+          icon = CheckCircle;
+          break;
+        case 'header_security_value':
+          label = 'Security Header Value Check';
           description = assertion.description;
           icon = CheckCircle;
           break;
@@ -432,7 +491,24 @@ function AssertionModal({
     onClose();
   };
 
-  const getAssertionTypeForOperator = (operator: string): string => {
+  const getAssertionTypeForOperator = (
+    operator: string,
+    isHeader: boolean = false
+  ): string => {
+    if (isHeader) {
+      const headerOperatorTypeMap: Record<string, string> = {
+        equals: 'header_equals',
+        field_not_equals: 'header_equals',
+        contains: 'header_contains',
+        field_not_contains: 'header_contains',
+        field_starts_with: 'header_contains',
+        field_ends_with: 'header_contains',
+        exists: 'header_present',
+        field_not_present: 'header_present',
+      };
+      return headerOperatorTypeMap[operator] || 'header_equals';
+    }
+
     const operatorTypeMap: Record<string, string> = {
       equals: 'field_equals',
       field_not_equals: 'field_equals',
@@ -472,7 +548,12 @@ function AssertionModal({
       return;
     }
 
-    const assertionType = getAssertionTypeForOperator(selectedOperator);
+    const isHeader = fieldPath.startsWith('headers.');
+
+    const assertionType = getAssertionTypeForOperator(
+      selectedOperator,
+      isHeader
+    );
 
     const operatorLabels: Record<string, string> = {
       equals: 'equals',
@@ -491,7 +572,14 @@ function AssertionModal({
     };
 
     const operatorText = operatorLabels[selectedOperator] || selectedOperator;
-    const description = `${fieldPath} ${operatorText}${
+
+    const normalizedFieldPath = isHeader
+      ? fieldPath.replace(/^headers\./, '').toLowerCase()
+      : fieldPath;
+
+    console.log('normalizedFieldPath:', normalizedFieldPath);
+
+    const description = `${normalizedFieldPath} ${operatorText}${
       manualValue ? ` "${manualValue}"` : ''
     }`;
 
@@ -499,12 +587,14 @@ function AssertionModal({
       id: `manual-${Date.now()}`,
       type: assertionType,
       displayType: assertionType,
-      category: getCategoryForAssertionType(assertionType),
+      category: isHeader
+        ? 'headers'
+        : getCategoryForAssertionType(assertionType),
       description,
       operator: selectedOperator,
       expectedValue: manualValue,
       enabled: true,
-      field: fieldPath,
+      field: normalizedFieldPath,
     };
 
     onSelect(assertionType, config);
@@ -537,7 +627,6 @@ function AssertionModal({
       }
     }
 
-    // Always use 'full' scope for static and dynamic variables
     if (
       generalType === 'contains_static' ||
       generalType === 'contains_dynamic'
@@ -555,6 +644,8 @@ function AssertionModal({
   const filteredDynamicVariables = dynamicVariables.filter((v) =>
     v.name.startsWith('D_')
   );
+
+  const displayedSuggestions = suggestedAssertions;
 
   const hasChanges =
     selectedSuggestedAssertions.size > 0 || assertionsToRemove.size > 0;
@@ -609,7 +700,7 @@ function AssertionModal({
           >
             <div className='flex items-center justify-center gap-2'>
               <CheckCircle className='w-4 h-4' />
-              Suggested ({suggestedAssertions.length})
+              Suggested ({displayedSuggestions.length})
             </div>
           </button>
           <button
@@ -792,88 +883,73 @@ function AssertionModal({
 
           {activeTab === 'suggested' && (
             <div className='space-y-2'>
-              {suggestedAssertions.length === 0 ? (
-                <div className='text-center py-8 text-gray-500'>
-                  <p className='mb-2'>No suggested assertions for this field</p>
-                  <p className='text-sm'>
-                    Try the Manual or General tabs to create custom assertions
-                  </p>
-                </div>
-              ) : (
-                suggestedAssertions.map((assertionItem) => {
-                  const Icon = assertionItem.icon;
-                  const isAlreadyEnabled = assertionItem.assertion.enabled;
+              {displayedSuggestions.length > 0 ? (
+                displayedSuggestions.map((assertion: any) => {
+                  const Icon = assertion.icon || CheckCircle;
+                  const isEnabled = assertion.assertion?.enabled || false;
                   const isMarkedForRemoval = assertionsToRemove.has(
-                    assertionItem.id
+                    assertion.id
                   );
                   const isSelected = selectedSuggestedAssertions.has(
-                    assertionItem.id
+                    assertion.id
                   );
-
-                  const isActiveInUI =
-                    (isAlreadyEnabled && !isMarkedForRemoval) || isSelected;
+                  const isDisabled = isEnabled && !isMarkedForRemoval;
 
                   return (
-                    <div
-                      key={assertionItem.id}
-                      onClick={() => handleSuggestedClick(assertionItem)}
-                      className={`w-full flex items-start gap-4 p-4 rounded-lg border transition-all text-left group ${
-                        isActiveInUI
-                          ? 'border-blue-500 bg-blue-100 dark:bg-blue-900/40 cursor-pointer'
-                          : 'border-gray-200 dark:border-gray-700 hover:border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer'
+                    <button
+                      key={assertion.id}
+                      onClick={() => handleSuggestedClick(assertion)}
+                      disabled={isDisabled}
+                      className={`w-full flex items-start gap-4 p-4 rounded-lg border transition-all text-left ${
+                        isDisabled
+                          ? 'border-gray-200 bg-gray-50 opacity-50 cursor-not-allowed'
+                          : isMarkedForRemoval
+                          ? 'border-red-300 bg-red-50'
+                          : isSelected
+                          ? 'border-blue-300 bg-blue-50'
+                          : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50'
                       }`}
                     >
                       <div
                         className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors ${
-                          isActiveInUI
-                            ? 'bg-blue-200 dark:bg-blue-800'
-                            : 'bg-gray-100 dark:bg-gray-800 group-hover:bg-blue-100 dark:group-hover:bg-blue-900/30'
+                          isDisabled
+                            ? 'bg-gray-100'
+                            : isMarkedForRemoval
+                            ? 'bg-red-100'
+                            : isSelected
+                            ? 'bg-blue-100'
+                            : 'bg-gray-100 group-hover:bg-blue-100'
                         }`}
                       >
-                        {isActiveInUI ? (
-                          <CheckCircle className='w-5 h-5 text-blue-600' />
-                        ) : (
-                          <Icon
-                            className={`w-5 h-5 transition-colors text-gray-600 dark:text-gray-400 group-hover:text-blue-600`}
-                          />
-                        )}
+                        <Icon
+                          className={`w-5 h-5 transition-colors ${
+                            isDisabled
+                              ? 'text-gray-400'
+                              : isMarkedForRemoval
+                              ? 'text-red-600'
+                              : isSelected
+                              ? 'text-blue-600'
+                              : 'text-gray-600'
+                          }`}
+                        />
                       </div>
                       <div className='flex-1 min-w-0'>
-                        <div className='flex items-center justify-between'>
-                          <div
-                            className={`text-sm font-medium ${
-                              isActiveInUI
-                                ? 'text-blue-900 dark:text-blue-200'
-                                : 'text-gray-900 dark:text-gray-100 group-hover:text-blue-900 dark:group-hover:text-blue-300'
-                            }`}
-                          >
-                            {assertionItem.label}
-                            {isAlreadyEnabled &&
-                              !isMarkedForRemoval &&
-                              !isSelected && (
-                                <span className='ml-2 text-xs px-2 py-0.5 bg-blue-200 dark:bg-blue-800 text-blue-800 dark:text-blue-200 rounded-full'>
-                                  Added
-                                </span>
-                              )}
-                          </div>
-                          {isAlreadyEnabled && !isMarkedForRemoval && (
-                            <button
-                              onClick={(e) =>
-                                handleMarkForRemoval(assertionItem.id, e)
-                              }
-                              className='p-1 rounded-full transition-colors text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30'
-                            >
-                              <X className='w-4 h-4' />
-                            </button>
-                          )}
+                        <div className='text-sm font-medium text-gray-900'>
+                          {assertion.label}
                         </div>
                         <div className='text-xs text-gray-500 mt-1'>
-                          {assertionItem.description}
+                          {assertion.description}
                         </div>
                       </div>
-                    </div>
+                    </button>
                   );
                 })
+              ) : (
+                <div className='text-center py-8 text-gray-500'>
+                  <p className='text-sm'>
+                    No suggestions available for this field
+                  </p>
+                </div>
               )}
             </div>
           )}
@@ -976,7 +1052,7 @@ function AssertionModal({
               disabled={shouldDisableButton}
               className='px-4 py-2 text-sm font-medium text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
             >
-              Save Changes ({finalCount}/{suggestedAssertions.length})
+              Save Changes ({finalCount}/{totalAssertions})
             </Button>
           )}
           {activeTab === 'manual' && (
