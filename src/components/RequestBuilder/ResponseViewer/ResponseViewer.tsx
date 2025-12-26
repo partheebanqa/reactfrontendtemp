@@ -80,7 +80,6 @@ const ResponseViewer = () => {
     const isValidVar = (name: string) =>
       name.startsWith('S_') || name.startsWith('D_');
 
-    // Format static variables
     if (Array.isArray(variables)) {
       variables.forEach((variable: any) => {
         const name = variable.name || variable.key || '';
@@ -94,8 +93,6 @@ const ResponseViewer = () => {
         }
       });
     }
-
-    // Format dynamic variables
     if (Array.isArray(dynamicVariables)) {
       dynamicVariables.forEach((variable: any) => {
         const name = variable.name || '';
@@ -108,7 +105,6 @@ const ResponseViewer = () => {
         }
       });
     }
-
     return formatted;
   }, [variables, dynamicVariables]);
 
@@ -370,6 +366,8 @@ const ResponseViewer = () => {
         description = `${activeFieldPath} ${operatorText} "${config.value}"`;
       }
 
+      console.log('activeFieldPath88:', activeFieldPath);
+
       const baseAssertion = {
         id: `manual-${Date.now()}`,
         type: finalType,
@@ -382,10 +380,19 @@ const ResponseViewer = () => {
         ...config,
       };
 
+      const normalizeFieldPath = (path: string) => {
+        if (path.startsWith('headers.')) {
+          return path.replace(/^headers\./, '').toLowerCase();
+        }
+        return path;
+      };
       const newAssertion =
         config?.isGeneral && config.scope !== 'field'
           ? baseAssertion
-          : { ...baseAssertion, field: activeFieldPath };
+          : {
+              ...baseAssertion,
+              field: normalizeFieldPath(activeFieldPath),
+            };
 
       setAssertions([...assertions, newAssertion]);
     }
@@ -651,17 +658,28 @@ const ResponseViewer = () => {
               {String(value)}
             </p>
           </div>
-          <div className='flex items-center space-x-2 flex-shrink-0'>
+          <div className='flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0'>
             <button
               onClick={() => handleCopy(value as string, `header-${key}`)}
-              className='p-1 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 rounded'
+              className='p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors'
               title='Copy value'
             >
               {copiedItem === `header-${key}` ? (
-                <CheckCircle className='w-4 h-4 text-green-600' />
+                <CheckCircle className='w-3.5 h-3.5 text-green-500' />
               ) : (
-                <Copy className='w-4 h-4' />
+                <Copy className='w-3.5 h-3.5' />
               )}
+            </button>
+
+            <button
+              onClick={() => {
+                setActiveFieldPath(`headers.${key}`);
+                setActiveFieldValue(value);
+                setShowAssertionModal(true);
+              }}
+              className='px-1.5 py-0.5 text-xs font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors'
+            >
+              + Assert
             </button>
           </div>
         </div>

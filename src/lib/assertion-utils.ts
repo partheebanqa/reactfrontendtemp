@@ -8,11 +8,12 @@ export function getCategoryForAssertionType(type: string): string {
     payload_size: 'performance',
 
     // Header assertions
-    header_present: 'header',
-    header_equals: 'header',
-    header_security_present: 'header',
-    header_security_value: 'header',
-    header_hsts_max_age: 'header',
+    header_present: 'headers',
+    header_equals: 'headers',
+    header_contains: 'headers',
+    header_security_present: 'HeaderGuard™',
+    header_security_value: 'HeaderGuard™',
+    header_hsts_max_age: 'HeaderGuard™',
 
     // Field assertions
     field_present: 'body',
