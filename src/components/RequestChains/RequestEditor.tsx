@@ -182,6 +182,8 @@ export function RequestEditor({
 
   const [assertions, setAssertions] = useState<any[]>([]);
 
+  console.log('assertion88:', assertions);
+
   const [isExecuting, setIsExecuting] = useState(false);
   const [executionResult, setExecutionResult] = useState<ExecutionLog | null>(
     null
@@ -2806,6 +2808,8 @@ export function RequestEditor({
               actualRequestMethod={executionResult.request.method}
               executionStatus={executionResult.status}
               errorMessage={executionResult.error}
+              allAssertions={assertions}
+              onAssertionsUpdate={handleAssertionsUpdate}
             />
           </div>
         )}
