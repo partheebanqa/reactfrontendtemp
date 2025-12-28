@@ -89,6 +89,7 @@ import {
   type AutocompleteState,
   generateDynamicValueById,
   hasResponseChanged,
+  getUsedVariablesInRequest,
 } from '@/lib/request-utils';
 import { ResponseExplorer } from './ResponseExplorer';
 import BreadCum from '../BreadCum/Breadcum';
@@ -3070,18 +3071,28 @@ export function RequestChainEditor({
                                                         assertions
                                                       );
                                                     }}
-                                                    variables={storeVariables.map(
-                                                      (v) => ({
-                                                        name: v.name,
-                                                        value: String(v.value),
-                                                      })
-                                                    )}
-                                                    dynamicVariables={dynamicStructured.map(
-                                                      (v) => ({
-                                                        name: v.name,
-                                                        value: String(v.value),
-                                                      })
-                                                    )}
+                                                    variables={getUsedVariablesInRequest(
+                                                      formData.chainRequests.find(
+                                                        (r) =>
+                                                          r.id ===
+                                                          executionLog.requestId
+                                                      ) || ({} as APIRequest),
+                                                      storeVariables
+                                                    ).map((v) => ({
+                                                      name: v.name,
+                                                      value: String(v.value),
+                                                    }))}
+                                                    dynamicVariables={getUsedVariablesInRequest(
+                                                      formData.chainRequests.find(
+                                                        (r) =>
+                                                          r.id ===
+                                                          executionLog.requestId
+                                                      ) || ({} as APIRequest),
+                                                      dynamicStructured
+                                                    ).map((v) => ({
+                                                      name: v.name,
+                                                      value: String(v.value),
+                                                    }))}
                                                   />
                                                 </div>
                                               )}

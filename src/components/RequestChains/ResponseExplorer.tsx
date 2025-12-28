@@ -473,7 +473,7 @@ export function ResponseExplorer({
     return (
       <div
         key={node.path}
-        className='group hover:bg-blue-50 transition-colors'
+        className='group/item hover:bg-blue-50 transition-colors'
         style={{ marginLeft: `${node.level * 20}px` }}
       >
         <div className='flex items-center py-1 px-2 rounded'>
@@ -512,7 +512,7 @@ export function ResponseExplorer({
             )}
           </div>
           {!hasChildren && (
-            <div className='flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity'>
+            <div className='flex items-center space-x-1 opacity-0 group-hover/item:opacity-100 transition-opacity'>
               <button
                 onClick={() =>
                   navigator.clipboard.writeText(String(node.value))
@@ -661,7 +661,7 @@ export function ResponseExplorer({
           return (
             <div
               key={key}
-              className='group flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50'
+              className='group/header flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50'
             >
               <div className='flex-1 min-w-0'>
                 <div className='flex items-center space-x-2'>
@@ -674,7 +674,7 @@ export function ResponseExplorer({
                   {value}
                 </p>
               </div>
-              <div className='flex items-center space-x-2 ml-4'>
+              <div className='flex items-center space-x-2 ml-4 opacity-0 group-hover/header:opacity-100 transition-opacity'>
                 <button
                   onClick={() => navigator.clipboard.writeText(value)}
                   className='p-1 text-gray-400 hover:text-gray-600 rounded'
@@ -735,7 +735,7 @@ export function ResponseExplorer({
           return (
             <div
               key={name}
-              className='group flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50'
+              className='group/cookie flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50'
             >
               <div className='flex-1 min-w-0'>
                 <div className='flex items-center space-x-2'>
@@ -748,7 +748,7 @@ export function ResponseExplorer({
                   {value}
                 </p>
               </div>
-              <div className='flex items-center space-x-2 ml-4'>
+              <div className='flex items-center space-x-2 ml-4 opacity-0 group-hover/cookie:opacity-100 transition-opacity'>
                 <button
                   onClick={() => navigator.clipboard.writeText(value)}
                   className='p-1 text-gray-400 hover:text-gray-600 rounded'
@@ -1089,14 +1089,6 @@ export function ResponseExplorer({
                   {response?.statusCode} {response?.statusText}
                 </span>
               </span>
-
-              {/* Added execution time and size display */}
-              {response?.assertions && (
-                <span className='flex items-center space-x-1 bg-blue-100 text-blue-700 px-2 py-1 rounded-full'>
-                  <Wand2 className='w-4 h-4' />
-                  <span>{response.assertions.length} Assertions</span>
-                </span>
-              )}
             </div>
           )}
         </div>

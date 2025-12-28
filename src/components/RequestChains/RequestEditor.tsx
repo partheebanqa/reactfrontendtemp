@@ -61,6 +61,7 @@ import {
   buildUrlWithParams,
   generateDynamicValueById,
   hasResponseChanged,
+  getUsedVariablesInRequest,
 } from '@/lib/request-utils';
 import 'codemirror/lib/codemirror.css';
 import 'codemirror/theme/material.css';
@@ -2180,7 +2181,6 @@ export function RequestEditor({
   const compactView = (
     <div className='space-y-4'>
       <VariableAutocomplete />
-
       <div className='flex items-center space-x-2'>
         <Select
           value={initialRequest.method}
@@ -2216,14 +2216,12 @@ export function RequestEditor({
           {isExecuting ? 'Running...' : 'Run'}
         </Button>
       </div>
-
       <div className='flex items-start space-x-2 mt-2 text-sm'>
         <span className='text-gray-600 dark:text-gray-400 font-medium'>
           Final URL Preview:
         </span>
         <div className='flex-1'>{renderEnhancedPreviewUrl()}</div>
       </div>
-
       <DynamicVariablesPanel />
       {Object.keys(parentExtractedVariables).length > 0 && (
         <div className='mt-2 p-2 bg-blue-50 border border-blue-200 rounded'>
@@ -2280,7 +2278,6 @@ export function RequestEditor({
           </div>
         </div>
       )}
-
       <div className='border-b border-gray-200'>
         <div className='flex items-center justify-between px-6 relative'>
           <nav className='flex space-x-6'>
@@ -2416,9 +2413,7 @@ export function RequestEditor({
           </div>
         </div>
       </div>
-
       <VariableHelpDialog open={helpOpen} onOpenChange={setHelpOpen} />
-
       <div className='p-2'>
         {activeTab === 'params' && (
           <div className='space-y-4'>
@@ -2786,7 +2781,6 @@ export function RequestEditor({
           </div>
         )}
       </div>
-
       {hideResponseExplorer &&
         executionResult &&
         (executionResult.response || executionResult.error) && (
@@ -2808,11 +2802,17 @@ export function RequestEditor({
               errorMessage={executionResult.error}
               allAssertions={assertions}
               onAssertionsUpdate={handleAssertionsUpdate}
-              variables={storeVariables.map((v) => ({
+              variables={getUsedVariablesInRequest(
+                initialRequest,
+                storeVariables
+              ).map((v) => ({
                 name: v.name,
                 value: String(v.value),
               }))}
-              dynamicVariables={dynamicStructured.map((v) => ({
+              dynamicVariables={getUsedVariablesInRequest(
+                initialRequest,
+                dynamicStructured
+              ).map((v) => ({
                 name: v.name,
                 value: String(v.value),
               }))}
