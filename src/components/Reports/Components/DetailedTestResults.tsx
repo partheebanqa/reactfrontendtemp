@@ -40,7 +40,6 @@ const DetailedTestResults = ({
 }: {
   categories: TestCategory[];
 }) => {
-  // console.log('categories123:', categories);
   const [openSections, setOpenSections] = useState<string[]>([]);
   const [expandedTestId, setExpandedTestId] = useState<string | null>(null);
 

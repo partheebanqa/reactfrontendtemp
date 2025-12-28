@@ -1,9 +1,9 @@
-import { API_COLLECTION_REQUESTS } from "@/config/apiRoutes";
-import axios, { AxiosRequestConfig, AxiosError } from "axios";
-import { RequestData, ResponseData } from "@/shared/types/request";
+import { API_COLLECTION_REQUESTS } from '@/config/apiRoutes';
+import axios, { AxiosRequestConfig, AxiosError } from 'axios';
+import { RequestData, ResponseData } from '@/shared/types/request';
 
 export interface ApiError {
-  type: "network" | "cors" | "timeout" | "server" | "client" | "unknown";
+  type: 'network' | 'cors' | 'timeout' | 'server' | 'client' | 'unknown';
   message: string;
   description?: string;
   suggestions?: string[];
@@ -31,80 +31,70 @@ export const makeRequest = async (
   request: RequestInput
 ): Promise<ResponseData> => {
   const startTime = Date.now();
-  console.log("🚀 ~ startTime:", startTime);
 
   try {
-    // Build URL with params
     let fullUrl = request.url;
 
-    // Add http:// if not present
     if (!/^https?:\/\//i.test(fullUrl)) {
-      fullUrl = "http://" + fullUrl;
+      fullUrl = 'http://' + fullUrl;
     }
 
-    // Create URL object for parameter handling
     const url = new URL(fullUrl);
 
-    // Add query parameters
     request.params?.forEach((param: any) => {
       if (param.enabled !== false && param.key) {
-        url.searchParams.append(param.key, param.value || "");
+        url.searchParams.append(param.key, param.value || '');
       }
     });
 
-    // Build headers with CORS support
     const headers: Record<string, string> = {
-      Accept: "*/*",
+      Accept: '*/*',
     };
 
-    // Add default content-type if not specified in request headers
     if (
       !request.headers?.some(
         (h: any) =>
-          h.key.toLowerCase() === "content-type" && h.enabled !== false
+          h.key.toLowerCase() === 'content-type' && h.enabled !== false
       )
     ) {
-      headers["Content-Type"] = "application/json";
+      headers['Content-Type'] = 'application/json';
     }
 
-    // Add headers from request
     request.headers?.forEach((header: any) => {
       if (header.enabled !== false && header.key) {
-        headers[header.key] = header.value || "";
+        headers[header.key] = header.value || '';
       }
     });
 
-    // Handle authentication headers
     if (
-      request.authorizationType === "bearer" &&
+      request.authorizationType === 'bearer' &&
       request.authorization?.token
     ) {
-      headers["Authorization"] = `Bearer ${request.authorization.token}`;
+      headers['Authorization'] = `Bearer ${request.authorization.token}`;
     } else if (
-      request.authorizationType === "basic" &&
+      request.authorizationType === 'basic' &&
       request.authorization?.username
     ) {
       const auth = btoa(
         `${request.authorization.username}:${
-          request.authorization.password || ""
+          request.authorization.password || ''
         }`
       );
-      headers["Authorization"] = `Basic ${auth}`;
+      headers['Authorization'] = `Basic ${auth}`;
     } else if (
-      request.authorizationType === "apiKey" &&
+      request.authorizationType === 'apiKey' &&
       request.authorization?.key
     ) {
-      if (request.authorization.addTo === "header") {
-        headers[request.authorization.key] = request.authorization.value || "";
-      } else if (request.authorization.addTo === "query") {
+      if (request.authorization.addTo === 'header') {
+        headers[request.authorization.key] = request.authorization.value || '';
+      } else if (request.authorization.addTo === 'query') {
         url.searchParams.append(
           request.authorization.key,
-          request.authorization.value || ""
+          request.authorization.value || ''
         );
       }
     }
 
-    // Build config with enhanced error handling
     const config: AxiosRequestConfig = {
       method: request.method.toLowerCase(),
       url: url.toString(),
@@ -116,16 +106,16 @@ export const makeRequest = async (
     };
 
     // Add body for methods that support it
-    if (["POST", "PUT", "PATCH"].includes(request.method.toUpperCase())) {
+    if (['POST', 'PUT', 'PATCH'].includes(request.method.toUpperCase())) {
       // Handle different body types
-      const bodyType = request.bodyType?.toLowerCase() || "none";
+      const bodyType = request.bodyType?.toLowerCase() || 'none';
 
-      if (bodyType === "none") {
+      if (bodyType === 'none') {
         // No body
-      } else if (bodyType === "json") {
+      } else if (bodyType === 'json') {
         try {
           // If it's already a string, try to parse it to validate JSON
-          if (typeof request.body === "string") {
+          if (typeof request.body === 'string') {
             // Only parse if it's not empty
             if (request.body.trim()) {
               try {
@@ -140,30 +130,30 @@ export const makeRequest = async (
             config.data = request.body;
           }
 
-          headers["Content-Type"] = "application/json";
+          headers['Content-Type'] = 'application/json';
         } catch (e) {
-          console.error("Error processing JSON body:", e);
+          console.error('Error processing JSON body:', e);
           config.data = request.body || {};
-          headers["Content-Type"] = "application/json";
+          headers['Content-Type'] = 'application/json';
         }
-      } else if (bodyType === "form-data") {
+      } else if (bodyType === 'form-data') {
         const formData = new FormData();
         if (request.body instanceof FormData) {
           config.data = request.body;
-        } else if (typeof request.body === "string") {
+        } else if (typeof request.body === 'string') {
           config.data = request.body;
-        } else if (typeof request.body === "object") {
+        } else if (typeof request.body === 'object') {
           Object.entries(request.body || {}).forEach(([key, value]) => {
             formData.append(key, value as string);
           });
           config.data = formData;
         }
-        delete headers["Content-Type"];
-      } else if (bodyType === "x-www-form-urlencoded") {
-        headers["Content-Type"] = "application/x-www-form-urlencoded";
+        delete headers['Content-Type'];
+      } else if (bodyType === 'x-www-form-urlencoded') {
+        headers['Content-Type'] = 'application/x-www-form-urlencoded';
 
         // Convert the body to URLSearchParams
-        if (typeof request.body === "object" && request.body !== null) {
+        if (typeof request.body === 'object' && request.body !== null) {
           const params = new URLSearchParams();
           Object.entries(request.body).forEach(([key, value]) => {
             params.append(key, value as string);
@@ -172,26 +162,24 @@ export const makeRequest = async (
         } else {
           config.data = request.body;
         }
-      } else if (bodyType === "raw") {
+      } else if (bodyType === 'raw') {
         // Send raw content
         config.data = request.body;
-        headers["Content-Type"] = "text/plain";
-      } else if (bodyType === "binary") {
+        headers['Content-Type'] = 'text/plain';
+      } else if (bodyType === 'binary') {
         // Binary data
         config.data = request.body;
         // Let the browser set the appropriate Content-Type
-        delete headers["Content-Type"];
+        delete headers['Content-Type'];
       }
     }
 
     const response = await axios(config);
     const endTime = Date.now();
 
-    console.log("🚀 ~ endTime:", endTime);
     const diff = endTime - startTime;
     const formattedTime =
       diff < 1000 ? `${diff} ms` : `${(diff / 1000).toFixed(2)} s`;
-    console.log("🚀 ~ formattedTime:", formattedTime);
 
     return {
       status: response.status,
@@ -202,13 +190,12 @@ export const makeRequest = async (
       size: calculateResponseSize(response.data),
     };
   } catch (error: any) {
-    console.error("Request error:", error);
+    console.error('Request error:', error);
     const endTime = Date.now();
     const apiError = parseError(error);
     const diff = endTime - startTime;
     const formattedTime =
       diff < 1000 ? `${diff} ms` : `${(diff / 1000).toFixed(2)} s`;
-    console.log("🚀 ~ formattedTime:", formattedTime);
 
     // Format the error response
     return {
@@ -231,68 +218,65 @@ export const makeRequest = async (
 };
 
 const parseError = (error: AxiosError): ApiError => {
-  console.log("Parsing error:", error);
-
-  // Network error (no response received)
   if (!error.response) {
-    if (error.code === "ECONNABORTED") {
+    if (error.code === 'ECONNABORTED') {
       return {
-        type: "timeout",
-        message: "Request Timeout",
-        description: "The request took too long to complete and was cancelled.",
+        type: 'timeout',
+        message: 'Request Timeout',
+        description: 'The request took too long to complete and was cancelled.',
         suggestions: [
-          "Check if the server is responding",
-          "Try increasing the timeout value",
-          "Verify the URL is correct",
+          'Check if the server is responding',
+          'Try increasing the timeout value',
+          'Verify the URL is correct',
         ],
       };
     }
 
     if (
-      error.message.includes("Network Error") ||
-      error.code === "ERR_NETWORK"
+      error.message.includes('Network Error') ||
+      error.code === 'ERR_NETWORK'
     ) {
       return {
-        type: "network",
-        message: "Network Error",
+        type: 'network',
+        message: 'Network Error',
         description:
-          "Unable to connect to the server. This could be a network connectivity issue.",
+          'Unable to connect to the server. This could be a network connectivity issue.',
         suggestions: [
-          "Check your internet connection",
-          "Verify the server URL is correct",
-          "Check if the server is running",
+          'Check your internet connection',
+          'Verify the server URL is correct',
+          'Check if the server is running',
         ],
       };
     }
 
     // CORS error detection
     if (
-      error.message.includes("CORS") ||
-      error.message.includes("Access-Control-Allow-Origin") ||
-      (error.code === "ERR_FAILED" && !error.response)
+      error.message.includes('CORS') ||
+      error.message.includes('Access-Control-Allow-Origin') ||
+      (error.code === 'ERR_FAILED' && !error.response)
     ) {
       return {
-        type: "cors",
-        message: "CORS Error",
+        type: 'cors',
+        message: 'CORS Error',
         description:
-          "Cross-Origin Resource Sharing (CORS) policy is blocking this request.",
+          'Cross-Origin Resource Sharing (CORS) policy is blocking this request.',
         suggestions: [
-          "Use a CORS browser extension (for development only)",
-          "Configure the server to allow CORS",
-          "Use a proxy server to bypass CORS",
-          "Run the request from the same domain as the API",
+          'Use a CORS browser extension (for development only)',
+          'Configure the server to allow CORS',
+          'Use a proxy server to bypass CORS',
+          'Run the request from the same domain as the API',
         ],
       };
     }
 
     return {
-      type: "unknown",
-      message: "Unknown Network Error",
-      description: error.message || "An unexpected network error occurred.",
+      type: 'unknown',
+      message: 'Unknown Network Error',
+      description: error.message || 'An unexpected network error occurred.',
       suggestions: [
-        "Check your network connection",
-        "Try the request again",
-        "Contact your system administrator",
+        'Check your network connection',
+        'Try the request again',
+        'Contact your system administrator',
       ],
     };
   }
@@ -302,35 +286,35 @@ const parseError = (error: AxiosError): ApiError => {
 
   if (status >= 400 && status < 500) {
     return {
-      type: "client",
+      type: 'client',
       message: `Client Error (${status})`,
       description: `The request was invalid or unauthorized. ${error.response.statusText}`,
       suggestions: [
-        "Check the request URL and parameters",
-        "Verify authentication credentials",
-        "Review the request headers and body",
+        'Check the request URL and parameters',
+        'Verify authentication credentials',
+        'Review the request headers and body',
       ],
     };
   }
 
   if (status >= 500) {
     return {
-      type: "server",
+      type: 'server',
       message: `Server Error (${status})`,
       description: `The server encountered an error processing the request. ${error.response.statusText}`,
       suggestions: [
-        "Try the request again later",
-        "Contact the API provider",
-        "Check the server status",
+        'Try the request again later',
+        'Contact the API provider',
+        'Check the server status',
       ],
     };
   }
 
   return {
-    type: "unknown",
-    message: "Unknown Error",
-    description: error.message || "An unexpected error occurred.",
-    suggestions: ["Try the request again"],
+    type: 'unknown',
+    message: 'Unknown Error',
+    description: error.message || 'An unexpected error occurred.',
+    suggestions: ['Try the request again'],
   };
 };
 

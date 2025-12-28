@@ -546,10 +546,6 @@ export function RequestExecutor({
                 error
               );
             }
-          } else {
-            console.log(
-              'No extraction variables found or invalid response body'
-            );
           }
 
           logs.push(log);

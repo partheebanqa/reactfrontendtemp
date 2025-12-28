@@ -1,5 +1,3 @@
-
-
 import type React from 'react';
 import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -17,7 +15,6 @@ import {
   Ticket,
   CircleCheckBig,
   Info,
-
 } from 'lucide-react';
 import { RequestTestDialog } from './RequestTestDialog';
 import {
@@ -44,7 +41,6 @@ import {
   RequestParam,
 } from '@/shared/types/TestSuite.model';
 import { ExtractedVariable } from '@/shared/types/requestChain.model';
-
 
 interface Request {
   id: string;
@@ -135,15 +131,6 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
 
   const [selectedRequest, setSelectedRequest] = useState<Request | null>(null);
   const [isTestCaseModalOpen, setIsTestCaseModalOpen] = useState(false);
-
-  // console.log('requests123:', requests);
-
-  // console.log('preRequestId:', preRequestId);
-
-  // console.log('extractVariables:', extractVariables[0]?.path);
-
-  // console.log('testSuiteId:', testSuiteId);
-
   const [isTestDialogOpen, setIsTestDialogOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [pendingRequest, setPendingRequest] = useState<Request | null>(null);
@@ -174,7 +161,6 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
 
     return list;
   }, [requests, filterMethod]);
-
 
   const mapCategoryData = (meta: any) => {
     if (!meta)
@@ -260,7 +246,6 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
       preRequestId !== request.id &&
       extractVariables.length > 0
     ) {
-
       setPendingRequest(request);
       setShowOverwriteDialog(true);
     } else {
@@ -283,7 +268,6 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
   };
 
   const handleConfirmOverwrite = () => {
-    console.log('User confirmed overwrite');
     if (pendingRequest) {
       setSelectedRequest(pendingRequest);
       setIsTestDialogOpen(true);
@@ -293,7 +277,6 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
   };
 
   const handleCancelOverwrite = () => {
-    console.log('User cancelled overwrite');
     setPendingRequest(null);
     setShowOverwriteDialog(false);
   };
@@ -312,16 +295,11 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
     requestId: string,
     extractVariables: ExtractedVariable[]
   ) => {
-    // console.log('requestId:', requestId);
-    // console.log('extractVariables:', extractVariables);
-
-    // Pass the data to parent component instead of storing locally
     if (onSaveExtractVariables) {
       onSaveExtractVariables(requestId, extractVariables);
     }
   };
 
-  // ✅ Central mapping of all categories with color + icon
   const categoryConfig: {
     [key: string]: { color: string; icon: string };
   } = {
@@ -392,14 +370,11 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
   const getCategoryIcon = (category: string) =>
     categoryConfig[category]?.icon || DEFAULT_ICON;
 
-
   const shouldHidePreRequest =
     typeof window !== 'undefined' &&
-    (
-      window.location.href.includes('/test-suites/create?step=select-apis') ||
+    (window.location.href.includes('/test-suites/create?step=select-apis') ||
       window.location.href.includes('step=select-tests') ||
-      window.location.href.includes('step=select-api')
-    );
+      window.location.href.includes('step=select-api'));
 
   const isSelectTestsRoute =
     typeof window !== 'undefined' &&
@@ -423,7 +398,6 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
     return requests.filter((r) => r.id !== preRequestId).length;
   }, [isCreateTestSuitePrereqRoute, preRequestId, requests]);
 
-
   const hasImportedPreRequest =
     isCreateTestSuitePrereqRoute && visibleRequests.length > 0;
 
@@ -436,7 +410,6 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
     isCreateTestSuitePrereqRoute &&
     hasImportedAuthCandidate &&
     !hasExtractedValues;
-
 
   const hasGeneratedAnyTests = useMemo(
     () =>
@@ -463,7 +436,6 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
   const showTestcaseHint =
     isSelectTestsRoute && hasGeneratedAnyTests && !hasAnySelectedTests;
 
-
   const isSelectApisRoute =
     typeof window !== 'undefined' &&
     window.location.href.includes('step=select-apis');
@@ -474,13 +446,14 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
         <div className='flex items-center justify-between'>
           {shouldHidePreRequest ? (
             <CardTitle>
-              <div className="flex items-center gap-4">
+              <div className='flex items-center gap-4'>
                 Requests ({headerRequestsCount})
                 {showTestcaseHint && (
-                  <p className="text-xs text-amber-600 flex items-center gap-1">
+                  <p className='text-xs text-amber-600 flex items-center gap-1'>
                     <span>
                       Testcases are generated. Please select
-                      <span className="font-semibold"> testcases</span> before proceeding.
+                      <span className='font-semibold'> testcases</span> before
+                      proceeding.
                     </span>
                   </p>
                 )}
@@ -488,35 +461,37 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
             </CardTitle>
           ) : (
             <CardTitle>
-              <div className="flex items-center gap-4">
+              <div className='flex items-center gap-4'>
                 <span>Requests ({headerRequestsCount})</span>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Info className="w-4 h-4 text-gray-500 cursor-pointer" />
+                    <Info className='w-4 h-4 text-gray-500 cursor-pointer' />
                   </TooltipTrigger>
                   <TooltipContent
-                    side="bottom"
-                    align="start"
-                    className="max-w-sm text-xs p-2 leading-relaxed text-gray-600"
+                    side='bottom'
+                    align='start'
+                    className='max-w-sm text-xs p-2 leading-relaxed text-gray-600'
                   >
                     <p>1: Add the Auth request like login or signin.</p>
                     <p>
-                      Step 2: Click on send , On a successful response, you'll get the option to extract the authorization token from the response body.
+                      Step 2: Click on send , On a successful response, you'll
+                      get the option to extract the authorization token from the
+                      response body.
                     </p>
                     <p>Step 3: Save the extracted variable.</p>
                     <p>
-                      Note: This token will be used for all api's while executing the test
-                      cases.
+                      Note: This token will be used for all api's while
+                      executing the test cases.
                     </p>
                   </TooltipContent>
                 </Tooltip>
 
                 {showAuthWarning && (
-                  <p className="text-xs text-amber-600 flex items-center gap-1">
+                  <p className='text-xs text-amber-600 flex items-center gap-1'>
                     <span>
                       Auth request added. Please click
-                      <span className="font-semibold"> Capture Auth</span> and save the
-                      extracted values before proceeding.
+                      <span className='font-semibold'> Capture Auth</span> and
+                      save the extracted values before proceeding.
                     </span>
                   </p>
                 )}
@@ -524,12 +499,7 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
             </CardTitle>
           )}
 
-
-
-
-
           <div className='flex items-center space-x-2'>
-
             {onRefreshRequests && !hasImportedPreRequest && (
               <Button
                 variant='outline'
@@ -537,8 +507,7 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
                 disabled={refreshing}
               >
                 <RefreshCcw
-                  className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''
-                    }`}
+                  className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`}
                 />
                 {refreshing ? 'Refreshing...' : 'Refresh'}
               </Button>
@@ -558,7 +527,6 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
         </div>
       </CardHeader>
 
-
       <CardContent>
         <div className='space-y-3'>
           {visibleRequests.map((request) => {
@@ -567,9 +535,10 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
             }
             const MAX_CHAR = 95;
             const finalUrl = buildFinalUrl(request.url);
-            const displayUrl = finalUrl.length > MAX_CHAR
-              ? finalUrl.substring(0, MAX_CHAR) + "..."
-              : finalUrl;
+            const displayUrl =
+              finalUrl.length > MAX_CHAR
+                ? finalUrl.substring(0, MAX_CHAR) + '...'
+                : finalUrl;
             const { totalTests, selectedTests, selectedByCategory } =
               mapCategoryData(request.meta);
             const isPreRequest = preRequestId === request.id;
@@ -582,7 +551,6 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
                 className='p-4 border rounded-lg hover:bg-muted/50 transition-colors'
               >
                 <div className='flex items-center justify-between'>
-
                   <div className='flex items-center space-x-3 flex-1'>
                     <Badge className={getMethodBadgeColor(request.method)}>
                       {request.method}
@@ -600,7 +568,8 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
                             >
                               Pre-request
                             </Badge>
-                            <CircleCheckBig color='#16a34a' size={20} /><p>Auth : {extractVariables[0]?.path}</p>
+                            <CircleCheckBig color='#16a34a' size={20} />
+                            <p>Auth : {extractVariables[0]?.path}</p>
                           </>
                         )}
                       </div>
@@ -609,8 +578,6 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
                       </p>
                     </div>
                   </div>
-
-
 
                   <div className='flex items-center justify-center space-x-2'>
                     {showAuthCapture && request.method === 'POST' && (
@@ -626,7 +593,9 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
                       onUpdateTestCases &&
                       preRequestId !== request.id &&
                       isSelectTestsRoute && (
-                        <Button onClick={() => handleConfigureTestCases(request)}>
+                        <Button
+                          onClick={() => handleConfigureTestCases(request)}
+                        >
                           Select testcases
                         </Button>
                       )}
@@ -674,7 +643,8 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
                     </AlertDialog>
                   </div>
                 </div>
-                {testSuiteId && preRequestId !== request.id &&
+                {testSuiteId &&
+                  preRequestId !== request.id &&
                   isSelectTestsRoute && (
                     <div className='mt-4'>
                       {selectedByCategory.length === 0 && (
@@ -706,10 +676,11 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
 
                           {/* collapsible category list */}
                           <div
-                            className={`overflow-hidden transition-all duration-300 ${showCategories
-                              ? 'max-h-[1000px] opacity-100'
-                              : 'max-h-0 opacity-0'
-                              }`}
+                            className={`overflow-hidden transition-all duration-300 ${
+                              showCategories
+                                ? 'max-h-[1000px] opacity-100'
+                                : 'max-h-0 opacity-0'
+                            }`}
                           >
                             <div className='space-y-2'>
                               {selectedByCategory.map((categoryData) => (
@@ -803,7 +774,6 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
           testSuiteId={testSuiteId || ''}
         />
       )}
-
 
       <AlertDialog
         open={showOverwriteDialog}

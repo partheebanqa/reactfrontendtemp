@@ -23,7 +23,13 @@ import {
   Activity,
   Globe,
 } from 'lucide-react';
-import { format, formatDate, formatDistanceToNow, isValid, sub } from 'date-fns';
+import {
+  format,
+  formatDate,
+  formatDistanceToNow,
+  isValid,
+  sub,
+} from 'date-fns';
 import { Button } from '@/components/ui/button';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -31,20 +37,34 @@ import { shareReport } from '@/utils/exportUtils';
 import { RequestGrouping } from '../Reports/Components/RequestGrouping';
 import Logo from '../../assests/images/OptraLogo.png';
 import { Loader } from '../Loader';
-import { downloadAsHTMLSameUI, downloadAsPDFSameUI } from '@/utils/exportUtilsSameUi';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
+import {
+  downloadAsHTMLSameUI,
+  downloadAsPDFSameUI,
+} from '@/utils/exportUtilsSameUi';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '../ui/tooltip';
 import { RequestMetrics } from '../Reports/Components/RequestMetrics';
 import { buildRequestMetrics } from '@/types/report';
 import ExportHTMLButton from '../Reports/Components/ExportHTMLButton';
 import ExportPDFButton from '../Reports/Components/ExportPDFButton';
 import { RequestReportMetrics } from '../Reports/Components/RequestReportMetrics';
-import { downloadAsPDF, mapBackendSuiteReportToTestSuiteData } from '@/utils/exportUtilsNew';
-import { convertDateStamp, convertTimestamp, isValidTimestamp } from '@/utils/exportDate';
+import {
+  downloadAsPDF,
+  mapBackendSuiteReportToTestSuiteData,
+} from '@/utils/exportUtilsNew';
+import {
+  convertDateStamp,
+  convertTimestamp,
+  isValidTimestamp,
+} from '@/utils/exportDate';
 
 type RouteParams = {
   type: 'test_suite' | 'request_chain';
   entityId: string;
-
 };
 
 const useQueryParams = () => {
@@ -122,16 +142,19 @@ const computeOverall = (data: any) => {
     Number(data?.skippedTestCases || 0);
 
   const successRate =
-    total > 0 ? Math.round((passed / total) * 100) : Number(data?.successRate || 0);
+    total > 0
+      ? Math.round((passed / total) * 100)
+      : Number(data?.successRate || 0);
 
   const avgDuration =
     tcs.length > 0
       ? Math.round(
-        tcs.reduce((s: number, t: any) => s + Number(t?.duration || 0), 0) / tcs.length
-      )
+          tcs.reduce((s: number, t: any) => s + Number(t?.duration || 0), 0) /
+            tcs.length
+        )
       : Number.isFinite(data?.duration)
-        ? Number(data.duration)
-        : 0;
+      ? Number(data.duration)
+      : 0;
 
   return { total, passed, failed, skipped, successRate, avgDuration };
 };
@@ -144,7 +167,8 @@ const TestSuiteReport: React.FC<TestSuiteReportProps> = ({ data }) => {
   const overall = useMemo(() => computeOverall(data), [data]);
   const requestMetrics = useMemo(() => buildRequestMetrics(data), [data]);
 
-  const formatDate = (dateString: string) => new Date(dateString).toLocaleString();
+  const formatDate = (dateString: string) =>
+    new Date(dateString).toLocaleString();
   const formatDuration = (ms: number) => `${(ms / 1000).toFixed(2)}s`;
 
   const metrics = [
@@ -156,8 +180,8 @@ const TestSuiteReport: React.FC<TestSuiteReportProps> = ({ data }) => {
         overall.successRate >= 80
           ? 'text-green-600 bg-green-100'
           : overall.successRate >= 60
-            ? 'text-yellow-600 bg-yellow-100'
-            : 'text-red-600 bg-red-100',
+          ? 'text-yellow-600 bg-yellow-100'
+          : 'text-red-600 bg-red-100',
     },
     {
       title: 'Total Test Cases',
@@ -179,15 +203,13 @@ const TestSuiteReport: React.FC<TestSuiteReportProps> = ({ data }) => {
     },
   ];
 
-
-
   const search = new URLSearchParams(window.location.search);
-  const executionId = search.get("executionId");
+  const executionId = search.get('executionId');
 
-  const { type, entityId, } = useParams<RouteParams>();
+  const { type, entityId } = useParams<RouteParams>();
 
   const handleShare = () => {
-    shareReport(entityId, executionId || "");
+    shareReport(entityId, executionId || '');
   };
   const handleDownloadPDF = async () => {
     // 1. Map raw backend response to TestSuiteData
@@ -197,80 +219,83 @@ const TestSuiteReport: React.FC<TestSuiteReportProps> = ({ data }) => {
     (window as any).__REPORT_DATA__ = mappedSuite;
 
     // 3. Trigger PDF generation
-    await downloadAsPDF("report-content", `${mappedSuite.name}_report.pdf`);
+    await downloadAsPDF('report-content', `${mappedSuite.name}_report.pdf`);
   };
 
   const handleDownloadHTML = () =>
     downloadAsHTMLSameUI('report-content', `${data.name}_report.html`);
 
-
-
-
-
   return (
-    <div id="report-content">
-      <div className="border border-gray-200 bg-background rounded-lg px-6 py-3 animate-fade-in mt-3">
-        <div className="flex justify-between items-start mb-6">
+    <div id='report-content'>
+      <div className='border border-gray-200 bg-background rounded-lg px-6 py-3 animate-fade-in mt-3'>
+        <div className='flex justify-between items-start mb-6'>
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">{data.name}</h1>
-            <p className="text-gray-600">{data.description}</p>
+            <h1 className='text-3xl font-bold text-gray-900 mb-2'>
+              {data.name}
+            </h1>
+            <p className='text-gray-600'>{data.description}</p>
           </div>
 
           <div>
-            <img src={Logo} alt="Optraflow logo" style={{ width: '100%', height: '50px' }} />
+            <img
+              src={Logo}
+              alt='Optraflow logo'
+              style={{ width: '100%', height: '50px' }}
+            />
           </div>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-3">
-          <div className="flex items-center space-x-3">
-            <Calendar className="w-5 h-5 text-blue-500" />
+        <div className='grid grid-cols-2 md:grid-cols-4 gap-6 mb-3'>
+          <div className='flex items-center space-x-3'>
+            <Calendar className='w-5 h-5 text-blue-500' />
             <div>
-              <p className="text-sm text-gray-500">Execution Date</p>
-              <p className="text-sm font-semibold">
+              <p className='text-sm text-gray-500'>Execution Date</p>
+              <p className='text-sm font-semibold'>
                 {(() => {
-                  const { dateTime, tz } = convertDateStamp(data.lastExecutionDate);
+                  const { dateTime, tz } = convertDateStamp(
+                    data.lastExecutionDate
+                  );
                   return `${dateTime}, ${tz}`;
-                })()}</p>
+                })()}
+              </p>
             </div>
           </div>
 
-          <div className="flex items-center space-x-3">
-            <Clock className="w-5 h-5 text-green-500" />
+          <div className='flex items-center space-x-3'>
+            <Clock className='w-5 h-5 text-green-500' />
             <div>
-              <p className="text-sm text-gray-500">Duration</p>
-              <p className="font-semibold">{formatDuration(data.duration)}</p>
+              <p className='text-sm text-gray-500'>Duration</p>
+              <p className='font-semibold'>{formatDuration(data.duration)}</p>
             </div>
           </div>
 
-          <div className="flex items-center space-x-3">
-            <User className="w-5 h-5 text-purple-500" />
+          <div className='flex items-center space-x-3'>
+            <User className='w-5 h-5 text-purple-500' />
             <div>
-              <p className="text-sm text-gray-500">Executed By</p>
-              <p className="font-semibold text-xs">{data.executedBy}</p>
+              <p className='text-sm text-gray-500'>Executed By</p>
+              <p className='font-semibold text-xs'>{data.executedBy}</p>
             </div>
           </div>
 
-          <div className="flex items-center space-x-3">
-            <Database className="w-5 h-5 text-orange-500" />
+          <div className='flex items-center space-x-3'>
+            <Database className='w-5 h-5 text-orange-500' />
             <div>
-              <p className="text-sm text-gray-500">Environment</p>
-              <p className="font-semibold text-xs">{data.environmentId}</p>
+              <p className='text-sm text-gray-500'>Environment</p>
+              <p className='font-semibold text-xs'>{data.environmentId}</p>
             </div>
           </div>
         </div>
 
-
-
-        <div className="flex items-center gap-4">
+        <div className='flex items-center gap-4'>
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
                   onClick={handleDownloadHTML}
-                  className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors group"
-                  title="Download HTML"
+                  className='p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors group'
+                  title='Download HTML'
                 >
-                  <FileText className="w-5 h-5" />
+                  <FileText className='w-5 h-5' />
                 </button>
               </TooltipTrigger>
               <TooltipContent>Download HTML File</TooltipContent>
@@ -279,10 +304,10 @@ const TestSuiteReport: React.FC<TestSuiteReportProps> = ({ data }) => {
               <TooltipTrigger asChild>
                 <button
                   onClick={handleDownloadPDF}
-                  className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors group"
-                  title="Download PDF"
+                  className='p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors group'
+                  title='Download PDF'
                 >
-                  <Download className="w-5 h-5" />
+                  <Download className='w-5 h-5' />
                 </button>
               </TooltipTrigger>
               <TooltipContent>Download PDF File</TooltipContent>
@@ -291,10 +316,10 @@ const TestSuiteReport: React.FC<TestSuiteReportProps> = ({ data }) => {
               <TooltipTrigger asChild>
                 <button
                   onClick={handleShare}
-                  className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors group"
-                  title="Share Report"
+                  className='p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors group'
+                  title='Share Report'
                 >
-                  <Share2 className="w-5 h-5" />
+                  <Share2 className='w-5 h-5' />
                 </button>
               </TooltipTrigger>
               <TooltipContent>Share Report</TooltipContent>
@@ -303,16 +328,21 @@ const TestSuiteReport: React.FC<TestSuiteReportProps> = ({ data }) => {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-3 mt-3">
+      <div className='grid grid-cols-2 md:grid-cols-4 gap-6 mb-3 mt-3'>
         {metrics.map((metric, index) => (
-          <div key={index} className="border border-gray-200 bg-background rounded-lg px-6 py-6 animate-fade-in">
-            <div className="flex items-center justify-between">
+          <div
+            key={index}
+            className='border border-gray-200 bg-background rounded-lg px-6 py-6 animate-fade-in'
+          >
+            <div className='flex items-center justify-between'>
               <div>
-                <p className="text-sm text-gray-500 mb-1">{metric.title}</p>
-                <p className="text-2xl font-bold text-gray-900">{metric.value}</p>
+                <p className='text-sm text-gray-500 mb-1'>{metric.title}</p>
+                <p className='text-2xl font-bold text-gray-900'>
+                  {metric.value}
+                </p>
               </div>
               <div className={`p-3 rounded-full ${metric.color}`}>
-                <metric.icon className="w-6 h-6" />
+                <metric.icon className='w-6 h-6' />
               </div>
             </div>
           </div>
@@ -326,7 +356,6 @@ const TestSuiteReport: React.FC<TestSuiteReportProps> = ({ data }) => {
     </div>
   );
 };
-
 
 // --- 🔧 Helpers (put near your other utils) -------------------------------
 
@@ -342,7 +371,8 @@ type RequestExec = {
 };
 
 function computeChainOverall(data: any) {
-  const total = Number(data?.totalRequests) || data?.requestExecutions?.length || 0;
+  const total =
+    Number(data?.totalRequests) || data?.requestExecutions?.length || 0;
   const successful = Number(data?.successfulRequests) || 0;
   const failed = Number(data?.failedRequests) || 0;
   const skipped = Number(data?.skippedRequests) || 0;
@@ -355,7 +385,10 @@ function computeChainOverall(data: any) {
 function percentile(values: number[], p: number) {
   if (!values.length) return 0;
   const sorted = [...values].sort((a, b) => a - b);
-  const idx = Math.min(sorted.length - 1, Math.max(0, Math.ceil((p / 100) * sorted.length) - 1));
+  const idx = Math.min(
+    sorted.length - 1,
+    Math.max(0, Math.ceil((p / 100) * sorted.length) - 1)
+  );
   return sorted[idx];
 }
 
@@ -380,11 +413,15 @@ function buildRequestMetricsFromChain(data: any): MethodRow[] {
 
   const rows: MethodRow[] = [];
   for (const [method, list] of byMethod.entries()) {
-    const durations = list.map((x) => Number(x.duration || 0)).filter((n) => Number.isFinite(n));
+    const durations = list
+      .map((x) => Number(x.duration || 0))
+      .filter((n) => Number.isFinite(n));
     const total = list.length;
     const success = list.filter((x) => x.status === 'passed').length;
     const failed = list.filter((x) => x.status === 'failed').length;
-    const avgDurationMs = durations.length ? Math.round(durations.reduce((a, b) => a + b, 0) / durations.length) : 0;
+    const avgDurationMs = durations.length
+      ? Math.round(durations.reduce((a, b) => a + b, 0) / durations.length)
+      : 0;
     const p95DurationMs = Math.round(percentile(durations, 95));
     rows.push({ method, total, success, failed, avgDurationMs, p95DurationMs });
   }
@@ -403,8 +440,8 @@ function buildRequestMetricsFromChain(data: any): MethodRow[] {
   return rows;
 }
 
-const formatMs = (ms: number) => (ms < 1000 ? `${ms}ms` : `${(ms / 1000).toFixed(2)}s`);
-
+const formatMs = (ms: number) =>
+  ms < 1000 ? `${ms}ms` : `${(ms / 1000).toFixed(2)}s`;
 
 // --- ✅ RequestChainReport with Metrics -----------------------------------
 
@@ -414,7 +451,11 @@ type RequestChainReportProps = {
   startedQS: string | null;
 };
 
-const RequestChainReport: React.FC<RequestChainReportProps> = ({ data, environment, startedQS }) => {
+const RequestChainReport: React.FC<RequestChainReportProps> = ({
+  data,
+  environment,
+  startedQS,
+}) => {
   // 🧮 Derived data
   const steps =
     data.requestExecutions?.map((req: any, index: number) => ({
@@ -428,7 +469,12 @@ const RequestChainReport: React.FC<RequestChainReportProps> = ({ data, environme
       responseSize: `${req.responseSize || 0} bytes`,
       duration: `${req.duration}ms`,
       substitutedVariables: req.substitutedVariables || [],
-      status: req.status === 'passed' ? 'success' : req.status === 'failed' ? 'fail' : 'skipped',
+      status:
+        req.status === 'passed'
+          ? 'success'
+          : req.status === 'failed'
+          ? 'fail'
+          : 'skipped',
       extractedVars:
         req.extractedVariables?.map((v: any) => ({
           key: v.name,
@@ -445,14 +491,16 @@ const RequestChainReport: React.FC<RequestChainReportProps> = ({ data, environme
     }, {}) || {};
 
   const overall = React.useMemo(() => computeChainOverall(data), [data]);
-  const methodMetrics = React.useMemo(() => buildRequestMetricsFromChain(data), [data]);
-  // console.log("RequestChainReport Render - methodMetrics:", methodMetrics);
+  const methodMetrics = React.useMemo(
+    () => buildRequestMetricsFromChain(data),
+    [data]
+  );
   const successRateColor =
     overall.successRate >= 80
       ? 'text-green-600 bg-green-100'
       : overall.successRate >= 60
-        ? 'text-yellow-600 bg-yellow-100'
-        : 'text-red-600 bg-red-100';
+      ? 'text-yellow-600 bg-yellow-100'
+      : 'text-red-600 bg-red-100';
 
   const metricCards = [
     {
@@ -487,17 +535,19 @@ const RequestChainReport: React.FC<RequestChainReportProps> = ({ data, environme
     },
   ];
 
-  const formatDuration = (ms: number) => (ms < 1000 ? `${ms}ms` : `${(ms / 1000).toFixed(2)}s`);
+  const formatDuration = (ms: number) =>
+    ms < 1000 ? `${ms}ms` : `${(ms / 1000).toFixed(2)}s`;
 
   const formatBytes = (bytes: number) => {
     if (!bytes) return '0 B';
     const k = 1024;
     const sizes = ['B', 'KB', 'MB', 'GB'];
-    const i = Math.min(Math.floor(Math.log(bytes) / Math.log(k)), sizes.length - 1);
+    const i = Math.min(
+      Math.floor(Math.log(bytes) / Math.log(k)),
+      sizes.length - 1
+    );
     return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
   };
-
-
 
   return (
     <div>
@@ -521,72 +571,86 @@ const RequestChainReport: React.FC<RequestChainReportProps> = ({ data, environme
       /> */}
 
       {/* Header block (unchanged, except we reuse formatDuration) */}
-      <div className="border border-gray-200 bg-background rounded-lg px-6 py-3 animate-fade-in mt-3">
-        <div className="flex justify-between items-start mb-6">
+      <div className='border border-gray-200 bg-background rounded-lg px-6 py-3 animate-fade-in mt-3'>
+        <div className='flex justify-between items-start mb-6'>
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">{data.name}</h1>
-            <p className="text-gray-600">
-              {data.description || 'Request chain execution flow with variable extraction and data flow analysis'}
+            <h1 className='text-3xl font-bold text-gray-900 mb-2'>
+              {data.name}
+            </h1>
+            <p className='text-gray-600'>
+              {data.description ||
+                'Request chain execution flow with variable extraction and data flow analysis'}
             </p>
           </div>
 
           {/* Replace Logo import if needed */}
           <div>
-            <img src={Logo} alt="Optraflow logo" style={{ width: '100%', height: '50px' }} />
+            <img
+              src={Logo}
+              alt='Optraflow logo'
+              style={{ width: '100%', height: '50px' }}
+            />
           </div>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-3">
-          <div className="flex items-center space-x-3">
-            <Calendar className="w-5 h-5 text-blue-500" />
+        <div className='grid grid-cols-2 md:grid-cols-4 gap-6 mb-3'>
+          <div className='flex items-center space-x-3'>
+            <Calendar className='w-5 h-5 text-blue-500' />
             <div>
-              <p className="text-sm text-gray-500">Execution Date</p>
-              <p className="text-sm font-semibold">
+              <p className='text-sm text-gray-500'>Execution Date</p>
+              <p className='text-sm font-semibold'>
                 {(() => {
-                  const { dateTime, tz } = convertDateStamp(data.lastExecutionDate);
+                  const { dateTime, tz } = convertDateStamp(
+                    data.lastExecutionDate
+                  );
                   return `${dateTime}, ${tz}`;
-                })()}</p>
+                })()}
+              </p>
             </div>
           </div>
 
-          <div className="flex items-center space-x-3">
-            <Clock className="w-5 h-5 text-green-500" />
+          <div className='flex items-center space-x-3'>
+            <Clock className='w-5 h-5 text-green-500' />
             <div>
-              <p className="text-sm text-gray-500">Duration</p>
-              <p className="font-semibold">{formatDuration(data?.duration || 0)}</p>
+              <p className='text-sm text-gray-500'>Duration</p>
+              <p className='font-semibold'>
+                {formatDuration(data?.duration || 0)}
+              </p>
             </div>
           </div>
 
-          <div className="flex items-center space-x-3">
-            <User className="w-5 h-5 text-purple-500" />
+          <div className='flex items-center space-x-3'>
+            <User className='w-5 h-5 text-purple-500' />
             <div>
-              <p className="text-sm text-gray-500">Executed By</p>
-              <p className="font-semibold text-xs">{data.executedBy}</p>
+              <p className='text-sm text-gray-500'>Executed By</p>
+              <p className='font-semibold text-xs'>{data.executedBy}</p>
             </div>
           </div>
 
-          <div className="flex items-center space-x-3">
-            <Database className="w-5 h-5 text-orange-500" />
+          <div className='flex items-center space-x-3'>
+            <Database className='w-5 h-5 text-orange-500' />
             <div>
-              <p className="text-sm text-gray-500">Environment</p>
-              <p className="font-semibold text-xs">{data.environmentId}</p>
+              <p className='text-sm text-gray-500'>Environment</p>
+              <p className='font-semibold text-xs'>{data.environmentId}</p>
             </div>
           </div>
         </div>
 
         {/* 🔹 New: Metric Cards (same visual style as TestSuiteReport) */}
 
-
         {/* (Optional) Action buttons retained but commented handlers */}
 
-        <div className="flex items-center gap-4">
+        <div className='flex items-center gap-4'>
           <TooltipProvider>
             <ExportHTMLButton reportData={data} />
             <ExportPDFButton reportData={data} />
             <Tooltip>
               <TooltipTrigger asChild>
-                <button className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors group" title="Share Report">
-                  <Share2 className="w-5 h-5" />
+                <button
+                  className='p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors group'
+                  title='Share Report'
+                >
+                  <Share2 className='w-5 h-5' />
                 </button>
               </TooltipTrigger>
               <TooltipContent>Share Report</TooltipContent>
@@ -595,23 +659,26 @@ const RequestChainReport: React.FC<RequestChainReportProps> = ({ data, environme
         </div>
       </div>
 
-
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-6 mb-3 mt-3">
+      <div className='grid grid-cols-2 md:grid-cols-5 gap-6 mb-3 mt-3'>
         {metricCards.map((metric, idx) => (
-          <div key={idx} className="border border-gray-200 bg-background rounded-lg px-6 py-6 animate-fade-in">
-            <div className="flex items-center justify-between">
+          <div
+            key={idx}
+            className='border border-gray-200 bg-background rounded-lg px-6 py-6 animate-fade-in'
+          >
+            <div className='flex items-center justify-between'>
               <div>
-                <p className="text-sm text-gray-500 mb-1">{metric.title}</p>
-                <p className="text-2xl font-bold text-gray-900">{metric.value}</p>
+                <p className='text-sm text-gray-500 mb-1'>{metric.title}</p>
+                <p className='text-2xl font-bold text-gray-900'>
+                  {metric.value}
+                </p>
               </div>
               <div className={`p-3 rounded-full ${metric.color}`}>
-                <metric.icon className="w-6 h-6" />
+                <metric.icon className='w-6 h-6' />
               </div>
             </div>
           </div>
         ))}
       </div>
-
 
       {/* <div className="bg-white rounded-lg border border-gray-200  p-6">
         <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center">
@@ -658,27 +725,26 @@ const RequestChainReport: React.FC<RequestChainReportProps> = ({ data, environme
         </div>
       </div> */}
 
-
       <RequestReportMetrics metrics={methodMetrics} />
-
 
       {/* Existing sections */}
 
-
       <RequestChainExecutionFlow steps={steps} />
 
-      <div className="bg-[#FAFAFA]">
-        <VariablesAndDataFlow globalVariables={globalVars} extractedVariables={extractedVars} />
+      <div className='bg-[#FAFAFA]'>
+        <VariablesAndDataFlow
+          globalVariables={globalVars}
+          extractedVariables={extractedVars}
+        />
       </div>
     </div>
   );
 };
 
-
 // ----------------- Page component -----------------
 
 const ExecutionReportPage: React.FC = () => {
-  const { type, entityId, } = useParams<RouteParams>();
+  const { type, entityId } = useParams<RouteParams>();
   const qs = useQueryParams();
   const environment = qs.get('env') || 'Unknown';
   const started = qs.get('started');
@@ -719,12 +785,14 @@ const ExecutionReportPage: React.FC = () => {
   };
 
   return (
-    <div className="mx-auto p-1 sm:p-1" ref={reportRef}>
-      <header className="border border-gray-200 bg-background rounded-lg px-6 py-4 animate-fade-in">
-        <div className="flex items-center justify-between">
+    <div className='mx-auto p-1 sm:p-1' ref={reportRef}>
+      <header className='border border-gray-200 bg-background rounded-lg px-6 py-4 animate-fade-in'>
+        <div className='flex items-center justify-between'>
           <div>
-            <h2 className="text-2xl font-semibold text-foreground">
-              {type === 'test_suite' ? 'Test Suite Report' : 'Request Chain Report'}
+            <h2 className='text-2xl font-semibold text-foreground'>
+              {type === 'test_suite'
+                ? 'Test Suite Report'
+                : 'Request Chain Report'}
             </h2>
           </div>
           {/* <div className="flex items-center space-x-4">
@@ -736,16 +804,20 @@ const ExecutionReportPage: React.FC = () => {
       </header>
 
       {isLoading ? (
-        <Loader message="Loading Report" />
+        <Loader message='Loading Report' />
       ) : reportData?.data ? (
         type === 'test_suite' ? (
           <TestSuiteReport data={reportData.data} />
         ) : (
-          <RequestChainReport data={reportData.data} environment={environment} startedQS={started} />
+          <RequestChainReport
+            data={reportData.data}
+            environment={environment}
+            startedQS={started}
+          />
         )
       ) : (
-        <div className="text-center py-8">
-          <p className="text-gray-500">No report data available</p>
+        <div className='text-center py-8'>
+          <p className='text-gray-500'>No report data available</p>
         </div>
       )}
     </div>

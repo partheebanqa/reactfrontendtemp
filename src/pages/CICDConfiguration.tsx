@@ -150,8 +150,6 @@ export default function CICDConfiguration() {
 
   const [isLoading, setIsLoading] = useState(false);
 
-  // console.log(workspaceId, "workspaceid");
-
   const getToken = async () => {
     try {
       const response = await getWorkSpaceToken(workspaceId || '');

@@ -1,30 +1,35 @@
-import { Download } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
-import { jsPDF } from "jspdf";
+import { Download } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
+import { jsPDF } from 'jspdf';
 
-import { format } from "date-fns";
-import { ExtractedVariable, Variable } from "@/shared/types/requestChain.model";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { convertDateStamp } from "@/utils/exportDate";
-
+import { format } from 'date-fns';
+import { ExtractedVariable, Variable } from '@/shared/types/requestChain.model';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import { convertDateStamp } from '@/utils/exportDate';
 
 export interface RequestExecution {
   id: string;
   name: string;
-  method: "GET" | "POST" | "PUT" | "DELETE" | "PATCH" | "HEAD" | "OPTIONS";
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'HEAD' | 'OPTIONS';
   url: string;
   order: number;
-  status: "passed" | "failed" | "skipped";
+  status: 'passed' | 'failed' | 'skipped';
   responseSize: number;
   duration: number;
   responseStatusCode: number;
   extractedVariables: ExtractedVariable[] | null;
-  substitutedVariables: { name: string; value: string; usedIn: string }[] | null;
+  substitutedVariables:
+    | { name: string; value: string; usedIn: string }[]
+    | null;
   requestCurl: string;
   response: string;
 }
-
 
 export interface ReportData {
   id: string;
@@ -53,8 +58,6 @@ export default function ExportPDFButton({ reportData }: ExportPDFButtonProps) {
 
   const handleExport = () => {
     try {
-      // console.log("Starting PDF export...");
-
       const doc = new jsPDF();
       const pageWidth = doc.internal.pageSize.getWidth();
       const pageHeight = doc.internal.pageSize.getHeight();
@@ -62,14 +65,14 @@ export default function ExportPDFButton({ reportData }: ExportPDFButtonProps) {
       let yPosition = margin;
 
       doc.setFontSize(20);
-      doc.setFont("helvetica", "bold");
+      doc.setFont('helvetica', 'bold');
       doc.text(reportData.name, margin, yPosition);
       yPosition += 8;
 
       doc.setFontSize(10);
-      doc.setFont("helvetica", "normal");
+      doc.setFont('helvetica', 'normal');
       doc.setTextColor(100, 100, 100);
-      doc.text("API Request Chain Execution Report", margin, yPosition);
+      doc.text('API Request Chain Execution Report', margin, yPosition);
       yPosition += 15;
 
       doc.setDrawColor(200, 200, 200);
@@ -77,13 +80,13 @@ export default function ExportPDFButton({ reportData }: ExportPDFButtonProps) {
       yPosition += 10;
 
       doc.setFontSize(12);
-      doc.setFont("helvetica", "bold");
+      doc.setFont('helvetica', 'bold');
       doc.setTextColor(0, 0, 0);
-      doc.text("Execution Summary", margin, yPosition);
+      doc.text('Execution Summary', margin, yPosition);
       yPosition += 8;
 
       doc.setFontSize(10);
-      doc.setFont("helvetica", "normal");
+      doc.setFont('helvetica', 'normal');
       const summaryData = [
         `Execution Date:  ${(() => {
           const { dateTime, tz } = convertDateStamp(
@@ -91,12 +94,16 @@ export default function ExportPDFButton({ reportData }: ExportPDFButtonProps) {
           );
           return `${dateTime}, ${tz}`;
         })()}`,
-        `Duration: ${reportData.duration < 1000 ? `${reportData.duration}ms` : `${(reportData.duration / 1000).toFixed(2)}s`}`,
+        `Duration: ${
+          reportData.duration < 1000
+            ? `${reportData.duration}ms`
+            : `${(reportData.duration / 1000).toFixed(2)}s`
+        }`,
         `Executed By: ${reportData.executedBy}`,
         `Environment: ${reportData.environment}`,
       ];
 
-      summaryData.forEach(line => {
+      summaryData.forEach((line) => {
         doc.text(line, margin + 5, yPosition);
         yPosition += 6;
       });
@@ -107,15 +114,24 @@ export default function ExportPDFButton({ reportData }: ExportPDFButtonProps) {
       yPosition += 10;
 
       doc.setFontSize(12);
-      doc.setFont("helvetica", "bold");
-      doc.text("Performance Metrics", margin, yPosition);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Performance Metrics', margin, yPosition);
       yPosition += 8;
 
-      const avgResponseTime = reportData.requestExecutions.length > 0
-        ? Math.round(reportData.requestExecutions.reduce((sum, req) => sum + req.duration, 0) / reportData.requestExecutions.length)
-        : 0;
+      const avgResponseTime =
+        reportData.requestExecutions.length > 0
+          ? Math.round(
+              reportData.requestExecutions.reduce(
+                (sum, req) => sum + req.duration,
+                0
+              ) / reportData.requestExecutions.length
+            )
+          : 0;
 
-      const totalDataTransferred = reportData.requestExecutions.reduce((sum, req) => sum + req.responseSize, 0);
+      const totalDataTransferred = reportData.requestExecutions.reduce(
+        (sum, req) => sum + req.responseSize,
+        0
+      );
       const formatBytes = (bytes: number) => {
         if (bytes < 1024) return `${bytes} B`;
         if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(2)} KB`;
@@ -123,7 +139,7 @@ export default function ExportPDFButton({ reportData }: ExportPDFButtonProps) {
       };
 
       doc.setFontSize(10);
-      doc.setFont("helvetica", "normal");
+      doc.setFont('helvetica', 'normal');
 
       const col1X = margin + 5;
       const col2X = pageWidth / 2;
@@ -134,30 +150,38 @@ export default function ExportPDFButton({ reportData }: ExportPDFButtonProps) {
       doc.rect(col2X, yPosition - 5, colWidth, 50, 'F');
 
       doc.setTextColor(0, 0, 0);
-      doc.setFont("helvetica", "bold");
-      doc.text("Total Requests", col1X, yPosition);
-      doc.text("Success Rate", col2X + 5, yPosition);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Total Requests', col1X, yPosition);
+      doc.text('Success Rate', col2X + 5, yPosition);
       yPosition += 7;
 
       doc.setFontSize(18);
       doc.setTextColor(33, 150, 243);
       doc.text(reportData.totalRequests.toString(), col1X, yPosition);
 
-      const successColor = reportData.successRate === 100 ? [76, 175, 80] :
-        reportData.successRate >= 80 ? [255, 152, 0] : [244, 67, 54];
+      const successColor =
+        reportData.successRate === 100
+          ? [76, 175, 80]
+          : reportData.successRate >= 80
+          ? [255, 152, 0]
+          : [244, 67, 54];
       doc.setTextColor(successColor[0], successColor[1], successColor[2]);
       doc.text(`${reportData.successRate}%`, col2X + 5, yPosition);
       yPosition += 10;
 
       doc.setFontSize(10);
       doc.setTextColor(0, 0, 0);
-      doc.setFont("helvetica", "normal");
+      doc.setFont('helvetica', 'normal');
       doc.text(`Passed: ${reportData.successfulRequests}`, col1X, yPosition);
       doc.text(`Avg Response: ${avgResponseTime}ms`, col2X + 5, yPosition);
       yPosition += 6;
 
       doc.text(`Failed: ${reportData.failedRequests}`, col1X, yPosition);
-      doc.text(`Data Transfer: ${formatBytes(totalDataTransferred)}`, col2X + 5, yPosition);
+      doc.text(
+        `Data Transfer: ${formatBytes(totalDataTransferred)}`,
+        col2X + 5,
+        yPosition
+      );
       yPosition += 6;
 
       doc.text(`Skipped: ${reportData.skippedRequests}`, col1X, yPosition);
@@ -168,23 +192,25 @@ export default function ExportPDFButton({ reportData }: ExportPDFButtonProps) {
       yPosition += 10;
 
       doc.setFontSize(12);
-      doc.setFont("helvetica", "bold");
+      doc.setFont('helvetica', 'bold');
       doc.setTextColor(0, 0, 0);
-      doc.text("Request Execution Details", margin, yPosition);
+      doc.text('Request Execution Details', margin, yPosition);
       yPosition += 8;
 
       doc.setFontSize(9);
-      doc.setFont("helvetica", "bold");
-      doc.text("#", margin, yPosition);
-      doc.text("Request Name", margin + 10, yPosition);
-      doc.text("Status", margin + 90, yPosition);
-      doc.text("Duration", margin + 120, yPosition);
-      doc.text("Status Code", margin + 155, yPosition);
+      doc.setFont('helvetica', 'bold');
+      doc.text('#', margin, yPosition);
+      doc.text('Request Name', margin + 10, yPosition);
+      doc.text('Status', margin + 90, yPosition);
+      doc.text('Duration', margin + 120, yPosition);
+      doc.text('Status Code', margin + 155, yPosition);
       yPosition += 5;
 
-      doc.setFont("helvetica", "normal");
+      doc.setFont('helvetica', 'normal');
 
-      const sortedRequests = [...reportData.requestExecutions].sort((a, b) => a.order - b.order);
+      const sortedRequests = [...reportData.requestExecutions].sort(
+        (a, b) => a.order - b.order
+      );
 
       sortedRequests.forEach((req, index) => {
         if (yPosition > pageHeight - 30) {
@@ -192,13 +218,18 @@ export default function ExportPDFButton({ reportData }: ExportPDFButtonProps) {
           yPosition = margin;
         }
 
-        const statusColor = req.status === "passed" ? [76, 175, 80] :
-          req.status === "failed" ? [244, 67, 54] : [158, 158, 158];
+        const statusColor =
+          req.status === 'passed'
+            ? [76, 175, 80]
+            : req.status === 'failed'
+            ? [244, 67, 54]
+            : [158, 158, 158];
 
         doc.setTextColor(0, 0, 0);
         doc.text(req.order.toString(), margin, yPosition);
 
-        const requestName = req.name.length > 35 ? req.name.substring(0, 32) + "..." : req.name;
+        const requestName =
+          req.name.length > 35 ? req.name.substring(0, 32) + '...' : req.name;
         doc.text(requestName, margin + 10, yPosition);
 
         doc.setTextColor(statusColor[0], statusColor[1], statusColor[2]);
@@ -223,38 +254,48 @@ export default function ExportPDFButton({ reportData }: ExportPDFButtonProps) {
 
       doc.setFontSize(8);
       doc.setTextColor(150, 150, 150);
-      doc.text(`Generated on ${format(new Date(), "MM/dd/yyyy 'at' h:mm a")} • OptraFlow API Testing Platform`, margin, yPosition);
+      doc.text(
+        `Generated on ${format(
+          new Date(),
+          "MM/dd/yyyy 'at' h:mm a"
+        )} • OptraFlow API Testing Platform`,
+        margin,
+        yPosition
+      );
 
-      const fileName = `${reportData.name.replace(/[^a-z0-9]/gi, '_')}_Summary_${Date.now()}.pdf`;
+      const fileName = `${reportData.name.replace(
+        /[^a-z0-9]/gi,
+        '_'
+      )}_Summary_${Date.now()}.pdf`;
       doc.save(fileName);
-
-      // console.log("PDF exported successfully:", fileName);
       toast({
-        title: "PDF Summary Ready",
+        title: 'PDF Summary Ready',
         description: `${fileName} has been downloaded.`,
       });
     } catch (error) {
-      console.error("PDF export error:", error);
+      console.error('PDF export error:', error);
       toast({
-        title: "Export Failed",
-        description: "There was an error generating the PDF. Please try again.",
-        variant: "destructive",
+        title: 'Export Failed',
+        description: 'There was an error generating the PDF. Please try again.',
+        variant: 'destructive',
       });
     }
   };
 
   return (
-
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <button onClick={handleExport} data-testid="export-html-button" className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors group">
-            <Download className="w-5 h-5" />
+          <button
+            onClick={handleExport}
+            data-testid='export-html-button'
+            className='p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors group'
+          >
+            <Download className='w-5 h-5' />
           </button>
         </TooltipTrigger>
         <TooltipContent>Download PDF Summary</TooltipContent>
       </Tooltip>
     </TooltipProvider>
-
   );
 }

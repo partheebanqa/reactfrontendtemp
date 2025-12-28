@@ -7,8 +7,6 @@ export const getWorkSpaceToken = async (workspaceId: string) => {
     'GET',
     `${ENV.API_BASE_URL}/${workspaceId}/api-key`
   );
-  // console.log(response?.json(), "response")
-
   if (!response.ok) {
     throw new Error('Failed to fetch test suite report');
   }

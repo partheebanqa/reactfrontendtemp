@@ -1,27 +1,32 @@
-import { Button } from "@/components/ui/button";
-import { Download, FileText } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { ExtractedVariable, Variable } from "@/shared/types/requestChain.model";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { convertDateStamp } from "@/utils/exportDate";
-
+import { Button } from '@/components/ui/button';
+import { Download, FileText } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { ExtractedVariable, Variable } from '@/shared/types/requestChain.model';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import { convertDateStamp } from '@/utils/exportDate';
 
 export interface RequestExecution {
   id: string;
   name: string;
-  method: "GET" | "POST" | "PUT" | "DELETE" | "PATCH" | "HEAD" | "OPTIONS";
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'HEAD' | 'OPTIONS';
   url: string;
   order: number;
-  status: "passed" | "failed" | "skipped";
+  status: 'passed' | 'failed' | 'skipped';
   responseSize: number;
   duration: number;
   responseStatusCode: number;
   extractedVariables: ExtractedVariable[] | null;
-  substitutedVariables: { name: string; value: string; usedIn: string }[] | null;
+  substitutedVariables:
+    | { name: string; value: string; usedIn: string }[]
+    | null;
   requestCurl: string;
   response: string;
 }
-
 
 export interface ReportData {
   id: string;
@@ -41,12 +46,13 @@ export interface ReportData {
   requestExecutions: RequestExecution[];
 }
 
-
 interface ExportHTMLButtonProps {
   reportData: ReportData;
 }
 
-export default function ExportHTMLButton({ reportData }: ExportHTMLButtonProps) {
+export default function ExportHTMLButton({
+  reportData,
+}: ExportHTMLButtonProps) {
   const { toast } = useToast();
 
   const escapeHtml = (text: string): string => {
@@ -57,32 +63,38 @@ export default function ExportHTMLButton({ reportData }: ExportHTMLButtonProps) 
 
   const calculateAvgResponseTime = () => {
     if (reportData.requestExecutions.length === 0) return 0;
-    const totalDuration = reportData.requestExecutions.reduce((sum, req) => sum + req.duration, 0);
+    const totalDuration = reportData.requestExecutions.reduce(
+      (sum, req) => sum + req.duration,
+      0
+    );
     return Math.round(totalDuration / reportData.requestExecutions.length);
   };
 
   const calculateTotalDataTransferred = () => {
-    return reportData.requestExecutions.reduce((sum, req) => sum + req.responseSize, 0);
+    return reportData.requestExecutions.reduce(
+      (sum, req) => sum + req.responseSize,
+      0
+    );
   };
 
   const formatBytes = (bytes: number) => {
-    if (bytes === 0) return "0 B";
+    if (bytes === 0) return '0 B';
     const k = 1024;
-    const sizes = ["B", "KB", "MB", "GB"];
+    const sizes = ['B', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
   };
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
-      case "passed":
-        return "#10b981";
-      case "failed":
-        return "#ef4444";
-      case "skipped":
-        return "#f59e0b";
+      case 'passed':
+        return '#10b981';
+      case 'failed':
+        return '#ef4444';
+      case 'skipped':
+        return '#f59e0b';
       default:
-        return "#6b7280";
+        return '#6b7280';
     }
   };
 
@@ -385,11 +397,11 @@ export default function ExportHTMLButton({ reportData }: ExportHTMLButtonProps) 
           <div class="meta-label">Execution Date</div>
           <div class="meta-value">
           ${(() => {
-        const { dateTime, tz } = convertDateStamp(
-          Date.parse(reportData.lastExecutionDate)
-        );
-        return `${dateTime}, ${tz}`;
-      })()}
+            const { dateTime, tz } = convertDateStamp(
+              Date.parse(reportData.lastExecutionDate)
+            );
+            return `${dateTime}, ${tz}`;
+          })()}
          </div>
         </div>
         <div class="meta-item">
@@ -408,19 +420,27 @@ export default function ExportHTMLButton({ reportData }: ExportHTMLButtonProps) 
       </div>
       <div class="metric-card">
         <div class="metric-label">Successful</div>
-        <div class="metric-value" style="color: #10b981">${reportData.successfulRequests}</div>
+        <div class="metric-value" style="color: #10b981">${
+          reportData.successfulRequests
+        }</div>
       </div>
       <div class="metric-card">
         <div class="metric-label">Failed</div>
-        <div class="metric-value" style="color: #ef4444">${reportData.failedRequests}</div>
+        <div class="metric-value" style="color: #ef4444">${
+          reportData.failedRequests
+        }</div>
       </div>
       <div class="metric-card">
         <div class="metric-label">Skipped</div>
-        <div class="metric-value" style="color: #f59e0b">${reportData.skippedRequests}</div>
+        <div class="metric-value" style="color: #f59e0b">${
+          reportData.skippedRequests
+        }</div>
       </div>
       <div class="metric-card">
         <div class="metric-label">Success Rate</div>
-        <div class="metric-value">${reportData.successRate}<span class="metric-unit">%</span></div>
+        <div class="metric-value">${
+          reportData.successRate
+        }<span class="metric-unit">%</span></div>
       </div>
       <div class="metric-card">
         <div class="metric-label">Avg Response Time</div>
@@ -428,28 +448,40 @@ export default function ExportHTMLButton({ reportData }: ExportHTMLButtonProps) 
       </div>
       <div class="metric-card">
         <div class="metric-label">Data Transferred</div>
-        <div class="metric-value" style="font-size: 20px">${formatBytes(totalDataTransferred)}</div>
+        <div class="metric-value" style="font-size: 20px">${formatBytes(
+          totalDataTransferred
+        )}</div>
       </div>
     </div>
 
     <div class="section">
       <h2 class="section-title">Request Execution Timeline</h2>
-      ${reportData.requestExecutions.map(req => `
+      ${reportData.requestExecutions
+        .map(
+          (req) => `
         <div class="request-item">
           <div class="request-header">
             <div class="request-order">${req.order}</div>
             <div class="request-name">${esc(req.name)}</div>
-            <span class="method-badge method-${esc(req.method.toLowerCase())}">${esc(req.method)}</span>
-            <span class="status-badge status-${esc(req.status.toLowerCase())}">${esc(req.status)}</span>
+            <span class="method-badge method-${esc(
+              req.method.toLowerCase()
+            )}">${esc(req.method)}</span>
+            <span class="status-badge status-${esc(
+              req.status.toLowerCase()
+            )}">${esc(req.status)}</span>
           </div>
           <div class="request-url">${esc(req.url)}</div>
           <div class="request-stats">
             <span><strong>Status Code:</strong> ${req.responseStatusCode}</span>
             <span><strong>Duration:</strong> ${req.duration}ms</span>
-            <span><strong>Size:</strong> ${esc(formatBytes(req.responseSize))}</span>
+            <span><strong>Size:</strong> ${esc(
+              formatBytes(req.responseSize)
+            )}</span>
           </div>
           
-          ${req.substitutedVariables && req.substitutedVariables.length > 0 ? `
+          ${
+            req.substitutedVariables && req.substitutedVariables.length > 0
+              ? `
             <div style="margin-top: 16px;">
               <strong style="font-size: 14px; color: #475569;">Variable Substitutions</strong>
               <p style="font-size: 12px; color: #64748b; margin-top: 4px;">Variables from previous requests used in this request</p>
@@ -462,19 +494,31 @@ export default function ExportHTMLButton({ reportData }: ExportHTMLButtonProps) 
                   </tr>
                 </thead>
                 <tbody>
-                  ${req.substitutedVariables.map(v => `
+                  ${req.substitutedVariables
+                    .map(
+                      (v) => `
                     <tr>
                       <td class="variable-name">${esc(v.name)}</td>
-                      <td class="variable-value" style="word-break: break-all;">${esc(v.value)}</td>
-                      <td style="font-size: 12px; color: #64748b;">${esc(v.usedIn)}</td>
+                      <td class="variable-value" style="word-break: break-all;">${esc(
+                        v.value
+                      )}</td>
+                      <td style="font-size: 12px; color: #64748b;">${esc(
+                        v.usedIn
+                      )}</td>
                     </tr>
-                  `).join('')}
+                  `
+                    )
+                    .join('')}
                 </tbody>
               </table>
             </div>
-          ` : ''}
+          `
+              : ''
+          }
           
-          ${req.extractedVariables && req.extractedVariables.length > 0 ? `
+          ${
+            req.extractedVariables && req.extractedVariables.length > 0
+              ? `
             <div style="margin-top: 16px;">
               <strong style="font-size: 14px; color: #475569;">Extracted Variables</strong>
               <table class="variable-table" style="margin-top: 8px;">
@@ -487,18 +531,28 @@ export default function ExportHTMLButton({ reportData }: ExportHTMLButtonProps) 
                   </tr>
                 </thead>
                 <tbody>
-                  ${req.extractedVariables.map(v => `
+                  ${req.extractedVariables
+                    .map(
+                      (v) => `
                     <tr>
                       <td class="variable-name">${esc(v.name)}</td>
-                      <td class="variable-value" style="word-break: break-all;">${esc(v.value)}</td>
+                      <td class="variable-value" style="word-break: break-all;">${esc(
+                        v.value
+                      )}</td>
                       <td>${esc(v.source || '-')}</td>
-                      <td><span class="type-badge type-${esc(v.status || 'success')}">${esc(v.status || 'success')}</span></td>
+                      <td><span class="type-badge type-${esc(
+                        v.status || 'success'
+                      )}">${esc(v.status || 'success')}</span></td>
                     </tr>
-                  `).join('')}
+                  `
+                    )
+                    .join('')}
                 </tbody>
               </table>
             </div>
-          ` : ''}
+          `
+              : ''
+          }
           
           <div style="margin-top: 16px;">
             <strong style="font-size: 14px; color: #475569;">Request cURL</strong>
@@ -510,10 +564,14 @@ export default function ExportHTMLButton({ reportData }: ExportHTMLButtonProps) 
             <div class="code-block"><pre>${esc(req.response)}</pre></div>
           </div>
         </div>
-      `).join('')}
+      `
+        )
+        .join('')}
     </div>
 
-    ${reportData.globalVariables.length > 0 ? `
+    ${
+      reportData.globalVariables.length > 0
+        ? `
       <div class="section">
         <h2 class="section-title">Global Variables</h2>
         <table class="variable-table">
@@ -526,20 +584,32 @@ export default function ExportHTMLButton({ reportData }: ExportHTMLButtonProps) 
             </tr>
           </thead>
           <tbody>
-            ${reportData.globalVariables.map(v => `
+            ${reportData.globalVariables
+              .map(
+                (v) => `
               <tr>
                 <td class="variable-name">${esc(v.name)}</td>
-                <td class="variable-value" style="word-break: break-all;">${esc(v?.value || "")}</td>
-                <td><span class="type-badge type-${esc(v.type)}">${esc(v.type)}</span></td>
+                <td class="variable-value" style="word-break: break-all;">${esc(
+                  v?.value || ''
+                )}</td>
+                <td><span class="type-badge type-${esc(v.type)}">${esc(
+                  v.type
+                )}</span></td>
               
               </tr>
-            `).join('')}
+            `
+              )
+              .join('')}
           </tbody>
         </table>
       </div>
-    ` : ''}
+    `
+        : ''
+    }
 
-    ${reportData.extractedVariables.length > 0 ? `
+    ${
+      reportData.extractedVariables.length > 0
+        ? `
       <div class="section">
         <h2 class="section-title">Extracted Variables</h2>
         <table class="variable-table">
@@ -550,16 +620,24 @@ export default function ExportHTMLButton({ reportData }: ExportHTMLButtonProps) 
             </tr>
           </thead>
           <tbody>
-            ${reportData.extractedVariables.map(v => `
+            ${reportData.extractedVariables
+              .map(
+                (v) => `
               <tr>
                 <td class="variable-name">${esc(v.name)}</td>
-                <td class="variable-value" style="word-break: break-all;">${esc(v.value)}</td>
+                <td class="variable-value" style="word-break: break-all;">${esc(
+                  v.value
+                )}</td>
               </tr>
-            `).join('')}
+            `
+              )
+              .join('')}
           </tbody>
         </table>
       </div>
-    ` : ''}
+    `
+        : ''
+    }
 
     <div class="footer">
       Generated on ${new Date().toLocaleDateString()} • OptraFlow API Testing Platform
@@ -571,37 +649,37 @@ export default function ExportHTMLButton({ reportData }: ExportHTMLButtonProps) 
 
   const handleExport = () => {
     try {
-      console.log("Starting HTML export...");
       const htmlContent = generateHTML();
-      const blob = new Blob([htmlContent], { type: "text/html;charset=utf-8" });
+      const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
       const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      const filename = `${reportData.name.replace(/\s+/g, "_")}_Report_${new Date().getTime()}.html`;
+      const link = document.createElement('a');
+      const filename = `${reportData.name.replace(
+        /\s+/g,
+        '_'
+      )}_Report_${new Date().getTime()}.html`;
 
       link.href = url;
       link.download = filename;
-      link.setAttribute("data-testid", "download-link-html");
+      link.setAttribute('data-testid', 'download-link-html');
       document.body.appendChild(link);
 
-      console.log("Triggering download:", filename);
       link.click();
 
       setTimeout(() => {
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
-        console.log("Download triggered successfully");
 
         toast({
-          title: "HTML Report Ready",
-          description: "Your report has been downloaded successfully.",
+          title: 'HTML Report Ready',
+          description: 'Your report has been downloaded successfully.',
         });
       }, 100);
     } catch (error) {
-      console.error("HTML export error:", error);
+      console.error('HTML export error:', error);
       toast({
-        title: "Export Failed",
-        description: "There was an error generating the HTML report.",
-        variant: "destructive",
+        title: 'Export Failed',
+        description: 'There was an error generating the HTML report.',
+        variant: 'destructive',
       });
     }
   };
@@ -610,8 +688,12 @@ export default function ExportHTMLButton({ reportData }: ExportHTMLButtonProps) 
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <button onClick={handleExport} data-testid="export-html-button" className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors group">
-            <FileText className="w-5 h-5" />
+          <button
+            onClick={handleExport}
+            data-testid='export-html-button'
+            className='p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors group'
+          >
+            <FileText className='w-5 h-5' />
           </button>
         </TooltipTrigger>
         <TooltipContent>Download HTML File</TooltipContent>

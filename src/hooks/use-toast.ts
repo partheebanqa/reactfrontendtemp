@@ -65,9 +65,7 @@ export function useToast() {
         return {
           id,
           dismiss: () => toastActions.removeToast(id),
-          update: (props: Partial<Toast>) => {
-            // Updates not supported in current implementation
-          },
+          update: (props: Partial<Toast>) => {},
         };
       },
 

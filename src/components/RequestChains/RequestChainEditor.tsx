@@ -3050,6 +3050,38 @@ export function RequestChainEditor({
                                                     onApplyToAllRequests={
                                                       handleApplyToAllRequests
                                                     }
+                                                    allAssertions={
+                                                      assertionsByRequest[
+                                                        executionLog.requestId
+                                                      ] || []
+                                                    }
+                                                    onAssertionsUpdate={(
+                                                      assertions
+                                                    ) => {
+                                                      setAssertionsByRequest(
+                                                        (prev) => ({
+                                                          ...prev,
+                                                          [executionLog.requestId]:
+                                                            assertions,
+                                                        })
+                                                      );
+                                                      persistAssertionsToStorage(
+                                                        executionLog.requestId,
+                                                        assertions
+                                                      );
+                                                    }}
+                                                    variables={storeVariables.map(
+                                                      (v) => ({
+                                                        name: v.name,
+                                                        value: String(v.value),
+                                                      })
+                                                    )}
+                                                    dynamicVariables={dynamicStructured.map(
+                                                      (v) => ({
+                                                        name: v.name,
+                                                        value: String(v.value),
+                                                      })
+                                                    )}
                                                   />
                                                 </div>
                                               )}

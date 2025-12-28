@@ -116,8 +116,6 @@ export const getRequestChains = async (
     );
 
     const data = await response.json();
-    console.log('Data:', data);
-
     // Map the API response to the RequestChain interface
     const mappedChains: RequestChain[] = data.data.map((chain: any) => ({
       id: chain.requestchainId,

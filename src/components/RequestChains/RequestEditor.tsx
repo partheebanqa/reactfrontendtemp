@@ -182,8 +182,6 @@ export function RequestEditor({
 
   const [assertions, setAssertions] = useState<any[]>([]);
 
-  console.log('assertion88:', assertions);
-
   const [isExecuting, setIsExecuting] = useState(false);
   const [executionResult, setExecutionResult] = useState<ExecutionLog | null>(
     null
@@ -2810,6 +2808,14 @@ export function RequestEditor({
               errorMessage={executionResult.error}
               allAssertions={assertions}
               onAssertionsUpdate={handleAssertionsUpdate}
+              variables={storeVariables.map((v) => ({
+                name: v.name,
+                value: String(v.value),
+              }))}
+              dynamicVariables={dynamicStructured.map((v) => ({
+                name: v.name,
+                value: String(v.value),
+              }))}
             />
           </div>
         )}

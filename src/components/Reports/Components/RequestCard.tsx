@@ -65,10 +65,8 @@ export default function RequestCard({ request, index }: RequestCardProps) {
   const hasExtracted =
     request.extractedVariables && request.extractedVariables.length > 0;
 
-  // console.log("RequestCard Render - Request:", request);
   return (
     <div className='relative pl-8' data-testid={`request-card-${index}`}>
-      {/* Timeline line + dot */}
       <div className='absolute left-0 top-0 bottom-0 w-0.5 bg-border' />
       <div className='absolute left-0 top-6 w-3 h-3 rounded-full bg-primary border-2 border-background -translate-x-[5px]' />
 

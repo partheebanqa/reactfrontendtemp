@@ -49,7 +49,9 @@ interface ResponseExplorerProps {
   errorMessage?: string;
   allAssertions?: any[];
   onAssertionsUpdate?: (assertions: any[]) => void;
-  onApplyToAllRequests?: (name: string) => void; // Declared the variable here
+  onApplyToAllRequests?: (name: string) => void;
+  variables?: Array<{ name: string; value: string }>;
+  dynamicVariables?: Array<{ name: string; value: string }>;
 }
 
 interface JsonNode {
@@ -78,12 +80,12 @@ export function ResponseExplorer({
   allAssertions = [],
   onAssertionsUpdate,
   onApplyToAllRequests,
+  variables,
+  dynamicVariables,
 }: ResponseExplorerProps) {
   const [activeTab, setActiveTab] = useState<
     'body' | 'headers' | 'cookies' | 'actualRequest' | 'assertions'
   >('body');
-
-  console.log('allAssertions11:', allAssertions);
 
   const [assertionModalOpen, setAssertionModalOpen] = useState(false);
   const [selectedAssertion, setSelectedAssertion] = useState<{
@@ -91,6 +93,7 @@ export function ResponseExplorer({
     value: any;
     fieldType?: FieldType;
     operators?: Operator[];
+    filteredAssertions?: any[];
   } | null>(null);
 
   const getValueByPath = (obj: any, path: string): any => {
@@ -283,11 +286,147 @@ export function ResponseExplorer({
     });
   };
 
+  const filterAssertionsByField = (
+    allAssertions: any[],
+    fieldPath: string,
+    fieldValue: any
+  ): any[] => {
+    const normalizedPath = fieldPath.toLowerCase();
+    const isHeader = normalizedPath.startsWith('headers.');
+    const fieldType = typeof fieldValue;
+    const isArray = Array.isArray(fieldValue);
+
+    const cleanFieldPath = normalizedPath.replace(/^headers\./, '');
+
+    return allAssertions.filter((assertion) => {
+      const generalAssertionTypes = [
+        'status_equals',
+        'response_time',
+        'payload_size',
+      ];
+
+      const generalCategories = ['status', 'performance'];
+
+      if (
+        generalAssertionTypes.includes(assertion.type) ||
+        generalCategories.includes(assertion.category)
+      ) {
+        return false;
+      }
+
+      if (isHeader) {
+        if (
+          assertion.category !== 'headers' &&
+          assertion.category !== 'HeaderGuard™'
+        ) {
+          return false;
+        }
+
+        const assertionField = assertion.field?.toLowerCase();
+
+        if (assertion.category === 'HeaderGuard™') {
+          return assertionField === cleanFieldPath;
+        }
+
+        if (assertion.category === 'headers') {
+          if (
+            assertion.type === 'header_present' ||
+            assertion.type === 'header_equals'
+          ) {
+            return assertionField === cleanFieldPath;
+          }
+
+          if (assertion.type === 'header_contains') {
+            return assertionField === cleanFieldPath;
+          }
+        }
+
+        return false;
+      }
+
+      if (assertion.category === 'body') {
+        const assertionField = assertion.field?.toLowerCase();
+
+        if (assertionField && assertionField !== normalizedPath) {
+          return false;
+        }
+        switch (assertion.type) {
+          case 'field_present':
+            return true;
+
+          case 'field_type':
+            if (assertion.expectedValue) {
+              return (
+                assertion.expectedValue === fieldType ||
+                (isArray && assertion.expectedValue === 'array')
+              );
+            }
+            return true;
+
+          case 'field_not_empty':
+            return fieldType === 'string' || isArray;
+
+          case 'field_equals':
+          case 'field_contains':
+            if (assertion.expectedValue !== undefined) {
+              const expectedType = typeof assertion.expectedValue;
+              if (fieldType === 'string' && expectedType === 'string')
+                return true;
+              if (fieldType === 'number' && expectedType === 'number')
+                return true;
+              if (fieldType === 'boolean' && expectedType === 'boolean')
+                return true;
+            }
+            return true;
+
+          case 'field_pattern':
+            return fieldType === 'string';
+
+          case 'field_range':
+          case 'field_greater_than':
+          case 'field_less_than':
+            return fieldType === 'number';
+
+          case 'field_null':
+            return true;
+
+          case 'array_length':
+          case 'array_present':
+            return isArray;
+
+          default:
+            return true;
+        }
+      }
+
+      return false;
+    });
+  };
+
+  const normalizeHeaderName = (name: string): string => {
+    return name
+      .toLowerCase()
+      .replace(/^headers\./, '')
+      .trim();
+  };
+
   const handleAssertClick = (path: string, value: any) => {
     const fieldType = getFieldType(value);
     const operators = getOperatorsForFieldType(fieldType);
 
-    setSelectedAssertion({ path, value, fieldType, operators });
+    const filteredAssertions = filterAssertionsByField(
+      allAssertions,
+      path,
+      value
+    );
+
+    setSelectedAssertion({
+      path,
+      value,
+      fieldType,
+      operators,
+      filteredAssertions,
+    });
     setAssertionModalOpen(true);
   };
 
@@ -1208,11 +1347,124 @@ export function ResponseExplorer({
           }}
           initialField={selectedAssertion.path}
           initialValue={selectedAssertion.value}
-          suggestedAssertions={response?.assertions || allAssertions || []}
+          suggestedAssertions={
+            selectedAssertion.filteredAssertions || allAssertions
+          }
           availableOperators={selectedAssertion.operators}
           fieldType={selectedAssertion.fieldType}
           allAssertions={allAssertions}
           setAssertions={onAssertionsUpdate}
+          variables={variables}
+          dynamicVariables={dynamicVariables}
+          onSelect={(assertionType: string, config?: any) => {
+            let description = '';
+            let finalType = assertionType;
+
+            if (config?.isGeneral) {
+              // General assertion descriptions
+              switch (assertionType) {
+                case 'response_time':
+                  description = `Response time should be ${
+                    config.comparison === 'less' ? 'less than' : 'more than'
+                  } ${config.value}ms`;
+                  break;
+                case 'payload_size':
+                  description = `Payload size should be ${
+                    config.comparison === 'less' ? 'less than' : 'more than'
+                  } ${config.value}KB`;
+                  break;
+                case 'status_equals':
+                  description = `Response status should be ${config.value}`;
+                  break;
+                case 'contains_text':
+                  description = `Response should contain text: "${config.value}"`;
+                  finalType = 'contains';
+                  break;
+                case 'contains_number':
+                  description = `Response should contain number: ${config.value}`;
+                  finalType = 'contains';
+                  break;
+                case 'contains_boolean':
+                  description = `Response should contain boolean: ${config.value}`;
+                  finalType = 'contains';
+                  break;
+                case 'contains_static':
+                  description = `Response should contain static value: "${config.value}"`;
+                  finalType = 'contains';
+                  break;
+                case 'contains_dynamic':
+                  description = `Response should contain dynamic variable: ${config.value}`;
+                  finalType = 'contains';
+                  break;
+                case 'contains_extracted':
+                  description = `Response should contain extracted variable: ${config.value}`;
+                  finalType = 'contains';
+                  break;
+                default:
+                  description = `General assertion: ${assertionType}`;
+              }
+            } else {
+              const operatorLabels: Record<string, string> = {
+                equals: 'equals',
+                field_not_equals: 'does not equal',
+                field_greater_than: 'is greater than',
+                field_less_than: 'is less than',
+                contains: 'contains',
+                field_not_contains: 'does not contain',
+                array_length: 'has length',
+                field_null: 'is null',
+                field_not_null: 'is not null',
+                field_is_true: 'is true',
+                field_is_false: 'is false',
+                exists: 'exists',
+                field_not_present: 'does not exist',
+              };
+              const operatorText =
+                operatorLabels[config.operator] || config.operator;
+              description = `${selectedAssertion.path} ${operatorText}${
+                config.expectedValue ? ` "${config.expectedValue}"` : ''
+              }`;
+            }
+
+            const normalizeFieldPath = (path: string) => {
+              if (path.startsWith('headers.')) {
+                return path.replace(/^headers\./, '').toLowerCase();
+              }
+              return path;
+            };
+
+            const baseAssertion = {
+              id: `manual-${Date.now()}`,
+              type: finalType,
+              displayType: assertionType,
+              category: config?.isGeneral
+                ? 'general'
+                : selectedAssertion.path.startsWith('headers.')
+                ? 'headers'
+                : 'body',
+              description,
+              value: selectedAssertion.value,
+              expectedValue: config.expectedValue || config.value,
+              enabled: true,
+              ...config,
+            };
+
+            const newAssertion =
+              config?.isGeneral && config.scope !== 'field'
+                ? baseAssertion
+                : {
+                    ...baseAssertion,
+                    field: normalizeFieldPath(selectedAssertion.path),
+                  };
+
+            const updatedAssertions = [...allAssertions, newAssertion];
+
+            if (onAssertionsUpdate) {
+              onAssertionsUpdate(updatedAssertions);
+            }
+            setAssertionModalOpen(false);
+            setSelectedAssertion(null);
+          }}
         />
       )}
     </div>

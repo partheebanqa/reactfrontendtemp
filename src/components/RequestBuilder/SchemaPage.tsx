@@ -23,8 +23,6 @@ const SchemaPage: React.FC = () => {
   const { activeRequest } = useCollection();
   const { toast } = useToast();
 
-  console.log('schemas:', schemas);
-
   const [compareMode, setCompareMode] = useState(false);
   const [selectedSchemas, setSelectedSchemas] = useState<string[]>([]);
   const [viewSchema, setViewSchema] = useState<{
@@ -35,15 +33,11 @@ const SchemaPage: React.FC = () => {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // ⭐ FIX → Get schema count Safely
   const schemaCount =
     schemas.length > 0 && schemas[0]?.schema?.components?.schemas
       ? Object.keys(schemas[0].schema.components.schemas).length
       : 0;
 
-  console.log('Schema count:', schemaCount);
-
-  // Upload handler
   const processFile = async (file: File) => {
     if (!activeRequest?.id) {
       toast({

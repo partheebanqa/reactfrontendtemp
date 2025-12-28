@@ -46,7 +46,6 @@ export default function SignIn() {
 
     try {
       const loginMutationResult = await loginMutation.mutateAsync(formData);
-      console.log('loginMutationResult:', loginMutationResult);
 
       if (loginMutationResult?.token) {
         setLocation('/dashboard');

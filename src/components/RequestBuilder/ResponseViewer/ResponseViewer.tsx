@@ -365,9 +365,6 @@ const ResponseViewer = () => {
         const operatorText = operatorLabels[config.operator] || config.operator;
         description = `${activeFieldPath} ${operatorText} "${config.value}"`;
       }
-
-      console.log('activeFieldPath88:', activeFieldPath);
-
       const baseAssertion = {
         id: `manual-${Date.now()}`,
         type: finalType,

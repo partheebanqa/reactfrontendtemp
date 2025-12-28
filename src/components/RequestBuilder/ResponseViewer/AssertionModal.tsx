@@ -582,9 +582,6 @@ function AssertionModal({
     const normalizedFieldPath = isHeader
       ? fieldPath.replace(/^headers\./, '').toLowerCase()
       : fieldPath;
-
-    console.log('normalizedFieldPath:', normalizedFieldPath);
-
     const description = `${normalizedFieldPath} ${operatorText}${
       manualValue ? ` "${manualValue}"` : ''
     }`;

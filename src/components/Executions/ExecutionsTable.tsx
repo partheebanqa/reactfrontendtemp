@@ -124,8 +124,6 @@ export const ExecutionsTable = ({
     );
   };
 
-  // console.log(executions, 'executions');
-
   return (
     <Table>
       <TableHeader>
@@ -161,7 +159,10 @@ export const ExecutionsTable = ({
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <Layers className='text-[#136fb0] cursor-pointer' size={20} />
+                              <Layers
+                                className='text-[#136fb0] cursor-pointer'
+                                size={20}
+                              />
                             </TooltipTrigger>
                             <TooltipContent>Test Suite</TooltipContent>
                           </Tooltip>
@@ -169,7 +170,9 @@ export const ExecutionsTable = ({
                         <p
                           className='font-medium text-[#136fb0] hover:text-primary/80 cursor-pointer'
                           onClick={() =>
-                            setLocation(`/test-suites/${execution?.entityId}/edit`)
+                            setLocation(
+                              `/test-suites/${execution?.entityId}/edit`
+                            )
                           }
                         >
                           {execution.testSuite.name}
@@ -182,7 +185,10 @@ export const ExecutionsTable = ({
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <Link2 className='text-purple-600 cursor-pointer' size={20} />
+                              <Link2
+                                className='text-purple-600 cursor-pointer'
+                                size={20}
+                              />
                             </TooltipTrigger>
                             <TooltipContent>Request Chain</TooltipContent>
                           </Tooltip>
@@ -200,28 +206,27 @@ export const ExecutionsTable = ({
                       </div>
                     </>
                   )}
-                  <div className="group flex items-center gap-2 mt-1 max-w-full">
-                    <p className="text-sm text-muted-foreground truncate max-w-[190px]">
+                  <div className='group flex items-center gap-2 mt-1 max-w-full'>
+                    <p className='text-sm text-muted-foreground truncate max-w-[190px]'>
                       {execution.id}
                     </p>
 
                     <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-5 w-5 p-0 flex-shrink-0 
+                      variant='ghost'
+                      size='sm'
+                      className='h-5 w-5 p-0 flex-shrink-0 
                opacity-0 group-hover:opacity-100 
-               transition-opacity"
+               transition-opacity'
                       onClick={() =>
-                        copyToClipboard(execution.id.toString(), "Execution ID")
+                        copyToClipboard(execution.id.toString(), 'Execution ID')
                       }
                     >
                       <Copy
                         size={12}
-                        className="text-muted-foreground hover:text-foreground"
+                        className='text-muted-foreground hover:text-foreground'
                       />
                     </Button>
                   </div>
-
                 </div>
               </TableCell>
               <TableCell>
@@ -231,10 +236,11 @@ export const ExecutionsTable = ({
                       addSuffix: true,
                     })} */}
                     {(() => {
-                      const { dateTime, tz } = convertTimestamp(execution.startTime);
+                      const { dateTime, tz } = convertTimestamp(
+                        execution.startTime
+                      );
                       return `${dateTime}, ${tz}`;
                     })()}
-
                   </p>
                 </div>
               </TableCell>
@@ -261,8 +267,8 @@ export const ExecutionsTable = ({
                     execution.status === 'success'
                       ? 'active'
                       : execution.status === 'failed'
-                        ? 'destructive'
-                        : 'secondary'
+                      ? 'destructive'
+                      : 'secondary'
                   }
                 >
                   <span className='mr-1'>

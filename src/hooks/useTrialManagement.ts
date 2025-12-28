@@ -35,13 +35,6 @@ function useTrialManagement() {
       planId: string;
       durationDays?: number;
     }) => {
-      console.log(
-        'Starting trial with planId:',
-        planId,
-        'for durationDays:',
-        durationDays
-      );
-
       if (!currentWorkspace) throw new Error('No workspace selected');
 
       return await apiRequest(
