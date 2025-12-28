@@ -19,6 +19,30 @@ import {
 import { useEffect, useState } from 'react';
 import { getCategoryForAssertionType } from '@/lib/assertion-utils';
 
+interface Operator {
+  id: string;
+  label: string;
+  description: string;
+}
+
+interface AssertionModalProps {
+  fieldPath?: string;
+  fieldValue?: any;
+  isOpen: boolean;
+  onSelect?: (assertionType: string, config?: any) => void;
+  onClose: () => void;
+  allAssertions?: any[];
+  variables?: Array<{ name: string; value: string }>;
+  dynamicVariables?: Array<{ name: string; value: string }>;
+  extractedVariables?: Array<{ name: string; value: string }>;
+  setAssertions?: (assertions: any[]) => void;
+  initialField?: string;
+  initialValue?: any;
+  fieldType?: string;
+  availableOperators?: Operator[];
+  suggestedAssertions?: any[];
+}
+
 function AssertionModal({
   fieldPath,
   fieldValue,
@@ -28,18 +52,14 @@ function AssertionModal({
   allAssertions = [],
   variables = [],
   dynamicVariables = [],
+  extractedVariables = [],
   setAssertions,
-}: {
-  fieldPath: string;
-  fieldValue: any;
-  isOpen: boolean;
-  onSelect: (assertionType: string, config?: any) => void;
-  onClose: () => void;
-  allAssertions?: any[];
-  variables?: Array<{ name: string; value: string }>;
-  dynamicVariables?: Array<{ name: string; value: string }>;
-  setAssertions: (assertions: any[]) => void;
-}) {
+  initialField,
+  initialValue,
+  fieldType,
+  availableOperators,
+  suggestedAssertions = [],
+}: AssertionModalProps) {
   const [activeTab, setActiveTab] = useState<
     'suggested' | 'manual' | 'general'
   >('suggested');
@@ -54,29 +74,9 @@ function AssertionModal({
     new Set()
   );
 
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        onClose();
-      }
-    };
-
-    document.addEventListener('keydown', handleEscape);
-    return () => {
-      document.removeEventListener('keydown', handleEscape);
-    };
-  }, [isOpen, onClose]);
-
-  useEffect(() => {
-    if (!isOpen) {
-      setAssertionsToRemove(new Set());
-      setSelectedSuggestedAssertions(new Set());
-    }
-  }, [isOpen]);
-
-  if (!isOpen) return null;
+  const displayFieldPath = initialField || fieldPath || '';
+  const displayFieldValue =
+    initialValue !== undefined ? initialValue : fieldValue;
 
   const normalizeHeaderName = (name: string): string => {
     return name
@@ -84,241 +84,6 @@ function AssertionModal({
       .replace(/^headers\./, '')
       .trim();
   };
-
-  const suggestedAssertions = allAssertions
-    .filter((assertion) => {
-      const isHeaderField = fieldPath.startsWith('headers.');
-
-      if (isHeaderField) {
-        const headerName = normalizeHeaderName(fieldPath);
-
-        if (
-          assertion.category === 'HeaderGuard™' ||
-          assertion.category === 'HeaderGuard'
-        ) {
-          const assertionField = normalizeHeaderName(assertion.field || '');
-
-          const matches = assertionField === headerName;
-
-          return matches;
-        }
-
-        if (assertion.category === 'headers') {
-          const assertionField = normalizeHeaderName(assertion.field || '');
-
-          const matches = assertionField === headerName;
-
-          return matches;
-        }
-
-        return false;
-      }
-
-      return assertion.category === 'body' && assertion.field === fieldPath;
-    })
-    .map((assertion) => {
-      let label = '';
-      let description = '';
-      let icon = CheckCircle;
-
-      switch (assertion.type) {
-        case 'field_present':
-          label = 'Field Exists';
-          description = assertion.description;
-          icon = CheckCircle;
-          break;
-        case 'header_present':
-          label = 'Header Exists';
-          description = assertion.description;
-          icon = CheckCircle;
-          break;
-        case 'header_equals':
-          label = 'Header Equals';
-          description = assertion.description;
-          icon = CheckCircle;
-          break;
-        case 'header_contains':
-          label = 'Header Contains';
-          description = assertion.description;
-          icon = Code;
-          break;
-        case 'header_security_present':
-          label = 'Security Header Present';
-          description = assertion.description;
-          icon = CheckCircle;
-          break;
-        case 'header_security_value':
-          label = 'Security Header Value Check';
-          description = assertion.description;
-          icon = CheckCircle;
-          break;
-        case 'field_type':
-          label = 'Check Data Type';
-          description = assertion.description;
-          icon = Type;
-          break;
-        case 'field_not_empty':
-          label = 'Not Empty';
-          description = assertion.description;
-          icon = CheckCircle;
-          break;
-        case 'field_equals':
-          label = 'Equals Value';
-          description = assertion.description;
-          icon = CheckCircle;
-          break;
-        case 'field_contains':
-          label = 'Contains';
-          description = assertion.description;
-          icon = Code;
-          break;
-        case 'field_pattern':
-          label = 'Matches Pattern';
-          description = assertion.description;
-          icon = Code;
-          break;
-        case 'field_range':
-          label = 'Range Check';
-          description = assertion.description;
-          icon = CheckCircle;
-          break;
-        case 'field_null':
-          label = 'Is Null';
-          description = assertion.description;
-          icon = XCircle;
-          break;
-        case 'array_length':
-          label = 'Array Length';
-          description = assertion.description;
-          icon = List;
-          break;
-        case 'array_present':
-          label = 'Array Present';
-          description = assertion.description;
-          icon = List;
-          break;
-        default:
-          label = assertion.type.replace(/_/g, ' ');
-          description = assertion.description;
-          icon = CheckCircle;
-      }
-
-      return {
-        id: assertion.id,
-        label,
-        description,
-        icon,
-        assertion,
-      };
-    });
-
-  const allGeneralAssertions = [
-    {
-      id: 'response_time',
-      label: 'Response Time',
-      icon: Clock,
-      needsInput: true,
-      inputType: 'number',
-      inputLabel: 'Time in milliseconds',
-      hasComparison: true,
-      showForTypes: ['all'],
-    },
-    {
-      id: 'payload_size',
-      label: 'Payload Size',
-      icon: HardDrive,
-      needsInput: true,
-      inputType: 'number',
-      inputLabel: 'Size in KB',
-      hasComparison: true,
-      showForTypes: ['all'],
-    },
-    {
-      id: 'status_equals',
-      label: 'Status Code',
-      icon: Hash,
-      needsInput: true,
-      inputType: 'number',
-      inputLabel: 'Status code (e.g., 200, 404, 500)',
-      showForTypes: ['all'],
-    },
-    {
-      id: 'contains_text',
-      label: 'Contains Text',
-      icon: Code,
-      needsInput: true,
-      inputType: 'text',
-      inputLabel: 'Text value',
-      contentType: 'string',
-      showForTypes: ['string'],
-    },
-    {
-      id: 'contains_number',
-      label: 'Contains Number',
-      icon: Hash,
-      needsInput: true,
-      inputType: 'number',
-      inputLabel: 'Number value',
-      contentType: 'number',
-      showForTypes: ['number'],
-    },
-    {
-      id: 'contains_boolean',
-      label: 'Contains Boolean',
-      icon: CheckCircle,
-      needsInput: true,
-      inputType: 'select',
-      inputLabel: 'Boolean value',
-      contentType: 'boolean',
-      options: [
-        { value: 'true', label: 'true' },
-        { value: 'false', label: 'false' },
-      ],
-      showForTypes: ['boolean'],
-    },
-    {
-      id: 'contains_static',
-      label: 'Contains Static Variable',
-      icon: Code,
-      needsInput: true,
-      inputType: 'select',
-      inputLabel: 'Select static variable',
-      showForTypes: ['all'],
-      tooltip:
-        'Static variables are predefined values that remain constant throughout test execution',
-    },
-    {
-      id: 'contains_dynamic',
-      label: 'Contains Dynamic Variable',
-      icon: Code,
-      needsInput: true,
-      inputType: 'select',
-      inputLabel: 'Select dynamic variable',
-      showForTypes: ['all'],
-      tooltip:
-        'Dynamic variables are values that change during test execution, such as timestamps or random data',
-    },
-    {
-      id: 'contains_extracted',
-      label: 'Contains Extracted Variable',
-      icon: Code,
-      needsInput: true,
-      inputType: 'text',
-      inputLabel: 'Variable name',
-      showForTypes: ['all'],
-      tooltip:
-        'Extracted variables are values captured from previous request responses for use in assertions',
-    },
-  ];
-
-  const getValueType = (value: any): string => {
-    if (value === null) return 'null';
-    if (Array.isArray(value)) return 'array';
-    return typeof value;
-  };
-
-  const valueType = getValueType(fieldValue);
-  const isArray = Array.isArray(fieldValue);
 
   const getOperatorsForType = (type: string, isArray: boolean) => {
     if (isArray) {
@@ -418,14 +183,212 @@ function AssertionModal({
     }
   };
 
+  const getValueType = (value: any): string => {
+    if (value === null) return 'null';
+    if (Array.isArray(value)) return 'array';
+    return typeof value;
+  };
+
+  const valueType = getValueType(displayFieldValue);
+  const isArray = Array.isArray(displayFieldValue);
+
+  const operators = getOperatorsForType(fieldType || valueType, isArray);
+
+  const suggestedAssertionsList = suggestedAssertions.map((assertion) => {
+    let label = '';
+    let description = '';
+    let icon = CheckCircle;
+
+    switch (assertion.type) {
+      case 'field_present':
+        label = 'Field Exists';
+        description = assertion.description;
+        icon = CheckCircle;
+        break;
+      case 'header_present':
+        label = 'Header Exists';
+        description = assertion.description;
+        icon = CheckCircle;
+        break;
+      case 'header_equals':
+        label = 'Header Equals';
+        description = assertion.description;
+        icon = CheckCircle;
+        break;
+      case 'header_contains':
+        label = 'Header Contains';
+        description = assertion.description;
+        icon = Code;
+        break;
+      case 'header_security_present':
+        label = 'Security Header Present';
+        description = assertion.description;
+        icon = CheckCircle;
+        break;
+      case 'header_security_value':
+        label = 'Security Header Value Check';
+        description = assertion.description;
+        icon = CheckCircle;
+        break;
+      case 'field_type':
+        label = 'Check Data Type';
+        description = assertion.description;
+        icon = Type;
+        break;
+      case 'field_not_empty':
+        label = 'Not Empty';
+        description = assertion.description;
+        icon = CheckCircle;
+        break;
+      case 'field_equals':
+        label = 'Equals Value';
+        description = assertion.description;
+        icon = CheckCircle;
+        break;
+      case 'field_contains':
+        label = 'Contains';
+        description = assertion.description;
+        icon = Code;
+        break;
+      case 'field_pattern':
+        label = 'Matches Pattern';
+        description = assertion.description;
+        icon = Code;
+        break;
+      case 'field_range':
+        label = 'Range Check';
+        description = assertion.description;
+        icon = CheckCircle;
+        break;
+      case 'field_null':
+        label = 'Is Null';
+        description = assertion.description;
+        icon = XCircle;
+        break;
+      case 'array_length':
+        label = 'Array Length';
+        description = assertion.description;
+        icon = List;
+        break;
+      case 'array_present':
+        label = 'Array Present';
+        description = assertion.description;
+        icon = List;
+        break;
+      default:
+        label = assertion.type.replace(/_/g, ' ');
+        description = assertion.description;
+        icon = CheckCircle;
+    }
+
+    return {
+      id: assertion.id,
+      label,
+      description,
+      icon,
+      assertion,
+    };
+  });
+
+  const allGeneralAssertions = [
+    {
+      id: 'response_time',
+      label: 'Response Time',
+      icon: Clock,
+      needsInput: true,
+      inputType: 'number',
+      inputLabel: 'Time in milliseconds',
+      hasComparison: true,
+      showForTypes: ['all'],
+    },
+    {
+      id: 'payload_size',
+      label: 'Payload Size',
+      icon: HardDrive,
+      needsInput: true,
+      inputType: 'number',
+      inputLabel: 'Size in KB',
+      hasComparison: true,
+      showForTypes: ['all'],
+    },
+    {
+      id: 'status_equals',
+      label: 'Status Code',
+      icon: Hash,
+      needsInput: true,
+      inputType: 'number',
+      inputLabel: 'Status code (e.g., 200, 404, 500)',
+      showForTypes: ['all'],
+    },
+    {
+      id: 'contains_text',
+      label: 'Contains Text',
+      icon: Code,
+      needsInput: true,
+      inputType: 'text',
+      inputLabel: 'Text value',
+      contentType: 'string',
+      showForTypes: ['string'],
+    },
+    {
+      id: 'contains_number',
+      label: 'Contains Number',
+      icon: Hash,
+      needsInput: true,
+      inputType: 'number',
+      inputLabel: 'Number value',
+      contentType: 'number',
+      showForTypes: ['number'],
+    },
+    {
+      id: 'contains_boolean',
+      label: 'Contains Boolean',
+      icon: CheckCircle,
+      needsInput: true,
+      inputType: 'select',
+      inputLabel: 'Boolean value',
+      contentType: 'boolean',
+      options: [
+        { value: 'true', label: 'true' },
+        { value: 'false', label: 'false' },
+      ],
+      showForTypes: ['boolean'],
+    },
+    {
+      id: 'contains_static',
+      label: 'Contains Static Variable',
+      icon: Code,
+      needsInput: true,
+      inputType: 'select',
+      inputLabel: 'Select static variable',
+      showForTypes: ['all'],
+    },
+    {
+      id: 'contains_dynamic',
+      label: 'Contains Dynamic Variable',
+      icon: Code,
+      needsInput: true,
+      inputType: 'select',
+      inputLabel: 'Select dynamic variable',
+      showForTypes: ['all'],
+    },
+    {
+      id: 'contains_extracted',
+      label: 'Contains Extracted Variable',
+      icon: Code,
+      needsInput: true,
+      inputType: 'select',
+      inputLabel: 'Select extracted variable',
+      showForTypes: ['all'],
+    },
+  ];
+
   const generalAssertions = allGeneralAssertions.filter((assertion) => {
     if (assertion.showForTypes.includes('all')) {
       return true;
     }
     return assertion.showForTypes.includes(valueType);
   });
-
-  const operators = getOperatorsForType(valueType, isArray);
 
   const handleSuggestedClick = (assertionItem: any) => {
     const isAlreadyEnabled = assertionItem.assertion.enabled;
@@ -481,7 +444,7 @@ function AssertionModal({
     }
 
     selectedSuggestedAssertions.forEach((assertionId) => {
-      const assertionItem = suggestedAssertions.find(
+      const assertionItem = suggestedAssertionsList.find(
         (a) => a.id === assertionId
       );
       if (assertionItem) {
@@ -491,7 +454,9 @@ function AssertionModal({
       }
     });
 
-    setAssertions(updatedAssertions);
+    if (setAssertions) {
+      setAssertions(updatedAssertions);
+    }
 
     setSelectedSuggestedAssertions(new Set());
     setAssertionsToRemove(new Set());
@@ -500,7 +465,7 @@ function AssertionModal({
 
   const getAssertionTypeForOperator = (
     operator: string,
-    isHeader: boolean = false
+    isHeader = false
   ): string => {
     if (isHeader) {
       const headerOperatorTypeMap: Record<string, string> = {
@@ -555,7 +520,7 @@ function AssertionModal({
       return;
     }
 
-    const isHeader = fieldPath.startsWith('headers.');
+    const isHeader = displayFieldPath.startsWith('headers.');
 
     const assertionType = getAssertionTypeForOperator(
       selectedOperator,
@@ -581,8 +546,9 @@ function AssertionModal({
     const operatorText = operatorLabels[selectedOperator] || selectedOperator;
 
     const normalizedFieldPath = isHeader
-      ? fieldPath.replace(/^headers\./, '').toLowerCase()
-      : fieldPath;
+      ? displayFieldPath.replace(/^headers\./, '').toLowerCase()
+      : displayFieldPath;
+
     const description = `${normalizedFieldPath} ${operatorText}${
       manualValue ? ` "${manualValue}"` : ''
     }`;
@@ -601,13 +567,17 @@ function AssertionModal({
       field: normalizedFieldPath,
     };
 
-    onSelect(assertionType, config);
+    if (onSelect) {
+      onSelect(assertionType, config);
+    }
   };
 
   const handleGeneralClick = (id: string) => {
     const assertion = generalAssertions.find((a) => a.id === id);
     if (!assertion?.needsInput) {
-      onSelect(id, { isGeneral: true });
+      if (onSelect) {
+        onSelect(id, { isGeneral: true });
+      }
     } else {
       setGeneralType(id);
       setGeneralValue('');
@@ -638,7 +608,9 @@ function AssertionModal({
       config.scope = 'full';
     }
 
-    onSelect(generalType, config);
+    if (onSelect) {
+      onSelect(generalType, config);
+    }
     setGeneralType('');
     setGeneralValue('');
     setGeneralComparison('less');
@@ -648,15 +620,18 @@ function AssertionModal({
   const filteredDynamicVariables = dynamicVariables.filter((v) =>
     v.name.startsWith('D_')
   );
+  const filteredExtractedVariables = extractedVariables.filter((v) =>
+    v.name.startsWith('E_')
+  );
 
-  const displayedSuggestions = suggestedAssertions;
+  const displayedSuggestions = suggestedAssertionsList;
 
   const hasChanges =
     selectedSuggestedAssertions.size > 0 || assertionsToRemove.size > 0;
   const totalChanges =
     selectedSuggestedAssertions.size + assertionsToRemove.size;
 
-  const initialEnabledCount = suggestedAssertions.filter(
+  const initialEnabledCount = suggestedAssertionsList.filter(
     (a) => a.assertion.enabled
   ).length;
 
@@ -665,34 +640,62 @@ function AssertionModal({
     selectedSuggestedAssertions.size -
     assertionsToRemove.size;
 
-  const totalAssertions = suggestedAssertions.length;
+  const totalAssertions = suggestedAssertionsList.length;
 
   const shouldDisableButton = finalCount === initialEnabledCount;
 
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [isOpen, onClose]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setAssertionsToRemove(new Set());
+      setSelectedSuggestedAssertions(new Set());
+    }
+  }, [isOpen]);
+
+  if (!isOpen) return null;
+
   return (
     <div
-      className='fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4'
+      className='fixed inset-0 bg-foreground/30 backdrop-blur-sm flex items-center justify-center z-50 p-4'
       onClick={onClose}
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className='bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[85vh] overflow-hidden flex flex-col'
+        className='bg-card rounded-2xl shadow-xl w-full max-w-2xl max-h-[85vh] overflow-hidden flex flex-col animate-fade-in'
       >
-        <div className='px-6 py-4 border-b border-gray-200 flex items-center justify-between flex-shrink-0'>
+        {/* Header */}
+        <div className='px-6 py-4 border-b border-border flex items-center justify-between flex-shrink-0'>
           <div className='flex-1'>
-            <h2 className='text-lg font-semibold text-gray-900'>
+            <h2 className='text-lg font-semibold text-card-foreground'>
               Add Assertion
             </h2>
-            <p className='text-xs text-gray-500 mt-1 font-mono'>{fieldPath}</p>
+            <p className='text-xs text-muted-foreground mt-1 font-mono'>
+              {displayFieldPath}
+            </p>
           </div>
           <button
             onClick={onClose}
-            className='p-1 text-gray-400 hover:text-gray-600 rounded hover:bg-gray-100 transition-colors ml-2'
+            className='p-1 text-muted-foreground hover:text-card-foreground rounded hover:bg-muted transition-colors ml-2'
           >
             <X className='w-5 h-5' />
           </button>
         </div>
 
+        {/* Tabs */}
         <div className='flex border-b border-gray-200 bg-gray-50'>
           <button
             onClick={() => setActiveTab('suggested')}
@@ -735,6 +738,7 @@ function AssertionModal({
           </button>
         </div>
 
+        {/* Content */}
         <div className='flex-1 overflow-y-auto scrollbar-thin px-6 py-4'>
           {activeTab === 'general' && (
             <div className='space-y-2'>
@@ -746,16 +750,16 @@ function AssertionModal({
                       <button
                         key={a.id}
                         onClick={() => handleGeneralClick(a.id)}
-                        className='w-full flex items-start gap-4 p-4 rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-all text-left group'
+                        className='w-full flex items-start gap-4 p-4 rounded-lg border border-border hover:border-primary/30 hover:bg-accent transition-all text-left group'
                       >
-                        <div className='w-10 h-10 rounded-lg bg-gray-100 group-hover:bg-blue-100 flex items-center justify-center flex-shrink-0 transition-colors'>
-                          <Icon className='w-5 h-5 text-gray-600 group-hover:text-blue-600 transition-colors' />
+                        <div className='w-10 h-10 rounded-lg bg-muted group-hover:bg-accent flex items-center justify-center flex-shrink-0 transition-colors'>
+                          <Icon className='w-5 h-5 text-muted-foreground text-gray-900 transition-colors' />
                         </div>
                         <div className='flex-1 min-w-0'>
-                          <div className='text-sm font-medium text-gray-900 group-hover:text-blue-900'>
+                          <div className='text-sm font-medium text-card-foreground text-gray-900'>
                             {a.label}
                           </div>
-                          <div className='text-xs text-gray-500 mt-1'>
+                          <div className='text-xs text-muted-foreground mt-1'>
                             {a.inputLabel || 'No input needed'}
                           </div>
                         </div>
@@ -814,7 +818,7 @@ function AssertionModal({
                   {generalAssertions.find((a) => a.id === generalType)
                     ?.hasComparison && (
                     <div>
-                      <label className='block text-sm font-semibold text-gray-900 mb-2'>
+                      <label className='block text-sm font-semibold text-card-foreground mb-2'>
                         Comparison
                       </label>
                       <div className='grid grid-cols-2 gap-2'>
@@ -822,11 +826,10 @@ function AssertionModal({
                           <Button
                             key={c}
                             onClick={() => setGeneralComparison(c)}
-                            className={`px-4 py-2 text-sm rounded-lg border font-medium transition-all ${
-                              generalComparison === c
-                                ? ' border-blue-600 text-white'
-                                : 'bg-white border-gray-200 text-gray-700 hover:border-blue-300'
-                            }`}
+                            variant={
+                              generalComparison === c ? 'default' : 'outline'
+                            }
+                            className='px-4 py-2 text-sm font-medium'
                           >
                             {c === 'less' ? 'Less than' : 'More than'}
                           </Button>
@@ -835,7 +838,7 @@ function AssertionModal({
                     </div>
                   )}
                   <div>
-                    <label className='block text-sm font-semibold text-gray-900 mb-2'>
+                    <label className='block text-sm font-semibold text-card-foreground mb-2'>
                       {
                         generalAssertions.find((a) => a.id === generalType)
                           ?.inputLabel
@@ -845,7 +848,7 @@ function AssertionModal({
                       <select
                         value={generalValue}
                         onChange={(e) => setGeneralValue(e.target.value)}
-                        className='w-full px-4 py-3 border border-gray-300 bg-white text-gray-900 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm'
+                        className='w-full px-4 py-3 border border-input bg-card text-card-foreground rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent outline-none text-sm'
                         autoFocus
                       >
                         <option value=''>Select static variable...</option>
@@ -862,7 +865,7 @@ function AssertionModal({
                       <select
                         value={generalValue}
                         onChange={(e) => setGeneralValue(e.target.value)}
-                        className='w-full px-4 py-3 border border-gray-300 bg-white text-gray-900 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm'
+                        className='w-full px-4 py-3 border border-input bg-card text-card-foreground rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent outline-none text-sm'
                         autoFocus
                       >
                         <option value=''>Select dynamic variable...</option>
@@ -871,16 +874,39 @@ function AssertionModal({
                             key={variable.name}
                             value={`{{${variable.name}}}`}
                           >
-                            {variable.name}
+                            {variable.name} = {variable.value}
                           </option>
                         ))}
+                      </select>
+                    ) : generalType === 'contains_extracted' ? (
+                      <select
+                        value={generalValue}
+                        onChange={(e) => setGeneralValue(e.target.value)}
+                        className='w-full px-4 py-3 border border-input bg-card text-card-foreground rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent outline-none text-sm'
+                        autoFocus
+                      >
+                        <option value=''>Select extracted variable...</option>
+                        {filteredExtractedVariables.length > 0 ? (
+                          filteredExtractedVariables.map((variable) => (
+                            <option
+                              key={variable.name}
+                              value={`{{${variable.name}}}`}
+                            >
+                              {variable.name} = {variable.value}
+                            </option>
+                          ))
+                        ) : (
+                          <option disabled>
+                            No extracted variables available
+                          </option>
+                        )}
                       </select>
                     ) : generalAssertions.find((a) => a.id === generalType)
                         ?.inputType === 'select' ? (
                       <select
                         value={generalValue}
                         onChange={(e) => setGeneralValue(e.target.value)}
-                        className='w-full px-4 py-3 border border-gray-300 bg-white text-gray-900 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm'
+                        className='w-full px-4 py-3 border border-input bg-card text-card-foreground rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent outline-none text-sm'
                         autoFocus
                       >
                         <option value=''>Select value...</option>
@@ -904,7 +930,7 @@ function AssertionModal({
                           generalAssertions.find((a) => a.id === generalType)
                             ?.inputLabel
                         }`}
-                        className='w-full px-4 py-3 border border-gray-300 bg-white text-gray-900 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm'
+                        className='w-full px-4 py-3 border border-input bg-card text-card-foreground rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent outline-none text-sm'
                         autoFocus
                       />
                     )}
@@ -916,73 +942,65 @@ function AssertionModal({
 
           {activeTab === 'suggested' && (
             <div className='space-y-2'>
-              {displayedSuggestions.length > 0 ? (
-                displayedSuggestions.map((assertion: any) => {
-                  const Icon = assertion.icon || CheckCircle;
-                  const isEnabled = assertion.assertion?.enabled || false;
+              {displayedSuggestions.length === 0 ? (
+                <div className='text-center py-8'>
+                  <p className='text-muted-foreground text-sm'>
+                    No suggestions available for this field
+                  </p>
+                </div>
+              ) : (
+                displayedSuggestions.map((assertionItem) => {
+                  const Icon = assertionItem.icon;
+                  const isAlreadyEnabled = assertionItem.assertion.enabled;
                   const isMarkedForRemoval = assertionsToRemove.has(
-                    assertion.id
+                    assertionItem.id
                   );
                   const isSelected = selectedSuggestedAssertions.has(
-                    assertion.id
+                    assertionItem.id
                   );
-                  const isDisabled = isEnabled && !isMarkedForRemoval;
+                  const isDisabled = isAlreadyEnabled && !isMarkedForRemoval;
 
                   return (
                     <button
-                      key={assertion.id}
-                      onClick={() => handleSuggestedClick(assertion)}
+                      key={assertionItem.id}
+                      onClick={() => handleSuggestedClick(assertionItem)}
                       disabled={isDisabled}
                       className={`w-full flex items-start gap-4 p-4 rounded-lg border transition-all text-left ${
                         isDisabled
-                          ? 'border-gray-200 bg-gray-50 opacity-50 cursor-not-allowed'
+                          ? 'border-border bg-muted/50 opacity-50 cursor-not-allowed'
                           : isMarkedForRemoval
-                          ? 'border-red-300 bg-red-50'
+                          ? 'border-destructive/30 bg-destructive/5'
                           : isSelected
-                          ? 'border-blue-300 bg-blue-50'
-                          : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50'
+                          ? 'border-primary/30 bg-accent'
+                          : 'border-border hover:border-primary/30 hover:bg-accent'
                       }`}
                     >
                       <div
                         className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors ${
                           isDisabled
-                            ? 'bg-gray-100'
-                            : isMarkedForRemoval
-                            ? 'bg-red-100'
-                            : isSelected
-                            ? 'bg-blue-100'
-                            : 'bg-gray-100 group-hover:bg-blue-100'
+                            ? 'bg-muted'
+                            : 'bg-muted group-hover:bg-accent'
                         }`}
                       >
                         <Icon
-                          className={`w-5 h-5 transition-colors ${
+                          className={`w-5 h-5 ${
                             isDisabled
-                              ? 'text-gray-400'
-                              : isMarkedForRemoval
-                              ? 'text-red-600'
-                              : isSelected
-                              ? 'text-blue-600'
-                              : 'text-gray-600'
+                              ? 'text-muted-foreground'
+                              : 'text-gray-900'
                           }`}
                         />
                       </div>
                       <div className='flex-1 min-w-0'>
                         <div className='text-sm font-medium text-gray-900'>
-                          {assertion.label}
+                          {assertionItem.label}
                         </div>
                         <div className='text-xs text-gray-500 mt-1'>
-                          {assertion.description}
+                          {assertionItem.description}
                         </div>
                       </div>
                     </button>
                   );
                 })
-              ) : (
-                <div className='text-center py-8 text-gray-500'>
-                  <p className='text-sm'>
-                    No suggestions available for this field
-                  </p>
-                </div>
               )}
             </div>
           )}
@@ -990,7 +1008,7 @@ function AssertionModal({
           {activeTab === 'manual' && (
             <div className='space-y-6'>
               <div>
-                <label className='block text-sm font-semibold text-gray-900 mb-3'>
+                <label className='block text-sm font-semibold text-card-foreground mb-3'>
                   Operator
                 </label>
                 <div className='grid grid-cols-3 gap-2'>
@@ -999,11 +1017,10 @@ function AssertionModal({
                       key={op.id}
                       onClick={() => setSelectedOperator(op.id)}
                       title={op.description}
-                      className={`px-3 py-2 rounded-lg text-sm font-medium transition-all border ${
-                        selectedOperator === op.id
-                          ? ' text-white border-blue-600'
-                          : 'bg-white text-gray-700 border-gray-200 hover:border-blue-300'
-                      }`}
+                      variant={
+                        selectedOperator === op.id ? 'default' : 'outline'
+                      }
+                      className='px-3 py-2 text-sm font-medium'
                     >
                       {op.label}
                     </Button>
@@ -1020,7 +1037,7 @@ function AssertionModal({
                 'field_not_present',
               ].includes(selectedOperator) && (
                 <div>
-                  <label className='block text-sm font-semibold text-gray-900 mb-2'>
+                  <label className='block text-sm font-semibold text-card-foreground mb-2'>
                     Expected Value
                   </label>
                   <input
@@ -1028,16 +1045,18 @@ function AssertionModal({
                     value={manualValue}
                     onChange={(e) => setManualValue(e.target.value)}
                     placeholder='Enter the expected value'
-                    className='w-full px-4 py-3 border border-gray-300 bg-white text-gray-900 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm'
+                    className='w-full px-4 py-3 border border-input bg-card text-card-foreground rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent outline-none text-sm'
                     autoFocus
                   />
                 </div>
               )}
 
-              <div className='bg-blue-50 border border-blue-200 rounded-lg p-3'>
-                <p className='text-sm text-gray-700'>
-                  <span className='font-mono text-blue-700'>{fieldPath}</span>
-                  <span className='text-gray-600 mx-2'>
+              <div className='bg-accent border border-primary/20 rounded-lg p-3'>
+                <p className='text-sm text-card-foreground'>
+                  <span className='font-mono text-gray-900'>
+                    {displayFieldPath}
+                  </span>
+                  <span className='text-muted-foreground mx-2'>
                     {operators.find((o) => o.id === selectedOperator)?.label}
                   </span>
                   {![
@@ -1048,7 +1067,7 @@ function AssertionModal({
                     'exists',
                     'field_not_present',
                   ].includes(selectedOperator) && (
-                    <span className='font-mono text-blue-700'>
+                    <span className='font-mono text-gray-900'>
                       {manualValue || '...'}
                     </span>
                   )}
@@ -1058,6 +1077,7 @@ function AssertionModal({
           )}
         </div>
 
+        {/* Footer */}
         <div className='px-6 py-4 border-t border-gray-200 flex items-center justify-between flex-shrink-0 bg-gray-50'>
           <button
             onClick={onClose}

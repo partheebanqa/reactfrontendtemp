@@ -233,9 +233,6 @@ const EditDynamicVariableDialog: React.FC<EditDynamicVariableDialogProps> = ({
       payload.category = 'DateTime';
       payload.type = 'string';
     }
-
-    console.log('Update Payload:', payload);
-
     handleDynamicUpdate(variable.id, payload);
     setOpen(false);
   };

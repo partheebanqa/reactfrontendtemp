@@ -65,7 +65,7 @@ const VariableCreateDialog: React.FC<VariableCreateDialogProps> = ({
     if (open) {
       setNewVariable((prev) => ({
         ...prev,
-        type, // force from prop
+        type,
         initialValue: type === 'static' ? prev.initialValue : '',
         generatorFunction: type === 'dynamic' ? prev.generatorFunction : '',
       }));
@@ -104,12 +104,10 @@ const VariableCreateDialog: React.FC<VariableCreateDialogProps> = ({
         'Variable name can only contain uppercase letters, numbers, and underscores';
     }
 
-    // Validate type (should already be set by default, but just in case)
     if (!newVariable.type) {
       newErrors.type = 'Variable type is required';
     }
 
-    // Validate initial value (can be optional for some types)
     if (newVariable.type !== 'dynamic' && !newVariable.initialValue.trim()) {
       newErrors.initialValue = 'Initial value is required';
     }
@@ -118,7 +116,6 @@ const VariableCreateDialog: React.FC<VariableCreateDialogProps> = ({
     return Object.keys(newErrors).length === 0;
   };
 
-  // Handle form submission with validation
   const handleSubmit = () => {
     if (validateForm()) {
       const payload: any = {
@@ -130,7 +127,6 @@ const VariableCreateDialog: React.FC<VariableCreateDialogProps> = ({
         currentValue: newVariable.currentValue,
       };
 
-      // Handle dynamic variables
       if (newVariable.type === 'dynamic' && newVariable.generatorFunction) {
         const generator = getGenerator(newVariable.generatorFunction);
 
@@ -155,13 +151,9 @@ const VariableCreateDialog: React.FC<VariableCreateDialogProps> = ({
 
         payload.generatorId = newVariable.generatorFunction;
 
-        // Add generatorName from the generator's label
         payload.generatorName = generator?.label;
-
-        // Set category and type based on generator category
         if (generator?.category === 'custom') {
           payload.category = 'Custom';
-          // Set type based on generator - number generators vs string generators
           const numberGenerators = ['randomInteger', 'price'];
           payload.type = numberGenerators.includes(
             newVariable.generatorFunction
@@ -173,17 +165,14 @@ const VariableCreateDialog: React.FC<VariableCreateDialogProps> = ({
           payload.type = 'string';
         } else if (generator?.category === 'internet') {
           payload.category = 'Internet';
-          // Set type based on specific generators
           payload.type =
             newVariable.generatorFunction === 'boolean' ? 'boolean' : 'string';
         } else if (generator?.category === 'datetime') {
           payload.category = 'DateTime';
-          // Set type based on specific generators
           payload.type =
             newVariable.generatorFunction === 'year' ? 'number' : 'string';
         } else if (generator?.category === 'location') {
           payload.category = 'Location';
-          // Set type based on specific generators
           const numberGenerators = ['latitude', 'longitude'];
           payload.type = numberGenerators.includes(
             newVariable.generatorFunction
@@ -195,12 +184,10 @@ const VariableCreateDialog: React.FC<VariableCreateDialogProps> = ({
           payload.type = 'string';
         } else if (generator?.category === 'basic') {
           payload.category = 'Basic';
-          // Set type based on specific generators
           payload.type =
             newVariable.generatorFunction === 'timestamp' ? 'number' : 'string';
         } else if (generator?.category === 'random') {
           payload.category = 'Random';
-          // Set type based on specific generators
           const numberGenerators = ['random_float'];
           const booleanGenerators = ['random_boolean'];
           if (numberGenerators.includes(newVariable.generatorFunction)) {
@@ -217,7 +204,6 @@ const VariableCreateDialog: React.FC<VariableCreateDialogProps> = ({
           payload.type = 'string';
         } else if (generator?.category === 'network') {
           payload.category = 'Network';
-          // Set type based on specific generators
           payload.type =
             newVariable.generatorFunction === 'random_port'
               ? 'number'
@@ -228,11 +214,7 @@ const VariableCreateDialog: React.FC<VariableCreateDialogProps> = ({
         }
       }
 
-      console.log('Creating variable with payload:', payload);
-
       handleCreate(payload);
-
-      // Reset form and close dialog after successful creation
       resetForm();
       setOpen(false);
     }

@@ -1,4 +1,3 @@
-
 import type React from 'react';
 import { useEffect, useState } from 'react';
 
@@ -77,7 +76,7 @@ export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
   onClose,
   request,
   onSaveExtractVariables,
-  existingExtractedVariables
+  existingExtractedVariables,
 }) => {
   const { currentWorkspace } = useWorkspace();
   const [url, setUrl] = useState(request?.url);
@@ -125,8 +124,6 @@ export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
   const [extractedFields, setExtractedFields] = useState<ExtractedField[]>([]);
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set());
 
-
-
   useEffect(() => {
     if (!request) return;
 
@@ -149,7 +146,10 @@ export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
     setHeaders(
       hasContentType
         ? existingHeaders
-        : [{ key: 'Content-Type', value: 'application/json', enabled: true }, ...existingHeaders]
+        : [
+            { key: 'Content-Type', value: 'application/json', enabled: true },
+            ...existingHeaders,
+          ]
     );
 
     setParams(
@@ -164,7 +164,6 @@ export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
     setExtractedFields([]);
     setExpandedPaths(new Set());
   }, [request, isOpen]);
-
 
   const addHeader = () => {
     setHeaders([...headers, { key: '', value: '', enabled: true }]);
@@ -503,7 +502,7 @@ export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
         );
       }
     } catch {
-      // Not JSON, treat as plain text
+      console.error('Failed to parse JSON:', text);
     }
 
     const lines = text.split('\n');
@@ -579,14 +578,15 @@ export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
       try {
         parsedBody = JSON.parse(firstResponse.body);
       } catch {
-        console.log('error');
+        console.error('error');
       }
 
       setResponse(parsedBody);
       setResponseHeaders(firstResponse?.headers || {});
     } catch (error) {
-      const errorMessage = `Error: ${error instanceof Error ? error.message : 'Unknown error'
-        }`;
+      const errorMessage = `Error: ${
+        error instanceof Error ? error.message : 'Unknown error'
+      }`;
       setResponse(errorMessage);
       setResponseHeaders({});
     } finally {
@@ -606,34 +606,27 @@ export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
           typeof field.value === 'string'
             ? 'string'
             : typeof field.value === 'number'
-              ? 'number'
-              : typeof field.value === 'boolean'
-                ? 'boolean'
-                : Array.isArray(field.value)
-                  ? 'array'
-                  : typeof field.value === 'object'
-                    ? 'object'
-                    : 'string',
+            ? 'number'
+            : typeof field.value === 'boolean'
+            ? 'boolean'
+            : Array.isArray(field.value)
+            ? 'array'
+            : typeof field.value === 'object'
+            ? 'object'
+            : 'string',
         sampleValue:
           typeof field.value === 'string'
             ? field.value
             : JSON.stringify(field.value),
-
       })
     );
 
-    // ✅ Build a consistent request info object
     const reqInfo = {
-      id: request?.id || 'auth-pre-request', // fallback id
-      name: request?.name || 'Authentication API', // fallback name
+      id: request?.id || 'auth-pre-request',
+      name: request?.name || 'Authentication API',
       method: method || request?.method || 'POST',
       url: url || request?.url || '',
     };
-
-    console.log('Saving variables from RequestTestDialog:', {
-      request: reqInfo,
-      variables: formattedVariables,
-    });
 
     onSaveExtractVariables(reqInfo, formattedVariables);
     setExtractedFields([]);
@@ -661,7 +654,6 @@ export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
               >
                 <p>Step 1: Send the request with your login credentials.</p>
                 <p>
-
                   Step 2: On a successful response, you'll get the option to
                   extract the authorization token from the response body
                 </p>
@@ -674,26 +666,31 @@ export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
             </Tooltip>
           </div>
         </DialogHeader>
-        {existingExtractedVariables && existingExtractedVariables.length > 0 && (
-          <div className="mb-3 border border-blue-100 bg-blue-50 rounded-md p-3">
-            <Label className="text-xs font-semibold text-blue-900 mb-1 block">
-              Saved Auth Variables
-            </Label>
-            <div className="space-y-1 text-xs">
-              {existingExtractedVariables.map((v, idx) => (
-                <div
-                  key={`${v.name}-${idx}`}
-                  className="flex flex-wrap gap-2 items-baseline"
-                >
-                  <span className="font-semibold text-blue-900">{v.name}</span>
-                  <span className="text-gray-600">({v.type})</span>
-                  <span className="text-gray-500">• source: {v.source}</span>
-                  <span className="text-gray-500 break-all">• path: {v.path}</span>
-                </div>
-              ))}
+        {existingExtractedVariables &&
+          existingExtractedVariables.length > 0 && (
+            <div className='mb-3 border border-blue-100 bg-blue-50 rounded-md p-3'>
+              <Label className='text-xs font-semibold text-blue-900 mb-1 block'>
+                Saved Auth Variables
+              </Label>
+              <div className='space-y-1 text-xs'>
+                {existingExtractedVariables.map((v, idx) => (
+                  <div
+                    key={`${v.name}-${idx}`}
+                    className='flex flex-wrap gap-2 items-baseline'
+                  >
+                    <span className='font-semibold text-blue-900'>
+                      {v.name}
+                    </span>
+                    <span className='text-gray-600'>({v.type})</span>
+                    <span className='text-gray-500'>• source: {v.source}</span>
+                    <span className='text-gray-500 break-all'>
+                      • path: {v.path}
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
         <div className='flex-1 flex flex-col min-h-0 overflow-hidden'>
           <div className='flex gap-2 mb-3 items-center'>

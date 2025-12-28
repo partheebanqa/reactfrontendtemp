@@ -10,7 +10,6 @@ import {
   Cookie,
   CheckCircle,
   Trash2,
-  Info,
   AlertCircle,
   X,
   Wand2,
@@ -18,47 +17,42 @@ import {
 import type { DataExtraction } from '@/shared/types/requestChain.model';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
 import { Button } from '../ui/button';
+import AssertionModal from './RequestChainAssertionModel';
+import {
+  getOperatorsForFieldType,
+  getFieldType,
+  type FieldType,
+  type Operator,
+} from '@/lib/operators';
 
 interface ResponseExplorerProps {
   response?: {
-    status: number;
+    statusCode: number;
+    statusText: string;
     headers: Record<string, string>;
-    body: string;
-    cookies?: Record<string, string>;
-    assertions?: Array<{
-      status: 'passed' | 'failed';
-      responseStatus?: number;
-      responseTime?: number;
-      responseSize?: number;
-      description: string;
-      expectedValue?: string;
-      operator?: string;
-      type?: string;
-      category?: string;
-      errorMessage?: string;
-    }>;
+    body: any;
+    cookies?: Array<{ name: string; value: string }>;
+    assertions?: any[];
   };
-  onExtractVariable: (extraction: DataExtraction) => void;
-  extractedVariables: Record<string, any>;
-  existingExtractions: DataExtraction[];
-  onRemoveExtraction: (variableName: string) => void;
-  handleCopy: (value: string) => void;
+  onExtractVariable?: (name: string, value: any, path: string) => void;
+  extractedVariables?: Record<string, any>;
+  existingExtractions?: Array<{ name: string; path: string }>;
+  onRemoveExtraction?: (name: string) => void;
+  handleCopy?: (text: string) => void;
   copied?: boolean;
-  chainId: string;
+  chainId?: string;
   actualRequestUrl?: string;
   actualRequestHeaders?: Record<string, string>;
-  actualRequestBody?: string;
+  actualRequestBody?: any;
   actualRequestMethod?: string;
-  executionStatus?: 'success' | 'error';
+  executionStatus?: string;
   errorMessage?: string;
-  executionLog?: {
-    duration: number;
-    response?: {
-      size: number;
-      status: number;
-    };
-  };
-  onApplyToAllRequests?: (variableName: string) => void;
+  allAssertions?: any[];
+  onAssertionsUpdate?: (assertions: any[]) => void;
+  onApplyToAllRequests?: (name: string) => void;
+  variables?: Array<{ name: string; value: string }>;
+  dynamicVariables?: Array<{ name: string; value: string }>;
+  requestExtractedVariables?: Record<string, any>;
 }
 
 interface JsonNode {
@@ -72,8 +66,8 @@ interface JsonNode {
 export function ResponseExplorer({
   response,
   onExtractVariable,
-  extractedVariables,
-  existingExtractions,
+  extractedVariables = {},
+  existingExtractions = [],
   onRemoveExtraction,
   handleCopy,
   copied,
@@ -84,12 +78,25 @@ export function ResponseExplorer({
   actualRequestMethod,
   executionStatus,
   errorMessage,
-  executionLog,
+  allAssertions = [],
+  onAssertionsUpdate,
   onApplyToAllRequests,
+  variables,
+  dynamicVariables,
+  requestExtractedVariables = {},
 }: ResponseExplorerProps) {
   const [activeTab, setActiveTab] = useState<
     'body' | 'headers' | 'cookies' | 'actualRequest' | 'assertions'
   >('body');
+
+  const [assertionModalOpen, setAssertionModalOpen] = useState(false);
+  const [selectedAssertion, setSelectedAssertion] = useState<{
+    path: string;
+    value: any;
+    fieldType?: FieldType;
+    operators?: Operator[];
+    filteredAssertions?: any[];
+  } | null>(null);
 
   const getValueByPath = (obj: any, path: string): any => {
     if (!obj || !path) return undefined;
@@ -120,12 +127,11 @@ export function ResponseExplorer({
     const autoExtracted: Record<string, any> = { ...extractedVariables };
 
     existingExtractions.forEach((extraction) => {
-      const variableName = extraction.variableName || extraction.name;
+      const variableName = extraction.name;
       if (!extraction.path || !variableName) {
         return;
       }
 
-      // Skip if already extracted
       if (autoExtracted[variableName] !== undefined) return;
 
       try {
@@ -152,7 +158,6 @@ export function ResponseExplorer({
             break;
         }
 
-        // Extract value using path
         if (sourceData && extraction.path) {
           const value = getValueByPath(sourceData, extraction.path);
 
@@ -283,6 +288,150 @@ export function ResponseExplorer({
     });
   };
 
+  const filterAssertionsByField = (
+    allAssertions: any[],
+    fieldPath: string,
+    fieldValue: any
+  ): any[] => {
+    const normalizedPath = fieldPath.toLowerCase();
+    const isHeader = normalizedPath.startsWith('headers.');
+    const fieldType = typeof fieldValue;
+    const isArray = Array.isArray(fieldValue);
+
+    const cleanFieldPath = normalizedPath.replace(/^headers\./, '');
+
+    return allAssertions.filter((assertion) => {
+      const generalAssertionTypes = [
+        'status_equals',
+        'response_time',
+        'payload_size',
+      ];
+
+      const generalCategories = ['status', 'performance'];
+
+      if (
+        generalAssertionTypes.includes(assertion.type) ||
+        generalCategories.includes(assertion.category)
+      ) {
+        return false;
+      }
+
+      if (isHeader) {
+        if (
+          assertion.category !== 'headers' &&
+          assertion.category !== 'HeaderGuard™'
+        ) {
+          return false;
+        }
+
+        const assertionField = assertion.field?.toLowerCase();
+
+        if (assertion.category === 'HeaderGuard™') {
+          return assertionField === cleanFieldPath;
+        }
+
+        if (assertion.category === 'headers') {
+          if (
+            assertion.type === 'header_present' ||
+            assertion.type === 'header_equals'
+          ) {
+            return assertionField === cleanFieldPath;
+          }
+
+          if (assertion.type === 'header_contains') {
+            return assertionField === cleanFieldPath;
+          }
+        }
+
+        return false;
+      }
+
+      if (assertion.category === 'body') {
+        const assertionField = assertion.field?.toLowerCase();
+
+        if (assertionField && assertionField !== normalizedPath) {
+          return false;
+        }
+        switch (assertion.type) {
+          case 'field_present':
+            return true;
+
+          case 'field_type':
+            if (assertion.expectedValue) {
+              return (
+                assertion.expectedValue === fieldType ||
+                (isArray && assertion.expectedValue === 'array')
+              );
+            }
+            return true;
+
+          case 'field_not_empty':
+            return fieldType === 'string' || isArray;
+
+          case 'field_equals':
+          case 'field_contains':
+            if (assertion.expectedValue !== undefined) {
+              const expectedType = typeof assertion.expectedValue;
+              if (fieldType === 'string' && expectedType === 'string')
+                return true;
+              if (fieldType === 'number' && expectedType === 'number')
+                return true;
+              if (fieldType === 'boolean' && expectedType === 'boolean')
+                return true;
+            }
+            return true;
+
+          case 'field_pattern':
+            return fieldType === 'string';
+
+          case 'field_range':
+          case 'field_greater_than':
+          case 'field_less_than':
+            return fieldType === 'number';
+
+          case 'field_null':
+            return true;
+
+          case 'array_length':
+          case 'array_present':
+            return isArray;
+
+          default:
+            return true;
+        }
+      }
+
+      return false;
+    });
+  };
+
+  const normalizeHeaderName = (name: string): string => {
+    return name
+      .toLowerCase()
+      .replace(/^headers\./, '')
+      .trim();
+  };
+
+  const handleAssertClick = (path: string, value: any) => {
+    const fieldType = getFieldType(value);
+    const operators = getOperatorsForFieldType(fieldType);
+
+    const filteredAssertions = filterAssertionsByField(
+      allAssertions,
+      path,
+      value
+    );
+
+    setSelectedAssertion({
+      path,
+      value,
+      fieldType,
+      operators,
+      filteredAssertions,
+    });
+    setAssertionModalOpen(true);
+  };
+
   const handleVariableNameChange = (value: string) => {
     setVariableName(value);
   };
@@ -299,7 +448,11 @@ export function ResponseExplorer({
         value: extractionModal.value,
         transform,
       };
-      onExtractVariable(extraction);
+      onExtractVariable?.(
+        finalVariableName,
+        extractionModal.value,
+        extractionModal.path
+      );
       setExtractionModal(null);
       setVariableName('');
     }
@@ -307,7 +460,6 @@ export function ResponseExplorer({
 
   const isJWTToken = (value: any): boolean => {
     if (typeof value !== 'string') return false;
-    // JWT format: header.payload.signature (three base64url encoded parts separated by dots)
     const jwtRegex = /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/;
     return jwtRegex.test(value);
   };
@@ -323,7 +475,7 @@ export function ResponseExplorer({
     return (
       <div
         key={node.path}
-        className='group hover:bg-blue-50 transition-colors'
+        className='group/item hover:bg-blue-50 transition-colors'
         style={{ marginLeft: `${node.level * 20}px` }}
       >
         <div className='flex items-center py-1 px-2 rounded'>
@@ -362,7 +514,7 @@ export function ResponseExplorer({
             )}
           </div>
           {!hasChildren && (
-            <div className='flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity'>
+            <div className='flex items-center space-x-1 opacity-0 group-hover/item:opacity-100 transition-opacity'>
               <button
                 onClick={() =>
                   navigator.clipboard.writeText(String(node.value))
@@ -389,6 +541,14 @@ export function ResponseExplorer({
                   Extract
                 </button>
               )}
+              <button
+                onClick={() => handleAssertClick(node.path, node.value)}
+                className='px-2 py-1 bg-purple-600 text-white rounded text-xs hover:bg-purple-700 transition-colors'
+                title='Add assertion'
+              >
+                <Wand2 className='w-3 h-3 mr-1 inline' />
+                Assert
+              </button>
             </div>
           )}
         </div>
@@ -503,7 +663,7 @@ export function ResponseExplorer({
           return (
             <div
               key={key}
-              className='group flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50'
+              className='group/header flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50'
             >
               <div className='flex-1 min-w-0'>
                 <div className='flex items-center space-x-2'>
@@ -516,7 +676,7 @@ export function ResponseExplorer({
                   {value}
                 </p>
               </div>
-              <div className='flex items-center space-x-2 ml-4'>
+              <div className='flex items-center space-x-2 ml-4 opacity-0 group-hover/header:opacity-100 transition-opacity'>
                 <button
                   onClick={() => navigator.clipboard.writeText(value)}
                   className='p-1 text-gray-400 hover:text-gray-600 rounded'
@@ -540,6 +700,14 @@ export function ResponseExplorer({
                     Extract
                   </button>
                 )}
+                <button
+                  onClick={() => handleAssertClick(`headers.${key}`, value)}
+                  className='px-3 py-1 bg-purple-600 text-white rounded text-sm hover:bg-purple-700 transition-colors'
+                  title='Add assertion'
+                >
+                  <Wand2 className='w-4 h-4 mr-1 inline' />
+                  Assert
+                </button>
               </div>
             </div>
           );
@@ -559,29 +727,30 @@ export function ResponseExplorer({
     <div className='space-y-2'>
       {response?.cookies &&
       typeof response?.cookies === 'object' &&
-      Object.keys(response?.cookies).length > 0 ? (
-        Object.entries(response?.cookies).map(([key, value]) => {
-          if (!key || value === undefined || value === null) return null;
+      response?.cookies.length > 0 ? (
+        response?.cookies.map((cookie) => {
+          const { name, value } = cookie;
+          if (!name || value === undefined || value === null) return null;
           const isAlreadyExtracted = existingExtractions.some(
-            (e) => e.source === 'response_cookie' && e.path === key
+            (e) => e.source === 'response_cookie' && e.path === name
           );
           return (
             <div
-              key={key}
-              className='group flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50'
+              key={name}
+              className='group/cookie flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50'
             >
               <div className='flex-1 min-w-0'>
                 <div className='flex items-center space-x-2'>
                   <Cookie className='w-4 h-4 text-gray-400' />
                   <span className='font-medium text-gray-900 text-sm'>
-                    {key}
+                    {name}
                   </span>
                 </div>
                 <p className='text-sm text-gray-600 font-mono mt-1 break-all'>
                   {value}
                 </p>
               </div>
-              <div className='flex items-center space-x-2 ml-4'>
+              <div className='flex items-center space-x-2 ml-4 opacity-0 group-hover/cookie:opacity-100 transition-opacity'>
                 <button
                   onClick={() => navigator.clipboard.writeText(value)}
                   className='p-1 text-gray-400 hover:text-gray-600 rounded'
@@ -597,9 +766,9 @@ export function ResponseExplorer({
                 ) : (
                   <button
                     onClick={() =>
-                      handleExtractClick('response_cookie', key, value)
+                      handleExtractClick('response_cookie', name, value)
                     }
-                    className='px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 transition-colors'
+                    className='px-3 py-1 bg-[#136fb0] text-white rounded text-sm hover:bg-blue-700 transition-colors'
                   >
                     <Plus className='w-4 h-4 mr-1 inline' />
                     Extract
@@ -635,7 +804,6 @@ export function ResponseExplorer({
 
     return (
       <div className='space-y-4'>
-        {/* Summary */}
         <div className='flex items-center space-x-4 p-4 bg-gray-50 rounded-lg'>
           <div className='flex items-center space-x-2'>
             <CheckCircle className='w-5 h-5 text-green-600' />
@@ -687,12 +855,12 @@ export function ResponseExplorer({
                     )}
                     <div className='mt-2 flex flex-wrap gap-2'>
                       {assertion.expectedValue && (
-                        <span className='text-xs bg-white px-2 py-1 rounded border'>
+                        <span className='text-xs bg-white px-2 py-1 rounded border text-sm font-mono flex-1 overflow-x-auto scrollbar-thin whitespace-nowrap'>
                           Expected: {assertion.expectedValue}
                         </span>
                       )}
                       {assertion.operator && (
-                        <span className='text-xs bg-white px-2 py-1 rounded border'>
+                        <span className='text-xs bg-white px-2 py-1 rounded border text-sm font-mono flex-1 overflow-x-auto scrollbar-thin whitespace-nowrap'>
                           Operator: {assertion.operator}
                         </span>
                       )}
@@ -741,7 +909,6 @@ export function ResponseExplorer({
 
     return (
       <div className='space-y-6'>
-        {/* Request URL */}
         <div>
           <h4 className='text-sm font-semibold text-gray-700 mb-3'>
             Request URL:
@@ -767,7 +934,6 @@ export function ResponseExplorer({
           </div>
         </div>
 
-        {/* Headers */}
         <div>
           <h4 className='text-sm font-semibold text-gray-700 mb-3'>Headers:</h4>
           <div className='border border-gray-200 rounded-lg overflow-hidden'>
@@ -868,7 +1034,7 @@ export function ResponseExplorer({
                 label: 'Cookies',
                 count:
                   response?.cookies && typeof response?.cookies === 'object'
-                    ? Object.keys(response.cookies).length
+                    ? response?.cookies.length
                     : 0,
               },
               {
@@ -900,7 +1066,6 @@ export function ResponseExplorer({
                 >
                   <span>{tab.label}</span>
 
-                  {/* Blue dot for headers and cookies when count > 0 */}
                   {showBlueDot && (
                     <span
                       className='inline-block w-1.5 h-1.5 rounded-full bg-[#136fb0]'
@@ -908,7 +1073,6 @@ export function ResponseExplorer({
                     />
                   )}
 
-                  {/* Count badge for assertions */}
                   {showCountBadge && (
                     <span className='ml-1 bg-gray-100 text-gray-600 rounded-full px-2 py-0.5 text-xs'>
                       {count}
@@ -919,21 +1083,13 @@ export function ResponseExplorer({
             })}
           </nav>
 
-          {/* RIGHT: Status panel */}
-          {executionLog && (
+          {executionStatus && (
             <div className='flex items-center space-x-4 text-sm text-gray-600'>
-              {/* Status Badge */}
               <span className='flex items-center space-x-1 bg-green-100 text-green-700 px-2 py-1 rounded-full'>
                 <CheckCircle className='w-4 h-4' />
-                <span>{executionLog.response?.status} OK</span>
-              </span>
-
-              {/* Duration */}
-              <span>{executionLog.duration}ms</span>
-
-              {/* Size */}
-              <span>
-                {((executionLog.response?.size || 0) / 1024).toFixed(2)} KB
+                <span>
+                  {response?.statusCode} {response?.statusText}
+                </span>
               </span>
             </div>
           )}
@@ -974,7 +1130,7 @@ export function ResponseExplorer({
               {Object.entries(finalExtractedVariables).map(([name, value]) => {
                 if (!name || value === undefined) return null;
                 const extraction = existingExtractions?.find(
-                  (e) => e.variableName === name || e.name === name
+                  (e) => e.name === name
                 );
                 const isJwt =
                   typeof value === 'string' &&
@@ -995,7 +1151,7 @@ export function ResponseExplorer({
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <button
-                              onClick={() => handleCopy(name)}
+                              onClick={() => handleCopy?.(name)}
                               className='p-1 text-blue-600 hover:bg-blue-50 rounded'
                             >
                               {copied ? (
@@ -1032,7 +1188,7 @@ export function ResponseExplorer({
                           {extraction?.path}
                         </span>
                         <button
-                          onClick={() => onRemoveExtraction(name)}
+                          onClick={() => onRemoveExtraction?.(name)}
                           className='p-1 text-red-600 hover:bg-red-50 rounded'
                           title='Remove extraction'
                         >
@@ -1173,6 +1329,142 @@ export function ResponseExplorer({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Update AssertionModal to pass operators based on field type */}
+      {selectedAssertion && (
+        <AssertionModal
+          isOpen={assertionModalOpen}
+          onClose={() => {
+            setAssertionModalOpen(false);
+            setSelectedAssertion(null);
+          }}
+          initialField={selectedAssertion.path}
+          initialValue={selectedAssertion.value}
+          suggestedAssertions={
+            selectedAssertion.filteredAssertions || allAssertions
+          }
+          availableOperators={selectedAssertion.operators}
+          fieldType={selectedAssertion.fieldType}
+          allAssertions={allAssertions}
+          setAssertions={onAssertionsUpdate}
+          variables={variables}
+          dynamicVariables={dynamicVariables}
+          extractedVariables={Object.entries(
+            requestExtractedVariables || {}
+          ).map(([name, value]) => ({
+            name,
+            value: String(value),
+          }))}
+          onSelect={(assertionType: string, config?: any) => {
+            let description = '';
+            let finalType = assertionType;
+
+            if (config?.isGeneral) {
+              switch (assertionType) {
+                case 'response_time':
+                  description = `Response time should be ${
+                    config.comparison === 'less' ? 'less than' : 'more than'
+                  } ${config.value}ms`;
+                  break;
+                case 'payload_size':
+                  description = `Payload size should be ${
+                    config.comparison === 'less' ? 'less than' : 'more than'
+                  } ${config.value}KB`;
+                  break;
+                case 'status_equals':
+                  description = `Response status should be ${config.value}`;
+                  break;
+                case 'contains_text':
+                  description = `Response should contain text: "${config.value}"`;
+                  finalType = 'contains';
+                  break;
+                case 'contains_number':
+                  description = `Response should contain number: ${config.value}`;
+                  finalType = 'contains';
+                  break;
+                case 'contains_boolean':
+                  description = `Response should contain boolean: ${config.value}`;
+                  finalType = 'contains';
+                  break;
+                case 'contains_static':
+                  description = `Response should contain static value: "${config.value}"`;
+                  finalType = 'contains';
+                  break;
+                case 'contains_dynamic':
+                  description = `Response should contain dynamic variable: ${config.value}`;
+                  finalType = 'contains';
+                  break;
+                case 'contains_extracted':
+                  description = `Response should contain extracted variable: ${config.value}`;
+                  finalType = 'contains';
+                  break;
+                default:
+                  description = `General assertion: ${assertionType}`;
+              }
+            } else {
+              const operatorLabels: Record<string, string> = {
+                equals: 'equals',
+                field_not_equals: 'does not equal',
+                field_greater_than: 'is greater than',
+                field_less_than: 'is less than',
+                contains: 'contains',
+                field_not_contains: 'does not contain',
+                array_length: 'has length',
+                field_null: 'is null',
+                field_not_null: 'is not null',
+                field_is_true: 'is true',
+                field_is_false: 'is false',
+                exists: 'exists',
+                field_not_present: 'does not exist',
+              };
+              const operatorText =
+                operatorLabels[config.operator] || config.operator;
+              description = `${selectedAssertion.path} ${operatorText}${
+                config.expectedValue ? ` "${config.expectedValue}"` : ''
+              }`;
+            }
+
+            const normalizeFieldPath = (path: string) => {
+              if (path.startsWith('headers.')) {
+                return path.replace(/^headers\./, '').toLowerCase();
+              }
+              return path;
+            };
+
+            const baseAssertion = {
+              id: `manual-${Date.now()}`,
+              type: finalType,
+              displayType: assertionType,
+              category: config?.isGeneral
+                ? 'general'
+                : selectedAssertion.path.startsWith('headers.')
+                ? 'headers'
+                : 'body',
+              description,
+              value: selectedAssertion.value,
+              expectedValue: config.expectedValue || config.value,
+              enabled: true,
+              ...config,
+            };
+
+            const newAssertion =
+              config?.isGeneral && config.scope !== 'field'
+                ? baseAssertion
+                : {
+                    ...baseAssertion,
+                    field: normalizeFieldPath(selectedAssertion.path),
+                  };
+
+            const updatedAssertions = [...allAssertions, newAssertion];
+
+            if (onAssertionsUpdate) {
+              onAssertionsUpdate(updatedAssertions);
+            }
+            setAssertionModalOpen(false);
+            setSelectedAssertion(null);
+          }}
+        />
       )}
     </div>
   );

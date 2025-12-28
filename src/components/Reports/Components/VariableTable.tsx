@@ -22,9 +22,6 @@ export default function VariableTable({
       </div>
     );
   }
-
-  // console.log("Rendering VariableTable with variables:", variables);
-
   const getTypeBadgeVariant = (type: string) => {
     switch (type) {
       case 'dynamic':
@@ -44,8 +41,6 @@ export default function VariableTable({
   const getVariableType = (variable: Variable | ExtractedVariable): string => {
     return 'type' in variable ? variable?.type : 'extracted';
   };
-
-  // console.log("VariableTable Render - Variables:", variables);
 
   return (
     <div className='overflow-x-auto scrollbar-thin' data-testid={testId}>

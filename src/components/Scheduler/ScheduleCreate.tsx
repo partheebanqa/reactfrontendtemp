@@ -249,9 +249,6 @@ export default function ScheduleCreate({
     if (data.scheduleType === 'one-time') {
       submitData.frequencyMode = 1;
     }
-
-    console.log('Processed submission data:', submitData);
-
     createMutation.mutate(submitData);
   };
 

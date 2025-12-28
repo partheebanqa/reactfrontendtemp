@@ -89,6 +89,7 @@ import {
   type AutocompleteState,
   generateDynamicValueById,
   hasResponseChanged,
+  getUsedVariablesInRequest,
 } from '@/lib/request-utils';
 import { ResponseExplorer } from './ResponseExplorer';
 import BreadCum from '../BreadCum/Breadcum';
@@ -2951,6 +2952,7 @@ export function RequestChainEditor({
                                               extractedVariablesByRequest
                                             }
                                           />
+
                                           {executionLog && (
                                             <div>
                                               {(executionLog.response != null ||
@@ -2961,20 +2963,24 @@ export function RequestChainEditor({
                                                       Extract Variables from
                                                       Response
                                                     </h3>
-                                                    <div className='relative group inline-block'>
-                                                      <Info className='w-4 h-4 text-gray-400 cursor-pointer' />
-
-                                                      <div
-                                                        className='absolute left-0 mt-2 w-56 p-2 text-xs text-gray-700 bg-white border
-                    border-gray-200 rounded shadow-lg opacity-0 group-hover:opacity-100
-                    pointer-events-none transition-opacity z-50'
-                                                      >
-                                                        Mouse over on element
-                                                        and click on "extract"
-                                                        button to extract
-                                                        variable.
-                                                      </div>
-                                                    </div>
+                                                    <TooltipProvider>
+                                                      <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                          <div className='cursor-pointer'>
+                                                            <Info className='w-4 h-4 text-gray-400' />
+                                                          </div>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent className='max-w-xs'>
+                                                          <p>
+                                                            Mouse over on
+                                                            response elements
+                                                            and click on
+                                                            "extract" button to
+                                                            extract variable.
+                                                          </p>
+                                                        </TooltipContent>
+                                                      </Tooltip>
+                                                    </TooltipProvider>
                                                   </div>
 
                                                   <ResponseExplorer
@@ -3044,6 +3050,53 @@ export function RequestChainEditor({
                                                     executionLog={executionLog}
                                                     onApplyToAllRequests={
                                                       handleApplyToAllRequests
+                                                    }
+                                                    allAssertions={
+                                                      assertionsByRequest[
+                                                        executionLog.requestId
+                                                      ] || []
+                                                    }
+                                                    onAssertionsUpdate={(
+                                                      assertions
+                                                    ) => {
+                                                      setAssertionsByRequest(
+                                                        (prev) => ({
+                                                          ...prev,
+                                                          [executionLog.requestId]:
+                                                            assertions,
+                                                        })
+                                                      );
+                                                      persistAssertionsToStorage(
+                                                        executionLog.requestId,
+                                                        assertions
+                                                      );
+                                                    }}
+                                                    variables={getUsedVariablesInRequest(
+                                                      formData.chainRequests.find(
+                                                        (r) =>
+                                                          r.id ===
+                                                          executionLog.requestId
+                                                      ) || ({} as APIRequest),
+                                                      storeVariables
+                                                    ).map((v) => ({
+                                                      name: v.name,
+                                                      value: String(v.value),
+                                                    }))}
+                                                    dynamicVariables={getUsedVariablesInRequest(
+                                                      formData.chainRequests.find(
+                                                        (r) =>
+                                                          r.id ===
+                                                          executionLog.requestId
+                                                      ) || ({} as APIRequest),
+                                                      dynamicStructured
+                                                    ).map((v) => ({
+                                                      name: v.name,
+                                                      value: String(v.value),
+                                                    }))}
+                                                    requestExtractedVariables={
+                                                      extractedVariablesByRequest[
+                                                        executionLog.requestId
+                                                      ] || {}
                                                     }
                                                   />
                                                 </div>

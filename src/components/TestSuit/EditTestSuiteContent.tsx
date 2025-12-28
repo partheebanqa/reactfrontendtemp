@@ -247,8 +247,8 @@ const EditTestSuiteContent: React.FC = () => {
       params: Array.isArray(req.params)
         ? req.params
         : Array.isArray(req.parameters)
-          ? req.parameters
-          : [],
+        ? req.parameters
+        : [],
 
       order: req.order || 0,
       testCases: {
@@ -259,15 +259,15 @@ const EditTestSuiteContent: React.FC = () => {
 
       meta: req.meta
         ? {
-          totalTests: req.meta.totalTests,
-          selectedTests: req.meta.selectedTests,
-          positive: req.meta.positive,
-          negative: req.meta.negative,
-          semantic: req.meta.semantic,
-          edgeCase: req.meta.edgeCase,
-          security: req.meta.security,
-          advancedSecurity: req.meta.advancedSecurity,
-        }
+            totalTests: req.meta.totalTests,
+            selectedTests: req.meta.selectedTests,
+            positive: req.meta.positive,
+            negative: req.meta.negative,
+            semantic: req.meta.semantic,
+            edgeCase: req.meta.edgeCase,
+            security: req.meta.security,
+            advancedSecurity: req.meta.advancedSecurity,
+          }
         : undefined,
     };
   };
@@ -278,12 +278,9 @@ const EditTestSuiteContent: React.FC = () => {
       setDescription(testSuite.description || '');
 
       if (Array.isArray(testSuite.requests) && testSuite.requests.length > 0) {
-        console.log('Original testSuite.requests:', testSuite.requests);
-
         const transformedRequests: Request[] =
           testSuite.requests.map(transformRequestData);
 
-        // Fallback merge: if backend request lacks headers/body/etc, enrich from imported source by id
         const enrichedRequests: Request[] = transformedRequests.map((req) => {
           const imported = importedRequestMap[req.id];
           if (!imported) return req;
@@ -305,13 +302,13 @@ const EditTestSuiteContent: React.FC = () => {
             headers: hasHeaders
               ? req.headers
               : Array.isArray(imported.headers)
-                ? imported.headers
-                : [],
+              ? imported.headers
+              : [],
             params: hasParams
               ? req.params
               : Array.isArray(imported.params)
-                ? imported.params
-                : [],
+              ? imported.params
+              : [],
             bodyRawContent: hasBody
               ? req.bodyRawContent
               : imported.bodyRawContent ?? imported.body ?? '',
@@ -324,8 +321,6 @@ const EditTestSuiteContent: React.FC = () => {
               : imported.authorization ?? null,
           };
         });
-
-        console.log('Transformed requests:', enrichedRequests);
 
         setRequests(enrichedRequests);
         setOriginalRequestIds(enrichedRequests.map((r) => r.id));
@@ -408,17 +403,6 @@ const EditTestSuiteContent: React.FC = () => {
     requestId: string,
     variables: ExtractedVariable[]
   ) => {
-    console.log('Saving extracted variables:', { requestId, variables });
-
-    // Check if we're changing from an existing preRequestId
-    if (
-      preRequestId &&
-      preRequestId !== requestId &&
-      extractVariables.length > 0
-    ) {
-      console.log('Overwriting existing variables from different request');
-    }
-
     setPreRequestId(requestId);
     setExtractVariables(variables);
 
@@ -430,11 +414,9 @@ const EditTestSuiteContent: React.FC = () => {
 
   const calculateRequestChanges = () => {
     const currentRequestIds = requests.map((req) => req.id);
-    // Find added requests (present in current but not in original)
     const addRequestIds = currentRequestIds.filter(
       (id) => !originalRequestIds.includes(id)
     );
-    // Find removed requests (present in original but not in current)
     const removeRequestIds = originalRequestIds.filter(
       (id) => !currentRequestIds.includes(id)
     );
@@ -493,13 +475,13 @@ const EditTestSuiteContent: React.FC = () => {
     () =>
       isCreateMode
         ? requests.reduce(
-          (total, req) => total + (req.selectedTestCases?.length || 0),
-          0
-        )
+            (total, req) => total + (req.selectedTestCases?.length || 0),
+            0
+          )
         : requests.reduce(
-          (total, req) => total + (req.meta?.selectedTests ?? 0),
-          0
-        ),
+            (total, req) => total + (req.meta?.selectedTests ?? 0),
+            0
+          ),
     [requests, isCreateMode]
   );
 
@@ -521,12 +503,9 @@ const EditTestSuiteContent: React.FC = () => {
 
   const [isTestDialogOpen, setIsTestDialogOpen] = useState(false);
 
-  console.log('isTestDialogOpen:', isTestDialogOpen);
-
   const handleTestRequest = () => {
     setIsTestDialogOpen(true);
-  }
-
+  };
 
   return (
     <>
@@ -609,13 +588,13 @@ const EditTestSuiteContent: React.FC = () => {
             </CardContent>
           </Card>
 
-
           <div className='bg-gray-50 p-6 rounded-lg border border-dashed flex flex-col items-center justify-center text-center'>
             <div className='w-16 h-16 mb-6 rounded-full bg-muted flex items-center justify-center'>
               <Info className='w-8 h-8 text-muted-foreground' />
             </div>
             <p className='text-muted-foreground mb-6 max-w-md'>
-              If your APIs require authentication, add a pre-request API to fetch the token. Skip this step if authentication is not needed.
+              If your APIs require authentication, add a pre-request API to
+              fetch the token. Skip this step if authentication is not needed.
             </p>
             <Button onClick={handleTestRequest}>
               <Plus className='w-4 h-4 mr-2' />
@@ -623,18 +602,16 @@ const EditTestSuiteContent: React.FC = () => {
             </Button>
           </div>
 
-
           <RequestTestDialog
             isOpen={isTestDialogOpen}
             onClose={() => {
               setIsTestDialogOpen(false);
             }}
             onSaveExtractVariables={handleSaveExtractVariables}
-          // existingExtractedVariables={
-          //   preRequestId === selectedRequest?.id ? extractVariables : []
-          // }
+            // existingExtractedVariables={
+            //   preRequestId === selectedRequest?.id ? extractVariables : []
+            // }
           />
-
 
           {/* Import Requests Section */}
           <Card>
@@ -701,19 +678,19 @@ const EditTestSuiteContent: React.FC = () => {
                       </Button>
                       <Button
                         onClick={handleSaveChanges}
-                      // disabled={
-                      //   isSaving ||
-                      //   !testSuiteName.trim() ||
-                      //   requests.length === 0
-                      // }
+                        // disabled={
+                        //   isSaving ||
+                        //   !testSuiteName.trim() ||
+                        //   requests.length === 0
+                        // }
                       >
                         {isSaving
                           ? isCreateMode
                             ? 'Creating Test Suite...'
                             : 'Saving...'
                           : isCreateMode
-                            ? 'Create Test Suite'
-                            : 'Save Changes'}
+                          ? 'Create Test Suite'
+                          : 'Save Changes'}
                       </Button>
                     </div>
                   </div>
@@ -752,19 +729,19 @@ const EditTestSuiteContent: React.FC = () => {
                       </Button>
                       <Button
                         onClick={handleSaveChanges}
-                      // disabled={
-                      //   isSaving ||
-                      //   !testSuiteName.trim() ||
-                      //   requests.length === 0
-                      // }
+                        // disabled={
+                        //   isSaving ||
+                        //   !testSuiteName.trim() ||
+                        //   requests.length === 0
+                        // }
                       >
                         {isSaving
                           ? isCreateMode
                             ? 'Creating Test Suite...'
                             : 'Saving...'
                           : isCreateMode
-                            ? 'Create Test Suite'
-                            : 'Save Changes'}
+                          ? 'Create Test Suite'
+                          : 'Save Changes'}
                       </Button>
                     </div>
                   </div>

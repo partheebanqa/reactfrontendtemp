@@ -1117,3 +1117,37 @@ export const buildUrlWithParams = (
     return baseUrl;
   }
 };
+
+export const getUsedVariablesInRequest = (
+  request: Partial<APIRequest>,
+  allVariables: Variable[]
+): Variable[] => {
+  const allTextFields = [
+    request.url || '',
+    request.body || '',
+    request.authToken || '',
+    request.authUsername || '',
+    request.authPassword || '',
+    request.authApiKey || '',
+    request.authApiValue || '',
+    request.authorization?.token || '',
+    request.authorization?.username || '',
+    request.authorization?.password || '',
+    request.authorization?.key || '',
+    request.authorization?.value || '',
+    ...(request.headers || []).map((h) => `${h.key} ${h.value}`),
+    ...(request.params || []).map((p) => `${p.key} ${p.value}`),
+  ];
+
+  const allText = allTextFields.join(' ');
+  const variableMatches = allText.match(/\{\{(\w+)\}\}/g) || [];
+  const usedVariableNames = [
+    ...new Set(
+      variableMatches.map((match) => match.replace(/\{\{(\w+)\}\}/, '$1'))
+    ),
+  ];
+
+  return allVariables.filter((variable) =>
+    usedVariableNames.includes(variable.name)
+  );
+};

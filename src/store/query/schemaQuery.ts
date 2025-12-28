@@ -14,7 +14,6 @@ export const useUploadRequestSchemaMutation = () => {
   return useMutation({
     mutationFn: uploadSchema,
     onSuccess: (newSchema: any, variables) => {
-      console.log('New schema uploaded:', newSchema);
       queryClient.invalidateQueries({
         queryKey: ['schemas', variables.requestId],
       });
@@ -46,7 +45,6 @@ export const useSetPrimarySchemaMutation = () => {
   return useMutation({
     mutationFn: setPrimarySchema,
     onSuccess: (data: any, variables) => {
-      console.log('Schema set as primary:', data);
       queryClient.invalidateQueries({
         queryKey: ['schemas', variables.requestId],
       });
@@ -65,7 +63,6 @@ export const useDeleteSchemaMutation = () => {
   return useMutation({
     mutationFn: deleteSchema,
     onSuccess: (data: any, variables) => {
-      console.log('Schema deleted:', data);
       queryClient.invalidateQueries({
         queryKey: ['schemas', variables.requestId],
       });

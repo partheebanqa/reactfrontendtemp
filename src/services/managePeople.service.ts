@@ -27,8 +27,6 @@ export const getUserRoles = async (): Promise<RolesResponse> => {
 export const addUser = async (
   payload: AddMemberPayload
 ): Promise<AddMemberResponse> => {
-  console.log('payload111:', payload);
-
   const response = await apiRequest(
     'POST',
     `${ENV.API_BASE_URL}/auth/add-member`,

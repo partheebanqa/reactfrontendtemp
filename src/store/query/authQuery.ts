@@ -141,7 +141,6 @@ export const useChangePasswordMutation = () => {
   return useMutation({
     mutationFn: changePasswordApi,
     onSuccess: () => {
-      console.log('Password changed successfully');
       authActions.clearAuth();
       removeCookie(USER_COOKIE_NAME);
     },

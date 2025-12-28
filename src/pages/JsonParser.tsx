@@ -148,7 +148,7 @@ const JsonParser: FC = () => {
   };
 
   const handleJsonParse = (parsedJson, text) => {
-    console.log('🚀 ~ handleJsonParse ~ parsedJson,text:', parsedJson, text);
+    console.log('handleJsonParse ~ parsedJson,text:', parsedJson, text);
   };
 
   const compareJsonObjects = (

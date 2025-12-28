@@ -687,8 +687,6 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
         ).toFixed(2);
 
         try {
-          console.log('payload:', payload);
-
           const result = await executeRequest(payload);
           const endTime = Date.now();
 

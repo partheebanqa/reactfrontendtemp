@@ -136,13 +136,9 @@ export const resetPasswordApi = async (data: {
       Authorization: `Bearer ${data.token}`,
     },
     body: JSON.stringify({
-      // token: data.token,
       newPassword: data.newPassword,
     }),
   });
-
-  console.log('response:', response);
-
   if (!response.ok) {
     throw new Error('Failed to reset password');
   }

@@ -112,7 +112,6 @@ export default function SignUp() {
         timezone,
       };
       const response = await registerMutation.mutateAsync(form);
-      console.log('response000:', response);
       if (response.message) {
         toast({
           title: 'Registration Successful',

@@ -48,9 +48,8 @@ export default function Dashboard() {
     try {
       const response = await getDashboard(workspaceId || '');
       setData(response);
-      // console.log(response, "res")
     } catch (err) {
-      console.log(err, 'err');
+      console.error(err, 'err');
     }
   };
 

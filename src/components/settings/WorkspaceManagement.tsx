@@ -57,14 +57,12 @@ interface Workspace extends BaseWorkspace {
   isPrimary?: boolean;
 }
 
-
 export interface UserRoleData {
   firstName: string;
   lastName: string;
   email: string;
   role: string;
 }
-
 
 export function WorkspaceManagement() {
   const { toast } = useToast();
@@ -78,21 +76,13 @@ export function WorkspaceManagement() {
     null
   );
 
-  // Get workspaces and mutations from the custom hook
-
   const { currentWorkspace } = useWorkspace();
 
-
   const { data: userRole, isLoading } = useQuery<UserRoleData>({
-    queryKey: ["workspace-role", currentWorkspace?.id],
+    queryKey: ['workspace-role', currentWorkspace?.id],
     enabled: !!currentWorkspace?.id,
     queryFn: () => getWorkSpaceRole(currentWorkspace!.id),
   });
-
-
-
-
-  // console.log(userRole?.role, "apiData");
 
   const {
     workspaces,
@@ -102,9 +92,6 @@ export function WorkspaceManagement() {
     deleteWorkspaceMutation,
     updatePrimaryWorkspaceMutation,
   } = useWorkspace();
-
-  // console.log('workspaces111:', workspaces);
-
   const handleCreateWorkspace = () => {
     if (!newWorkspaceName.trim()) {
       toast({
@@ -327,8 +314,7 @@ export function WorkspaceManagement() {
               onOpenChange={setIsCreateDialogOpen}
             >
               <DialogTrigger asChild>
-                <Button
-                  disabled={userRole?.role !== 'Org Admin'}>
+                <Button disabled={userRole?.role !== 'Org Admin'}>
                   <Plus className='h-4 w-4 mr-2' />
                   <span className='hidden sm:inline'>Create Workspace</span>
                   <span className='sm:hidden'>Create</span>
@@ -449,8 +435,8 @@ export function WorkspaceManagement() {
                             Created{' '}
                             {enrichedWorkspace.createdAt
                               ? new Date(
-                                enrichedWorkspace.createdAt
-                              ).toLocaleDateString()
+                                  enrichedWorkspace.createdAt
+                                ).toLocaleDateString()
                               : 'N/A'}
                           </div>
                         </div>
@@ -475,10 +461,11 @@ export function WorkspaceManagement() {
                                 }
                               >
                                 <Star
-                                  className={`h-3 w-3 sm:h-4 sm:w-4 ${enrichedWorkspace.isPrimary
-                                    ? 'fill-blue-600 text-blue-600'
-                                    : ''
-                                    }`}
+                                  className={`h-3 w-3 sm:h-4 sm:w-4 ${
+                                    enrichedWorkspace.isPrimary
+                                      ? 'fill-blue-600 text-blue-600'
+                                      : ''
+                                  }`}
                                 />
                               </Button>
                             </TooltipTrigger>

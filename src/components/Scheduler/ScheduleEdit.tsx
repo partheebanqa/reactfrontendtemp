@@ -126,7 +126,6 @@ export default function ScheduleEdit({
   const queryClient = useQueryClient();
   const { currentWorkspace } = useWorkspace();
 
-  // Fetch test suites using React Query
   const { data: allTestSuites = [], isLoading: isLoadingTestSuites } = useQuery(
     {
       queryKey: ['test-suites', currentWorkspace?.id],
@@ -135,7 +134,6 @@ export default function ScheduleEdit({
     }
   );
 
-  // Fetch request chains using React Query
   const { data: allRequestChains = [], isLoading: isLoadingRequestChains } =
     useQuery({
       queryKey: ['request-chains', currentWorkspace?.id],
@@ -190,10 +188,6 @@ export default function ScheduleEdit({
   });
 
   const onSubmit = (data: ScheduleFormData) => {
-    console.log('📝 Form submission started');
-    console.log('📝 Form submission data:', data);
-    console.log('📝 Form validation errors:', form.formState.errors);
-
     const scheduleDate = data.scheduledDate || new Date();
     const currentScheduleTime = data.scheduledTime || scheduleTime || '09:00';
     const [hours, minutes] = currentScheduleTime.split(':');
@@ -249,38 +243,28 @@ export default function ScheduleEdit({
       }
     }
 
-    console.log('Processed submission data:', submitData);
-
     updateMutation.mutate({ id: editingSchedule.scheduleId, data: submitData });
   };
 
-  // Load schedule data when editing schedule changes
   useEffect(() => {
     const loadScheduleData = async () => {
       if (editingSchedule && editingSchedule.scheduleId) {
         setIsLoadingSchedule(true);
         try {
-          // Fetch the complete schedule data using getSchedule API
           const scheduleData = await getSchedule(editingSchedule.scheduleId);
-          console.log('📄 Loaded schedule data:', scheduleData);
-
-          // Set target type based on the target field
           const newTargetType =
             scheduleData.target === 1 ? 'testSuite' : 'requestChain';
           setTargetType(newTargetType);
 
-          // Parse scheduled time
           const scheduledDateTime = parseISO(scheduleData.scheduledTime);
           const timeString = format(scheduledDateTime, 'HH:mm');
           setScheduleTime(timeString);
 
-          // Set recurring data
           setRecurringData({
             frequencyMode: scheduleData.frequencyMode || 1,
             daysOfWeek: scheduleData.daysOfWeek || [],
           });
 
-          // Map stop conditions from numbers back to IDs
           const stopConditionIds = (
             scheduleData.stopExecutionAfterFailure || []
           ).map((value: number) => {
@@ -288,10 +272,8 @@ export default function ScheduleEdit({
             return condition ? condition.id : value.toString();
           });
 
-          // Join email recipients into comma-separated string
           const emailString = (scheduleData.mailRecipients || []).join(', ');
 
-          // Reset form with the loaded data
           form.reset({
             name: scheduleData.scheduleName,
             description: scheduleData.description || '',
@@ -311,7 +293,7 @@ export default function ScheduleEdit({
             stopConditions: stopConditionIds,
           });
         } catch (error) {
-          console.error('❌ Failed to load schedule data:', error);
+          console.error('Failed to load schedule data:', error);
           toast({
             title: 'Error',
             description: 'Failed to load schedule data',

@@ -92,11 +92,8 @@ export function PlanManagement() {
     'Security Scan',
   ];
 
-  // console.log(currentPlan, "currentPlan");
-
   const [plansData, setPlansData] = useState<IPlan[]>([]);
 
-  // Fetch billing history with TanStack Query
   const { data: billingHistory = [], isLoading: isLoadingBilling } = useQuery({
     queryKey: ['/api/billing/history'],
     enabled: showBillingHistory,
@@ -104,7 +101,6 @@ export function PlanManagement() {
     gcTime: 10 * 60 * 1000, // 10 minutes
   });
 
-  // Mock billing history data
   const mockBillingHistory = [
     {
       id: '1',
@@ -241,7 +237,7 @@ export function PlanManagement() {
       const response = await getPlanName(name);
       setFeatures(response?.features || []);
     } catch (err) {
-      console.log(err, 'err');
+      console.error(err, 'err');
     }
   };
 

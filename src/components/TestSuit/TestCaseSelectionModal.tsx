@@ -81,8 +81,8 @@ type TestCaseCategory = {
 };
 
 type SubcatChip = {
-  name: string; count: number,
-
+  name: string;
+  count: number;
 };
 
 type TestCaseSelectionModalProps = {
@@ -204,8 +204,6 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
     TestCaseCategory[]
   >([]);
 
-  // console.log(testCaseCategories, 'testCaseCategories');
-
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -238,7 +236,6 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
         allTestCaseIds
       ),
     onSuccess: () => {
-
       queryClient.invalidateQueries({ queryKey: ['testCases'] });
       onSelect(selectedTestCases);
       onClose();
@@ -252,7 +249,6 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
     },
   });
 
-  // Initialize selected test cases when modal opens or request changes
   useEffect(() => {
     if (isOpen && request?.selectedTestCases) {
       setSelectedTestCases([...request.selectedTestCases]);
@@ -261,9 +257,6 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
     }
   }, [isOpen, request?.selectedTestCases]);
 
-  // console.log("testCasesData:", testCasesData);
-
-  // Transform and set test cases when data changes
   useEffect(() => {
     if (testCasesData?.testCases) {
       const { categories, selectedIds } = transformTestCases(
@@ -383,9 +376,6 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
         return { ...category, tests };
       });
   }, [testCaseCategories, categoryFilter, searchTerm]);
-
-  // console.log(filteredCategoriesPreSubcat, 'filteredCategories');
-
   const totalAvailableTests = testCaseCategories.reduce(
     (sum, cat) => sum + cat.tests.length,
     0
@@ -474,10 +464,6 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
     return chips.concat(rest);
   }, [filteredCategoriesPreSubcat]);
 
-
-
-
-
   const subCategoryTestMap = React.useMemo(() => {
     const map: Record<string, string[]> = {};
 
@@ -495,8 +481,6 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
 
     return map;
   }, [filteredCategories]);
-
-
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -560,8 +544,8 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
           </DialogHeader>
         </div>
 
-        <div className="px-3">
-          <div className="flex flex-wrap gap-2 justify-center">
+        <div className='px-3'>
+          <div className='flex flex-wrap gap-2 justify-center'>
             {subcatChips.map((chip) => {
               const active = subcatFilter === chip.name;
 
@@ -576,30 +560,28 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
               return (
                 <button
                   key={chip.name}
-                  onClick={() => setSubcatFilter(active ? "" : chip.name)}
+                  onClick={() => setSubcatFilter(active ? '' : chip.name)}
                   className={`
         relative inline-flex items-center rounded-md border px-2 py-1 text-xs
-        ${active
-                      ? "bg-[#136fb0] text-white border-[#136fb0]"
-                      : "bg-transparent text-foreground border-muted-foreground/30 hover:bg-muted/40"
-                    }
+        ${
+          active
+            ? 'bg-[#136fb0] text-white border-[#136fb0]'
+            : 'bg-transparent text-foreground border-muted-foreground/30 hover:bg-muted/40'
+        }
       `}
                   title={chip.name}
                 >
                   {/* 🔵 DOT if any test selected in this sub-category */}
                   {hasSelection && !active && (
-                    <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-green-600" />
+                    <span className='absolute -top-1 -right-1 h-2 w-2 rounded-full bg-green-600' />
                   )}
 
-                  <span className="mr-1 capitalize">{chip.name}</span>
+                  <span className='mr-1 capitalize'>{chip.name}</span>
 
                   <span
                     className={`
           ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1
-          ${active
-                        ? "bg-white/20 text-white"
-                        : "bg-muted text-[#136fb0]"
-                      }
+          ${active ? 'bg-white/20 text-white' : 'bg-muted text-[#136fb0]'}
         `}
                   >
                     {chip.count}
@@ -608,8 +590,9 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
                   {/* optional x/y */}
                   {hasSelection && (
                     <span
-                      className={`ml-1 text-[10px] font-medium ${active ? "text-white/90" : "text-[#136fb0]"
-                        }`}
+                      className={`ml-1 text-[10px] font-medium ${
+                        active ? 'text-white/90' : 'text-[#136fb0]'
+                      }`}
                     >
                       {selectedInSubCategory}/{subCategoryTestIds.length}
                     </span>
@@ -617,10 +600,8 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
                 </button>
               );
             })}
-
           </div>
         </div>
-
 
         {/* Main Content */}
         <div className='flex-1 flex overflow-hidden flex-col md:flex-row'>
@@ -702,7 +683,7 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
                             </span>
                             <span className='font-medium'>
                               {category.category}
-                              { }
+                              {}
                             </span>
                             <Badge variant='outline'>
                               {categoryTests.length}
@@ -865,9 +846,9 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
                                                 <JsonView
                                                   dark
                                                   enableClipboard
-                                                  onAdd={() => { }}
-                                                  onDelete={() => { }}
-                                                  onEdit={() => { }}
+                                                  onAdd={() => {}}
+                                                  onDelete={() => {}}
+                                                  onEdit={() => {}}
                                                   src={test}
                                                   theme='default'
                                                 />
@@ -889,9 +870,9 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
                                                 <JsonView
                                                   dark
                                                   enableClipboard
-                                                  onAdd={() => { }}
-                                                  onDelete={() => { }}
-                                                  onEdit={() => { }}
+                                                  onAdd={() => {}}
+                                                  onDelete={() => {}}
+                                                  onEdit={() => {}}
                                                   src={test}
                                                   theme='default'
                                                 />
@@ -914,9 +895,6 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
               )}
             </div>
           </div>
-
-
-
         </div>
         <div className='flex items-center justify-between p-6 border-t bg-muted/20'>
           <span className='text-sm text-muted-foreground'>
