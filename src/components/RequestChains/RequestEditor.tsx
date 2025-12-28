@@ -2816,6 +2816,7 @@ export function RequestEditor({
                 name: v.name,
                 value: String(v.value),
               }))}
+              requestExtractedVariables={extractedVariables}
             />
           </div>
         )}

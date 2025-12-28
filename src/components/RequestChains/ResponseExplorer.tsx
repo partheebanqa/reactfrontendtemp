@@ -52,6 +52,7 @@ interface ResponseExplorerProps {
   onApplyToAllRequests?: (name: string) => void;
   variables?: Array<{ name: string; value: string }>;
   dynamicVariables?: Array<{ name: string; value: string }>;
+  requestExtractedVariables?: Record<string, any>;
 }
 
 interface JsonNode {
@@ -82,6 +83,7 @@ export function ResponseExplorer({
   onApplyToAllRequests,
   variables,
   dynamicVariables,
+  requestExtractedVariables = {},
 }: ResponseExplorerProps) {
   const [activeTab, setActiveTab] = useState<
     'body' | 'headers' | 'cookies' | 'actualRequest' | 'assertions'
@@ -1348,12 +1350,17 @@ export function ResponseExplorer({
           setAssertions={onAssertionsUpdate}
           variables={variables}
           dynamicVariables={dynamicVariables}
+          extractedVariables={Object.entries(
+            requestExtractedVariables || {}
+          ).map(([name, value]) => ({
+            name,
+            value: String(value),
+          }))}
           onSelect={(assertionType: string, config?: any) => {
             let description = '';
             let finalType = assertionType;
 
             if (config?.isGeneral) {
-              // General assertion descriptions
               switch (assertionType) {
                 case 'response_time':
                   description = `Response time should be ${

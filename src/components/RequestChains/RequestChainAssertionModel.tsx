@@ -10,6 +10,7 @@ import {
   Code2,
   HardDrive,
   Hash,
+  Info,
   List,
   Type,
   X,
@@ -33,6 +34,7 @@ interface AssertionModalProps {
   allAssertions?: any[];
   variables?: Array<{ name: string; value: string }>;
   dynamicVariables?: Array<{ name: string; value: string }>;
+  extractedVariables?: Array<{ name: string; value: string }>;
   setAssertions?: (assertions: any[]) => void;
   initialField?: string;
   initialValue?: any;
@@ -50,6 +52,7 @@ function AssertionModal({
   allAssertions = [],
   variables = [],
   dynamicVariables = [],
+  extractedVariables = [],
   setAssertions,
   initialField,
   initialValue,
@@ -374,8 +377,8 @@ function AssertionModal({
       label: 'Contains Extracted Variable',
       icon: Code,
       needsInput: true,
-      inputType: 'text',
-      inputLabel: 'Variable name',
+      inputType: 'select',
+      inputLabel: 'Select extracted variable',
       showForTypes: ['all'],
     },
   ];
@@ -617,6 +620,9 @@ function AssertionModal({
   const filteredDynamicVariables = dynamicVariables.filter((v) =>
     v.name.startsWith('D_')
   );
+  const filteredExtractedVariables = extractedVariables.filter((v) =>
+    v.name.startsWith('E_')
+  );
 
   const displayedSuggestions = suggestedAssertionsList;
 
@@ -664,30 +670,32 @@ function AssertionModal({
 
   return (
     <div
-      className='fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4'
+      className='fixed inset-0 bg-foreground/30 backdrop-blur-sm flex items-center justify-center z-50 p-4'
       onClick={onClose}
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className='bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[85vh] overflow-hidden flex flex-col'
+        className='bg-card rounded-2xl shadow-xl w-full max-w-2xl max-h-[85vh] overflow-hidden flex flex-col animate-fade-in'
       >
-        <div className='px-6 py-4 border-b border-gray-200 flex items-center justify-between flex-shrink-0'>
+        {/* Header */}
+        <div className='px-6 py-4 border-b border-border flex items-center justify-between flex-shrink-0'>
           <div className='flex-1'>
-            <h2 className='text-lg font-semibold text-gray-900'>
+            <h2 className='text-lg font-semibold text-card-foreground'>
               Add Assertion
             </h2>
-            <p className='text-xs text-gray-500 mt-1 font-mono'>
+            <p className='text-xs text-muted-foreground mt-1 font-mono'>
               {displayFieldPath}
             </p>
           </div>
           <button
             onClick={onClose}
-            className='p-1 text-gray-400 hover:text-gray-600 rounded hover:bg-gray-100 transition-colors ml-2'
+            className='p-1 text-muted-foreground hover:text-card-foreground rounded hover:bg-muted transition-colors ml-2'
           >
             <X className='w-5 h-5' />
           </button>
         </div>
 
+        {/* Tabs */}
         <div className='flex border-b border-gray-200 bg-gray-50'>
           <button
             onClick={() => setActiveTab('suggested')}
@@ -730,6 +738,7 @@ function AssertionModal({
           </button>
         </div>
 
+        {/* Content */}
         <div className='flex-1 overflow-y-auto scrollbar-thin px-6 py-4'>
           {activeTab === 'general' && (
             <div className='space-y-2'>
@@ -741,16 +750,16 @@ function AssertionModal({
                       <button
                         key={a.id}
                         onClick={() => handleGeneralClick(a.id)}
-                        className='w-full flex items-start gap-4 p-4 rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-all text-left group'
+                        className='w-full flex items-start gap-4 p-4 rounded-lg border border-border hover:border-primary/30 hover:bg-accent transition-all text-left group'
                       >
-                        <div className='w-10 h-10 rounded-lg bg-gray-100 group-hover:bg-blue-100 flex items-center justify-center flex-shrink-0 transition-colors'>
-                          <Icon className='w-5 h-5 text-gray-600 group-hover:text-blue-600 transition-colors' />
+                        <div className='w-10 h-10 rounded-lg bg-muted group-hover:bg-accent flex items-center justify-center flex-shrink-0 transition-colors'>
+                          <Icon className='w-5 h-5 text-muted-foreground text-gray-900 transition-colors' />
                         </div>
                         <div className='flex-1 min-w-0'>
-                          <div className='text-sm font-medium text-gray-900 group-hover:text-blue-900'>
+                          <div className='text-sm font-medium text-card-foreground text-gray-900'>
                             {a.label}
                           </div>
-                          <div className='text-xs text-gray-500 mt-1'>
+                          <div className='text-xs text-muted-foreground mt-1'>
                             {a.inputLabel || 'No input needed'}
                           </div>
                         </div>
@@ -761,18 +770,47 @@ function AssertionModal({
               ) : (
                 <div className='space-y-4'>
                   <div className='flex items-center justify-between'>
-                    <h3 className='text-sm font-semibold text-gray-900'>
-                      {
-                        generalAssertions.find((a) => a.id === generalType)
-                          ?.label
-                      }
-                    </h3>
+                    <div className='flex items-center gap-2'>
+                      <h3 className='text-sm font-semibold text-card-foreground'>
+                        {
+                          generalAssertions.find((a) => a.id === generalType)
+                            ?.label
+                        }
+                      </h3>
+                      {(generalType === 'contains_static' ||
+                        generalType === 'contains_dynamic' ||
+                        generalType === 'contains_extracted') && (
+                        <div className='relative inline-flex items-center group/tooltip'>
+                          <Info className='w-3.5 h-3.5 cursor-pointer' />
+
+                          <div
+                            className='
+      absolute left-0 top-full mt-1 w-64 p-2
+      border rounded text-xs shadow-lg z-10
+      bg-white dark:bg-gray-900
+      opacity-0 invisible
+      group-hover/tooltip:opacity-100
+      group-hover/tooltip:visible
+      transition-opacity
+      pointer-events-none
+    '
+                          >
+                            {generalType === 'contains_static' &&
+                              'Static variables for the request will be listed below'}
+                            {generalType === 'contains_dynamic' &&
+                              'Dynamic variables for the request will be listed below'}
+                            {generalType === 'contains_extracted' &&
+                              'Extracted variables for the request will be listed below'}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                     <button
                       onClick={() => {
                         setGeneralType('');
                         setGeneralValue('');
                       }}
-                      className='text-xs text-blue-600 hover:underline'
+                      className='text-xs text-gray-900 hover:underline'
                     >
                       ← Back
                     </button>
@@ -780,7 +818,7 @@ function AssertionModal({
                   {generalAssertions.find((a) => a.id === generalType)
                     ?.hasComparison && (
                     <div>
-                      <label className='block text-sm font-semibold text-gray-900 mb-2'>
+                      <label className='block text-sm font-semibold text-card-foreground mb-2'>
                         Comparison
                       </label>
                       <div className='grid grid-cols-2 gap-2'>
@@ -788,11 +826,10 @@ function AssertionModal({
                           <Button
                             key={c}
                             onClick={() => setGeneralComparison(c)}
-                            className={`px-4 py-2 text-sm rounded-lg border font-medium transition-all ${
-                              generalComparison === c
-                                ? 'border-blue-600 bg-blue-600 text-white'
-                                : 'bg-white border-gray-200 text-gray-700 hover:border-blue-300'
-                            }`}
+                            variant={
+                              generalComparison === c ? 'default' : 'outline'
+                            }
+                            className='px-4 py-2 text-sm font-medium'
                           >
                             {c === 'less' ? 'Less than' : 'More than'}
                           </Button>
@@ -801,7 +838,7 @@ function AssertionModal({
                     </div>
                   )}
                   <div>
-                    <label className='block text-sm font-semibold text-gray-900 mb-2'>
+                    <label className='block text-sm font-semibold text-card-foreground mb-2'>
                       {
                         generalAssertions.find((a) => a.id === generalType)
                           ?.inputLabel
@@ -811,7 +848,7 @@ function AssertionModal({
                       <select
                         value={generalValue}
                         onChange={(e) => setGeneralValue(e.target.value)}
-                        className='w-full px-4 py-3 border border-gray-300 bg-white text-gray-900 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm'
+                        className='w-full px-4 py-3 border border-input bg-card text-card-foreground rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent outline-none text-sm'
                         autoFocus
                       >
                         <option value=''>Select static variable...</option>
@@ -828,7 +865,7 @@ function AssertionModal({
                       <select
                         value={generalValue}
                         onChange={(e) => setGeneralValue(e.target.value)}
-                        className='w-full px-4 py-3 border border-gray-300 bg-white text-gray-900 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm'
+                        className='w-full px-4 py-3 border border-input bg-card text-card-foreground rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent outline-none text-sm'
                         autoFocus
                       >
                         <option value=''>Select dynamic variable...</option>
@@ -837,16 +874,39 @@ function AssertionModal({
                             key={variable.name}
                             value={`{{${variable.name}}}`}
                           >
-                            {variable.name}
+                            {variable.name} = {variable.value}
                           </option>
                         ))}
+                      </select>
+                    ) : generalType === 'contains_extracted' ? (
+                      <select
+                        value={generalValue}
+                        onChange={(e) => setGeneralValue(e.target.value)}
+                        className='w-full px-4 py-3 border border-input bg-card text-card-foreground rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent outline-none text-sm'
+                        autoFocus
+                      >
+                        <option value=''>Select extracted variable...</option>
+                        {filteredExtractedVariables.length > 0 ? (
+                          filteredExtractedVariables.map((variable) => (
+                            <option
+                              key={variable.name}
+                              value={`{{${variable.name}}}`}
+                            >
+                              {variable.name} = {variable.value}
+                            </option>
+                          ))
+                        ) : (
+                          <option disabled>
+                            No extracted variables available
+                          </option>
+                        )}
                       </select>
                     ) : generalAssertions.find((a) => a.id === generalType)
                         ?.inputType === 'select' ? (
                       <select
                         value={generalValue}
                         onChange={(e) => setGeneralValue(e.target.value)}
-                        className='w-full px-4 py-3 border border-gray-300 bg-white text-gray-900 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm'
+                        className='w-full px-4 py-3 border border-input bg-card text-card-foreground rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent outline-none text-sm'
                         autoFocus
                       >
                         <option value=''>Select value...</option>
@@ -870,7 +930,7 @@ function AssertionModal({
                           generalAssertions.find((a) => a.id === generalType)
                             ?.inputLabel
                         }`}
-                        className='w-full px-4 py-3 border border-gray-300 bg-white text-gray-900 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm'
+                        className='w-full px-4 py-3 border border-input bg-card text-card-foreground rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent outline-none text-sm'
                         autoFocus
                       />
                     )}
@@ -884,7 +944,7 @@ function AssertionModal({
             <div className='space-y-2'>
               {displayedSuggestions.length === 0 ? (
                 <div className='text-center py-8'>
-                  <p className='text-gray-500 text-sm'>
+                  <p className='text-muted-foreground text-sm'>
                     No suggestions available for this field
                   </p>
                 </div>
@@ -898,41 +958,45 @@ function AssertionModal({
                   const isSelected = selectedSuggestedAssertions.has(
                     assertionItem.id
                   );
+                  const isDisabled = isAlreadyEnabled && !isMarkedForRemoval;
 
                   return (
                     <button
                       key={assertionItem.id}
                       onClick={() => handleSuggestedClick(assertionItem)}
-                      className={`w-full text-left p-3 rounded-lg border-2 transition-all ${
-                        isAlreadyEnabled && !isMarkedForRemoval
-                          ? 'border-green-400 bg-green-50 cursor-not-allowed'
-                          : isSelected || isMarkedForRemoval
-                          ? 'border-blue-400 bg-blue-50'
-                          : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                      disabled={isDisabled}
+                      className={`w-full flex items-start gap-4 p-4 rounded-lg border transition-all text-left ${
+                        isDisabled
+                          ? 'border-border bg-muted/50 opacity-50 cursor-not-allowed'
+                          : isMarkedForRemoval
+                          ? 'border-destructive/30 bg-destructive/5'
+                          : isSelected
+                          ? 'border-primary/30 bg-accent'
+                          : 'border-border hover:border-primary/30 hover:bg-accent'
                       }`}
                     >
-                      <div className='flex items-start justify-between'>
-                        <div className='flex items-start gap-3 flex-1'>
-                          <Icon className='w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0' />
-                          <div className='flex-1 min-w-0'>
-                            <p className='font-medium text-gray-900'>
-                              {assertionItem.label}
-                            </p>
-                            <p className='text-sm text-gray-600 line-clamp-2'>
-                              {assertionItem.description}
-                            </p>
-                          </div>
+                      <div
+                        className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors ${
+                          isDisabled
+                            ? 'bg-muted'
+                            : 'bg-muted group-hover:bg-accent'
+                        }`}
+                      >
+                        <Icon
+                          className={`w-5 h-5 ${
+                            isDisabled
+                              ? 'text-muted-foreground'
+                              : 'text-gray-900'
+                          }`}
+                        />
+                      </div>
+                      <div className='flex-1 min-w-0'>
+                        <div className='text-sm font-medium text-gray-900'>
+                          {assertionItem.label}
                         </div>
-                        {isAlreadyEnabled && !isMarkedForRemoval && (
-                          <span className='text-xs font-medium text-green-700 ml-2 flex-shrink-0'>
-                            Active
-                          </span>
-                        )}
-                        {isMarkedForRemoval && (
-                          <span className='text-xs font-medium text-red-700 ml-2 flex-shrink-0'>
-                            Remove
-                          </span>
-                        )}
+                        <div className='text-xs text-gray-500 mt-1'>
+                          {assertionItem.description}
+                        </div>
                       </div>
                     </button>
                   );
@@ -944,7 +1008,7 @@ function AssertionModal({
           {activeTab === 'manual' && (
             <div className='space-y-6'>
               <div>
-                <label className='block text-sm font-semibold text-gray-900 mb-3'>
+                <label className='block text-sm font-semibold text-card-foreground mb-3'>
                   Operator
                 </label>
                 <div className='grid grid-cols-3 gap-2'>
@@ -953,11 +1017,10 @@ function AssertionModal({
                       key={op.id}
                       onClick={() => setSelectedOperator(op.id)}
                       title={op.description}
-                      className={`px-3 py-2 rounded-lg text-sm font-medium transition-all border ${
-                        selectedOperator === op.id
-                          ? 'text-white border-blue-600 bg-blue-600'
-                          : 'bg-white text-gray-700 border-gray-200 hover:border-blue-300'
-                      }`}
+                      variant={
+                        selectedOperator === op.id ? 'default' : 'outline'
+                      }
+                      className='px-3 py-2 text-sm font-medium'
                     >
                       {op.label}
                     </Button>
@@ -974,7 +1037,7 @@ function AssertionModal({
                 'field_not_present',
               ].includes(selectedOperator) && (
                 <div>
-                  <label className='block text-sm font-semibold text-gray-900 mb-2'>
+                  <label className='block text-sm font-semibold text-card-foreground mb-2'>
                     Expected Value
                   </label>
                   <input
@@ -982,18 +1045,18 @@ function AssertionModal({
                     value={manualValue}
                     onChange={(e) => setManualValue(e.target.value)}
                     placeholder='Enter the expected value'
-                    className='w-full px-4 py-3 border border-gray-300 bg-white text-gray-900 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm'
+                    className='w-full px-4 py-3 border border-input bg-card text-card-foreground rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent outline-none text-sm'
                     autoFocus
                   />
                 </div>
               )}
 
-              <div className='bg-blue-50 border border-blue-200 rounded-lg p-3'>
-                <p className='text-sm text-gray-700'>
-                  <span className='font-mono text-blue-700'>
+              <div className='bg-accent border border-primary/20 rounded-lg p-3'>
+                <p className='text-sm text-card-foreground'>
+                  <span className='font-mono text-gray-900'>
                     {displayFieldPath}
                   </span>
-                  <span className='text-gray-600 mx-2'>
+                  <span className='text-muted-foreground mx-2'>
                     {operators.find((o) => o.id === selectedOperator)?.label}
                   </span>
                   {![
@@ -1004,7 +1067,7 @@ function AssertionModal({
                     'exists',
                     'field_not_present',
                   ].includes(selectedOperator) && (
-                    <span className='font-mono text-blue-700'>
+                    <span className='font-mono text-gray-900'>
                       {manualValue || '...'}
                     </span>
                   )}
@@ -1014,37 +1077,44 @@ function AssertionModal({
           )}
         </div>
 
-        <div className='px-6 py-4 border-t border-gray-200 flex gap-3 flex-shrink-0 bg-gray-50'>
-          <Button
+        {/* Footer */}
+        <div className='px-6 py-4 border-t border-gray-200 flex items-center justify-between flex-shrink-0 bg-gray-50'>
+          <button
             onClick={onClose}
-            className='flex-1 bg-white text-gray-900 border border-gray-300 hover:bg-gray-50'
+            className='px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg text-sm font-medium transition-colors'
           >
             Cancel
-          </Button>
+          </button>
+          {activeTab === 'general' && !generalType && (
+            <p className='flex-1 text-sm text-gray-500 text-center py-2'>
+              Click on any assertion above to add it
+            </p>
+          )}
+          {activeTab === 'general' && generalType && (
+            <Button
+              onClick={handleGeneralSubmit}
+              disabled={!generalValue}
+              className='px-4 py-2 text-sm font-medium text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
+            >
+              Save Assertion
+            </Button>
+          )}
           {activeTab === 'suggested' && (
             <Button
               onClick={handleSuggestedSubmit}
               disabled={shouldDisableButton}
-              className='flex-1 bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed'
+              className='px-4 py-2 text-sm font-medium text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
             >
-              Save Changes ({totalChanges})
+              Save Changes ({finalCount}/{totalAssertions})
             </Button>
           )}
           {activeTab === 'manual' && (
             <Button
               onClick={handleManualSubmit}
-              className='flex-1 bg-blue-600 text-white hover:bg-blue-700'
+              disabled={!manualValue}
+              className='px-4 py-2 text-sm font-medium text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
             >
-              Add Assertion
-            </Button>
-          )}
-          {activeTab === 'general' && (
-            <Button
-              onClick={handleGeneralSubmit}
-              disabled={!generalValue}
-              className='flex-1 bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed'
-            >
-              Add Assertion
+              Save Assertion
             </Button>
           )}
         </div>

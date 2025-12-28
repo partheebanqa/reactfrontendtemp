@@ -10,6 +10,7 @@ import {
   Code2,
   HardDrive,
   Hash,
+  Info,
   List,
   Type,
   X,
@@ -765,18 +766,47 @@ function AssertionModal({
               ) : (
                 <div className='space-y-4'>
                   <div className='flex items-center justify-between'>
-                    <h3 className='text-sm font-semibold text-gray-900'>
-                      {
-                        generalAssertions.find((a) => a.id === generalType)
-                          ?.label
-                      }
-                    </h3>
+                    <div className='flex items-center gap-2'>
+                      <h3 className='text-sm font-semibold text-card-foreground'>
+                        {
+                          generalAssertions.find((a) => a.id === generalType)
+                            ?.label
+                        }
+                      </h3>
+                      {(generalType === 'contains_static' ||
+                        generalType === 'contains_dynamic' ||
+                        generalType === 'contains_extracted') && (
+                        <div className='relative inline-flex items-center group/tooltip'>
+                          <Info className='w-3.5 h-3.5 cursor-pointer' />
+
+                          <div
+                            className='
+      absolute left-0 top-full mt-1 w-64 p-2
+      border rounded text-xs shadow-lg z-10
+      bg-white dark:bg-gray-900
+      opacity-0 invisible
+      group-hover/tooltip:opacity-100
+      group-hover/tooltip:visible
+      transition-opacity
+      pointer-events-none
+    '
+                          >
+                            {generalType === 'contains_static' &&
+                              'Static variables for the request will be listed below'}
+                            {generalType === 'contains_dynamic' &&
+                              'Dynamic variables for the request will be listed below'}
+                            {generalType === 'contains_extracted' &&
+                              'Extracted variables for the request will be listed below'}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                     <button
                       onClick={() => {
                         setGeneralType('');
                         setGeneralValue('');
                       }}
-                      className='text-xs text-blue-600 hover:underline'
+                      className='text-xs text-gray-900 hover:underline'
                     >
                       ← Back
                     </button>

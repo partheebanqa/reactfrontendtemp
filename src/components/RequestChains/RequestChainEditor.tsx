@@ -3093,6 +3093,11 @@ export function RequestChainEditor({
                                                       name: v.name,
                                                       value: String(v.value),
                                                     }))}
+                                                    requestExtractedVariables={
+                                                      extractedVariablesByRequest[
+                                                        executionLog.requestId
+                                                      ] || {}
+                                                    }
                                                   />
                                                 </div>
                                               )}
