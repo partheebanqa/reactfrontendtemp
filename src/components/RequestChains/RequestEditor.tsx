@@ -61,7 +61,6 @@ import {
   buildUrlWithParams,
   generateDynamicValueById,
   hasResponseChanged,
-  getUsedVariablesInRequest,
 } from '@/lib/request-utils';
 import 'codemirror/lib/codemirror.css';
 import 'codemirror/theme/material.css';
@@ -1610,6 +1609,7 @@ export function RequestEditor({
   };
 
   const handleExtractVariable = (extraction: DataExtraction) => {
+    console.log('extraction222:', extraction);
     const normalizeString = (value?: string) => (value || '').trim();
     const normalizeBool = (value?: boolean) => !!value;
     const currentExtractions = initialRequest.extractVariables || [];
@@ -1803,57 +1803,6 @@ export function RequestEditor({
     setHeaders((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const addTest = (type: 'status' | 'responseTime' | 'jsonContent') => {
-    let newTest: TestScript;
-    const base = {
-      id: `temp_${Date.now().toString()}`,
-      type,
-      enabled: true,
-    };
-    if (type === 'status') {
-      newTest = {
-        ...base,
-        operator: 'equal',
-        expectedValue: '200',
-        description: 'Status code should be equal to 200 (OK)',
-      };
-    } else if (type === 'responseTime') {
-      newTest = {
-        ...base,
-        operator: 'lessThan',
-        expectedValue: '200',
-        description: 'Response time should be less than 200 ms',
-      };
-    } else {
-      newTest = {
-        ...base,
-        jsonPath: '$.property',
-        operator: 'contain',
-        expectedValue: 'expected value',
-        description:
-          'JSON value at path $.property should contain expected value',
-      };
-    }
-    onUpdate({
-      testScripts: [...(initialRequest.testScripts || []), newTest],
-    });
-  };
-
-  const updateTest = (testId: string, updates: Partial<TestScript>) => {
-    const updatedTests = (initialRequest.testScripts || []).map((test) =>
-      test.id === testId ? { ...test, ...updates } : test
-    );
-    onUpdate({ testScripts: updatedTests });
-  };
-
-  const removeTest = (testId: string) => {
-    onUpdate({
-      testScripts: (initialRequest.testScripts || []).filter(
-        (test) => test.id !== testId
-      ),
-    });
-  };
-
   const KeyValueTable = ({
     type,
     items,
@@ -1954,21 +1903,6 @@ export function RequestEditor({
       )}
     </div>
   );
-
-  const showVariablePreview = () => {
-    const allVariables = getAllAvailableVariables();
-    return (
-      processedRequest.authToken !== initialRequest.authToken ||
-      processedRequest.authorization?.token !==
-        initialRequest.authorization?.token ||
-      processedRequest.body !== initialRequest.body ||
-      processedRequest.url !== initialRequest.url ||
-      JSON.stringify(processedRequest.headers) !==
-        JSON.stringify(initialRequest.headers) ||
-      JSON.stringify(processedRequest.params) !==
-        JSON.stringify(initialRequest.params)
-    );
-  };
 
   const DynamicVariablesPanel = () => {
     if (usedDynamicVariables.length === 0) return null;
@@ -2177,6 +2111,50 @@ export function RequestEditor({
         'All dynamic variables have been replaced with their current values.',
     });
   };
+
+  const usedRequestVariables = useMemo(() => {
+    const usedVariableNamesSet = new Set<string>();
+
+    const allTextFields = [
+      initialRequest.url || '',
+      initialRequest.body || '',
+      initialRequest.authToken || '',
+      initialRequest.authUsername || '',
+      initialRequest.authPassword || '',
+      initialRequest.authApiKey || '',
+      initialRequest.authApiValue || '',
+      initialRequest.authorization?.token || '',
+      ...(initialRequest.headers || []).map((h) => `${h.key} ${h.value}`),
+      ...(initialRequest.params || []).map((p) => `${p.key} ${p.value}`),
+    ];
+
+    const allText = allTextFields.join(' ');
+    const variableMatches = allText.match(/\{\{(\w+)\}\}/g) || [];
+    variableMatches.forEach((match) => {
+      usedVariableNamesSet.add(match.replace(/\{\{(\w+)\}\}/, '$1'));
+    });
+
+    Object.keys(extractedVariables).forEach((varName) => {
+      usedVariableNamesSet.add(varName);
+    });
+
+    const usedVariableNames = Array.from(usedVariableNamesSet);
+
+    return {
+      staticVars: storeVariables
+        .filter((v) => usedVariableNames.includes(v.name))
+        .map((v) => ({
+          name: v.name,
+          value: String(v.value || v.initialValue || ''),
+        })),
+      dynamicVars: dynamicStructured
+        .filter((v) => usedVariableNames.includes(v.name))
+        .map((v) => ({
+          name: v.name,
+          value: String(v.value || v.initialValue || ''),
+        })),
+    };
+  }, [initialRequest, storeVariables, dynamicStructured, extractedVariables]);
 
   const compactView = (
     <div className='space-y-4'>
@@ -2802,20 +2780,8 @@ export function RequestEditor({
               errorMessage={executionResult.error}
               allAssertions={assertions}
               onAssertionsUpdate={handleAssertionsUpdate}
-              variables={getUsedVariablesInRequest(
-                initialRequest,
-                storeVariables
-              ).map((v) => ({
-                name: v.name,
-                value: String(v.value),
-              }))}
-              dynamicVariables={getUsedVariablesInRequest(
-                initialRequest,
-                dynamicStructured
-              ).map((v) => ({
-                name: v.name,
-                value: String(v.value),
-              }))}
+              variables={usedRequestVariables.staticVars}
+              dynamicVariables={usedRequestVariables.dynamicVars}
               requestExtractedVariables={extractedVariables}
             />
           </div>

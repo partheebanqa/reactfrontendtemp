@@ -89,7 +89,7 @@ import {
   type AutocompleteState,
   generateDynamicValueById,
   hasResponseChanged,
-  getUsedVariablesInRequest,
+  getUsedVariablesForChain,
 } from '@/lib/request-utils';
 import { ResponseExplorer } from './ResponseExplorer';
 import BreadCum from '../BreadCum/Breadcum';
@@ -741,38 +741,6 @@ export function RequestChainEditor({
     });
   };
 
-  const handleExtractFromDependency = (
-    sourceRequestIndex: number,
-    path: string,
-    suggestedName: string
-  ) => {
-    const sourceRequest = formData.chainRequests?.[sourceRequestIndex];
-    if (!sourceRequest) {
-      console.error('Source request not found at index:', sourceRequestIndex);
-      return;
-    }
-
-    const extraction: DataExtraction = {
-      variableName: `E_${suggestedName}`,
-      name: `E_${suggestedName}`,
-      source: 'response_body',
-      path: path,
-    };
-
-    handleExtractVariableForRequest(sourceRequest.id, extraction);
-
-    const newExpanded = new Set(expandedRequests);
-    newExpanded.add(sourceRequest.id);
-    setExpandedRequests(newExpanded);
-
-    toast({
-      title: 'Variable Extraction Added',
-      description: `Variable "E_${suggestedName}" will be extracted from ${path} in request #${
-        sourceRequestIndex + 1
-      }. Run the request again to see the extracted value.`,
-    });
-  };
-
   const DynamicVariablesPanel = () => {
     if (usedDynamicVariables.length === 0) return null;
 
@@ -1087,6 +1055,20 @@ export function RequestChainEditor({
       ),
     ];
   };
+
+  const usedChainVariables = useMemo(() => {
+    return getUsedVariablesForChain(
+      formData.chainRequests || [],
+      storeVariables,
+      dynamicStructured,
+      extractedVariablesByRequest
+    );
+  }, [
+    formData.chainRequests,
+    storeVariables,
+    dynamicStructured,
+    extractedVariablesByRequest,
+  ]);
 
   const executeSingleRequest = async (
     request: APIRequest,
@@ -1573,6 +1555,8 @@ export function RequestChainEditor({
     requestId: string,
     extraction: DataExtraction
   ) => {
+    console.log('extraction111:', extraction);
+
     const request = formData.chainRequests.find((r) => r.id === requestId);
     if (!request) return;
 
@@ -3071,33 +3055,42 @@ export function RequestChainEditor({
                                                         assertions
                                                       );
                                                     }}
-                                                    variables={getUsedVariablesInRequest(
-                                                      formData.chainRequests.find(
-                                                        (r) =>
-                                                          r.id ===
-                                                          executionLog.requestId
-                                                      ) || ({} as APIRequest),
-                                                      storeVariables
-                                                    ).map((v) => ({
-                                                      name: v.name,
-                                                      value: String(v.value),
-                                                    }))}
-                                                    dynamicVariables={getUsedVariablesInRequest(
-                                                      formData.chainRequests.find(
-                                                        (r) =>
-                                                          r.id ===
-                                                          executionLog.requestId
-                                                      ) || ({} as APIRequest),
-                                                      dynamicStructured
-                                                    ).map((v) => ({
-                                                      name: v.name,
-                                                      value: String(v.value),
-                                                    }))}
-                                                    requestExtractedVariables={
-                                                      extractedVariablesByRequest[
-                                                        executionLog.requestId
-                                                      ] || {}
+                                                    variables={
+                                                      usedChainVariables.staticVars
                                                     }
+                                                    dynamicVariables={
+                                                      usedChainVariables.dynamicVars
+                                                    }
+                                                    requestExtractedVariables={(() => {
+                                                      const varsUpToThisPoint: Record<
+                                                        string,
+                                                        any
+                                                      > = {};
+                                                      for (
+                                                        let i = 0;
+                                                        i <= requestIndex;
+                                                        i++
+                                                      ) {
+                                                        const reqId =
+                                                          formData
+                                                            .chainRequests?.[i]
+                                                            ?.id;
+                                                        if (
+                                                          reqId &&
+                                                          extractedVariablesByRequest[
+                                                            reqId
+                                                          ]
+                                                        ) {
+                                                          Object.assign(
+                                                            varsUpToThisPoint,
+                                                            extractedVariablesByRequest[
+                                                              reqId
+                                                            ]
+                                                          );
+                                                        }
+                                                      }
+                                                      return varsUpToThisPoint;
+                                                    })()}
                                                   />
                                                 </div>
                                               )}

@@ -85,6 +85,9 @@ export function ResponseExplorer({
   dynamicVariables,
   requestExtractedVariables = {},
 }: ResponseExplorerProps) {
+  console.log('variables123:', variables);
+  console.log('dynamicVariables:', dynamicVariables);
+
   const [activeTab, setActiveTab] = useState<
     'body' | 'headers' | 'cookies' | 'actualRequest' | 'assertions'
   >('body');
@@ -448,11 +451,9 @@ export function ResponseExplorer({
         value: extractionModal.value,
         transform,
       };
-      onExtractVariable?.(
-        finalVariableName,
-        extractionModal.value,
-        extractionModal.path
-      );
+      console.log('inputVariableName:', extractionModal);
+
+      onExtractVariable(extraction);
       setExtractionModal(null);
       setVariableName('');
     }
@@ -1331,7 +1332,6 @@ export function ResponseExplorer({
         </div>
       )}
 
-      {/* Update AssertionModal to pass operators based on field type */}
       {selectedAssertion && (
         <AssertionModal
           isOpen={assertionModalOpen}
