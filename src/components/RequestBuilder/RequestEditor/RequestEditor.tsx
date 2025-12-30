@@ -322,10 +322,8 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
   const getUsedVariables = () => {
     const usedVarNames = new Set();
 
-    // Check URL
     extractVariableNames(url).forEach((name) => usedVarNames.add(name));
 
-    // Check params
     params.forEach((param) => {
       if (param.enabled) {
         extractVariableNames(param.key).forEach((name) =>
@@ -337,7 +335,6 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
       }
     });
 
-    // Check headers
     headers.forEach((header) => {
       if (header.enabled) {
         extractVariableNames(header.key).forEach((name) =>
@@ -349,7 +346,6 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
       }
     });
 
-    // Check body content
     extractVariableNames(bodyContent).forEach((name) => usedVarNames.add(name));
 
     return {

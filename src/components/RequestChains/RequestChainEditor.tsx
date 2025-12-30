@@ -7,6 +7,23 @@ import {
 } from '@/lib/postman-analysis';
 
 import type React from 'react';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 import {
   ArrowLeft,
@@ -98,6 +115,7 @@ import { generateAssertions } from '@/utils/assertionGenerator';
 import { useDataManagement } from '@/hooks/useDataManagement';
 import { RequestAnalyzer } from './RequestAnalyzer';
 import { AddRequestMenu } from './AddRequestMenu';
+import { SortableRequestItem } from './DragAndDrop';
 
 interface RequestChainEditorProps {
   chain?: RequestChain;
@@ -1653,6 +1671,16 @@ export function RequestChainEditor({
   const [editingNameId, setEditingNameId] = useState<string | null>(null);
   const [tempName, setTempName] = useState<string>('');
   const [isAnalyzerOpen, setIsAnalyzerOpen] = useState(false);
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   const handleCopyForRequest = async (requestId: string, value: string) => {
     try {
@@ -1675,30 +1703,28 @@ export function RequestChainEditor({
     }
   };
 
-  const handleDragStart = (index: number) => {
-    dragItem.current = index;
-  };
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
 
-  const handleDragEnter = (index: number) => {
-    dragOverItem.current = index;
-  };
+    if (over && active.id !== over.id) {
+      setFormData((prev) => {
+        const requests = prev.chainRequests || [];
+        const oldIndex = requests.findIndex((req) => req.id === active.id);
+        const newIndex = requests.findIndex((req) => req.id === over.id);
 
-  const handleDragEnd = () => {
-    if (dragItem.current !== null && dragOverItem.current !== null) {
-      const requests = [...(formData.chainRequests || [])];
-      const draggedItem = requests[dragItem.current];
-      requests.splice(dragItem.current, 1);
-      requests.splice(dragOverItem.current, 0, draggedItem);
+        const reorderedRequests = arrayMove(requests, oldIndex, newIndex).map(
+          (request, index) => ({
+            ...request,
+            order: index + 1,
+          })
+        );
 
-      const reorderedRequests = requests.map((request, index) => ({
-        ...request,
-        order: index + 1,
-      }));
-
-      setFormData({ ...formData, chainRequests: reorderedRequests });
+        return {
+          ...prev,
+          chainRequests: reorderedRequests,
+        };
+      });
     }
-    dragItem.current = null;
-    dragOverItem.current = null;
   };
 
   const toggleRequestExpanded = (requestId: string) => {
@@ -2593,517 +2619,300 @@ export function RequestChainEditor({
                       {formData.chainRequests &&
                       formData.chainRequests.length > 0 ? (
                         <>
-                          <div className='space-y-3'>
-                            {formData.chainRequests.map(
-                              (request, requestIndex) => {
-                                const executionLog = getExecutionLogForRequest(
-                                  executionLogs,
-                                  request.id
-                                );
+                          <DndContext
+                            sensors={sensors}
+                            collisionDetection={closestCenter}
+                            onDragEnd={handleDragEnd}
+                          >
+                            <SortableContext
+                              items={(formData.chainRequests || []).map(
+                                (r) => r.id
+                              )}
+                              strategy={verticalListSortingStrategy}
+                            >
+                              <div className='space-y-3'>
+                                {formData.chainRequests.map(
+                                  (request, requestIndex) => {
+                                    const executionLog =
+                                      getExecutionLogForRequest(
+                                        executionLogs,
+                                        request.id
+                                      );
 
-                                return (
-                                  <Card
-                                    key={request.id}
-                                    className={`hover:shadow-sm transition-shadow group ${
-                                      currentRequestIndex === requestIndex
-                                        ? 'ring-2 ring-primary'
-                                        : ''
-                                    }`}
-                                  >
-                                    <CardContent className='p-2'>
-                                      <div className='flex items-center'>
-                                        <div className='flex items-center space-x-3'>
-                                          <TooltipProvider>
-                                            <Tooltip>
-                                              <TooltipTrigger asChild>
-                                                <div
-                                                  className='cursor-move'
-                                                  draggable
-                                                  onDragStart={() =>
-                                                    handleDragStart(
-                                                      requestIndex
-                                                    )
-                                                  }
-                                                  onDragEnter={() =>
-                                                    handleDragEnter(
-                                                      requestIndex
-                                                    )
-                                                  }
-                                                  onDragEnd={handleDragEnd}
-                                                >
-                                                  <GripVertical className='w-5 h-5 text-muted-foreground' />
-                                                </div>
-                                              </TooltipTrigger>
-                                              <TooltipContent>
-                                                <p>Drag to change the order</p>
-                                              </TooltipContent>
-                                            </Tooltip>
-                                          </TooltipProvider>
-
-                                          <div
-                                            className={`w-8 h-8 ${
-                                              currentRequestIndex ===
-                                              requestIndex
-                                                ? 'bg-primary text-primary-foreground animate-pulse'
-                                                : 'bg-blue-100 text-blue-600'
-                                            } rounded-full flex items-center justify-center text-sm font-medium`}
-                                          >
-                                            {currentRequestIndex ===
-                                            requestIndex ? (
-                                              <Loader2 className='w-4 h-4 animate-spin' />
-                                            ) : (
-                                              requestIndex + 1
-                                            )}
-                                          </div>
-                                        </div>
-
-                                        <div className='flex-1 flex items-center space-x-4 ml-3'>
-                                          <span
-                                            className={`py-1 px-2 text-xs font-semibold ${getMethodColor(
-                                              request.method
-                                            )}`}
-                                          >
-                                            {request.method}
-                                          </span>
-
-                                          <div className='flex-1'>
-                                            {editingNameId === request.id ? (
-                                              <div className='flex items-center gap-2'>
-                                                <Input
-                                                  value={tempName}
-                                                  onChange={(e) =>
-                                                    setTempName(e.target.value)
-                                                  }
-                                                  className='h-8 max-w-[280px]'
-                                                  placeholder='Request name'
-                                                  autoFocus
-                                                />
-                                                <Button
-                                                  variant='ghost'
-                                                  size='icon'
-                                                  onClick={() => {
-                                                    commitRequestName(
-                                                      requestIndex,
-                                                      tempName
-                                                    );
-                                                    setEditingNameId(null);
-                                                    setTempName('');
-                                                  }}
-                                                  className='text-green-600 hover:text-green-700'
-                                                >
-                                                  <Check className='w-4 h-4' />
-                                                </Button>
-                                                <Button
-                                                  variant='ghost'
-                                                  size='icon'
-                                                  onClick={() => {
-                                                    setEditingNameId(null);
-                                                    setTempName('');
-                                                  }}
-                                                  className='text-red-600 hover:text-red-700'
-                                                >
-                                                  <X className='w-4 h-4' />
-                                                </Button>
-                                              </div>
-                                            ) : (
-                                              <div className='flex items-center gap-2'>
-                                                <p className='font-medium'>
-                                                  {request.name ||
-                                                    request.url ||
-                                                    'New Request'}
-                                                </p>
-
-                                                <div className='opacity-0 group-hover:opacity-100 transition-opacity'>
-                                                  <TooltipProvider>
-                                                    <Tooltip>
-                                                      <TooltipTrigger asChild>
-                                                        <Button
-                                                          variant='ghost'
-                                                          size='icon'
-                                                          onClick={() => {
-                                                            setEditingNameId(
-                                                              request.id
-                                                            );
-                                                            setTempName(
-                                                              request.name ||
-                                                                request.url ||
-                                                                ''
-                                                            );
-                                                          }}
-                                                          disabled={isExecuting}
-                                                          className='h-6 w-6 p-0'
-                                                        >
-                                                          <Edit className='w-3 h-3' />
-                                                        </Button>
-                                                      </TooltipTrigger>
-
-                                                      <TooltipContent>
-                                                        {isExecuting
-                                                          ? 'Cannot edit during execution'
-                                                          : 'Edit'}
-                                                      </TooltipContent>
-                                                    </Tooltip>
-                                                  </TooltipProvider>
-                                                </div>
-                                              </div>
-                                            )}
-                                          </div>
-
-                                          <div className='flex items-center space-x-2'>
-                                            {executionLog && (
-                                              <div className='flex items-center space-x-1'>
-                                                {executionLog.status ===
-                                                'success' ? (
-                                                  <CheckCircle className='w-4 h-4 text-green-500' />
-                                                ) : (
-                                                  <XCircle className='w-4 h-4 text-red-500' />
-                                                )}
-
-                                                {executionLog.response && (
-                                                  <Badge
-                                                    variant={
-                                                      executionLog.response
-                                                        .status < 300
-                                                        ? 'default'
-                                                        : 'destructive'
-                                                    }
-                                                    className='text-xs'
-                                                  >
-                                                    {
-                                                      executionLog.response
-                                                        .status
-                                                    }
-                                                  </Badge>
-                                                )}
-                                              </div>
-                                            )}
-                                          </div>
-                                        </div>
-
-                                        <div className='flex items-center space-x-2 ml-4'>
-                                          <div className='flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity'>
-                                            <TooltipProvider>
-                                              <Tooltip>
-                                                <TooltipTrigger asChild>
-                                                  <button
-                                                    onClick={() =>
-                                                      duplicateRequest(
-                                                        request.id
-                                                      )
-                                                    }
-                                                    disabled={isExecuting}
-                                                    className='p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700'
-                                                    aria-label='Clone'
-                                                  >
-                                                    <Copy className='w-4 h-4' />
-                                                  </button>
-                                                </TooltipTrigger>
-                                                <TooltipContent>
-                                                  Duplicate request
-                                                </TooltipContent>
-                                              </Tooltip>
-                                            </TooltipProvider>
-
-                                            <TooltipProvider>
-                                              <Tooltip>
-                                                <TooltipTrigger asChild>
-                                                  <button
-                                                    onClick={() =>
-                                                      removeRequest(request.id)
-                                                    }
-                                                    className='p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-red-600 hover:text-red-700'
-                                                    disabled={isExecuting}
-                                                    aria-label='Delete request'
-                                                  >
-                                                    <Trash2 className='w-4 h-4' />
-                                                  </button>
-                                                </TooltipTrigger>
-                                                <TooltipContent>
-                                                  Delete request
-                                                </TooltipContent>
-                                              </Tooltip>
-                                            </TooltipProvider>
-                                          </div>
-
-                                          {/* Expand/Collapse - Always visible */}
-                                          <Button
-                                            variant='ghost'
-                                            size='sm'
-                                            onClick={() =>
-                                              toggleRequestExpanded(request.id)
-                                            }
-                                            className='h-8 w-8 p-0'
-                                          >
-                                            {expandedRequests.has(
-                                              request.id
-                                            ) ? (
-                                              <ChevronUp className='w-4 h-4 text-[rgb(19_111_176)]' />
-                                            ) : (
-                                              <ChevronDown className='w-4 h-4 text-[rgb(19_111_176)]' />
-                                            )}
-                                          </Button>
-                                        </div>
-                                      </div>
-
-                                      {expandedRequests.has(request.id) && (
-                                        <div className='mt-4 pt-4 border-t space-y-4'>
-                                          <RequestEditor
-                                            request={request}
-                                            onUpdate={(updates) =>
-                                              updateRequest(request.id, updates)
-                                            }
-                                            compact={true}
-                                            chainName={formData.name}
-                                            chainDescription={
-                                              formData.description
-                                            }
-                                            chainEnabled={formData.enabled}
-                                            environmentBaseUrl={
-                                              environmentBaseUrl
-                                            }
-                                            chainId={chain?.id || ''}
-                                            hideResponseExplorer={false}
-                                            onRequestExecution={(
-                                              executionLog
-                                            ) =>
-                                              handleRequestExecution(
-                                                request.id,
+                                    return (
+                                      <SortableRequestItem
+                                        key={request.id}
+                                        request={request}
+                                        requestIndex={requestIndex}
+                                        isExecuting={isExecuting}
+                                        currentRequestIndex={
+                                          currentRequestIndex
+                                        }
+                                        expandedRequests={expandedRequests}
+                                        editingNameId={editingNameId}
+                                        tempName={tempName}
+                                        executionLog={executionLog}
+                                        getMethodColor={getMethodColor}
+                                        onToggleExpand={toggleRequestExpanded}
+                                        onStartEditName={(id, name) => {
+                                          setEditingNameId(id);
+                                          setTempName(name);
+                                        }}
+                                        onCommitName={commitRequestName}
+                                        onCancelEditName={() => {
+                                          setEditingNameId(null);
+                                          setTempName('');
+                                        }}
+                                        onDuplicate={duplicateRequest}
+                                        onRemove={removeRequest}
+                                        setTempName={setTempName}
+                                      >
+                                        {expandedRequests.has(request.id) && (
+                                          <div className='mt-4 pt-4 border-t space-y-4'>
+                                            {/* All your existing expanded content goes here */}
+                                            <RequestEditor
+                                              request={request}
+                                              onUpdate={(updates) =>
+                                                updateRequest(
+                                                  request.id,
+                                                  updates
+                                                )
+                                              }
+                                              compact={true}
+                                              chainName={formData.name}
+                                              chainDescription={
+                                                formData.description
+                                              }
+                                              chainEnabled={formData.enabled}
+                                              environmentBaseUrl={
+                                                environmentBaseUrl
+                                              }
+                                              chainId={chain?.id || ''}
+                                              hideResponseExplorer={false}
+                                              onRequestExecution={(
                                                 executionLog
-                                              )
-                                            }
-                                            extractedVariables={(() => {
-                                              const varsUpToThisPoint: Record<
-                                                string,
-                                                any
-                                              > = {};
-                                              for (
-                                                let i = 0;
-                                                i < requestIndex;
-                                                i++
-                                              ) {
-                                                const prevReqId =
-                                                  formData.chainRequests?.[i]
-                                                    ?.id;
-                                                if (
-                                                  prevReqId &&
-                                                  extractedVariablesByRequest[
-                                                    prevReqId
-                                                  ]
+                                              ) =>
+                                                handleRequestExecution(
+                                                  request.id,
+                                                  executionLog
+                                                )
+                                              }
+                                              extractedVariables={(() => {
+                                                const varsUpToThisPoint: Record<
+                                                  string,
+                                                  any
+                                                > = {};
+                                                for (
+                                                  let i = 0;
+                                                  i < requestIndex;
+                                                  i++
                                                 ) {
-                                                  Object.assign(
-                                                    varsUpToThisPoint,
+                                                  const prevReqId =
+                                                    formData.chainRequests?.[i]
+                                                      ?.id;
+                                                  if (
+                                                    prevReqId &&
                                                     extractedVariablesByRequest[
                                                       prevReqId
                                                     ]
-                                                  );
-                                                }
-                                              }
-                                              return varsUpToThisPoint;
-                                            })()}
-                                            chainVariables={
-                                              formData.variables || []
-                                            }
-                                            dynamicVariableOverrides={
-                                              dynamicOverrides
-                                            }
-                                            onRegenerateDynamicVariable={
-                                              regenerateDynamicVariableLocal
-                                            }
-                                            requestAssertions={(() => {
-                                              const assertions =
-                                                assertionsByRequest[
-                                                  request.id
-                                                ] || [];
-                                              return assertions;
-                                            })()}
-                                            onAssertionsUpdate={(
-                                              assertions
-                                            ) => {
-                                              setAssertionsByRequest(
-                                                (prev) => ({
-                                                  ...prev,
-                                                  [request.id]: assertions,
-                                                })
-                                              );
-                                              persistAssertionsToStorage(
-                                                request.id,
-                                                assertions
-                                              );
-                                            }}
-                                            requestIndex={requestIndex}
-                                            formData={formData}
-                                            extractedVariablesByRequest={
-                                              extractedVariablesByRequest
-                                            }
-                                          />
-
-                                          {executionLog && (
-                                            <div>
-                                              {(executionLog.response != null ||
-                                                executionLog.error) && (
-                                                <div className='border-t border-gray-200 p-2'>
-                                                  <div className='flex items-center gap-2 mb-4'>
-                                                    <h3 className='text-lg font-medium text-gray-900'>
-                                                      Extract Variables from
-                                                      Response
-                                                    </h3>
-                                                    <TooltipProvider>
-                                                      <Tooltip>
-                                                        <TooltipTrigger asChild>
-                                                          <div className='cursor-pointer'>
-                                                            <Info className='w-4 h-4 text-gray-400' />
-                                                          </div>
-                                                        </TooltipTrigger>
-                                                        <TooltipContent className='max-w-xs'>
-                                                          <p>
-                                                            Mouse over on
-                                                            response elements
-                                                            and click on
-                                                            "extract" button to
-                                                            extract variable.
-                                                          </p>
-                                                        </TooltipContent>
-                                                      </Tooltip>
-                                                    </TooltipProvider>
-                                                  </div>
-
-                                                  <ResponseExplorer
-                                                    response={
-                                                      executionLog.response
-                                                    }
-                                                    onExtractVariable={(
-                                                      extraction
-                                                    ) =>
-                                                      handleExtractVariableForRequest(
-                                                        executionLog.requestId,
-                                                        extraction
-                                                      )
-                                                    }
-                                                    extractedVariables={
+                                                  ) {
+                                                    Object.assign(
+                                                      varsUpToThisPoint,
                                                       extractedVariablesByRequest[
-                                                        executionLog.requestId
-                                                      ] || {}
-                                                    }
-                                                    existingExtractions={
-                                                      formData.chainRequests.find(
-                                                        (r) =>
-                                                          r.id ===
+                                                        prevReqId
+                                                      ]
+                                                    );
+                                                  }
+                                                }
+                                                return varsUpToThisPoint;
+                                              })()}
+                                              chainVariables={
+                                                formData.variables || []
+                                              }
+                                              dynamicVariableOverrides={
+                                                dynamicOverrides
+                                              }
+                                              onRegenerateDynamicVariable={
+                                                regenerateDynamicVariableLocal
+                                              }
+                                              requestAssertions={(() => {
+                                                const assertions =
+                                                  assertionsByRequest[
+                                                    request.id
+                                                  ] || [];
+                                                return assertions;
+                                              })()}
+                                              onAssertionsUpdate={(
+                                                assertions
+                                              ) => {
+                                                setAssertionsByRequest(
+                                                  (prev) => ({
+                                                    ...prev,
+                                                    [request.id]: assertions,
+                                                  })
+                                                );
+                                                persistAssertionsToStorage(
+                                                  request.id,
+                                                  assertions
+                                                );
+                                              }}
+                                              requestIndex={requestIndex}
+                                              formData={formData}
+                                              extractedVariablesByRequest={
+                                                extractedVariablesByRequest
+                                              }
+                                            />
+
+                                            {executionLog && (
+                                              <div>
+                                                {(executionLog.response !=
+                                                  null ||
+                                                  executionLog.error) && (
+                                                  <div className='border-t border-gray-200 p-2'>
+                                                    {/* All your ResponseExplorer code */}
+                                                    <ResponseExplorer
+                                                      response={
+                                                        executionLog.response
+                                                      }
+                                                      onExtractVariable={(
+                                                        extraction
+                                                      ) =>
+                                                        handleExtractVariableForRequest(
+                                                          executionLog.requestId,
+                                                          extraction
+                                                        )
+                                                      }
+                                                      extractedVariables={
+                                                        extractedVariablesByRequest[
                                                           executionLog.requestId
-                                                      )?.extractVariables || []
-                                                    }
-                                                    onRemoveExtraction={(
-                                                      variableName
-                                                    ) =>
-                                                      handleRemoveExtractionForRequest(
-                                                        executionLog.requestId,
+                                                        ] || {}
+                                                      }
+                                                      existingExtractions={
+                                                        formData.chainRequests.find(
+                                                          (r) =>
+                                                            r.id ===
+                                                            executionLog.requestId
+                                                        )?.extractVariables ||
+                                                        []
+                                                      }
+                                                      onRemoveExtraction={(
                                                         variableName
-                                                      )
-                                                    }
-                                                    handleCopy={(value) =>
-                                                      handleCopyForRequest(
-                                                        executionLog.requestId,
-                                                        value
-                                                      )
-                                                    }
-                                                    chainId={chain?.id ?? ''}
-                                                    copied={
-                                                      copiedStates[
-                                                        executionLog.requestId
-                                                      ] || false
-                                                    }
-                                                    actualRequestUrl={
-                                                      executionLog.request.url
-                                                    }
-                                                    actualRequestHeaders={
-                                                      executionLog.request
-                                                        .headers
-                                                    }
-                                                    actualRequestBody={
-                                                      executionLog.request.body
-                                                    }
-                                                    actualRequestMethod={
-                                                      executionLog.request
-                                                        .method
-                                                    }
-                                                    executionStatus={
-                                                      executionLog.status
-                                                    }
-                                                    errorMessage={
-                                                      executionLog.error
-                                                    }
-                                                    executionLog={executionLog}
-                                                    onApplyToAllRequests={
-                                                      handleApplyToAllRequests
-                                                    }
-                                                    allAssertions={
-                                                      assertionsByRequest[
-                                                        executionLog.requestId
-                                                      ] || []
-                                                    }
-                                                    onAssertionsUpdate={(
-                                                      assertions
-                                                    ) => {
-                                                      setAssertionsByRequest(
-                                                        (prev) => ({
-                                                          ...prev,
-                                                          [executionLog.requestId]:
-                                                            assertions,
-                                                        })
-                                                      );
-                                                      persistAssertionsToStorage(
-                                                        executionLog.requestId,
+                                                      ) =>
+                                                        handleRemoveExtractionForRequest(
+                                                          executionLog.requestId,
+                                                          variableName
+                                                        )
+                                                      }
+                                                      handleCopy={(value) =>
+                                                        handleCopyForRequest(
+                                                          executionLog.requestId,
+                                                          value
+                                                        )
+                                                      }
+                                                      chainId={chain?.id ?? ''}
+                                                      copied={
+                                                        copiedStates[
+                                                          executionLog.requestId
+                                                        ] || false
+                                                      }
+                                                      actualRequestUrl={
+                                                        executionLog.request.url
+                                                      }
+                                                      actualRequestHeaders={
+                                                        executionLog.request
+                                                          .headers
+                                                      }
+                                                      actualRequestBody={
+                                                        executionLog.request
+                                                          .body
+                                                      }
+                                                      actualRequestMethod={
+                                                        executionLog.request
+                                                          .method
+                                                      }
+                                                      executionStatus={
+                                                        executionLog.status
+                                                      }
+                                                      errorMessage={
+                                                        executionLog.error
+                                                      }
+                                                      executionLog={
+                                                        executionLog
+                                                      }
+                                                      onApplyToAllRequests={
+                                                        handleApplyToAllRequests
+                                                      }
+                                                      allAssertions={
+                                                        assertionsByRequest[
+                                                          executionLog.requestId
+                                                        ] || []
+                                                      }
+                                                      onAssertionsUpdate={(
                                                         assertions
-                                                      );
-                                                    }}
-                                                    variables={
-                                                      usedChainVariables.staticVars
-                                                    }
-                                                    dynamicVariables={
-                                                      usedChainVariables.dynamicVars
-                                                    }
-                                                    requestExtractedVariables={(() => {
-                                                      const varsUpToThisPoint: Record<
-                                                        string,
-                                                        any
-                                                      > = {};
-                                                      for (
-                                                        let i = 0;
-                                                        i <= requestIndex;
-                                                        i++
-                                                      ) {
-                                                        const reqId =
-                                                          formData
-                                                            .chainRequests?.[i]
-                                                            ?.id;
-                                                        if (
-                                                          reqId &&
-                                                          extractedVariablesByRequest[
-                                                            reqId
-                                                          ]
+                                                      ) => {
+                                                        setAssertionsByRequest(
+                                                          (prev) => ({
+                                                            ...prev,
+                                                            [executionLog.requestId]:
+                                                              assertions,
+                                                          })
+                                                        );
+                                                        persistAssertionsToStorage(
+                                                          executionLog.requestId,
+                                                          assertions
+                                                        );
+                                                      }}
+                                                      variables={
+                                                        usedChainVariables.staticVars
+                                                      }
+                                                      dynamicVariables={
+                                                        usedChainVariables.dynamicVars
+                                                      }
+                                                      requestExtractedVariables={(() => {
+                                                        const varsUpToThisPoint: Record<
+                                                          string,
+                                                          any
+                                                        > = {};
+                                                        for (
+                                                          let i = 0;
+                                                          i <= requestIndex;
+                                                          i++
                                                         ) {
-                                                          Object.assign(
-                                                            varsUpToThisPoint,
+                                                          const reqId =
+                                                            formData
+                                                              .chainRequests?.[
+                                                              i
+                                                            ]?.id;
+                                                          if (
+                                                            reqId &&
                                                             extractedVariablesByRequest[
                                                               reqId
                                                             ]
-                                                          );
+                                                          ) {
+                                                            Object.assign(
+                                                              varsUpToThisPoint,
+                                                              extractedVariablesByRequest[
+                                                                reqId
+                                                              ]
+                                                            );
+                                                          }
                                                         }
-                                                      }
-                                                      return varsUpToThisPoint;
-                                                    })()}
-                                                  />
-                                                </div>
-                                              )}
-                                            </div>
-                                          )}
-                                        </div>
-                                      )}
-                                    </CardContent>
-                                  </Card>
-                                );
-                              }
-                            )}
-                          </div>
+                                                        return varsUpToThisPoint;
+                                                      })()}
+                                                    />
+                                                  </div>
+                                                )}
+                                              </div>
+                                            )}
+                                          </div>
+                                        )}
+                                      </SortableRequestItem>
+                                    );
+                                  }
+                                )}
+                              </div>
+                            </SortableContext>
+                          </DndContext>
 
                           <div className='flex justify-end mt-6'>
                             <div className='flex items-center gap-3'>

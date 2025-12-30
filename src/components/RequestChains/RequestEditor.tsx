@@ -167,7 +167,6 @@ export function RequestEditor({
 }: RequestEditorProps) {
   const isSyncingRef = useRef(false);
   const isInitialMount = useRef(true);
-  const [isJsonOpen, setIsJsonOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
 
   const [activeTab, setActiveTab] = useState<

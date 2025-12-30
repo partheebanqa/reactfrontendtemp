@@ -85,12 +85,12 @@ export function ResponseExplorer({
   dynamicVariables,
   requestExtractedVariables = {},
 }: ResponseExplorerProps) {
-  console.log('variables123:', variables);
-  console.log('dynamicVariables:', dynamicVariables);
-
   const [activeTab, setActiveTab] = useState<
     'body' | 'headers' | 'cookies' | 'actualRequest' | 'assertions'
   >('body');
+
+  console.log('extractedVariables123:', extractedVariables);
+  console.log('requestExtractedVariables123:', requestExtractedVariables);
 
   const [assertionModalOpen, setAssertionModalOpen] = useState(false);
   const [selectedAssertion, setSelectedAssertion] = useState<{
