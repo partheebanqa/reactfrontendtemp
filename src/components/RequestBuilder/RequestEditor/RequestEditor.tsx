@@ -381,8 +381,10 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
 
   const [selectedCollectionId, setSelectedCollectionId] = useState<string>('');
   const [isSaving, setIsSaving] = useState(false);
-
   const [loadedRequestId, setLoadedRequestId] = useState<string | undefined>();
+  const [extractedVariables, setExtractedVariables] = useState<
+    Array<{ name: string; value: string }>
+  >([]);
 
   const collectionsRef = useRef(collections);
   useEffect(() => {
@@ -1185,6 +1187,8 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
             normalizedResponse
           );
         }
+        const extracted = extractVariablesFromResponse(normalizedResponse);
+        setExtractedVariables(extracted);
 
         const formattedResponse = formatBackendResponse(normalizedResponse);
         const generatedAssertions = generateAssertions(formattedResponse);
@@ -2099,6 +2103,26 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
     }
   };
 
+  const extractVariablesFromResponse = (response: any) => {
+    if (!response || !response.body) return [];
+
+    const extracted: Array<{ name: string; value: string }> = [];
+
+    if (typeof response.body === 'object' && response.body !== null) {
+      Object.keys(response.body).forEach((key) => {
+        const value = response.body[key];
+        if (typeof value === 'string' || typeof value === 'number') {
+          extracted.push({
+            name: `E_${key}`,
+            value: String(value),
+          });
+        }
+      });
+    }
+
+    return extracted;
+  };
+
   if (!activeRequest) {
     return (
       <div className='flex-1 flex items-center justify-center bg-gray-50 dark:bg-gray-900 p-4'>
@@ -2562,6 +2586,8 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
               onRemoveVariable={handleRemoveVariable}
               onVariableSelect={handleVariableSelect}
               onSaveAssertions={handleUpdateRequest}
+              staticVariables={usedVariables.staticVars}
+              dynamicVariables={usedVariables.dynamicVars}
             />
           )}
 
@@ -2580,6 +2606,8 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
               onRemoveVariable={handleRemoveVariable}
               onVariableSelect={handleVariableSelect}
               onSaveAssertions={handleUpdateRequest}
+              staticVariables={usedVariables.staticVars}
+              dynamicVariables={usedVariables.dynamicVars}
             />
           )}
 

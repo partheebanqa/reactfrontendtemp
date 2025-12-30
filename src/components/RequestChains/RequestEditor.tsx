@@ -2156,6 +2156,8 @@ export function RequestEditor({
     };
   }, [initialRequest, storeVariables, dynamicStructured, extractedVariables]);
 
+  console.log('usedRequestVariables111:', usedRequestVariables);
+
   const compactView = (
     <div className='space-y-4'>
       <VariableAutocomplete />
@@ -2632,6 +2634,8 @@ export function RequestEditor({
               responseData={executionResult?.response}
               showAssertions={true}
               selectedVariables={selectedVariable}
+              staticVariables={usedRequestVariables.staticVars}
+              dynamicVariables={usedRequestVariables.dynamicVars}
             />
           </div>
         )}
@@ -2644,6 +2648,8 @@ export function RequestEditor({
               setAssertions={setAssertions}
               responseData={executionResult?.response}
               showAssertions={true}
+              staticVariables={usedRequestVariables.staticVars}
+              dynamicVariables={usedRequestVariables.dynamicVars}
             />
           </div>
         )}
@@ -3276,6 +3282,8 @@ export function RequestEditor({
             responseData={executionResult?.response}
             showAssertions={true}
             selectedVariables={selectedVariable}
+            staticVariables={usedRequestVariables.staticVars}
+            dynamicVariables={usedRequestVariables.dynamicVars}
           />
         </TabsContent>
 
@@ -3286,6 +3294,8 @@ export function RequestEditor({
             setAssertions={setAssertions}
             responseData={executionResult?.response}
             showAssertions={true}
+            staticVariables={usedRequestVariables.staticVars}
+            dynamicVariables={usedRequestVariables.dynamicVars}
           />
         </TabsContent>
 
