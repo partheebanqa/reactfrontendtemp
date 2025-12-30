@@ -1118,36 +1118,63 @@ export const buildUrlWithParams = (
   }
 };
 
-export const getUsedVariablesInRequest = (
-  request: Partial<APIRequest>,
-  allVariables: Variable[]
-): Variable[] => {
-  const allTextFields = [
-    request.url || '',
-    request.body || '',
-    request.authToken || '',
-    request.authUsername || '',
-    request.authPassword || '',
-    request.authApiKey || '',
-    request.authApiValue || '',
-    request.authorization?.token || '',
-    request.authorization?.username || '',
-    request.authorization?.password || '',
-    request.authorization?.key || '',
-    request.authorization?.value || '',
-    ...(request.headers || []).map((h) => `${h.key} ${h.value}`),
-    ...(request.params || []).map((p) => `${p.key} ${p.value}`),
-  ];
+export const getUsedVariablesForChain = (
+  chainRequests: APIRequest[],
+  storeVariables: Variable[],
+  dynamicStructured: Variable[],
+  extractedVariablesByRequest: Record<string, Record<string, any>>
+): {
+  staticVars: Array<{ name: string; value: string }>;
+  dynamicVars: Array<{ name: string; value: string }>;
+} => {
+  const usedVariableNamesSet = new Set<string>();
 
-  const allText = allTextFields.join(' ');
-  const variableMatches = allText.match(/\{\{(\w+)\}\}/g) || [];
-  const usedVariableNames = [
-    ...new Set(
-      variableMatches.map((match) => match.replace(/\{\{(\w+)\}\}/, '$1'))
-    ),
-  ];
+  chainRequests.forEach((request) => {
+    const allTextFields = [
+      request.url || '',
+      request.body || '',
+      request.authToken || '',
+      request.authUsername || '',
+      request.authPassword || '',
+      request.authApiKey || '',
+      request.authApiValue || '',
+      request.authorization?.token || '',
+      ...(request.headers || []).map((h) => `${h.key} ${h.value}`),
+      ...(request.params || []).map((p) => `${p.key} ${p.value}`),
+    ];
 
-  return allVariables.filter((variable) =>
-    usedVariableNames.includes(variable.name)
-  );
+    const allText = allTextFields.join(' ');
+    const variableMatches = allText.match(/\{\{(\w+)\}\}/g) || [];
+    variableMatches.forEach((match) => {
+      usedVariableNamesSet.add(match.replace(/\{\{(\w+)\}\}/, '$1'));
+    });
+
+    if (extractedVariablesByRequest[request.id]) {
+      Object.keys(extractedVariablesByRequest[request.id]).forEach(
+        (varName) => {
+          usedVariableNamesSet.add(varName);
+        }
+      );
+    }
+  });
+
+  const usedVariableNames = Array.from(usedVariableNamesSet);
+
+  const staticVars = storeVariables
+    .filter(
+      (v) => usedVariableNames.includes(v.name) && !v.name.startsWith('D_')
+    )
+    .map((v) => ({
+      name: v.name,
+      value: String(v.value || v.initialValue || ''),
+    }));
+
+  const dynamicVars = dynamicStructured
+    .filter((v) => usedVariableNames.includes(v.name))
+    .map((v) => ({
+      name: v.name,
+      value: String(v.value || v.initialValue || ''),
+    }));
+
+  return { staticVars, dynamicVars };
 };

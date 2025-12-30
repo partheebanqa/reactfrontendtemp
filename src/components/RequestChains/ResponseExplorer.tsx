@@ -89,6 +89,9 @@ export function ResponseExplorer({
     'body' | 'headers' | 'cookies' | 'actualRequest' | 'assertions'
   >('body');
 
+  console.log('extractedVariables123:', extractedVariables);
+  console.log('requestExtractedVariables123:', requestExtractedVariables);
+
   const [assertionModalOpen, setAssertionModalOpen] = useState(false);
   const [selectedAssertion, setSelectedAssertion] = useState<{
     path: string;
@@ -448,11 +451,9 @@ export function ResponseExplorer({
         value: extractionModal.value,
         transform,
       };
-      onExtractVariable?.(
-        finalVariableName,
-        extractionModal.value,
-        extractionModal.path
-      );
+      console.log('inputVariableName:', extractionModal);
+
+      onExtractVariable(extraction);
       setExtractionModal(null);
       setVariableName('');
     }
@@ -1331,7 +1332,6 @@ export function ResponseExplorer({
         </div>
       )}
 
-      {/* Update AssertionModal to pass operators based on field type */}
       {selectedAssertion && (
         <AssertionModal
           isOpen={assertionModalOpen}

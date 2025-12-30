@@ -589,6 +589,7 @@ function AssertionModal({
     const config: any = {
       isGeneral: true,
       value: generalValue,
+      category: getCategoryForAssertionType(generalType),
     };
 
     const assertion = generalAssertions.find((a) => a.id === generalType);

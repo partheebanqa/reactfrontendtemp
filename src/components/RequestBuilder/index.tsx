@@ -35,6 +35,14 @@ import { SanitizeTestRunner } from '@/components/RequestBuilder/sanitizeTest/san
 import { useCollectionStore } from '@/store/collectionStore';
 
 const RequestBuilder = () => {
+  const [usedVariables, setUsedVariables] = useState<{
+    staticVars: Array<{ name: string; value: string }>;
+    dynamicVars: Array<{ name: string; value: string }>;
+  }>({
+    staticVars: [],
+    dynamicVars: [],
+  });
+
   const { sanitizeTestRunner, collections } = useCollectionStore();
   const { currentWorkspace } = useWorkspace();
   const {
@@ -209,7 +217,7 @@ const RequestBuilder = () => {
                     width: !isBottomLayout ? `${resizePosition}%` : undefined,
                   }}
                 >
-                  <RequestEditor />
+                  <RequestEditor onUsedVariablesChange={setUsedVariables} />
                 </div>
 
                 {/* Resizer Handle */}
@@ -256,7 +264,11 @@ const RequestBuilder = () => {
                       : undefined,
                   }}
                 >
-                  <ResponseViewer isBottomLayout={isBottomLayout} />
+                  <ResponseViewer
+                    isBottomLayout={isBottomLayout}
+                    usedStaticVariables={usedVariables.staticVars}
+                    usedDynamicVariables={usedVariables.dynamicVars}
+                  />
                 </div>
               </>
             )}

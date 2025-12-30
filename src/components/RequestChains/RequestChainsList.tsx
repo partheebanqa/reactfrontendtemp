@@ -17,6 +17,7 @@ import {
   EllipsisVertical,
   RefreshCw,
   ChartNoAxesCombined,
+  CopyPlus,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -717,7 +718,7 @@ export function RequestChainsList({
                                 <DropdownMenuItem
                                   onClick={() => onCloneChain(chain.id)}
                                 >
-                                  <Copy className='w-4 h-4 mr-2' /> Clone
+                                  <CopyPlus className='w-4 h-4 mr-2' /> Clone
                                 </DropdownMenuItem>
                                 <AlertDialog>
                                   <AlertDialogTrigger asChild>

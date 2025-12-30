@@ -59,6 +59,13 @@ type Assertion = {
   priority: string;
 };
 
+interface RequestEditorProps {
+  onUsedVariablesChange?: (variables: {
+    staticVars: Array<{ name: string; value: string }>;
+    dynamicVars: Array<{ name: string; value: string }>;
+  }) => void;
+}
+
 interface FormattedResponse {
   status: number;
   statusText: string;
@@ -122,7 +129,9 @@ const getContentTypeForBodyType = (
   return 'application/json';
 };
 
-const RequestEditor: React.FC = () => {
+const RequestEditor: React.FC<RequestEditorProps> = ({
+  onUsedVariablesChange,
+}) => {
   const {
     isLoading,
     clearError,
@@ -299,6 +308,68 @@ const RequestEditor: React.FC = () => {
     return formatted;
   }, [variables, dynamicVariables, dynamicVarTrigger]);
 
+  const extractVariableNames = (text: any) => {
+    if (!text) return [];
+    const regex = /\{\{([^}]+)\}\}/g;
+    const matches = [];
+    let match;
+    while ((match = regex.exec(text)) !== null) {
+      matches.push(match[1]);
+    }
+    return [...new Set(matches)];
+  };
+
+  const getUsedVariables = () => {
+    const usedVarNames = new Set();
+
+    extractVariableNames(url).forEach((name) => usedVarNames.add(name));
+
+    params.forEach((param) => {
+      if (param.enabled) {
+        extractVariableNames(param.key).forEach((name) =>
+          usedVarNames.add(name)
+        );
+        extractVariableNames(param.value).forEach((name) =>
+          usedVarNames.add(name)
+        );
+      }
+    });
+
+    headers.forEach((header) => {
+      if (header.enabled) {
+        extractVariableNames(header.key).forEach((name) =>
+          usedVarNames.add(name)
+        );
+        extractVariableNames(header.value).forEach((name) =>
+          usedVarNames.add(name)
+        );
+      }
+    });
+
+    extractVariableNames(bodyContent).forEach((name) => usedVarNames.add(name));
+
+    return {
+      staticVars: formattedVariables.filter(
+        (v) => v.name.startsWith('S_') && usedVarNames.has(v.name)
+      ),
+      dynamicVars: formattedVariables.filter(
+        (v) => v.name.startsWith('D_') && usedVarNames.has(v.name)
+      ),
+    };
+  };
+
+  const usedVariables = getUsedVariables();
+
+  useEffect(() => {
+    if (onUsedVariablesChange) {
+      onUsedVariablesChange(usedVariables);
+    }
+  }, [
+    usedVariables.staticVars,
+    usedVariables.dynamicVars,
+    onUsedVariablesChange,
+  ]);
+
   const [selectedFolderId, setSelectedFolderId] = useState<string>('');
   const [folderOptions, setFolderOptions] = useState<
     Array<{ id: string; label: string }>
@@ -306,8 +377,10 @@ const RequestEditor: React.FC = () => {
 
   const [selectedCollectionId, setSelectedCollectionId] = useState<string>('');
   const [isSaving, setIsSaving] = useState(false);
-
   const [loadedRequestId, setLoadedRequestId] = useState<string | undefined>();
+  const [extractedVariables, setExtractedVariables] = useState<
+    Array<{ name: string; value: string }>
+  >([]);
 
   const collectionsRef = useRef(collections);
   useEffect(() => {
@@ -1110,6 +1183,8 @@ const RequestEditor: React.FC = () => {
             normalizedResponse
           );
         }
+        const extracted = extractVariablesFromResponse(normalizedResponse);
+        setExtractedVariables(extracted);
 
         const formattedResponse = formatBackendResponse(normalizedResponse);
         const generatedAssertions = generateAssertions(formattedResponse);
@@ -2024,6 +2099,26 @@ const RequestEditor: React.FC = () => {
     }
   };
 
+  const extractVariablesFromResponse = (response: any) => {
+    if (!response || !response.body) return [];
+
+    const extracted: Array<{ name: string; value: string }> = [];
+
+    if (typeof response.body === 'object' && response.body !== null) {
+      Object.keys(response.body).forEach((key) => {
+        const value = response.body[key];
+        if (typeof value === 'string' || typeof value === 'number') {
+          extracted.push({
+            name: `E_${key}`,
+            value: String(value),
+          });
+        }
+      });
+    }
+
+    return extracted;
+  };
+
   if (!activeRequest) {
     return (
       <div className='flex-1 flex items-center justify-center bg-gray-50 dark:bg-gray-900 p-4'>
@@ -2487,6 +2582,8 @@ const RequestEditor: React.FC = () => {
               onRemoveVariable={handleRemoveVariable}
               onVariableSelect={handleVariableSelect}
               onSaveAssertions={handleUpdateRequest}
+              staticVariables={usedVariables.staticVars}
+              dynamicVariables={usedVariables.dynamicVars}
             />
           )}
 
@@ -2505,6 +2602,8 @@ const RequestEditor: React.FC = () => {
               onRemoveVariable={handleRemoveVariable}
               onVariableSelect={handleVariableSelect}
               onSaveAssertions={handleUpdateRequest}
+              staticVariables={usedVariables.staticVars}
+              dynamicVariables={usedVariables.dynamicVars}
             />
           )}
 

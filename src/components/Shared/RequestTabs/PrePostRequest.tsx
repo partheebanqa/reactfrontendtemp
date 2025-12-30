@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Trash2, Plus } from 'lucide-react';
+import { Trash2, Plus, Copy, Shuffle } from 'lucide-react';
 import AssertionManager from '@/components/RequestBuilder/RequestEditor/assertionManager';
 import {
   AlertDialog,
@@ -33,6 +33,9 @@ interface PrePostRequestProps {
   onRemoveVariable?: (path: string) => void;
   onVariableSelect?: (variables: SelectedVariable[]) => void;
   onSaveAssertions?: () => Promise<void>;
+  staticVariables?: { name: string; value: string }[];
+  dynamicVariables?: { name: string; value: string }[];
+  extractedVariables?: { name: string; value: string }[];
 }
 
 export function PrePostRequest({
@@ -47,8 +50,10 @@ export function PrePostRequest({
   showAssertions = true,
   selectedVariables = [],
   onRemoveVariable,
-  onVariableSelect,
   onSaveAssertions,
+  staticVariables = [],
+  dynamicVariables = [],
+  extractedVariables = [],
 }: PrePostRequestProps) {
   const [postResponseScript, setPostResponseScript] = useState('');
   const [activeSubTab, setActiveSubTab] = useState<'assertions' | 'extracted'>(
@@ -56,8 +61,7 @@ export function PrePostRequest({
   );
   const [deleteTargetPath, setDeleteTargetPath] = useState<string | null>(null);
 
-  const [showManualAssertionModal, setShowManualAssertionModal] =
-    useState(false);
+  console.log('extractedVariables:', extractedVariables);
 
   const handleDeleteVariable = (path: string) => {
     if (onRemoveVariable) {
@@ -66,25 +70,21 @@ export function PrePostRequest({
     setDeleteTargetPath(null);
   };
 
-  const handleAddManualAssertion = (newAssertion: any) => {
-    if (setAssertions) {
-      setAssertions([...assertions, newAssertion]);
-    }
-    setShowManualAssertionModal(false);
-  };
-
   return (
     <div className='w-full h-full'>
       {type === 'pre-request' && (
-        <div className='px-2'>
+        <div className='px-2 space-y-6'>
           {selectedVariables.length > 0 && (
-            <div className='mb-6'>
+            <div>
+              <h4 className='text-sm font-semibold text-gray-900 dark:text-gray-200 mb-3'>
+                Substituted Variables
+              </h4>
               <div className='rounded-xl border border-gray-300 dark:border-gray-700 shadow-sm overflow-hidden bg-white dark:bg-gray-900'>
                 <table className='w-full text-sm'>
                   <tbody>
                     <tr className='border-b border-gray-200 dark:border-gray-700'>
                       <td className='px-4 py-3 font-semibold text-gray-900 dark:text-gray-200 w-48 bg-gray-50 dark:bg-gray-800'>
-                        Substituted variable
+                        Variable Path
                       </td>
                       <td className='px-4 py-3 text-gray-800 dark:text-gray-300'>
                         <div className='flex flex-wrap gap-2'>
@@ -100,8 +100,6 @@ export function PrePostRequest({
                               <span>
                                 {v.path}: {v.name}
                               </span>
-
-                              {/* Trash icon */}
                               <button
                                 onClick={() => setDeleteTargetPath(v.path)}
                                 className='transition-colors p-0.5 rounded group-hover:text-red-500 text-white'
@@ -114,27 +112,79 @@ export function PrePostRequest({
                         </div>
                       </td>
                     </tr>
-
-                    <tr>
-                      <td className='px-4 py-3 font-semibold text-gray-900 dark:text-gray-200 w-48 bg-gray-50 dark:bg-gray-800'>
-                        Extracted variable
-                      </td>
-                      <td className='px-4 py-3 text-gray-800 dark:text-gray-300'>
-                        -
-                      </td>
-                    </tr>
                   </tbody>
                 </table>
               </div>
             </div>
           )}
 
-          {selectedVariables.length === 0 && (
-            <div className='text-sm text-gray-500 dark:text-gray-400 italic'>
-              No variables substituted yet. Substitute variables in the Body tab
-              to see them here.
+          {(staticVariables.length > 0 || dynamicVariables.length > 0) && (
+            <div>
+              <h4 className='text-sm font-semibold text-gray-900 dark:text-gray-200 mb-3'>
+                Variables Used in Request
+              </h4>
+              <div className='rounded-xl border border-gray-300 dark:border-gray-700 shadow-sm overflow-hidden bg-white dark:bg-gray-900'>
+                <table className='w-full text-sm'>
+                  <tbody>
+                    {dynamicVariables.length > 0 && (
+                      <tr className='border-b border-gray-200 dark:border-gray-700'>
+                        <td className='px-4 py-3 font-semibold text-gray-900 dark:text-gray-200 w-48 bg-gray-50 dark:bg-gray-800 align-top'>
+                          Dynamic Variables
+                        </td>
+                        <td className='px-4 py-3 text-gray-800 dark:text-gray-300'>
+                          <div className='flex flex-wrap gap-2'>
+                            {dynamicVariables.map((variable, i) => (
+                              <div
+                                key={i}
+                                className='inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 rounded-lg border border-purple-300 dark:border-purple-700 group hover:bg-purple-200 dark:hover:bg-purple-800/40 transition-colors'
+                              >
+                                <code className='text-xs font-mono font-medium'>
+                                  {`{{${variable.name}}}`}
+                                </code>
+                              </div>
+                            ))}
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+
+                    {staticVariables.length > 0 && (
+                      <tr>
+                        <td className='px-4 py-3 font-semibold text-gray-900 dark:text-gray-200 w-48 bg-gray-50 dark:bg-gray-800 align-top'>
+                          Static Variables
+                        </td>
+                        <td className='px-4 py-3 text-gray-800 dark:text-gray-300'>
+                          <div className='flex flex-wrap gap-2'>
+                            {staticVariables.map((variable, i) => (
+                              <div
+                                key={i}
+                                className='inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded-lg border border-blue-300 dark:border-blue-700 group hover:bg-blue-200 dark:hover:bg-blue-800/40 transition-colors'
+                              >
+                                <code className='text-xs font-mono font-medium'>
+                                  {`{{${variable.name}}}`}
+                                </code>
+                              </div>
+                            ))}
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
+
+          {selectedVariables.length === 0 &&
+            staticVariables.length === 0 &&
+            dynamicVariables.length === 0 && (
+              <div className='text-center py-8'>
+                <div className='text-sm text-gray-500 dark:text-gray-400 italic'>
+                  No variables used in this request yet. Add variables to your
+                  request URL, headers, body, or parameters to see them here.
+                </div>
+              </div>
+            )}
         </div>
       )}
 
@@ -161,6 +211,11 @@ export function PrePostRequest({
               }`}
             >
               Extracted Variables
+              {extractedVariables.length > 0 && (
+                <span className='ml-1 bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded-full px-2 py-0.5 text-xs'>
+                  {extractedVariables.length}
+                </span>
+              )}
             </button>
           </div>
 
@@ -168,19 +223,6 @@ export function PrePostRequest({
             <>
               {showAssertions && (
                 <div>
-                  {/* <div className='flex items-center justify-between mb-4 px-4'>
-                    <h4 className='text-base font-medium text-gray-900 dark:text-white'>
-                      Test Assertions
-                    </h4>
-                    <button
-                      onClick={() => setShowManualAssertionModal(true)}
-                      className='px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-md flex items-center gap-2 transition-colors'
-                    >
-                      <Plus className='w-4 h-4' />
-                      Add Manual Assertion
-                    </button>
-                  </div> */}
-
                   <AssertionManager
                     assertions={assertions}
                     setAssertions={setAssertions}
@@ -217,21 +259,71 @@ export function PrePostRequest({
           )}
 
           {activeSubTab === 'extracted' && (
-            <div className='mb-6 py-3'>
+            <div className='mb-6 py-3 px-4'>
               <div className='rounded-xl border border-gray-300 dark:border-gray-700 shadow-sm overflow-hidden bg-white dark:bg-gray-900'>
                 <table className='w-full text-sm'>
                   <tbody>
-                    <tr>
-                      <td className='px-4 py-3 font-semibold text-gray-900 dark:text-gray-200 w-48 bg-gray-50 dark:bg-gray-800'>
-                        Extracted variable
-                      </td>
-                      <td className='px-4 py-3 text-gray-800 dark:text-gray-300'>
-                        <div className='flex flex-wrap gap-2'>-</div>
-                      </td>
-                    </tr>
+                    {extractedVariables.length > 0 ? (
+                      <tr>
+                        <td className='px-4 py-3 font-semibold text-gray-900 dark:text-gray-200 w-48 bg-gray-50 dark:bg-gray-800 align-top'>
+                          Extracted Variables
+                        </td>
+                        <td className='px-4 py-3 text-gray-800 dark:text-gray-300'>
+                          <div className='flex flex-wrap gap-2'>
+                            {extractedVariables.map((variable, i) => (
+                              <div
+                                key={i}
+                                className='inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 rounded-lg border border-green-300 dark:border-green-700 group hover:bg-green-200 dark:hover:bg-green-800/40 transition-colors'
+                                title={`Value: ${variable.value}`}
+                              >
+                                <code className='text-xs font-mono font-medium'>
+                                  {`{{${variable.name}}}`}
+                                </code>
+                                <span className='text-xs text-green-600 dark:text-green-400 font-medium'>
+                                  ={' '}
+                                  {variable.value.length > 30
+                                    ? `${variable.value.substring(0, 30)}...`
+                                    : variable.value}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </td>
+                      </tr>
+                    ) : (
+                      <tr>
+                        <td className='px-4 py-3 font-semibold text-gray-900 dark:text-gray-200 w-48 bg-gray-50 dark:bg-gray-800'>
+                          Extracted Variables
+                        </td>
+                        <td className='px-4 py-3 text-gray-800 dark:text-gray-300'>
+                          <div className='flex flex-wrap gap-2'>
+                            <span className='text-sm text-gray-500 dark:text-gray-400 italic'>
+                              No variables extracted yet. Variables will appear
+                              here after running the request with extraction
+                              rules.
+                            </span>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
+
+              {extractedVariables.length > 0 && (
+                <div className='mt-4 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800'>
+                  <h5 className='text-sm font-medium text-green-800 dark:text-green-200 mb-2'>
+                    Using Extracted Variables
+                  </h5>
+                  <p className='text-xs text-green-700 dark:text-green-300'>
+                    These variables have been extracted from the response and
+                    can be used in subsequent requests. Reference them using the
+                    syntax{' '}
+                    <code className='px-1 py-0.5 bg-green-100 dark:bg-green-900/50 rounded'>{`{{variable_name}}`}</code>{' '}
+                    in your request URL, headers, body, or parameters.
+                  </p>
+                </div>
+              )}
             </div>
           )}
         </div>

@@ -18,8 +18,6 @@ import {
 } from 'lucide-react';
 import { useRequest } from '@/hooks/useRequest';
 import AssertionModal from './AssertionModal';
-import { useDataManagement } from '@/hooks/useDataManagement';
-import { generateDynamicValueById } from '@/lib/request-utils';
 import { getCategoryForAssertionType } from '@/lib/assertion-utils';
 
 interface JsonNode {
@@ -50,10 +48,18 @@ export interface Assertion {
   expectedSize?: string;
   scope?: 'full' | 'field';
 }
+interface ResponseViewerProps {
+  isBottomLayout: boolean;
+  usedStaticVariables?: Array<{ name: string; value: string }>;
+  usedDynamicVariables?: Array<{ name: string; value: string }>;
+}
 
-const ResponseViewer = () => {
+const ResponseViewer = ({
+  isBottomLayout,
+  usedStaticVariables = [],
+  usedDynamicVariables = [],
+}: ResponseViewerProps) => {
   const { responseData, assertions, setAssertions } = useRequest();
-  const { variables, dynamicVariables } = useDataManagement();
 
   const [activeTab, setActiveTab] = useState<
     | 'body'
@@ -73,40 +79,6 @@ const ResponseViewer = () => {
   const [showAssertionModal, setShowAssertionModal] = useState(false);
   const [activeFieldPath, setActiveFieldPath] = useState<string>('');
   const [activeFieldValue, setActiveFieldValue] = useState<any>(null);
-
-  const formattedVariables = useMemo(() => {
-    const formatted: Array<{ name: string; value: string }> = [];
-
-    const isValidVar = (name: string) =>
-      name.startsWith('S_') || name.startsWith('D_');
-
-    if (Array.isArray(variables)) {
-      variables.forEach((variable: any) => {
-        const name = variable.name || variable.key || '';
-        const value =
-          variable.value ||
-          variable.initialValue ||
-          variable.currentValue ||
-          '';
-        if (name && isValidVar(name)) {
-          formatted.push({ name, value: String(value) });
-        }
-      });
-    }
-    if (Array.isArray(dynamicVariables)) {
-      dynamicVariables.forEach((variable: any) => {
-        const name = variable.name || '';
-        if (name && isValidVar(name)) {
-          const generatedValue = generateDynamicValueById(
-            variable.generatorId || '',
-            variable.parameters || {}
-          );
-          formatted.push({ name, value: String(generatedValue) });
-        }
-      });
-    }
-    return formatted;
-  }, [variables, dynamicVariables]);
 
   useEffect(() => {
     if (responseData?.body) {
@@ -1096,10 +1068,8 @@ const ResponseViewer = () => {
         onSelect={handleAssertionSelect}
         onClose={handleModalClose}
         allAssertions={assertions}
-        variables={formattedVariables.filter((v) => v.name.startsWith('S_'))}
-        dynamicVariables={formattedVariables.filter((v) =>
-          v.name.startsWith('D_')
-        )}
+        variables={usedStaticVariables}
+        dynamicVariables={usedDynamicVariables}
         setAssertions={setAssertions}
       />
     </div>
