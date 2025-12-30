@@ -15,6 +15,7 @@ import {
   ChevronDown,
   ChevronUp,
   Copy,
+  CopyPlus,
   Edit,
   GripVertical,
   Loader2,
@@ -240,7 +241,7 @@ export const SortableRequestItem: React.FC<SortableRequestItemProps> = ({
                       className='p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700'
                       aria-label='Clone'
                     >
-                      <Copy className='w-4 h-4' />
+                      <CopyPlus className='w-4 h-4' />
                     </button>
                   </TooltipTrigger>
                   <TooltipContent>Duplicate request</TooltipContent>

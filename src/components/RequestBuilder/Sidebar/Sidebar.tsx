@@ -20,6 +20,7 @@ import {
   Search,
   Zap,
   Import,
+  CopyPlus,
 } from 'lucide-react';
 import { useCollection } from '@/hooks/useCollection';
 import { useWorkspace } from '@/hooks/useWorkspace';
@@ -1299,7 +1300,7 @@ const Sidebar: React.FC = () => {
                       }}
                       className='flex items-center w-full px-4 py-1 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
                     >
-                      <Copy className='h-4 w-4 mr-2' />
+                      <CopyPlus className='h-4 w-4 mr-2' />
                       Duplicate
                     </button>
                     {/* <button

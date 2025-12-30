@@ -20,6 +20,7 @@ import {
   Pencil,
   Layers,
   Link2,
+  CopyPlus,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -641,7 +642,7 @@ export default function ScheduleList({
                                     cloneMutation.mutate(schedule.scheduleId)
                                   }
                                 >
-                                  <Copy size={16} />
+                                  <CopyPlus size={16} />
                                 </Button>
                               </TooltipTrigger>
                               <TooltipContent>
