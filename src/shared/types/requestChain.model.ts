@@ -20,6 +20,7 @@ export interface RequestChain {
 }
 
 export interface APIRequest {
+  isSelected?: boolean;
   assertions: boolean;
   id: string;
   name: string;
