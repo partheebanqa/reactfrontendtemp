@@ -74,6 +74,9 @@ function AssertionModal({
     new Set()
   );
 
+  const truncate = (text: string, max = 50) =>
+    text.length > max ? text.slice(0, max) + '…' : text;
+
   const displayFieldPath = initialField || fieldPath || '';
   const displayFieldValue =
     initialValue !== undefined ? initialValue : fieldValue;
@@ -485,21 +488,21 @@ function AssertionModal({
       equals: 'field_equals',
       field_not_equals: 'field_equals',
       contains: 'field_contains',
-      field_not_contains: 'field_contains',
+      field_not_contains: 'field_not_contains',
       field_starts_with: 'field_contains',
       field_ends_with: 'field_contains',
-      field_greater_than: 'field_range',
-      field_less_than: 'field_range',
-      field_greater_equal: 'field_range',
-      field_less_equal: 'field_range',
+      field_greater_than: 'field_greater_than',
+      field_less_than: 'field_less_than',
+      field_greater_equal: 'field_greater_equal',
+      field_less_equal: 'field_less_equal',
       between: 'field_range',
-      field_is_true: 'field_equals',
-      field_is_false: 'field_equals',
+      field_is_true: 'field_is_true',
+      field_is_false: 'field_is_false',
       field_null: 'field_null',
-      field_not_null: 'field_null',
+      field_not_null: 'field_not_null',
       array_length: 'array_length',
       exists: 'field_present',
-      field_not_present: 'field_present',
+      field_not_present: 'field_not_present',
       field_has_property: 'field_present',
     };
 
@@ -858,7 +861,7 @@ function AssertionModal({
                             key={variable.name}
                             value={`{{${variable.name}}}`}
                           >
-                            {variable.name} = {variable.value}
+                            {variable.name} = {truncate(variable.value, 60)}
                           </option>
                         ))}
                       </select>
@@ -875,7 +878,7 @@ function AssertionModal({
                             key={variable.name}
                             value={`{{${variable.name}}}`}
                           >
-                            {variable.name} = {variable.value}
+                            {variable.name} = {truncate(variable.value, 60)}
                           </option>
                         ))}
                       </select>
@@ -893,7 +896,7 @@ function AssertionModal({
                               key={variable.name}
                               value={`{{${variable.name}}}`}
                             >
-                              {variable.name} = {variable.value}
+                              {variable.name} = {truncate(variable.value, 60)}
                             </option>
                           ))
                         ) : (

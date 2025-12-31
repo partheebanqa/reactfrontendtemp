@@ -251,6 +251,7 @@ export function RequestChainEditor({
         body: req.body || req.bodyRawContent || '',
         bodyType: req.bodyType || (req.bodyRawContent ? 'raw' : 'none'),
         assertions: req.assertions || [],
+        isSelected: true,
       })
     ),
     variables: chain?.variables || [],
@@ -1356,6 +1357,21 @@ export function RequestChainEditor({
       return;
     }
 
+    // ADD: Filter only selected requests
+    const selectedRequests = formData.chainRequests.filter(
+      (r) => r.isSelected !== false
+    );
+
+    // ADD: Check if any requests are selected
+    if (selectedRequests.length === 0) {
+      toast({
+        title: 'No Requests Selected',
+        description: 'Select at least one request to run',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setActiveTab('requests');
 
     setTimeout(() => {
@@ -1391,14 +1407,20 @@ export function RequestChainEditor({
     const variablesByRequest: Record<string, Record<string, any>> = {};
 
     try {
+      // UPDATE: Show selected count in toast
       toast({
         title: 'Starting Execution',
-        description: `Running ${formData.chainRequests.length} requests sequentially...`,
+        description: `Running ${selectedRequests.length} selected requests sequentially...`,
       });
 
-      for (let i = 0; i < formData.chainRequests.length; i++) {
-        const request = formData.chainRequests[i];
-        setCurrentRequestIndex(i);
+      // CHANGE: Loop through selectedRequests instead of all requests
+      for (let i = 0; i < selectedRequests.length; i++) {
+        const request = selectedRequests[i];
+        // ADD: Find original index for proper variable resolution
+        const originalIndex = formData.chainRequests.findIndex(
+          (r) => r.id === request.id
+        );
+        setCurrentRequestIndex(originalIndex);
 
         try {
           let requestAssertions: any[] = [];
@@ -1441,16 +1463,17 @@ export function RequestChainEditor({
           if (existingLog) {
             log = existingLog;
           } else {
+            // CHANGE: Use originalIndex instead of i
             const currentAvailableVariables =
               getAllVariablesForRequestAtRuntime(
-                i,
+                originalIndex,
                 allExtractedVarsInCurrentExecution
               );
 
             log = await executeSingleRequest(
               request,
               currentAvailableVariables,
-              i,
+              originalIndex,
               requestAssertions
             );
 
@@ -1473,7 +1496,7 @@ export function RequestChainEditor({
 
           setExecutionLogs([...allLogs]);
 
-          if (i < formData.chainRequests.length - 1) {
+          if (i < selectedRequests.length - 1) {
             await new Promise((resolve) => setTimeout(resolve, 500));
           }
         } catch (error) {
@@ -1490,8 +1513,9 @@ export function RequestChainEditor({
 
           setExecutionLogs([...allLogs]);
 
+          // CHANGE: Use originalIndex in error message
           toast({
-            title: `Request ${i + 1} Failed`,
+            title: `Request ${originalIndex + 1} Failed`,
             description: errorLog.error || 'Unknown error occurred',
             variant: 'destructive',
           });
@@ -1500,7 +1524,7 @@ export function RequestChainEditor({
             toast({
               title: 'Execution Stopped',
               description: `Chain execution stopped due to error in request ${
-                i + 1
+                originalIndex + 1
               }`,
               variant: 'destructive',
             });
@@ -1508,7 +1532,7 @@ export function RequestChainEditor({
           } else if (request.errorHandling === 'retry' && request.retries > 0) {
             toast({
               title: 'Retrying Request',
-              description: `Retrying request ${i + 1}...`,
+              description: `Retrying request ${originalIndex + 1}...`,
             });
           }
         }
@@ -1774,6 +1798,7 @@ export function RequestChainEditor({
             ...t,
             id: `temp_${Date.now()}_${Math.random()}`,
           })) || [],
+        isSelected: true,
       };
       setFormData({
         ...formData,
@@ -1813,6 +1838,7 @@ export function RequestChainEditor({
       testScripts: [],
       enabled: true,
       authorizationType: 'none',
+      isSelected: true,
     };
     setFormData({
       ...formData,
@@ -2093,6 +2119,7 @@ export function RequestChainEditor({
             (req.errorHandling as APIRequest['errorHandling']) || 'stop',
           extractVariables: req.extractVariables || [],
           testScripts: req.testScripts || [],
+          isSelected: true,
         };
       });
 
@@ -2654,6 +2681,20 @@ export function RequestChainEditor({
                                         executionLog={executionLog}
                                         getMethodColor={getMethodColor}
                                         onToggleExpand={toggleRequestExpanded}
+                                        onToggleSelect={() => {
+                                          setFormData({
+                                            ...formData,
+                                            chainRequests:
+                                              formData.chainRequests?.map((r) =>
+                                                r.id === request.id
+                                                  ? {
+                                                      ...r,
+                                                      isSelected: !r.isSelected,
+                                                    }
+                                                  : r
+                                              ) || [],
+                                          });
+                                        }}
                                         onStartEditName={(id, name) => {
                                           setEditingNameId(id);
                                           setTempName(name);
@@ -2868,6 +2909,16 @@ export function RequestChainEditor({
                                                       dynamicVariables={
                                                         usedChainVariables.dynamicVars
                                                       }
+                                                      requestIndex={
+                                                        requestIndex
+                                                      }
+                                                      extractedVariablesByRequest={
+                                                        extractedVariablesByRequest
+                                                      }
+                                                      chainRequests={
+                                                        formData.chainRequests ||
+                                                        []
+                                                      }
                                                       requestExtractedVariables={(() => {
                                                         const varsUpToThisPoint: Record<
                                                           string,
@@ -2914,14 +2965,62 @@ export function RequestChainEditor({
                             </SortableContext>
                           </DndContext>
 
-                          <div className='flex justify-end mt-6'>
+                          <div className='flex items-center justify-between mt-6'>
+                            <div className='flex items-center gap-3'>
+                              <button
+                                onClick={() => {
+                                  setFormData({
+                                    ...formData,
+                                    chainRequests:
+                                      formData.chainRequests?.map((req) => ({
+                                        ...req,
+                                        isSelected: false,
+                                      })) || [],
+                                  });
+                                }}
+                                className='text-sm text-muted-foreground hover:text-foreground transition-colors'
+                              >
+                                Deselect All
+                              </button>
+
+                              <button
+                                onClick={() => {
+                                  setFormData({
+                                    ...formData,
+                                    chainRequests:
+                                      formData.chainRequests?.map((req) => ({
+                                        ...req,
+                                        isSelected: true,
+                                      })) || [],
+                                  });
+                                }}
+                                className='text-sm text-muted-foreground hover:text-foreground transition-colors'
+                              >
+                                Select All
+                              </button>
+
+                              <span className='text-sm text-muted-foreground'>
+                                (
+                                {
+                                  formData.chainRequests?.filter(
+                                    (r) => r.isSelected !== false
+                                  ).length
+                                }{' '}
+                                / {formData.chainRequests?.length} selected )
+                              </span>
+                            </div>
+
                             <div className='flex items-center gap-3'>
                               <Button
                                 ref={runAllButtonRef}
                                 variant='outline'
                                 onClick={handleRunAll}
                                 disabled={
-                                  isExecuting || !formData.chainRequests?.length
+                                  isExecuting ||
+                                  !formData.chainRequests?.length ||
+                                  formData.chainRequests?.filter(
+                                    (r) => r.isSelected !== false
+                                  ).length === 0
                                 }
                                 className='gap-2 bg-transparent'
                               >
@@ -2930,12 +3029,20 @@ export function RequestChainEditor({
                                 ) : (
                                   <PlayCircle className='w-4 h-4' />
                                 )}
-                                {isExecuting ? 'Running...' : 'Run All'}
+                                {isExecuting
+                                  ? 'Running...'
+                                  : `Run Selected (${
+                                      formData.chainRequests?.filter(
+                                        (r) => r.isSelected !== false
+                                      ).length || 0
+                                    })`}
                               </Button>
 
                               {executionLogs.length > 0 &&
                                 executionLogs.length ===
-                                  formData.chainRequests?.length &&
+                                  formData.chainRequests?.filter(
+                                    (r) => r.isSelected !== false
+                                  ).length &&
                                 !isExecuting && (
                                   <Button
                                     variant='outline'

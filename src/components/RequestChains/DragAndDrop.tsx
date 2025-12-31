@@ -9,7 +9,6 @@ import {
   TooltipTrigger,
 } from '../ui/tooltip';
 import {
-  Badge,
   Check,
   CheckCircle,
   ChevronDown,
@@ -26,6 +25,7 @@ import {
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
 import { useSortable } from '@dnd-kit/sortable';
+import { Badge } from '../ui/badge';
 
 interface SortableRequestItemProps {
   request: APIRequest;
@@ -38,6 +38,7 @@ interface SortableRequestItemProps {
   executionLog?: ExecutionLog;
   getMethodColor: (method: string) => string;
   onToggleExpand: (requestId: string) => void;
+  onToggleSelect: () => void;
   onStartEditName: (requestId: string, name: string) => void;
   onCommitName: (index: number, name: string) => void;
   onCancelEditName: () => void;
@@ -58,6 +59,7 @@ export const SortableRequestItem: React.FC<SortableRequestItemProps> = ({
   executionLog,
   getMethodColor,
   onToggleExpand,
+  onToggleSelect,
   onStartEditName,
   onCommitName,
   onCancelEditName,
@@ -84,13 +86,15 @@ export const SortableRequestItem: React.FC<SortableRequestItemProps> = ({
     opacity: isDragging ? 0.5 : 1,
   };
 
+  const isSelected = request.isSelected !== false;
+
   return (
     <Card
       ref={setNodeRef}
       style={style}
       className={`hover:shadow-sm transition-shadow group ${
         currentRequestIndex === requestIndex ? 'ring-2 ring-primary' : ''
-      }`}
+      } ${!isSelected ? 'opacity-50' : ''}`}
     >
       <CardContent className='p-2'>
         <div className='flex items-center'>
@@ -109,6 +113,23 @@ export const SortableRequestItem: React.FC<SortableRequestItemProps> = ({
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>Drag to reorder</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <input
+                    type='checkbox'
+                    checked={isSelected}
+                    onChange={onToggleSelect}
+                    className='w-4 h-4 rounded border-border cursor-pointer accent-primary'
+                    disabled={isExecuting}
+                  />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{isSelected ? 'Deselect request' : 'Select request'}</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -146,6 +167,14 @@ export const SortableRequestItem: React.FC<SortableRequestItemProps> = ({
                     className='h-8 max-w-[280px]'
                     placeholder='Request name'
                     autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        onCommitName(requestIndex, tempName);
+                        onCancelEditName();
+                      } else if (e.key === 'Escape') {
+                        onCancelEditName();
+                      }
+                    }}
                   />
                   <Button
                     variant='ghost'
@@ -195,7 +224,7 @@ export const SortableRequestItem: React.FC<SortableRequestItemProps> = ({
                         <TooltipContent>
                           {isExecuting
                             ? 'Cannot edit during execution'
-                            : 'Edit'}
+                            : 'Edit request name'}
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>

@@ -52,6 +52,9 @@ interface ResponseExplorerProps {
   onApplyToAllRequests?: (name: string) => void;
   variables?: Array<{ name: string; value: string }>;
   dynamicVariables?: Array<{ name: string; value: string }>;
+  requestIndex?: number;
+  extractedVariablesByRequest?: Record<string, Record<string, any>>;
+  chainRequests?: any[];
   requestExtractedVariables?: Record<string, any>;
 }
 
@@ -83,6 +86,9 @@ export function ResponseExplorer({
   onApplyToAllRequests,
   variables,
   dynamicVariables,
+  requestIndex = 0,
+  extractedVariablesByRequest = {},
+  chainRequests = [],
   requestExtractedVariables = {},
 }: ResponseExplorerProps) {
   const [activeTab, setActiveTab] = useState<
@@ -408,11 +414,32 @@ export function ResponseExplorer({
     });
   };
 
-  const normalizeHeaderName = (name: string): string => {
-    return name
-      .toLowerCase()
-      .replace(/^headers\./, '')
-      .trim();
+  const getExtractedVariablesForAssertion = (): Array<{
+    name: string;
+    value: string;
+  }> => {
+    const availableVars: Array<{ name: string; value: string }> = [];
+
+    // CRITICAL: Only iterate through requests BEFORE this one (i < requestIndex)
+    if (requestIndex !== undefined && requestIndex > 0) {
+      for (let i = 0; i < requestIndex; i++) {
+        const reqId = chainRequests[i]?.id;
+        if (reqId && extractedVariablesByRequest[reqId]) {
+          Object.entries(extractedVariablesByRequest[reqId]).forEach(
+            ([name, value]) => {
+              if (!availableVars.some((v) => v.name === name)) {
+                availableVars.push({
+                  name,
+                  value: String(value),
+                });
+              }
+            }
+          );
+        }
+      }
+    }
+
+    return availableVars;
   };
 
   const handleAssertClick = (path: string, value: any) => {
@@ -1350,12 +1377,7 @@ export function ResponseExplorer({
           setAssertions={onAssertionsUpdate}
           variables={variables}
           dynamicVariables={dynamicVariables}
-          extractedVariables={Object.entries(
-            requestExtractedVariables || {}
-          ).map(([name, value]) => ({
-            name,
-            value: String(value),
-          }))}
+          extractedVariables={getExtractedVariablesForAssertion()}
           onSelect={(assertionType: string, config?: any) => {
             let description = '';
             let finalType = assertionType;
