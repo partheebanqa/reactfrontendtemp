@@ -2868,6 +2868,16 @@ export function RequestChainEditor({
                                                       dynamicVariables={
                                                         usedChainVariables.dynamicVars
                                                       }
+                                                      requestIndex={
+                                                        requestIndex
+                                                      }
+                                                      extractedVariablesByRequest={
+                                                        extractedVariablesByRequest
+                                                      }
+                                                      chainRequests={
+                                                        formData.chainRequests ||
+                                                        []
+                                                      }
                                                       requestExtractedVariables={(() => {
                                                         const varsUpToThisPoint: Record<
                                                           string,

@@ -54,6 +54,9 @@ function AssertionModal({
     new Set()
   );
 
+  const truncate = (text: string, max = 50) =>
+    text.length > max ? text.slice(0, max) + '…' : text;
+
   useEffect(() => {
     if (!isOpen) return;
 
@@ -854,7 +857,7 @@ function AssertionModal({
                             key={variable.name}
                             value={`{{${variable.name}}}`}
                           >
-                            {variable.name} = {variable.value}
+                            {variable.name} = {truncate(variable.value, 60)}
                           </option>
                         ))}
                       </select>
@@ -871,7 +874,7 @@ function AssertionModal({
                             key={variable.name}
                             value={`{{${variable.name}}}`}
                           >
-                            {variable.name}
+                            {variable.name} = {truncate(variable.value, 60)}
                           </option>
                         ))}
                       </select>
