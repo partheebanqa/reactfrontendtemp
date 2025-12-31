@@ -9,7 +9,6 @@ import {
   TooltipTrigger,
 } from '../ui/tooltip';
 import {
-  Badge,
   Check,
   CheckCircle,
   ChevronDown,
@@ -26,6 +25,7 @@ import {
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
 import { useSortable } from '@dnd-kit/sortable';
+import { Badge } from '../ui/badge';
 
 interface SortableRequestItemProps {
   request: APIRequest;
