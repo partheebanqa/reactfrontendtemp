@@ -100,24 +100,24 @@ function AssertionModal({
     switch (type) {
       case 'string':
         return [
-          { id: 'equals', label: '=', description: 'Equals' },
-          { id: 'field_not_equals', label: '≠', description: 'Not equals' },
+          // { id: 'equals', label: '=', description: 'Equals' },
+          // { id: 'field_not_equals', label: '≠', description: 'Not equals' },
           { id: 'contains', label: 'contains', description: 'Contains' },
           {
             id: 'field_not_contains',
             label: 'not contains',
             description: 'Does not contain',
           },
-          {
-            id: 'field_starts_with',
-            label: 'starts with',
-            description: 'Starts with',
-          },
-          {
-            id: 'field_ends_with',
-            label: 'ends with',
-            description: 'Ends with',
-          },
+          // {
+          //   id: 'field_starts_with',
+          //   label: 'starts with',
+          //   description: 'Starts with',
+          // },
+          // {
+          //   id: 'field_ends_with',
+          //   label: 'ends with',
+          //   description: 'Ends with',
+          // },
         ];
 
       case 'number':
@@ -136,17 +136,17 @@ function AssertionModal({
             label: '≤',
             description: 'Less than or equal',
           },
-          {
-            id: 'between',
-            label: 'between',
-            description: 'Between (inclusive)',
-          },
+          // {
+          //   id: 'between',
+          //   label: 'between',
+          //   description: 'Between (inclusive)',
+          // },
         ];
 
       case 'boolean':
         return [
-          { id: 'equals', label: '=', description: 'Equals' },
-          { id: 'field_not_equals', label: '≠', description: 'Not equals' },
+          // { id: 'equals', label: '=', description: 'Equals' },
+          // { id: 'field_not_equals', label: '≠', description: 'Not equals' },
           { id: 'field_is_true', label: 'is true', description: 'Is true' },
           { id: 'field_is_false', label: 'is false', description: 'Is false' },
         ];
@@ -169,13 +169,13 @@ function AssertionModal({
             label: 'not exists',
             description: 'Field does not exist',
           },
-          {
-            id: 'field_has_property',
-            label: 'has property',
-            description: 'Has property',
-          },
-          { id: 'equals', label: '=', description: 'Equals' },
-          { id: 'field_not_equals', label: '≠', description: 'Not equals' },
+          // {
+          //   id: 'field_has_property',
+          //   label: 'has property',
+          //   description: 'Has property',
+          // },
+          // { id: 'equals', label: '=', description: 'Equals' },
+          // { id: 'field_not_equals', label: '≠', description: 'Not equals' },
         ];
 
       default:
@@ -598,11 +598,19 @@ function AssertionModal({
     const assertion = generalAssertions.find((a) => a.id === generalType);
     if (assertion?.hasComparison) {
       config.comparison = generalComparison;
+      if (generalComparison === 'less') {
+        config.operator = 'less_than';
+      } else if (generalComparison === 'more') {
+        config.operator = 'greater_than';
+      }
+
       if (generalType === 'response_time') {
         config.expectedTime = generalValue;
       } else if (generalType === 'payload_size') {
         config.expectedSize = generalValue;
       }
+    } else if (generalType === 'status_equals') {
+      config.operator = 'equals';
     }
 
     if (

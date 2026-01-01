@@ -627,11 +627,19 @@ function AssertionModal({
     const assertion = generalAssertions.find((a) => a.id === generalType);
     if (assertion?.hasComparison) {
       config.comparison = generalComparison;
+      if (generalComparison === 'less') {
+        config.operator = 'less_than';
+      } else if (generalComparison === 'more') {
+        config.operator = 'greater_than';
+      }
+
       if (generalType === 'response_time') {
         config.expectedTime = generalValue;
       } else if (generalType === 'payload_size') {
         config.expectedSize = generalValue;
       }
+    } else if (generalType === 'status_equals') {
+      config.operator = 'equals';
     }
 
     if (

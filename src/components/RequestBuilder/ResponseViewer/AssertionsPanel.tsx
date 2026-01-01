@@ -16,12 +16,24 @@ export function AssertionsPanel({
     if (assertion.isGeneral) {
       switch (typeToUse) {
         case 'response_time':
-          return `Response Time ${assertion.comparison || 'less'} than ${
-            assertion.expectedTime
+          const timeOperator =
+            assertion.operator === 'less_than'
+              ? 'less'
+              : assertion.operator === 'greater_than'
+              ? 'more'
+              : assertion.comparison || 'less';
+          return `Response Time ${timeOperator} than ${
+            assertion.expectedTime || assertion.value
           }ms`;
         case 'payload_size':
-          return `Payload Size ${assertion.comparison || 'less'} than ${
-            assertion.expectedSize
+          const sizeOperator =
+            assertion.operator === 'less_than'
+              ? 'less'
+              : assertion.operator === 'greater_than'
+              ? 'more'
+              : assertion.comparison || 'less';
+          return `Payload Size ${sizeOperator} than ${
+            assertion.expectedSize || assertion.value
           }KB`;
         case 'status_equals':
           return `Status Code: ${assertion.value}`;

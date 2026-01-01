@@ -346,6 +346,7 @@ const ResponseViewer = ({
         value: activeFieldValue,
         expectedValue: config.value,
         enabled: true,
+        operator: config.operator,
         ...config,
       };
 
