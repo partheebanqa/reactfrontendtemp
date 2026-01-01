@@ -420,7 +420,6 @@ export function ResponseExplorer({
   }> => {
     const availableVars: Array<{ name: string; value: string }> = [];
 
-    // CRITICAL: Only iterate through requests BEFORE this one (i < requestIndex)
     if (requestIndex !== undefined && requestIndex > 0) {
       for (let i = 0; i < requestIndex; i++) {
         const reqId = chainRequests[i]?.id;
@@ -1467,6 +1466,7 @@ export function ResponseExplorer({
               value: selectedAssertion.value,
               expectedValue: config.expectedValue || config.value,
               enabled: true,
+              operator: config.operator,
               ...config,
             };
 
