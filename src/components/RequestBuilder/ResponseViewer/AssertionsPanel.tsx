@@ -38,11 +38,7 @@ export function AssertionsPanel({
         case 'status_equals':
           return `Status Code: ${assertion.value}`;
         case 'contains_text':
-          return `Contains Text: "${assertion.value}"`;
-        case 'contains_number':
-          return `Contains Number: ${assertion.value}`;
-        case 'contains_boolean':
-          return `Contains Boolean: ${assertion.value}`;
+          return `Contains Text: ${assertion.value}`;
         case 'contains_static':
           return `Contains Static: ${assertion.value}`;
         case 'contains_dynamic':
