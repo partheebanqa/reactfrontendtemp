@@ -330,32 +330,7 @@ function AssertionModal({
       needsInput: true,
       inputType: 'text',
       inputLabel: 'Text value',
-      contentType: 'string',
-      showForTypes: ['string'],
-    },
-    {
-      id: 'contains_number',
-      label: 'Contains Number',
-      icon: Hash,
-      needsInput: true,
-      inputType: 'number',
-      inputLabel: 'Number value',
-      contentType: 'number',
-      showForTypes: ['number'],
-    },
-    {
-      id: 'contains_boolean',
-      label: 'Contains Boolean',
-      icon: CheckCircle,
-      needsInput: true,
-      inputType: 'select',
-      inputLabel: 'Boolean value',
-      contentType: 'boolean',
-      options: [
-        { value: 'true', label: 'true' },
-        { value: 'false', label: 'false' },
-      ],
-      showForTypes: ['boolean'],
+      showForTypes: ['all'],
     },
     {
       id: 'contains_static',
@@ -615,7 +590,8 @@ function AssertionModal({
 
     if (
       generalType === 'contains_static' ||
-      generalType === 'contains_dynamic'
+      generalType === 'contains_dynamic' ||
+      generalType === 'contains_text'
     ) {
       config.scope = 'full';
     }
