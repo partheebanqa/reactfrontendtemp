@@ -1400,14 +1400,6 @@ export function ResponseExplorer({
                   description = `Response should contain text: "${config.value}"`;
                   finalType = 'contains';
                   break;
-                case 'contains_number':
-                  description = `Response should contain number: ${config.value}`;
-                  finalType = 'contains';
-                  break;
-                case 'contains_boolean':
-                  description = `Response should contain boolean: ${config.value}`;
-                  finalType = 'contains';
-                  break;
                 case 'contains_static':
                   description = `Response should contain static value: "${config.value}"`;
                   finalType = 'contains';

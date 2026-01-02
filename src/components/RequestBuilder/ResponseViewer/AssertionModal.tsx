@@ -45,6 +45,7 @@ function AssertionModal({
   >('suggested');
   const [selectedOperator, setSelectedOperator] = useState<string>('equals');
   const [manualValue, setManualValue] = useState('');
+  const [localDateValue, setLocalDateValue] = useState('');
   const [generalType, setGeneralType] = useState<string>('');
   const [generalValue, setGeneralValue] = useState<string>('');
   const [generalComparison, setGeneralComparison] = useState<string>('less');
@@ -53,6 +54,24 @@ function AssertionModal({
   const [assertionsToRemove, setAssertionsToRemove] = useState<Set<string>>(
     new Set()
   );
+
+  const isDateValue = (value: any): boolean => {
+    if (typeof value !== 'string') return false;
+
+    const iso8601Regex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?Z?$/;
+
+    const commonDateFormats = [
+      /^\d{4}-\d{2}-\d{2}$/,
+      /^\d{2}\/\d{2}\/\d{4}$/,
+      /^\d{2}-\d{2}-\d{4}$/,
+    ];
+
+    if (iso8601Regex.test(value)) return true;
+    if (commonDateFormats.some((regex) => regex.test(value))) return true;
+
+    const date = new Date(value);
+    return !isNaN(date.getTime());
+  };
 
   const truncate = (text: string, max = 50) =>
     text.length > max ? text.slice(0, max) + '…' : text;
@@ -252,32 +271,7 @@ function AssertionModal({
       needsInput: true,
       inputType: 'text',
       inputLabel: 'Text value',
-      contentType: 'string',
-      showForTypes: ['string'],
-    },
-    {
-      id: 'contains_number',
-      label: 'Contains Number',
-      icon: Hash,
-      needsInput: true,
-      inputType: 'number',
-      inputLabel: 'Number value',
-      contentType: 'number',
-      showForTypes: ['number'],
-    },
-    {
-      id: 'contains_boolean',
-      label: 'Contains Boolean',
-      icon: CheckCircle,
-      needsInput: true,
-      inputType: 'select',
-      inputLabel: 'Boolean value',
-      contentType: 'boolean',
-      options: [
-        { value: 'true', label: 'true' },
-        { value: 'false', label: 'false' },
-      ],
-      showForTypes: ['boolean'],
+      showForTypes: ['all'],
     },
     {
       id: 'contains_static',
@@ -317,9 +311,9 @@ function AssertionModal({
   const getValueType = (value: any): string => {
     if (value === null) return 'null';
     if (Array.isArray(value)) return 'array';
+    if (isDateValue(value)) return 'date';
     return typeof value;
   };
-
   const valueType = getValueType(fieldValue);
   const isArray = Array.isArray(fieldValue);
 
@@ -384,6 +378,20 @@ function AssertionModal({
           { id: 'field_not_equals', label: '≠', description: 'Not equals' },
           { id: 'field_is_true', label: 'is true', description: 'Is true' },
           { id: 'field_is_false', label: 'is false', description: 'Is false' },
+        ];
+
+      case 'date':
+        return [
+          {
+            id: 'date_greater_than',
+            label: '>',
+            description: 'Date after (greater than)',
+          },
+          {
+            id: 'date_less_than',
+            label: '<',
+            description: 'Date before (less than)',
+          },
         ];
 
       case 'null':
@@ -539,6 +547,8 @@ function AssertionModal({
       exists: 'field_present',
       field_not_present: 'field_not_present',
       field_has_property: 'field_present',
+      date_greater_than: 'date_greater_than',
+      date_less_than: 'date_less_than',
     };
 
     return operatorTypeMap[operator] || 'field_equals';
@@ -579,6 +589,8 @@ function AssertionModal({
       field_is_false: 'is false',
       exists: 'exists',
       field_not_present: 'does not exist',
+      date_greater_than: 'is after',
+      date_less_than: 'is before',
     };
 
     const operatorText = operatorLabels[selectedOperator] || selectedOperator;
@@ -644,7 +656,8 @@ function AssertionModal({
 
     if (
       generalType === 'contains_static' ||
-      generalType === 'contains_dynamic'
+      generalType === 'contains_dynamic' ||
+      generalType === 'contains_text'
     ) {
       config.scope = 'full';
     }
@@ -1035,11 +1048,27 @@ function AssertionModal({
                     Expected Value
                   </label>
                   <input
-                    type='text'
-                    value={manualValue}
-                    onChange={(e) => setManualValue(e.target.value)}
-                    placeholder='Enter the expected value'
-                    className='w-full px-4 py-3 border border-gray-300 bg-white text-gray-900 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm'
+                    type={valueType === 'date' ? 'datetime-local' : 'text'}
+                    value={valueType === 'date' ? localDateValue : manualValue}
+                    onChange={(e) => {
+                      if (valueType === 'date') {
+                        const local = e.target.value;
+                        setLocalDateValue(local);
+
+                        if (local) {
+                          const iso = new Date(local).toISOString();
+                          setManualValue(iso);
+                        }
+                      } else {
+                        setManualValue(e.target.value);
+                      }
+                    }}
+                    placeholder={
+                      valueType === 'date'
+                        ? 'Select date and time'
+                        : 'Enter the expected value'
+                    }
+                    className='w-full px-4 py-3 border border-input bg-card text-card-foreground rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent outline-none text-sm'
                     autoFocus
                   />
                 </div>
