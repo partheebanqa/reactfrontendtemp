@@ -33,6 +33,11 @@ export interface CollectionState {
     isOpen: boolean;
     collectionId: string | null;
   };
+  securityScan: {
+    isOpen: boolean;
+    requestId: string | null;
+    request: CollectionRequest | null;
+  };
 }
 
 export const initialCollectionState: CollectionState = {
@@ -50,6 +55,11 @@ export const initialCollectionState: CollectionState = {
   sanitizeTestRunner: {
     isOpen: false,
     collectionId: null,
+  },
+  securityScan: {
+    isOpen: false,
+    requestId: null,
+    request: null,
   },
 };
 
@@ -453,6 +463,29 @@ export const collectionActions = {
       sanitizeTestRunner: {
         isOpen: false,
         collectionId: null,
+      },
+    }));
+  },
+
+  // ✅ NEW: Security Scan Actions
+  openSecurityScan: (request: CollectionRequest) => {
+    collectionStore.setState((state) => ({
+      ...state,
+      securityScan: {
+        isOpen: true,
+        requestId: request.id || null,
+        request: request,
+      },
+    }));
+  },
+
+  closeSecurityScan: () => {
+    collectionStore.setState((state) => ({
+      ...state,
+      securityScan: {
+        isOpen: false,
+        requestId: null,
+        request: null,
       },
     }));
   },

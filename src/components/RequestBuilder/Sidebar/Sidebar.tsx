@@ -21,6 +21,7 @@ import {
   Zap,
   Import,
   CopyPlus,
+  Shield,
 } from 'lucide-react';
 import { useCollection } from '@/hooks/useCollection';
 import { useWorkspace } from '@/hooks/useWorkspace';
@@ -127,6 +128,7 @@ const Sidebar: React.FC = () => {
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(
     new Set()
   );
+
   const [selectedFolder, setSelectedFolder] = useState<any | null>(null);
 
   const [showMoveModal, setShowMoveModal] = useState(false);
@@ -164,8 +166,8 @@ const Sidebar: React.FC = () => {
     setActiveRequest(req);
     collectionActions.openRequest(req);
     collectionActions.closeSanitizeTestRunner();
+    collectionActions.closeSecurityScan();
   };
-
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
@@ -300,6 +302,11 @@ const Sidebar: React.FC = () => {
     }
   };
 
+  const handleOpenSecurityScan = (request: CollectionRequest) => {
+    collectionActions.openSecurityScan(request);
+    setShowMenu(null);
+    setMenuPosition(null);
+  };
   const handleCreateCollection = () => {
     setSelectedCollection(null);
     setShowCollectionModal(true);
@@ -1320,6 +1327,14 @@ const Sidebar: React.FC = () => {
                     >
                       <Trash2 className='h-4 w-4 mr-2' />
                       Delete
+                    </button>
+
+                    <button
+                      onClick={() => handleOpenSecurityScan(selectedRequest)}
+                      className='flex items-center w-full px-4 py-1 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
+                    >
+                      <Shield className='h-4 w-4 mr-2' />
+                      Security Scan (Beta)
                     </button>
                   </div>
                 )}

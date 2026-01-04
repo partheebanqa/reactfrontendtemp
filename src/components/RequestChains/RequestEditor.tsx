@@ -31,13 +31,11 @@ import {
   FileText,
   Shuffle,
   HelpCircle,
-  CheckCircle,
 } from 'lucide-react';
 import type {
   APIRequest,
   DataExtraction,
   ExecutionLog,
-  TestScript,
 } from '@/shared/types/requestChain.model';
 import { ResponseExplorer } from './ResponseExplorer';
 import { useToast } from '@/hooks/use-toast';

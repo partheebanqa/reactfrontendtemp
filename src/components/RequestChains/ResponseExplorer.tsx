@@ -1074,6 +1074,11 @@ export function ResponseExplorer({
                 label: 'Assertions(R)',
                 count: response?.assertions ? response.assertions.length : 0,
               },
+              {
+                id: 'securityScan',
+                label: 'Security(S)',
+                count: response?.assertions ? response.assertions.length : 0,
+              },
             ].map((tab) => {
               const count = tab.count ?? 0;
               const showBlueDot =
