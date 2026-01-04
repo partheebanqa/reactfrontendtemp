@@ -27,24 +27,12 @@ import { CSS } from '@dnd-kit/utilities';
 
 import {
   ArrowLeft,
-  Plus,
-  GripVertical,
-  Trash2,
-  ChevronDown,
   Code,
-  Download,
-  ChevronUp,
-  Copy,
   Database,
   Loader2,
   PlayCircle,
-  CheckCircle,
-  XCircle,
   Info,
   Link2,
-  Edit,
-  X,
-  Check,
   Shuffle,
   Edit3,
   AlertTriangle,
@@ -61,7 +49,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import type {

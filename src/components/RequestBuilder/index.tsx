@@ -30,9 +30,9 @@ import {
 } from '../ui/dialog';
 import { Button } from '../ui/button';
 import WelcomeImage from '../../assests/images/Welcome.webp';
-import { navigate } from 'wouter/use-browser-location';
 import { SanitizeTestRunner } from '@/components/RequestBuilder/sanitizeTest/sanitizeTest';
-import { useCollectionStore } from '@/store/collectionStore';
+import SecurityScanView from '@/components/RequestBuilder/SecurityScan/SecurityScanView';
+import { useCollectionStore, collectionActions } from '@/store/collectionStore';
 
 const RequestBuilder = () => {
   const [usedVariables, setUsedVariables] = useState<{
@@ -43,7 +43,8 @@ const RequestBuilder = () => {
     dynamicVars: [],
   });
 
-  const { sanitizeTestRunner, collections } = useCollectionStore();
+  const { sanitizeTestRunner, securityScan, collections } =
+    useCollectionStore();
   const { currentWorkspace } = useWorkspace();
   const {
     refetch: refetchCollection,
@@ -205,6 +206,19 @@ const RequestBuilder = () => {
               <div className='flex-1 w-full h-full'>
                 <SanitizeTestRunner collection={sanitizeCollection} />
               </div>
+            ) : /* ✅ If Security Scan is open, show it fullscreen */
+            securityScan.isOpen && securityScan.request ? (
+              <div className='flex-1 w-full h-full overflow-auto'>
+                <SecurityScanView
+                  request={{
+                    id: securityScan.request.id || '',
+                    name: securityScan.request.name || 'Untitled Request',
+                    method: securityScan.request.method,
+                    url: securityScan.request.url || '',
+                  }}
+                  onClose={() => collectionActions.closeSecurityScan()}
+                />
+              </div>
             ) : (
               <>
                 {/* Request Editor */}
@@ -324,10 +338,8 @@ const RequestBuilder = () => {
           <DialogDescription asChild>
             <div className='max-h-[88vh] overflow-y-auto scrollbar-thin pr-2'>
               <div className='rounded-xl bg-white'>
-                {/* Main content */}
                 <div className='p-2 sm:p-4'>
                   <div className='grid gap-3 md:grid-cols-2 md:items-center'>
-                    {/* LEFT: copy */}
                     <div>
                       <h2 className='text-2xl sm:text-3xl font-bold text-slate-900 mb-4'>
                         Welcome to Optraflow.com
@@ -335,8 +347,8 @@ const RequestBuilder = () => {
 
                       <p className='text-slate-600 mb-4'>
                         your low-code platform for API testing and automation.
-                        We’ve set up a workspace called{' '}
-                        <strong>“My workspace”</strong> to help you get started
+                        We've set up a workspace called{' '}
+                        <strong>"My workspace"</strong> to help you get started
                         quickly.
                       </p>
 
@@ -404,7 +416,7 @@ const RequestBuilder = () => {
 
                       <div className='mt-6'>
                         <h3 className='text-lg font-semibold text-slate-900 mb-2'>
-                          What’s next?
+                          What's next?
                         </h3>
                         <p className='text-slate-600'>
                           Create a new workspace, set up environments, import
@@ -423,7 +435,6 @@ const RequestBuilder = () => {
                       </div>
                     </div>
 
-                    {/* RIGHT: illustration (inline SVG) */}
                     <div className='relative mx-auto w-full max-w-[480px]'>
                       <div className='relative rounded-2xl  p-6'>
                         <img src={WelcomeImage} />
@@ -432,7 +443,6 @@ const RequestBuilder = () => {
                   </div>
                 </div>
 
-                {/* Footer CTA */}
                 <div className='px-6 sm:px-8 pb-6'>
                   <DialogFooter className='justify-center'>
                     <DialogClose asChild></DialogClose>

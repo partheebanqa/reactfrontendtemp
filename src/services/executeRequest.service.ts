@@ -1,5 +1,5 @@
 import { apiRequest } from '@/lib/queryClient';
-import { API_EXECUTOR } from '@/config/apiRoutes';
+import { API_EXECUTOR, SECURITY_API_BASE } from '@/config/apiRoutes';
 import {
   APIRequest,
   Variable,
@@ -201,5 +201,130 @@ export const executeCollectionRequest = async (
     return await response.json();
   } catch (error: any) {
     throw new Error(error.message || 'Failed to execute request');
+  }
+};
+
+export const startSecurityScan = async (
+  requestId: string
+): Promise<{ scanId: string }> => {
+  try {
+    const response = await apiRequest(
+      'POST',
+      `${SECURITY_API_BASE}/scan/start`,
+      {
+        body: JSON.stringify({ requestId }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Failed to start scan: ${response.statusText}`);
+    }
+
+    return await response.json();
+  } catch (error: any) {
+    throw new Error(error.message || 'Failed to start security scan');
+  }
+};
+
+// export const startSecurityScan = async (): Promise<{ scanId: string }> => {
+//   try {
+//     const response = await fetch(
+//       'https://api.optraflow.com/security/scan/start',
+//       {
+//         method: 'POST',
+//         headers: {
+//           'Content-Type': 'application/json',
+//           Authorization: `Bearer ${STATIC_SECURITY_TOKEN}`,
+//         },
+//         body: JSON.stringify({
+//           requestId: STATIC_SECURITY_REQUEST_ID,
+//         }),
+//       }
+//     );
+
+//     if (!response.ok) {
+//       throw new Error(`Failed to start scan: ${response.statusText}`);
+//     }
+
+//     return await response.json();
+//   } catch (error: any) {
+//     throw new Error(error.message || 'Failed to start security scan');
+//   }
+// };
+
+export const getSecurityScanStatus = async (
+  scanId: string
+): Promise<{
+  scanId: string;
+  status: 'pending' | 'scanning' | 'completed' | 'failed';
+  progress?: number;
+}> => {
+  try {
+    const response = await apiRequest(
+      'GET',
+      `${SECURITY_API_BASE}/scan/${scanId}/status`
+    );
+
+    if (!response.ok) {
+      throw new Error(`Failed to get scan status: ${response.statusText}`);
+    }
+
+    return await response.json();
+  } catch (error: any) {
+    throw new Error(error.message || 'Failed to fetch scan status');
+  }
+};
+
+export const getSecurityReport = async (
+  scanId: string
+): Promise<{
+  scanId: string;
+  completedAt: string;
+  totalIssues: number;
+  highSeverity: number;
+  mediumSeverity: number;
+  lowSeverity: number;
+  vulnerabilities: any[];
+  passedChecks: number;
+}> => {
+  try {
+    const response = await apiRequest(
+      'GET',
+      `${SECURITY_API_BASE}/report?scanId=${scanId}`
+    );
+
+    if (!response.ok) {
+      throw new Error(
+        `Failed to fetch security report: ${response.statusText}`
+      );
+    }
+
+    return await response.json();
+  } catch (error: any) {
+    throw new Error(error.message || 'Failed to fetch security report');
+  }
+};
+
+export const pollSecurityScan = async (
+  scanId: string,
+  onProgress?: (status: any) => void,
+  interval = 2000
+) => {
+  while (true) {
+    const status = await getSecurityScanStatus(scanId);
+    onProgress?.(status);
+
+    if (status.status === 'completed') {
+      return getSecurityReport(scanId);
+    }
+
+    if (status.status === 'failed') {
+      throw new Error('Security scan failed');
+    }
+
+    await new Promise((r) => setTimeout(r, interval));
   }
 };

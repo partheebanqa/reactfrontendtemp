@@ -16,7 +16,6 @@ import {
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
-import Papa from 'papaparse';
 import { toast } from '@/hooks/use-toast';
 import { collectionActions } from '@/store/collectionStore';
 
