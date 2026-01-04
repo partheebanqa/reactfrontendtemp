@@ -415,7 +415,7 @@ Passed Checks: ${scanResult.passedChecks}
   };
 
   const filteredVulnerabilities = useMemo(() => {
-    if (!scanResult) return [];
+    if (!scanResult?.vulnerabilities) return [];
 
     return scanResult.vulnerabilities.filter((vuln) => {
       const matchesSearch =
