@@ -229,31 +229,89 @@ export const startSecurityScan = async (
   }
 };
 
-// export const startSecurityScan = async (): Promise<{ scanId: string }> => {
-//   try {
-//     const response = await fetch(
-//       'https://api.optraflow.com/security/scan/start',
-//       {
-//         method: 'POST',
-//         headers: {
-//           'Content-Type': 'application/json',
-//           Authorization: `Bearer ${STATIC_SECURITY_TOKEN}`,
-//         },
-//         body: JSON.stringify({
-//           requestId: STATIC_SECURITY_REQUEST_ID,
-//         }),
-//       }
-//     );
+type SecurityReportStatus = 'running' | 'completed' | 'failed';
 
-//     if (!response.ok) {
-//       throw new Error(`Failed to start scan: ${response.statusText}`);
-//     }
+interface SecurityReportResponse {
+  scanId: string;
+  status: SecurityReportStatus;
+  targetUrl?: string;
+  scanDate?: string;
+  completedAt?: string;
+  totalAlerts?: number;
+  summary?: {
+    highRisk: number;
+    mediumRisk: number;
+    lowRisk: number;
+    informational: number;
+  };
+  alerts?: Array<{
+    id: string;
+    name: string;
+    risk: string;
+    confidence: string;
+    url: string;
+    description: string;
+    solution: string;
+    reference: string;
+    cwe: string;
+    wasc: string;
+    tags: string | null;
+  }>;
+}
 
-//     return await response.json();
-//   } catch (error: any) {
-//     throw new Error(error.message || 'Failed to start security scan');
-//   }
-// };
+// Transform API response to match component's ScanResult interface
+const transformSecurityReport = (report: SecurityReportResponse) => {
+  const summary = report.summary || {
+    highRisk: 0,
+    mediumRisk: 0,
+    lowRisk: 0,
+    informational: 0,
+  };
+
+  const alerts = report.alerts || [];
+
+  // Map risk levels to severity
+  const vulnerabilities = alerts.map((alert) => {
+    let severity: 'high' | 'medium' | 'low' | 'info';
+
+    switch (alert.risk.toLowerCase()) {
+      case 'high':
+        severity = 'high';
+        break;
+      case 'medium':
+        severity = 'medium';
+        break;
+      case 'low':
+        severity = 'low';
+        break;
+      default:
+        severity = 'info';
+    }
+
+    return {
+      id: alert.id,
+      severity,
+      title: alert.name,
+      description: alert.description,
+      recommendation: alert.solution,
+      cwe: alert.cwe !== '-1' ? alert.cwe : undefined,
+      owasp: alert.reference,
+    };
+  });
+
+  return {
+    scanId: report.scanId,
+    completedAt:
+      report.scanDate || report.completedAt || new Date().toISOString(),
+    totalIssues: report.totalAlerts || 0,
+    highSeverity: summary.highRisk,
+    mediumSeverity: summary.mediumRisk,
+    lowSeverity: summary.lowRisk,
+    informational: summary.informational,
+    vulnerabilities,
+    passedChecks: 0,
+  };
+};
 
 export const getSecurityScanStatus = async (
   scanId: string
@@ -280,31 +338,43 @@ export const getSecurityScanStatus = async (
 
 export const getSecurityReport = async (
   scanId: string
-): Promise<{
-  scanId: string;
-  completedAt: string;
-  totalIssues: number;
-  highSeverity: number;
-  mediumSeverity: number;
-  lowSeverity: number;
-  vulnerabilities: any[];
-  passedChecks: number;
-}> => {
-  try {
-    const response = await apiRequest(
-      'GET',
-      `${SECURITY_API_BASE}/report?scanId=${scanId}`
-    );
+): Promise<SecurityReportResponse> => {
+  const response = await apiRequest(
+    'GET',
+    `${SECURITY_API_BASE}/report?scanId=${scanId}`
+  );
 
-    if (!response.ok) {
-      throw new Error(
-        `Failed to fetch security report: ${response.statusText}`
-      );
+  if (!response.ok) {
+    throw new Error(`Failed to fetch security report`);
+  }
+
+  return response.json();
+};
+
+const pollSecurityReport = async (
+  scanId: string,
+  interval = 3000,
+  maxDuration = 120000
+) => {
+  const startTime = Date.now();
+
+  while (true) {
+    if (Date.now() - startTime >= maxDuration) {
+      throw new Error('Security report generation timed out');
     }
 
-    return await response.json();
-  } catch (error: any) {
-    throw new Error(error.message || 'Failed to fetch security report');
+    const report = await getSecurityReport(scanId);
+
+    if (report.status === 'completed') {
+      // Transform the report before returning
+      return transformSecurityReport(report);
+    }
+
+    if (report.status === 'failed') {
+      throw new Error('Security report generation failed');
+    }
+
+    await new Promise((r) => setTimeout(r, interval));
   }
 };
 
@@ -312,13 +382,14 @@ export const pollSecurityScan = async (
   scanId: string,
   onProgress?: (status: any) => void,
   interval = 2000,
-  maxDuration = 60000
+  maxDuration = 120000
 ) => {
   const startTime = Date.now();
 
+  await new Promise((r) => setTimeout(r, 4000));
+
   while (true) {
-    const elapsedTime = Date.now() - startTime;
-    if (elapsedTime >= maxDuration) {
+    if (Date.now() - startTime >= maxDuration) {
       throw new Error('Security scan timed out. Please try again.');
     }
 
@@ -326,7 +397,7 @@ export const pollSecurityScan = async (
     onProgress?.(status);
 
     if (status.status === 'completed') {
-      return getSecurityReport(scanId);
+      return pollSecurityReport(scanId, interval, maxDuration);
     }
 
     if (status.status === 'failed') {

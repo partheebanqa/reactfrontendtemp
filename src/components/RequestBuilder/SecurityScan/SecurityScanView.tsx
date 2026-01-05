@@ -48,6 +48,7 @@ export interface ScanResult {
   highSeverity: number;
   mediumSeverity: number;
   lowSeverity: number;
+  informational: number;
   vulnerabilities: Vulnerability[];
   passedChecks: number;
 }
@@ -139,6 +140,7 @@ Total Issues: ${scanResult.totalIssues}
 High Severity: ${scanResult.highSeverity}
 Medium Severity: ${scanResult.mediumSeverity}
 Low Severity: ${scanResult.lowSeverity}
+Informational: ${scanResult.informational}
 Passed Checks: ${scanResult.passedChecks}
     `.trim();
 
@@ -257,37 +259,45 @@ Passed Checks: ${scanResult.passedChecks}
               </div>
             </div>
 
-            <div className='grid grid-cols-4 gap-3'>
-              <div className='bg-white dark:bg-gray-900 rounded-lg p-3 border border-gray-200 dark:border-gray-700'>
-                <div className='text-xs text-gray-600 dark:text-gray-400 mb-1'>
+            <div className='flex gap-2'>
+              <div className='flex-1 bg-slate-50 dark:bg-slate-900/50 rounded-lg p-3 border border-slate-200 dark:border-slate-700 min-w-0'>
+                <div className='text-xs text-slate-600 dark:text-slate-400 mb-1 font-medium'>
                   Total Issues
                 </div>
-                <div className='text-2xl font-bold text-gray-900 dark:text-white'>
+                <div className='text-2xl font-bold text-slate-900 dark:text-white'>
                   {scanResult.totalIssues}
                 </div>
               </div>
-              <div className='bg-red-50 dark:bg-red-900/20 rounded-lg p-3 border border-red-200 dark:border-red-800'>
-                <div className='text-xs text-red-700 dark:text-red-400 mb-1'>
+              <div className='flex-1 bg-rose-50 dark:bg-rose-950/50 rounded-lg p-3 border border-rose-200 dark:border-rose-800 min-w-0'>
+                <div className='text-xs text-rose-700 dark:text-rose-400 mb-1 font-medium'>
                   High Severity
                 </div>
-                <div className='text-2xl font-bold text-red-600 dark:text-red-400'>
+                <div className='text-2xl font-bold text-rose-600 dark:text-rose-400'>
                   {scanResult.highSeverity}
                 </div>
               </div>
-              <div className='bg-orange-50 dark:bg-orange-900/20 rounded-lg p-3 border border-orange-200 dark:border-orange-800'>
-                <div className='text-xs text-orange-700 dark:text-orange-400 mb-1'>
+              <div className='flex-1 bg-amber-50 dark:bg-amber-950/50 rounded-lg p-3 border border-amber-200 dark:border-amber-800 min-w-0'>
+                <div className='text-xs text-amber-700 dark:text-amber-400 mb-1 font-medium'>
                   Medium Severity
                 </div>
-                <div className='text-2xl font-bold text-orange-600 dark:text-orange-400'>
+                <div className='text-2xl font-bold text-amber-600 dark:text-amber-400'>
                   {scanResult.mediumSeverity}
                 </div>
               </div>
-              <div className='bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3 border border-blue-200 dark:border-blue-800'>
-                <div className='text-xs text-blue-700 dark:text-blue-400 mb-1'>
+              <div className='flex-1 bg-sky-50 dark:bg-sky-950/50 rounded-lg p-3 border border-sky-200 dark:border-sky-800 min-w-0'>
+                <div className='text-xs text-sky-700 dark:text-sky-400 mb-1 font-medium'>
                   Low Severity
                 </div>
-                <div className='text-2xl font-bold text-blue-600 dark:text-blue-400'>
+                <div className='text-2xl font-bold text-sky-600 dark:text-sky-400'>
                   {scanResult.lowSeverity}
+                </div>
+              </div>
+              <div className='flex-1 bg-indigo-50 dark:bg-indigo-950/50 rounded-lg p-3 border border-indigo-200 dark:border-indigo-700 min-w-0'>
+                <div className='text-xs text-indigo-700 dark:text-indigo-400 mb-1 font-medium'>
+                  Informational
+                </div>
+                <div className='text-2xl font-bold text-indigo-900 dark:text-indigo-300'>
+                  {scanResult.informational}
                 </div>
               </div>
             </div>
