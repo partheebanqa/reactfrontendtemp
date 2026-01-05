@@ -10,14 +10,7 @@ import {
   Shield,
   Clock,
   AlertCircle,
-  AlertTriangle,
-  Info,
   CheckCircle,
-  ChevronDown,
-  ChevronUp,
-  FileJson,
-  FileText,
-  Table,
 } from 'lucide-react';
 import {
   pollSecurityScan,
@@ -25,8 +18,10 @@ import {
 } from '@/services/executeRequest.service';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
+import { ExportModal } from './Export';
+import { VulnerabilityCard } from './VulnerabilityCard';
 
-interface SecurityScanViewProps {
+export interface SecurityScanViewProps {
   request: {
     id: string;
     name: string;
@@ -36,7 +31,7 @@ interface SecurityScanViewProps {
   onClose: () => void;
 }
 
-interface Vulnerability {
+export interface Vulnerability {
   id: string;
   severity: 'high' | 'medium' | 'low' | 'info';
   title: string;
@@ -46,7 +41,7 @@ interface Vulnerability {
   owasp?: string;
 }
 
-interface ScanResult {
+export interface ScanResult {
   scanId: string;
   completedAt: string;
   totalIssues: number;
@@ -59,275 +54,6 @@ interface ScanResult {
 
 type ScanStatus = 'idle' | 'initializing' | 'scanning' | 'completed' | 'error';
 
-// Vulnerability Card Component
-function VulnerabilityCard({
-  vulnerability,
-  isExpanded,
-  onToggle,
-}: {
-  vulnerability: Vulnerability;
-  isExpanded: boolean;
-  onToggle: () => void;
-}) {
-  const severityConfig = {
-    high: {
-      bg: 'bg-red-50 dark:bg-red-900/20',
-      border: 'border-red-200 dark:border-red-800',
-      badge: 'bg-red-500 text-white',
-      icon: AlertCircle,
-      iconColor: 'text-red-500',
-    },
-    medium: {
-      bg: 'bg-orange-50 dark:bg-orange-900/20',
-      border: 'border-orange-200 dark:border-orange-800',
-      badge: 'bg-orange-500 text-white',
-      icon: AlertTriangle,
-      iconColor: 'text-orange-500',
-    },
-    low: {
-      bg: 'bg-blue-50 dark:bg-blue-900/20',
-      border: 'border-blue-200 dark:border-blue-800',
-      badge: 'bg-blue-500 text-white',
-      icon: Info,
-      iconColor: 'text-blue-500',
-    },
-    info: {
-      bg: 'bg-gray-50 dark:bg-gray-900/20',
-      border: 'border-gray-200 dark:border-gray-800',
-      badge: 'bg-gray-500 text-white',
-      icon: Info,
-      iconColor: 'text-gray-500',
-    },
-  };
-
-  const config = severityConfig[vulnerability.severity];
-  const Icon = config.icon;
-
-  return (
-    <div
-      className={`${config.bg} ${config.border} rounded-lg border overflow-hidden`}
-    >
-      <button
-        onClick={onToggle}
-        className='w-full p-4 flex items-start gap-3 hover:opacity-80 transition-opacity'
-      >
-        <Icon className={`w-5 h-5 ${config.iconColor} flex-shrink-0 mt-0.5`} />
-        <div className='flex-1 text-left'>
-          <div className='flex items-start justify-between gap-3 mb-2'>
-            <h4 className='font-semibold text-gray-900 dark:text-white'>
-              {vulnerability.title}
-            </h4>
-            <div className='flex items-center gap-2'>
-              <span
-                className={`px-2 py-0.5 rounded text-xs font-medium ${config.badge} uppercase`}
-              >
-                {vulnerability.severity}
-              </span>
-              {isExpanded ? (
-                <ChevronUp className='w-4 h-4 text-gray-500' />
-              ) : (
-                <ChevronDown className='w-4 h-4 text-gray-500' />
-              )}
-            </div>
-          </div>
-          {!isExpanded && (
-            <p className='text-sm text-gray-600 dark:text-gray-400 line-clamp-2'>
-              {vulnerability.description}
-            </p>
-          )}
-        </div>
-      </button>
-
-      {isExpanded && (
-        <div className='px-4 pb-4 space-y-3 border-t border-gray-200 dark:border-gray-700 pt-3'>
-          <div>
-            <h5 className='text-sm font-semibold text-gray-900 dark:text-white mb-1'>
-              Description
-            </h5>
-            <p className='text-sm text-gray-600 dark:text-gray-400'>
-              {vulnerability.description}
-            </p>
-          </div>
-
-          {vulnerability.recommendation && (
-            <div>
-              <h5 className='text-sm font-semibold text-gray-900 dark:text-white mb-1'>
-                Recommendation
-              </h5>
-              <p className='text-sm text-gray-600 dark:text-gray-400'>
-                {vulnerability.recommendation}
-              </p>
-            </div>
-          )}
-
-          <div className='flex gap-3 text-xs'>
-            {vulnerability.cwe && (
-              <span className='px-2 py-1 bg-gray-200 dark:bg-gray-700 rounded text-gray-700 dark:text-gray-300'>
-                CWE: {vulnerability.cwe}
-              </span>
-            )}
-            {vulnerability.owasp && (
-              <span className='px-2 py-1 bg-gray-200 dark:bg-gray-700 rounded text-gray-700 dark:text-gray-300'>
-                OWASP: {vulnerability.owasp}
-              </span>
-            )}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// Export Modal Component
-function ExportModal({
-  isOpen,
-  onClose,
-  scanResult,
-  request,
-}: {
-  isOpen: boolean;
-  onClose: () => void;
-  scanResult: ScanResult;
-  request: { name: string };
-}) {
-  const [selectedFormat, setSelectedFormat] = useState<'pdf' | 'json' | 'csv'>(
-    'json'
-  );
-  const [isExporting, setIsExporting] = useState(false);
-  const { toast } = useToast();
-
-  const formats = [
-    {
-      id: 'pdf' as const,
-      label: 'PDF Report',
-      icon: FileText,
-      description: 'Professional PDF with details',
-    },
-    {
-      id: 'json' as const,
-      label: 'JSON Data',
-      icon: FileJson,
-      description: 'Structured data export',
-    },
-    {
-      id: 'csv' as const,
-      label: 'CSV File',
-      icon: Table,
-      description: 'Spreadsheet compatible',
-    },
-  ];
-
-  const handleExport = () => {
-    setIsExporting(true);
-
-    setTimeout(() => {
-      if (selectedFormat === 'json') {
-        const data = JSON.stringify(scanResult, null, 2);
-        const blob = new Blob([data], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `security-scan-${request.name}-${
-          new Date().toISOString().split('T')[0]
-        }.json`;
-        link.click();
-        URL.revokeObjectURL(url);
-      }
-
-      setIsExporting(false);
-      onClose();
-      toast({
-        title: 'Export Successful',
-        description: `Security report exported as ${selectedFormat.toUpperCase()}`,
-      });
-    }, 1000);
-  };
-
-  if (!isOpen) return null;
-
-  return (
-    <div className='fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4'>
-      <div className='bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-md w-full'>
-        <div className='flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700'>
-          <h2 className='text-xl font-semibold text-gray-900 dark:text-white'>
-            Export Security Report
-          </h2>
-          <button
-            onClick={onClose}
-            className='p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg'
-          >
-            <X size={20} className='text-gray-500' />
-          </button>
-        </div>
-
-        <div className='p-6 space-y-6'>
-          <div>
-            <label className='text-sm font-semibold text-gray-900 dark:text-white mb-3 block'>
-              Export Format
-            </label>
-            <div className='space-y-2'>
-              {formats.map(({ id, label, icon: Icon, description }) => (
-                <button
-                  key={id}
-                  onClick={() => setSelectedFormat(id)}
-                  className={`w-full px-4 py-3 rounded-lg border-2 transition-all flex items-center gap-3 ${
-                    selectedFormat === id
-                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                      : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
-                  }`}
-                >
-                  <Icon
-                    size={20}
-                    className={
-                      selectedFormat === id ? 'text-blue-600' : 'text-gray-400'
-                    }
-                  />
-                  <div className='text-left'>
-                    <div className='font-medium text-gray-900 dark:text-white'>
-                      {label}
-                    </div>
-                    <div className='text-xs text-gray-500 dark:text-gray-400'>
-                      {description}
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className='flex gap-3 pt-4 border-t border-gray-200 dark:border-gray-700'>
-            <button
-              onClick={onClose}
-              disabled={isExporting}
-              className='flex-1 px-4 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors'
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleExport}
-              disabled={isExporting}
-              className='flex-1 px-4 py-2.5 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2'
-            >
-              {isExporting ? (
-                <>
-                  <Loader2 size={16} className='animate-spin' />
-                  Exporting...
-                </>
-              ) : (
-                <>
-                  <Download size={16} />
-                  Export
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// Main Security Scan View Component (Full Page, No Modal Wrapper)
 export default function SecurityScanView({
   request,
   onClose,
@@ -339,33 +65,52 @@ export default function SecurityScanView({
   const [expandedVulnerability, setExpandedVulnerability] = useState<
     string | null
   >(null);
+
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [scanProgress, setScanProgress] = useState('');
+  const [remainingTime, setRemainingTime] = useState(60);
   const { toast } = useToast();
 
   const startScan = async () => {
     try {
       setScanStatus('initializing');
       setScanProgress('Initializing scan...');
+      setRemainingTime(60);
 
       const { scanId } = await startSecurityScan(request.id);
 
       setScanStatus('scanning');
       setScanProgress('Scanning endpoint...');
 
-      const result = await pollSecurityScan(scanId, (status) => {
-        if (status.progress) {
-          setScanProgress(`Scanning... ${status.progress}%`);
-        }
-      });
+      const timerInterval = setInterval(() => {
+        setRemainingTime((prev) => {
+          if (prev <= 1) {
+            clearInterval(timerInterval);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
 
-      setScanResult(result);
-      setScanStatus('completed');
+      try {
+        const result = await pollSecurityScan(scanId, (status) => {
+          if (status.progress) {
+            setScanProgress(`Scanning... ${status.progress}%`);
+          }
+        });
 
-      toast({
-        title: 'Scan Complete',
-        description: `Found ${result.totalIssues} security issues`,
-      });
+        clearInterval(timerInterval);
+        setScanResult(result);
+        setScanStatus('completed');
+
+        toast({
+          title: 'Scan Complete',
+          description: `Found ${result.totalIssues} security issues`,
+        });
+      } catch (pollError: any) {
+        clearInterval(timerInterval);
+        throw pollError;
+      }
     } catch (error: any) {
       console.error('Security scan failed:', error);
       setScanStatus('error');
@@ -380,6 +125,7 @@ export default function SecurityScanView({
   const cancelScan = () => {
     setScanStatus('idle');
     setScanProgress('');
+    setRemainingTime(60);
   };
 
   const handleShare = async () => {
@@ -429,7 +175,6 @@ Passed Checks: ${scanResult.passedChecks}
 
   return (
     <div className='bg-white dark:bg-gray-900 w-full h-full flex flex-col overflow-hidden'>
-      {/* Header */}
       <div className='border-b border-gray-200 dark:border-gray-800 p-4 flex-shrink-0'>
         <div className='flex items-center justify-between mb-3'>
           <div className='flex-1'>
@@ -463,7 +208,6 @@ Passed Checks: ${scanResult.passedChecks}
         )}
       </div>
 
-      {/* Scanning State */}
       {(scanStatus === 'initializing' || scanStatus === 'scanning') && (
         <div className='flex-1 flex items-center justify-center p-8'>
           <div className='text-center max-w-md'>
@@ -474,8 +218,11 @@ Passed Checks: ${scanResult.passedChecks}
             <h3 className='text-xl font-semibold text-gray-900 dark:text-white mb-2'>
               Scanning API Endpoint
             </h3>
-            <p className='text-gray-600 dark:text-gray-400 mb-6'>
+            <p className='text-gray-600 dark:text-gray-400 mb-2'>
               {scanProgress}
+            </p>
+            <p className='text-sm text-gray-500 dark:text-gray-500 mb-6'>
+              Timeout in {remainingTime}s
             </p>
             <button
               onClick={cancelScan}
@@ -488,10 +235,8 @@ Passed Checks: ${scanResult.passedChecks}
         </div>
       )}
 
-      {/* Results State */}
       {scanStatus === 'completed' && scanResult && (
         <div className='flex-1 overflow-auto'>
-          {/* Summary Cards */}
           <div className='p-4 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50'>
             <div className='flex items-center justify-between mb-4'>
               <div className='flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400'>
@@ -501,17 +246,11 @@ Passed Checks: ${scanResult.passedChecks}
                 </span>
               </div>
               <div className='flex gap-2'>
-                <Button
-                  onClick={() => setIsExportModalOpen(true)}
-                  className='px-3 py-1.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-white dark:hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm'
-                >
+                <Button onClick={() => setIsExportModalOpen(true)}>
                   <Download size={14} />
                   Export
                 </Button>
-                <Button
-                  onClick={handleShare}
-                  className='px-3 py-1.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-white dark:hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm'
-                >
+                <Button onClick={handleShare}>
                   <Share2 size={14} />
                   Share
                 </Button>
@@ -554,7 +293,6 @@ Passed Checks: ${scanResult.passedChecks}
             </div>
           </div>
 
-          {/* Filters and Search */}
           <div className='p-4 border-b border-gray-200 dark:border-gray-800'>
             <div className='flex items-center justify-between mb-3'>
               <h3 className='font-semibold text-gray-900 dark:text-white'>
@@ -599,7 +337,6 @@ Passed Checks: ${scanResult.passedChecks}
             </div>
           </div>
 
-          {/* Vulnerabilities List */}
           <div className='p-4 space-y-3'>
             {filteredVulnerabilities.length === 0 ? (
               <div className='text-center py-12'>
@@ -624,7 +361,6 @@ Passed Checks: ${scanResult.passedChecks}
             )}
           </div>
 
-          {/* Footer */}
           <div className='p-4 border-t border-gray-200 dark:border-gray-800'>
             <div className='flex items-center justify-between text-sm'>
               <div className='flex items-center gap-4'>
@@ -650,7 +386,6 @@ Passed Checks: ${scanResult.passedChecks}
         </div>
       )}
 
-      {/* Error State */}
       {scanStatus === 'error' && (
         <div className='flex-1 flex items-center justify-center p-8'>
           <div className='text-center max-w-md'>
@@ -666,7 +401,6 @@ Passed Checks: ${scanResult.passedChecks}
         </div>
       )}
 
-      {/* Export Modal */}
       <ExportModal
         isOpen={isExportModalOpen}
         onClose={() => setIsExportModalOpen(false)}
