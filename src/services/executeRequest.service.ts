@@ -311,9 +311,17 @@ export const getSecurityReport = async (
 export const pollSecurityScan = async (
   scanId: string,
   onProgress?: (status: any) => void,
-  interval = 2000
+  interval = 2000,
+  maxDuration = 60000
 ) => {
+  const startTime = Date.now();
+
   while (true) {
+    const elapsedTime = Date.now() - startTime;
+    if (elapsedTime >= maxDuration) {
+      throw new Error('Security scan timed out. Please try again.');
+    }
+
     const status = await getSecurityScanStatus(scanId);
     onProgress?.(status);
 
