@@ -1317,6 +1317,8 @@ const Sidebar: React.FC = () => {
                       <Move className='h-4 w-4 mr-2' />
                       Move to
                     </button> */}
+                    <div className='border-t border-gray-200 dark:border-gray-700 my-1'></div>
+
                     <button
                       onClick={() => {
                         setShowDeleteRequestDialog(true);
@@ -1328,6 +1330,7 @@ const Sidebar: React.FC = () => {
                       <Trash2 className='h-4 w-4 mr-2' />
                       Delete
                     </button>
+                    <div className='border-t border-gray-200 dark:border-gray-700 my-1'></div>
 
                     <button
                       onClick={() => handleOpenSecurityScan(selectedRequest)}

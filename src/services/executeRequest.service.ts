@@ -291,7 +291,7 @@ const transformSecurityReport = (report: SecurityReportResponse) => {
     return {
       id: alert.id,
       severity,
-      confidence: alert.confidence as 'High' | 'Medium' | 'Low', // Add this line
+      confidence: alert.confidence as 'High' | 'Medium' | 'Low',
       title: alert.name,
       description: alert.description,
       recommendation: alert.solution,
@@ -315,7 +315,8 @@ const transformSecurityReport = (report: SecurityReportResponse) => {
 };
 
 export const getSecurityScanStatus = async (
-  scanId: string
+  scanId: string,
+  signal?: AbortSignal
 ): Promise<{
   scanId: string;
   status: 'pending' | 'scanning' | 'completed' | 'failed';
@@ -324,7 +325,8 @@ export const getSecurityScanStatus = async (
   try {
     const response = await apiRequest(
       'GET',
-      `${SECURITY_API_BASE}/scan/${scanId}/status`
+      `${SECURITY_API_BASE}/scan/${scanId}/status`,
+      { signal } // Pass abort signal to fetch
     );
 
     if (!response.ok) {
@@ -333,16 +335,22 @@ export const getSecurityScanStatus = async (
 
     return await response.json();
   } catch (error: any) {
+    // Re-throw abort errors
+    if (error.name === 'AbortError') {
+      throw new Error('Scan cancelled');
+    }
     throw new Error(error.message || 'Failed to fetch scan status');
   }
 };
 
 export const getSecurityReport = async (
-  scanId: string
+  scanId: string,
+  signal?: AbortSignal
 ): Promise<SecurityReportResponse> => {
   const response = await apiRequest(
     'GET',
-    `${SECURITY_API_BASE}/report?scanId=${scanId}`
+    `${SECURITY_API_BASE}/report?scanId=${scanId}`,
+    { signal }
   );
 
   if (!response.ok) {
@@ -354,20 +362,24 @@ export const getSecurityReport = async (
 
 const pollSecurityReport = async (
   scanId: string,
+  signal?: AbortSignal,
   interval = 3000,
   maxDuration = 120000
 ) => {
   const startTime = Date.now();
 
   while (true) {
+    if (signal?.aborted) {
+      throw new Error('Scan cancelled');
+    }
+
     if (Date.now() - startTime >= maxDuration) {
       throw new Error('Security report generation timed out');
     }
 
-    const report = await getSecurityReport(scanId);
+    const report = await getSecurityReport(scanId, signal);
 
     if (report.status === 'completed') {
-      // Transform the report before returning
       return transformSecurityReport(report);
     }
 
@@ -375,36 +387,81 @@ const pollSecurityReport = async (
       throw new Error('Security report generation failed');
     }
 
-    await new Promise((r) => setTimeout(r, interval));
+    await new Promise((resolve, reject) => {
+      const timeoutId = setTimeout(resolve, interval);
+
+      if (signal) {
+        signal.addEventListener(
+          'abort',
+          () => {
+            clearTimeout(timeoutId);
+            reject(new Error('Scan cancelled'));
+          },
+          { once: true }
+        );
+      }
+    });
   }
 };
 
 export const pollSecurityScan = async (
   scanId: string,
   onProgress?: (status: any) => void,
+  signal?: AbortSignal,
   interval = 2000,
   maxDuration = 120000
 ) => {
   const startTime = Date.now();
 
-  await new Promise((r) => setTimeout(r, 4000));
+  await new Promise((resolve, reject) => {
+    const timeoutId = setTimeout(resolve, 4000);
+
+    if (signal) {
+      signal.addEventListener(
+        'abort',
+        () => {
+          clearTimeout(timeoutId);
+          reject(new Error('Scan cancelled'));
+        },
+        { once: true }
+      );
+    }
+  });
 
   while (true) {
+    if (signal?.aborted) {
+      throw new Error('Scan cancelled');
+    }
+
     if (Date.now() - startTime >= maxDuration) {
       throw new Error('Security scan timed out. Please try again.');
     }
 
-    const status = await getSecurityScanStatus(scanId);
+    const status = await getSecurityScanStatus(scanId, signal);
     onProgress?.(status);
 
     if (status.status === 'completed') {
-      return pollSecurityReport(scanId, interval, maxDuration);
+      return pollSecurityReport(scanId, signal, interval, maxDuration);
     }
 
     if (status.status === 'failed') {
       throw new Error('Security scan failed');
     }
 
-    await new Promise((r) => setTimeout(r, interval));
+    // Use AbortSignal with setTimeout for cancellable delay
+    await new Promise((resolve, reject) => {
+      const timeoutId = setTimeout(resolve, interval);
+
+      if (signal) {
+        signal.addEventListener(
+          'abort',
+          () => {
+            clearTimeout(timeoutId);
+            reject(new Error('Scan cancelled'));
+          },
+          { once: true }
+        );
+      }
+    });
   }
 };
