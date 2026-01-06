@@ -291,6 +291,7 @@ const transformSecurityReport = (report: SecurityReportResponse) => {
     return {
       id: alert.id,
       severity,
+      confidence: alert.confidence as 'High' | 'Medium' | 'Low', // Add this line
       title: alert.name,
       description: alert.description,
       recommendation: alert.solution,
