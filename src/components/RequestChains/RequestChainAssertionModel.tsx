@@ -683,6 +683,12 @@ function AssertionModal({
     if (!isOpen) {
       setAssertionsToRemove(new Set());
       setSelectedSuggestedAssertions(new Set());
+      setSelectedOperator('equals');
+      setManualValue('');
+      setLocalDateValue('');
+      setGeneralType('');
+      setGeneralValue('');
+      setGeneralComparison('less');
     }
   }, [isOpen]);
 
