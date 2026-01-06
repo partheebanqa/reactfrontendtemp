@@ -100,13 +100,6 @@ function AssertionModal({
   const displayFieldValue =
     initialValue !== undefined ? initialValue : fieldValue;
 
-  const normalizeHeaderName = (name: string): string => {
-    return name
-      .toLowerCase()
-      .replace(/^headers\./, '')
-      .trim();
-  };
-
   const getOperatorsForType = (type: string, isArray: boolean) => {
     if (isArray) {
       return [
@@ -227,9 +220,10 @@ function AssertionModal({
   };
 
   const valueType = getValueType(displayFieldValue);
+
   const isArray = Array.isArray(displayFieldValue);
 
-  const operators = getOperatorsForType(fieldType || valueType, isArray);
+  const operators = getOperatorsForType(valueType, isArray);
 
   const suggestedAssertionsList = suggestedAssertions.map((assertion) => {
     let label = '';
