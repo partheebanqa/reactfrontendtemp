@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import {
   Loader2,
   X,
@@ -83,21 +83,37 @@ export default function SecurityScanView({
   const [remainingTime, setRemainingTime] = useState(60);
   const { toast } = useToast();
 
+  // Add refs to track ongoing operations
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
   const startScan = async () => {
     try {
+      // Create new abort controller for this scan
+      abortControllerRef.current = new AbortController();
+
       setScanStatus('initializing');
       setScanProgress('Initializing scan...');
       setRemainingTime(60);
 
       const { scanId } = await startSecurityScan(request.id);
 
+      // Check if cancelled during initialization
+      if (abortControllerRef.current.signal.aborted) {
+        return;
+      }
+
       setScanStatus('scanning');
       setScanProgress('Scanning endpoint...');
 
-      const timerInterval = setInterval(() => {
+      // Start countdown timer
+      timerIntervalRef.current = setInterval(() => {
         setRemainingTime((prev) => {
           if (prev <= 1) {
-            clearInterval(timerInterval);
+            if (timerIntervalRef.current) {
+              clearInterval(timerIntervalRef.current);
+              timerIntervalRef.current = null;
+            }
             return 0;
           }
           return prev - 1;
@@ -105,13 +121,32 @@ export default function SecurityScanView({
       }, 1000);
 
       try {
-        const result = await pollSecurityScan(scanId, (status) => {
-          if (status.progress) {
-            setScanProgress(`Scanning... ${status.progress}%`);
-          }
-        });
+        const result = await pollSecurityScan(
+          scanId,
+          (status) => {
+            // Check if scan was cancelled
+            if (abortControllerRef.current?.signal.aborted) {
+              throw new Error('Scan cancelled');
+            }
 
-        clearInterval(timerInterval);
+            if (status.progress) {
+              setScanProgress(`Scanning... ${status.progress}%`);
+            }
+          },
+          abortControllerRef.current.signal // Pass abort signal to polling
+        );
+
+        // Check if cancelled before setting results
+        if (abortControllerRef.current?.signal.aborted) {
+          return;
+        }
+
+        // Clear timer
+        if (timerIntervalRef.current) {
+          clearInterval(timerIntervalRef.current);
+          timerIntervalRef.current = null;
+        }
+
         setScanResult(result);
         setScanStatus('completed');
 
@@ -120,24 +155,61 @@ export default function SecurityScanView({
           description: `Found ${result.totalIssues} security issues`,
         });
       } catch (pollError: any) {
-        clearInterval(timerInterval);
+        // Clear timer
+        if (timerIntervalRef.current) {
+          clearInterval(timerIntervalRef.current);
+          timerIntervalRef.current = null;
+        }
+
+        // Don't show error if scan was cancelled
+        if (pollError.message === 'Scan cancelled') {
+          return;
+        }
+
         throw pollError;
       }
     } catch (error: any) {
       console.error('Security scan failed:', error);
+
+      // Don't show error for cancelled scans
+      if (error.message === 'Scan cancelled') {
+        return;
+      }
+
       setScanStatus('error');
       toast({
         title: 'Scan Failed',
         description: error.message || 'Failed to complete security scan',
         variant: 'destructive',
       });
+    } finally {
+      // Cleanup
+      abortControllerRef.current = null;
     }
   };
 
   const cancelScan = () => {
+    // Abort ongoing operations
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+
+    // Clear timer
+    if (timerIntervalRef.current) {
+      clearInterval(timerIntervalRef.current);
+      timerIntervalRef.current = null;
+    }
+
+    // Reset UI state
     setScanStatus('idle');
     setScanProgress('');
     setRemainingTime(60);
+
+    toast({
+      title: 'Scan Cancelled',
+      description: 'Security scan has been cancelled',
+    });
   };
 
   const severityStyles = {
@@ -161,20 +233,41 @@ export default function SecurityScanView({
     },
   };
 
+  // UPDATED: Share handler with proper return value handling
   const handleShare = async () => {
     if (!scanResult) return;
 
     try {
-      await shareSecurityScan(scanResult, request, request.id);
-    } catch (error) {
-      console.error('Share error:', error);
-      if ((error as Error).name !== 'AbortError') {
+      const result = await shareSecurityScan(scanResult, request);
+
+      // Don't show toast if user cancelled the share dialog
+      if (result.method === 'cancelled') {
+        return;
+      }
+
+      // Show appropriate success message based on share method
+      if (result.method === 'shared') {
         toast({
-          title: 'Share Failed',
-          description: 'Failed to share security scan',
-          variant: 'destructive',
+          title: 'Shared Successfully',
+          description: 'Security scan summary shared',
+        });
+      } else if (
+        result.method === 'clipboard' ||
+        result.method === 'execCommand'
+      ) {
+        toast({
+          title: 'Copied to Clipboard',
+          description:
+            'Security scan summary copied - you can now paste it anywhere',
         });
       }
+    } catch (error) {
+      console.error('Share error:', error);
+      toast({
+        title: 'Share Failed',
+        description: 'Failed to share security scan',
+        variant: 'destructive',
+      });
     }
   };
 

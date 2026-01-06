@@ -21,15 +21,13 @@ import BreadCum from '@/components/BreadCum/Breadcum';
 import { Loader } from '@/components/Loader';
 import { useLocation } from 'wouter';
 
-
-
 const useQueryParams = () => {
   const [location] = useLocation(); // only pathname, e.g. "/executions/report"
 
   // 🔥 Use window.location.search to get query string
   return useMemo(() => {
-    if (typeof window === "undefined") {
-      return new URLSearchParams("");
+    if (typeof window === 'undefined') {
+      return new URLSearchParams('');
     }
     return new URLSearchParams(window.location.search);
   }, [location]); // re-run when route changes
@@ -66,11 +64,8 @@ const Executions = () => {
   );
 
   const queryParams = useQueryParams();
-  const suiteIdFromUrl = queryParams.get("suiteId") ?? "";
-  const chainIdFromUrl = queryParams.get("chainId") ?? "";
-
-  console.log("suiteIdFromUrl", suiteIdFromUrl);
-
+  const suiteIdFromUrl = queryParams.get('suiteId') ?? '';
+  const chainIdFromUrl = queryParams.get('chainId') ?? '';
 
   // Saved filters (mock data for now)
   const [savedFilters] = useState<SavedFilter[]>([
@@ -89,10 +84,6 @@ const Executions = () => {
       },
     },
   ]);
-
-
-
-
 
   // Mock schedules data
   const schedules = [
@@ -113,7 +104,6 @@ const Executions = () => {
 
   // console.log("workspaceId", workspaceId);
 
-
   const {
     data: executionData,
     isLoading,
@@ -122,7 +112,7 @@ const Executions = () => {
     isFetching,
   } = useQuery({
     queryKey: [
-      "executions",
+      'executions',
       currentPage,
       itemsPerPage,
       workspaceId,
@@ -166,13 +156,8 @@ const Executions = () => {
         .then(executionService.mapData);
     },
 
-
     enabled: !!workspaceId, // prevents running before workspace is loaded
   });
-
-
-
-
 
   // console.log('executionData', executionData);
 
@@ -195,12 +180,9 @@ const Executions = () => {
         return false;
       }
 
-
       if (suiteOrChainIdFilter) {
         const suiteId = (execution.entityId ?? '').toLowerCase();
-        if (
-          !suiteId.includes(suiteOrChainIdFilter)
-        ) {
+        if (!suiteId.includes(suiteOrChainIdFilter)) {
           return false;
         }
       }
@@ -208,7 +190,7 @@ const Executions = () => {
       if (
         environmentFilter !== 'all' &&
         (execution.environment ?? '').toLowerCase() !==
-        environmentFilter.toLowerCase()
+          environmentFilter.toLowerCase()
       ) {
         return false;
       }
@@ -262,7 +244,7 @@ const Executions = () => {
     executionIdFilter,
     dateRange,
     durationRange,
-    suiteOrChainIdQuery
+    suiteOrChainIdQuery,
   ]);
 
   // Helper functions
@@ -407,7 +389,6 @@ const Executions = () => {
   const isSuiteFiltered = !!suiteIdFromUrl;
   const isChainFiltered = !!chainIdFromUrl;
 
-
   const breadCrumbTitle = (() => {
     if (isSuiteFiltered) return 'Executions · Test Suite';
     if (isChainFiltered) return 'Executions · Request Chain';
@@ -439,18 +420,30 @@ const Executions = () => {
         quickGuideContent={
           <div>
             <p className='mb-4 text-base font-medium mt-4'>
-              Optraflow allows you to track the executions of Test Suites and Request Chains triggered via Manual Execution, CI/CD pipelines, or Scheduled Runs — and verify their reports.
+              Optraflow allows you to track the executions of Test Suites and
+              Request Chains triggered via Manual Execution, CI/CD pipelines, or
+              Scheduled Runs — and verify their reports.
             </p>
 
             <ul className='list-none pl-5 space-y-4 text-sm leading-relaxed'>
               <li>
-                🟩 <b className='text-[#000000]'>Step 1: Filter Executions</b> – Narrow down execution results based on various filters.
+                🟩 <b className='text-[#000000]'>Step 1: Filter Executions</b> –
+                Narrow down execution results based on various filters.
                 <span className='block mt-1'>
                   <ul className='list-disc pl-6 mt-2 space-y-1'>
-                    <li><b>Environment:</b> Select the target environment</li>
-                    <li><b>Type:</b> Choose between Test Suite or Request Chain</li>
-                    <li><b>Quick Filters:</b> Last 24 hours, Last week, Failed only</li>
-                    <li><b>Advanced Filters:</b></li>
+                    <li>
+                      <b>Environment:</b> Select the target environment
+                    </li>
+                    <li>
+                      <b>Type:</b> Choose between Test Suite or Request Chain
+                    </li>
+                    <li>
+                      <b>Quick Filters:</b> Last 24 hours, Last week, Failed
+                      only
+                    </li>
+                    <li>
+                      <b>Advanced Filters:</b>
+                    </li>
                     <ul className='list-[circle] pl-6 mt-1 space-y-1'>
                       <li>By date range</li>
                       <li>By execution status</li>
@@ -462,20 +455,25 @@ const Executions = () => {
               </li>
 
               <li>
-                🟨 <b className='text-[#000000]'>Step 2: View Execution Reports</b> – Click the 👁️ Eye icon next to any execution to view its detailed report.
+                🟨{' '}
+                <b className='text-[#000000]'>Step 2: View Execution Reports</b>{' '}
+                – Click the 👁️ Eye icon next to any execution to view its
+                detailed report.
                 <span className='block mt-1'>
-                  Report formats differ for Test Suites and Request Chains to reflect their unique execution flows.
+                  Report formats differ for Test Suites and Request Chains to
+                  reflect their unique execution flows.
                 </span>
                 <span className='block mt-2 text-gray-600'>
-                  💡 <i>Tip:</i> If you don’t see expected executions, ensure the correct workspace is selected.
-                  Use the <b>Workspace Switcher</b> at the top-left (next to the Optraflow logo) to toggle between workspaces.
+                  💡 <i>Tip:</i> If you don’t see expected executions, ensure
+                  the correct workspace is selected. Use the{' '}
+                  <b>Workspace Switcher</b> at the top-left (next to the
+                  Optraflow logo) to toggle between workspaces.
                 </span>
               </li>
             </ul>
           </div>
         }
       />
-
 
       <ExecutionsFilters
         searchQuery={searchQuery}
@@ -505,7 +503,7 @@ const Executions = () => {
         handleDeleteEnvironment={handleDeleteEnvironment}
         onRefresh={refetch}
         refreshing={isFetching}
-        suiteOrChainIdQuery={suiteOrChainIdQuery}                // 👈 NEW
+        suiteOrChainIdQuery={suiteOrChainIdQuery} // 👈 NEW
         setSuiteOrChainIdQuery={setSuiteOrChainIdQuery}
       />
 
