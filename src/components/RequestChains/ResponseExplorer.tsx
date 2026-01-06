@@ -89,14 +89,10 @@ export function ResponseExplorer({
   requestIndex = 0,
   extractedVariablesByRequest = {},
   chainRequests = [],
-  requestExtractedVariables = {},
 }: ResponseExplorerProps) {
   const [activeTab, setActiveTab] = useState<
     'body' | 'headers' | 'cookies' | 'actualRequest' | 'assertions'
   >('body');
-
-  console.log('extractedVariables123:', extractedVariables);
-  console.log('requestExtractedVariables123:', requestExtractedVariables);
 
   const [assertionModalOpen, setAssertionModalOpen] = useState(false);
   const [selectedAssertion, setSelectedAssertion] = useState<{

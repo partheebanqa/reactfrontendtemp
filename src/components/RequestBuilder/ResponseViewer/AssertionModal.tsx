@@ -941,64 +941,92 @@ function AssertionModal({
           {activeTab === 'suggested' && (
             <div className='space-y-2'>
               {displayedSuggestions.length > 0 ? (
-                displayedSuggestions.map((assertion: any) => {
-                  const Icon = assertion.icon || CheckCircle;
-                  const isEnabled = assertion.assertion?.enabled || false;
+                displayedSuggestions.map((assertionItem: any) => {
+                  const Icon = assertionItem.icon || CheckCircle;
+                  const isAlreadyEnabled =
+                    assertionItem.assertion?.enabled || false;
                   const isMarkedForRemoval = assertionsToRemove.has(
-                    assertion.id
+                    assertionItem.id
                   );
                   const isSelected = selectedSuggestedAssertions.has(
-                    assertion.id
+                    assertionItem.id
                   );
-                  const isDisabled = isEnabled && !isMarkedForRemoval;
+                  const isDisabled = isAlreadyEnabled && !isMarkedForRemoval;
+                  const isVisuallySelected = isSelected || isDisabled;
 
                   return (
-                    <button
-                      key={assertion.id}
-                      onClick={() => handleSuggestedClick(assertion)}
-                      disabled={isDisabled}
-                      className={`w-full flex items-start gap-4 p-4 rounded-lg border transition-all text-left ${
-                        isDisabled
-                          ? 'border-gray-200 bg-gray-50 opacity-50 cursor-not-allowed'
-                          : isMarkedForRemoval
+                    <div
+                      key={assertionItem.id}
+                      className={`w-full flex items-start gap-4 p-4 rounded-lg border transition-all group/assertion ${
+                        isMarkedForRemoval
                           ? 'border-red-300 bg-red-50'
-                          : isSelected
-                          ? 'border-blue-300 bg-blue-50'
-                          : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50'
+                          : isVisuallySelected
+                          ? 'border-blue-400 bg-blue-50'
+                          : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                       }`}
                     >
-                      <div
-                        className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors ${
-                          isDisabled
-                            ? 'bg-gray-100'
-                            : isMarkedForRemoval
-                            ? 'bg-red-100'
-                            : isSelected
-                            ? 'bg-blue-100'
-                            : 'bg-gray-100 group-hover:bg-blue-100'
-                        }`}
+                      <button
+                        onClick={() => handleSuggestedClick(assertionItem)}
+                        className='flex items-start gap-4 flex-1 text-left min-w-0'
                       >
-                        <Icon
-                          className={`w-5 h-5 transition-colors ${
-                            isDisabled
-                              ? 'text-gray-400'
-                              : isMarkedForRemoval
-                              ? 'text-red-600'
-                              : isSelected
-                              ? 'text-blue-600'
-                              : 'text-gray-600'
+                        <div
+                          className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors ${
+                            isMarkedForRemoval
+                              ? 'bg-red-100'
+                              : isVisuallySelected
+                              ? 'bg-blue-100'
+                              : 'bg-gray-100'
                           }`}
-                        />
-                      </div>
-                      <div className='flex-1 min-w-0'>
-                        <div className='text-sm font-medium text-gray-900'>
-                          {assertion.label}
+                        >
+                          <Icon
+                            className={`w-5 h-5 transition-colors ${
+                              isMarkedForRemoval
+                                ? 'text-red-600'
+                                : isVisuallySelected
+                                ? 'text-blue-600'
+                                : 'text-gray-600'
+                            }`}
+                          />
                         </div>
-                        <div className='text-xs text-gray-500 mt-1'>
-                          {assertion.description}
+
+                        <div className='flex-1 min-w-0'>
+                          <div
+                            className={`text-sm font-medium ${
+                              isMarkedForRemoval
+                                ? 'text-red-700'
+                                : isVisuallySelected
+                                ? 'text-blue-700'
+                                : 'text-gray-900'
+                            }`}
+                          >
+                            {assertionItem.label}
+                          </div>
+                          <div className='text-xs text-gray-500 mt-1'>
+                            {assertionItem.description}
+                          </div>
                         </div>
-                      </div>
-                    </button>
+                      </button>
+
+                      {isAlreadyEnabled && (
+                        <button
+                          onClick={(e) =>
+                            handleMarkForRemoval(assertionItem.id, e)
+                          }
+                          className={`p-1.5 rounded transition-all flex-shrink-0 ${
+                            isMarkedForRemoval
+                              ? 'bg-red-100 text-red-600 hover:bg-red-200'
+                              : 'text-gray-400 hover:text-red-600 hover:bg-red-50 opacity-0 group-hover/assertion:opacity-100'
+                          }`}
+                          title={
+                            isMarkedForRemoval
+                              ? 'Undo removal'
+                              : 'Remove assertion'
+                          }
+                        >
+                          <X className='w-4 h-4' />
+                        </button>
+                      )}
+                    </div>
                   );
                 })
               ) : (
