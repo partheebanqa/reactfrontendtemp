@@ -127,7 +127,6 @@ function isAuthEndpoint(name: string, url: string): boolean {
     lowerName.includes('signin') ||
     lowerName.includes('token') ||
     lowerUrl.includes('/login') ||
-    lowerUrl.includes('/auth') ||
     lowerUrl.includes('/signin') ||
     lowerUrl.includes('/token')
   );

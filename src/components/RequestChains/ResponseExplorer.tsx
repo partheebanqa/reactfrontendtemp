@@ -1070,11 +1070,6 @@ export function ResponseExplorer({
                 label: 'Assertions(R)',
                 count: response?.assertions ? response.assertions.length : 0,
               },
-              {
-                id: 'securityScan',
-                label: 'Security(S)',
-                count: response?.assertions ? response.assertions.length : 0,
-              },
             ].map((tab) => {
               const count = tab.count ?? 0;
               const showBlueDot =
@@ -1110,17 +1105,6 @@ export function ResponseExplorer({
               );
             })}
           </nav>
-
-          {executionStatus && (
-            <div className='flex items-center space-x-4 text-sm text-gray-600'>
-              <span className='flex items-center space-x-1 bg-green-100 text-green-700 px-2 py-1 rounded-full'>
-                <CheckCircle className='w-4 h-4' />
-                <span>
-                  {response?.statusCode} {response?.statusText}
-                </span>
-              </span>
-            </div>
-          )}
         </div>
 
         <div className='p-6 max-h-96 overflow-auto scrollbar-thin'>
