@@ -1,7 +1,7 @@
 'use client';
 
 import type React from 'react';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { CheckCircle2, Circle, Search, X, Plus, Filter } from 'lucide-react';
 import { useToast } from '@/hooks/useToast';
 import { Button } from '@/components/ui/button';
@@ -30,16 +30,29 @@ const AssertionManager: React.FC<AssertionManagerProps> = ({
   const [showDialog, setShowDialog] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('All Categories');
   const [searchTerm, setSearchTerm] = useState('');
+  const [tempAssertions, setTempAssertions] = useState<Assertion[]>([]);
   const { toast } = useToast();
 
+  // Initialize temp assertions when dialog opens
+  useEffect(() => {
+    if (showDialog) {
+      setTempAssertions(assertions);
+    }
+  }, [showDialog, assertions]);
+
   const handleToggleAssertion = (id: string) => {
-    setAssertions(
-      assertions.map((a) => (a.id === id ? { ...a, enabled: !a.enabled } : a))
+    setTempAssertions(
+      tempAssertions.map((a) =>
+        a.id === id ? { ...a, enabled: !a.enabled } : a
+      )
     );
   };
 
   const handleSaveAssertions = async () => {
-    const selectedCount = assertions.filter((a) => a.enabled).length;
+    const selectedCount = tempAssertions.filter((a) => a.enabled).length;
+
+    // Apply temp changes to actual assertions
+    setAssertions(tempAssertions);
 
     if (onSaveAssertions) {
       try {
@@ -64,18 +77,19 @@ const AssertionManager: React.FC<AssertionManagerProps> = ({
 
     setShowDialog(false);
   };
+
   const selectedAssertions = assertions.filter((a) => a.enabled);
   const totalCount = assertions.length;
 
   const categories = useMemo(() => {
     const uniqueCats = [
-      ...new Set(assertions.map((a) => a.category.toUpperCase())),
+      ...new Set(tempAssertions.map((a) => a.category.toUpperCase())),
     ];
     return ['All Categories', ...uniqueCats.sort()];
-  }, [assertions]);
+  }, [tempAssertions]);
 
   const filteredAssertions = useMemo(() => {
-    let filtered = assertions;
+    let filtered = tempAssertions;
 
     if (selectedCategory !== 'All Categories') {
       filtered = filtered.filter(
@@ -103,15 +117,27 @@ const AssertionManager: React.FC<AssertionManagerProps> = ({
     );
 
     return uniqueFiltered;
-  }, [assertions, selectedCategory, searchTerm]);
+  }, [tempAssertions, selectedCategory, searchTerm]);
 
   const groupedByCategory = useMemo(() => {
     const grouped: Record<string, Assertion[]> = {};
+
+    // Add selected category first if there are selected assertions
+    const selectedFiltered = filteredAssertions.filter((a) => a.enabled);
+    if (selectedFiltered.length > 0) {
+      grouped['SELECTED'] = selectedFiltered;
+    }
+
+    // Then add other categories (excluding selected assertions)
     filteredAssertions.forEach((assertion) => {
+      // Skip if assertion is enabled (already in SELECTED)
+      if (assertion.enabled) return;
+
       const cat = assertion.category.toUpperCase();
       if (!grouped[cat]) grouped[cat] = [];
       grouped[cat].push(assertion);
     });
+
     return grouped;
   }, [filteredAssertions]);
 
@@ -131,10 +157,14 @@ const AssertionManager: React.FC<AssertionManagerProps> = ({
   };
 
   const handleDialogClose = () => {
+    // Reset temp assertions to original state
+    setTempAssertions(assertions);
     setShowDialog(false);
     setSearchTerm('');
     setSelectedCategory('All Categories');
   };
+
+  const tempSelectedCount = tempAssertions.filter((a) => a.enabled).length;
 
   return (
     <div className='w-full'>
@@ -186,7 +216,13 @@ const AssertionManager: React.FC<AssertionManagerProps> = ({
                   </div>
                 </div>
                 <button
-                  onClick={() => handleToggleAssertion(assertion.id)}
+                  onClick={() => {
+                    setAssertions(
+                      assertions.map((a) =>
+                        a.id === assertion.id ? { ...a, enabled: false } : a
+                      )
+                    );
+                  }}
                   className='ml-2 p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors'
                 >
                   <X className='w-4 h-4' />
@@ -242,8 +278,8 @@ const AssertionManager: React.FC<AssertionManagerProps> = ({
                     {categories.map((cat) => {
                       const count =
                         cat === 'All Categories'
-                          ? assertions.length
-                          : assertions.filter(
+                          ? tempAssertions.length
+                          : tempAssertions.filter(
                               (a) => a.category.toUpperCase() === cat
                             ).length;
                       return (
@@ -332,7 +368,7 @@ const AssertionManager: React.FC<AssertionManagerProps> = ({
 
             <div className='px-6 py-4 border-t border-gray-200 flex items-center justify-between flex-shrink-0 bg-gray-50'>
               <p className='text-sm text-gray-600'>
-                {selectedAssertions.length} of {totalCount} assertions selected
+                {tempSelectedCount} of {totalCount} assertions selected
               </p>
               <div className='flex gap-3'>
                 <button
