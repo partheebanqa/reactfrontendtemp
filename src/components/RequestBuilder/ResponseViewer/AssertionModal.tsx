@@ -18,7 +18,10 @@ import {
   Trash2,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { getCategoryForAssertionType } from '@/lib/assertion-utils';
+import {
+  getArrayAssertionConfig,
+  getCategoryForAssertionType,
+} from '@/lib/assertion-utils';
 
 function AssertionModal({
   fieldPath,
@@ -329,9 +332,36 @@ function AssertionModal({
   const getOperatorsForType = (type: string, isArray: boolean) => {
     if (isArray) {
       return [
-        { id: 'array_length', label: 'length', description: 'Array length' },
-        { id: 'equals', label: '=', description: 'Equals' },
-        { id: 'field_not_equals', label: '≠', description: 'Not equals' },
+        {
+          id: 'array_length',
+          label: 'length =',
+          description: 'Array length equals',
+        },
+        {
+          id: 'field_not_equals',
+          label: 'length ≠',
+          description: 'Array length not equals',
+        },
+        {
+          id: 'field_greater_than',
+          label: 'length >',
+          description: 'Array length greater than',
+        },
+        {
+          id: 'field_less_than',
+          label: 'length <',
+          description: 'Array length less than',
+        },
+        {
+          id: 'field_greater_equal',
+          label: 'length ≥',
+          description: 'Array length at least',
+        },
+        {
+          id: 'field_less_equal',
+          label: 'length ≤',
+          description: 'Array length at most',
+        },
       ];
     }
 
@@ -1117,77 +1147,102 @@ function AssertionModal({
                       }
 
                       if (value) {
-                        const config: any = {
-                          id: `manual-${Date.now()}-${selectedOperator}`,
-                          type: selectedOperator,
-                          displayType: selectedOperator,
-                          category:
-                            getCategoryForAssertionType(selectedOperator),
-                          field: fieldPath,
-                          value: value,
-                          enabled: true,
-                          source: 'manual',
-                        };
+                        let config: any;
 
-                        if (selectedOperator === 'array_length') {
-                          config.expectedLength = parseInt(value);
-                          config.description = `${fieldPath} array length = ${value}`;
-                        } else if (
-                          selectedOperator === 'contains' ||
-                          selectedOperator === 'field_not_contains'
-                        ) {
-                          config.expectedValue = value;
-                          config.description = `${fieldPath} ${
-                            selectedOperator === 'contains'
-                              ? 'contains'
-                              : 'does not contain'
-                          } "${value}"`;
-                        } else if (
-                          [
-                            'field_greater_than',
-                            'field_less_than',
-                            'field_greater_equal',
-                            'field_less_equal',
-                          ].includes(selectedOperator)
-                        ) {
-                          config.expectedValue = parseFloat(value);
-                          config.operator = selectedOperator;
-                          const opSymbol =
-                            selectedOperator === 'field_greater_than'
-                              ? '>'
-                              : selectedOperator === 'field_less_than'
-                              ? '<'
-                              : selectedOperator === 'field_greater_equal'
-                              ? '≥'
-                              : '≤';
-                          config.description = `${fieldPath} ${opSymbol} ${value}`;
-                        } else if (
-                          ['date_greater_than', 'date_less_than'].includes(
-                            selectedOperator
-                          )
-                        ) {
-                          config.expectedValue = value;
-                          config.operator = selectedOperator;
-                          config.description = `${fieldPath} ${
-                            selectedOperator === 'date_greater_than'
-                              ? 'after'
-                              : 'before'
-                          } ${value}`;
+                        if (isArray) {
+                          try {
+                            config = {
+                              id: `manual-${Date.now()}-${selectedOperator}`,
+                              ...getArrayAssertionConfig(
+                                selectedOperator,
+                                value,
+                                fieldPath
+                              ),
+                              source: 'manual',
+                            };
+                          } catch (error) {
+                            console.error(
+                              'Error creating array assertion:',
+                              error
+                            );
+                            return;
+                          }
                         } else {
-                          config.expectedValue = value;
-                          config.operator =
-                            selectedOperator === 'equals'
-                              ? 'equals'
-                              : selectedOperator;
-                          config.description = `${fieldPath} ${
-                            operators.find((o) => o.id === selectedOperator)
-                              ?.label || '='
-                          } ${value}`;
+                          config = {
+                            id: `manual-${Date.now()}-${selectedOperator}`,
+                            type: selectedOperator,
+                            displayType: selectedOperator,
+                            category:
+                              getCategoryForAssertionType(selectedOperator),
+                            field: fieldPath,
+                            value: value,
+                            enabled: true,
+                            source: 'manual',
+                          };
+
+                          if (selectedOperator === 'array_length') {
+                            config.expectedLength = parseInt(value);
+                            config.description = `${fieldPath} array length = ${value}`;
+                          } else if (
+                            selectedOperator === 'contains' ||
+                            selectedOperator === 'field_not_contains'
+                          ) {
+                            config.expectedValue = value;
+                            config.operator = selectedOperator;
+                            config.description = `${fieldPath} ${
+                              selectedOperator === 'contains'
+                                ? 'contains'
+                                : 'does not contain'
+                            } "${value}"`;
+                          } else if (
+                            [
+                              'field_greater_than',
+                              'field_less_than',
+                              'field_greater_equal',
+                              'field_less_equal',
+                            ].includes(selectedOperator)
+                          ) {
+                            config.expectedValue = parseFloat(value);
+                            config.operator = selectedOperator;
+                            const opSymbol =
+                              selectedOperator === 'field_greater_than'
+                                ? '>'
+                                : selectedOperator === 'field_less_than'
+                                ? '<'
+                                : selectedOperator === 'field_greater_equal'
+                                ? '≥'
+                                : '≤';
+                            config.description = `${fieldPath} ${opSymbol} ${value}`;
+                          } else if (
+                            ['date_greater_than', 'date_less_than'].includes(
+                              selectedOperator
+                            )
+                          ) {
+                            config.expectedValue = value;
+                            config.operator = selectedOperator;
+                            config.description = `${fieldPath} ${
+                              selectedOperator === 'date_greater_than'
+                                ? 'after'
+                                : 'before'
+                            } ${value}`;
+                          } else {
+                            config.expectedValue = value;
+                            config.operator =
+                              selectedOperator === 'equals'
+                                ? 'equals'
+                                : selectedOperator;
+                            config.description = `${fieldPath} ${
+                              operators.find((o) => o.id === selectedOperator)
+                                ?.label || '='
+                            } ${value}`;
+                          }
                         }
 
+                        // Update pending assertions
                         const existingIndex = pendingAssertions.findIndex(
                           (a) =>
-                            a.field === fieldPath && a.type === selectedOperator
+                            a.field === fieldPath &&
+                            a.operator === config.operator
                         );
 
                         if (existingIndex >= 0) {

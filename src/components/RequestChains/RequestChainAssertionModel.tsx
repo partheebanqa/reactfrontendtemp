@@ -471,7 +471,6 @@ function AssertionModal({
       field_less_than: 'field_less_than',
       field_greater_equal: 'field_greater_equal',
       field_less_equal: 'field_less_equal',
-      between: 'field_range',
       field_is_true: 'field_is_true',
       field_is_false: 'field_is_false',
       field_null: 'field_null',

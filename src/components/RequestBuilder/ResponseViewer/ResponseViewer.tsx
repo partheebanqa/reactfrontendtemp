@@ -321,26 +321,30 @@ const ResponseViewer = ({
           field_not_equals: 'does not equal',
           field_greater_than: 'is greater than',
           field_less_than: 'is less than',
+          field_greater_equal: 'is at least',
+          field_less_equal: 'is at most',
           contains: 'contains',
           field_not_contains: 'does not contain',
           array_length: 'has length',
+          greater_than: 'has more than',
+          less_than: 'has fewer than',
+          greater_than_or_equal: 'has at least',
+          less_than_or_equal: 'has at most',
+          not_equals: 'does not have',
         };
 
         const operatorText = operatorLabels[config.operator] || config.operator;
-        description = `${activeFieldPath} ${operatorText} "${config.value}"`;
+
+        if (config.type === 'array_length') {
+          description =
+            config.description ||
+            `${activeFieldPath} array ${operatorText} ${config.expectedValue} elements`;
+        } else {
+          description = `${activeFieldPath} ${operatorText} "${
+            config.expectedValue || config.value
+          }"`;
+        }
       }
-      const baseAssertion = {
-        id: `manual-${Date.now()}`,
-        type: finalType,
-        displayType: assertionType,
-        category: getCategoryForAssertionType(finalType),
-        description,
-        value: activeFieldValue,
-        expectedValue: config.value,
-        enabled: true,
-        operator: config.operator,
-        ...config,
-      };
 
       const normalizeFieldPath = (path: string) => {
         if (path.startsWith('headers.')) {
@@ -348,6 +352,20 @@ const ResponseViewer = ({
         }
         return path;
       };
+
+      const baseAssertion = {
+        id: `manual-${Date.now()}`,
+        type: finalType,
+        displayType: assertionType,
+        category: getCategoryForAssertionType(finalType),
+        description,
+        value: activeFieldValue,
+        expectedValue: config.expectedValue || config.value,
+        enabled: true,
+        operator: config.operator,
+        ...config,
+      };
+
       const newAssertion =
         config?.isGeneral && config.scope !== 'field'
           ? baseAssertion

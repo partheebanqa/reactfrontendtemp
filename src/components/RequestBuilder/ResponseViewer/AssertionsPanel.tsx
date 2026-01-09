@@ -13,6 +13,7 @@ export function AssertionsPanel({
   const getAssertionLabel = (assertion: Assertion): string => {
     const typeToUse = assertion.displayType || assertion.type;
 
+    // Handle general assertions
     if (assertion.isGeneral) {
       switch (typeToUse) {
         case 'response_time':
@@ -50,6 +51,28 @@ export function AssertionsPanel({
       }
     }
 
+    // Handle array assertions
+    if (typeToUse === 'array_length') {
+      const operatorLabels: Record<string, string> = {
+        equals: 'has exactly',
+        not_equals: 'does not have',
+        greater_than: 'has more than',
+        less_than: 'has fewer than',
+        greater_than_or_equal: 'has at least',
+        less_than_or_equal: 'has at most',
+      };
+
+      const operatorText =
+        operatorLabels[assertion.operator || 'equals'] || assertion.operator;
+      const expectedValue =
+        assertion.expectedValue || assertion.expectedLength || '?';
+
+      return `Array ${operatorText} ${expectedValue} element${
+        expectedValue !== 1 ? 's' : ''
+      }`;
+    }
+
+    // Handle other field assertions
     switch (typeToUse) {
       case 'exists':
         return 'Field exists';
@@ -74,9 +97,16 @@ export function AssertionsPanel({
       field_not_equals: '≠',
       field_greater_than: '>',
       field_less_than: '<',
+      field_greater_equal: '≥',
+      field_less_equal: '≤',
       contains: 'contains',
       field_not_contains: 'not contains',
       array_length: 'length',
+      greater_than: '>',
+      less_than: '<',
+      greater_than_or_equal: '≥',
+      less_than_or_equal: '≤',
+      not_equals: '≠',
     };
     return operators[op] || op;
   };
