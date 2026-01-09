@@ -752,28 +752,42 @@ function AssertionModal({
                     const isSelected = selectedGeneralAssertions.has(a.id);
                     const savedData = selectedGeneralAssertions.get(a.id);
 
+                    // Check if this assertion type already exists in allAssertions
+                    const alreadyExists = allAssertions.some(
+                      (assertion) =>
+                        assertion.type === a.id && assertion.enabled
+                    );
+
                     return (
                       <button
                         key={a.id}
                         onClick={() => handleGeneralClick(a.id)}
-                        className={`w-full flex items-start gap-4 p-4 rounded-lg border transition-all text-left group ${
+                        className={`w-full flex items-start gap-4 p-4 rounded-lg border transition-all text-left group relative ${
                           isSelected
                             ? 'border-blue-400 bg-blue-50'
-                            : 'border-border hover:border-primary/30 hover:bg-accent'
+                            : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50'
                         }`}
                       >
+                        {alreadyExists && (
+                          <div className='absolute top-2 right-2'>
+                            <div
+                              className='w-2 h-2 bg-blue-500 rounded-full'
+                              title='Already added'
+                            />
+                          </div>
+                        )}
                         <div
                           className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors ${
                             isSelected
                               ? 'bg-blue-100'
-                              : 'bg-muted group-hover:bg-accent'
+                              : 'bg-gray-100 group-hover:bg-blue-100'
                           }`}
                         >
                           <Icon
                             className={`w-5 h-5 transition-colors ${
                               isSelected
                                 ? 'text-blue-600'
-                                : 'text-muted-foreground group-hover:text-gray-900'
+                                : 'text-gray-600 group-hover:text-blue-600'
                             }`}
                           />
                         </div>
@@ -782,12 +796,12 @@ function AssertionModal({
                             className={`text-sm font-medium ${
                               isSelected
                                 ? 'text-blue-900'
-                                : 'text-card-foreground group-hover:text-gray-900'
+                                : 'text-gray-900 group-hover:text-blue-900'
                             }`}
                           >
                             {a.label}
                           </div>
-                          <div className='text-xs text-muted-foreground mt-1'>
+                          <div className='text-xs text-gray-500 mt-1'>
                             {a.inputLabel || 'No input needed'}
                           </div>
                           {isSelected && savedData?.value && (
