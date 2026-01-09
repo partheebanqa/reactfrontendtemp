@@ -33,7 +33,6 @@ const AssertionManager: React.FC<AssertionManagerProps> = ({
   const [tempAssertions, setTempAssertions] = useState<Assertion[]>([]);
   const { toast } = useToast();
 
-  // Initialize temp assertions when dialog opens
   useEffect(() => {
     if (showDialog) {
       setTempAssertions(assertions);
@@ -76,6 +75,10 @@ const AssertionManager: React.FC<AssertionManagerProps> = ({
     }
 
     setShowDialog(false);
+  };
+
+  const handleUnselectAll = () => {
+    setTempAssertions((prev) => prev.map((a) => ({ ...a, enabled: false })));
   };
 
   const selectedAssertions = assertions.filter((a) => a.enabled);
@@ -370,13 +373,28 @@ const AssertionManager: React.FC<AssertionManagerProps> = ({
               <p className='text-sm text-gray-600'>
                 {tempSelectedCount} of {totalCount} assertions selected
               </p>
+
               <div className='flex gap-3'>
+                <button
+                  onClick={handleUnselectAll}
+                  disabled={tempSelectedCount === 0}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors
+        ${
+          tempSelectedCount === 0
+            ? 'text-gray-400 cursor-not-allowed'
+            : 'text-red-600 hover:bg-red-50'
+        }`}
+                >
+                  Unselect All
+                </button>
+
                 <button
                   onClick={handleDialogClose}
                   className='px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg text-sm font-medium transition-colors'
                 >
                   Cancel
                 </button>
+
                 <Button onClick={handleSaveAssertions}>Save Assertions</Button>
               </div>
             </div>

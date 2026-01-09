@@ -538,22 +538,6 @@ const generateBodyAssertions = (data: any, prefix = ''): Assertion[] => {
         });
       }
 
-      // Add array size range assertion
-      if (value.length > 2) {
-        assertions.push({
-          id: `array-size-range-${path}`,
-          category: 'body',
-          type: 'array_length',
-          description: `Array '${path}' size is between 1 and ${
-            value.length + 5
-          }`,
-          field: path,
-          operator: 'between',
-          expectedValue: JSON.stringify({ min: 1, max: value.length + 5 }),
-          enabled: false,
-        });
-      }
-
       // Process array elements if they exist
       if (value.length > 0) {
         const firstItem = value[0];
@@ -646,22 +630,6 @@ const generateBodyAssertions = (data: any, prefix = ''): Assertion[] => {
           field: path,
           operator: 'greater_than',
           expectedValue: String(Math.max(0, value - 10)),
-          enabled: false,
-        });
-      }
-
-      // Add range assertion for numbers
-      if (value > 0) {
-        const min = Math.max(0, value - 50);
-        const max = value + 50;
-        assertions.push({
-          id: `field-range-${path}`,
-          category: 'body',
-          type: 'field_range',
-          description: `Field '${path}' is between ${min} and ${max}`,
-          field: path,
-          operator: 'between',
-          expectedValue: JSON.stringify({ min, max }),
           enabled: false,
         });
       }
@@ -759,22 +727,6 @@ const generateBodyAssertions = (data: any, prefix = ''): Assertion[] => {
           field: path,
           operator: 'greater_than',
           expectedValue: '1',
-          enabled: false,
-        });
-      }
-
-      // Add array size range assertion
-      if (value.length > 0) {
-        const minRange = Math.max(0, value.length - 2);
-        const maxRange = value.length + 5;
-        assertions.push({
-          id: `array-size-range-${path}`,
-          category: 'body',
-          type: 'array_length',
-          description: `Array '${path}' size is between ${minRange} and ${maxRange}`,
-          field: path,
-          operator: 'between',
-          expectedValue: JSON.stringify({ min: minRange, max: maxRange }),
           enabled: false,
         });
       }
