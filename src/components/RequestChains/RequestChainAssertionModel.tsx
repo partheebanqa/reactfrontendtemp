@@ -17,7 +17,10 @@ import {
   XCircle,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { getCategoryForAssertionType } from '@/lib/assertion-utils';
+import {
+  getArrayAssertionConfig,
+  getCategoryForAssertionType,
+} from '@/lib/assertion-utils';
 
 interface Operator {
   id: string;
@@ -107,9 +110,36 @@ function AssertionModal({
   const getOperatorsForType = (type: string, isArray: boolean) => {
     if (isArray) {
       return [
-        { id: 'array_length', label: 'length', description: 'Array length' },
-        { id: 'equals', label: '=', description: 'Equals' },
-        { id: 'field_not_equals', label: '≠', description: 'Not equals' },
+        {
+          id: 'array_length',
+          label: 'length =',
+          description: 'Array length equals',
+        },
+        {
+          id: 'field_not_equals',
+          label: 'length ≠',
+          description: 'Array length not equals',
+        },
+        {
+          id: 'field_greater_than',
+          label: 'length >',
+          description: 'Array length greater than',
+        },
+        {
+          id: 'field_less_than',
+          label: 'length <',
+          description: 'Array length less than',
+        },
+        {
+          id: 'field_greater_equal',
+          label: 'length ≥',
+          description: 'Array length at least',
+        },
+        {
+          id: 'field_less_equal',
+          label: 'length ≤',
+          description: 'Array length at most',
+        },
       ];
     }
 
@@ -446,7 +476,7 @@ function AssertionModal({
       field_is_false: 'field_is_false',
       field_null: 'field_null',
       field_not_null: 'field_not_null',
-      array_length: 'array_length',
+      array_length: 'equals',
       exists: 'field_present',
       field_not_present: 'field_not_present',
       field_has_property: 'field_present',
@@ -1219,84 +1249,100 @@ function AssertionModal({
                       if (value) {
                         const isHeader =
                           displayFieldPath.startsWith('headers.');
-                        const assertionType = getAssertionTypeForOperator(
-                          selectedOperator,
-                          isHeader
-                        );
                         const normalizedFieldPath = isHeader
                           ? displayFieldPath
                               .replace(/^headers\./, '')
                               .toLowerCase()
                           : displayFieldPath;
 
-                        const config: any = {
-                          id: `manual-${Date.now()}-${selectedOperator}`,
-                          type: assertionType,
-                          displayType: assertionType,
-                          category: isHeader
-                            ? 'headers'
-                            : getCategoryForAssertionType(assertionType),
-                          field: normalizedFieldPath,
-                          value: value,
-                          enabled: true,
-                          source: 'manual',
-                          operator: selectedOperator,
-                        };
+                        let config: any;
 
-                        if (selectedOperator === 'array_length') {
-                          config.expectedLength = parseInt(value);
-                          config.description = `${normalizedFieldPath} array length = ${value}`;
-                        } else if (
-                          selectedOperator === 'contains' ||
-                          selectedOperator === 'field_not_contains'
-                        ) {
-                          config.expectedValue = value;
-                          config.description = `${normalizedFieldPath} ${
-                            selectedOperator === 'contains'
-                              ? 'contains'
-                              : 'does not contain'
-                          } "${value}"`;
-                        } else if (
-                          [
-                            'field_greater_than',
-                            'field_less_than',
-                            'field_greater_equal',
-                            'field_less_equal',
-                          ].includes(selectedOperator)
-                        ) {
-                          config.expectedValue = parseFloat(value);
-                          const opSymbol =
-                            selectedOperator === 'field_greater_than'
-                              ? '>'
-                              : selectedOperator === 'field_less_than'
-                              ? '<'
-                              : selectedOperator === 'field_greater_equal'
-                              ? '≥'
-                              : '≤';
-                          config.description = `${normalizedFieldPath} ${opSymbol} ${value}`;
-                        } else if (
-                          ['date_greater_than', 'date_less_than'].includes(
-                            selectedOperator
-                          )
-                        ) {
-                          config.expectedValue = value;
-                          config.description = `${normalizedFieldPath} ${
-                            selectedOperator === 'date_greater_than'
-                              ? 'after'
-                              : 'before'
-                          } ${value}`;
+                        // Special handling for arrays
+                        if (isArray) {
+                          config = {
+                            id: `manual-${Date.now()}-${selectedOperator}`,
+                            ...getArrayAssertionConfig(
+                              selectedOperator,
+                              value,
+                              normalizedFieldPath
+                            ),
+                            source: 'manual',
+                          };
                         } else {
-                          config.expectedValue = value;
-                          config.description = `${normalizedFieldPath} ${
-                            operators.find((o) => o.id === selectedOperator)
-                              ?.label || '='
-                          } ${value}`;
+                          // Existing logic for non-array types
+                          const assertionType = getAssertionTypeForOperator(
+                            selectedOperator,
+                            isHeader
+                          );
+
+                          config = {
+                            id: `manual-${Date.now()}-${selectedOperator}`,
+                            type: assertionType,
+                            displayType: assertionType,
+                            category: isHeader
+                              ? 'headers'
+                              : getCategoryForAssertionType(assertionType),
+                            field: normalizedFieldPath,
+                            value: value,
+                            enabled: true,
+                            source: 'manual',
+                            operator: selectedOperator,
+                          };
+
+                          // Add specific handling for different operator types
+                          if (
+                            selectedOperator === 'contains' ||
+                            selectedOperator === 'field_not_contains'
+                          ) {
+                            config.expectedValue = value;
+                            config.description = `${normalizedFieldPath} ${
+                              selectedOperator === 'contains'
+                                ? 'contains'
+                                : 'does not contain'
+                            } "${value}"`;
+                          } else if (
+                            [
+                              'field_greater_than',
+                              'field_less_than',
+                              'field_greater_equal',
+                              'field_less_equal',
+                            ].includes(selectedOperator)
+                          ) {
+                            config.expectedValue = parseFloat(value);
+                            const opSymbol =
+                              selectedOperator === 'field_greater_than'
+                                ? '>'
+                                : selectedOperator === 'field_less_than'
+                                ? '<'
+                                : selectedOperator === 'field_greater_equal'
+                                ? '≥'
+                                : '≤';
+                            config.description = `${normalizedFieldPath} ${opSymbol} ${value}`;
+                          } else if (
+                            ['date_greater_than', 'date_less_than'].includes(
+                              selectedOperator
+                            )
+                          ) {
+                            config.expectedValue = value;
+                            config.description = `${normalizedFieldPath} ${
+                              selectedOperator === 'date_greater_than'
+                                ? 'after'
+                                : 'before'
+                            } ${value}`;
+                          } else {
+                            config.expectedValue = value;
+                            config.description = `${normalizedFieldPath} ${
+                              operators.find((o) => o.id === selectedOperator)
+                                ?.label || '='
+                            } ${value}`;
+                          }
                         }
 
+                        // Update pending assertions
                         const existingIndex = pendingAssertions.findIndex(
                           (a) =>
                             a.field === normalizedFieldPath &&
-                            a.type === assertionType
+                            a.type === config.type
                         );
 
                         if (existingIndex >= 0) {

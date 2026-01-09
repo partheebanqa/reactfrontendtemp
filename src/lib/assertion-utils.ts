@@ -36,3 +36,80 @@ export function getCategoryForAssertionType(type: string): string {
 
   return categoryMap[type] || 'body';
 }
+
+export const getArrayAssertionConfig = (
+  operator: string,
+  value: string,
+  fieldPath: string
+) => {
+  const config: any = {
+    type: 'array_length',
+    category: 'body',
+    field: fieldPath,
+    enabled: true,
+  };
+
+  switch (operator) {
+    case 'array_length':
+      // User will provide the expected length
+      config.operator = 'equals';
+      config.expectedValue = value;
+      config.description = `${fieldPath} array has exactly ${value} elements`;
+      break;
+
+    case 'equals':
+      config.operator = 'equals';
+      config.expectedValue = value;
+      config.description = `${fieldPath} array has exactly ${value} elements`;
+      break;
+
+    case 'field_not_equals':
+      config.operator = 'not_equals';
+      config.expectedValue = value;
+      config.description = `${fieldPath} array does not have ${value} elements`;
+      break;
+
+    case 'field_greater_than':
+      config.operator = 'greater_than';
+      config.expectedValue = value;
+      config.description = `${fieldPath} array has more than ${value} elements`;
+      break;
+
+    case 'field_less_than':
+      config.operator = 'less_than';
+      config.expectedValue = value;
+      config.description = `${fieldPath} array has less than ${value} elements`;
+      break;
+
+    case 'field_greater_equal':
+      config.operator = 'greater_than_or_equal';
+      config.expectedValue = value;
+      config.description = `${fieldPath} array has at least ${value} elements`;
+      break;
+
+    case 'field_less_equal':
+      config.operator = 'less_than_or_equal';
+      config.expectedValue = value;
+      config.description = `${fieldPath} array has at most ${value} elements`;
+      break;
+
+    case 'not_empty':
+      config.operator = 'not_empty';
+      config.expectedValue = '';
+      config.description = `${fieldPath} array is not empty`;
+      break;
+
+    case 'greater_than_zero':
+      config.operator = 'greater_than_zero';
+      config.expectedValue = '';
+      config.description = `${fieldPath} array is not empty`;
+      break;
+
+    default:
+      config.operator = 'equals';
+      config.expectedValue = value;
+      config.description = `${fieldPath} array length equals ${value}`;
+  }
+
+  return config;
+};
