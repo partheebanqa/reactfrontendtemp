@@ -370,24 +370,25 @@ const AssertionManager: React.FC<AssertionManagerProps> = ({
             </div>
 
             <div className='px-6 py-4 border-t border-gray-200 flex items-center justify-between flex-shrink-0 bg-gray-50'>
-              <p className='text-sm text-gray-600'>
-                {tempSelectedCount} of {totalCount} assertions selected
-              </p>
+              <div className='flex items-center gap-2 text-sm text-gray-600'>
+                <span>
+                  {tempSelectedCount} of {totalCount} assertions selected
+                </span>
+
+                {tempSelectedCount > 0 && (
+                  <>
+                    <span className='text-gray-400'>·</span>
+                    <button
+                      onClick={handleUnselectAll}
+                      className='text-red-600 hover:text-red-700 font-medium transition-colors'
+                    >
+                      Unselect All
+                    </button>
+                  </>
+                )}
+              </div>
 
               <div className='flex gap-3'>
-                <button
-                  onClick={handleUnselectAll}
-                  disabled={tempSelectedCount === 0}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors
-        ${
-          tempSelectedCount === 0
-            ? 'text-gray-400 cursor-not-allowed'
-            : 'text-red-600 hover:bg-red-50'
-        }`}
-                >
-                  Unselect All
-                </button>
-
                 <button
                   onClick={handleDialogClose}
                   className='px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg text-sm font-medium transition-colors'

@@ -713,7 +713,6 @@ function AssertionModal({
                     const isSelected = selectedGeneralAssertions.has(a.id);
                     const savedData = selectedGeneralAssertions.get(a.id);
 
-                    // Check if this assertion type already exists in allAssertions
                     const alreadyExists = allAssertions.some(
                       (assertion) =>
                         assertion.type === a.id && assertion.enabled
