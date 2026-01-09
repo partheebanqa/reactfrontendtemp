@@ -399,7 +399,7 @@ export const generateAssertions = (response: ApiResponse): Assertion[] => {
           description: 'HSTS max-age should be ≥31536000 seconds (1 year)',
           field: headerName,
           operator: 'min_max_age',
-          expectedValue: 31536000,
+          expectedValue: '31536000',
           priority: 'Critical',
           impact: 'Ensures long-term HTTPS enforcement',
           group: 'security',
@@ -431,7 +431,7 @@ export const generateAssertions = (response: ApiResponse): Assertion[] => {
     });
   });
 
-  // Performance assertions
+  // Performance assertions - convert to strings
   assertions.push({
     id: 'response-time',
     category: 'performance',
@@ -440,7 +440,7 @@ export const generateAssertions = (response: ApiResponse): Assertion[] => {
       response.responseTime * 2,
       500
     )} ms`,
-    expectedValue: Math.max(response.responseTime * 2, 500),
+    expectedValue: String(Math.max(response.responseTime * 2, 500)),
     enabled: false,
   });
 
@@ -452,7 +452,7 @@ export const generateAssertions = (response: ApiResponse): Assertion[] => {
       response.size * 2,
       10000
     )} bytes`,
-    expectedValue: Math.max(response.size * 2, 10000),
+    expectedValue: String(Math.max(response.size * 2, 10000)),
     enabled: false,
   });
 
@@ -510,7 +510,7 @@ const generateBodyAssertions = (data: any, prefix = ''): Assertion[] => {
         description: `Array '${path}' has length ${value.length}`,
         field: path,
         operator: 'equals',
-        expectedValue: value.length,
+        expectedValue: String(value.length),
         enabled: false,
       });
 
@@ -533,7 +533,7 @@ const generateBodyAssertions = (data: any, prefix = ''): Assertion[] => {
           description: `Array '${path}' has more than 1 item`,
           field: path,
           operator: 'greater_than',
-          expectedValue: 1,
+          expectedValue: '1',
           enabled: false,
         });
       }
@@ -549,7 +549,7 @@ const generateBodyAssertions = (data: any, prefix = ''): Assertion[] => {
           }`,
           field: path,
           operator: 'between',
-          expectedValue: { min: 1, max: value.length + 5 },
+          expectedValue: JSON.stringify({ min: 1, max: value.length + 5 }),
           enabled: false,
         });
       }
@@ -616,7 +616,7 @@ const generateBodyAssertions = (data: any, prefix = ''): Assertion[] => {
         type: 'field_equals',
         description: `Field '${path}' equals ${value}`,
         field: path,
-        expectedValue: value,
+        expectedValue: String(value),
         enabled: false,
       });
 
@@ -628,7 +628,7 @@ const generateBodyAssertions = (data: any, prefix = ''): Assertion[] => {
           description: `Field '${path}' is positive`,
           field: path,
           operator: 'greater_than_or_equal',
-          expectedValue: 0,
+          expectedValue: '0',
           enabled: false,
         });
       }
@@ -645,7 +645,7 @@ const generateBodyAssertions = (data: any, prefix = ''): Assertion[] => {
           )}`,
           field: path,
           operator: 'greater_than',
-          expectedValue: Math.max(0, value - 10),
+          expectedValue: String(Math.max(0, value - 10)),
           enabled: false,
         });
       }
@@ -661,7 +661,7 @@ const generateBodyAssertions = (data: any, prefix = ''): Assertion[] => {
           description: `Field '${path}' is between ${min} and ${max}`,
           field: path,
           operator: 'between',
-          expectedValue: { min, max },
+          expectedValue: JSON.stringify({ min, max }),
           enabled: false,
         });
       }
@@ -672,7 +672,7 @@ const generateBodyAssertions = (data: any, prefix = ''): Assertion[] => {
         type: 'field_equals',
         description: `Field '${path}' is ${value}`,
         field: path,
-        expectedValue: value,
+        expectedValue: String(value),
         enabled: false,
       });
     } else if (value === null) {
@@ -733,7 +733,7 @@ const generateBodyAssertions = (data: any, prefix = ''): Assertion[] => {
         description: `Array '${path}' has more than 0 items`,
         field: path,
         operator: 'greater_than',
-        expectedValue: 0,
+        expectedValue: '0',
         enabled: false,
       });
 
@@ -745,7 +745,7 @@ const generateBodyAssertions = (data: any, prefix = ''): Assertion[] => {
         description: `Array '${path}' has exactly ${value.length} items`,
         field: path,
         operator: 'equals',
-        expectedValue: value.length,
+        expectedValue: String(value.length),
         enabled: false,
       });
 
@@ -758,7 +758,7 @@ const generateBodyAssertions = (data: any, prefix = ''): Assertion[] => {
           description: `Array '${path}' has more than 1 item`,
           field: path,
           operator: 'greater_than',
-          expectedValue: 1,
+          expectedValue: '1',
           enabled: false,
         });
       }
@@ -774,7 +774,7 @@ const generateBodyAssertions = (data: any, prefix = ''): Assertion[] => {
           description: `Array '${path}' size is between ${minRange} and ${maxRange}`,
           field: path,
           operator: 'between',
-          expectedValue: { min: minRange, max: maxRange },
+          expectedValue: JSON.stringify({ min: minRange, max: maxRange }),
           enabled: false,
         });
       }

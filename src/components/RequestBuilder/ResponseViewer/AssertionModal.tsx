@@ -15,9 +15,13 @@ import {
   Type,
   X,
   XCircle,
+  Trash2,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { getCategoryForAssertionType } from '@/lib/assertion-utils';
+import {
+  getArrayAssertionConfig,
+  getCategoryForAssertionType,
+} from '@/lib/assertion-utils';
 
 function AssertionModal({
   fieldPath,
@@ -54,6 +58,12 @@ function AssertionModal({
   const [assertionsToRemove, setAssertionsToRemove] = useState<Set<string>>(
     new Set()
   );
+
+  const [pendingAssertions, setPendingAssertions] = useState<any[]>([]);
+
+  const [selectedGeneralAssertions, setSelectedGeneralAssertions] = useState<
+    Map<string, { value: string; comparison?: string }>
+  >(new Map());
 
   const isDateValue = (value: any): boolean => {
     if (typeof value !== 'string') return false;
@@ -101,6 +111,8 @@ function AssertionModal({
       setGeneralType('');
       setGeneralValue('');
       setGeneralComparison('less');
+      setPendingAssertions([]);
+      setSelectedGeneralAssertions(new Map());
     }
   }, [isOpen]);
 
@@ -125,18 +137,12 @@ function AssertionModal({
           assertion.category === 'HeaderGuard'
         ) {
           const assertionField = normalizeHeaderName(assertion.field || '');
-
-          const matches = assertionField === headerName;
-
-          return matches;
+          return assertionField === headerName;
         }
 
         if (assertion.category === 'headers') {
           const assertionField = normalizeHeaderName(assertion.field || '');
-
-          const matches = assertionField === headerName;
-
-          return matches;
+          return assertionField === headerName;
         }
 
         return false;
@@ -326,33 +332,48 @@ function AssertionModal({
   const getOperatorsForType = (type: string, isArray: boolean) => {
     if (isArray) {
       return [
-        { id: 'array_length', label: 'length', description: 'Array length' },
-        { id: 'equals', label: '=', description: 'Equals' },
-        { id: 'field_not_equals', label: '≠', description: 'Not equals' },
+        {
+          id: 'array_length',
+          label: 'length =',
+          description: 'Array length equals',
+        },
+        {
+          id: 'field_not_equals',
+          label: 'length ≠',
+          description: 'Array length not equals',
+        },
+        {
+          id: 'field_greater_than',
+          label: 'length >',
+          description: 'Array length greater than',
+        },
+        {
+          id: 'field_less_than',
+          label: 'length <',
+          description: 'Array length less than',
+        },
+        {
+          id: 'field_greater_equal',
+          label: 'length ≥',
+          description: 'Array length at least',
+        },
+        {
+          id: 'field_less_equal',
+          label: 'length ≤',
+          description: 'Array length at most',
+        },
       ];
     }
 
     switch (type) {
       case 'string':
         return [
-          // { id: 'equals', label: '=', description: 'Equals' },
-          // { id: 'field_not_equals', label: '≠', description: 'Not equals' },
           { id: 'contains', label: 'contains', description: 'Contains' },
           {
             id: 'field_not_contains',
             label: 'not contains',
             description: 'Does not contain',
           },
-          // {
-          //   id: 'field_starts_with',
-          //   label: 'starts with',
-          //   description: 'Starts with',
-          // },
-          // {
-          //   id: 'field_ends_with',
-          //   label: 'ends with',
-          //   description: 'Ends with',
-          // },
         ];
 
       case 'number':
@@ -371,17 +392,10 @@ function AssertionModal({
             label: '≤',
             description: 'Less than or equal',
           },
-          // {
-          //   id: 'between',
-          //   label: 'between',
-          //   description: 'Between (inclusive)',
-          // },
         ];
 
       case 'boolean':
         return [
-          // { id: 'equals', label: '=', description: 'Equals' },
-          // { id: 'field_not_equals', label: '≠', description: 'Not equals' },
           { id: 'field_is_true', label: 'is true', description: 'Is true' },
           { id: 'field_is_false', label: 'is false', description: 'Is false' },
         ];
@@ -418,13 +432,6 @@ function AssertionModal({
             label: 'not exists',
             description: 'Field does not exist',
           },
-          // {
-          //   id: 'field_has_property',
-          //   label: 'has property',
-          //   description: 'Has property',
-          // },
-          // { id: 'equals', label: '=', description: 'Equals' },
-          // { id: 'field_not_equals', label: '≠', description: 'Not equals' },
         ];
 
       default:
@@ -432,6 +439,26 @@ function AssertionModal({
           { id: 'equals', label: '=', description: 'Equals' },
           { id: 'field_not_equals', label: '≠', description: 'Not equals' },
         ];
+    }
+  };
+
+  const handleGeneralClick = (id: string) => {
+    const assertion = generalAssertions.find((a) => a.id === id);
+    const alreadySelected = selectedGeneralAssertions.has(id);
+
+    if (alreadySelected) {
+      const savedData = selectedGeneralAssertions.get(id);
+      setGeneralType(id);
+      setGeneralValue(savedData?.value || '');
+      setGeneralComparison(savedData?.comparison || 'less');
+    } else if (!assertion?.needsInput) {
+      const newMap = new Map(selectedGeneralAssertions);
+      newMap.set(id, { value: '', comparison: undefined });
+      setSelectedGeneralAssertions(newMap);
+    } else {
+      setGeneralType(id);
+      setGeneralValue('');
+      setGeneralComparison('less');
     }
   };
 
@@ -482,7 +509,18 @@ function AssertionModal({
     setAssertionsToRemove(newRemoveSet);
   };
 
-  const handleSuggestedSubmit = () => {
+  const handleGeneralSubmit = () => {
+    if (!generalValue) return;
+
+    const newMap = new Map(selectedGeneralAssertions);
+    newMap.set(generalType, {
+      value: generalValue,
+      comparison: generalComparison,
+    });
+    setSelectedGeneralAssertions(newMap);
+  };
+
+  const handleFinalSave = () => {
     let updatedAssertions = [...allAssertions];
 
     if (assertionsToRemove.size > 0) {
@@ -508,170 +546,69 @@ function AssertionModal({
       }
     });
 
+    selectedGeneralAssertions.forEach((data, generalType) => {
+      const assertion = generalAssertions.find((a) => a.id === generalType);
+
+      const config: any = {
+        id: `general-${Date.now()}-${generalType}`,
+        type: generalType,
+        displayType: generalType,
+        category: getCategoryForAssertionType(generalType),
+        isGeneral: true,
+        value: data.value,
+        enabled: true,
+        source: 'general',
+      };
+
+      if (assertion?.hasComparison) {
+        config.comparison = data.comparison;
+        config.operator =
+          data.comparison === 'less' ? 'less_than' : 'greater_than';
+
+        if (generalType === 'response_time') {
+          config.expectedTime = data.value;
+          config.description = `Response time ${
+            data.comparison === 'less' ? '<' : '>'
+          } ${data.value}ms`;
+        } else if (generalType === 'payload_size') {
+          config.expectedSize = data.value;
+          config.description = `Payload size ${
+            data.comparison === 'less' ? '<' : '>'
+          } ${data.value}KB`;
+        }
+      } else if (generalType === 'status_equals') {
+        config.operator = 'equals';
+        config.description = `Status code equals ${data.value}`;
+      } else if (generalType === 'contains_text') {
+        config.description = `Contains text "${data.value}"`;
+      } else if (generalType === 'contains_static') {
+        config.description = `Contains static variable ${data.value}`;
+      } else if (generalType === 'contains_dynamic') {
+        config.description = `Contains dynamic variable ${data.value}`;
+      } else if (generalType === 'contains_extracted') {
+        config.description = `Contains extracted variable ${data.value}`;
+      }
+
+      if (
+        generalType === 'contains_static' ||
+        generalType === 'contains_dynamic' ||
+        generalType === 'contains_text'
+      ) {
+        config.scope = 'full';
+      }
+
+      updatedAssertions.push(config);
+    });
+
+    updatedAssertions = [...updatedAssertions, ...pendingAssertions];
+
     setAssertions(updatedAssertions);
 
     setSelectedSuggestedAssertions(new Set());
     setAssertionsToRemove(new Set());
+    setPendingAssertions([]);
+    setSelectedGeneralAssertions(new Map());
     onClose();
-  };
-
-  const getAssertionTypeForOperator = (
-    operator: string,
-    isHeader: boolean = false
-  ): string => {
-    if (isHeader) {
-      const headerOperatorTypeMap: Record<string, string> = {
-        equals: 'header_equals',
-        field_not_equals: 'header_equals',
-        contains: 'header_contains',
-        field_not_contains: 'header_contains',
-        field_starts_with: 'header_contains',
-        field_ends_with: 'header_contains',
-        exists: 'header_present',
-        field_not_present: 'header_present',
-      };
-      return headerOperatorTypeMap[operator] || 'header_equals';
-    }
-
-    const operatorTypeMap: Record<string, string> = {
-      equals: 'field_equals',
-      field_not_equals: 'field_equals',
-      contains: 'field_contains',
-      field_not_contains: 'field_not_contains',
-      field_starts_with: 'field_contains',
-      field_ends_with: 'field_contains',
-      field_greater_than: 'field_greater_than',
-      field_less_than: 'field_less_than',
-      field_greater_equal: 'field_greater_equal',
-      field_less_equal: 'field_less_equal',
-      between: 'field_range',
-      field_is_true: 'field_is_true',
-      field_is_false: 'field_is_false',
-      field_null: 'field_null',
-      field_not_null: 'field_not_null',
-      array_length: 'array_length',
-      exists: 'field_present',
-      field_not_present: 'field_not_present',
-      field_has_property: 'field_present',
-      date_greater_than: 'date_greater_than',
-      date_less_than: 'date_less_than',
-    };
-
-    return operatorTypeMap[operator] || 'field_equals';
-  };
-
-  const handleManualSubmit = () => {
-    const operatorsWithoutValue = [
-      'field_null',
-      'field_not_null',
-      'field_is_true',
-      'field_is_false',
-      'exists',
-      'field_not_present',
-    ];
-
-    if (!operatorsWithoutValue.includes(selectedOperator) && !manualValue) {
-      return;
-    }
-
-    const isHeader = fieldPath.startsWith('headers.');
-
-    const assertionType = getAssertionTypeForOperator(
-      selectedOperator,
-      isHeader
-    );
-
-    const operatorLabels: Record<string, string> = {
-      equals: 'equals',
-      field_not_equals: 'does not equal',
-      field_greater_than: 'is greater than',
-      field_less_than: 'is less than',
-      contains: 'contains',
-      field_not_contains: 'does not contain',
-      array_length: 'has length',
-      field_null: 'is null',
-      field_not_null: 'is not null',
-      field_is_true: 'is true',
-      field_is_false: 'is false',
-      exists: 'exists',
-      field_not_present: 'does not exist',
-      date_greater_than: 'is after',
-      date_less_than: 'is before',
-    };
-
-    const operatorText = operatorLabels[selectedOperator] || selectedOperator;
-
-    const normalizedFieldPath = isHeader
-      ? fieldPath.replace(/^headers\./, '').toLowerCase()
-      : fieldPath;
-    const description = `${normalizedFieldPath} ${operatorText}${
-      manualValue ? ` "${manualValue}"` : ''
-    }`;
-
-    const config: any = {
-      id: `manual-${Date.now()}`,
-      type: assertionType,
-      displayType: assertionType,
-      category: isHeader
-        ? 'headers'
-        : getCategoryForAssertionType(assertionType),
-      description,
-      operator: selectedOperator,
-      expectedValue: manualValue,
-      enabled: true,
-      field: normalizedFieldPath,
-    };
-
-    onSelect(assertionType, config);
-  };
-
-  const handleGeneralClick = (id: string) => {
-    const assertion = generalAssertions.find((a) => a.id === id);
-    if (!assertion?.needsInput) {
-      onSelect(id, { isGeneral: true });
-    } else {
-      setGeneralType(id);
-      setGeneralValue('');
-    }
-  };
-
-  const handleGeneralSubmit = () => {
-    if (!generalValue) return;
-    const config: any = {
-      isGeneral: true,
-      value: generalValue,
-    };
-
-    const assertion = generalAssertions.find((a) => a.id === generalType);
-    if (assertion?.hasComparison) {
-      config.comparison = generalComparison;
-      if (generalComparison === 'less') {
-        config.operator = 'less_than';
-      } else if (generalComparison === 'more') {
-        config.operator = 'greater_than';
-      }
-
-      if (generalType === 'response_time') {
-        config.expectedTime = generalValue;
-      } else if (generalType === 'payload_size') {
-        config.expectedSize = generalValue;
-      }
-    } else if (generalType === 'status_equals') {
-      config.operator = 'equals';
-    }
-
-    if (
-      generalType === 'contains_static' ||
-      generalType === 'contains_dynamic' ||
-      generalType === 'contains_text'
-    ) {
-      config.scope = 'full';
-    }
-
-    onSelect(generalType, config);
-    setGeneralType('');
-    setGeneralValue('');
-    setGeneralComparison('less');
   };
 
   const staticVariables = variables.filter((v) => v.name.startsWith('S_'));
@@ -682,9 +619,10 @@ function AssertionModal({
   const displayedSuggestions = suggestedAssertions;
 
   const hasChanges =
-    selectedSuggestedAssertions.size > 0 || assertionsToRemove.size > 0;
-  const totalChanges =
-    selectedSuggestedAssertions.size + assertionsToRemove.size;
+    selectedSuggestedAssertions.size > 0 ||
+    assertionsToRemove.size > 0 ||
+    pendingAssertions.length > 0 ||
+    selectedGeneralAssertions.size > 0;
 
   const initialEnabledCount = suggestedAssertions.filter(
     (a) => a.assertion.enabled
@@ -693,11 +631,11 @@ function AssertionModal({
   const finalCount =
     initialEnabledCount +
     selectedSuggestedAssertions.size -
-    assertionsToRemove.size;
+    assertionsToRemove.size +
+    pendingAssertions.length +
+    selectedGeneralAssertions.size;
 
-  const totalAssertions = suggestedAssertions.length;
-
-  const shouldDisableButton = finalCount === initialEnabledCount;
+  const totalAssertions = suggestedAssertions.length + pendingAssertions.length;
 
   return (
     <div
@@ -772,22 +710,62 @@ function AssertionModal({
                 <div className='space-y-2'>
                   {generalAssertions.map((a) => {
                     const Icon = a.icon;
+                    const isSelected = selectedGeneralAssertions.has(a.id);
+                    const savedData = selectedGeneralAssertions.get(a.id);
+
                     return (
                       <button
                         key={a.id}
                         onClick={() => handleGeneralClick(a.id)}
-                        className='w-full flex items-start gap-4 p-4 rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-all text-left group'
+                        className={`w-full flex items-start gap-4 p-4 rounded-lg border transition-all text-left group ${
+                          isSelected
+                            ? 'border-blue-400 bg-blue-50'
+                            : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50'
+                        }`}
                       >
-                        <div className='w-10 h-10 rounded-lg bg-gray-100 group-hover:bg-blue-100 flex items-center justify-center flex-shrink-0 transition-colors'>
-                          <Icon className='w-5 h-5 text-gray-600 group-hover:text-blue-600 transition-colors' />
+                        <div
+                          className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors ${
+                            isSelected
+                              ? 'bg-blue-100'
+                              : 'bg-gray-100 group-hover:bg-blue-100'
+                          }`}
+                        >
+                          <Icon
+                            className={`w-5 h-5 transition-colors ${
+                              isSelected
+                                ? 'text-blue-600'
+                                : 'text-gray-600 group-hover:text-blue-600'
+                            }`}
+                          />
                         </div>
                         <div className='flex-1 min-w-0'>
-                          <div className='text-sm font-medium text-gray-900 group-hover:text-blue-900'>
+                          <div
+                            className={`text-sm font-medium ${
+                              isSelected
+                                ? 'text-blue-900'
+                                : 'text-gray-900 group-hover:text-blue-900'
+                            }`}
+                          >
                             {a.label}
                           </div>
                           <div className='text-xs text-gray-500 mt-1'>
                             {a.inputLabel || 'No input needed'}
                           </div>
+                          {isSelected && savedData?.value && (
+                            <div className='text-xs text-blue-600 font-medium mt-1'>
+                              {savedData.comparison === 'less'
+                                ? '< '
+                                : savedData.comparison === 'more'
+                                ? '> '
+                                : ''}
+                              {savedData.value}
+                              {a.id === 'response_time'
+                                ? 'ms'
+                                : a.id === 'payload_size'
+                                ? 'KB'
+                                : ''}
+                            </div>
+                          )}
                         </div>
                       </button>
                     );
@@ -808,19 +786,7 @@ function AssertionModal({
                         generalType === 'contains_extracted') && (
                         <div className='relative inline-flex items-center group/tooltip'>
                           <Info className='w-3.5 h-3.5 cursor-pointer' />
-
-                          <div
-                            className='
-      absolute left-0 top-full mt-1 w-64 p-2
-      border rounded text-xs shadow-lg z-10
-      bg-white dark:bg-gray-900
-      opacity-0 invisible
-      group-hover/tooltip:opacity-100
-      group-hover/tooltip:visible
-      transition-opacity
-      pointer-events-none
-    '
-                          >
+                          <div className='absolute left-0 top-full mt-1 w-64 p-2 border rounded text-xs shadow-lg z-10 bg-white opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-opacity pointer-events-none'>
                             {generalType === 'contains_static' &&
                               'Static variables for the request will be listed below'}
                             {generalType === 'contains_dynamic' &&
@@ -833,8 +799,10 @@ function AssertionModal({
                     </div>
                     <button
                       onClick={() => {
+                        if (generalValue) {
+                          handleGeneralSubmit();
+                        }
                         setGeneralType('');
-                        setGeneralValue('');
                       }}
                       className='text-xs text-gray-900 hover:underline'
                     >
@@ -851,7 +819,19 @@ function AssertionModal({
                         {['less', 'more'].map((c) => (
                           <Button
                             key={c}
-                            onClick={() => setGeneralComparison(c)}
+                            onClick={() => {
+                              setGeneralComparison(c);
+                              if (generalValue) {
+                                const newMap = new Map(
+                                  selectedGeneralAssertions
+                                );
+                                newMap.set(generalType, {
+                                  value: generalValue,
+                                  comparison: c,
+                                });
+                                setSelectedGeneralAssertions(newMap);
+                              }
+                            }}
                             className={`px-4 py-2 text-sm rounded-lg border font-medium transition-all ${
                               generalComparison === c
                                 ? ' border-blue-600 text-white'
@@ -874,7 +854,18 @@ function AssertionModal({
                     {generalType === 'contains_static' ? (
                       <select
                         value={generalValue}
-                        onChange={(e) => setGeneralValue(e.target.value)}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setGeneralValue(value);
+                          if (value) {
+                            const newMap = new Map(selectedGeneralAssertions);
+                            newMap.set(generalType, {
+                              value,
+                              comparison: generalComparison,
+                            });
+                            setSelectedGeneralAssertions(newMap);
+                          }
+                        }}
                         className='w-full px-4 py-3 border border-gray-300 bg-white text-gray-900 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm'
                         autoFocus
                       >
@@ -891,7 +882,18 @@ function AssertionModal({
                     ) : generalType === 'contains_dynamic' ? (
                       <select
                         value={generalValue}
-                        onChange={(e) => setGeneralValue(e.target.value)}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setGeneralValue(value);
+                          if (value) {
+                            const newMap = new Map(selectedGeneralAssertions);
+                            newMap.set(generalType, {
+                              value,
+                              comparison: generalComparison,
+                            });
+                            setSelectedGeneralAssertions(newMap);
+                          }
+                        }}
                         className='w-full px-4 py-3 border border-gray-300 bg-white text-gray-900 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm'
                         autoFocus
                       >
@@ -909,7 +911,18 @@ function AssertionModal({
                         ?.inputType === 'select' ? (
                       <select
                         value={generalValue}
-                        onChange={(e) => setGeneralValue(e.target.value)}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setGeneralValue(value);
+                          if (value) {
+                            const newMap = new Map(selectedGeneralAssertions);
+                            newMap.set(generalType, {
+                              value,
+                              comparison: generalComparison,
+                            });
+                            setSelectedGeneralAssertions(newMap);
+                          }
+                        }}
                         className='w-full px-4 py-3 border border-gray-300 bg-white text-gray-900 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm'
                         autoFocus
                       >
@@ -929,7 +942,18 @@ function AssertionModal({
                             ?.inputType || 'text'
                         }
                         value={generalValue}
-                        onChange={(e) => setGeneralValue(e.target.value)}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setGeneralValue(value);
+                          if (value) {
+                            const newMap = new Map(selectedGeneralAssertions);
+                            newMap.set(generalType, {
+                              value,
+                              comparison: generalComparison,
+                            });
+                            setSelectedGeneralAssertions(newMap);
+                          }
+                        }}
                         placeholder={`Enter ${
                           generalAssertions.find((a) => a.id === generalType)
                             ?.inputLabel
@@ -943,7 +967,6 @@ function AssertionModal({
               )}
             </div>
           )}
-
           {activeTab === 'suggested' && (
             <div className='space-y-2'>
               {displayedSuggestions.length > 0 ? (
@@ -1044,7 +1067,6 @@ function AssertionModal({
               )}
             </div>
           )}
-
           {activeTab === 'manual' && (
             <div className='space-y-6'>
               <div>
@@ -1055,7 +1077,31 @@ function AssertionModal({
                   {operators.map((op) => (
                     <Button
                       key={op.id}
-                      onClick={() => setSelectedOperator(op.id)}
+                      onClick={() => {
+                        setSelectedOperator(op.id);
+                        if (
+                          [
+                            'field_null',
+                            'field_not_null',
+                            'field_is_true',
+                            'field_is_false',
+                            'exists',
+                            'field_not_present',
+                          ].includes(op.id)
+                        ) {
+                          const config: any = {
+                            id: `manual-${Date.now()}-${op.id}`,
+                            type: op.id,
+                            displayType: op.id,
+                            category: getCategoryForAssertionType(op.id),
+                            field: fieldPath,
+                            enabled: true,
+                            source: 'manual',
+                            description: `${fieldPath} ${op.description}`,
+                          };
+                          setPendingAssertions([...pendingAssertions, config]);
+                        }
+                      }}
                       title={op.description}
                       className={`px-3 py-2 rounded-lg text-sm font-medium transition-all border ${
                         selectedOperator === op.id
@@ -1085,16 +1131,127 @@ function AssertionModal({
                     type={valueType === 'date' ? 'datetime-local' : 'text'}
                     value={valueType === 'date' ? localDateValue : manualValue}
                     onChange={(e) => {
+                      let value = e.target.value;
+
                       if (valueType === 'date') {
-                        const local = e.target.value;
+                        const local = value;
                         setLocalDateValue(local);
 
                         if (local) {
                           const iso = new Date(local).toISOString();
                           setManualValue(iso);
+                          value = iso;
                         }
                       } else {
-                        setManualValue(e.target.value);
+                        setManualValue(value);
+                      }
+
+                      if (value) {
+                        let config: any;
+
+                        if (isArray) {
+                          try {
+                            config = {
+                              id: `manual-${Date.now()}-${selectedOperator}`,
+                              ...getArrayAssertionConfig(
+                                selectedOperator,
+                                value,
+                                fieldPath
+                              ),
+                              source: 'manual',
+                            };
+                          } catch (error) {
+                            console.error(
+                              'Error creating array assertion:',
+                              error
+                            );
+                            return;
+                          }
+                        } else {
+                          config = {
+                            id: `manual-${Date.now()}-${selectedOperator}`,
+                            type: selectedOperator,
+                            displayType: selectedOperator,
+                            category:
+                              getCategoryForAssertionType(selectedOperator),
+                            field: fieldPath,
+                            value: value,
+                            enabled: true,
+                            source: 'manual',
+                          };
+
+                          if (selectedOperator === 'array_length') {
+                            config.expectedLength = parseInt(value);
+                            config.description = `${fieldPath} array length = ${value}`;
+                          } else if (
+                            selectedOperator === 'contains' ||
+                            selectedOperator === 'field_not_contains'
+                          ) {
+                            config.expectedValue = value;
+                            config.operator = selectedOperator;
+                            config.description = `${fieldPath} ${
+                              selectedOperator === 'contains'
+                                ? 'contains'
+                                : 'does not contain'
+                            } "${value}"`;
+                          } else if (
+                            [
+                              'field_greater_than',
+                              'field_less_than',
+                              'field_greater_equal',
+                              'field_less_equal',
+                            ].includes(selectedOperator)
+                          ) {
+                            config.expectedValue = parseFloat(value);
+                            config.operator = selectedOperator;
+                            const opSymbol =
+                              selectedOperator === 'field_greater_than'
+                                ? '>'
+                                : selectedOperator === 'field_less_than'
+                                ? '<'
+                                : selectedOperator === 'field_greater_equal'
+                                ? '≥'
+                                : '≤';
+                            config.description = `${fieldPath} ${opSymbol} ${value}`;
+                          } else if (
+                            ['date_greater_than', 'date_less_than'].includes(
+                              selectedOperator
+                            )
+                          ) {
+                            config.expectedValue = value;
+                            config.operator = selectedOperator;
+                            config.description = `${fieldPath} ${
+                              selectedOperator === 'date_greater_than'
+                                ? 'after'
+                                : 'before'
+                            } ${value}`;
+                          } else {
+                            config.expectedValue = value;
+                            config.operator =
+                              selectedOperator === 'equals'
+                                ? 'equals'
+                                : selectedOperator;
+                            config.description = `${fieldPath} ${
+                              operators.find((o) => o.id === selectedOperator)
+                                ?.label || '='
+                            } ${value}`;
+                          }
+                        }
+
+                        // Update pending assertions
+                        const existingIndex = pendingAssertions.findIndex(
+                          (a) =>
+                            a.field === fieldPath &&
+                            a.operator === config.operator
+                        );
+
+                        if (existingIndex >= 0) {
+                          const updated = [...pendingAssertions];
+                          updated[existingIndex] = config;
+                          setPendingAssertions(updated);
+                        } else {
+                          setPendingAssertions([...pendingAssertions, config]);
+                        }
                       }
                     }}
                     placeholder={
@@ -1102,7 +1259,7 @@ function AssertionModal({
                         ? 'Select date and time'
                         : 'Enter the expected value'
                     }
-                    className='w-full px-4 py-3 border border-input bg-card text-card-foreground rounded-lg focus:ring-2 focus:ring-ring focus:border-transparent outline-none text-sm'
+                    className='w-full px-4 py-3 border border-gray-300 bg-white text-gray-900 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm'
                     autoFocus
                   />
                 </div>
@@ -1139,47 +1296,13 @@ function AssertionModal({
           >
             Cancel
           </button>
-          {activeTab === 'general' && !generalType && (
-            <p className='flex-1 text-sm text-gray-500 text-center py-2'>
-              Click on any assertion above to add it
-            </p>
-          )}
-          {activeTab === 'general' && generalType && (
-            <Button
-              onClick={handleGeneralSubmit}
-              disabled={!generalValue}
-              className='px-4 py-2 text-sm font-medium text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
-            >
-              Save Assertion
-            </Button>
-          )}
-          {activeTab === 'suggested' && (
-            <Button
-              onClick={handleSuggestedSubmit}
-              disabled={shouldDisableButton}
-              className='px-4 py-2 text-sm font-medium text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
-            >
-              Save Changes ({finalCount}/{totalAssertions})
-            </Button>
-          )}
-          {activeTab === 'manual' && (
-            <Button
-              onClick={handleManualSubmit}
-              disabled={
-                ![
-                  'field_null',
-                  'field_not_null',
-                  'field_is_true',
-                  'field_is_false',
-                  'exists',
-                  'field_not_present',
-                ].includes(selectedOperator) && !manualValue
-              }
-              className='px-4 py-2 text-sm font-medium text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
-            >
-              Save Assertion
-            </Button>
-          )}
+          <Button
+            onClick={handleFinalSave}
+            disabled={!hasChanges}
+            className='px-6 py-2 text-sm font-medium text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
+          >
+            Save All Changes
+          </Button>
         </div>
       </div>
     </div>

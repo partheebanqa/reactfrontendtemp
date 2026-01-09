@@ -536,44 +536,46 @@ export function ResponseExplorer({
               </span>
             )}
           </div>
-          {!hasChildren && (
-            <div className='flex items-center space-x-1 opacity-0 group-hover/item:opacity-100 transition-opacity'>
-              <button
-                onClick={() =>
-                  navigator.clipboard.writeText(String(node.value))
-                }
-                className='p-1 text-gray-400 hover:text-gray-600 rounded'
-                title='Copy value'
-              >
-                <Copy className='w-3 h-3' />
-              </button>
-              {isAlreadyExtracted ? (
-                <div className='flex items-center space-x-1 px-2 py-1 bg-green-100 text-green-700 rounded text-xs'>
-                  <CheckCircle className='w-3 h-3' />
-                  <span>Extracted</span>
-                </div>
-              ) : (
+          <div className='flex items-center space-x-1 opacity-0 group-hover/item:opacity-100 transition-opacity'>
+            {!hasChildren && (
+              <>
                 <button
                   onClick={() =>
-                    handleExtractClick('response_body', node.path, node.value)
+                    navigator.clipboard.writeText(String(node.value))
                   }
-                  className='px-2 py-1 bg-[#136fb0] text-white rounded text-xs hover:bg-blue-700 transition-colors'
-                  title='Extract as variable'
+                  className='p-1 text-gray-400 hover:text-gray-600 rounded'
+                  title='Copy value'
                 >
-                  <Plus className='w-3 h-3 mr-1 inline' />
-                  Extract
+                  <Copy className='w-3 h-3' />
                 </button>
-              )}
-              <button
-                onClick={() => handleAssertClick(node.path, node.value)}
-                className='px-2 py-1 bg-purple-600 text-white rounded text-xs hover:bg-purple-700 transition-colors'
-                title='Add assertion'
-              >
-                <Wand2 className='w-3 h-3 mr-1 inline' />
-                Assert
-              </button>
-            </div>
-          )}
+                {isAlreadyExtracted ? (
+                  <div className='flex items-center space-x-1 px-2 py-1 bg-green-100 text-green-700 rounded text-xs'>
+                    <CheckCircle className='w-3 h-3' />
+                    <span>Extracted</span>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() =>
+                      handleExtractClick('response_body', node.path, node.value)
+                    }
+                    className='px-2 py-1 bg-[#136fb0] text-white rounded text-xs hover:bg-blue-700 transition-colors'
+                    title='Extract as variable'
+                  >
+                    <Plus className='w-3 h-3 mr-1 inline' />
+                    Extract
+                  </button>
+                )}
+              </>
+            )}
+            <button
+              onClick={() => handleAssertClick(node.path, node.value)}
+              className='px-2 py-1 bg-purple-600 text-white rounded text-xs hover:bg-purple-700 transition-colors'
+              title='Add assertion'
+            >
+              <Wand2 className='w-3 h-3 mr-1 inline' />
+              Assert
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -1070,11 +1072,6 @@ export function ResponseExplorer({
                 label: 'Assertions(R)',
                 count: response?.assertions ? response.assertions.length : 0,
               },
-              {
-                id: 'securityScan',
-                label: 'Security(S)',
-                count: response?.assertions ? response.assertions.length : 0,
-              },
             ].map((tab) => {
               const count = tab.count ?? 0;
               const showBlueDot =
@@ -1110,17 +1107,6 @@ export function ResponseExplorer({
               );
             })}
           </nav>
-
-          {executionStatus && (
-            <div className='flex items-center space-x-4 text-sm text-gray-600'>
-              <span className='flex items-center space-x-1 bg-green-100 text-green-700 px-2 py-1 rounded-full'>
-                <CheckCircle className='w-4 h-4' />
-                <span>
-                  {response?.statusCode} {response?.statusText}
-                </span>
-              </span>
-            </div>
-          )}
         </div>
 
         <div className='p-6 max-h-96 overflow-auto scrollbar-thin'>
