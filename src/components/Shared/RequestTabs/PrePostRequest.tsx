@@ -61,8 +61,6 @@ export function PrePostRequest({
   );
   const [deleteTargetPath, setDeleteTargetPath] = useState<string | null>(null);
 
-  console.log('extractedVariables:', extractedVariables);
-
   const handleDeleteVariable = (path: string) => {
     if (onRemoveVariable) {
       onRemoveVariable(path);

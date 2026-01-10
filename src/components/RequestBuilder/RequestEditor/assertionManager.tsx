@@ -239,7 +239,7 @@ const AssertionManager: React.FC<AssertionManagerProps> = ({
           <p className='text-gray-600 mb-4'>No assertions selected</p>
           <Button onClick={() => setShowDialog(true)}>
             <Plus className='w-4 h-4' />
-            Generate Assertions
+            Add Assertions
           </Button>
         </div>
       )}
@@ -379,6 +379,7 @@ const AssertionManager: React.FC<AssertionManagerProps> = ({
                   <>
                     <span className='text-gray-400'>·</span>
                     <button
+                      title='Deselect all assertions'
                       onClick={handleUnselectAll}
                       className='text-red-600 hover:text-red-700 font-medium transition-colors'
                     >
