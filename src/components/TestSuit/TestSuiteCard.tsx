@@ -269,7 +269,7 @@ const TestSuiteCard: React.FC<TestSuiteCardProps> = ({
                 <Button
                   variant='ghost'
                   size='icon'
-                  className='text-gray-600 hover:text-blue-600'
+                  className='text-green-600 hover:text-green-700'
                   onClick={() => {
                     if (!suite?.isExecutable) {
                       toast({
@@ -303,28 +303,13 @@ const TestSuiteCard: React.FC<TestSuiteCardProps> = ({
               <TooltipContent>Edit Suite</TooltipContent>
             </Tooltip>
 
-            {/* Copy */}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant='ghost'
-                  size='icon'
-                  className='text-gray-600 hover:text-blue-600'
-                  onClick={() => onClone(suite.id)}
-                >
-                  <CopyPlus className='w-4 h-4' />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Duplicate Suite</TooltipContent>
-            </Tooltip>
-
             <Tooltip>
               <TooltipTrigger asChild>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button
                       variant='ghost'
-                      size='sm'
+                      size='icon'
                       className='text-muted-foreground hover:text-foreground'
                     >
                       <EllipsisVertical className='w-4 h-4' />
@@ -333,20 +318,58 @@ const TestSuiteCard: React.FC<TestSuiteCardProps> = ({
 
                   <DropdownMenuContent
                     align='end'
-                    className='bg-white border shadow-lg flex flex-col p-1'
+                    className='
+              bg-white dark:bg-gray-900
+              border border-gray-200 dark:border-gray-700
+              shadow-lg
+              rounded-lg
+              min-w-[200px]
+              py-1
+            '
                   >
-                    <Button variant='ghost' size='lg'>
-                      <Workflow className='w-4 h-4 mr-2' /> CI/CD
-                    </Button>
+                    {/* Duplicate */}
+                    <button
+                      onClick={() => onClone(suite.id)}
+                      className='flex items-center w-full px-4 py-2 text-sm
+                hover:bg-gray-100 dark:hover:bg-gray-700'
+                    >
+                      <CopyPlus className='h-4 w-4 mr-2' />
+                      Duplicate
+                    </button>
+
+                    <div className='border-t border-gray-200 dark:border-gray-700 my-1' />
+
+                    {/* CI/CD */}
+                    <button
+                      className='flex items-center w-full px-4 py-2 text-sm
+                hover:bg-gray-100 dark:hover:bg-gray-700'
+                    >
+                      <Workflow className='h-4 w-4 mr-2' />
+                      CI/CD
+                    </button>
+
+                    {/* Reports */}
+                    <button
+                      onClick={handleClickReport}
+                      className='flex items-center w-full px-4 py-2 text-sm
+                hover:bg-gray-100 dark:hover:bg-gray-700'
+                    >
+                      <ChartNoAxesCombined className='h-4 w-4 mr-2' />
+                      Reports
+                    </button>
+
+                    <div className='border-t border-gray-200 dark:border-gray-700 my-1' />
+
+                    {/* Delete */}
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
-                        <Button
-                          variant='ghost'
-                          size='lg'
-                          className='text-red-600 hover:text-red-700'
+                        <button
+                          className='flex items-center w-full px-4 py-2 text-sm
+                    text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700'
                         >
-                          <Trash2 className='w-4 h-2' /> Delete
-                        </Button>
+                          <Trash2 className='h-4 w-4 mr-2' />
+                          Delete
+                        </button>
                       </AlertDialogTrigger>
 
                       <AlertDialogContent>
@@ -367,50 +390,11 @@ const TestSuiteCard: React.FC<TestSuiteCardProps> = ({
                         </AlertDialogFooter>
                       </AlertDialogContent>
                     </AlertDialog>
-                    <Button
-                      variant='ghost'
-                      size='lg'
-                      onClick={handleClickReport}
-                    >
-                      <ChartNoAxesCombined className='w-4 h-4 mr-2' /> Reports
-                    </Button>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </TooltipTrigger>
               <TooltipContent>More</TooltipContent>
             </Tooltip>
-
-            {/* 
-            <AlertDialog>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <AlertDialogTrigger asChild>
-                    <Button
-                      variant='ghost'
-                      size='sm'
-                      className='text-red-600 hover:text-red-700'
-                    >
-                      <Trash2 className='w-4 h-4' />
-                    </Button>
-                  </AlertDialogTrigger>
-                </TooltipTrigger>
-                <TooltipContent>Delete Suite</TooltipContent>
-              </Tooltip>
-
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Delete this suite?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This will permanently delete “{suite.name}”. This action
-                    cannot be undo.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <Button onClick={() => onDelete(suite.id)}>Delete</Button>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog> */}
           </TooltipProvider>
         </div>
       </div>

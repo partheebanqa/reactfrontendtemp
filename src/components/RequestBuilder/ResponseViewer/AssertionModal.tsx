@@ -33,6 +33,7 @@ function AssertionModal({
   variables = [],
   dynamicVariables = [],
   setAssertions,
+  onRedirectToTab,
 }: {
   fieldPath: string;
   fieldValue: any;
@@ -43,6 +44,7 @@ function AssertionModal({
   variables?: Array<{ name: string; value: string }>;
   dynamicVariables?: Array<{ name: string; value: string }>;
   setAssertions: (assertions: any[]) => void;
+  onRedirectToTab?: (tabName: string) => void;
 }) {
   const [activeTab, setActiveTab] = useState<
     'suggested' | 'manual' | 'general'
@@ -333,15 +335,14 @@ function AssertionModal({
           description: 'Array length less than',
         },
         {
+          id: 'field_less_equal',
+          label: 'length ≤',
+          description: 'Array length is less then or equal',
+        },
+        {
           id: 'field_greater_equal',
           label: 'length ≥',
           description: 'Array length at least',
-          disabled: true,
-        },
-        {
-          id: 'field_less_equal',
-          label: 'length ≤',
-          description: 'Array length at most',
           disabled: true,
         },
       ];
@@ -818,9 +819,15 @@ function AssertionModal({
       setTimeout(() => {
         handleFinalSave();
         onClose();
+        if (onRedirectToTab) {
+          onRedirectToTab('post-response');
+        }
       }, 0);
     } else {
       onClose();
+      if (onRedirectToTab) {
+        onRedirectToTab('post-response');
+      }
     }
   };
 
@@ -888,6 +895,9 @@ function AssertionModal({
           handleCloseWithSave();
         } else {
           onClose();
+          if (onRedirectToTab) {
+            onRedirectToTab('post-response');
+          }
         }
       }
     };

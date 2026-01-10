@@ -52,12 +52,14 @@ interface ResponseViewerProps {
   isBottomLayout: boolean;
   usedStaticVariables?: Array<{ name: string; value: string }>;
   usedDynamicVariables?: Array<{ name: string; value: string }>;
+  onRedirectToTab?: (tabName: string) => void;
 }
 
 const ResponseViewer = ({
   isBottomLayout,
   usedStaticVariables = [],
   usedDynamicVariables = [],
+  onRedirectToTab,
 }: ResponseViewerProps) => {
   const { responseData, assertions, setAssertions } = useRequest();
 
@@ -1082,6 +1084,7 @@ const ResponseViewer = ({
         variables={usedStaticVariables}
         dynamicVariables={usedDynamicVariables}
         setAssertions={setAssertions}
+        onRedirectToTab={onRedirectToTab}
       />
     </div>
   );

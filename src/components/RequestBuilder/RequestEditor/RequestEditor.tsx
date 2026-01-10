@@ -64,6 +64,8 @@ interface RequestEditorProps {
     staticVars: Array<{ name: string; value: string }>;
     dynamicVars: Array<{ name: string; value: string }>;
   }) => void;
+  activeTab?: string;
+  onTabChange?: (tab: string) => void;
 }
 
 interface FormattedResponse {
@@ -79,7 +81,6 @@ interface SelectedVariable {
   name: string;
   path?: string;
 }
-
 interface PendingSubstitution {
   lineIndex: number;
   variableName: string;
@@ -131,6 +132,9 @@ const getContentTypeForBodyType = (
 
 const RequestEditor: React.FC<RequestEditorProps> = ({
   onUsedVariablesChange,
+
+  activeTab: externalActiveTab,
+  onTabChange,
 }) => {
   const {
     isLoading,
@@ -179,7 +183,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
     | 'post-response'
     | 'settings'
     | 'schemas'
-  >('params');
+  >((externalActiveTab as any) ?? 'params');
 
   const { schemas, fetchSchemas, isLoading: isSchemasLoading } = useSchema();
 
@@ -369,6 +373,12 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
     usedVariables.dynamicVars,
     onUsedVariablesChange,
   ]);
+
+  useEffect(() => {
+    if (externalActiveTab) {
+      setActiveTab(externalActiveTab as any);
+    }
+  }, [externalActiveTab]);
 
   const [selectedFolderId, setSelectedFolderId] = useState<string>('');
   const [folderOptions, setFolderOptions] = useState<
@@ -2408,7 +2418,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
                 key={tab.id}
                 onClick={() => {
                   setActiveTab(tab.id as any);
-
+                  onTabChange?.(tab.id);
                   if (tab.id === 'schemas') {
                     fetchSchemas();
                   }

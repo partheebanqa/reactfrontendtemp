@@ -43,6 +43,8 @@ const RequestBuilder = () => {
     dynamicVars: [],
   });
 
+  const [activeRequestTab, setActiveRequestTab] = useState<string>('params');
+
   const { sanitizeTestRunner, securityScan, collections } =
     useCollectionStore();
   const { currentWorkspace } = useWorkspace();
@@ -74,6 +76,10 @@ const RequestBuilder = () => {
     },
     [isBottomLayout]
   );
+
+  const handleRedirectToTab = useCallback((tabName: string) => {
+    setActiveRequestTab(tabName);
+  }, []);
 
   const sanitizeCollection = useMemo(() => {
     if (!sanitizeTestRunner.isOpen || !sanitizeTestRunner.collectionId) {
@@ -231,7 +237,11 @@ const RequestBuilder = () => {
                     width: !isBottomLayout ? `${resizePosition}%` : undefined,
                   }}
                 >
-                  <RequestEditor onUsedVariablesChange={setUsedVariables} />
+                  <RequestEditor
+                    onUsedVariablesChange={setUsedVariables}
+                    activeTab={activeRequestTab}
+                    onTabChange={setActiveRequestTab}
+                  />
                 </div>
 
                 {/* Resizer Handle */}
@@ -282,6 +292,7 @@ const RequestBuilder = () => {
                     isBottomLayout={isBottomLayout}
                     usedStaticVariables={usedVariables.staticVars}
                     usedDynamicVariables={usedVariables.dynamicVars}
+                    onRedirectToTab={handleRedirectToTab}
                   />
                 </div>
               </>
