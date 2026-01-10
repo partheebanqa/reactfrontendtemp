@@ -1368,6 +1368,7 @@ function AssertionModal({
                     <label className='block text-sm font-semibold text-gray-900 mb-2'>
                       Expected Value
                     </label>
+
                     <input
                       type={valueType === 'date' ? 'datetime-local' : 'text'}
                       value={
@@ -1377,25 +1378,28 @@ function AssertionModal({
                         const value = e.target.value;
 
                         if (valueType === 'date') {
-                          const local = value;
-                          setLocalDateValue(local);
-
-                          if (local) {
-                            const iso = new Date(local).toISOString();
-                            setManualValue(iso);
+                          setLocalDateValue(value);
+                          if (value) {
+                            setManualValue(new Date(value).toISOString());
                           }
                         } else {
                           setManualValue(value);
                         }
                       }}
                       placeholder={
-                        valueType === 'date'
-                          ? 'Select date and time'
-                          : 'Enter the expected value'
+                        valueType === 'date' ? '' : 'Enter the expected value'
                       }
                       className='w-full px-4 py-3 border border-gray-300 bg-white text-gray-900 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm'
-                      autoFocus
                     />
+
+                    {valueType === 'date' && (
+                      <p className='mt-1 text-xs text-gray-500'>
+                        Format:{' '}
+                        <span className='font-medium'>DD-MM-YYYY HH:mm</span>{' '}
+                        (24 hrs) Example:{' '}
+                        <span className='font-medium'>10-01-2026 20:44</span>
+                      </p>
+                    )}
                   </div>
                 )}
 
