@@ -541,6 +541,7 @@ export function RequestChainEditor({
 
     let appliedCount = 0;
     let overwrittenCount = 0;
+    let unauthorizedCount = 0;
 
     const updatedRequests = formData.chainRequests.map((request, index) => {
       if (index <= sourceRequestIndex) return request;
@@ -548,7 +549,12 @@ export function RequestChainEditor({
       const requestDomain = getDomain(request.url);
       const hasSameDomain = sourceDomain && requestDomain === sourceDomain;
 
-      if (hasSameDomain) {
+      const executionLog = executionLogs.find(
+        (log) => log.requestId === request.id
+      );
+      const has401Status = executionLog?.response?.status === 401;
+
+      if (hasSameDomain || has401Status) {
         appliedCount++;
 
         const hasExistingAuth =
@@ -559,6 +565,10 @@ export function RequestChainEditor({
 
         if (hasExistingAuth) {
           overwrittenCount++;
+        }
+
+        if (has401Status) {
+          unauthorizedCount++;
         }
 
         return {
@@ -582,7 +592,7 @@ export function RequestChainEditor({
     if (appliedCount === 0) {
       toast({
         title: 'No Requests Updated',
-        description: `No subsequent requests found with matching domain "${sourceDomain}"`,
+        description: `No subsequent requests found with matching domain "${sourceDomain}" or 401 status`,
         variant: 'destructive',
       });
       return;
@@ -590,13 +600,23 @@ export function RequestChainEditor({
 
     setFormData({ ...formData, chainRequests: [...updatedRequests] });
 
+    const descriptionParts = [
+      `Variable {{${variableName}}} applied as Bearer Token to ${appliedCount} request(s)`,
+    ];
+
+    if (unauthorizedCount > 0) {
+      descriptionParts.push(
+        `${unauthorizedCount} with 401 Unauthorized status`
+      );
+    }
+
+    if (overwrittenCount > 0) {
+      descriptionParts.push(`${overwrittenCount} overwritten`);
+    }
+
     toast({
       title: 'Applied to Subsequent Requests',
-      description: `Variable {{${variableName}}} applied as Bearer Token to ${appliedCount} request(s) after request #${
-        sourceRequestIndex + 1
-      } with matching domain "${sourceDomain}"${
-        overwrittenCount > 0 ? ` (${overwrittenCount} overwritten)` : ''
-      }`,
+      description: descriptionParts.join(', '),
     });
   };
 

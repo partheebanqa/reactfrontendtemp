@@ -362,18 +362,16 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
     };
   };
 
-  const usedVariables = getUsedVariables();
+  const usedVariables = useMemo(
+    () => getUsedVariables(),
+    [url, params, headers, bodyContent, formattedVariables]
+  );
 
   useEffect(() => {
     if (onUsedVariablesChange) {
       onUsedVariablesChange(usedVariables);
     }
-  }, [
-    usedVariables.staticVars,
-    usedVariables.dynamicVars,
-    onUsedVariablesChange,
-  ]);
-
+  }, [usedVariables, onUsedVariablesChange]);
   useEffect(() => {
     if (externalActiveTab) {
       setActiveTab(externalActiveTab as any);

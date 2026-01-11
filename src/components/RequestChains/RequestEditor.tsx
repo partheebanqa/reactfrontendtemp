@@ -1167,56 +1167,54 @@ export function RequestEditor({
       const actualRequestBody = processedRequest.body ?? '';
       const actualRequestMethod = processedRequest.method;
 
-      let previousExecutionLog = null;
-      try {
-        const raw = localStorage.getItem('lastExecutionByRequest');
-        if (raw) {
-          const map = JSON.parse(raw);
-          previousExecutionLog = map[initialRequest.id];
-        }
-      } catch (e) {
-        console.error('Failed to read previous execution:', e);
-      }
+      const formattedAssertionFormat = {
+        status: result?.statusCode ?? null,
+        statusText: '',
+        headers: result?.headers ?? {},
+        data: (() => {
+          try {
+            return JSON.parse(result?.body || '{}');
+          } catch {
+            return {};
+          }
+        })(),
+        responseTime: result?.metrics?.responseTime ?? 0,
+        size: result?.metrics?.bytesReceived ?? 0,
+      };
 
-      const responseChanged = hasResponseChanged(
-        result,
-        previousExecutionLog?.response
+      const allGeneratedAssertions = await generateAssertions(
+        formattedAssertionFormat
       );
 
-      let finalAssertions = assertions;
-      if (assertions.length === 0 || responseChanged) {
-        const formattedAssertionFormat = {
-          status: result?.statusCode ?? null,
-          statusText: '',
-          headers: result?.headers ?? {},
-          data: (() => {
-            try {
-              return JSON.parse(result?.body || '{}');
-            } catch {
-              return {};
-            }
-          })(),
-          responseTime: result?.metrics?.responseTime ?? 0,
-          size: result?.metrics?.bytesReceived ?? 0,
-        };
-
-        const newAssertions = await generateAssertions(
-          formattedAssertionFormat
+      const mergedAssertions = allGeneratedAssertions.map((newAssertion) => {
+        const existingMatch = assertions.find(
+          (existing) =>
+            existing.description === newAssertion.description ||
+            (existing.type === newAssertion.type &&
+              existing.category === newAssertion.category &&
+              JSON.stringify(existing.expectedValue) ===
+                JSON.stringify(newAssertion.expectedValue))
         );
 
-        if (responseChanged && assertions.length > 0) {
-          const customAssertions = assertions.filter(
-            (assertion) => assertion.isCustom === true
-          );
+        return {
+          ...newAssertion,
+          enabled: existingMatch ? existingMatch.enabled : false,
+        };
+      });
 
-          finalAssertions = [...newAssertions, ...customAssertions];
-        } else {
-          finalAssertions = newAssertions;
-        }
+      const customAssertions = assertions.filter((existing) => {
+        return !mergedAssertions.some(
+          (merged) =>
+            merged.description === existing.description ||
+            (merged.type === existing.type &&
+              merged.category === existing.category)
+        );
+      });
 
-        setAssertions(finalAssertions);
-        handleAssertionsUpdate(finalAssertions);
-      }
+      const finalAssertions = [...mergedAssertions, ...customAssertions];
+
+      setAssertions(finalAssertions);
+      handleAssertionsUpdate(finalAssertions);
 
       const log: ExecutionLog = {
         id: Date.now().toString(),
@@ -1268,9 +1266,7 @@ export function RequestEditor({
 
       toast({
         title: 'Execution Complete',
-        description: `Request completed with status ${result.statusCode}${
-          responseChanged ? ' (Assertions updated due to response change)' : ''
-        }`,
+        description: `Request completed with status ${result.statusCode}`,
         variant: log.status === 'success' ? 'default' : 'destructive',
       });
     } catch (error) {
@@ -2060,26 +2056,29 @@ export function RequestEditor({
   useEffect(() => {
     if (requestAssertions && requestAssertions.length > 0) {
       setAssertions(requestAssertions);
-    } else {
-      try {
-        const raw = localStorage.getItem('lastExecutionByRequest');
-        if (raw && initialRequest.id) {
-          const map = JSON.parse(raw);
-          const saved = map?.[initialRequest.id];
-          if (
-            saved?.assertions &&
-            Array.isArray(saved.assertions) &&
-            saved.assertions.length > 0
-          ) {
-            setAssertions(saved.assertions);
-            if (onAssertionsUpdate) {
-              onAssertionsUpdate(saved.assertions);
-            }
+      return;
+    }
+
+    try {
+      const raw = localStorage.getItem('lastExecutionByRequest');
+      if (raw && initialRequest.id) {
+        const map = JSON.parse(raw);
+        const saved = map?.[initialRequest.id];
+
+        if (
+          saved?.assertions &&
+          Array.isArray(saved.assertions) &&
+          saved.assertions.length > 0
+        ) {
+          setAssertions(saved.assertions);
+          if (onAssertionsUpdate) {
+            onAssertionsUpdate(saved.assertions);
           }
+          return;
         }
-      } catch (e) {
-        console.error('Failed to load assertions from localStorage:', e);
       }
+    } catch (e) {
+      console.error('Failed to load assertions from localStorage:', e);
     }
   }, [requestAssertions, initialRequest.id]);
 
@@ -2633,6 +2632,10 @@ export function RequestEditor({
               selectedVariables={selectedVariable}
               staticVariables={usedRequestVariables.staticVars}
               dynamicVariables={usedRequestVariables.dynamicVars}
+              onAssertionsChange={(newAssertions) => {
+                setAssertions(newAssertions);
+                handleAssertionsUpdate(newAssertions);
+              }}
             />
           </div>
         )}
@@ -2647,6 +2650,10 @@ export function RequestEditor({
               showAssertions={true}
               staticVariables={usedRequestVariables.staticVars}
               dynamicVariables={usedRequestVariables.dynamicVars}
+              onAssertionsChange={(newAssertions) => {
+                setAssertions(newAssertions);
+                handleAssertionsUpdate(newAssertions);
+              }}
             />
           </div>
         )}
