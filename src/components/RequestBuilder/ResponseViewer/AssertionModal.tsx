@@ -819,15 +819,16 @@ function AssertionModal({
       setTimeout(() => {
         handleFinalSave();
         onClose();
-        if (onRedirectToTab) {
-          onRedirectToTab('post-response');
-        }
       }, 0);
     } else {
       onClose();
-      if (onRedirectToTab) {
-        onRedirectToTab('post-response');
-      }
+    }
+  };
+
+  const handleMoveTopostResponseTab = () => {
+    onClose();
+    if (onRedirectToTab) {
+      onRedirectToTab('post-response');
     }
   };
 
@@ -895,9 +896,6 @@ function AssertionModal({
           handleCloseWithSave();
         } else {
           onClose();
-          if (onRedirectToTab) {
-            onRedirectToTab('post-response');
-          }
         }
       }
     };
@@ -1566,10 +1564,10 @@ function AssertionModal({
 
         <div className='px-6 py-4 border-t border-gray-200 flex items-center justify-between flex-shrink-0 bg-gray-50'>
           <button
-            onClick={onClose}
-            className='px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg text-sm font-medium transition-colors'
+            onClick={handleMoveTopostResponseTab}
+            className='px-4 py-2 text-gray-700 bg-gray-100 rounded-lg text-sm font-medium transition-colors'
           >
-            Cancel
+            Manage Assertion
           </button>
           <Button
             onClick={handleAddToList}
