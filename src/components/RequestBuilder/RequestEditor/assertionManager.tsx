@@ -50,7 +50,6 @@ const AssertionManager: React.FC<AssertionManagerProps> = ({
   const handleSaveAssertions = async () => {
     const selectedCount = tempAssertions.filter((a) => a.enabled).length;
 
-    // Apply temp changes to actual assertions
     setAssertions(tempAssertions);
 
     if (onSaveAssertions) {
@@ -125,15 +124,12 @@ const AssertionManager: React.FC<AssertionManagerProps> = ({
   const groupedByCategory = useMemo(() => {
     const grouped: Record<string, Assertion[]> = {};
 
-    // Add selected category first if there are selected assertions
     const selectedFiltered = filteredAssertions.filter((a) => a.enabled);
     if (selectedFiltered.length > 0) {
       grouped['SELECTED'] = selectedFiltered;
     }
 
-    // Then add other categories (excluding selected assertions)
     filteredAssertions.forEach((assertion) => {
-      // Skip if assertion is enabled (already in SELECTED)
       if (assertion.enabled) return;
 
       const cat = assertion.category.toUpperCase();
@@ -160,7 +156,6 @@ const AssertionManager: React.FC<AssertionManagerProps> = ({
   };
 
   const handleDialogClose = () => {
-    // Reset temp assertions to original state
     setTempAssertions(assertions);
     setShowDialog(false);
     setSearchTerm('');
