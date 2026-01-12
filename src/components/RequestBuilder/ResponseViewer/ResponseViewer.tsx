@@ -53,6 +53,7 @@ interface ResponseViewerProps {
   usedStaticVariables?: Array<{ name: string; value: string }>;
   usedDynamicVariables?: Array<{ name: string; value: string }>;
   onRedirectToTab?: (tabName: string) => void;
+  onSaveAssertions?: () => Promise<void>;
 }
 
 const ResponseViewer = ({
@@ -60,6 +61,7 @@ const ResponseViewer = ({
   usedStaticVariables = [],
   usedDynamicVariables = [],
   onRedirectToTab,
+  onSaveAssertions,
 }: ResponseViewerProps) => {
   const { responseData, assertions, setAssertions } = useRequest();
 
@@ -1085,6 +1087,7 @@ const ResponseViewer = ({
         dynamicVariables={usedDynamicVariables}
         setAssertions={setAssertions}
         onRedirectToTab={onRedirectToTab}
+        onSave={onSaveAssertions}
       />
     </div>
   );

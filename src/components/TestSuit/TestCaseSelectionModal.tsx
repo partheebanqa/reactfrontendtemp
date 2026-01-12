@@ -464,6 +464,42 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
     return chips.concat(rest);
   }, [filteredCategoriesPreSubcat]);
 
+
+  const SUBCATEGORY_ORDER = [
+    "all",
+    "positive",
+    "negative",
+    "http methods",
+    "token",
+    "status code",
+    "missing fields",
+    "security",
+    "version compatibility",
+    "invalid value",
+    "boundary",
+  ];
+
+
+  const sortedSubcatChips = React.useMemo(() => {
+    return [...subcatChips].sort((a, b) => {
+      const aIndex = SUBCATEGORY_ORDER.indexOf(a.name.toLowerCase());
+      const bIndex = SUBCATEGORY_ORDER.indexOf(b.name.toLowerCase());
+
+      // both exist in priority list
+      if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex;
+
+      // only a exists → a comes first
+      if (aIndex !== -1) return -1;
+
+      // only b exists → b comes first
+      if (bIndex !== -1) return 1;
+
+      // neither exists → keep natural order but move after all known ones
+      return a.name.localeCompare(b.name);
+    });
+  }, [subcatChips]);
+
+
   const subCategoryTestMap = React.useMemo(() => {
     const map: Record<string, string[]> = {};
 
@@ -481,6 +517,25 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
 
     return map;
   }, [filteredCategories]);
+
+
+  const subCategoryCategoryMap = React.useMemo(() => {
+    const map: Record<string, Set<string>> = {};
+
+    filteredCategoriesPreSubcat.forEach((category) => {
+      category.tests.forEach((test) => {
+        const name = (test.subCategory && test.subCategory.trim()) || 'Other';
+
+        if (!map[name]) map[name] = new Set();
+        map[name].add(category.category);
+      });
+    });
+
+    return map;
+  }, [filteredCategoriesPreSubcat]);
+
+
+
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -546,7 +601,7 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
 
         <div className='px-3'>
           <div className='flex flex-wrap gap-2 justify-center'>
-            {subcatChips.map((chip) => {
+            {sortedSubcatChips.map((chip) => {
               const active = subcatFilter === chip.name;
 
               const subCategoryTestIds = subCategoryTestMap[chip.name] ?? [];
@@ -560,14 +615,27 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
               return (
                 <button
                   key={chip.name}
-                  onClick={() => setSubcatFilter(active ? '' : chip.name)}
+                  onClick={() => {
+                    if (active) {
+                      setSubcatFilter('All');
+                      setExpandedCategories([]);
+                      return;
+                    }
+
+                    setSubcatFilter(chip.name);
+
+                    const cats = subCategoryCategoryMap[chip.name];
+                    if (cats) {
+                      setExpandedCategories(Array.from(cats));
+                    }
+                  }}
+
                   className={`
         relative inline-flex items-center rounded-md border px-2 py-1 text-xs
-        ${
-          active
-            ? 'bg-[#136fb0] text-white border-[#136fb0]'
-            : 'bg-transparent text-foreground border-muted-foreground/30 hover:bg-muted/40'
-        }
+        ${active
+                      ? 'bg-[#136fb0] text-white border-[#136fb0]'
+                      : 'bg-transparent text-foreground border-muted-foreground/30 hover:bg-muted/40'
+                    }
       `}
                   title={chip.name}
                 >
@@ -590,9 +658,8 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
                   {/* optional x/y */}
                   {hasSelection && (
                     <span
-                      className={`ml-1 text-[10px] font-medium ${
-                        active ? 'text-white/90' : 'text-[#136fb0]'
-                      }`}
+                      className={`ml-1 text-[10px] font-medium ${active ? 'text-white/90' : 'text-[#136fb0]'
+                        }`}
                     >
                       {selectedInSubCategory}/{subCategoryTestIds.length}
                     </span>
@@ -683,7 +750,7 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
                             </span>
                             <span className='font-medium'>
                               {category.category}
-                              {}
+                              { }
                             </span>
                             <Badge variant='outline'>
                               {categoryTests.length}
@@ -826,29 +893,13 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
                                           <TabsContent value='request'>
                                             {test && (
                                               <div className='mt-4 p-3 bg-gray-900 rounded max-h-96 overflow-auto text-xs text-white'>
-                                                {/* <ReactJson 
-                                                  src={test}
-                                                  collapsed={1}
-                                                  enableClipboard={false}
-                                                  // displayDataTypes={false}
-                                                  // name={false}
-                                                  theme="vscode"
-                                                /> */}
 
-                                                {/* <JsonView
-                                                  data={test}
-                                                  collapsed={1}
-                                                  enableClipboard={false}
-                                                  displayDataTypes={false}
-                                                  name={false}
-                                                  theme="monokai"
-                                                /> */}
                                                 <JsonView
                                                   dark
                                                   enableClipboard
-                                                  onAdd={() => {}}
-                                                  onDelete={() => {}}
-                                                  onEdit={() => {}}
+                                                  onAdd={() => { }}
+                                                  onDelete={() => { }}
+                                                  onEdit={() => { }}
                                                   src={test}
                                                   theme='default'
                                                 />
@@ -859,20 +910,13 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
                                           <TabsContent value='assertions'>
                                             {test && (
                                               <div className='mt-4 p-3 bg-gray-900 rounded max-h-96 overflow-auto text-xs text-white'>
-                                                {/* <ReactJson
-                                                  src={test}
-                                                  collapsed={1}
-                                                  enableClipboard={false}
-                                                  // displayDataTypes={false}
-                                                  // name={false}
-                                                  theme="vscode"
-                                                /> */}
+
                                                 <JsonView
                                                   dark
                                                   enableClipboard
-                                                  onAdd={() => {}}
-                                                  onDelete={() => {}}
-                                                  onEdit={() => {}}
+                                                  onAdd={() => { }}
+                                                  onDelete={() => { }}
+                                                  onEdit={() => { }}
                                                   src={test}
                                                   theme='default'
                                                 />

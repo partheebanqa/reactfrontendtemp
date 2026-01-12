@@ -23,6 +23,20 @@ import {
   getCategoryForAssertionType,
 } from '@/lib/assertion-utils';
 
+interface AssertionModalProps {
+  fieldPath: string;
+  fieldValue: any;
+  isOpen: boolean;
+  onSelect: (assertionType: string, config?: any) => void;
+  onClose: () => void;
+  allAssertions?: any[];
+  variables?: Array<{ name: string; value: string }>;
+  dynamicVariables?: Array<{ name: string; value: string }>;
+  setAssertions: (assertions: any[]) => void;
+  onRedirectToTab?: (tabName: string) => void;
+  onSave?: () => Promise<void>; // ✅ ADD THIS LINE
+}
+
 function AssertionModal({
   fieldPath,
   fieldValue,
@@ -34,18 +48,8 @@ function AssertionModal({
   dynamicVariables = [],
   setAssertions,
   onRedirectToTab,
-}: {
-  fieldPath: string;
-  fieldValue: any;
-  isOpen: boolean;
-  onSelect: (assertionType: string, config?: any) => void;
-  onClose: () => void;
-  allAssertions?: any[];
-  variables?: Array<{ name: string; value: string }>;
-  dynamicVariables?: Array<{ name: string; value: string }>;
-  setAssertions: (assertions: any[]) => void;
-  onRedirectToTab?: (tabName: string) => void;
-}) {
+  onSave,
+}: AssertionModalProps) {
   const [activeTab, setActiveTab] = useState<
     'suggested' | 'manual' | 'general'
   >('suggested');
@@ -713,7 +717,7 @@ function AssertionModal({
     setSelectedGeneralAssertions(new Map());
   };
 
-  const handleCloseWithSave = () => {
+  const handleCloseWithSave = async () => {
     const hasUnsubmittedManualAssertion =
       activeTab === 'manual' &&
       manualValue &&
@@ -826,8 +830,17 @@ function AssertionModal({
         setSelectedGeneralAssertions(newMap);
       }
 
-      setTimeout(() => {
+      setTimeout(async () => {
         handleFinalSave();
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        if (onSave) {
+          try {
+            await onSave();
+          } catch (error) {
+            console.error('Error saving assertions:', error);
+          }
+        }
+
         onClose();
       }, 0);
     } else {

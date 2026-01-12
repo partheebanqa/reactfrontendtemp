@@ -66,6 +66,7 @@ interface RequestEditorProps {
   }) => void;
   activeTab?: string;
   onTabChange?: (tab: string) => void;
+  onRegisterSave?: (saveFn: () => Promise<void>) => void;
 }
 
 interface FormattedResponse {
@@ -135,6 +136,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
 
   activeTab: externalActiveTab,
   onTabChange,
+  onRegisterSave,
 }) => {
   const {
     isLoading,
