@@ -35,6 +35,7 @@ import SecurityScanView from '@/components/RequestBuilder/SecurityScan/SecurityS
 import { useCollectionStore, collectionActions } from '@/store/collectionStore';
 
 const RequestBuilder = () => {
+  const saveRequestRef = useRef<(() => Promise<void>) | null>(null);
   const [usedVariables, setUsedVariables] = useState<{
     staticVars: Array<{ name: string; value: string }>;
     dynamicVars: Array<{ name: string; value: string }>;
@@ -241,6 +242,9 @@ const RequestBuilder = () => {
                     onUsedVariablesChange={setUsedVariables}
                     activeTab={activeRequestTab}
                     onTabChange={setActiveRequestTab}
+                    onRegisterSave={(saveFn) => {
+                      saveRequestRef.current = saveFn;
+                    }}
                   />
                 </div>
 
@@ -293,6 +297,11 @@ const RequestBuilder = () => {
                     usedStaticVariables={usedVariables.staticVars}
                     usedDynamicVariables={usedVariables.dynamicVars}
                     onRedirectToTab={handleRedirectToTab}
+                    onSaveAssertions={async () => {
+                      if (saveRequestRef.current) {
+                        await saveRequestRef.current();
+                      }
+                    }}
                   />
                 </div>
               </>

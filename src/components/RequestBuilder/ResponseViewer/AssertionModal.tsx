@@ -23,6 +23,20 @@ import {
   getCategoryForAssertionType,
 } from '@/lib/assertion-utils';
 
+interface AssertionModalProps {
+  fieldPath: string;
+  fieldValue: any;
+  isOpen: boolean;
+  onSelect: (assertionType: string, config?: any) => void;
+  onClose: () => void;
+  allAssertions?: any[];
+  variables?: Array<{ name: string; value: string }>;
+  dynamicVariables?: Array<{ name: string; value: string }>;
+  setAssertions: (assertions: any[]) => void;
+  onRedirectToTab?: (tabName: string) => void;
+  onSave?: () => Promise<void>; // ✅ ADD THIS LINE
+}
+
 function AssertionModal({
   fieldPath,
   fieldValue,
@@ -34,18 +48,8 @@ function AssertionModal({
   dynamicVariables = [],
   setAssertions,
   onRedirectToTab,
-}: {
-  fieldPath: string;
-  fieldValue: any;
-  isOpen: boolean;
-  onSelect: (assertionType: string, config?: any) => void;
-  onClose: () => void;
-  allAssertions?: any[];
-  variables?: Array<{ name: string; value: string }>;
-  dynamicVariables?: Array<{ name: string; value: string }>;
-  setAssertions: (assertions: any[]) => void;
-  onRedirectToTab?: (tabName: string) => void;
-}) {
+  onSave,
+}: AssertionModalProps) {
   const [activeTab, setActiveTab] = useState<
     'suggested' | 'manual' | 'general'
   >('suggested');
@@ -475,8 +479,18 @@ function AssertionModal({
     const newSelected = new Set(selectedSuggestedAssertions);
     if (newSelected.has(assertionItem.id)) {
       newSelected.delete(assertionItem.id);
+      setPendingAssertions(
+        pendingAssertions.filter((a) => a.id !== assertionItem.id)
+      );
     } else {
       newSelected.add(assertionItem.id);
+      const newAssertion = {
+        ...assertionItem.assertion,
+        id: assertionItem.id,
+        enabled: true,
+        source: 'suggested',
+      };
+      setPendingAssertions([...pendingAssertions, newAssertion]);
     }
     setSelectedSuggestedAssertions(newSelected);
   };
@@ -703,7 +717,7 @@ function AssertionModal({
     setSelectedGeneralAssertions(new Map());
   };
 
-  const handleCloseWithSave = () => {
+  const handleCloseWithSave = async () => {
     const hasUnsubmittedManualAssertion =
       activeTab === 'manual' &&
       manualValue &&
@@ -816,8 +830,17 @@ function AssertionModal({
         setSelectedGeneralAssertions(newMap);
       }
 
-      setTimeout(() => {
+      setTimeout(async () => {
         handleFinalSave();
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        if (onSave) {
+          try {
+            await onSave();
+          } catch (error) {
+            console.error('Error saving assertions:', error);
+          }
+        }
+
         onClose();
       }, 0);
     } else {
@@ -1033,7 +1056,8 @@ function AssertionModal({
                                 {a.label}
                               </div>
                               {alreadyExists && (
-                                <div className='flex items-center gap-1 px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-medium'>
+                                <div className='flex items-center gap-1 px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-medium flex-shrink-0'>
+                                  {' '}
                                   <CheckCircle className='w-3 h-3' />
                                   <span>Added</span>
                                 </div>
@@ -1272,7 +1296,8 @@ function AssertionModal({
                                 </div>
                               )}
                             </div>
-                            <div className='text-xs text-gray-500 mt-1'>
+                            <div className='text-xs text-gray-500 mt-1 break-all line-clamp-2'>
+                              {' '}
                               {assertionItem.description}
                             </div>
                           </div>
@@ -1458,7 +1483,7 @@ function AssertionModal({
                           className='flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg'
                         >
                           <div className='flex-1 min-w-0'>
-                            <p className='text-sm font-medium text-blue-900'>
+                            <p className='text-sm font-medium text-blue-900 break-all line-clamp-1'>
                               {assertionItem.label}
                             </p>
                             <p className='text-xs text-blue-600 mt-0.5'>
@@ -1509,7 +1534,7 @@ function AssertionModal({
                           className='flex items-center justify-between p-3 bg-purple-50 border border-purple-200 rounded-lg'
                         >
                           <div className='flex-1 min-w-0'>
-                            <p className='text-sm font-medium text-purple-900'>
+                            <p className='text-sm font-medium text-purple-900 break-all line-clamp-1'>
                               {assertion.label}: {displayValue}
                             </p>
                             <p className='text-xs text-purple-600 mt-0.5'>
@@ -1538,13 +1563,14 @@ function AssertionModal({
                       className='flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg'
                     >
                       <div className='flex-1 min-w-0'>
-                        <p className='text-sm font-medium text-green-900'>
+                        <p className='text-sm font-medium text-green-900 break-all line-clamp-2'>
                           {assertion.description || assertion.type}
                         </p>
                         <p className='text-xs text-green-600 mt-0.5'>
                           Manual assertion
                         </p>
                       </div>
+
                       <button
                         onClick={() =>
                           handleRemovePendingAssertion(assertion.id)
