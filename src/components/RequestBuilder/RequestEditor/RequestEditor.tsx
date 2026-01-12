@@ -426,6 +426,16 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
   }, [showSaveModal, activeCollection?.id]);
 
   useEffect(() => {
+    if (onRegisterSave) {
+      onRegisterSave(async () => {
+        if (activeRequest && !activeRequest.id?.startsWith('temp-')) {
+          await handleUpdateContentRequest();
+        }
+      });
+    }
+  }, [activeRequest, onRegisterSave]);
+
+  useEffect(() => {
     const loadFolders = async () => {
       if (!showSaveModal || !selectedCollectionId) return;
       try {
