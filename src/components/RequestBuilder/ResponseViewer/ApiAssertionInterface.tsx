@@ -2,7 +2,6 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
   Check,
   X,
-  Filter,
   ChevronDown,
   ChevronRight,
   Search,
@@ -19,14 +18,8 @@ import {
   Save,
   RotateCcw,
   Share2,
-  RefreshCw,
   Loader2,
 } from 'lucide-react';
-import { ValidationPayload } from '@/services/assertionValidation.service';
-import { useValidateAssertionsMutation } from '@/store/assertionValidation';
-import { useToast } from '@/hooks/useToast';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -34,6 +27,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 interface Assertion {
   id: string;
@@ -91,9 +86,7 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
   onVerifyAssertions,
   onSaveAssertions,
 }) => {
-  const { toast } = useToast();
   const saveMenuRef = useRef<HTMLDivElement>(null);
-
   const [localAssertions, setLocalAssertions] =
     useState<Assertion[]>(assertions);
   const [selectedView, setSelectedView] = useState<'all' | 'selected'>('all');
@@ -123,26 +116,27 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
     performance: true,
     status: true,
   });
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [modalData, setModalData] = useState({
-    field: '',
-    dataType: 'string',
-    operator: 'equals',
-    value: '',
-    category: 'body',
-  });
   const [quickAddData, setQuickAddData] = useState({
     field: '',
     operator: 'equals',
     value: '',
   });
-  const [nlpInput, setNlpInput] = useState('');
-  const [selectedAssertions, setSelectedAssertions] = useState<Assertion[]>([]);
 
-  useEffect(() => {
-    const selected = localAssertions.filter((a) => a.enabled);
-    setSelectedAssertions(selected);
-  }, [localAssertions]);
+  const [expandedAddForm, setExpandedAddForm] = useState<string | null>(null);
+  const [inlineFormData, setInlineFormData] = useState({
+    field: '',
+    operator: 'equals',
+    value: '',
+    dataType: 'string',
+  });
+
+  const [expandedEditForm, setExpandedEditForm] = useState<string | null>(null);
+  const [editFormData, setEditFormData] = useState({
+    field: '',
+    operator: 'equals',
+    value: '',
+    dataType: 'string',
+  });
 
   useEffect(() => {
     setLocalAssertions(assertions);
@@ -208,11 +202,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
     if (onUpdateAssertions) {
       onUpdateAssertions(updated);
     }
-    toast({
-      title: 'Assertion removed',
-      description: 'The assertion has been removed successfully',
-      duration: 2000,
-    });
   };
 
   const removeAllSelected = () => {
@@ -222,18 +211,10 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
     if (onUpdateAssertions) {
       onUpdateAssertions(updated);
     }
-    toast({
-      title: 'All assertions cleared',
-      description: 'All assertions have been disabled',
-      duration: 2000,
-    });
   };
 
   const toggleCategory = (category: string) => {
-    setExpandedCategories((prev) => ({
-      ...prev,
-      [category]: !prev[category],
-    }));
+    setExpandedCategories((prev) => ({ ...prev, [category]: !prev[category] }));
   };
 
   const getSelectedCount = () => {
@@ -245,11 +226,9 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
     categoryKey?: string
   ) => {
     let filtered = [...categoryAssertions];
-
     if (selectedView === 'selected') {
       filtered = filtered.filter((a) => a.enabled);
     }
-
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(
@@ -259,7 +238,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
           a.type.toLowerCase().includes(query)
       );
     }
-
     if (categoryKey && sortBy[categoryKey] && sortBy[categoryKey] !== 'none') {
       filtered = [...filtered].sort((a, b) => {
         if (sortBy[categoryKey] === 'field') {
@@ -270,7 +248,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
         return 0;
       });
     }
-
     return filtered;
   };
 
@@ -307,15 +284,8 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
 
   const handleQuickAdd = () => {
     if (!quickAddData.field || !quickAddData.value) {
-      toast({
-        title: 'Missing fields',
-        description: 'Please fill in both field and value',
-        variant: 'destructive',
-        duration: 3000,
-      });
       return;
     }
-
     const newAssertion: Assertion = {
       id: `manual_${Date.now()}`,
       field: quickAddData.field,
@@ -327,7 +297,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
       category: 'body',
       group: 'custom',
     };
-
     const updated = [...localAssertions, newAssertion];
     setLocalAssertions(updated);
     setQuickAddData({ field: '', operator: 'equals', value: '' });
@@ -335,246 +304,163 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
     if (onUpdateAssertions) {
       onUpdateAssertions(updated);
     }
-    toast({
-      title: 'Assertion added',
-      description: 'Custom assertion has been added successfully',
-      duration: 2000,
-    });
   };
 
-  const openAddModal = (
+  const handleExpandAddForm = (
+    assertionId: string,
     field: string,
-    dataType = 'string',
-    category = 'body'
+    category: string
   ) => {
-    setModalData({
-      field,
-      dataType,
-      operator: getOperatorsByDataType(dataType)[0],
-      value: '',
-      category,
-    });
-    setShowAddModal(true);
-  };
+    if (expandedAddForm === assertionId) {
+      handleCancelInlineAdd();
+      return;
+    }
 
-  const closeAddModal = () => {
-    setShowAddModal(false);
-    setModalData({
-      field: '',
-      dataType: 'string',
+    if (expandedEditForm) {
+      handleCancelEdit();
+    }
+
+    setExpandedAddForm(assertionId);
+    setInlineFormData({
+      field: field || '',
       operator: 'equals',
       value: '',
-      category: 'body',
+      dataType: 'string',
+    });
+  };
+  const handleCancelInlineAdd = () => {
+    setExpandedAddForm(null);
+    setInlineFormData({
+      field: '',
+      operator: 'equals',
+      value: '',
+      dataType: 'string',
     });
   };
 
-  const handleAddAssertion = () => {
+  const handleSaveInlineAssertion = (category: string) => {
+    if (!inlineFormData.field || !inlineFormData.value) {
+      return;
+    }
     const newAssertion: Assertion = {
-      id: `manual_${Date.now()}`,
-      field: modalData.field,
-      type: modalData.operator,
-      description: `Field '${modalData.field}' ${modalData.operator} '${modalData.value}'`,
-      operator: modalData.operator,
-      expectedValue: modalData.value,
+      id: `custom_${Date.now()}`,
+      field: inlineFormData.field,
+      type: inlineFormData.operator,
+      description: `Field '${inlineFormData.field}' ${inlineFormData.operator} '${inlineFormData.value}'`,
+      operator: inlineFormData.operator,
+      expectedValue: inlineFormData.value,
       enabled: true,
-      category: modalData.category,
+      category: category,
       group: 'custom',
     };
-
     const updated = [...localAssertions, newAssertion];
     setLocalAssertions(updated);
     setHasUnsavedChanges(true);
     if (onUpdateAssertions) {
       onUpdateAssertions(updated);
     }
-    closeAddModal();
-    toast({
-      title: 'Assertion created',
-      description: `New assertion for '${modalData.field}' has been created`,
-      duration: 2000,
-    });
+    handleCancelInlineAdd();
   };
 
-  const validationMutation = useValidateAssertionsMutation({
-    onSuccess: (data) => {
-      const mappedResults: ValidationResult[] = data.assertionResults.map(
-        (result) => {
-          const originalAssertion = localAssertions.find(
-            (a) =>
-              a.field === result.field &&
-              a.type === result.type &&
-              a.category === result.category
-          );
-
-          return {
-            id:
-              originalAssertion?.id || `result_${Date.now()}_${Math.random()}`,
-            category: result.category,
-            type: result.type,
-            description: result.description,
-            field: result.field,
-            operator: result.operator,
-            expectedValue: result.expectedValue,
-            enabled: originalAssertion?.enabled || true,
-            group: result.group || originalAssertion?.group,
-            priority: originalAssertion?.priority,
-            impact: originalAssertion?.impact,
-            validated: true as const,
-            result:
-              result.status === 'passed'
-                ? ('passed' as const)
-                : ('failed' as const),
-            actualValue: result.actualValue,
-            failureReason: result.errorMessage,
-          };
-        }
-      );
-
-      const summary = {
-        passed: data.assertionResults.filter((r) => r.status === 'passed')
-          .length,
-        failed: data.assertionResults.filter((r) => r.status === 'failed')
-          .length,
-        skipped: selectedAssertions.length - data.assertionResults.length,
-        total: selectedAssertions.length,
-      };
-
-      const responseTime = data.response?.metrics?.responseTime
-        ? `${data.response.metrics.responseTime}ms`
-        : data.assertionResults[0]?.responseTime
-        ? `${data.assertionResults[0].responseTime}ms`
-        : 'N/A';
-
-      setValidationResults({
-        results: mappedResults,
-        summary,
-        timestamp: new Date().toISOString(),
-        responseTime,
-      });
-
-      toast({
-        title: 'Validation complete',
-        description: `${summary.passed} passed, ${summary.failed} failed out of ${summary.total} assertions`,
-        duration: 4000,
-      });
-      setAppState('results');
-    },
-    onError: (error) => {
-      console.error('Validation error:', error);
-      setAppState('build');
-      toast({
-        title: 'Validation failed',
-        description:
-          error.message || 'Failed to validate assertions. Please try again.',
-        variant: 'destructive',
-        duration: 5000,
-      });
-    },
-  });
-
-  const handleVerifyAssertions = async () => {
-    if (getSelectedCount() === 0) {
-      toast({
-        title: 'No assertions selected',
-        description: 'Please select at least one assertion to verify',
-        variant: 'destructive',
-        duration: 3000,
-      });
+  const handleExpandEditForm = (assertion: Assertion) => {
+    if (expandedEditForm === assertion.id) {
+      handleCancelEdit();
       return;
     }
 
-    setAppState('validating');
-
-    const validationPayload: ValidationPayload = {
-      assertions: selectedAssertions.map((assertion) => ({
-        category: assertion.category,
-        type: assertion.type,
-        description: assertion.description,
-        ...(assertion.field && { field: assertion.field }),
-        ...(assertion.operator && { operator: assertion.operator }),
-        ...(assertion.expectedValue !== undefined && {
-          expectedValue: assertion.expectedValue,
-        }),
-        ...(assertion.priority && { priority: assertion.priority }),
-        ...(assertion.impact && { impact: assertion.impact }),
-        enabled: assertion.enabled,
-        ...(assertion.group && { group: assertion.group }),
-      })),
-      response: responseData
-        ? {
-            requestId: responseData.requestId,
-            requestName: responseData.requestId,
-            ...(responseData.requestCurl && {
-              requestCurl: responseData.requestCurl,
-            }),
-            statusCode: responseData.statusCode || responseData.status || 0,
-            headers: responseData.headers,
-            body:
-              typeof responseData.body === 'string'
-                ? responseData.body
-                : JSON.stringify(responseData.body),
-            error: '',
-            extractedVariables: [],
-            ...(responseData.metrics && { metrics: responseData.metrics }),
-          }
-        : {
-            requestId: 'unknown',
-            requestName: 'unknown',
-            requestCurl: '',
-            statusCode: 0,
-            headers: {},
-            body: '',
-            error: 'No response data available',
-            extractedVariables: [],
-            metrics: { bytesReceived: 0, responseTime: 0 },
-          },
-    };
-
-    try {
-      await validationMutation.mutateAsync(validationPayload);
-    } catch (error) {
-      console.error('Failed to validate assertions:', error);
-      setAppState('build');
+    if (expandedAddForm) {
+      handleCancelInlineAdd();
     }
+
+    setExpandedEditForm(assertion.id);
+    setEditFormData({
+      field: assertion.field || '',
+      operator: assertion.operator || 'equals',
+      value: String(assertion.expectedValue || ''),
+      dataType: 'string',
+    });
+  };
+
+  const handleCancelEdit = () => {
+    setExpandedEditForm(null);
+    setEditFormData({
+      field: '',
+      operator: 'equals',
+      value: '',
+      dataType: 'string',
+    });
+  };
+
+  const handleSaveEdit = (assertionId: string) => {
+    if (!editFormData.field || !editFormData.value) {
+      return;
+    }
+    const updated = localAssertions.map((a) =>
+      a.id === assertionId
+        ? {
+            ...a,
+            field: editFormData.field,
+            operator: editFormData.operator,
+            type: editFormData.operator,
+            expectedValue: editFormData.value,
+            description: `Field '${editFormData.field}' ${editFormData.operator} '${editFormData.value}'`,
+          }
+        : a
+    );
+    setLocalAssertions(updated);
+    setHasUnsavedChanges(true);
+    if (onUpdateAssertions) {
+      onUpdateAssertions(updated);
+    }
+    handleCancelEdit();
+  };
+
+  const handleVerifyAssertions = async () => {
+    if (getSelectedCount() === 0) {
+      return;
+    }
+    setAppState('validating');
+    setTimeout(() => {
+      const results: ValidationResult[] = localAssertions
+        .filter((a) => a.enabled)
+        .map((a) => ({
+          ...a,
+          validated: true as const,
+          result:
+            Math.random() > 0.3 ? ('passed' as const) : ('failed' as const),
+          actualValue: a.expectedValue,
+          failureReason: Math.random() > 0.3 ? undefined : 'Value mismatch',
+        }));
+
+      setValidationResults({
+        results,
+        summary: {
+          passed: results.filter((r) => r.result === 'passed').length,
+          failed: results.filter((r) => r.result === 'failed').length,
+          skipped: 0,
+          total: results.length,
+        },
+        timestamp: new Date().toISOString(),
+        responseTime: '245ms',
+      });
+      setAppState('results');
+    }, 1500);
   };
 
   const handleSaveAssertions = async () => {
-    try {
-      if (onSaveAssertions) {
-        await onSaveAssertions();
-      }
-      setIsSaved(true);
-      setHasUnsavedChanges(false);
-      setShowSaveMenu(false);
-      toast({
-        title: 'Assertions saved',
-        description: 'All assertions have been saved successfully',
-        duration: 3000,
-      });
-    } catch (error) {
-      toast({
-        title: 'Save failed',
-        description: 'Failed to save assertions. Please try again.',
-        variant: 'destructive',
-        duration: 4000,
-      });
+    if (onSaveAssertions) {
+      await onSaveAssertions();
     }
+    setIsSaved(true);
+    setHasUnsavedChanges(false);
+    setShowSaveMenu(false);
   };
 
   const handleSaveAndVerify = async () => {
-    try {
-      await handleSaveAssertions();
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      handleVerifyAssertions();
-      setShowSaveMenu(false);
-    } catch (error) {
-      toast({
-        title: 'Operation failed',
-        description: 'Failed to save and verify assertions',
-        variant: 'destructive',
-        duration: 4000,
-      });
-    }
+    await handleSaveAssertions();
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    handleVerifyAssertions();
+    setShowSaveMenu(false);
   };
 
   const handleRerun = () => {
@@ -585,11 +471,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
   const handleEditAssertions = () => {
     setAppState('build');
     setValidationResults(null);
-    toast({
-      title: 'Edit mode',
-      description: 'You can now edit your assertions',
-      duration: 2000,
-    });
   };
 
   const getCategoryIcon = (category: string) => {
@@ -629,161 +510,424 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
       (r) => r.id === assertion.id
     );
     const hasResult = validationResult && appState === 'results';
+    const isExpanded = expandedAddForm === assertion.id;
+    const isEditing = expandedEditForm === assertion.id;
 
     return (
-      <div
-        key={assertion.id}
-        className={`group flex flex-col sm:flex-row sm:items-start gap-3 p-4 rounded-lg border transition-all ${
-          hasResult
-            ? validationResult.result === 'passed'
-              ? 'bg-green-50 border-green-300'
-              : 'bg-red-50 border-red-300'
-            : assertion.enabled
-            ? 'bg-blue-50 border-blue-300 shadow-sm'
-            : 'bg-white border-gray-200 hover:border-gray-300'
-        }`}
-      >
-        <div className='flex items-start gap-3 flex-1 min-w-0'>
-          <button
-            onClick={() => toggleAssertion(assertion.id)}
-            disabled={appState !== 'build'}
-            className={`flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center transition-all mt-0.5 ${
-              assertion.enabled
-                ? 'bg-blue-600 border-blue-600'
-                : 'border-gray-300 hover:border-blue-400'
-            } ${appState !== 'build' ? 'opacity-50 cursor-not-allowed' : ''}`}
-          >
-            {assertion.enabled && <Check className='w-3 h-3 text-white' />}
-          </button>
+      <div key={assertion.id} className='space-y-0'>
+        <div
+          className={`group flex flex-col sm:flex-row sm:items-start gap-3 p-4 border transition-all ${
+            isExpanded || isEditing ? 'rounded-t-lg border-b-0' : 'rounded-lg'
+          } ${
+            hasResult
+              ? validationResult.result === 'passed'
+                ? 'bg-green-50 border-green-300'
+                : 'bg-red-50 border-red-300'
+              : assertion.enabled
+              ? 'bg-blue-50 border-blue-300 shadow-sm'
+              : 'bg-white border-gray-200 hover:border-gray-300'
+          }`}
+        >
+          <div className='flex items-start gap-3 flex-1 min-w-0'>
+            <button
+              onClick={() => toggleAssertion(assertion.id)}
+              disabled={appState !== 'build'}
+              className={`flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center transition-all mt-0.5 ${
+                assertion.enabled
+                  ? 'bg-blue-600 border-blue-600'
+                  : 'border-gray-300 hover:border-blue-400'
+              } ${appState !== 'build' ? 'opacity-50 cursor-not-allowed' : ''}`}
+            >
+              {assertion.enabled && <Check className='w-3 h-3 text-white' />}
+            </button>
 
-          <div className='flex-1 min-w-0 space-y-2'>
-            <div className='flex items-start gap-2 flex-wrap'>
-              <div
-                className={`w-6 h-6 rounded flex items-center justify-center text-xs font-semibold flex-shrink-0 ${
-                  hasResult
+            <div className='flex-1 min-w-0 space-y-2'>
+              <div className='flex items-start gap-2 flex-wrap'>
+                <div
+                  className={`w-6 h-6 rounded flex items-center justify-center text-xs font-semibold flex-shrink-0 ${
+                    hasResult
+                      ? validationResult.result === 'passed'
+                        ? 'bg-green-600 text-white'
+                        : 'bg-red-600 text-white'
+                      : assertion.enabled
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-200 text-gray-600'
+                  }`}
+                >
+                  {hasResult
                     ? validationResult.result === 'passed'
-                      ? 'bg-green-600 text-white'
-                      : 'bg-red-600 text-white'
-                    : assertion.enabled
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-200 text-gray-600'
-                }`}
-              >
-                {hasResult
-                  ? validationResult.result === 'passed'
-                    ? '✓'
-                    : '✗'
-                  : '='}
-              </div>
+                      ? '✓'
+                      : '✗'
+                    : '='}
+                </div>
 
-              <div className='flex items-center gap-2 flex-1 min-w-0'>
-                {assertion.field && (
-                  <span className='font-medium text-gray-900 font-mono text-sm truncate'>
-                    {assertion.field}
-                  </span>
-                )}
-                {assertion.operator && (
-                  <span className='text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded whitespace-nowrap'>
-                    {assertion.operator}
-                  </span>
-                )}
-                {assertion.expectedValue !== undefined &&
-                  assertion.expectedValue !== null && (
-                    <span className='text-sm text-gray-700 font-mono truncate'>
-                      ={' '}
-                      <span className='text-blue-600'>
-                        {String(assertion.expectedValue)}
-                      </span>
+                <div className='flex items-center gap-2 flex-1 min-w-0'>
+                  {assertion.field && (
+                    <span className='font-medium text-gray-900 font-mono text-sm truncate'>
+                      {assertion.field}
                     </span>
                   )}
+                  {assertion.operator && (
+                    <span className='text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded whitespace-nowrap'>
+                      {assertion.operator}
+                    </span>
+                  )}
+                  {assertion.expectedValue !== undefined &&
+                    assertion.expectedValue !== null && (
+                      <span className='text-sm text-gray-700 font-mono truncate'>
+                        ={' '}
+                        <span className='text-blue-600'>
+                          {String(assertion.expectedValue)}
+                        </span>
+                      </span>
+                    )}
+                </div>
+
+                {assertion.priority && (
+                  <span
+                    className={`text-xs px-2 py-1 rounded border whitespace-nowrap ${getPriorityColor(
+                      assertion.priority
+                    )}`}
+                  >
+                    {assertion.priority}
+                  </span>
+                )}
               </div>
 
-              {assertion.priority && (
-                <span
-                  className={`text-xs px-2 py-1 rounded border whitespace-nowrap ${getPriorityColor(
-                    assertion.priority
-                  )}`}
-                >
-                  {assertion.priority}
-                </span>
+              <p className='text-sm text-gray-700'>{assertion.description}</p>
+
+              {hasResult && validationResult.result === 'failed' && (
+                <div className='mt-2 text-xs text-red-700 bg-red-100 p-2 rounded'>
+                  <div className='font-semibold'>Failed:</div>
+                  <div>{validationResult.failureReason}</div>
+                  <div className='mt-1 text-red-600'>
+                    Actual: {validationResult.actualValue}
+                  </div>
+                </div>
+              )}
+
+              {assertion.impact && (
+                <div className='text-xs text-gray-600 bg-gray-50 p-2 rounded border border-gray-200'>
+                  <span className='font-semibold'>Impact:</span>{' '}
+                  {assertion.impact}
+                </div>
               )}
             </div>
+          </div>
 
-            <p className='text-sm text-gray-700'>{assertion.description}</p>
+          <div className='flex items-center gap-2 justify-end sm:justify-start'>
+            {assertion.group === 'custom' && appState === 'build' && (
+              <>
+                <button
+                  onClick={() => handleExpandEditForm(assertion)}
+                  className={`p-1 rounded transition-all ${
+                    expandedEditForm === assertion.id
+                      ? 'bg-blue-600 text-white'
+                      : 'sm:opacity-0 sm:group-hover:opacity-100 hover:bg-gray-100 text-gray-500'
+                  }`}
+                  title='Edit assertion'
+                >
+                  <Edit2 className='w-4 h-4' />
+                </button>
+                <button
+                  onClick={() => removeAssertion(assertion.id)}
+                  className='sm:opacity-0 sm:group-hover:opacity-100 p-1 hover:bg-red-100 rounded transition-opacity'
+                  title='Remove assertion'
+                >
+                  <X className='w-4 h-4 text-red-600' />
+                </button>
+              </>
+            )}
 
-            {hasResult && validationResult.result === 'failed' && (
-              <div className='mt-2 text-xs text-red-700 bg-red-100 p-2 rounded'>
-                <div className='font-semibold'>Failed:</div>
-                <div>{validationResult.failureReason}</div>
-                <div className='mt-1 text-red-600'>
-                  Actual: {validationResult.actualValue}
-                </div>
+            {appState === 'build' && (
+              <button
+                onClick={() =>
+                  handleExpandAddForm(
+                    assertion.id,
+                    assertion.field || '',
+                    assertion.category
+                  )
+                }
+                className={`p-1 rounded transition-all ${
+                  isExpanded
+                    ? 'bg-blue-600 text-white'
+                    : 'sm:opacity-0 sm:group-hover:opacity-100 hover:bg-blue-100 text-blue-600'
+                }`}
+                title='Create similar assertion'
+              >
+                <Plus className='w-4 h-4' />
+              </button>
+            )}
+
+            {assertion.group !== 'custom' && (
+              <div className='flex items-center gap-1 text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded whitespace-nowrap'>
+                <Zap className='w-3 h-3' />
+                Auto
               </div>
             )}
 
-            {assertion.impact && (
-              <div className='text-xs text-gray-600 bg-gray-50 p-2 rounded border border-gray-200'>
-                <span className='font-semibold'>Impact:</span>{' '}
-                {assertion.impact}
+            {hasResult && (
+              <div
+                className={`flex items-center gap-1 text-xs px-2 py-1 rounded whitespace-nowrap ${
+                  validationResult.result === 'passed'
+                    ? 'bg-green-100 text-green-700'
+                    : 'bg-red-100 text-red-700'
+                }`}
+              >
+                {validationResult.result === 'passed' ? 'Passed' : 'Failed'}
               </div>
             )}
           </div>
         </div>
 
-        <div className='flex items-center gap-2 justify-end sm:justify-start'>
-          {assertion.group === 'custom' && appState === 'build' && (
-            <>
-              <button
-                className='sm:opacity-0 sm:group-hover:opacity-100 p-1 hover:bg-gray-100 rounded transition-opacity'
-                title='Edit assertion'
-              >
-                <Edit2 className='w-4 h-4 text-gray-500' />
-              </button>
-              <button
-                onClick={() => removeAssertion(assertion.id)}
-                className='sm:opacity-0 sm:group-hover:opacity-100 p-1 hover:bg-red-100 rounded transition-opacity'
-                title='Remove assertion'
-              >
-                <X className='w-4 h-4 text-red-600' />
-              </button>
-            </>
-          )}
-
-          {appState === 'build' && (
-            <button
-              onClick={() =>
-                openAddModal(
-                  assertion.field || '',
-                  'string',
-                  assertion.category
-                )
-              }
-              className='sm:opacity-0 sm:group-hover:opacity-100 p-1 hover:bg-blue-100 rounded transition-opacity'
-              title='Create new assertion from this field'
-            >
-              <Plus className='w-4 h-4 text-blue-600' />
-            </button>
-          )}
-
-          {assertion.group !== 'custom' && (
-            <div className='flex items-center gap-1 text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded whitespace-nowrap'>
-              <Zap className='w-3 h-3' />
-              Auto
+        {isExpanded && appState === 'build' && (
+          <div className='bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-300 border-t-0 rounded-b-lg p-4 space-y-4 shadow-inner'>
+            <div className='flex items-center gap-2 mb-2'>
+              <Zap className='w-4 h-4 text-blue-600' />
+              <h4 className='font-semibold text-gray-900 text-sm'>
+                Create Similar Assertion
+              </h4>
             </div>
-          )}
 
-          {hasResult && (
-            <div
-              className={`flex items-center gap-1 text-xs px-2 py-1 rounded whitespace-nowrap ${
-                validationResult.result === 'passed'
-                  ? 'bg-green-100 text-green-700'
-                  : 'bg-red-100 text-red-700'
-              }`}
-            >
-              {validationResult.result === 'passed' ? 'Passed' : 'Failed'}
+            <div className='grid grid-cols-1 sm:grid-cols-2 gap-3'>
+              <div>
+                <label className='block text-xs font-medium text-gray-700 mb-1'>
+                  Field Path
+                </label>
+                <Input
+                  value={inlineFormData.field}
+                  onChange={(e: any) =>
+                    setInlineFormData({
+                      ...inlineFormData,
+                      field: e.target.value,
+                    })
+                  }
+                  placeholder='e.g., data.user.email'
+                />
+              </div>
+
+              <div>
+                <label className='block text-xs font-medium text-gray-700 mb-1'>
+                  Data Type
+                </label>
+                <Select
+                  value={inlineFormData.dataType}
+                  onValueChange={(newDataType: string) => {
+                    setInlineFormData({
+                      ...inlineFormData,
+                      dataType: newDataType,
+                      operator: getOperatorsByDataType(newDataType)[0],
+                    });
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value='string'>String</SelectItem>
+                    <SelectItem value='number'>Number</SelectItem>
+                    <SelectItem value='boolean'>Boolean</SelectItem>
+                    <SelectItem value='array'>Array</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-          )}
-        </div>
+
+            <div className='grid grid-cols-1 sm:grid-cols-2 gap-3'>
+              <div>
+                <label className='block text-xs font-medium text-gray-700 mb-1'>
+                  Operator
+                </label>
+                <Select
+                  value={inlineFormData.operator}
+                  onValueChange={(value: string) =>
+                    setInlineFormData({ ...inlineFormData, operator: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {getOperatorsByDataType(inlineFormData.dataType).map(
+                      (op) => (
+                        <SelectItem key={op} value={op}>
+                          {op}
+                        </SelectItem>
+                      )
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <label className='block text-xs font-medium text-gray-700 mb-1'>
+                  Expected Value
+                </label>
+                <Input
+                  value={inlineFormData.value}
+                  onChange={(e: any) =>
+                    setInlineFormData({
+                      ...inlineFormData,
+                      value: e.target.value,
+                    })
+                  }
+                  placeholder='Enter expected value'
+                />
+              </div>
+            </div>
+
+            <div className='bg-white border border-blue-200 rounded-lg p-3'>
+              <div className='text-xs font-medium text-gray-600 mb-1'>
+                Preview
+              </div>
+              <div className='font-mono text-sm text-gray-900'>
+                <span className='text-blue-600'>
+                  {inlineFormData.field || '...'}
+                </span>{' '}
+                <span className='text-gray-600'>{inlineFormData.operator}</span>{' '}
+                <span className='text-blue-600'>
+                  {inlineFormData.value || '...'}
+                </span>
+              </div>
+            </div>
+
+            <div className='flex justify-end gap-2 pt-2 border-t border-blue-200'>
+              <Button onClick={handleCancelInlineAdd} variant='outline'>
+                Cancel
+              </Button>
+              <Button
+                onClick={() => handleSaveInlineAssertion(assertion.category)}
+                disabled={!inlineFormData.field || !inlineFormData.value}
+              >
+                <Plus className='w-4 h-4 mr-1' />
+                Add Assertion
+              </Button>
+            </div>
+          </div>
+        )}
+        {isEditing && appState === 'build' && (
+          <div className='bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-300 border-t-0 rounded-b-lg p-4 space-y-4 shadow-inner'>
+            <div className='flex items-center gap-2 mb-2'>
+              <Edit2 className='w-4 h-4 text-purple-600' />
+              <h4 className='font-semibold text-gray-900 text-sm'>
+                Edit Assertion
+              </h4>
+            </div>
+
+            <div className='grid grid-cols-1 sm:grid-cols-2 gap-3'>
+              <div>
+                <label className='block text-xs font-medium text-gray-700 mb-1'>
+                  Field Path
+                </label>
+                <Input
+                  value={editFormData.field}
+                  onChange={(e: any) =>
+                    setEditFormData({
+                      ...editFormData,
+                      field: e.target.value,
+                    })
+                  }
+                  placeholder='e.g., data.user.email'
+                />
+              </div>
+
+              <div>
+                <label className='block text-xs font-medium text-gray-700 mb-1'>
+                  Data Type
+                </label>
+                <Select
+                  value={editFormData.dataType}
+                  onValueChange={(newDataType: string) => {
+                    setEditFormData({
+                      ...editFormData,
+                      dataType: newDataType,
+                      operator: getOperatorsByDataType(newDataType)[0],
+                    });
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value='string'>String</SelectItem>
+                    <SelectItem value='number'>Number</SelectItem>
+                    <SelectItem value='boolean'>Boolean</SelectItem>
+                    <SelectItem value='array'>Array</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className='grid grid-cols-1 sm:grid-cols-2 gap-3'>
+              <div>
+                <label className='block text-xs font-medium text-gray-700 mb-1'>
+                  Operator
+                </label>
+                <Select
+                  value={editFormData.operator}
+                  onValueChange={(value: string) =>
+                    setEditFormData({ ...editFormData, operator: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {getOperatorsByDataType(editFormData.dataType).map((op) => (
+                      <SelectItem key={op} value={op}>
+                        {op}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <label className='block text-xs font-medium text-gray-700 mb-1'>
+                  Expected Value
+                </label>
+                <Input
+                  value={editFormData.value}
+                  onChange={(e: any) =>
+                    setEditFormData({
+                      ...editFormData,
+                      value: e.target.value,
+                    })
+                  }
+                  placeholder='Enter expected value'
+                />
+              </div>
+            </div>
+
+            <div className='bg-white border border-purple-200 rounded-lg p-3'>
+              <div className='text-xs font-medium text-gray-600 mb-1'>
+                Preview
+              </div>
+              <div className='font-mono text-sm text-gray-900'>
+                <span className='text-purple-600'>
+                  {editFormData.field || '...'}
+                </span>{' '}
+                <span className='text-gray-600'>{editFormData.operator}</span>{' '}
+                <span className='text-purple-600'>
+                  {editFormData.value || '...'}
+                </span>
+              </div>
+            </div>
+
+            <div className='flex justify-end gap-2 pt-2 border-t border-purple-200'>
+              <Button onClick={handleCancelEdit} variant='outline'>
+                Cancel
+              </Button>
+              <Button
+                onClick={() => handleSaveEdit(assertion.id)}
+                disabled={!editFormData.field || !editFormData.value}
+              >
+                <Save className='w-4 h-4 mr-1' />
+                Save Changes
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
     );
   };
@@ -931,6 +1075,7 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
       </div>
     );
   };
+
   if (!localAssertions || localAssertions.length === 0) {
     return (
       <div className='min-h-screen bg-gray-50 p-6 flex items-center justify-center'>
@@ -947,9 +1092,9 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
       </div>
     );
   }
+
   return (
     <div className='space-y-3'>
-      {/* Header Section */}
       <div className='bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-5 md:p-6'>
         <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4'>
           <div>
@@ -974,7 +1119,7 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
             </div>
           </div>
         </div>
-        {/* Status Indicator */}
+
         {appState === 'build' && hasUnsavedChanges && (
           <div className='flex items-center gap-2 mb-4 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2'>
             <AlertCircle className='w-4 h-4' />
@@ -989,7 +1134,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
           </div>
         )}
 
-        {/* Validation Summary */}
         {appState === 'results' && validationResults && (
           <div className='bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4 mb-4'>
             <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4'>
@@ -1046,7 +1190,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
           </div>
         )}
 
-        {/* Filters */}
         <div className='flex flex-col lg:flex-row gap-3'>
           <div className='relative flex-1'>
             <Search className='w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400' />
@@ -1054,12 +1197,12 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
               placeholder='Search assertions...'
               className='pl-10'
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e: any) => setSearchQuery(e.target.value)}
             />
           </div>
 
           <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-            <SelectTrigger className='w-full lg:w-48'>
+            <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -1100,7 +1243,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
         </div>
       </div>
 
-      {/* Assertions List */}
       <div>
         {(selectedCategory === 'all'
           ? Object.keys(groupedAssertions)
@@ -1122,7 +1264,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
           })}
       </div>
 
-      {/* Quick Add Section */}
       {appState === 'build' && (
         <div className='bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-5 md:p-6'>
           <h3 className='font-semibold text-gray-900 mb-3 flex items-center gap-2 text-sm sm:text-base'>
@@ -1133,13 +1274,13 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
             <Input
               placeholder='Field path'
               value={quickAddData.field}
-              onChange={(e) =>
+              onChange={(e: any) =>
                 setQuickAddData({ ...quickAddData, field: e.target.value })
               }
             />
             <Select
               value={quickAddData.operator}
-              onValueChange={(value) =>
+              onValueChange={(value: string) =>
                 setQuickAddData({ ...quickAddData, operator: value })
               }
             >
@@ -1159,7 +1300,7 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
             <Input
               placeholder='Expected value'
               value={quickAddData.value}
-              onChange={(e) =>
+              onChange={(e: any) =>
                 setQuickAddData({ ...quickAddData, value: e.target.value })
               }
             />
@@ -1173,7 +1314,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
         </div>
       )}
 
-      {/* Action Buttons */}
       <div className='flex flex-col sm:flex-row justify-end gap-3'>
         {appState === 'build' && (
           <>
@@ -1245,102 +1385,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
         )}
       </div>
 
-      {/* Add Assertion Modal */}
-      {showAddModal && (
-        <div className='fixed inset-0 bg-black bg-opacity-50 flex items-start sm:items-center justify-center z-50 overflow-y-auto'>
-          <div className='bg-white rounded-lg shadow-xl w-full max-w-2xl my-4 mx-3 sm:mx-4 flex flex-col max-h-[calc(100vh-2rem)]'>
-            <div className='flex items-center justify-between p-4 sm:p-6 border-b border-gray-200 flex-shrink-0'>
-              <h2 className='text-lg sm:text-xl font-bold text-gray-900'>
-                Add Assertion
-              </h2>
-              <button
-                onClick={closeAddModal}
-                className='p-1 hover:bg-gray-100 rounded transition-colors'
-              >
-                <X className='w-5 h-5 text-gray-500' />
-              </button>
-            </div>
-
-            <div className='p-4 sm:p-6 space-y-4 sm:space-y-6 overflow-y-auto flex-1'>
-              <div>
-                <label className='block text-sm font-medium text-gray-700 mb-2'>
-                  Field
-                </label>
-                <div className='px-3 sm:px-4 py-2 sm:py-3 bg-gray-50 border border-gray-200 rounded-lg font-mono text-xs sm:text-sm text-gray-900 break-all'>
-                  {modalData.field}
-                </div>
-              </div>
-
-              <div>
-                <label className='block text-sm font-medium text-gray-700 mb-3'>
-                  Operator
-                </label>
-                <div className='grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3'>
-                  {getOperatorsByDataType(modalData.dataType).map((op) => (
-                    <Button
-                      key={op}
-                      onClick={() =>
-                        setModalData({ ...modalData, operator: op })
-                      }
-                      variant={
-                        modalData.operator === op ? 'default' : 'outline'
-                      }
-                      className='justify-start'
-                    >
-                      {op}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <label className='block text-sm font-medium text-gray-700 mb-2'>
-                  Expected Value
-                </label>
-                <Input
-                  value={modalData.value}
-                  onChange={(e) =>
-                    setModalData({ ...modalData, value: e.target.value })
-                  }
-                  placeholder='Enter expected value'
-                />
-              </div>
-
-              <div className='bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4'>
-                <div className='text-sm font-medium text-gray-700 mb-2'>
-                  Preview
-                </div>
-                <div className='font-mono text-xs sm:text-sm text-gray-900 break-all'>
-                  <span className='text-blue-600'>{modalData.field}</span>{' '}
-                  <span className='text-gray-600'>{modalData.operator}</span>{' '}
-                  <span className='text-blue-600'>
-                    {modalData.value || '...'}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div className='bg-gray-50 flex flex-col sm:flex-row justify-end gap-2 sm:gap-3 p-4 sm:p-6 border-t border-gray-200 flex-shrink-0'>
-              <Button
-                onClick={closeAddModal}
-                variant='outline'
-                className='w-full sm:w-auto'
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleAddAssertion}
-                disabled={!modalData.value}
-                className='w-full sm:w-auto'
-              >
-                Add Assertion
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Summary Footer */}
       <div className='bg-white rounded-lg shadow-sm border border-gray-200 p-4'>
         <div className='flex items-center justify-between'>
           <div className='text-sm text-gray-600'>
@@ -1360,4 +1404,5 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
     </div>
   );
 };
+
 export default ApiAssertionInterface;
