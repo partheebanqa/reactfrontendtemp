@@ -1034,16 +1034,14 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
     return (
       <div key={assertion.id} className='space-y-0 '>
         <div
-          className={`group flex flex-col sm:flex-row sm:items-start gap-3 p-4 border transition-all ${
-            isExpanded || isEditing ? 'rounded-t-lg border-b-0' : 'rounded-lg'
-          } ${
+          className={`group flex items-start gap-3 p-3 border rounded-lg ${
             hasResult
               ? validationResult.result === 'passed'
                 ? 'bg-green-50 border-green-300'
                 : 'bg-red-50 border-red-300'
               : assertion.enabled
-              ? 'bg-blue-50 border-blue-300 shadow-sm'
-              : 'bg-white border-gray-200 hover:border-gray-300'
+              ? 'bg-blue-50 border-blue-300'
+              : 'bg-white border-gray-200'
           }`}
         >
           <div className='flex items-start gap-3 flex-1 min-w-0'>
@@ -1059,10 +1057,10 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
               {assertion.enabled && <Check className='w-3 h-3 text-white' />}
             </button>
 
-            <div className='flex-1 min-w-0 space-y-2'>
+            <div className='flex-1 space-y-2'>
               <div className='flex items-start gap-2 flex-wrap'>
                 <div
-                  className={`w-6 h-6 rounded flex items-center justify-center text-xs font-semibold flex-shrink-0 ${
+                  className={`w-6 h-6 rounded flex items-center justify-center text-xs ${
                     hasResult
                       ? validationResult.result === 'passed'
                         ? 'bg-green-600 text-white'
@@ -1083,13 +1081,13 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
                   )}
                 </div>
 
-                <div className='flex items-center gap-2 flex-1 min-w-0'>
+                <div className='flex items-center gap-2 flex-1'>
                   {assertion.category === 'status' ? (
                     <>
                       <span className='font-medium text-gray-900 font-mono text-sm'>
                         status
                       </span>
-                      <span className='text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded whitespace-nowrap'>
+                      <span className='text-xs bg-gray-100 px-2 py-0.5 rounded'>
                         =
                       </span>
                       <span className='text-sm text-gray-700 font-mono'>
@@ -1106,7 +1104,7 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
                         </span>
                       )}
                       {assertion.operator && (
-                        <span className='text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded whitespace-nowrap'>
+                        <span className='text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded'>
                           {getOperatorDisplayLabel(assertion.operator)}{' '}
                         </span>
                       )}
@@ -1125,7 +1123,7 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
 
                 {assertion.priority && (
                   <span
-                    className={`text-xs px-2 py-1 rounded border whitespace-nowrap ${getPriorityColor(
+                    className={`text-xs px-2 py-1 rounded border ${getPriorityColor(
                       assertion.priority
                     )}`}
                   >
@@ -1133,7 +1131,7 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
                   </span>
                 )}
                 {isFlaky && (
-                  <span className='flex items-center gap-1 text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded whitespace-nowrap'>
+                  <span className='flex items-center gap-1 text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded'>
                     <TrendingUp className='w-3 h-3' />
                     Flaky
                   </span>
@@ -1195,15 +1193,15 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
             </div>
           </div>
 
-          <div className='flex items-center gap-2 justify-end sm:justify-start'>
+          <div className='flex items-center gap-2'>
             {assertion.group === 'custom' && appState === 'build' && (
               <>
                 <button
                   onClick={() => handleExpandEditForm(assertion)}
-                  className={`p-1 rounded transition-all ${
+                  className={`p-1 rounded ${
                     expandedEditForm === assertion.id
                       ? 'bg-blue-600 text-white'
-                      : 'sm:opacity-0 sm:group-hover:opacity-100 hover:bg-gray-100 text-gray-500'
+                      : 'hover:bg-gray-100 text-gray-500'
                   }`}
                   title='Edit assertion'
                 >
@@ -1240,7 +1238,7 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
             )}
 
             {assertion.group !== 'custom' && (
-              <div className='flex items-center gap-1 text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded whitespace-nowrap'>
+              <div className='flex items-center gap-1 text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded'>
                 <Zap className='w-3 h-3' />
                 Auto
               </div>
@@ -1248,7 +1246,7 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
 
             {hasResult && (
               <div
-                className={`flex items-center gap-1 text-xs px-2 py-1 rounded whitespace-nowrap ${
+                className={`flex items-center gap-1 text-xs px-2 py-1 rounded ${
                   validationResult.result === 'passed'
                     ? 'bg-green-100 text-green-700'
                     : 'bg-red-100 text-red-700'
@@ -1899,233 +1897,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
                   </div>
                 ))}
               </div>
-            </div>
-          )}
-        {appState === 'results' &&
-          validationResults &&
-          resultsViewMode === 'table' && (
-            <div className='bg-white rounded-lg shadow-sm border border-gray-200 mb-4'>
-              <div className='p-4 border-b border-gray-200'>
-                <div className='flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between'>
-                  <h3 className='font-semibold text-gray-900 text-lg'>
-                    Detailed Results
-                  </h3>
-                  <div className='flex flex-wrap gap-2 w-full sm:w-auto'>
-                    <Select
-                      value={tableFilterStatus}
-                      onValueChange={(value: any) =>
-                        setTableFilterStatus(value)
-                      }
-                    >
-                      <SelectTrigger className='w-[140px]'>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value='all'>All Status</SelectItem>
-                        <SelectItem value='passed'>Passed Only</SelectItem>
-                        <SelectItem value='failed'>Failed Only</SelectItem>
-                      </SelectContent>
-                    </Select>
-
-                    <Select
-                      value={tableFilterCategory}
-                      onValueChange={setTableFilterCategory}
-                    >
-                      <SelectTrigger className='w-[150px]'>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value='all'>All Categories</SelectItem>
-                        <SelectItem value='headers'>Headers</SelectItem>
-                        <SelectItem value='body'>Body</SelectItem>
-                        <SelectItem value='HeaderGuard™'>Security</SelectItem>
-                        <SelectItem value='performance'>Performance</SelectItem>
-                        <SelectItem value='status'>Status</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </div>
-
-              <div className='overflow-x-auto'>
-                <table className='w-full'>
-                  <thead className='bg-gray-50 border-b border-gray-200'>
-                    <tr>
-                      <th
-                        className='px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors'
-                        onClick={() => handleTableSort('result')}
-                      >
-                        <div className='flex items-center gap-2'>
-                          Status
-                          <SortIcon columnKey='result' />
-                        </div>
-                      </th>
-                      <th
-                        className='px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors'
-                        onClick={() => handleTableSort('field')}
-                      >
-                        <div className='flex items-center gap-2'>
-                          Field
-                          <SortIcon columnKey='field' />
-                        </div>
-                      </th>
-                      <th
-                        className='px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors'
-                        onClick={() => handleTableSort('type')}
-                      >
-                        <div className='flex items-center gap-2'>
-                          Assertion
-                          <SortIcon columnKey='type' />
-                        </div>
-                      </th>
-                      <th className='px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider'>
-                        Expected
-                      </th>
-                      <th className='px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider'>
-                        Actual
-                      </th>
-                      <th
-                        className='px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors'
-                        onClick={() => handleTableSort('category')}
-                      >
-                        <div className='flex items-center gap-2'>
-                          Category
-                          <SortIcon columnKey='category' />
-                        </div>
-                      </th>
-                      <th
-                        className='px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors'
-                        onClick={() => handleTableSort('failureRate')}
-                      >
-                        <div className='flex items-center gap-2'>
-                          History
-                          <SortIcon columnKey='failureRate' />
-                        </div>
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className='divide-y divide-gray-200'>
-                    {getSortedTableData().map((result) => {
-                      const history = getAssertionHistory(result.id);
-                      const failureRate = getFailureRate(result.id);
-                      const isFlaky =
-                        history.totalRuns >= 3 &&
-                        failureRate > 20 &&
-                        failureRate < 80;
-
-                      return (
-                        <tr
-                          key={result.id}
-                          className={`hover:bg-gray-50 transition-colors ${
-                            result.result === 'failed' ? 'bg-red-50' : ''
-                          }`}
-                        >
-                          <td className='px-4 py-3 whitespace-nowrap'>
-                            <div className='flex items-center gap-2'>
-                              <div
-                                className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                                  result.result === 'passed'
-                                    ? 'bg-green-100 text-green-700'
-                                    : 'bg-red-100 text-red-700'
-                                }`}
-                              >
-                                {result.result === 'passed' ? (
-                                  <Check className='w-5 h-5' />
-                                ) : (
-                                  <X className='w-5 h-5' />
-                                )}
-                              </div>
-                            </div>
-                          </td>
-                          <td className='px-4 py-3'>
-                            <div className='flex items-center gap-2'>
-                              <span className='font-mono text-sm text-gray-900'>
-                                {result.field || 'N/A'}
-                              </span>
-                              {isFlaky && (
-                                <span className='flex items-center gap-1 text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded whitespace-nowrap'>
-                                  <TrendingUp className='w-3 h-3' />
-                                  Flaky
-                                </span>
-                              )}
-                            </div>
-                          </td>
-                          <td className='px-4 py-3'>
-                            <span className='text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded'>
-                              {result.type}
-                            </span>
-                          </td>
-                          <td className='px-4 py-3'>
-                            <span className='font-mono text-sm text-gray-900'>
-                              {result.expectedValue || 'exists'}
-                            </span>
-                          </td>
-                          <td className='px-4 py-3'>
-                            {result.result === 'failed' ? (
-                              <div className='space-y-1'>
-                                <span className='font-mono text-sm text-red-700'>
-                                  {result.actualValue}
-                                </span>
-                                {result.failureReason && (
-                                  <div className='text-xs text-red-600'>
-                                    {result.failureReason}
-                                  </div>
-                                )}
-                              </div>
-                            ) : (
-                              <span className='font-mono text-sm text-green-700'>
-                                {result.actualValue}
-                              </span>
-                            )}
-                          </td>
-                          <td className='px-4 py-3'>
-                            <span className='text-sm text-gray-600 capitalize'>
-                              {result.category}
-                            </span>
-                          </td>
-                          <td className='px-4 py-3'>
-                            {history.totalRuns > 0 ? (
-                              <div className='text-xs text-gray-600'>
-                                <div className='flex items-center gap-2'>
-                                  <span className='text-green-600 font-medium'>
-                                    {history.passes}✓
-                                  </span>
-                                  <span className='text-red-600 font-medium'>
-                                    {history.failures}✗
-                                  </span>
-                                </div>
-                                {failureRate > 0 && (
-                                  <div
-                                    className={`mt-1 ${
-                                      failureRate > 50
-                                        ? 'text-red-600'
-                                        : failureRate > 20
-                                        ? 'text-amber-600'
-                                        : 'text-gray-500'
-                                    }`}
-                                  >
-                                    {failureRate}% fail rate
-                                  </div>
-                                )}
-                              </div>
-                            ) : (
-                              <span className='text-xs text-gray-400'>
-                                First run
-                              </span>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-
-              {getSortedTableData().length === 0 && (
-                <div className='p-8 text-center text-gray-500'>
-                  No results match the selected filters
-                </div>
-              )}
             </div>
           )}
         <div className='flex flex-col lg:flex-row gap-3'>
