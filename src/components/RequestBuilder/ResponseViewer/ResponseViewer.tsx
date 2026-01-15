@@ -19,6 +19,7 @@ import {
 import { useRequest } from '@/hooks/useRequest';
 import AssertionModal from './AssertionModal';
 import { getCategoryForAssertionType } from '@/lib/assertion-utils';
+import ApiAssertionInterface from './ApiAssertionInterface';
 
 interface JsonNode {
   key: string;
@@ -47,6 +48,7 @@ export interface Assertion {
   expectedTime?: string;
   expectedSize?: string;
   scope?: 'full' | 'field';
+  dataType?: string;
 }
 interface ResponseViewerProps {
   isBottomLayout: boolean;
@@ -64,6 +66,8 @@ const ResponseViewer = ({
   onSaveAssertions,
 }: ResponseViewerProps) => {
   const { responseData, assertions, setAssertions } = useRequest();
+
+  console.log('responseData:', responseData);
 
   const [activeTab, setActiveTab] = useState<
     | 'body'
@@ -83,6 +87,7 @@ const ResponseViewer = ({
   const [showAssertionModal, setShowAssertionModal] = useState(false);
   const [activeFieldPath, setActiveFieldPath] = useState<string>('');
   const [activeFieldValue, setActiveFieldValue] = useState<any>(null);
+  const [showAssertionUI, setShowAssertionUI] = useState(false);
 
   useEffect(() => {
     if (responseData?.body) {
@@ -769,52 +774,24 @@ const ResponseViewer = ({
           </div>
         </div>
 
-        <div className='flex items-center justify-between px-4 py-1'>
-          <div className='flex items-center space-x-4'>
-            <button className='flex items-center space-x-2 text-sm font-medium text-blue-600'>
-              <CheckCircle className='w-4 h-4' />
-              <span>Pretty</span>
-            </button>
-            <button className='flex items-center space-x-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'>
-              <Code className='w-4 h-4' />
-              <span>Raw</span>
-            </button>
-          </div>
-
-          <div className='flex items-center space-x-2'>
-            <button
-              onClick={() => setShowSearch(!showSearch)}
-              className='p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400'
-              title='Search in response'
-            >
-              <Search className='h-4 w-4' />
-            </button>
-            <button
-              onClick={() =>
-                handleCopy(
-                  JSON.stringify(responseData.body, null, 2),
-                  'full-response'
-                )
-              }
-              className='p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400'
-              title='Copy response'
-            >
-              {copiedItem === 'full-response' ? (
-                <CheckCircle className='h-4 w-4 text-green-600' />
-              ) : (
-                <Copy className='h-4 w-4' />
-              )}
-            </button>
-            <button
-              onClick={downloadResponse}
-              className='p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400'
-              title='Download response'
-            >
-              <Download className='h-4 w-4' />
-            </button>
-          </div>
+        <div className='flex items-center space-x-4'>
+          <button className='flex items-center space-x-2 text-sm font-medium text-blue-600'>
+            <CheckCircle className='w-4 h-4' />
+            <span>Pretty</span>
+          </button>
+          <button className='flex items-center space-x-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'>
+            <Code className='w-4 h-4' />
+            <span>Raw</span>
+          </button>
+          {/* ADD THIS NEW BUTTON */}
+          <button
+            onClick={() => setShowAssertionUI(true)}
+            className='flex items-center space-x-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+          >
+            <CheckCircle className='w-4 h-4' />
+            <span>Assertions</span>
+          </button>
         </div>
-
         {showSearch && (
           <div className='px-4 py-2 border-b border-gray-200 dark:border-gray-700'>
             <div className='flex items-center space-x-2'>
@@ -1075,6 +1052,36 @@ const ResponseViewer = ({
           </div>
         )}
       </div>
+
+      {/* API Assertion Interface Modal */}
+      {showAssertionUI && (
+        <div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4'>
+          <div className='bg-white dark:bg-gray-900 rounded-lg shadow-xl w-full max-w-7xl max-h-[90vh] overflow-hidden flex flex-col'>
+            {/* Header */}
+            <div className='flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700'>
+              <h2 className='text-xl font-bold text-gray-900 dark:text-gray-100'>
+                API Assertions Manager
+              </h2>
+              <button
+                onClick={() => setShowAssertionUI(false)}
+                className='p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors'
+              >
+                <X className='w-5 h-5 text-gray-500' />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className='flex-1 overflow-auto'>
+              <ApiAssertionInterface
+                assertions={assertions}
+                responseData={responseData} // Pass the actual response data
+                onUpdateAssertions={setAssertions}
+                onSaveAssertions={onSaveAssertions}
+              />{' '}
+            </div>
+          </div>
+        </div>
+      )}
 
       <AssertionModal
         fieldPath={activeFieldPath}

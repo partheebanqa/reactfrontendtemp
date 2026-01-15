@@ -14,6 +14,10 @@ interface Assertion {
   enabled: boolean;
   priority?: string;
   expectedValue?: any;
+  operator?: string;
+  field?: string;
+  dataType?: string;
+  type?: string;
 }
 
 interface AssertionManagerProps {

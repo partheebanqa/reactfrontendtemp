@@ -57,6 +57,7 @@ type Assertion = {
   impact: string;
   group: string;
   priority: string;
+  dataType?: string;
 };
 
 interface RequestEditorProps {
@@ -70,6 +71,7 @@ interface RequestEditorProps {
 }
 
 interface FormattedResponse {
+  requestId: string;
   status: number;
   statusText: string;
   headers: Record<string, string>;
@@ -1183,6 +1185,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
         };
 
         const normalizedResponse = {
+          requestId: activeRequest.id,
           status: statusCode ?? 200,
           statusCode: statusCode ?? 200,
           headers: responseHeaders ?? {},
@@ -1227,6 +1230,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
       const backendBody = error?.response?.data || backendErrorMessage;
 
       const normalizedResponse = {
+        requestId: activeRequest.id,
         status: statusCode,
         statusCode,
         headers: responseHeaders,

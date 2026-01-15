@@ -26,6 +26,7 @@ export interface Assertion {
   priority?: 'Critical' | 'High' | 'Medium' | 'Low';
   impact?: string;
   group?: string;
+  dataType?: string;
 }
 
 export interface AssertionResult {

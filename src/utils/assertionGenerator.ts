@@ -342,6 +342,28 @@ const SECURITY_HEADERS = {
   },
 };
 
+// Helper function to detect data type
+const getDataType = (value: any): string => {
+  if (value === null) return 'null';
+  if (value === undefined) return 'undefined';
+  if (Array.isArray(value)) return 'array';
+  if (value instanceof Date) return 'date';
+
+  const type = typeof value;
+  if (type === 'object') return 'object';
+
+  return type; // 'string', 'number', 'boolean'
+};
+
+// Helper function to check if string is a date
+const isDateString = (value: string): boolean => {
+  const date = new Date(value);
+  return (
+    !isNaN(date.getTime()) &&
+    (value.includes('-') || value.includes('/') || value.includes('T'))
+  );
+};
+
 export const generateAssertions = (response: ApiResponse): Assertion[] => {
   const assertions: Assertion[] = [];
 
@@ -353,6 +375,7 @@ export const generateAssertions = (response: ApiResponse): Assertion[] => {
     description: `Status code equals ${response.status}`,
     operator: 'equals',
     expectedValue: `${response.status}`,
+    dataType: 'number',
     enabled: false,
   });
 
@@ -372,6 +395,7 @@ export const generateAssertions = (response: ApiResponse): Assertion[] => {
       priority: config.priority,
       impact: config.impact,
       group: config.group,
+      dataType: 'string',
       enabled: false,
     });
 
@@ -387,6 +411,7 @@ export const generateAssertions = (response: ApiResponse): Assertion[] => {
         priority: config.priority,
         impact: config.impact,
         group: config.group,
+        dataType: 'string',
         enabled: false,
       });
 
@@ -403,6 +428,7 @@ export const generateAssertions = (response: ApiResponse): Assertion[] => {
           priority: 'Critical',
           impact: 'Ensures long-term HTTPS enforcement',
           group: 'security',
+          dataType: 'number',
           enabled: false,
         });
       }
@@ -417,6 +443,7 @@ export const generateAssertions = (response: ApiResponse): Assertion[] => {
       type: 'header_present',
       description: `Header '${key}' is present`,
       field: key,
+      dataType: 'string',
       enabled: false,
     });
 
@@ -427,6 +454,7 @@ export const generateAssertions = (response: ApiResponse): Assertion[] => {
       description: `Header '${key}' equals '${value}'`,
       field: key,
       expectedValue: value,
+      dataType: 'string',
       enabled: false,
     });
   });
@@ -441,6 +469,7 @@ export const generateAssertions = (response: ApiResponse): Assertion[] => {
       500
     )} ms`,
     expectedValue: String(Math.max(response.responseTime * 2, 500)),
+    dataType: 'number',
     enabled: false,
   });
 
@@ -453,6 +482,7 @@ export const generateAssertions = (response: ApiResponse): Assertion[] => {
       10000
     )} bytes`,
     expectedValue: String(Math.max(response.size * 2, 10000)),
+    dataType: 'number',
     enabled: false,
   });
 
@@ -469,6 +499,8 @@ const generateBodyAssertions = (data: any, prefix = ''): Assertion[] => {
   const assertions: Assertion[] = [];
 
   const processValue = (value: any, path: string) => {
+    const dataType = getDataType(value);
+
     // Field presence assertion
     assertions.push({
       id: `field-present-${path}`,
@@ -476,6 +508,7 @@ const generateBodyAssertions = (data: any, prefix = ''): Assertion[] => {
       type: 'field_present',
       description: `Field '${path}' is present`,
       field: path,
+      dataType,
       enabled: false,
     });
 
@@ -488,6 +521,7 @@ const generateBodyAssertions = (data: any, prefix = ''): Assertion[] => {
       description: `Field '${path}' is of type '${type}'`,
       field: path,
       expectedValue: type,
+      dataType,
       enabled: false,
     });
 
@@ -500,6 +534,7 @@ const generateBodyAssertions = (data: any, prefix = ''): Assertion[] => {
         description: `Array '${path}' is not empty`,
         field: path,
         operator: 'greater_than_zero',
+        dataType: 'array',
         enabled: false,
       });
 
@@ -511,6 +546,7 @@ const generateBodyAssertions = (data: any, prefix = ''): Assertion[] => {
         field: path,
         operator: 'equals',
         expectedValue: String(value.length),
+        dataType: 'array',
         enabled: false,
       });
 
@@ -521,6 +557,7 @@ const generateBodyAssertions = (data: any, prefix = ''): Assertion[] => {
         type: 'field_present',
         description: `Array '${path}' is present`,
         field: path,
+        dataType: 'array',
         enabled: false,
       });
 
@@ -534,6 +571,7 @@ const generateBodyAssertions = (data: any, prefix = ''): Assertion[] => {
           field: path,
           operator: 'greater_than',
           expectedValue: '1',
+          dataType: 'array',
           enabled: false,
         });
       }
@@ -548,12 +586,16 @@ const generateBodyAssertions = (data: any, prefix = ''): Assertion[] => {
         }
       }
     } else if (typeof value === 'string') {
+      // Check if string is a date
+      const stringDataType = isDateString(value) ? 'date' : 'string';
+
       assertions.push({
         id: `field-not-empty-${path}`,
         category: 'body',
         type: 'field_not_empty',
         description: `String field '${path}' is not empty`,
         field: path,
+        dataType: stringDataType,
         enabled: false,
       });
 
@@ -564,6 +606,7 @@ const generateBodyAssertions = (data: any, prefix = ''): Assertion[] => {
         description: `Field '${path}' equals '${value}'`,
         field: path,
         expectedValue: value,
+        dataType: stringDataType,
         enabled: false,
       });
 
@@ -577,6 +620,7 @@ const generateBodyAssertions = (data: any, prefix = ''): Assertion[] => {
           description: `Field '${path}' contains '${substring}'`,
           field: path,
           expectedValue: substring,
+          dataType: stringDataType,
           enabled: false,
         });
       }
@@ -590,6 +634,7 @@ const generateBodyAssertions = (data: any, prefix = ''): Assertion[] => {
           description: `Field '${path}' matches email pattern`,
           field: path,
           operator: 'email_pattern',
+          dataType: 'string',
           enabled: false,
         });
       }
@@ -601,6 +646,7 @@ const generateBodyAssertions = (data: any, prefix = ''): Assertion[] => {
         description: `Field '${path}' equals ${value}`,
         field: path,
         expectedValue: String(value),
+        dataType: 'number',
         enabled: false,
       });
 
@@ -613,6 +659,7 @@ const generateBodyAssertions = (data: any, prefix = ''): Assertion[] => {
           field: path,
           operator: 'greater_than_or_equal',
           expectedValue: '0',
+          dataType: 'number',
           enabled: false,
         });
       }
@@ -630,6 +677,7 @@ const generateBodyAssertions = (data: any, prefix = ''): Assertion[] => {
           field: path,
           operator: 'greater_than',
           expectedValue: String(Math.max(0, value - 10)),
+          dataType: 'number',
           enabled: false,
         });
       }
@@ -641,6 +689,7 @@ const generateBodyAssertions = (data: any, prefix = ''): Assertion[] => {
         description: `Field '${path}' is ${value}`,
         field: path,
         expectedValue: String(value),
+        dataType: 'boolean',
         enabled: false,
       });
     } else if (value === null) {
@@ -650,6 +699,7 @@ const generateBodyAssertions = (data: any, prefix = ''): Assertion[] => {
         type: 'field_null',
         description: `Field '${path}' is null`,
         field: path,
+        dataType: 'null',
         enabled: false,
       });
     } else if (typeof value === 'object') {
@@ -679,6 +729,7 @@ const generateBodyAssertions = (data: any, prefix = ''): Assertion[] => {
         type: 'array_present',
         description: `Array '${path}' is present`,
         field: path,
+        dataType: 'array',
         enabled: false,
       });
 
@@ -690,6 +741,7 @@ const generateBodyAssertions = (data: any, prefix = ''): Assertion[] => {
         description: `Array '${path}' is not empty`,
         field: path,
         operator: 'not_empty',
+        dataType: 'array',
         enabled: false,
       });
 
@@ -702,6 +754,7 @@ const generateBodyAssertions = (data: any, prefix = ''): Assertion[] => {
         field: path,
         operator: 'greater_than',
         expectedValue: '0',
+        dataType: 'array',
         enabled: false,
       });
 
@@ -714,6 +767,7 @@ const generateBodyAssertions = (data: any, prefix = ''): Assertion[] => {
         field: path,
         operator: 'equals',
         expectedValue: String(value.length),
+        dataType: 'array',
         enabled: false,
       });
 
@@ -727,6 +781,7 @@ const generateBodyAssertions = (data: any, prefix = ''): Assertion[] => {
           field: path,
           operator: 'greater_than',
           expectedValue: '1',
+          dataType: 'array',
           enabled: false,
         });
       }
