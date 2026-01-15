@@ -9,6 +9,9 @@ import {
   TrendingUp,
   ChevronDown,
   ChevronRight,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
 } from 'lucide-react';
 
 interface ValidationResult {
@@ -66,6 +69,13 @@ const AssertionResults: React.FC<AssertionResultsProps> = ({
     'all' | 'passed' | 'failed'
   >('all');
   const [tableFilterCategory, setTableFilterCategory] = useState('all');
+  const [tableSortConfig, setTableSortConfig] = useState<{
+    key: string | null;
+    direction: 'asc' | 'desc';
+  }>({
+    key: null,
+    direction: 'asc',
+  });
   const [expandedCategories, setExpandedCategories] = useState<
     Record<string, boolean>
   >({
@@ -121,6 +131,25 @@ const AssertionResults: React.FC<AssertionResultsProps> = ({
     );
   };
 
+  const handleTableSort = (key: string) => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (tableSortConfig.key === key && tableSortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setTableSortConfig({ key, direction });
+  };
+
+  const SortIcon = ({ columnKey }: { columnKey: string }) => {
+    if (tableSortConfig.key !== columnKey) {
+      return <ArrowUpDown className='w-4 h-4 text-gray-400' />;
+    }
+    return tableSortConfig.direction === 'asc' ? (
+      <ArrowUp className='w-4 h-4 text-blue-600' />
+    ) : (
+      <ArrowDown className='w-4 h-4 text-blue-600' />
+    );
+  };
+
   const getFilteredTableData = () => {
     let filtered = [...results];
 
@@ -130,6 +159,24 @@ const AssertionResults: React.FC<AssertionResultsProps> = ({
 
     if (tableFilterCategory !== 'all') {
       filtered = filtered.filter((r) => r.category === tableFilterCategory);
+    }
+
+    if (tableSortConfig.key) {
+      filtered.sort((a, b) => {
+        let aVal = a[tableSortConfig.key as keyof ValidationResult];
+        let bVal = b[tableSortConfig.key as keyof ValidationResult];
+
+        if (tableSortConfig.key === 'failureRate') {
+          const aHistory = getHistory(a.id);
+          const bHistory = getHistory(b.id);
+          aVal = aHistory.failureRate as any;
+          bVal = bHistory.failureRate as any;
+        }
+
+        if (aVal < bVal) return tableSortConfig.direction === 'asc' ? -1 : 1;
+        if (aVal > bVal) return tableSortConfig.direction === 'asc' ? 1 : -1;
+        return 0;
+      });
     }
 
     return filtered;
@@ -497,17 +544,41 @@ const AssertionResults: React.FC<AssertionResultsProps> = ({
               <table className='w-full'>
                 <thead className='bg-gray-50 border-b border-gray-200'>
                   <tr>
-                    <th className='px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase'>
-                      Status
+                    <th
+                      className='px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase cursor-pointer hover:bg-gray-100 transition-colors'
+                      onClick={() => handleTableSort('result')}
+                    >
+                      <div className='flex items-center gap-2'>
+                        Status
+                        <SortIcon columnKey='result' />
+                      </div>
                     </th>
-                    <th className='px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase'>
-                      Category
+                    <th
+                      className='px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase cursor-pointer hover:bg-gray-100 transition-colors'
+                      onClick={() => handleTableSort('category')}
+                    >
+                      <div className='flex items-center gap-2'>
+                        Category
+                        <SortIcon columnKey='category' />
+                      </div>
                     </th>
-                    <th className='px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase'>
-                      Field
+                    <th
+                      className='px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase cursor-pointer hover:bg-gray-100 transition-colors'
+                      onClick={() => handleTableSort('field')}
+                    >
+                      <div className='flex items-center gap-2'>
+                        Field
+                        <SortIcon columnKey='field' />
+                      </div>
                     </th>
-                    <th className='px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase'>
-                      Assertion
+                    <th
+                      className='px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase cursor-pointer hover:bg-gray-100 transition-colors'
+                      onClick={() => handleTableSort('type')}
+                    >
+                      <div className='flex items-center gap-2'>
+                        Assertion
+                        <SortIcon columnKey='type' />
+                      </div>
                     </th>
                     <th className='px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase'>
                       Expected
@@ -515,9 +586,14 @@ const AssertionResults: React.FC<AssertionResultsProps> = ({
                     <th className='px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase'>
                       Actual
                     </th>
-
-                    <th className='px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase'>
-                      History
+                    <th
+                      className='px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase cursor-pointer hover:bg-gray-100 transition-colors'
+                      onClick={() => handleTableSort('failureRate')}
+                    >
+                      <div className='flex items-center gap-2'>
+                        History
+                        <SortIcon columnKey='failureRate' />
+                      </div>
                     </th>
                   </tr>
                 </thead>

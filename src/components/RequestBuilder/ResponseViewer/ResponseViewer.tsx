@@ -67,8 +67,6 @@ const ResponseViewer = ({
 }: ResponseViewerProps) => {
   const { responseData, assertions, setAssertions } = useRequest();
 
-  console.log('responseData:', responseData);
-
   const [activeTab, setActiveTab] = useState<
     | 'body'
     | 'headers'
