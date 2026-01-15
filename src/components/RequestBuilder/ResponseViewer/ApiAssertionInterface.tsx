@@ -187,8 +187,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
     dataType: 'string',
   });
 
-  console.log('editFormData:', editFormData);
-
   useEffect(() => {
     const selected = localAssertions.filter((a) => a.enabled);
     setSelectedAssertions(selected);
@@ -219,7 +217,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
         return (
           index ===
           self.findIndex((a) => {
-            // Create unique key based on category, type, field, and expectedValue
             const key1 = `${a.category}-${a.type}-${a.field || ''}-${
               a.expectedValue
             }`;
@@ -383,27 +380,20 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
       return;
     }
 
-    // Find the current assertion to detect its data type
     const currentAssertion = localAssertions.find((a) => a.id === assertionId);
 
-    // STEP 1: Use dataType from assertion if available, otherwise infer
-    let detectedType = 'string'; // default fallback
+    let detectedType = 'string';
 
     if (currentAssertion) {
-      // Priority 1: Use the dataType field if it exists
       if (currentAssertion.dataType) {
         detectedType = currentAssertion.dataType;
-      }
-      // Priority 2: Infer from expectedValue if it exists
-      else if (
+      } else if (
         currentAssertion.expectedValue !== undefined &&
         currentAssertion.expectedValue !== null &&
         currentAssertion.expectedValue !== ''
       ) {
         detectedType = inferDataType(currentAssertion.expectedValue);
-      }
-      // Priority 3: Infer from assertion type
-      else if (
+      } else if (
         category === 'performance' ||
         currentAssertion.type.includes('time') ||
         currentAssertion.type.includes('size')
@@ -420,9 +410,7 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
         currentAssertion.type.includes('false')
       ) {
         detectedType = 'boolean';
-      }
-      // Priority 4: Infer from field name
-      else if (field) {
+      } else if (field) {
         const lowerField = field.toLowerCase();
         if (
           lowerField.includes('count') ||
@@ -478,7 +466,7 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
     if (category === 'status') {
       const newAssertion: Assertion = {
         id: `custom_${Date.now()}`,
-        field: undefined, // Status doesn't need a field
+        field: undefined,
         type: 'status_equals',
         description: `Status code equals ${inlineFormData.value}`,
         operator: 'equals',
@@ -559,12 +547,10 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
       return;
     }
 
-    // Find the assertion being edited to check its category
     const assertionBeingEdited = localAssertions.find(
       (a) => a.id === assertionId
     );
 
-    // Handle status assertions differently
     if (assertionBeingEdited?.category === 'status') {
       const updated = localAssertions.map((a) =>
         a.id === assertionId
@@ -572,8 +558,8 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
               ...a,
               expectedValue: editFormData.value,
               description: `Status code equals ${editFormData.value}`,
-              type: 'status_equals', // ✅ ADDED: Preserve the correct type
-              operator: 'equals', // ✅ ADDED: Preserve the operator
+              type: 'status_equals',
+              operator: 'equals',
             }
           : a
       );
@@ -586,7 +572,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
       return;
     }
 
-    // Handle non-status assertions with full config
     if (!editFormData.field) {
       return;
     }
@@ -622,13 +607,11 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
     onSuccess: (data) => {
       const mappedResults: ValidationResult[] = data.assertionResults.map(
         (result) => {
-          // Find the original assertion by matching multiple fields for better accuracy
           const originalAssertion = localAssertions.find((a) => {
             const categoryMatch = a.category === result.category;
             const typeMatch = a.type === result.type;
             const fieldMatch = !result.field || a.field === result.field;
 
-            // ADDED: Also match by expectedValue for better accuracy
             const expectedValueMatch =
               result.expectedValue === undefined ||
               String(a.expectedValue) === String(result.expectedValue);
@@ -684,7 +667,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
         responseTime,
       });
 
-      // ✅ ADD: Store in validation history
       setValidationHistory((prev) => {
         const updated = [
           {
@@ -696,12 +678,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
           ...prev,
         ];
         return updated.slice(0, 10);
-      });
-
-      console.log('Validation complete:', {
-        passed: summary.passed,
-        failed: summary.failed,
-        total: summary.total,
       });
 
       setAppState('results');
@@ -717,15 +693,12 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
   const saveAssertionsMutation = useSaveAssertionsMutation({
     onSuccess: (data) => {
       setSelectedView('selected');
-      console.log('Assertions saved successfully:', data);
       setIsSaved(true);
       setHasUnsavedChanges(false);
       setShowSaveMenu(false);
-      // You can add a toast notification here
     },
     onError: (error) => {
       console.error('Failed to save assertions:', error);
-      // You can add an error toast notification here
     },
   });
 
@@ -801,9 +774,8 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
       return;
     }
 
-    // Map localAssertions to the format expected by the API
     const assertionsToSave: SaveAssertion[] = localAssertions
-      .filter((a) => a.enabled) // Only save enabled assertions
+      .filter((a) => a.enabled)
       .map((assertion) => ({
         category: assertion.category,
         description: assertion.description,
@@ -816,11 +788,10 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
         ...(assertion.impact && { impact: assertion.impact }),
         ...(assertion.operator && { operator: assertion.operator }),
         requestId: responseData.requestId,
-        ...(assertion.priority && { severity: assertion.priority }), // Map priority to severity
+        ...(assertion.priority && { severity: assertion.priority }),
         type: assertion.type,
       }));
 
-    // Prepare the payload
     const payload = {
       assertions: assertionsToSave,
       environmentId: activeEnvironment?.id,
@@ -833,7 +804,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
         payload,
       });
 
-      // Call the parent callback if provided
       if (onSaveAssertions) {
         await onSaveAssertions();
       }
@@ -845,10 +815,8 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
   const handleSaveAndVerify = async () => {
     await handleSaveAssertions();
 
-    // Wait a bit for the save to complete
     await new Promise((resolve) => setTimeout(resolve, 500));
 
-    // Only run verification if save was successful
     if (!saveAssertionsMutation.isError) {
       handleVerifyAssertions();
     }
@@ -865,8 +833,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
     setAppState('build');
     setValidationResults(null);
   };
-
-  // ✅ ADD THESE HELPER FUNCTIONS:
 
   const getAssertionHistory = (assertionId: string) => {
     const history = validationHistory
@@ -889,67 +855,11 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
     return Math.round((failures / totalRuns) * 100);
   };
 
-  const handleTableSort = (key: string) => {
-    let direction: 'asc' | 'desc' = 'asc';
-    if (tableSortConfig.key === key && tableSortConfig.direction === 'asc') {
-      direction = 'desc';
-    }
-    setTableSortConfig({ key, direction });
-  };
-
-  const getSortedTableData = () => {
-    if (!validationResults) return [];
-
-    let data = [...validationResults.results];
-
-    // Apply status filter
-    if (tableFilterStatus !== 'all') {
-      data = data.filter((r) => r.result === tableFilterStatus);
-    }
-
-    // Apply category filter
-    if (tableFilterCategory !== 'all') {
-      data = data.filter((r) => r.category === tableFilterCategory);
-    }
-
-    // Apply sorting
-    if (tableSortConfig.key) {
-      data.sort((a, b) => {
-        let aVal = (a as any)[tableSortConfig.key!];
-        let bVal = (b as any)[tableSortConfig.key!];
-
-        if (tableSortConfig.key === 'failureRate') {
-          aVal = getFailureRate(a.id);
-          bVal = getFailureRate(b.id);
-        }
-
-        if (aVal < bVal) return tableSortConfig.direction === 'asc' ? -1 : 1;
-        if (aVal > bVal) return tableSortConfig.direction === 'asc' ? 1 : -1;
-        return 0;
-      });
-    }
-
-    return data;
-  };
-
-  const SortIcon = ({ columnKey }: { columnKey: string }) => {
-    if (tableSortConfig.key !== columnKey) {
-      return <ArrowUpDown className='w-4 h-4 text-gray-400' />;
-    }
-    return tableSortConfig.direction === 'asc' ? (
-      <ArrowUp className='w-4 h-4 text-blue-600' />
-    ) : (
-      <ArrowDown className='w-4 h-4 text-blue-600' />
-    );
-  };
-
   const AssertionTypeIcon = ({
     assertion,
   }: {
     assertion: Assertion | ValidationResult;
   }) => {
-    console.log('iconsAssertion:', assertion);
-
     const operatorToUse = assertion.operator || assertion.type;
 
     const icons: Record<string, string> = {
@@ -1017,8 +927,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
   };
 
   const renderAssertion = (assertion: Assertion) => {
-    console.log('assertion-render:', assertion);
-
     const validationResult = validationResults?.results?.find(
       (r) => r.id === assertion.id
     );
@@ -1269,7 +1177,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
             </div>
 
             {assertion.category === 'status' ? (
-              // Simple form for status - only value input
               <div>
                 <label className='block text-xs font-medium text-gray-700 mb-1'>
                   Expected Status Code
@@ -1291,7 +1198,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
                 </p>
               </div>
             ) : (
-              // Original full form for other categories
               <>
                 <div className='grid grid-cols-1 sm:grid-cols-2 gap-3'>
                   <div>
@@ -1443,7 +1349,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
             </div>
 
             {assertion.category === 'status' ? (
-              // Simple form for status - only value input
               <div>
                 <label className='block text-xs font-medium text-gray-700 mb-1'>
                   Expected Status Code
