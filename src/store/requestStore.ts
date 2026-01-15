@@ -20,6 +20,7 @@ export interface Assertion {
   description: string;
   enabled: boolean;
   expectedValue: any;
+  dataType?: string;
   operator: string;
   type: string;
 }

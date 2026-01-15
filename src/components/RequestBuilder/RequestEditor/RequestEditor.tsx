@@ -57,6 +57,7 @@ type Assertion = {
   impact: string;
   group: string;
   priority: string;
+  dataType?: string;
 };
 
 interface RequestEditorProps {

@@ -48,6 +48,7 @@ export interface Assertion {
   expectedTime?: string;
   expectedSize?: string;
   scope?: 'full' | 'field';
+  dataType?: string;
 }
 interface ResponseViewerProps {
   isBottomLayout: boolean;

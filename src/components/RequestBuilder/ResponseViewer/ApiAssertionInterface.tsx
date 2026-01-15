@@ -1,4 +1,7 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+'use client';
+
+import type React from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import {
   Check,
   X,
@@ -29,6 +32,22 @@ import {
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import {
+  inferDataType,
+  getFieldAssertionConfig,
+  getOperatorsByDataType,
+  getOperatorDisplayLabel,
+} from '@/lib/assertion-utils';
+import {
+  useSaveAssertionsMutation,
+  useValidateAssertionsMutation,
+} from '@/store/assertionValidation';
+import {
+  SaveAssertion,
+  ValidationPayload,
+} from '@/services/assertionValidation.service';
+import { useWorkspace } from '@/hooks/useWorkspace';
+import { useDataManagement } from '@/hooks/useDataManagement';
 
 interface Assertion {
   id: string;
@@ -42,6 +61,7 @@ interface Assertion {
   group?: string;
   priority?: 'Critical' | 'High' | 'Medium' | 'Low';
   impact?: string;
+  dataType?: string;
 }
 
 interface ValidationResult extends Assertion {
@@ -74,6 +94,8 @@ interface ResponseData {
 interface ApiAssertionInterfaceProps {
   assertions?: Assertion[];
   responseData?: ResponseData;
+  workspaceId?: string;
+  environmentId?: string;
   onUpdateAssertions?: (assertions: Assertion[]) => void;
   onVerifyAssertions?: () => Promise<void>;
   onSaveAssertions?: () => Promise<void>;
@@ -86,6 +108,9 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
   onVerifyAssertions,
   onSaveAssertions,
 }) => {
+  const { activeEnvironment } = useDataManagement();
+
+  const { currentWorkspace } = useWorkspace();
   const saveMenuRef = useRef<HTMLDivElement>(null);
   const [localAssertions, setLocalAssertions] =
     useState<Assertion[]>(assertions);
@@ -95,6 +120,8 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
   const [appState, setAppState] = useState<'build' | 'validating' | 'results'>(
     'build'
   );
+  const [selectedAssertions, setSelectedAssertions] = useState<Assertion[]>([]);
+
   const [validationResults, setValidationResults] = useState<{
     results: ValidationResult[];
     summary: { passed: number; failed: number; skipped: number; total: number };
@@ -138,6 +165,13 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
     dataType: 'string',
   });
 
+  console.log('editFormData:', editFormData);
+
+  useEffect(() => {
+    const selected = localAssertions.filter((a) => a.enabled);
+    setSelectedAssertions(selected);
+  }, [localAssertions]);
+
   useEffect(() => {
     setLocalAssertions(assertions);
   }, [assertions]);
@@ -157,7 +191,27 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
 
   const groupedAssertions = useMemo(() => {
     const grouped: Record<string, Assertion[]> = {};
-    localAssertions.forEach((assertion) => {
+
+    // Remove duplicates based on unique key combination
+    const uniqueAssertions = localAssertions.filter(
+      (assertion, index, self) => {
+        return (
+          index ===
+          self.findIndex((a) => {
+            // Create unique key based on category, type, field, and expectedValue
+            const key1 = `${a.category}-${a.type}-${a.field || ''}-${
+              a.expectedValue
+            }`;
+            const key2 = `${assertion.category}-${assertion.type}-${
+              assertion.field || ''
+            }-${assertion.expectedValue}`;
+            return key1 === key2;
+          })
+        );
+      }
+    );
+
+    uniqueAssertions.forEach((assertion) => {
       const category = assertion.category || 'other';
       if (!grouped[category]) {
         grouped[category] = [];
@@ -251,48 +305,25 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
     return filtered;
   };
 
-  const getOperatorsByDataType = (dataType: string) => {
-    const operators: Record<string, string[]> = {
-      string: [
-        'contains',
-        'not contains',
-        'equals',
-        'not equals',
-        'starts with',
-        'ends with',
-      ],
-      number: [
-        'equals',
-        'not equals',
-        'greater than',
-        'less than',
-        'greater than or equal',
-        'less than or equal',
-      ],
-      boolean: ['equals', 'not equals'],
-      array: [
-        'contains',
-        'not contains',
-        'length equals',
-        'length greater than',
-        'length less than',
-      ],
-      object: ['exists', 'not exists', 'has property'],
-    };
-    return operators[dataType] || operators.string;
-  };
-
   const handleQuickAdd = () => {
     if (!quickAddData.field || !quickAddData.value) {
       return;
     }
+    const detectedType = inferDataType(quickAddData.value);
+    const config = getFieldAssertionConfig(
+      quickAddData.operator,
+      quickAddData.value,
+      quickAddData.field,
+      detectedType
+    );
+
     const newAssertion: Assertion = {
       id: `manual_${Date.now()}`,
-      field: quickAddData.field,
-      type: quickAddData.operator,
-      description: `Field '${quickAddData.field}' ${quickAddData.operator} '${quickAddData.value}'`,
-      operator: quickAddData.operator,
-      expectedValue: quickAddData.value,
+      field: config.field,
+      type: config.type,
+      description: config.description,
+      operator: config.operator,
+      expectedValue: config.expectedValue,
       enabled: true,
       category: 'body',
       group: 'custom',
@@ -320,14 +351,94 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
       handleCancelEdit();
     }
 
+    if (category === 'status') {
+      setExpandedAddForm(assertionId);
+      setInlineFormData({
+        field: 'status',
+        operator: 'equals',
+        value: '',
+        dataType: 'number',
+      });
+      return;
+    }
+
+    // Find the current assertion to detect its data type
+    const currentAssertion = localAssertions.find((a) => a.id === assertionId);
+
+    // STEP 1: Use dataType from assertion if available, otherwise infer
+    let detectedType = 'string'; // default fallback
+
+    if (currentAssertion) {
+      // Priority 1: Use the dataType field if it exists
+      if (currentAssertion.dataType) {
+        detectedType = currentAssertion.dataType;
+      }
+      // Priority 2: Infer from expectedValue if it exists
+      else if (
+        currentAssertion.expectedValue !== undefined &&
+        currentAssertion.expectedValue !== null &&
+        currentAssertion.expectedValue !== ''
+      ) {
+        detectedType = inferDataType(currentAssertion.expectedValue);
+      }
+      // Priority 3: Infer from assertion type
+      else if (
+        category === 'performance' ||
+        currentAssertion.type.includes('time') ||
+        currentAssertion.type.includes('size')
+      ) {
+        detectedType = 'number';
+      } else if (
+        currentAssertion.type.includes('array') ||
+        currentAssertion.type === 'arrayLength'
+      ) {
+        detectedType = 'array';
+      } else if (
+        currentAssertion.type.includes('boolean') ||
+        currentAssertion.type.includes('true') ||
+        currentAssertion.type.includes('false')
+      ) {
+        detectedType = 'boolean';
+      }
+      // Priority 4: Infer from field name
+      else if (field) {
+        const lowerField = field.toLowerCase();
+        if (
+          lowerField.includes('count') ||
+          lowerField.includes('size') ||
+          lowerField.includes('length') ||
+          lowerField.includes('age') ||
+          lowerField.includes('id')
+        ) {
+          detectedType = 'number';
+        } else if (
+          lowerField.includes('is') ||
+          lowerField.includes('has') ||
+          lowerField.includes('active') ||
+          lowerField.includes('enabled')
+        ) {
+          detectedType = 'boolean';
+        } else if (
+          lowerField.includes('array') ||
+          lowerField.includes('list') ||
+          lowerField.includes('items')
+        ) {
+          detectedType = 'array';
+        }
+      }
+    }
+
+    const availableOperators = getOperatorsByDataType(detectedType);
+
     setExpandedAddForm(assertionId);
     setInlineFormData({
       field: field || '',
-      operator: 'equals',
+      operator: availableOperators[0] || 'equals',
       value: '',
-      dataType: 'string',
+      dataType: detectedType,
     });
   };
+
   const handleCancelInlineAdd = () => {
     setExpandedAddForm(null);
     setInlineFormData({
@@ -342,13 +453,43 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
     if (!inlineFormData.field || !inlineFormData.value) {
       return;
     }
+
+    if (category === 'status') {
+      const newAssertion: Assertion = {
+        id: `custom_${Date.now()}`,
+        field: undefined, // Status doesn't need a field
+        type: 'status_equals',
+        description: `Status code equals ${inlineFormData.value}`,
+        operator: 'equals',
+        expectedValue: inlineFormData.value,
+        enabled: true,
+        category: 'status',
+        group: 'custom',
+      };
+      const updated = [...localAssertions, newAssertion];
+      setLocalAssertions(updated);
+      setHasUnsavedChanges(true);
+      if (onUpdateAssertions) {
+        onUpdateAssertions(updated);
+      }
+      handleCancelInlineAdd();
+      return;
+    }
+
+    const config = getFieldAssertionConfig(
+      inlineFormData.operator,
+      inlineFormData.value,
+      inlineFormData.field,
+      inlineFormData.dataType
+    );
+
     const newAssertion: Assertion = {
       id: `custom_${Date.now()}`,
-      field: inlineFormData.field,
-      type: inlineFormData.operator,
-      description: `Field '${inlineFormData.field}' ${inlineFormData.operator} '${inlineFormData.value}'`,
-      operator: inlineFormData.operator,
-      expectedValue: inlineFormData.value,
+      field: config.field,
+      type: config.type,
+      description: config.description,
+      operator: config.operator,
+      expectedValue: config.expectedValue,
       enabled: true,
       category: category,
       group: 'custom',
@@ -373,11 +514,12 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
     }
 
     setExpandedEditForm(assertion.id);
+    const detectedType = inferDataType(assertion.expectedValue);
     setEditFormData({
       field: assertion.field || '',
       operator: assertion.operator || 'equals',
       value: String(assertion.expectedValue || ''),
-      dataType: 'string',
+      dataType: detectedType,
     });
   };
 
@@ -392,18 +534,58 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
   };
 
   const handleSaveEdit = (assertionId: string) => {
-    if (!editFormData.field || !editFormData.value) {
+    if (!editFormData.value) {
       return;
     }
+
+    // Find the assertion being edited to check its category
+    const assertionBeingEdited = localAssertions.find(
+      (a) => a.id === assertionId
+    );
+
+    // Handle status assertions differently
+    if (assertionBeingEdited?.category === 'status') {
+      const updated = localAssertions.map((a) =>
+        a.id === assertionId
+          ? {
+              ...a,
+              expectedValue: editFormData.value,
+              description: `Status code equals ${editFormData.value}`,
+              type: 'status_equals', // ✅ ADDED: Preserve the correct type
+              operator: 'equals', // ✅ ADDED: Preserve the operator
+            }
+          : a
+      );
+      setLocalAssertions(updated);
+      setHasUnsavedChanges(true);
+      if (onUpdateAssertions) {
+        onUpdateAssertions(updated);
+      }
+      handleCancelEdit();
+      return;
+    }
+
+    // Handle non-status assertions with full config
+    if (!editFormData.field) {
+      return;
+    }
+
+    const config = getFieldAssertionConfig(
+      editFormData.operator,
+      editFormData.value,
+      editFormData.field,
+      editFormData.dataType
+    );
+
     const updated = localAssertions.map((a) =>
       a.id === assertionId
         ? {
             ...a,
-            field: editFormData.field,
-            operator: editFormData.operator,
-            type: editFormData.operator,
-            expectedValue: editFormData.value,
-            description: `Field '${editFormData.field}' ${editFormData.operator} '${editFormData.value}'`,
+            field: config.field,
+            operator: config.operator,
+            type: config.type,
+            expectedValue: config.expectedValue,
+            description: config.description,
           }
         : a
     );
@@ -415,51 +597,227 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
     handleCancelEdit();
   };
 
-  const handleVerifyAssertions = async () => {
-    if (getSelectedCount() === 0) {
-      return;
-    }
-    setAppState('validating');
-    setTimeout(() => {
-      const results: ValidationResult[] = localAssertions
-        .filter((a) => a.enabled)
-        .map((a) => ({
-          ...a,
-          validated: true as const,
-          result:
-            Math.random() > 0.3 ? ('passed' as const) : ('failed' as const),
-          actualValue: a.expectedValue,
-          failureReason: Math.random() > 0.3 ? undefined : 'Value mismatch',
-        }));
+  const validationMutation = useValidateAssertionsMutation({
+    onSuccess: (data) => {
+      const mappedResults: ValidationResult[] = data.assertionResults.map(
+        (result) => {
+          // Find the original assertion by matching multiple fields for better accuracy
+          const originalAssertion = localAssertions.find((a) => {
+            const categoryMatch = a.category === result.category;
+            const typeMatch = a.type === result.type;
+            const fieldMatch = !result.field || a.field === result.field;
+
+            // ADDED: Also match by expectedValue for better accuracy
+            const expectedValueMatch =
+              result.expectedValue === undefined ||
+              String(a.expectedValue) === String(result.expectedValue);
+
+            return (
+              categoryMatch && typeMatch && fieldMatch && expectedValueMatch
+            );
+          });
+
+          return {
+            id:
+              originalAssertion?.id || `result_${Date.now()}_${Math.random()}`,
+            category: result.category,
+            type: result.type,
+            description: result.description,
+            field: result.field,
+            operator: result.operator,
+            expectedValue: result.expectedValue,
+            enabled: originalAssertion?.enabled ?? true,
+            group: result.group || originalAssertion?.group,
+            priority: originalAssertion?.priority,
+            impact: originalAssertion?.impact,
+            validated: true as const,
+            result:
+              result.status === 'passed'
+                ? ('passed' as const)
+                : ('failed' as const),
+            actualValue: result.actualValue,
+            failureReason: result.errorMessage,
+          };
+        }
+      );
+
+      const summary = {
+        passed: data.assertionResults.filter((r) => r.status === 'passed')
+          .length,
+        failed: data.assertionResults.filter((r) => r.status === 'failed')
+          .length,
+        skipped: selectedAssertions.length - data.assertionResults.length,
+        total: selectedAssertions.length,
+      };
+
+      const responseTime = data.response?.metrics?.responseTime
+        ? `${data.response.metrics.responseTime}ms`
+        : data.assertionResults[0]?.responseTime
+        ? `${data.assertionResults[0].responseTime}ms`
+        : 'N/A';
 
       setValidationResults({
-        results,
-        summary: {
-          passed: results.filter((r) => r.result === 'passed').length,
-          failed: results.filter((r) => r.result === 'failed').length,
-          skipped: 0,
-          total: results.length,
-        },
+        results: mappedResults,
+        summary,
         timestamp: new Date().toISOString(),
-        responseTime: '245ms',
+        responseTime,
       });
+
+      console.log('Validation complete:', {
+        passed: summary.passed,
+        failed: summary.failed,
+        total: summary.total,
+      });
+
       setAppState('results');
-    }, 1500);
+      setSelectedView('selected');
+    },
+    onError: (error) => {
+      console.error('Validation error:', error);
+      setAppState('build');
+      console.error('Validation failed:', error.message);
+    },
+  });
+
+  const saveAssertionsMutation = useSaveAssertionsMutation({
+    onSuccess: (data) => {
+      setSelectedView('selected');
+      console.log('Assertions saved successfully:', data);
+      setIsSaved(true);
+      setHasUnsavedChanges(false);
+      setShowSaveMenu(false);
+      // You can add a toast notification here
+    },
+    onError: (error) => {
+      console.error('Failed to save assertions:', error);
+      // You can add an error toast notification here
+    },
+  });
+
+  const handleVerifyAssertions = async () => {
+    if (getSelectedCount() === 0) {
+      // toast({
+      //   title: 'No assertions selected',
+      //   description: 'Please select at least one assertion to verify',
+      //   variant: 'destructive',
+      //   duration: 3000,
+      // });
+      return;
+    }
+
+    setAppState('validating');
+
+    const validationPayload: ValidationPayload = {
+      assertions: selectedAssertions.map((assertion) => ({
+        category: assertion.category,
+        type: assertion.type,
+        description: assertion.description,
+        ...(assertion.field && { field: assertion.field }),
+        ...(assertion.operator && { operator: assertion.operator }),
+        ...(assertion.expectedValue !== undefined && {
+          expectedValue: assertion.expectedValue,
+        }),
+        ...(assertion.priority && { priority: assertion.priority }),
+        ...(assertion.impact && { impact: assertion.impact }),
+        enabled: assertion.enabled,
+        ...(assertion.group && { group: assertion.group }),
+      })),
+      response: responseData
+        ? {
+            requestId: responseData.requestId,
+            requestName: responseData.requestId,
+            ...(responseData.requestCurl && {
+              requestCurl: responseData.requestCurl,
+            }),
+            statusCode: responseData.statusCode || responseData.status || 0,
+            headers: responseData.headers,
+            body:
+              typeof responseData.body === 'string'
+                ? responseData.body
+                : JSON.stringify(responseData.body),
+            error: '',
+            extractedVariables: [],
+            ...(responseData.metrics && { metrics: responseData.metrics }),
+          }
+        : {
+            requestId: 'unknown',
+            requestName: 'unknown',
+            requestCurl: '',
+            statusCode: 0,
+            headers: {},
+            body: '',
+            error: 'No response data available',
+            extractedVariables: [],
+            metrics: { bytesReceived: 0, responseTime: 0 },
+          },
+    };
+
+    try {
+      await validationMutation.mutateAsync(validationPayload);
+    } catch (error) {
+      console.error('Failed to validate assertions:', error);
+      setAppState('build');
+    }
   };
 
   const handleSaveAssertions = async () => {
-    if (onSaveAssertions) {
-      await onSaveAssertions();
+    if (!responseData?.requestId) {
+      console.error('No request ID available');
+      return;
     }
-    setIsSaved(true);
-    setHasUnsavedChanges(false);
-    setShowSaveMenu(false);
+
+    // Map localAssertions to the format expected by the API
+    const assertionsToSave: SaveAssertion[] = localAssertions
+      .filter((a) => a.enabled) // Only save enabled assertions
+      .map((assertion) => ({
+        category: assertion.category,
+        description: assertion.description,
+        enabled: assertion.enabled,
+        ...(assertion.expectedValue !== undefined && {
+          expectedValue: String(assertion.expectedValue),
+        }),
+        ...(assertion.field && { field: assertion.field }),
+        ...(assertion.group && { group: assertion.group }),
+        ...(assertion.impact && { impact: assertion.impact }),
+        ...(assertion.operator && { operator: assertion.operator }),
+        requestId: responseData.requestId,
+        ...(assertion.priority && { severity: assertion.priority }), // Map priority to severity
+        type: assertion.type,
+      }));
+
+    // Prepare the payload
+    const payload = {
+      assertions: assertionsToSave,
+      environmentId: activeEnvironment?.id,
+      workspaceId: currentWorkspace?.id,
+    };
+
+    try {
+      await saveAssertionsMutation.mutateAsync({
+        requestId: responseData.requestId,
+        payload,
+      });
+
+      // Call the parent callback if provided
+      if (onSaveAssertions) {
+        await onSaveAssertions();
+      }
+    } catch (error) {
+      console.error('Error saving assertions:', error);
+    }
   };
 
   const handleSaveAndVerify = async () => {
     await handleSaveAssertions();
+
+    // Wait a bit for the save to complete
     await new Promise((resolve) => setTimeout(resolve, 500));
-    handleVerifyAssertions();
+
+    // Only run verification if save was successful
+    if (!saveAssertionsMutation.isError) {
+      handleVerifyAssertions();
+    }
+
     setShowSaveMenu(false);
   };
 
@@ -471,6 +829,47 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
   const handleEditAssertions = () => {
     setAppState('build');
     setValidationResults(null);
+  };
+
+  const AssertionTypeIcon = ({
+    assertion,
+  }: {
+    assertion: Assertion | ValidationResult;
+  }) => {
+    const operatorToUse = assertion.operator || assertion.type;
+
+    const icons: Record<string, string> = {
+      // Operator-based mappings
+      equals: '=',
+      exists: '✓',
+      type: 'T',
+      contains: '⊃',
+      'not contains': '⊄',
+      lessThan: '<',
+      greaterThan: '>',
+      arrayLength: '#',
+
+      // Type-based mappings (when operator is missing)
+      field_contains: '⊃',
+      field_equals: '=',
+      field_exists: '✓',
+      field_type: 'T',
+      field_not_contains: '⊄',
+      status_equals: '=',
+      response_time: '⏱',
+      response_time_less_than: '<',
+      header_exists: '✓',
+      header_equals: '=',
+      header_contains: '⊃',
+      security_header_missing: '🛡',
+      // Add more type mappings as needed
+    };
+
+    return (
+      <span className='text-xs font-mono font-semibold'>
+        {icons[operatorToUse] || '='}
+      </span>
+    );
   };
 
   const getCategoryIcon = (category: string) => {
@@ -506,6 +905,8 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
   };
 
   const renderAssertion = (assertion: Assertion) => {
+    console.log('assertion-render:', assertion);
+
     const validationResult = validationResults?.results?.find(
       (r) => r.id === assertion.id
     );
@@ -514,7 +915,7 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
     const isEditing = expandedEditForm === assertion.id;
 
     return (
-      <div key={assertion.id} className='space-y-0'>
+      <div key={assertion.id} className='space-y-0 '>
         <div
           className={`group flex flex-col sm:flex-row sm:items-start gap-3 p-4 border transition-all ${
             isExpanded || isEditing ? 'rounded-t-lg border-b-0' : 'rounded-lg'
@@ -554,33 +955,55 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
                       : 'bg-gray-200 text-gray-600'
                   }`}
                 >
-                  {hasResult
-                    ? validationResult.result === 'passed'
-                      ? '✓'
-                      : '✗'
-                    : '='}
+                  {hasResult ? (
+                    validationResult.result === 'passed' ? (
+                      '✓'
+                    ) : (
+                      '✗'
+                    )
+                  ) : (
+                    <AssertionTypeIcon assertion={assertion} />
+                  )}
                 </div>
 
                 <div className='flex items-center gap-2 flex-1 min-w-0'>
-                  {assertion.field && (
-                    <span className='font-medium text-gray-900 font-mono text-sm truncate'>
-                      {assertion.field}
-                    </span>
-                  )}
-                  {assertion.operator && (
-                    <span className='text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded whitespace-nowrap'>
-                      {assertion.operator}
-                    </span>
-                  )}
-                  {assertion.expectedValue !== undefined &&
-                    assertion.expectedValue !== null && (
-                      <span className='text-sm text-gray-700 font-mono truncate'>
-                        ={' '}
+                  {assertion.category === 'status' ? (
+                    <>
+                      <span className='font-medium text-gray-900 font-mono text-sm'>
+                        status
+                      </span>
+                      <span className='text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded whitespace-nowrap'>
+                        =
+                      </span>
+                      <span className='text-sm text-gray-700 font-mono'>
                         <span className='text-blue-600'>
-                          {String(assertion.expectedValue)}
+                          {assertion.expectedValue}
                         </span>
                       </span>
-                    )}
+                    </>
+                  ) : (
+                    <>
+                      {assertion.field && (
+                        <span className='font-medium text-gray-900 font-mono text-sm truncate'>
+                          {assertion.field}
+                        </span>
+                      )}
+                      {assertion.operator && (
+                        <span className='text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded whitespace-nowrap'>
+                          {getOperatorDisplayLabel(assertion.operator)}{' '}
+                        </span>
+                      )}
+                      {assertion.expectedValue !== undefined &&
+                        assertion.expectedValue !== null && (
+                          <span className='text-sm text-gray-700 font-mono truncate'>
+                            ={' '}
+                            <span className='text-blue-600'>
+                              {String(assertion.expectedValue)}
+                            </span>
+                          </span>
+                        )}
+                    </>
+                  )}
                 </div>
 
                 {assertion.priority && (
@@ -598,10 +1021,8 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
 
               {hasResult && validationResult.result === 'failed' && (
                 <div className='mt-2 text-xs text-red-700 bg-red-100 p-2 rounded'>
-                  <div className='font-semibold'>Failed:</div>
-                  <div>{validationResult.failureReason}</div>
-                  <div className='mt-1 text-red-600'>
-                    Actual: {validationResult.actualValue}
+                  <div className='font-semibold'>
+                    Failed: {validationResult.failureReason}
                   </div>
                 </div>
               )}
@@ -679,91 +1100,26 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
             )}
           </div>
         </div>
-
         {isExpanded && appState === 'build' && (
           <div className='bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-300 border-t-0 rounded-b-lg p-4 space-y-4 shadow-inner'>
             <div className='flex items-center gap-2 mb-2'>
               <Zap className='w-4 h-4 text-blue-600' />
               <h4 className='font-semibold text-gray-900 text-sm'>
-                Create Similar Assertion
+                {assertion.category === 'status'
+                  ? 'Add Status Code Assertion'
+                  : 'Create Similar Assertion'}
               </h4>
             </div>
 
-            <div className='grid grid-cols-1 sm:grid-cols-2 gap-3'>
+            {/* MODIFIED: Conditional rendering based on category */}
+            {assertion.category === 'status' ? (
+              // Simple form for status - only value input
               <div>
                 <label className='block text-xs font-medium text-gray-700 mb-1'>
-                  Field Path
+                  Expected Status Code
                 </label>
                 <Input
-                  value={inlineFormData.field}
-                  onChange={(e: any) =>
-                    setInlineFormData({
-                      ...inlineFormData,
-                      field: e.target.value,
-                    })
-                  }
-                  placeholder='e.g., data.user.email'
-                />
-              </div>
-
-              <div>
-                <label className='block text-xs font-medium text-gray-700 mb-1'>
-                  Data Type
-                </label>
-                <Select
-                  value={inlineFormData.dataType}
-                  onValueChange={(newDataType: string) => {
-                    setInlineFormData({
-                      ...inlineFormData,
-                      dataType: newDataType,
-                      operator: getOperatorsByDataType(newDataType)[0],
-                    });
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value='string'>String</SelectItem>
-                    <SelectItem value='number'>Number</SelectItem>
-                    <SelectItem value='boolean'>Boolean</SelectItem>
-                    <SelectItem value='array'>Array</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className='grid grid-cols-1 sm:grid-cols-2 gap-3'>
-              <div>
-                <label className='block text-xs font-medium text-gray-700 mb-1'>
-                  Operator
-                </label>
-                <Select
-                  value={inlineFormData.operator}
-                  onValueChange={(value: string) =>
-                    setInlineFormData({ ...inlineFormData, operator: value })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {getOperatorsByDataType(inlineFormData.dataType).map(
-                      (op) => (
-                        <SelectItem key={op} value={op}>
-                          {op}
-                        </SelectItem>
-                      )
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <label className='block text-xs font-medium text-gray-700 mb-1'>
-                  Expected Value
-                </label>
-                <Input
+                  type='number'
                   value={inlineFormData.value}
                   onChange={(e: any) =>
                     setInlineFormData({
@@ -771,23 +1127,138 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
                       value: e.target.value,
                     })
                   }
-                  placeholder='Enter expected value'
+                  placeholder='e.g., 200, 404, 500'
                 />
+                <p className='text-xs text-gray-500 mt-1'>
+                  Status assertions always check if the response status code
+                  equals your expected value
+                </p>
               </div>
-            </div>
+            ) : (
+              // Original full form for other categories
+              <>
+                <div className='grid grid-cols-1 sm:grid-cols-2 gap-3'>
+                  <div>
+                    <label className='block text-xs font-medium text-gray-700 mb-1'>
+                      Field Path
+                    </label>
+                    <Input
+                      value={inlineFormData.field}
+                      onChange={(e: any) =>
+                        setInlineFormData({
+                          ...inlineFormData,
+                          field: e.target.value,
+                        })
+                      }
+                      placeholder='e.g., data.user.email'
+                    />
+                  </div>
 
+                  <div>
+                    <label className='block text-xs font-medium text-gray-700 mb-1'>
+                      Data Type
+                    </label>
+                    <Select
+                      value={inlineFormData.dataType}
+                      onValueChange={(newDataType: string) => {
+                        setInlineFormData({
+                          ...inlineFormData,
+                          dataType: newDataType,
+                          operator: getOperatorsByDataType(newDataType)[0],
+                        });
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value='string'>String</SelectItem>
+                        <SelectItem value='number'>Number</SelectItem>
+                        <SelectItem value='boolean'>Boolean</SelectItem>
+                        <SelectItem value='date'>Date</SelectItem>
+                        <SelectItem value='null'>null</SelectItem>
+                        <SelectItem value='object'>Object</SelectItem>
+                        <SelectItem value='array'>Array</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className='grid grid-cols-1 sm:grid-cols-2 gap-3'>
+                  <div>
+                    <label className='block text-xs font-medium text-gray-700 mb-1'>
+                      Operator
+                    </label>
+                    <Select
+                      value={inlineFormData.operator}
+                      onValueChange={(value: string) =>
+                        setInlineFormData({
+                          ...inlineFormData,
+                          operator: value,
+                        })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {getOperatorsByDataType(inlineFormData.dataType).map(
+                          (op) => (
+                            <SelectItem key={op} value={op}>
+                              {getOperatorDisplayLabel(op)}{' '}
+                            </SelectItem>
+                          )
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <label className='block text-xs font-medium text-gray-700 mb-1'>
+                      Expected Value
+                    </label>
+                    <Input
+                      value={inlineFormData.value}
+                      onChange={(e: any) =>
+                        setInlineFormData({
+                          ...inlineFormData,
+                          value: e.target.value,
+                        })
+                      }
+                      placeholder='Enter expected value'
+                    />
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* MODIFIED: Conditional preview */}
             <div className='bg-white border border-blue-200 rounded-lg p-3'>
               <div className='text-xs font-medium text-gray-600 mb-1'>
                 Preview
               </div>
               <div className='font-mono text-sm text-gray-900'>
-                <span className='text-blue-600'>
-                  {inlineFormData.field || '...'}
-                </span>{' '}
-                <span className='text-gray-600'>{inlineFormData.operator}</span>{' '}
-                <span className='text-blue-600'>
-                  {inlineFormData.value || '...'}
-                </span>
+                {assertion.category === 'status' ? (
+                  <>
+                    <span className='text-blue-600'>status</span>{' '}
+                    <span className='text-gray-600'>=</span>{' '}
+                    <span className='text-blue-600'>
+                      {inlineFormData.value || '...'}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span className='text-blue-600'>
+                      {inlineFormData.field || '...'}
+                    </span>{' '}
+                    <span className='text-gray-600'>
+                      {getOperatorDisplayLabel(inlineFormData.operator)}
+                    </span>{' '}
+                    <span className='text-blue-600'>
+                      {inlineFormData.value || '...'}
+                    </span>
+                  </>
+                )}
               </div>
             </div>
 
@@ -797,7 +1268,7 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
               </Button>
               <Button
                 onClick={() => handleSaveInlineAssertion(assertion.category)}
-                disabled={!inlineFormData.field || !inlineFormData.value}
+                disabled={!inlineFormData.value}
               >
                 <Plus className='w-4 h-4 mr-1' />
                 Add Assertion
@@ -810,83 +1281,21 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
             <div className='flex items-center gap-2 mb-2'>
               <Edit2 className='w-4 h-4 text-purple-600' />
               <h4 className='font-semibold text-gray-900 text-sm'>
-                Edit Assertion
+                {assertion.category === 'status'
+                  ? 'Edit Status Code Assertion'
+                  : 'Edit Assertion'}
               </h4>
             </div>
 
-            <div className='grid grid-cols-1 sm:grid-cols-2 gap-3'>
+            {/* MODIFIED: Conditional rendering based on category */}
+            {assertion.category === 'status' ? (
+              // Simple form for status - only value input
               <div>
                 <label className='block text-xs font-medium text-gray-700 mb-1'>
-                  Field Path
+                  Expected Status Code
                 </label>
                 <Input
-                  value={editFormData.field}
-                  onChange={(e: any) =>
-                    setEditFormData({
-                      ...editFormData,
-                      field: e.target.value,
-                    })
-                  }
-                  placeholder='e.g., data.user.email'
-                />
-              </div>
-
-              <div>
-                <label className='block text-xs font-medium text-gray-700 mb-1'>
-                  Data Type
-                </label>
-                <Select
-                  value={editFormData.dataType}
-                  onValueChange={(newDataType: string) => {
-                    setEditFormData({
-                      ...editFormData,
-                      dataType: newDataType,
-                      operator: getOperatorsByDataType(newDataType)[0],
-                    });
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value='string'>String</SelectItem>
-                    <SelectItem value='number'>Number</SelectItem>
-                    <SelectItem value='boolean'>Boolean</SelectItem>
-                    <SelectItem value='array'>Array</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className='grid grid-cols-1 sm:grid-cols-2 gap-3'>
-              <div>
-                <label className='block text-xs font-medium text-gray-700 mb-1'>
-                  Operator
-                </label>
-                <Select
-                  value={editFormData.operator}
-                  onValueChange={(value: string) =>
-                    setEditFormData({ ...editFormData, operator: value })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {getOperatorsByDataType(editFormData.dataType).map((op) => (
-                      <SelectItem key={op} value={op}>
-                        {op}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <label className='block text-xs font-medium text-gray-700 mb-1'>
-                  Expected Value
-                </label>
-                <Input
+                  type='number'
                   value={editFormData.value}
                   onChange={(e: any) =>
                     setEditFormData({
@@ -894,23 +1303,135 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
                       value: e.target.value,
                     })
                   }
-                  placeholder='Enter expected value'
+                  placeholder='e.g., 200, 404, 500'
                 />
+                <p className='text-xs text-gray-500 mt-1'>
+                  Status assertions always check if the response status code
+                  equals your expected value
+                </p>
               </div>
-            </div>
+            ) : (
+              // Original full form for other categories
+              <>
+                <div className='grid grid-cols-1 sm:grid-cols-2 gap-3'>
+                  <div>
+                    <label className='block text-xs font-medium text-gray-700 mb-1'>
+                      Field Path
+                    </label>
+                    <Input
+                      value={editFormData.field}
+                      onChange={(e: any) =>
+                        setEditFormData({
+                          ...editFormData,
+                          field: e.target.value,
+                        })
+                      }
+                      placeholder='e.g., data.user.email'
+                    />
+                  </div>
 
+                  <div>
+                    <label className='block text-xs font-medium text-gray-700 mb-1'>
+                      Data Type
+                    </label>
+                    <Select
+                      value={editFormData.dataType}
+                      onValueChange={(newDataType: string) => {
+                        setEditFormData({
+                          ...editFormData,
+                          dataType: newDataType,
+                          operator: getOperatorsByDataType(newDataType)[0],
+                        });
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value='string'>String</SelectItem>
+                        <SelectItem value='number'>Number</SelectItem>
+                        <SelectItem value='boolean'>Boolean</SelectItem>
+                        <SelectItem value='date'>Date</SelectItem>
+                        <SelectItem value='object'>Object</SelectItem>
+                        <SelectItem value='null'>null</SelectItem>
+                        <SelectItem value='array'>Array</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className='grid grid-cols-1 sm:grid-cols-2 gap-3'>
+                  <div>
+                    <label className='block text-xs font-medium text-gray-700 mb-1'>
+                      Operator
+                    </label>
+                    <Select
+                      value={editFormData.operator}
+                      onValueChange={(value: string) =>
+                        setEditFormData({ ...editFormData, operator: value })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {getOperatorsByDataType(editFormData.dataType).map(
+                          (op) => (
+                            <SelectItem key={op} value={op}>
+                              {getOperatorDisplayLabel(op)}
+                            </SelectItem>
+                          )
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <label className='block text-xs font-medium text-gray-700 mb-1'>
+                      Expected Value
+                    </label>
+                    <Input
+                      value={editFormData.value}
+                      onChange={(e: any) =>
+                        setEditFormData({
+                          ...editFormData,
+                          value: e.target.value,
+                        })
+                      }
+                      placeholder='Enter expected value'
+                    />
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* MODIFIED: Conditional preview */}
             <div className='bg-white border border-purple-200 rounded-lg p-3'>
               <div className='text-xs font-medium text-gray-600 mb-1'>
                 Preview
               </div>
               <div className='font-mono text-sm text-gray-900'>
-                <span className='text-purple-600'>
-                  {editFormData.field || '...'}
-                </span>{' '}
-                <span className='text-gray-600'>{editFormData.operator}</span>{' '}
-                <span className='text-purple-600'>
-                  {editFormData.value || '...'}
-                </span>
+                {assertion.category === 'status' ? (
+                  <>
+                    <span className='text-purple-600'>status</span>{' '}
+                    <span className='text-gray-600'>=</span>{' '}
+                    <span className='text-purple-600'>
+                      {editFormData.value || '...'}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span className='text-purple-600'>
+                      {editFormData.field || '...'}
+                    </span>{' '}
+                    <span className='text-gray-600'>
+                      {getOperatorDisplayLabel(editFormData.operator)}
+                    </span>{' '}
+                    <span className='text-purple-600'>
+                      {editFormData.value || '...'}
+                    </span>
+                  </>
+                )}
               </div>
             </div>
 
@@ -920,7 +1441,7 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
               </Button>
               <Button
                 onClick={() => handleSaveEdit(assertion.id)}
-                disabled={!editFormData.field || !editFormData.value}
+                disabled={!editFormData.value}
               >
                 <Save className='w-4 h-4 mr-1' />
                 Save Changes
@@ -1060,7 +1581,7 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
                 </div>
               )}
 
-            <div className='space-y-3'>
+            <div className='space-y-3 ml-2 mt-2'>
               {categoryAssertions.map((assertion) =>
                 renderAssertion(assertion)
               )}
@@ -1081,7 +1602,7 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
       <div className='min-h-screen bg-gray-50 p-6 flex items-center justify-center'>
         <div className='text-center'>
           <AlertCircle className='w-16 h-16 text-gray-400 mx-auto mb-4' />
-          <h2 className='text-xl font-semibold text-gray-900 mb-2'>
+          <h2 className='text-xl sm:text-2xl font-semibold text-gray-900 mb-2'>
             No Assertions Found
           </h2>
           <p className='text-gray-600'>
@@ -1094,13 +1615,10 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
   }
 
   return (
-    <div className='space-y-3'>
+    <div className='space-y-3 ml-2 mt-2'>
       <div className='bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-5 md:p-6'>
         <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4'>
           <div>
-            <h1 className='text-xl sm:text-2xl font-bold text-gray-900'>
-              API Assertions
-            </h1>
             <p className='text-sm sm:text-base text-gray-600 mt-1'>
               {appState === 'build' &&
                 'Select assertions to validate your API responses'}
@@ -1111,10 +1629,11 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
           <div className='flex items-center gap-3'>
             <div className='text-right'>
               <div className='text-sm text-gray-600'>
-                {appState === 'results' ? 'Total Selected' : 'Selected'}
-              </div>
-              <div className='text-2xl font-bold text-blue-600'>
-                {getSelectedCount()}
+                {appState === 'results' ? 'Total Selected' : 'Selected'}:{' '}
+                <span className='text-2xl font-bold text-blue-600'>
+                  {' '}
+                  {getSelectedCount()}{' '}
+                </span>
               </div>
             </div>
           </div>
@@ -1191,7 +1710,27 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
         )}
 
         <div className='flex flex-col lg:flex-row gap-3'>
-          <div className='relative flex-1'>
+          {/* Category Selector - Left side, smaller width */}
+          <div className='lg:w-52'>
+            <Select
+              value={selectedCategory}
+              onValueChange={setSelectedCategory}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {categories.map((cat) => (
+                  <SelectItem key={cat.id} value={cat.id}>
+                    {cat.label} ({cat.count})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Search Bar - Center, larger width */}
+          <div className='relative flex-1 lg:max-w-3xl lg:mx-auto'>
             <Search className='w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400' />
             <Input
               placeholder='Search assertions...'
@@ -1201,20 +1740,8 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
             />
           </div>
 
-          <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {categories.map((cat) => (
-                <SelectItem key={cat.id} value={cat.id}>
-                  {cat.label} ({cat.count})
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <div className='flex gap-2'>
+          {/* Action Buttons - Right side */}
+          <div className='flex gap-2 lg:ml-auto'>
             <Button
               variant={selectedView === 'all' ? 'default' : 'outline'}
               onClick={() => setSelectedView('all')}
@@ -1231,11 +1758,12 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
             </Button>
           </div>
 
+          {/* Clear All Button */}
           <Button
             variant='outline'
             onClick={removeAllSelected}
             disabled={getSelectedCount() === 0}
-            className='w-full lg:w-auto'
+            className='w-full lg:w-auto bg-transparent'
           >
             <Trash2 className='w-4 h-4 mr-2' />
             Clear All
@@ -1270,6 +1798,10 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
             <Plus className='w-5 h-5' />
             Quick Add Custom Assertion
           </h3>
+          <p className='text-xs text-gray-500 mb-3'>
+            For status code assertions, use the "+" button in the Status Code
+            section
+          </p>
           <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3'>
             <Input
               placeholder='Field path'
@@ -1288,13 +1820,20 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value='equals'>equals</SelectItem>
-                <SelectItem value='contains'>contains</SelectItem>
-                <SelectItem value='not contains'>not contains</SelectItem>
-                <SelectItem value='exists'>exists</SelectItem>
-                <SelectItem value='type'>type</SelectItem>
-                <SelectItem value='lessThan'>lessThan</SelectItem>
-                <SelectItem value='greaterThan'>greaterThan</SelectItem>
+                <SelectItem value='equals'>Equals (=)</SelectItem>
+                <SelectItem value='contains'>Contains</SelectItem>
+                <SelectItem value='field_not_contains'>
+                  Not Contains
+                </SelectItem>{' '}
+                <SelectItem value='exists'>Exists</SelectItem>
+                <SelectItem value='field_type'>Type Check</SelectItem>{' '}
+                <SelectItem value='field_less_than'>
+                  Less Than (&lt;)
+                </SelectItem>{' '}
+                <SelectItem value='field_greater_than'>
+                  Greater Than (&gt;)
+                </SelectItem>{' '}
+                <SelectItem value='array_length'>Array Length</SelectItem>{' '}
               </SelectContent>
             </Select>
             <Input
@@ -1330,10 +1869,16 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
             <div className='relative' ref={saveMenuRef}>
               <Button
                 onClick={() => setShowSaveMenu(!showSaveMenu)}
-                disabled={getSelectedCount() === 0}
+                disabled={
+                  getSelectedCount() === 0 || saveAssertionsMutation.isPending
+                }
                 variant='outline'
               >
-                <Save className='w-5 h-5 mr-2' />
+                {saveAssertionsMutation.isPending ? (
+                  <Loader2 className='w-5 h-5 mr-2 animate-spin' />
+                ) : (
+                  <Save className='w-5 h-5 mr-2' />
+                )}
                 Save Assertions
                 <ChevronDown className='w-4 h-4 ml-2' />
               </Button>
@@ -1342,12 +1887,19 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
                 <div className='absolute right-0 mt-2 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-10'>
                   <button
                     onClick={handleSaveAssertions}
-                    className='w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors border-b border-gray-100 flex items-center gap-3'
+                    disabled={saveAssertionsMutation.isPending}
+                    className='w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors border-b border-gray-100 flex items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed'
                   >
-                    <Save className='w-4 h-4 text-gray-600' />
+                    {saveAssertionsMutation.isPending ? (
+                      <Loader2 className='w-4 h-4 text-gray-600 animate-spin' />
+                    ) : (
+                      <Save className='w-4 h-4 text-gray-600' />
+                    )}
                     <div>
                       <div className='font-medium text-gray-900 text-sm'>
-                        Save Only
+                        {saveAssertionsMutation.isPending
+                          ? 'Saving...'
+                          : 'Save Only'}
                       </div>
                       <div className='text-xs text-gray-500'>
                         Persist to database
@@ -1356,11 +1908,18 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
                   </button>
                   <button
                     onClick={handleSaveAndVerify}
-                    className='w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors rounded-b-lg flex items-center gap-3'
+                    disabled={saveAssertionsMutation.isPending}
+                    className='w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors rounded-b-lg flex items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed'
                   >
                     <div className='flex items-center gap-1'>
-                      <Save className='w-4 h-4 text-gray-600' />
-                      <Play className='w-3 h-3 text-gray-600' />
+                      {saveAssertionsMutation.isPending ? (
+                        <Loader2 className='w-4 h-4 text-gray-600 animate-spin' />
+                      ) : (
+                        <>
+                          <Save className='w-4 h-4 text-gray-600' />
+                          <Play className='w-3 h-3 text-gray-600' />
+                        </>
+                      )}
                     </div>
                     <div>
                       <div className='font-medium text-gray-900 text-sm'>
