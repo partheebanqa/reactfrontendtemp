@@ -380,6 +380,27 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
       return;
     }
 
+    if (category === 'performance') {
+      const currentAssertion = localAssertions.find(
+        (a) => a.id === assertionId
+      );
+      const isResponseTime = currentAssertion?.type === 'response_time';
+      const isPayloadSize = currentAssertion?.type === 'payload_size';
+
+      setExpandedAddForm(assertionId);
+      setInlineFormData({
+        field: isResponseTime
+          ? 'response_time'
+          : isPayloadSize
+          ? 'payload_size'
+          : '',
+        operator: 'less_than',
+        value: '',
+        dataType: 'performance',
+      });
+      return;
+    }
+
     const currentAssertion = localAssertions.find((a) => a.id === assertionId);
 
     let detectedType = 'string';
@@ -485,6 +506,41 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
       return;
     }
 
+    // Handle performance assertions
+    if (category === 'performance') {
+      const isResponseTime = inlineFormData.field === 'response_time';
+      const isPayloadSize = inlineFormData.field === 'payload_size';
+
+      const operatorLabel =
+        inlineFormData.operator === 'less_than'
+          ? 'less than'
+          : inlineFormData.operator === 'greater_than'
+          ? 'greater than'
+          : 'equals';
+
+      const newAssertion: Assertion = {
+        id: `custom_${Date.now()}`,
+        field: undefined,
+        type: isResponseTime ? 'response_time' : 'payload_size',
+        description: isResponseTime
+          ? `Response time ${operatorLabel} ${inlineFormData.value}ms`
+          : `Payload size ${operatorLabel} ${inlineFormData.value} bytes`,
+        operator: inlineFormData.operator,
+        expectedValue: inlineFormData.value,
+        enabled: true,
+        category: 'performance',
+        group: 'custom',
+      };
+      const updated = [...localAssertions, newAssertion];
+      setLocalAssertions(updated);
+      setHasUnsavedChanges(true);
+      if (onUpdateAssertions) {
+        onUpdateAssertions(updated);
+      }
+      handleCancelInlineAdd();
+      return;
+    }
+
     const config = getFieldAssertionConfig(
       inlineFormData.operator,
       inlineFormData.value,
@@ -523,9 +579,24 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
     }
 
     setExpandedEditForm(assertion.id);
-    const detectedType = inferDataType(assertion.expectedValue);
+
+    // Detect data type for the edit form
+    let detectedType = 'string';
+
+    if (assertion.category === 'performance') {
+      detectedType = 'performance';
+    } else {
+      detectedType = inferDataType(assertion.expectedValue);
+    }
+
     setEditFormData({
-      field: assertion.field || '',
+      field:
+        assertion.field ||
+        (assertion.type === 'response_time'
+          ? 'response_time'
+          : assertion.type === 'payload_size'
+          ? 'payload_size'
+          : ''),
       operator: assertion.operator || 'equals',
       value: String(assertion.expectedValue || ''),
       dataType: detectedType,
@@ -560,6 +631,38 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
               description: `Status code equals ${editFormData.value}`,
               type: 'status_equals',
               operator: 'equals',
+            }
+          : a
+      );
+      setLocalAssertions(updated);
+      setHasUnsavedChanges(true);
+      if (onUpdateAssertions) {
+        onUpdateAssertions(updated);
+      }
+      handleCancelEdit();
+      return;
+    }
+
+    // Handle performance assertions
+    if (assertionBeingEdited?.category === 'performance') {
+      const isResponseTime = assertionBeingEdited.type === 'response_time';
+      const operatorLabel =
+        editFormData.operator === 'less_than'
+          ? 'less than'
+          : editFormData.operator === 'greater_than'
+          ? 'greater than'
+          : 'equals';
+
+      const updated = localAssertions.map((a) =>
+        a.id === assertionId
+          ? {
+              ...a,
+              expectedValue: editFormData.value,
+              description: isResponseTime
+                ? `Response time ${operatorLabel} ${editFormData.value}ms`
+                : `Payload size ${operatorLabel} ${editFormData.value} bytes`,
+              type: assertionBeingEdited.type,
+              operator: editFormData.operator,
             }
           : a
       );
@@ -1197,6 +1300,77 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
                   equals your expected value
                 </p>
               </div>
+            ) : assertion.category === 'performance' ? (
+              <>
+                <div className='grid grid-cols-1 sm:grid-cols-2 gap-3'>
+                  <div>
+                    <label className='block text-xs font-medium text-gray-700 mb-1'>
+                      Metric Type
+                    </label>
+                    <Input
+                      value={
+                        inlineFormData.field === 'response_time'
+                          ? 'Response Time'
+                          : 'Payload Size'
+                      }
+                      disabled
+                      className='bg-gray-50'
+                    />
+                  </div>
+
+                  <div>
+                    <label className='block text-xs font-medium text-gray-700 mb-1'>
+                      Operator
+                    </label>
+                    <Select
+                      value={inlineFormData.operator}
+                      onValueChange={(value: string) =>
+                        setInlineFormData({
+                          ...inlineFormData,
+                          operator: value,
+                        })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value='less_than'>
+                          Less Than (&lt;)
+                        </SelectItem>
+                        <SelectItem value='greater_than'>
+                          Greater Than (&gt;)
+                        </SelectItem>
+                        <SelectItem value='equals'>Equals (=)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className='block text-xs font-medium text-gray-700 mb-1'>
+                    Expected Value{' '}
+                    {inlineFormData.field === 'response_time'
+                      ? '(milliseconds)'
+                      : '(bytes)'}
+                  </label>
+                  <Input
+                    type='number'
+                    value={inlineFormData.value}
+                    onChange={(e: any) =>
+                      setInlineFormData({
+                        ...inlineFormData,
+                        value: e.target.value,
+                      })
+                    }
+                    placeholder={
+                      inlineFormData.field === 'response_time'
+                        ? 'e.g., 500'
+                        : 'e.g., 1024'
+                    }
+                  />
+                </div>
+              </>
             ) : (
               <>
                 <div className='grid grid-cols-1 sm:grid-cols-2 gap-3'>
@@ -1307,6 +1481,23 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
                       {inlineFormData.value || '...'}
                     </span>
                   </>
+                ) : assertion.category === 'performance' ? (
+                  <>
+                    <span className='text-blue-600'>
+                      {inlineFormData.field === 'response_time'
+                        ? 'response_time'
+                        : 'payload_size'}
+                    </span>{' '}
+                    <span className='text-gray-600'>
+                      {getOperatorDisplayLabel(inlineFormData.operator)}
+                    </span>{' '}
+                    <span className='text-blue-600'>
+                      {inlineFormData.value || '...'}
+                      {inlineFormData.field === 'response_time'
+                        ? 'ms'
+                        : ' bytes'}
+                    </span>
+                  </>
                 ) : (
                   <>
                     <span className='text-blue-600'>
@@ -1369,6 +1560,74 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
                   equals your expected value
                 </p>
               </div>
+            ) : assertion.category === 'performance' ? (
+              <>
+                <div className='grid grid-cols-1 sm:grid-cols-2 gap-3'>
+                  <div>
+                    <label className='block text-xs font-medium text-gray-700 mb-1'>
+                      Metric Type
+                    </label>
+                    <Input
+                      value={
+                        editFormData.field === 'response_time'
+                          ? 'Response Time'
+                          : 'Payload Size'
+                      }
+                      disabled
+                      className='bg-gray-50'
+                    />
+                  </div>
+
+                  <div>
+                    <label className='block text-xs font-medium text-gray-700 mb-1'>
+                      Operator
+                    </label>
+                    <Select
+                      value={editFormData.operator}
+                      onValueChange={(value: string) =>
+                        setEditFormData({ ...editFormData, operator: value })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value='less_than'>
+                          Less Than (&lt;)
+                        </SelectItem>
+                        <SelectItem value='greater_than'>
+                          Greater Than (&gt;)
+                        </SelectItem>
+                        <SelectItem value='equals'>Equals (=)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className='block text-xs font-medium text-gray-700 mb-1'>
+                    Expected Value{' '}
+                    {editFormData.field === 'response_time'
+                      ? '(milliseconds)'
+                      : '(bytes)'}
+                  </label>
+                  <Input
+                    type='number'
+                    value={editFormData.value}
+                    onChange={(e: any) =>
+                      setEditFormData({
+                        ...editFormData,
+                        value: e.target.value,
+                      })
+                    }
+                    placeholder={
+                      editFormData.field === 'response_time'
+                        ? 'e.g., 500'
+                        : 'e.g., 1024'
+                    }
+                  />
+                </div>
+              </>
             ) : (
               <>
                 <div className='grid grid-cols-1 sm:grid-cols-2 gap-3'>
@@ -1467,6 +1726,7 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
               <div className='text-xs font-medium text-gray-600 mb-1'>
                 Preview
               </div>
+
               <div className='font-mono text-sm text-gray-900'>
                 {assertion.category === 'status' ? (
                   <>
@@ -1474,6 +1734,21 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
                     <span className='text-gray-600'>=</span>{' '}
                     <span className='text-purple-600'>
                       {editFormData.value || '...'}
+                    </span>
+                  </>
+                ) : assertion.category === 'performance' ? (
+                  <>
+                    <span className='text-purple-600'>
+                      {editFormData.field === 'response_time'
+                        ? 'response_time'
+                        : 'payload_size'}
+                    </span>{' '}
+                    <span className='text-gray-600'>
+                      {getOperatorDisplayLabel(editFormData.operator)}
+                    </span>{' '}
+                    <span className='text-purple-600'>
+                      {editFormData.value || '...'}
+                      {editFormData.field === 'response_time' ? 'ms' : ' bytes'}
                     </span>
                   </>
                 ) : (
