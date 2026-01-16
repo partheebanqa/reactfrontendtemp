@@ -480,7 +480,12 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
   };
 
   const handleSaveInlineAssertion = (category: string) => {
-    if (!inlineFormData.field || !inlineFormData.value) {
+    // For null and boolean types, value is not required
+    const requiresValue =
+      inlineFormData.dataType !== 'null' &&
+      inlineFormData.dataType !== 'boolean';
+
+    if (!inlineFormData.field || (requiresValue && !inlineFormData.value)) {
       return;
     }
 
@@ -554,7 +559,10 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
       type: config.type,
       description: config.description,
       operator: config.operator,
-      expectedValue: config.expectedValue,
+      ...(inlineFormData.dataType !== 'null' &&
+        inlineFormData.dataType !== 'boolean' && {
+          expectedValue: config.expectedValue,
+        }),
       enabled: true,
       category: category,
       group: 'custom',
@@ -581,11 +589,38 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
     setExpandedEditForm(assertion.id);
 
     // Detect data type for the edit form
+    // Detect data type for the edit form
     let detectedType = 'string';
 
     if (assertion.category === 'performance') {
       detectedType = 'performance';
-    } else {
+    } else if (assertion.dataType) {
+      // Use the stored dataType if available (most reliable)
+      detectedType = assertion.dataType;
+    } else if (
+      assertion.type === 'field_null' ||
+      assertion.type === 'field_not_null'
+    ) {
+      // Null type assertions
+      detectedType = 'null';
+    } else if (
+      assertion.type === 'field_is_true' ||
+      assertion.type === 'field_is_false'
+    ) {
+      // Boolean type assertions
+      detectedType = 'boolean';
+    } else if (
+      assertion.type === 'array_length' ||
+      assertion.type === 'array_present'
+    ) {
+      // Array type assertions
+      detectedType = 'array';
+    } else if (
+      assertion.expectedValue !== undefined &&
+      assertion.expectedValue !== null &&
+      assertion.expectedValue !== ''
+    ) {
+      // Infer from expected value only if it exists
       detectedType = inferDataType(assertion.expectedValue);
     }
 
@@ -614,7 +649,11 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
   };
 
   const handleSaveEdit = (assertionId: string) => {
-    if (!editFormData.value) {
+    // For null and boolean types, value is not required
+    const requiresValue =
+      editFormData.dataType !== 'null' && editFormData.dataType !== 'boolean';
+
+    if (requiresValue && !editFormData.value) {
       return;
     }
 
@@ -693,7 +732,10 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
             field: config.field,
             operator: config.operator,
             type: config.type,
-            expectedValue: config.expectedValue,
+            ...(editFormData.dataType !== 'null' &&
+              editFormData.dataType !== 'boolean' && {
+                expectedValue: config.expectedValue,
+              }),
             description: config.description,
           }
         : a
@@ -1449,21 +1491,25 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
                     </Select>
                   </div>
 
-                  <div>
-                    <label className='block text-xs font-medium text-gray-700 mb-1'>
-                      Expected Value
-                    </label>
-                    <Input
-                      value={inlineFormData.value}
-                      onChange={(e: any) =>
-                        setInlineFormData({
-                          ...inlineFormData,
-                          value: e.target.value,
-                        })
-                      }
-                      placeholder='Enter expected value'
-                    />
-                  </div>
+                  {/* Only show Expected Value field if NOT null or boolean */}
+                  {inlineFormData.dataType !== 'null' &&
+                    inlineFormData.dataType !== 'boolean' && (
+                      <div>
+                        <label className='block text-xs font-medium text-gray-700 mb-1'>
+                          Expected Value
+                        </label>
+                        <Input
+                          value={inlineFormData.value}
+                          onChange={(e: any) =>
+                            setInlineFormData({
+                              ...inlineFormData,
+                              value: e.target.value,
+                            })
+                          }
+                          placeholder='Enter expected value'
+                        />
+                      </div>
+                    )}
                 </div>
               </>
             )}
@@ -1520,7 +1566,12 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
               </Button>
               <Button
                 onClick={() => handleSaveInlineAssertion(assertion.category)}
-                disabled={!inlineFormData.value}
+                disabled={
+                  // For null and boolean, value is not required
+                  inlineFormData.dataType !== 'null' &&
+                  inlineFormData.dataType !== 'boolean' &&
+                  !inlineFormData.value
+                }
               >
                 <Plus className='w-4 h-4 mr-1' />
                 Add Assertion
@@ -1703,21 +1754,25 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
                     </Select>
                   </div>
 
-                  <div>
-                    <label className='block text-xs font-medium text-gray-700 mb-1'>
-                      Expected Value
-                    </label>
-                    <Input
-                      value={editFormData.value}
-                      onChange={(e: any) =>
-                        setEditFormData({
-                          ...editFormData,
-                          value: e.target.value,
-                        })
-                      }
-                      placeholder='Enter expected value'
-                    />
-                  </div>
+                  {/* Only show Expected Value field if NOT null or boolean */}
+                  {editFormData.dataType !== 'null' &&
+                    editFormData.dataType !== 'boolean' && (
+                      <div>
+                        <label className='block text-xs font-medium text-gray-700 mb-1'>
+                          Expected Value
+                        </label>
+                        <Input
+                          value={editFormData.value}
+                          onChange={(e: any) =>
+                            setEditFormData({
+                              ...editFormData,
+                              value: e.target.value,
+                            })
+                          }
+                          placeholder='Enter expected value'
+                        />
+                      </div>
+                    )}
                 </div>
               </>
             )}
@@ -1773,7 +1828,12 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
               </Button>
               <Button
                 onClick={() => handleSaveEdit(assertion.id)}
-                disabled={!editFormData.value}
+                disabled={
+                  // For null and boolean, value is not required
+                  editFormData.dataType !== 'null' &&
+                  editFormData.dataType !== 'boolean' &&
+                  !editFormData.value
+                }
               >
                 <Save className='w-4 h-4 mr-1' />
                 Save Changes
