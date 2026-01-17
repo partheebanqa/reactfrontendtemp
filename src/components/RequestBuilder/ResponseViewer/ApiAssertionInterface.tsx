@@ -2000,7 +2000,7 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
   }
 
   return (
-    <div className='space-y-3 ml-2 mt-2'>
+    <div className='space-y-3 ml-2 mt-2 mb-2'>
       <div className='bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-5 md:p-6'>
         <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4'>
           <div>
@@ -2284,110 +2284,104 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
         </div>
       )}
 
-      <div className='flex flex-col sm:flex-row justify-end gap-3'>
-        {appState === 'build' && (
-          <>
-            <Button
-              onClick={handleVerifyAssertions}
-              disabled={getSelectedCount() === 0}
-              variant='default'
-            >
-              <Play className='w-5 h-5 mr-2' />
-              Verify {getSelectedCount() > 0 && `${getSelectedCount()} `}
-              Assertions
-            </Button>
+      <div className='flex items-center gap-4'>
+        {/* Left text */}
+        {appState === 'build' && getSelectedCount() > 0 && (
+          <div className='text-sm font-medium text-blue-600'>
+            {getSelectedCount()} assertions are selected for validation
+          </div>
+        )}
 
-            <div className='relative' ref={saveMenuRef}>
+        {/* Right controls */}
+        <div className='ml-auto flex items-center gap-3'>
+          {appState === 'build' && (
+            <>
               <Button
-                onClick={() => setShowSaveMenu(!showSaveMenu)}
-                disabled={
-                  getSelectedCount() === 0 || saveAssertionsMutation.isPending
-                }
-                variant='outline'
+                onClick={handleVerifyAssertions}
+                disabled={getSelectedCount() === 0}
+                variant='default'
               >
-                {saveAssertionsMutation.isPending ? (
-                  <Loader2 className='w-5 h-5 mr-2 animate-spin' />
-                ) : (
-                  <Save className='w-5 h-5 mr-2' />
-                )}
-                Save Assertions
-                <ChevronDown className='w-4 h-4 ml-2' />
+                <Play className='w-5 h-5 mr-2' />
+                Verify {getSelectedCount() > 0 && `${getSelectedCount()} `}
+                Assertions
               </Button>
 
-              {showSaveMenu && (
-                <div className='absolute right-0 mt-2 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-10'>
-                  <button
-                    onClick={handleSaveAssertions}
-                    disabled={saveAssertionsMutation.isPending}
-                    className='w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors border-b border-gray-100 flex items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed'
-                  >
-                    {saveAssertionsMutation.isPending ? (
-                      <Loader2 className='w-4 h-4 text-gray-600 animate-spin' />
-                    ) : (
-                      <Save className='w-4 h-4 text-gray-600' />
-                    )}
-                    <div>
-                      <div className='font-medium text-gray-900 text-sm'>
-                        {saveAssertionsMutation.isPending
-                          ? 'Saving...'
-                          : 'Save Only'}
-                      </div>
-                      <div className='text-xs text-gray-500'>
-                        Persist to database
-                      </div>
-                    </div>
-                  </button>
-                  <button
-                    onClick={handleSaveAndVerify}
-                    disabled={saveAssertionsMutation.isPending}
-                    className='w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors rounded-b-lg flex items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed'
-                  >
-                    <div className='flex items-center gap-1'>
+              <div className='relative' ref={saveMenuRef}>
+                <Button
+                  onClick={() => setShowSaveMenu(!showSaveMenu)}
+                  disabled={
+                    getSelectedCount() === 0 || saveAssertionsMutation.isPending
+                  }
+                  variant='outline'
+                >
+                  {saveAssertionsMutation.isPending ? (
+                    <Loader2 className='w-5 h-5 mr-2 animate-spin' />
+                  ) : (
+                    <Save className='w-5 h-5 mr-2' />
+                  )}
+                  Save Assertions
+                  <ChevronDown className='w-4 h-4 ml-2' />
+                </Button>
+
+                {showSaveMenu && (
+                  <div className='absolute right-0 mt-2 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-10'>
+                    <button
+                      onClick={handleSaveAssertions}
+                      disabled={saveAssertionsMutation.isPending}
+                      className='w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors border-b border-gray-100 flex items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed'
+                    >
                       {saveAssertionsMutation.isPending ? (
                         <Loader2 className='w-4 h-4 text-gray-600 animate-spin' />
                       ) : (
-                        <>
-                          <Save className='w-4 h-4 text-gray-600' />
-                          <Play className='w-3 h-3 text-gray-600' />
-                        </>
+                        <Save className='w-4 h-4 text-gray-600' />
                       )}
-                    </div>
-                    <div>
-                      <div className='font-medium text-gray-900 text-sm'>
-                        Save & Verify
+                      <div>
+                        <div className='font-medium text-gray-900 text-sm'>
+                          {saveAssertionsMutation.isPending
+                            ? 'Saving...'
+                            : 'Save Only'}
+                        </div>
+                        <div className='text-xs text-gray-500'>
+                          Persist to database
+                        </div>
                       </div>
-                      <div className='text-xs text-gray-500'>
-                        Save then run validation
+                    </button>
+
+                    <button
+                      onClick={handleSaveAndVerify}
+                      disabled={saveAssertionsMutation.isPending}
+                      className='w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors rounded-b-lg flex items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed'
+                    >
+                      <div className='flex items-center gap-1'>
+                        {saveAssertionsMutation.isPending ? (
+                          <Loader2 className='w-4 h-4 text-gray-600 animate-spin' />
+                        ) : (
+                          <>
+                            <Save className='w-4 h-4 text-gray-600' />
+                            <Play className='w-3 h-3 text-gray-600' />
+                          </>
+                        )}
                       </div>
-                    </div>
-                  </button>
-                </div>
-              )}
-            </div>
-          </>
-        )}
+                      <div>
+                        <div className='font-medium text-gray-900 text-sm'>
+                          Save & Verify
+                        </div>
+                        <div className='text-xs text-gray-500'>
+                          Save then run validation
+                        </div>
+                      </div>
+                    </button>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
 
-        {appState === 'validating' && (
-          <Button disabled variant='default'>
-            <Loader2 className='w-5 h-5 mr-2 animate-spin' />
-            Validating assertions...
-          </Button>
-        )}
-      </div>
-
-      <div className='bg-white rounded-lg shadow-sm border border-gray-200 p-4'>
-        <div className='flex items-center justify-between'>
-          <div className='text-sm text-gray-600'>
-            Showing{' '}
-            {selectedView === 'all'
-              ? localAssertions.length
-              : getSelectedCount()}{' '}
-            of {localAssertions.length} assertions
-          </div>
-          {getSelectedCount() > 0 && (
-            <div className='text-sm font-medium text-blue-600'>
-              {getSelectedCount()} assertions are enabled for validation
-            </div>
+          {appState === 'validating' && (
+            <Button disabled variant='default'>
+              <Loader2 className='w-5 h-5 mr-2 animate-spin' />
+              Validating assertions...
+            </Button>
           )}
         </div>
       </div>
