@@ -384,34 +384,36 @@ export const generateAssertions = (
   });
 
   // Data Presence assertions - Static Variables
-  if (staticVariables && staticVariables.length > 0) {
-    staticVariables.forEach((variable) => {
-      assertions.push({
-        id: `data-presence-static-${variable.name}`,
-        category: 'data presence',
-        type: 'variable_present',
-        description: `Static variable '${variable.name}' is present`,
-        field: variable.name,
-        dataType: 'string',
-        enabled: false,
-      });
-    });
-  }
+  // if (staticVariables && staticVariables.length > 0) {
+  //   staticVariables.forEach((variable) => {
+  //     assertions.push({
+  //       id: `data-presence-static-${variable.name}`,
+  //       category: 'body',
+  //       type: 'contains',
+  //       description: `Static variable ${variable.name} is present`,
+  //       expectedValue: `{{${variable.name}}}`,
+  //       dataType: 'string',
+  //       enabled: false,
+  //       group: 'data_presence',
+  //     });
+  //   });
+  // }
 
-  // Data Presence assertions - Dynamic Variables
-  if (dynamicVariables && dynamicVariables.length > 0) {
-    dynamicVariables.forEach((variable) => {
-      assertions.push({
-        id: `data-presence-dynamic-${variable.name}`,
-        category: 'data presence',
-        type: 'variable_present',
-        description: `Dynamic variable '${variable.name}' is present`,
-        field: variable.name,
-        dataType: 'string',
-        enabled: false,
-      });
-    });
-  }
+  // // Data Presence assertions - Dynamic Variables
+  // if (dynamicVariables && dynamicVariables.length > 0) {
+  //   dynamicVariables.forEach((variable) => {
+  //     assertions.push({
+  //       id: `data-presence-dynamic-${variable.name}`,
+  //       category: 'body',
+  //       type: 'contains',
+  //       description: `Dynamic variable is present`,
+  //       expectedValue: `{{${variable.name}}}`,
+  //       dataType: 'string',
+  //       enabled: false,
+  //       group: 'data_presence',
+  //     });
+  //   });
+  // }
 
   // Header assertions
   // Generate HeaderGuard™ security assertions

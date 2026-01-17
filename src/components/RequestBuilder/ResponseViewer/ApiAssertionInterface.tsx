@@ -27,6 +27,7 @@ import {
   ArrowDown,
   Clock,
   TrendingUp,
+  Settings,
 } from 'lucide-react';
 import {
   Select,
@@ -75,6 +76,11 @@ interface ValidationResult extends Assertion {
   result: 'passed' | 'failed';
   actualValue?: any;
   failureReason?: string;
+  status?: string; // ADD THIS - from API "status" field
+  responseStatus?: number; // ADD THIS
+  responseTime?: number; // ADD THIS
+  responseSize?: number; // ADD THIS
+  errorMessage?: string; // ADD THIS - from API
 }
 
 interface ResponseData {
@@ -123,6 +129,9 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
   const [selectedView, setSelectedView] = useState<'all' | 'selected'>('all');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [failedAssertions, setFailedAssertions] = useState<Assertion[]>([]);
+  const [isRerunMode, setIsRerunMode] = useState(false);
+
   const [appState, setAppState] = useState<'build' | 'validating' | 'results'>(
     'build'
   );
@@ -232,12 +241,21 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
     );
 
     uniqueAssertions.forEach((assertion) => {
-      const category = assertion.category || 'other';
-      if (!grouped[category]) {
-        grouped[category] = [];
+      if (assertion.group === 'data_presence') {
+        const category = 'data presence';
+        if (!grouped[category]) {
+          grouped[category] = [];
+        }
+        grouped[category].push(assertion);
+      } else {
+        const category = assertion.category || 'other';
+        if (!grouped[category]) {
+          grouped[category] = [];
+        }
+        grouped[category].push(assertion);
       }
-      grouped[category].push(assertion);
     });
+
     return grouped;
   }, [localAssertions]);
 
@@ -251,6 +269,8 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
         label:
           category === 'HeaderGuard™'
             ? 'HeaderGuard™'
+            : category === 'data presence'
+            ? 'Data Presence'
             : category.charAt(0).toUpperCase() + category.slice(1),
         count: items.length,
       });
@@ -263,7 +283,10 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
       a.id === id ? { ...a, enabled: !a.enabled } : a
     );
     setLocalAssertions(updated);
-    setHasUnsavedChanges(true);
+
+    const hasSelected = updated.some((a) => a.enabled);
+    setHasUnsavedChanges(hasSelected);
+
     if (onUpdateAssertions) {
       onUpdateAssertions(updated);
     }
@@ -281,7 +304,10 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
   const removeAllSelected = () => {
     const updated = localAssertions.map((a) => ({ ...a, enabled: false }));
     setLocalAssertions(updated);
-    setHasUnsavedChanges(true);
+
+    // Clear unsaved changes flag since nothing is selected
+    setHasUnsavedChanges(false);
+
     if (onUpdateAssertions) {
       onUpdateAssertions(updated);
     }
@@ -758,7 +784,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
             const categoryMatch = a.category === result.category;
             const typeMatch = a.type === result.type;
             const fieldMatch = !result.field || a.field === result.field;
-
             const expectedValueMatch =
               result.expectedValue === undefined ||
               String(a.expectedValue) === String(result.expectedValue);
@@ -788,17 +813,82 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
                 : ('failed' as const),
             actualValue: result.actualValue,
             failureReason: result.errorMessage,
+            status: result.status,
+            responseStatus: result.responseStatus,
+            responseTime: result.responseTime,
+            responseSize: result.responseSize,
+            errorMessage: result.errorMessage,
           };
         }
       );
 
+      // ✅ MERGE RESULTS IF IN RERUN MODE
+      let finalResults: ValidationResult[];
+
+      if (isRerunMode && validationResults) {
+        // Keep all previously passed assertions
+        const previouslyPassedResults = validationResults.results.filter(
+          (r) => r.status === 'passed'
+        );
+
+        // Merge with new results (which only contain re-run failed assertions)
+        finalResults = [...previouslyPassedResults, ...mappedResults];
+
+        // Remove duplicates (in case an assertion was re-run)
+        finalResults = finalResults.filter((result, index, self) => {
+          const firstIndex = self.findIndex((r) => {
+            const categoryMatch = r.category === result.category;
+            const typeMatch = r.type === result.type;
+            const fieldMatch = !result.field || r.field === result.field;
+            const expectedValueMatch =
+              result.expectedValue === undefined ||
+              String(r.expectedValue) === String(result.expectedValue);
+
+            return (
+              categoryMatch && typeMatch && fieldMatch && expectedValueMatch
+            );
+          });
+
+          return index === firstIndex;
+        });
+      } else {
+        // Normal run: use all new results
+        finalResults = mappedResults;
+      }
+
+      // ✅ EXTRACT FAILED ASSERTIONS FROM FINAL RESULTS
+      const failedResults = finalResults.filter((r) => r.status === 'failed');
+
+      const failedAssertionsList: Assertion[] = failedResults
+        .map((failedResult) => {
+          const originalAssertion = localAssertions.find((a) => {
+            const categoryMatch = a.category === failedResult.category;
+            const typeMatch = a.type === failedResult.type;
+            const fieldMatch =
+              !failedResult.field || a.field === failedResult.field;
+            const expectedValueMatch =
+              failedResult.expectedValue === undefined ||
+              String(a.expectedValue) === String(failedResult.expectedValue);
+
+            return (
+              categoryMatch && typeMatch && fieldMatch && expectedValueMatch
+            );
+          });
+
+          return originalAssertion;
+        })
+        .filter(Boolean) as Assertion[];
+
+      setFailedAssertions(failedAssertionsList);
+
+      // ✅ RECALCULATE SUMMARY BASED ON FINAL RESULTS
       const summary = {
-        passed: data.assertionResults.filter((r) => r.status === 'passed')
-          .length,
-        failed: data.assertionResults.filter((r) => r.status === 'failed')
-          .length,
-        skipped: selectedAssertions.length - data.assertionResults.length,
-        total: selectedAssertions.length,
+        passed: finalResults.filter((r) => r.status === 'passed').length,
+        failed: finalResults.filter((r) => r.status === 'failed').length,
+        skipped: isRerunMode
+          ? 0 // No skipped when re-running
+          : selectedAssertions.length - finalResults.length,
+        total: finalResults.length,
       };
 
       const responseTime = data.response?.metrics?.responseTime
@@ -808,7 +898,7 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
         : 'N/A';
 
       setValidationResults({
-        results: mappedResults,
+        results: finalResults, // ✅ USE MERGED RESULTS
         summary,
         timestamp: new Date().toISOString(),
         responseTime,
@@ -817,7 +907,7 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
       setValidationHistory((prev) => {
         const updated = [
           {
-            results: mappedResults,
+            results: finalResults, // ✅ USE MERGED RESULTS
             summary,
             timestamp: new Date().toISOString(),
             responseTime,
@@ -826,6 +916,9 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
         ];
         return updated.slice(0, 10);
       });
+
+      // ✅ RESET RERUN MODE
+      setIsRerunMode(false);
 
       setAppState('results');
       setCurrentTab('results');
@@ -862,6 +955,9 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
       return;
     }
 
+    setFailedAssertions([]);
+
+    setIsRerunMode(false);
     setAppState('validating');
 
     const validationPayload: ValidationPayload = {
@@ -974,6 +1070,72 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
     setShowSaveMenu(false);
   };
 
+  const handleRerunFailed = async () => {
+    if (failedAssertions.length === 0) {
+      console.log('No failed assertions to re-run');
+      return;
+    }
+
+    console.log('Re-running failed assertions:', failedAssertions);
+
+    setIsRerunMode(true);
+
+    setAppState('validating');
+
+    const validationPayload: ValidationPayload = {
+      assertions: failedAssertions.map((assertion) => ({
+        category: assertion.category,
+        type: assertion.type,
+        description: assertion.description,
+        ...(assertion.field && { field: assertion.field }),
+        ...(assertion.operator && { operator: assertion.operator }),
+        ...(assertion.expectedValue !== undefined && {
+          expectedValue: assertion.expectedValue,
+        }),
+        ...(assertion.priority && { priority: assertion.priority }),
+        ...(assertion.impact && { impact: assertion.impact }),
+        enabled: assertion.enabled,
+        ...(assertion.group && { group: assertion.group }),
+      })),
+      response: responseData
+        ? {
+            requestId: responseData.requestId,
+            requestName: responseData.requestId,
+            ...(responseData.requestCurl && {
+              requestCurl: responseData.requestCurl,
+            }),
+            statusCode: responseData.statusCode || responseData.status || 0,
+            headers: responseData.headers,
+            body:
+              typeof responseData.body === 'string'
+                ? responseData.body
+                : JSON.stringify(responseData.body),
+            error: '',
+            extractedVariables: [],
+            ...(responseData.metrics && { metrics: responseData.metrics }),
+          }
+        : {
+            requestId: 'unknown',
+            requestName: 'unknown',
+            requestCurl: '',
+            statusCode: 0,
+            headers: {},
+            body: '',
+            error: 'No response data available',
+            extractedVariables: [],
+            metrics: { bytesReceived: 0, responseTime: 0 },
+          },
+    };
+
+    try {
+      await validationMutation.mutateAsync(validationPayload);
+    } catch (error) {
+      console.error('Failed to re-run failed assertions:', error);
+      setAppState('build');
+      setCurrentTab('build');
+    }
+  };
+
   const handleRerun = () => {
     setAppState('build');
     setCurrentTab('build');
@@ -1057,6 +1219,8 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
         return <Activity className='w-5 h-5 text-green-600' />;
       case 'status':
         return <CheckCircle className='w-5 h-5 text-orange-600' />;
+      case 'data presence':
+        return <Zap className='w-5 h-5 text-indigo-600' />;
       default:
         return <Zap className='w-5 h-5 text-gray-600' />;
     }
@@ -1900,7 +2064,7 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
           <div className='flex items-center gap-2'>
             {appState === 'build' && selectedInCategory > 0 && (
               <div className='bg-blue-600 text-white text-xs px-2 py-1 rounded-full font-medium'>
-                {selectedInCategory} enabled
+                {selectedInCategory} Selected
               </div>
             )}
           </div>
@@ -2001,12 +2165,59 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
             </p>
           </div>
           <div className='flex items-center gap-3'>
+            {/* Tab Controls */}
+            {(appState === 'results' || appState === 'validating') &&
+              validationResults && (
+                <div className='flex items-center bg-gray-100 rounded-xl p-1 w-fit'>
+                  <Button
+                    onClick={() => {
+                      setCurrentTab('build');
+                      setAppState('build');
+                    }}
+                    variant='ghost'
+                    size='sm'
+                    className={`flex items-center gap-2 rounded-lg px-4 ${
+                      currentTab === 'build'
+                        ? 'bg-white shadow-sm'
+                        : 'text-gray-500 hover:bg-transparent'
+                    }`}
+                  >
+                    <Settings className='w-4 h-4' />
+                    Build
+                  </Button>
+
+                  <Button
+                    onClick={() => {
+                      setCurrentTab('results');
+                      setAppState('results');
+                    }}
+                    variant='ghost'
+                    size='sm'
+                    className={`flex items-center gap-2 rounded-lg px-4 ${
+                      currentTab === 'results'
+                        ? 'bg-white shadow-sm'
+                        : 'text-gray-500 hover:bg-transparent'
+                    }`}
+                  >
+                    <TrendingUp className='w-4 h-4' />
+                    Results
+                    {validationResults && (
+                      <span className='ml-2 text-xs font-semibold bg-red-100 text-red-700 px-2 py-0.5 rounded-full'>
+                        {validationResults.summary.failed}/
+                        {validationResults.summary.passed +
+                          validationResults.summary.failed}
+                      </span>
+                    )}
+                  </Button>
+                </div>
+              )}
+
+            {/* Selected Count */}
             <div className='text-right'>
               <div className='text-sm text-gray-600'>
                 {appState === 'results' ? 'Total Selected' : 'Selected'}:{' '}
                 <span className='text-2xl font-bold text-blue-600'>
-                  {' '}
-                  {getSelectedCount()}{' '}
+                  {getSelectedCount()}
                 </span>
               </div>
             </div>
@@ -2044,7 +2255,7 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
                 }
               }}
               onRerunAll={handleRerun}
-              onRerunFailed={() => {}}
+              onRerunFailed={handleRerunFailed}
               onShare={() => {}}
             />
           )}
@@ -2136,6 +2347,7 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
               </div>
             </div>
           )}
+
         <div className='flex flex-col lg:flex-row gap-3'>
           <div className='lg:w-52'>
             <Select
@@ -2209,6 +2421,7 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
                   'HeaderGuard™': 'HeaderGuard™ Security',
                   performance: 'Performance Metrics',
                   status: 'Status Code',
+                  'data presence': 'Data Presence',
                 };
                 return renderCategorySection(
                   categoryKey,

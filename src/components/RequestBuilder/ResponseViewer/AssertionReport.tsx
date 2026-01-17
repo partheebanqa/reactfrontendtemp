@@ -169,7 +169,46 @@ const AssertionResults: React.FC<AssertionResultsProps> = ({
     }
 
     if (tableFilterCategory !== 'all') {
-      filtered = filtered.filter((r) => r.category === tableFilterCategory);
+      // ✅ NORMALIZE CATEGORY MATCHING
+      filtered = filtered.filter((r) => {
+        const normalizedCategory = r.category.toLowerCase().trim();
+        const filterValue = tableFilterCategory.toLowerCase();
+
+        // Match various category formats
+        if (filterValue === 'body') {
+          return (
+            normalizedCategory === 'body' ||
+            normalizedCategory === 'request body' ||
+            normalizedCategory === 'request body fields'
+          );
+        }
+        if (filterValue === 'headers') {
+          return (
+            normalizedCategory === 'headers' ||
+            normalizedCategory === 'response headers'
+          );
+        }
+        if (filterValue === 'headerguard™') {
+          return (
+            normalizedCategory === 'headerguard™' ||
+            normalizedCategory === 'security headers guard'
+          );
+        }
+        if (filterValue === 'performance') {
+          return (
+            normalizedCategory === 'performance' ||
+            normalizedCategory === 'performance checks'
+          );
+        }
+        if (filterValue === 'status') {
+          return (
+            normalizedCategory === 'status' ||
+            normalizedCategory === 'status code'
+          );
+        }
+
+        return normalizedCategory === filterValue;
+      });
     }
 
     if (tableSortConfig.key) {
@@ -565,8 +604,8 @@ const AssertionResults: React.FC<AssertionResultsProps> = ({
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value='all'>All Categories</SelectItem>
-                      <SelectItem value='headers'>Headers</SelectItem>
                       <SelectItem value='body'>Request Body</SelectItem>
+                      <SelectItem value='headers'>Response Headers</SelectItem>
                       <SelectItem value='HeaderGuard™'>Security</SelectItem>
                       <SelectItem value='performance'>Performance</SelectItem>
                       <SelectItem value='status'>Status</SelectItem>
