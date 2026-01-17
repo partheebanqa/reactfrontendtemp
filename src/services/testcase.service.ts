@@ -1,6 +1,6 @@
-import { ApiTestCase } from '../shared/types/testcase.model';
-import { apiRequest } from '@/lib/queryClient';
-import { API_TEST_CASES, API_TEST_SUITES } from '@/config/apiRoutes';
+import { ApiTestCase } from "../shared/types/testcase.model";
+import { apiRequest } from "@/lib/queryClient";
+import { API_TEST_CASES, API_TEST_SUITES } from "@/config/apiRoutes";
 
 export interface TestCasesResponse {
   testCases: ApiTestCase[];
@@ -8,12 +8,12 @@ export interface TestCasesResponse {
 
 export const getTestCasesByRequestId = async (
   requestId: string,
-  testSuiteId: string
+  testSuiteId: string,
 ): Promise<TestCasesResponse> => {
   try {
     const response = await apiRequest(
-      'GET',
-      `${API_TEST_CASES}?r=${requestId}&ts=${testSuiteId}`
+      "GET",
+      `${API_TEST_CASES}?r=${requestId}&ts=${testSuiteId}`,
     );
 
     if (!response.ok) {
@@ -26,22 +26,22 @@ export const getTestCasesByRequestId = async (
       return JSON.parse(responseText);
     } catch (jsonError) {
       console.warn(
-        'JSON parsing failed, attempting to clean response:',
-        jsonError
+        "JSON parsing failed, attempting to clean response:",
+        jsonError,
       );
 
       const jsonObjects = responseText.split(/\}\s*\{/);
 
       if (jsonObjects.length > 1) {
-        const firstJsonString = jsonObjects[0] + '}';
+        const firstJsonString = jsonObjects[0] + "}";
         return JSON.parse(firstJsonString);
       }
 
       throw jsonError;
     }
   } catch (error: any) {
-    console.error('Error fetching test cases:', error);
-    throw new Error(error.message || 'Failed to fetch test cases');
+    console.error("Error fetching test cases:", error);
+    throw new Error(error.message || "Failed to fetch test cases");
   }
 };
 
@@ -49,7 +49,7 @@ export const saveTestCasesForRequest = async (
   testSuiteId: string,
   requestId: string,
   selectedTestCaseIds: string[],
-  allTestCaseIds: string[]
+  allTestCaseIds: string[],
 ): Promise<void> => {
   try {
     // Map all test cases but include only selected ones
@@ -58,20 +58,48 @@ export const saveTestCasesForRequest = async (
       .map((id) => ({ testCaseId: id, isSelected: true }));
 
     const response = await apiRequest(
-      'PUT',
+      "PUT",
       `${API_TEST_SUITES}/${testSuiteId}/request/${requestId}`,
       {
         body: JSON.stringify({ testCases }),
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
-      }
+      },
     );
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
   } catch (error: any) {
-    throw new Error(error.message || 'Failed to save test cases');
+    throw new Error(error.message || "Failed to save test cases");
+  }
+};
+
+export const updateTestCase = async (
+  testCaseId: string,
+  payload: {
+    name: string;
+    expectedStatus: number;
+  },
+): Promise<void> => {
+  try {
+    const response = await apiRequest(
+      "PATCH",
+      `${API_TEST_CASES}/${testCaseId}`,
+      {
+        body: JSON.stringify(payload),
+        headers: {
+          "Content-Type": "application/json",
+          accept: "application/json",
+        },
+      },
+    );
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+  } catch (error: any) {
+    throw new Error(error.message || "Failed to update test case");
   }
 };
