@@ -557,7 +557,7 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
         type: isResponseTime ? 'response_time' : 'payload_size',
         description: isResponseTime
           ? `Response time ${operatorLabel} ${inlineFormData.value}ms`
-          : `Payload size ${operatorLabel} ${inlineFormData.value} bytes`,
+          : `Payload size ${operatorLabel} ${inlineFormData.value} kb`,
         operator: inlineFormData.operator,
         expectedValue: inlineFormData.value,
         enabled: true,
@@ -727,7 +727,7 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
               expectedValue: editFormData.value,
               description: isResponseTime
                 ? `Response time ${operatorLabel} ${editFormData.value}ms`
-                : `Payload size ${operatorLabel} ${editFormData.value} bytes`,
+                : `Payload size ${operatorLabel} ${editFormData.value} kb`,
               type: assertionBeingEdited.type,
               operator: editFormData.operator,
             }
@@ -1557,7 +1557,7 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
                     Expected Value{' '}
                     {inlineFormData.field === 'response_time'
                       ? '(milliseconds)'
-                      : '(bytes)'}
+                      : '(kb)'}
                   </label>
                   <Input
                     type='number'
@@ -1702,9 +1702,7 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
                     </span>{' '}
                     <span className='text-blue-600'>
                       {inlineFormData.value || '...'}
-                      {inlineFormData.field === 'response_time'
-                        ? 'ms'
-                        : ' bytes'}
+                      {inlineFormData.field === 'response_time' ? 'ms' : ' kb'}
                     </span>
                   </>
                 ) : (
@@ -1822,7 +1820,7 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
                     Expected Value{' '}
                     {editFormData.field === 'response_time'
                       ? '(milliseconds)'
-                      : '(bytes)'}
+                      : '(kb)'}
                   </label>
                   <Input
                     type='number'
@@ -1965,7 +1963,7 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
                     </span>{' '}
                     <span className='text-purple-600'>
                       {editFormData.value || '...'}
-                      {editFormData.field === 'response_time' ? 'ms' : ' bytes'}
+                      {editFormData.field === 'response_time' ? 'ms' : ' kb'}
                     </span>
                   </>
                 ) : (
