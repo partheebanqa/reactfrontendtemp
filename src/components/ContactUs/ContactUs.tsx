@@ -23,9 +23,13 @@ const ContactUs: React.FC = () => {
                   <h1 className="text-3xl lg:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-300 mb-4 text-center">
                     Contact Us
                   </h1>
-                  <p className="text-purple-200 text-lg mb-8 text-center">
+                  {/* <p className="text-purple-200 text-lg mb-8 text-center">
                     Ready to start your next project? We'd love to hear from you.<br />
                     Send us a message and we'll respond as soon as possible.
+                  </p> */}
+                  <p className="text-purple-200 text-lg mb-8 text-center">
+                    Have Questions about Optraflow?
+                    <br />   We’re Here to Help You Scale Your Testing.
                   </p>
                 </>
               )}
@@ -84,8 +88,9 @@ const ContactUs: React.FC = () => {
                       </svg>
                     </div>
                     <p className="text-md text-white max-w-[250px]">
-                      No 38, SLV Layout Phase-2,<br />
-                      Naganathapura, Bangalore 560100
+                      {/* No 38, SLV Layout Phase-2,<br />
+                      Naganathapura,  */}
+                      Bangalore - 560100
                     </p>
                   </div>
                 </div>

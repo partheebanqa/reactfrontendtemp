@@ -11,10 +11,10 @@ interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
 export const CustomSelect = forwardRef<HTMLSelectElement, SelectProps>(
   ({ label, error, options, required, className = '', ...props }, ref) => {
     const selectId = `select-${label.toLowerCase().replace(/\s+/g, '-')}`;
-    
+
     return (
       <div className="space-y-1">
-        <label 
+        <label
           htmlFor={selectId}
           className="block text-sm font-medium text-cyan-100"
         >
@@ -25,6 +25,7 @@ export const CustomSelect = forwardRef<HTMLSelectElement, SelectProps>(
           <select
             ref={ref}
             id={selectId}
+
             className={`
               w-full px-0 py-3 pr-8 bg-transparent text-white 
               border-0 border-b-2 border-purple-400 focus:border-cyan-300 
@@ -41,8 +42,8 @@ export const CustomSelect = forwardRef<HTMLSelectElement, SelectProps>(
               Select {label}
             </option>
             {options.map((option) => (
-              <option 
-                key={option.value} 
+              <option
+                key={option.value}
                 value={option.value}
                 className="bg-purple-800 text-white"
               >
@@ -50,13 +51,13 @@ export const CustomSelect = forwardRef<HTMLSelectElement, SelectProps>(
               </option>
             ))}
           </select>
-          <ChevronDown 
-            className="absolute right-0 top-1/2 transform -translate-y-1/2 text-purple-300 pointer-events-none" 
+          <ChevronDown
+            className="absolute right-0 top-1/2 transform -translate-y-1/2 text-purple-300 pointer-events-none"
             size={20}
           />
         </div>
         {error && (
-          <p 
+          <p
             id={`${selectId}-error`}
             className="text-red-300 text-sm mt-1"
             role="alert"

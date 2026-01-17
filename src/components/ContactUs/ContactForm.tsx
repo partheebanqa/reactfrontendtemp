@@ -262,6 +262,9 @@ export const ContactForm: React.FC<ContactFormProps> = ({ submitted, setSubmitte
       >
         {mutation.isPending ? 'Sending Message...' : 'SEND MESSAGE'}
       </CustomButton>
+      <p className="text-sm text-white">
+        Response time: Usually within 2-4 hours during business hours
+      </p>
     </form>
   );
 };

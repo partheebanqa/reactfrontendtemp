@@ -836,9 +836,9 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
                                           <button
                                             onClick={() =>
                                               setExpandedTestId(
-                                                expandedTestId === test.id
+                                                expandedTestId === test?.id
                                                   ? null
-                                                  : test.id
+                                                  : test?.id
                                               )
                                             }
                                             className='flex items-center text-xs text-blue-500 space-x-1'
