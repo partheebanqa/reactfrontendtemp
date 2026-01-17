@@ -988,19 +988,6 @@ function AssertionModal({
               Manual
             </div>
           </button>
-          <button
-            onClick={() => setActiveTab('general')}
-            className={`flex-1 px-4 py-3 text-sm font-medium transition-all ${
-              activeTab === 'general'
-                ? 'text-blue-600 border-b-2 border-blue-600 bg-white'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            <div className='flex items-center justify-center gap-2'>
-              <Activity className='w-4 h-4' />
-              General
-            </div>
-          </button>
         </div>
 
         <div className='flex flex-col flex-1 overflow-hidden'>

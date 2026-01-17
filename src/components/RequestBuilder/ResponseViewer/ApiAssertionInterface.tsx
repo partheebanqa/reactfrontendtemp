@@ -1433,13 +1433,15 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
 
             {appState === 'build' && (
               <>
-                <button
-                  onClick={() => removeAssertion(assertion.id)}
-                  className='sm:opacity-0 sm:group-hover:opacity-100 p-1 hover:bg-red-100 rounded transition-opacity'
-                  title='Remove assertion'
-                >
-                  <X className='w-4 h-4 text-red-600' />
-                </button>
+                {assertion.enabled && (
+                  <button
+                    onClick={() => removeAssertion(assertion.id)}
+                    className='sm:opacity-0 sm:group-hover:opacity-100 p-1 hover:bg-red-100 rounded transition-opacity'
+                    title='Remove assertion'
+                  >
+                    <X className='w-4 h-4 text-red-600' />
+                  </button>
+                )}
 
                 <button
                   onClick={() =>
@@ -1483,15 +1485,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
         </div>
         {isExpanded && appState === 'build' && (
           <div className='bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-300 border-t-0 rounded-b-lg p-4 space-y-4 shadow-inner'>
-            <div className='flex items-center gap-2 mb-2'>
-              <Zap className='w-4 h-4 text-blue-600' />
-              <h4 className='font-semibold text-gray-900 text-sm'>
-                {assertion.category === 'status'
-                  ? 'Add Status Code Assertion'
-                  : 'Create Similar Assertion'}
-              </h4>
-            </div>
-
             {assertion.category === 'status' ? (
               <div>
                 <label className='block text-xs font-medium text-gray-700 mb-1'>
@@ -1554,7 +1547,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
                         <SelectItem value='greater_than'>
                           Greater Than (&gt;)
                         </SelectItem>
-                        <SelectItem value='equals'>Equals (=)</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -1820,7 +1812,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
                         <SelectItem value='greater_than'>
                           Greater Than (&gt;)
                         </SelectItem>
-                        <SelectItem value='equals'>Equals (=)</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
