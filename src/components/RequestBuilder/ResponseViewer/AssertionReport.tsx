@@ -245,39 +245,6 @@ const AssertionResults: React.FC<AssertionResultsProps> = ({
                 Completed on {new Date(timestamp).toLocaleString()}
               </p>
             </div>
-
-            <div className='flex items-center bg-gray-100 rounded-xl p-1 w-fit'>
-              <Button
-                onClick={() => onTabChange?.('build')}
-                variant='ghost'
-                size='sm'
-                className={`flex items-center gap-2 rounded-lg px-4 ${
-                  activeTab === 'build'
-                    ? 'bg-white shadow-sm'
-                    : 'text-gray-500 hover:bg-transparent'
-                }`}
-              >
-                <Settings className='w-4 h-4' />
-                Build
-              </Button>
-
-              <Button
-                onClick={() => onTabChange?.('results')}
-                variant='ghost'
-                size='sm'
-                className={`flex items-center gap-2 rounded-lg px-4 ${
-                  activeTab === 'results'
-                    ? 'bg-white shadow-sm'
-                    : 'text-gray-500 hover:bg-transparent'
-                }`}
-              >
-                <TrendingUp className='w-4 h-4' />
-                Results
-                <span className='ml-2 text-xs font-semibold bg-red-100 text-red-700 px-2 py-0.5 rounded-full'>
-                  {summary.failed}/{summary.passed + summary.failed}
-                </span>
-              </Button>
-            </div>
           </div>
 
           <div className='grid grid-cols-2 md:grid-cols-4 gap-4 mb-6'>

@@ -1418,18 +1418,21 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
 
           <div className='flex items-center gap-2'>
             {assertion.group === 'custom' && appState === 'build' && (
+              <button
+                onClick={() => handleExpandEditForm(assertion)}
+                className={`p-1 rounded ${
+                  expandedEditForm === assertion.id
+                    ? 'bg-blue-600 text-white'
+                    : 'hover:bg-gray-100 text-gray-500'
+                }`}
+                title='Edit assertion'
+              >
+                <Edit2 className='w-4 h-4' />
+              </button>
+            )}
+
+            {appState === 'build' && (
               <>
-                <button
-                  onClick={() => handleExpandEditForm(assertion)}
-                  className={`p-1 rounded ${
-                    expandedEditForm === assertion.id
-                      ? 'bg-blue-600 text-white'
-                      : 'hover:bg-gray-100 text-gray-500'
-                  }`}
-                  title='Edit assertion'
-                >
-                  <Edit2 className='w-4 h-4' />
-                </button>
                 <button
                   onClick={() => removeAssertion(assertion.id)}
                   className='sm:opacity-0 sm:group-hover:opacity-100 p-1 hover:bg-red-100 rounded transition-opacity'
@@ -1437,27 +1440,25 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
                 >
                   <X className='w-4 h-4 text-red-600' />
                 </button>
-              </>
-            )}
 
-            {appState === 'build' && (
-              <button
-                onClick={() =>
-                  handleExpandAddForm(
-                    assertion.id,
-                    assertion.field || '',
-                    assertion.category
-                  )
-                }
-                className={`p-1 rounded transition-all ${
-                  isExpanded
-                    ? 'bg-blue-600 text-white'
-                    : 'sm:opacity-0 sm:group-hover:opacity-100 hover:bg-blue-100 text-blue-600'
-                }`}
-                title='Create similar assertion'
-              >
-                <Plus className='w-4 h-4' />
-              </button>
+                <button
+                  onClick={() =>
+                    handleExpandAddForm(
+                      assertion.id,
+                      assertion.field || '',
+                      assertion.category
+                    )
+                  }
+                  className={`p-1 rounded transition-all ${
+                    isExpanded
+                      ? 'bg-blue-600 text-white'
+                      : 'hover:bg-blue-100 text-blue-600'
+                  }`}
+                  title='Create similar assertion'
+                >
+                  <Plus className='w-4 h-4' />
+                </button>
+              </>
             )}
 
             {assertion.group !== 'custom' && (
@@ -2166,51 +2167,50 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
           </div>
           <div className='flex items-center gap-3'>
             {/* Tab Controls */}
-            {(appState === 'results' || appState === 'validating') &&
-              validationResults && (
-                <div className='flex items-center bg-gray-100 rounded-xl p-1 w-fit'>
-                  <Button
-                    onClick={() => {
-                      setCurrentTab('build');
-                      setAppState('build');
-                    }}
-                    variant='ghost'
-                    size='sm'
-                    className={`flex items-center gap-2 rounded-lg px-4 ${
-                      currentTab === 'build'
-                        ? 'bg-white shadow-sm'
-                        : 'text-gray-500 hover:bg-transparent'
-                    }`}
-                  >
-                    <Settings className='w-4 h-4' />
-                    Build
-                  </Button>
+            {validationResults && (
+              <div className='flex items-center bg-gray-100 rounded-xl p-1 w-fit'>
+                <Button
+                  onClick={() => {
+                    setCurrentTab('build');
+                    setAppState('build');
+                  }}
+                  variant='ghost'
+                  size='sm'
+                  className={`flex items-center gap-2 rounded-lg px-4 ${
+                    currentTab === 'build'
+                      ? 'bg-white shadow-sm'
+                      : 'text-gray-500 hover:bg-transparent'
+                  }`}
+                >
+                  <Settings className='w-4 h-4' />
+                  Build
+                </Button>
 
-                  <Button
-                    onClick={() => {
-                      setCurrentTab('results');
-                      setAppState('results');
-                    }}
-                    variant='ghost'
-                    size='sm'
-                    className={`flex items-center gap-2 rounded-lg px-4 ${
-                      currentTab === 'results'
-                        ? 'bg-white shadow-sm'
-                        : 'text-gray-500 hover:bg-transparent'
-                    }`}
-                  >
-                    <TrendingUp className='w-4 h-4' />
-                    Results
-                    {validationResults && (
-                      <span className='ml-2 text-xs font-semibold bg-red-100 text-red-700 px-2 py-0.5 rounded-full'>
-                        {validationResults.summary.failed}/
-                        {validationResults.summary.passed +
-                          validationResults.summary.failed}
-                      </span>
-                    )}
-                  </Button>
-                </div>
-              )}
+                <Button
+                  onClick={() => {
+                    setCurrentTab('results');
+                    setAppState('results');
+                  }}
+                  variant='ghost'
+                  size='sm'
+                  className={`flex items-center gap-2 rounded-lg px-4 ${
+                    currentTab === 'results'
+                      ? 'bg-white shadow-sm'
+                      : 'text-gray-500 hover:bg-transparent'
+                  }`}
+                >
+                  <TrendingUp className='w-4 h-4' />
+                  Results
+                  {validationResults && (
+                    <span className='ml-2 text-xs font-semibold bg-red-100 text-red-700 px-2 py-0.5 rounded-full'>
+                      {validationResults.summary.failed}/
+                      {validationResults.summary.passed +
+                        validationResults.summary.failed}
+                    </span>
+                  )}
+                </Button>
+              </div>
+            )}
 
             {/* Selected Count */}
             <div className='text-right'>
@@ -2347,63 +2347,64 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
               </div>
             </div>
           )}
+        {(appState === 'build' || currentTab === 'build') && (
+          <div className='flex flex-col lg:flex-row gap-3'>
+            <div className='lg:w-52'>
+              <Select
+                value={selectedCategory}
+                onValueChange={setSelectedCategory}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.id}>
+                      {cat.label} ({cat.count})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-        <div className='flex flex-col lg:flex-row gap-3'>
-          <div className='lg:w-52'>
-            <Select
-              value={selectedCategory}
-              onValueChange={setSelectedCategory}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {categories.map((cat) => (
-                  <SelectItem key={cat.id} value={cat.id}>
-                    {cat.label} ({cat.count})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+            <div className='relative flex-1 lg:max-w-3xl lg:mx-auto'>
+              <Search className='w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400' />
+              <Input
+                placeholder='Search assertions...'
+                className='pl-10'
+                value={searchQuery}
+                onChange={(e: any) => setSearchQuery(e.target.value)}
+              />
+            </div>
 
-          <div className='relative flex-1 lg:max-w-3xl lg:mx-auto'>
-            <Search className='w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400' />
-            <Input
-              placeholder='Search assertions...'
-              className='pl-10'
-              value={searchQuery}
-              onChange={(e: any) => setSearchQuery(e.target.value)}
-            />
-          </div>
+            <div className='flex gap-2 lg:ml-auto'>
+              <Button
+                variant={selectedView === 'all' ? 'default' : 'outline'}
+                onClick={() => setSelectedView('all')}
+                className='flex-1 lg:flex-none'
+              >
+                All
+              </Button>
+              <Button
+                variant={selectedView === 'selected' ? 'default' : 'outline'}
+                onClick={() => setSelectedView('selected')}
+                className='flex-1 lg:flex-none'
+              >
+                Selected
+              </Button>
+            </div>
 
-          <div className='flex gap-2 lg:ml-auto'>
             <Button
-              variant={selectedView === 'all' ? 'default' : 'outline'}
-              onClick={() => setSelectedView('all')}
-              className='flex-1 lg:flex-none'
+              variant='outline'
+              onClick={removeAllSelected}
+              disabled={getSelectedCount() === 0}
+              className='w-full lg:w-auto bg-transparent'
             >
-              All
-            </Button>
-            <Button
-              variant={selectedView === 'selected' ? 'default' : 'outline'}
-              onClick={() => setSelectedView('selected')}
-              className='flex-1 lg:flex-none'
-            >
-              Selected
+              <Trash2 className='w-4 h-4 mr-2' />
+              Clear All
             </Button>
           </div>
-
-          <Button
-            variant='outline'
-            onClick={removeAllSelected}
-            disabled={getSelectedCount() === 0}
-            className='w-full lg:w-auto bg-transparent'
-          >
-            <Trash2 className='w-4 h-4 mr-2' />
-            Clear All
-          </Button>
-        </div>
+        )}
       </div>
 
       <div>
@@ -2522,6 +2523,12 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
                     getSelectedCount() === 0 || saveAssertionsMutation.isPending
                   }
                   variant='outline'
+                  className='
+    border-2 border-blue-500 text-blue-600
+    hover:bg-blue-50 hover:text-blue-700
+
+    shadow-sm
+  '
                 >
                   {saveAssertionsMutation.isPending ? (
                     <Loader2 className='w-5 h-5 mr-2 animate-spin' />
