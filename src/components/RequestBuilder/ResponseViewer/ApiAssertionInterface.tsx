@@ -126,6 +126,9 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
   const saveMenuRef = useRef<HTMLDivElement>(null);
   const [localAssertions, setLocalAssertions] =
     useState<Assertion[]>(assertions);
+
+  console.log('Assertionnns:', assertions);
+
   const [selectedView, setSelectedView] = useState<'all' | 'selected'>('all');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -1187,6 +1190,7 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
 
       field_contains: '⊃',
       field_equals: '=',
+      field_present: '✓',
       field_exists: '✓',
       field_type: 'T',
       field_not_contains: '⊄',
@@ -1255,9 +1259,9 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
       history.totalRuns >= 3 && failureRate > 20 && failureRate < 80;
 
     return (
-      <div key={assertion.id} className='space-y-0 '>
+      <div key={assertion.id} className='space-y-0'>
         <div
-          className={`group flex items-start gap-3 p-3 border rounded-lg ${
+          className={`group flex items-center gap-3 p-3 border rounded-lg ${
             hasResult
               ? validationResult.result === 'passed'
                 ? 'bg-green-50 border-green-300'
@@ -1267,156 +1271,150 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
               : 'bg-white border-gray-200'
           }`}
         >
-          <div className='flex items-start gap-3 flex-1 min-w-0'>
-            <button
-              onClick={() => toggleAssertion(assertion.id)}
-              disabled={appState !== 'build'}
-              className={`flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center transition-all mt-0.5 ${
-                assertion.enabled
-                  ? 'bg-blue-600 border-blue-600'
-                  : 'border-gray-300 hover:border-blue-400'
-              } ${appState !== 'build' ? 'opacity-50 cursor-not-allowed' : ''}`}
-            >
-              {assertion.enabled && <Check className='w-3 h-3 text-white' />}
-            </button>
+          {/* Checkbox */}
+          <button
+            onClick={() => toggleAssertion(assertion.id)}
+            disabled={appState !== 'build'}
+            className={`flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
+              assertion.enabled
+                ? 'bg-blue-600 border-blue-600'
+                : 'border-gray-300 hover:border-blue-400'
+            } ${appState !== 'build' ? 'opacity-50 cursor-not-allowed' : ''}`}
+          >
+            {assertion.enabled && <Check className='w-3 h-3 text-white' />}
+          </button>
 
-            <div className='flex-1 space-y-2'>
-              <div className='flex items-start gap-2 flex-wrap'>
-                <div
-                  className={`w-6 h-6 rounded flex items-center justify-center text-xs ${
-                    hasResult
-                      ? validationResult.result === 'passed'
-                        ? 'bg-green-600 text-white'
-                        : 'bg-red-600 text-white'
-                      : assertion.enabled
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-200 text-gray-600'
-                  }`}
-                >
-                  {hasResult ? (
-                    validationResult.result === 'passed' ? (
-                      '✓'
-                    ) : (
-                      '✗'
-                    )
-                  ) : (
-                    <AssertionTypeIcon assertion={assertion} />
-                  )}
-                </div>
-
-                <div className='flex items-center gap-2 flex-1'>
-                  {assertion.category === 'status' ? (
-                    <>
-                      <span className='font-medium text-gray-900 font-mono text-sm'>
-                        status
-                      </span>
-                      <span className='text-xs bg-gray-100 px-2 py-0.5 rounded'>
-                        =
-                      </span>
-                      <span className='text-sm text-gray-700 font-mono'>
-                        <span className='text-blue-600'>
-                          {assertion.expectedValue}
-                        </span>
-                      </span>
-                    </>
-                  ) : (
-                    <>
-                      {assertion.field && (
-                        <span className='font-medium text-gray-900 font-mono text-sm truncate'>
-                          {assertion.field}
-                        </span>
-                      )}
-                      {assertion.operator && (
-                        <span className='text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded'>
-                          {getOperatorDisplayLabel(assertion.operator)}{' '}
-                        </span>
-                      )}
-                      {assertion.expectedValue !== undefined &&
-                        assertion.expectedValue !== null && (
-                          <span className='text-sm text-gray-700 font-mono truncate'>
-                            ={' '}
-                            <span className='text-blue-600'>
-                              {String(assertion.expectedValue)}
-                            </span>
-                          </span>
-                        )}
-                    </>
-                  )}
-                </div>
-
-                {assertion.priority && (
-                  <span
-                    className={`text-xs px-2 py-1 rounded border ${getPriorityColor(
-                      assertion.priority
-                    )}`}
-                  >
-                    {assertion.priority}
-                  </span>
-                )}
-                {isFlaky && (
-                  <span className='flex items-center gap-1 text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded'>
-                    <TrendingUp className='w-3 h-3' />
-                    Flaky
-                  </span>
-                )}
-              </div>
-
-              <p className='text-sm text-gray-700'>{assertion.description}</p>
-
-              {hasResult && validationResult.result === 'failed' && (
-                <div className='mt-2 text-xs text-red-700 bg-red-100 p-2 rounded'>
-                  <div className='font-semibold'>
-                    Failed: {validationResult.failureReason}
-                  </div>
-                </div>
-              )}
-
-              {assertion.impact && (
-                <div className='text-xs text-gray-600 bg-gray-50 p-2 rounded border border-gray-200'>
-                  <span className='font-semibold'>Impact:</span>{' '}
-                  {assertion.impact}
-                </div>
-              )}
-
-              {history.totalRuns > 0 && appState === 'results' && (
-                <div className='flex items-center gap-4 text-xs'>
-                  <div className='flex items-center gap-2 text-gray-600'>
-                    <Clock className='w-3 h-3' />
-                    <span>
-                      History:{' '}
-                      <span className='font-medium text-green-600'>
-                        {history.passes} passed
-                      </span>
-                      {history.failures > 0 && (
-                        <>
-                          ,{' '}
-                          <span className='font-medium text-red-600'>
-                            {history.failures} failed
-                          </span>
-                        </>
-                      )}{' '}
-                      out of {history.totalRuns} runs
-                    </span>
-                  </div>
-                  {failureRate > 0 && (
-                    <div
-                      className={`px-2 py-0.5 rounded ${
-                        failureRate > 50
-                          ? 'bg-red-100 text-red-700'
-                          : failureRate > 20
-                          ? 'bg-amber-100 text-amber-700'
-                          : 'bg-gray-100 text-gray-600'
-                      }`}
-                    >
-                      {failureRate}% failure rate
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
+          {/* Status Icon */}
+          <div
+            className={`flex-shrink-0 w-7 h-7 rounded flex items-center justify-center text-xs font-semibold ${
+              hasResult
+                ? validationResult.result === 'passed'
+                  ? 'bg-green-600 text-white'
+                  : 'bg-red-600 text-white'
+                : assertion.enabled
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-200 text-gray-600'
+            }`}
+          >
+            {hasResult ? (
+              validationResult.result === 'passed' ? (
+                '✓'
+              ) : (
+                '✗'
+              )
+            ) : (
+              <AssertionTypeIcon assertion={assertion} />
+            )}
           </div>
 
-          <div className='flex items-center gap-2'>
+          {/* Main Content - Single Line */}
+          <div className='flex items-center gap-2 flex-1 min-w-0'>
+            {assertion.category === 'status' ? (
+              <>
+                <span className='font-medium text-gray-900 font-mono text-sm'>
+                  statusCode
+                </span>
+                <span className='text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded'>
+                  equals
+                </span>
+                <span className='text-sm text-gray-700 font-mono'>
+                  ={' '}
+                  <span className='text-blue-600'>
+                    {assertion.expectedValue}
+                  </span>
+                </span>
+              </>
+            ) : assertion.category === 'performance' ? (
+              <>
+                <span className='font-medium text-gray-900 font-mono text-sm truncate'>
+                  {assertion.type === 'response_time'
+                    ? 'responseTime'
+                    : 'payloadSize'}
+                </span>
+                <span className='text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded'>
+                  {getOperatorDisplayLabel(assertion.operator || 'less_than')}
+                </span>
+                <span className='text-sm text-gray-700 font-mono'>
+                  ={' '}
+                  <span className='text-blue-600'>
+                    {assertion.expectedValue}
+                  </span>
+                </span>
+              </>
+            ) : (
+              <>
+                {assertion.field && (
+                  <span className='font-medium text-gray-900 font-mono text-sm truncate'>
+                    {assertion.field}
+                  </span>
+                )}
+
+                {/* Check if type indicates no value needed (exists, null checks, boolean checks, etc.) */}
+                {assertion.type === 'field_present' ||
+                assertion.type === 'field_exists' ||
+                assertion.type?.startsWith('header') ||
+                assertion.type === 'field_null' ||
+                assertion.type === 'field_not_null' ||
+                assertion.type === 'field_is_true' ||
+                assertion.type === 'field_is_false' ||
+                assertion.type === 'field_not_empty' ||
+                assertion.type === 'array_present' ||
+                assertion.type === 'security_header_missing' ? (
+                  <span className='text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded'>
+                    {assertion.type === 'field_present' ||
+                    assertion.type === 'field_exists' ||
+                    assertion.type?.startsWith('header') ||
+                    assertion.type === 'array_present'
+                      ? 'exists'
+                      : assertion.type === 'field_null'
+                      ? 'is null'
+                      : assertion.type === 'field_not_null'
+                      ? 'is not null'
+                      : assertion.type === 'field_not_empty'
+                      ? 'not empty'
+                      : assertion.type === 'field_is_true'
+                      ? 'is true'
+                      : assertion.type === 'field_is_false'
+                      ? 'is false'
+                      : assertion.type === 'security_header_missing'
+                      ? 'should be present'
+                      : getOperatorDisplayLabel(assertion.operator || 'exists')}
+                  </span>
+                ) : (
+                  <>
+                    {/* Show operator and value for other types */}
+                    {assertion.operator && (
+                      <span className='text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded'>
+                        {getOperatorDisplayLabel(assertion.operator)}
+                      </span>
+                    )}
+                    {assertion.expectedValue !== undefined &&
+                      assertion.expectedValue !== null &&
+                      assertion.expectedValue !== '' && (
+                        <span className='text-sm text-gray-700 font-mono truncate'>
+                          ={' '}
+                          <span className='text-blue-600'>
+                            {String(assertion.expectedValue)}
+                          </span>
+                        </span>
+                      )}
+                  </>
+                )}
+              </>
+            )}
+
+            {/* Failed reason inline */}
+            {hasResult &&
+              validationResult.result === 'failed' &&
+              validationResult.failureReason && (
+                <span className='text-xs text-red-700 ml-2 truncate'>
+                  ({validationResult.failureReason})
+                </span>
+              )}
+          </div>
+
+          {/* Right Side Actions */}
+          <div className='flex items-center gap-2 flex-shrink-0'>
             {assertion.group === 'custom' && appState === 'build' && (
               <button
                 onClick={() => handleExpandEditForm(assertion)}
@@ -1433,16 +1431,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
 
             {appState === 'build' && (
               <>
-                {assertion.enabled && (
-                  <button
-                    onClick={() => removeAssertion(assertion.id)}
-                    className='sm:opacity-0 sm:group-hover:opacity-100 p-1 hover:bg-red-100 rounded transition-opacity'
-                    title='Remove assertion'
-                  >
-                    <X className='w-4 h-4 text-red-600' />
-                  </button>
-                )}
-
                 <button
                   onClick={() =>
                     handleExpandAddForm(
@@ -1483,6 +1471,8 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
             )}
           </div>
         </div>
+
+        {/* Expanded Add Form */}
         {isExpanded && appState === 'build' && (
           <div className='bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-300 border-t-0 rounded-b-lg p-4 space-y-4 shadow-inner'>
             {assertion.category === 'status' ? (
@@ -1654,7 +1644,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
                     </Select>
                   </div>
 
-                  {/* Only show Expected Value field if NOT null or boolean */}
                   {inlineFormData.dataType !== 'null' &&
                     inlineFormData.dataType !== 'boolean' && (
                       <div>
@@ -1728,7 +1717,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
               <Button
                 onClick={() => handleSaveInlineAssertion(assertion.category)}
                 disabled={
-                  // For null and boolean, value is not required
                   inlineFormData.dataType !== 'null' &&
                   inlineFormData.dataType !== 'boolean' &&
                   !inlineFormData.value
@@ -1740,6 +1728,8 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
             </div>
           </div>
         )}
+
+        {/* Expanded Edit Form */}
         {isEditing && appState === 'build' && (
           <div className='bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-300 border-t-0 rounded-b-lg p-4 space-y-4 shadow-inner'>
             <div className='flex items-center gap-2 mb-2'>
@@ -1914,7 +1904,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
                     </Select>
                   </div>
 
-                  {/* Only show Expected Value field if NOT null or boolean */}
                   {editFormData.dataType !== 'null' &&
                     editFormData.dataType !== 'boolean' && (
                       <div>
@@ -1989,7 +1978,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
               <Button
                 onClick={() => handleSaveEdit(assertion.id)}
                 disabled={
-                  // For null and boolean, value is not required
                   editFormData.dataType !== 'null' &&
                   editFormData.dataType !== 'boolean' &&
                   !editFormData.value
@@ -2004,7 +1992,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
       </div>
     );
   };
-
   const renderCategorySection = (
     categoryKey: string,
     categoryLabel: string
