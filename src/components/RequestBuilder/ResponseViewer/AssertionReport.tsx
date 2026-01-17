@@ -12,6 +12,7 @@ import {
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
+  Settings,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -54,7 +55,8 @@ interface AssertionResultsProps {
   timestamp: string;
   responseTime: string;
   validationHistory?: Record<string, ValidationHistory>;
-  onBack?: () => void;
+  activeTab?: 'build' | 'results';
+  onTabChange?: (tab: 'build' | 'results') => void;
   onRerunAll?: () => void;
   onRerunFailed?: () => void;
   onShare?: () => void;
@@ -66,7 +68,8 @@ const AssertionResults: React.FC<AssertionResultsProps> = ({
   timestamp,
   responseTime,
   validationHistory = {},
-  onBack,
+  activeTab = 'results',
+  onTabChange,
   onRerunAll,
   onRerunFailed,
   onShare,
@@ -194,7 +197,7 @@ const AssertionResults: React.FC<AssertionResultsProps> = ({
     <div className='min-h-screen bg-gray-50 p-4 sm:p-6'>
       <div className='max-w-7xl mx-auto space-y-6'>
         <div className='bg-white rounded-lg shadow-sm border border-gray-200 p-6'>
-          <div className='flex items-center justify-between mb-6'>
+          <div className='mb-6 flex items-start justify-between gap-4'>
             <div>
               <h1 className='text-2xl font-bold text-gray-900 mb-1'>
                 Validation Results
@@ -203,12 +206,39 @@ const AssertionResults: React.FC<AssertionResultsProps> = ({
                 Completed on {new Date(timestamp).toLocaleString()}
               </p>
             </div>
-            {onBack && (
-              <Button onClick={onBack} variant='ghost'>
-                <ChevronLeft className='w-4 h-4' />
-                Back to Build
+
+            <div className='flex items-center bg-gray-100 rounded-xl p-1 w-fit'>
+              <Button
+                onClick={() => onTabChange?.('build')}
+                variant='ghost'
+                size='sm'
+                className={`flex items-center gap-2 rounded-lg px-4 ${
+                  activeTab === 'build'
+                    ? 'bg-white shadow-sm'
+                    : 'text-gray-500 hover:bg-transparent'
+                }`}
+              >
+                <Settings className='w-4 h-4' />
+                Build
               </Button>
-            )}
+
+              <Button
+                onClick={() => onTabChange?.('results')}
+                variant='ghost'
+                size='sm'
+                className={`flex items-center gap-2 rounded-lg px-4 ${
+                  activeTab === 'results'
+                    ? 'bg-white shadow-sm'
+                    : 'text-gray-500 hover:bg-transparent'
+                }`}
+              >
+                <TrendingUp className='w-4 h-4' />
+                Results
+                <span className='ml-2 text-xs font-semibold bg-red-100 text-red-700 px-2 py-0.5 rounded-full'>
+                  {summary.failed}/{summary.passed + summary.failed}
+                </span>
+              </Button>
+            </div>
           </div>
 
           <div className='grid grid-cols-2 md:grid-cols-4 gap-4 mb-6'>

@@ -140,6 +140,8 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
   const [resultsViewMode, setResultsViewMode] = useState<'table' | 'category'>(
     'table'
   );
+  const [currentTab, setCurrentTab] = useState<'build' | 'results'>('build');
+
   const [tableSortConfig, setTableSortConfig] = useState<{
     key: string | null;
     direction: 'asc' | 'desc';
@@ -826,11 +828,13 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
       });
 
       setAppState('results');
+      setCurrentTab('results');
       setSelectedView('selected');
     },
     onError: (error) => {
       console.error('Validation error:', error);
       setAppState('build');
+      setCurrentTab('build');
       console.error('Validation failed:', error.message);
     },
   });
@@ -910,6 +914,7 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
     } catch (error) {
       console.error('Failed to validate assertions:', error);
       setAppState('build');
+      setCurrentTab('build');
     }
   };
 
@@ -971,12 +976,13 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
 
   const handleRerun = () => {
     setAppState('build');
+    setCurrentTab('build');
     setTimeout(() => handleVerifyAssertions(), 100);
   };
 
   const handleEditAssertions = () => {
     setAppState('build');
-    setValidationResults(null);
+    setCurrentTab('build');
   };
 
   const getAssertionHistory = (assertionId: string) => {
@@ -1892,23 +1898,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
             </span>
           </div>
           <div className='flex items-center gap-2'>
-            {appState === 'results' && validationResults && (
-              <AssertionResults
-                results={validationResults.results}
-                summary={validationResults.summary}
-                timestamp={validationResults.timestamp}
-                responseTime={validationResults.responseTime}
-                validationHistory={validationHistory}
-                onBack={handleEditAssertions}
-                onRerunAll={handleRerun}
-                onRerunFailed={() => {
-                  /* implement rerun failed logic */
-                }}
-                onShare={() => {
-                  /* implement share logic */
-                }}
-              />
-            )}
             {appState === 'build' && selectedInCategory > 0 && (
               <div className='bg-blue-600 text-white text-xs px-2 py-1 rounded-full font-medium'>
                 {selectedInCategory} enabled
@@ -2038,19 +2027,27 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
           </div>
         )}
 
-        {appState === 'results' && validationResults && (
-          <AssertionResults
-            results={validationResults.results}
-            summary={validationResults.summary}
-            timestamp={validationResults.timestamp}
-            responseTime={validationResults.responseTime}
-            validationHistory={validationHistory}
-            onBack={handleEditAssertions}
-            onRerunAll={handleRerun}
-            onRerunFailed={() => {}}
-            onShare={() => {}}
-          />
-        )}
+        {appState === 'results' &&
+          validationResults &&
+          currentTab === 'results' && (
+            <AssertionResults
+              results={validationResults.results}
+              summary={validationResults.summary}
+              timestamp={validationResults.timestamp}
+              responseTime={validationResults.responseTime}
+              validationHistory={validationHistory}
+              activeTab={currentTab}
+              onTabChange={(tab) => {
+                setCurrentTab(tab);
+                if (tab === 'build') {
+                  setAppState('build');
+                }
+              }}
+              onRerunAll={handleRerun}
+              onRerunFailed={() => {}}
+              onShare={() => {}}
+            />
+          )}
 
         {appState === 'results' &&
           showHistory &&
@@ -2198,8 +2195,7 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
       </div>
 
       <div>
-        {(appState === 'build' ||
-          (appState === 'results' && resultsViewMode === 'category')) && (
+        {(currentTab === 'build' || appState === 'build') && (
           <div>
             {(selectedCategory === 'all'
               ? Object.keys(groupedAssertions)
