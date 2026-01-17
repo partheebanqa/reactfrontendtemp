@@ -27,6 +27,7 @@ import {
   ArrowDown,
   Clock,
   TrendingUp,
+  Settings,
 } from 'lucide-react';
 import {
   Select,
@@ -75,6 +76,11 @@ interface ValidationResult extends Assertion {
   result: 'passed' | 'failed';
   actualValue?: any;
   failureReason?: string;
+  status?: string; // ADD THIS - from API "status" field
+  responseStatus?: number; // ADD THIS
+  responseTime?: number; // ADD THIS
+  responseSize?: number; // ADD THIS
+  errorMessage?: string; // ADD THIS - from API
 }
 
 interface ResponseData {
@@ -123,6 +129,9 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
   const [selectedView, setSelectedView] = useState<'all' | 'selected'>('all');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [failedAssertions, setFailedAssertions] = useState<Assertion[]>([]);
+  const [isRerunMode, setIsRerunMode] = useState(false);
+
   const [appState, setAppState] = useState<'build' | 'validating' | 'results'>(
     'build'
   );
@@ -140,6 +149,8 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
   const [resultsViewMode, setResultsViewMode] = useState<'table' | 'category'>(
     'table'
   );
+  const [currentTab, setCurrentTab] = useState<'build' | 'results'>('build');
+
   const [tableSortConfig, setTableSortConfig] = useState<{
     key: string | null;
     direction: 'asc' | 'desc';
@@ -230,12 +241,21 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
     );
 
     uniqueAssertions.forEach((assertion) => {
-      const category = assertion.category || 'other';
-      if (!grouped[category]) {
-        grouped[category] = [];
+      if (assertion.group === 'data_presence') {
+        const category = 'data presence';
+        if (!grouped[category]) {
+          grouped[category] = [];
+        }
+        grouped[category].push(assertion);
+      } else {
+        const category = assertion.category || 'other';
+        if (!grouped[category]) {
+          grouped[category] = [];
+        }
+        grouped[category].push(assertion);
       }
-      grouped[category].push(assertion);
     });
+
     return grouped;
   }, [localAssertions]);
 
@@ -249,6 +269,8 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
         label:
           category === 'HeaderGuard™'
             ? 'HeaderGuard™'
+            : category === 'data presence'
+            ? 'Data Presence'
             : category.charAt(0).toUpperCase() + category.slice(1),
         count: items.length,
       });
@@ -261,7 +283,10 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
       a.id === id ? { ...a, enabled: !a.enabled } : a
     );
     setLocalAssertions(updated);
-    setHasUnsavedChanges(true);
+
+    const hasSelected = updated.some((a) => a.enabled);
+    setHasUnsavedChanges(hasSelected);
+
     if (onUpdateAssertions) {
       onUpdateAssertions(updated);
     }
@@ -279,7 +304,10 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
   const removeAllSelected = () => {
     const updated = localAssertions.map((a) => ({ ...a, enabled: false }));
     setLocalAssertions(updated);
-    setHasUnsavedChanges(true);
+
+    // Clear unsaved changes flag since nothing is selected
+    setHasUnsavedChanges(false);
+
     if (onUpdateAssertions) {
       onUpdateAssertions(updated);
     }
@@ -380,6 +408,27 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
       return;
     }
 
+    if (category === 'performance') {
+      const currentAssertion = localAssertions.find(
+        (a) => a.id === assertionId
+      );
+      const isResponseTime = currentAssertion?.type === 'response_time';
+      const isPayloadSize = currentAssertion?.type === 'payload_size';
+
+      setExpandedAddForm(assertionId);
+      setInlineFormData({
+        field: isResponseTime
+          ? 'response_time'
+          : isPayloadSize
+          ? 'payload_size'
+          : '',
+        operator: 'less_than',
+        value: '',
+        dataType: 'performance',
+      });
+      return;
+    }
+
     const currentAssertion = localAssertions.find((a) => a.id === assertionId);
 
     let detectedType = 'string';
@@ -459,7 +508,12 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
   };
 
   const handleSaveInlineAssertion = (category: string) => {
-    if (!inlineFormData.field || !inlineFormData.value) {
+    // For null and boolean types, value is not required
+    const requiresValue =
+      inlineFormData.dataType !== 'null' &&
+      inlineFormData.dataType !== 'boolean';
+
+    if (!inlineFormData.field || (requiresValue && !inlineFormData.value)) {
       return;
     }
 
@@ -485,6 +539,41 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
       return;
     }
 
+    // Handle performance assertions
+    if (category === 'performance') {
+      const isResponseTime = inlineFormData.field === 'response_time';
+      const isPayloadSize = inlineFormData.field === 'payload_size';
+
+      const operatorLabel =
+        inlineFormData.operator === 'less_than'
+          ? 'less than'
+          : inlineFormData.operator === 'greater_than'
+          ? 'greater than'
+          : 'equals';
+
+      const newAssertion: Assertion = {
+        id: `custom_${Date.now()}`,
+        field: undefined,
+        type: isResponseTime ? 'response_time' : 'payload_size',
+        description: isResponseTime
+          ? `Response time ${operatorLabel} ${inlineFormData.value}ms`
+          : `Payload size ${operatorLabel} ${inlineFormData.value} bytes`,
+        operator: inlineFormData.operator,
+        expectedValue: inlineFormData.value,
+        enabled: true,
+        category: 'performance',
+        group: 'custom',
+      };
+      const updated = [...localAssertions, newAssertion];
+      setLocalAssertions(updated);
+      setHasUnsavedChanges(true);
+      if (onUpdateAssertions) {
+        onUpdateAssertions(updated);
+      }
+      handleCancelInlineAdd();
+      return;
+    }
+
     const config = getFieldAssertionConfig(
       inlineFormData.operator,
       inlineFormData.value,
@@ -498,7 +587,10 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
       type: config.type,
       description: config.description,
       operator: config.operator,
-      expectedValue: config.expectedValue,
+      ...(inlineFormData.dataType !== 'null' &&
+        inlineFormData.dataType !== 'boolean' && {
+          expectedValue: config.expectedValue,
+        }),
       enabled: true,
       category: category,
       group: 'custom',
@@ -523,9 +615,51 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
     }
 
     setExpandedEditForm(assertion.id);
-    const detectedType = inferDataType(assertion.expectedValue);
+
+    // Detect data type for the edit form
+    // Detect data type for the edit form
+    let detectedType = 'string';
+
+    if (assertion.category === 'performance') {
+      detectedType = 'performance';
+    } else if (assertion.dataType) {
+      // Use the stored dataType if available (most reliable)
+      detectedType = assertion.dataType;
+    } else if (
+      assertion.type === 'field_null' ||
+      assertion.type === 'field_not_null'
+    ) {
+      // Null type assertions
+      detectedType = 'null';
+    } else if (
+      assertion.type === 'field_is_true' ||
+      assertion.type === 'field_is_false'
+    ) {
+      // Boolean type assertions
+      detectedType = 'boolean';
+    } else if (
+      assertion.type === 'array_length' ||
+      assertion.type === 'array_present'
+    ) {
+      // Array type assertions
+      detectedType = 'array';
+    } else if (
+      assertion.expectedValue !== undefined &&
+      assertion.expectedValue !== null &&
+      assertion.expectedValue !== ''
+    ) {
+      // Infer from expected value only if it exists
+      detectedType = inferDataType(assertion.expectedValue);
+    }
+
     setEditFormData({
-      field: assertion.field || '',
+      field:
+        assertion.field ||
+        (assertion.type === 'response_time'
+          ? 'response_time'
+          : assertion.type === 'payload_size'
+          ? 'payload_size'
+          : ''),
       operator: assertion.operator || 'equals',
       value: String(assertion.expectedValue || ''),
       dataType: detectedType,
@@ -543,7 +677,11 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
   };
 
   const handleSaveEdit = (assertionId: string) => {
-    if (!editFormData.value) {
+    // For null and boolean types, value is not required
+    const requiresValue =
+      editFormData.dataType !== 'null' && editFormData.dataType !== 'boolean';
+
+    if (requiresValue && !editFormData.value) {
       return;
     }
 
@@ -560,6 +698,38 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
               description: `Status code equals ${editFormData.value}`,
               type: 'status_equals',
               operator: 'equals',
+            }
+          : a
+      );
+      setLocalAssertions(updated);
+      setHasUnsavedChanges(true);
+      if (onUpdateAssertions) {
+        onUpdateAssertions(updated);
+      }
+      handleCancelEdit();
+      return;
+    }
+
+    // Handle performance assertions
+    if (assertionBeingEdited?.category === 'performance') {
+      const isResponseTime = assertionBeingEdited.type === 'response_time';
+      const operatorLabel =
+        editFormData.operator === 'less_than'
+          ? 'less than'
+          : editFormData.operator === 'greater_than'
+          ? 'greater than'
+          : 'equals';
+
+      const updated = localAssertions.map((a) =>
+        a.id === assertionId
+          ? {
+              ...a,
+              expectedValue: editFormData.value,
+              description: isResponseTime
+                ? `Response time ${operatorLabel} ${editFormData.value}ms`
+                : `Payload size ${operatorLabel} ${editFormData.value} bytes`,
+              type: assertionBeingEdited.type,
+              operator: editFormData.operator,
             }
           : a
       );
@@ -590,7 +760,10 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
             field: config.field,
             operator: config.operator,
             type: config.type,
-            expectedValue: config.expectedValue,
+            ...(editFormData.dataType !== 'null' &&
+              editFormData.dataType !== 'boolean' && {
+                expectedValue: config.expectedValue,
+              }),
             description: config.description,
           }
         : a
@@ -611,7 +784,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
             const categoryMatch = a.category === result.category;
             const typeMatch = a.type === result.type;
             const fieldMatch = !result.field || a.field === result.field;
-
             const expectedValueMatch =
               result.expectedValue === undefined ||
               String(a.expectedValue) === String(result.expectedValue);
@@ -641,17 +813,82 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
                 : ('failed' as const),
             actualValue: result.actualValue,
             failureReason: result.errorMessage,
+            status: result.status,
+            responseStatus: result.responseStatus,
+            responseTime: result.responseTime,
+            responseSize: result.responseSize,
+            errorMessage: result.errorMessage,
           };
         }
       );
 
+      // ✅ MERGE RESULTS IF IN RERUN MODE
+      let finalResults: ValidationResult[];
+
+      if (isRerunMode && validationResults) {
+        // Keep all previously passed assertions
+        const previouslyPassedResults = validationResults.results.filter(
+          (r) => r.status === 'passed'
+        );
+
+        // Merge with new results (which only contain re-run failed assertions)
+        finalResults = [...previouslyPassedResults, ...mappedResults];
+
+        // Remove duplicates (in case an assertion was re-run)
+        finalResults = finalResults.filter((result, index, self) => {
+          const firstIndex = self.findIndex((r) => {
+            const categoryMatch = r.category === result.category;
+            const typeMatch = r.type === result.type;
+            const fieldMatch = !result.field || r.field === result.field;
+            const expectedValueMatch =
+              result.expectedValue === undefined ||
+              String(r.expectedValue) === String(result.expectedValue);
+
+            return (
+              categoryMatch && typeMatch && fieldMatch && expectedValueMatch
+            );
+          });
+
+          return index === firstIndex;
+        });
+      } else {
+        // Normal run: use all new results
+        finalResults = mappedResults;
+      }
+
+      // ✅ EXTRACT FAILED ASSERTIONS FROM FINAL RESULTS
+      const failedResults = finalResults.filter((r) => r.status === 'failed');
+
+      const failedAssertionsList: Assertion[] = failedResults
+        .map((failedResult) => {
+          const originalAssertion = localAssertions.find((a) => {
+            const categoryMatch = a.category === failedResult.category;
+            const typeMatch = a.type === failedResult.type;
+            const fieldMatch =
+              !failedResult.field || a.field === failedResult.field;
+            const expectedValueMatch =
+              failedResult.expectedValue === undefined ||
+              String(a.expectedValue) === String(failedResult.expectedValue);
+
+            return (
+              categoryMatch && typeMatch && fieldMatch && expectedValueMatch
+            );
+          });
+
+          return originalAssertion;
+        })
+        .filter(Boolean) as Assertion[];
+
+      setFailedAssertions(failedAssertionsList);
+
+      // ✅ RECALCULATE SUMMARY BASED ON FINAL RESULTS
       const summary = {
-        passed: data.assertionResults.filter((r) => r.status === 'passed')
-          .length,
-        failed: data.assertionResults.filter((r) => r.status === 'failed')
-          .length,
-        skipped: selectedAssertions.length - data.assertionResults.length,
-        total: selectedAssertions.length,
+        passed: finalResults.filter((r) => r.status === 'passed').length,
+        failed: finalResults.filter((r) => r.status === 'failed').length,
+        skipped: isRerunMode
+          ? 0 // No skipped when re-running
+          : selectedAssertions.length - finalResults.length,
+        total: finalResults.length,
       };
 
       const responseTime = data.response?.metrics?.responseTime
@@ -661,7 +898,7 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
         : 'N/A';
 
       setValidationResults({
-        results: mappedResults,
+        results: finalResults, // ✅ USE MERGED RESULTS
         summary,
         timestamp: new Date().toISOString(),
         responseTime,
@@ -670,7 +907,7 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
       setValidationHistory((prev) => {
         const updated = [
           {
-            results: mappedResults,
+            results: finalResults, // ✅ USE MERGED RESULTS
             summary,
             timestamp: new Date().toISOString(),
             responseTime,
@@ -680,12 +917,17 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
         return updated.slice(0, 10);
       });
 
+      // ✅ RESET RERUN MODE
+      setIsRerunMode(false);
+
       setAppState('results');
+      setCurrentTab('results');
       setSelectedView('selected');
     },
     onError: (error) => {
       console.error('Validation error:', error);
       setAppState('build');
+      setCurrentTab('build');
       console.error('Validation failed:', error.message);
     },
   });
@@ -713,6 +955,9 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
       return;
     }
 
+    setFailedAssertions([]);
+
+    setIsRerunMode(false);
     setAppState('validating');
 
     const validationPayload: ValidationPayload = {
@@ -765,6 +1010,7 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
     } catch (error) {
       console.error('Failed to validate assertions:', error);
       setAppState('build');
+      setCurrentTab('build');
     }
   };
 
@@ -824,14 +1070,81 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
     setShowSaveMenu(false);
   };
 
+  const handleRerunFailed = async () => {
+    if (failedAssertions.length === 0) {
+      console.log('No failed assertions to re-run');
+      return;
+    }
+
+    console.log('Re-running failed assertions:', failedAssertions);
+
+    setIsRerunMode(true);
+
+    setAppState('validating');
+
+    const validationPayload: ValidationPayload = {
+      assertions: failedAssertions.map((assertion) => ({
+        category: assertion.category,
+        type: assertion.type,
+        description: assertion.description,
+        ...(assertion.field && { field: assertion.field }),
+        ...(assertion.operator && { operator: assertion.operator }),
+        ...(assertion.expectedValue !== undefined && {
+          expectedValue: assertion.expectedValue,
+        }),
+        ...(assertion.priority && { priority: assertion.priority }),
+        ...(assertion.impact && { impact: assertion.impact }),
+        enabled: assertion.enabled,
+        ...(assertion.group && { group: assertion.group }),
+      })),
+      response: responseData
+        ? {
+            requestId: responseData.requestId,
+            requestName: responseData.requestId,
+            ...(responseData.requestCurl && {
+              requestCurl: responseData.requestCurl,
+            }),
+            statusCode: responseData.statusCode || responseData.status || 0,
+            headers: responseData.headers,
+            body:
+              typeof responseData.body === 'string'
+                ? responseData.body
+                : JSON.stringify(responseData.body),
+            error: '',
+            extractedVariables: [],
+            ...(responseData.metrics && { metrics: responseData.metrics }),
+          }
+        : {
+            requestId: 'unknown',
+            requestName: 'unknown',
+            requestCurl: '',
+            statusCode: 0,
+            headers: {},
+            body: '',
+            error: 'No response data available',
+            extractedVariables: [],
+            metrics: { bytesReceived: 0, responseTime: 0 },
+          },
+    };
+
+    try {
+      await validationMutation.mutateAsync(validationPayload);
+    } catch (error) {
+      console.error('Failed to re-run failed assertions:', error);
+      setAppState('build');
+      setCurrentTab('build');
+    }
+  };
+
   const handleRerun = () => {
     setAppState('build');
+    setCurrentTab('build');
     setTimeout(() => handleVerifyAssertions(), 100);
   };
 
   const handleEditAssertions = () => {
     setAppState('build');
-    setValidationResults(null);
+    setCurrentTab('build');
   };
 
   const getAssertionHistory = (assertionId: string) => {
@@ -906,6 +1219,8 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
         return <Activity className='w-5 h-5 text-green-600' />;
       case 'status':
         return <CheckCircle className='w-5 h-5 text-orange-600' />;
+      case 'data presence':
+        return <Zap className='w-5 h-5 text-indigo-600' />;
       default:
         return <Zap className='w-5 h-5 text-gray-600' />;
     }
@@ -1103,18 +1418,21 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
 
           <div className='flex items-center gap-2'>
             {assertion.group === 'custom' && appState === 'build' && (
+              <button
+                onClick={() => handleExpandEditForm(assertion)}
+                className={`p-1 rounded ${
+                  expandedEditForm === assertion.id
+                    ? 'bg-blue-600 text-white'
+                    : 'hover:bg-gray-100 text-gray-500'
+                }`}
+                title='Edit assertion'
+              >
+                <Edit2 className='w-4 h-4' />
+              </button>
+            )}
+
+            {appState === 'build' && (
               <>
-                <button
-                  onClick={() => handleExpandEditForm(assertion)}
-                  className={`p-1 rounded ${
-                    expandedEditForm === assertion.id
-                      ? 'bg-blue-600 text-white'
-                      : 'hover:bg-gray-100 text-gray-500'
-                  }`}
-                  title='Edit assertion'
-                >
-                  <Edit2 className='w-4 h-4' />
-                </button>
                 <button
                   onClick={() => removeAssertion(assertion.id)}
                   className='sm:opacity-0 sm:group-hover:opacity-100 p-1 hover:bg-red-100 rounded transition-opacity'
@@ -1122,27 +1440,25 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
                 >
                   <X className='w-4 h-4 text-red-600' />
                 </button>
-              </>
-            )}
 
-            {appState === 'build' && (
-              <button
-                onClick={() =>
-                  handleExpandAddForm(
-                    assertion.id,
-                    assertion.field || '',
-                    assertion.category
-                  )
-                }
-                className={`p-1 rounded transition-all ${
-                  isExpanded
-                    ? 'bg-blue-600 text-white'
-                    : 'sm:opacity-0 sm:group-hover:opacity-100 hover:bg-blue-100 text-blue-600'
-                }`}
-                title='Create similar assertion'
-              >
-                <Plus className='w-4 h-4' />
-              </button>
+                <button
+                  onClick={() =>
+                    handleExpandAddForm(
+                      assertion.id,
+                      assertion.field || '',
+                      assertion.category
+                    )
+                  }
+                  className={`p-1 rounded transition-all ${
+                    isExpanded
+                      ? 'bg-blue-600 text-white'
+                      : 'hover:bg-blue-100 text-blue-600'
+                  }`}
+                  title='Create similar assertion'
+                >
+                  <Plus className='w-4 h-4' />
+                </button>
+              </>
             )}
 
             {assertion.group !== 'custom' && (
@@ -1197,6 +1513,77 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
                   equals your expected value
                 </p>
               </div>
+            ) : assertion.category === 'performance' ? (
+              <>
+                <div className='grid grid-cols-1 sm:grid-cols-2 gap-3'>
+                  <div>
+                    <label className='block text-xs font-medium text-gray-700 mb-1'>
+                      Metric Type
+                    </label>
+                    <Input
+                      value={
+                        inlineFormData.field === 'response_time'
+                          ? 'Response Time'
+                          : 'Payload Size'
+                      }
+                      disabled
+                      className='bg-gray-50'
+                    />
+                  </div>
+
+                  <div>
+                    <label className='block text-xs font-medium text-gray-700 mb-1'>
+                      Operator
+                    </label>
+                    <Select
+                      value={inlineFormData.operator}
+                      onValueChange={(value: string) =>
+                        setInlineFormData({
+                          ...inlineFormData,
+                          operator: value,
+                        })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value='less_than'>
+                          Less Than (&lt;)
+                        </SelectItem>
+                        <SelectItem value='greater_than'>
+                          Greater Than (&gt;)
+                        </SelectItem>
+                        <SelectItem value='equals'>Equals (=)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className='block text-xs font-medium text-gray-700 mb-1'>
+                    Expected Value{' '}
+                    {inlineFormData.field === 'response_time'
+                      ? '(milliseconds)'
+                      : '(bytes)'}
+                  </label>
+                  <Input
+                    type='number'
+                    value={inlineFormData.value}
+                    onChange={(e: any) =>
+                      setInlineFormData({
+                        ...inlineFormData,
+                        value: e.target.value,
+                      })
+                    }
+                    placeholder={
+                      inlineFormData.field === 'response_time'
+                        ? 'e.g., 500'
+                        : 'e.g., 1024'
+                    }
+                  />
+                </div>
+              </>
             ) : (
               <>
                 <div className='grid grid-cols-1 sm:grid-cols-2 gap-3'>
@@ -1275,21 +1662,25 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
                     </Select>
                   </div>
 
-                  <div>
-                    <label className='block text-xs font-medium text-gray-700 mb-1'>
-                      Expected Value
-                    </label>
-                    <Input
-                      value={inlineFormData.value}
-                      onChange={(e: any) =>
-                        setInlineFormData({
-                          ...inlineFormData,
-                          value: e.target.value,
-                        })
-                      }
-                      placeholder='Enter expected value'
-                    />
-                  </div>
+                  {/* Only show Expected Value field if NOT null or boolean */}
+                  {inlineFormData.dataType !== 'null' &&
+                    inlineFormData.dataType !== 'boolean' && (
+                      <div>
+                        <label className='block text-xs font-medium text-gray-700 mb-1'>
+                          Expected Value
+                        </label>
+                        <Input
+                          value={inlineFormData.value}
+                          onChange={(e: any) =>
+                            setInlineFormData({
+                              ...inlineFormData,
+                              value: e.target.value,
+                            })
+                          }
+                          placeholder='Enter expected value'
+                        />
+                      </div>
+                    )}
                 </div>
               </>
             )}
@@ -1305,6 +1696,23 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
                     <span className='text-gray-600'>=</span>{' '}
                     <span className='text-blue-600'>
                       {inlineFormData.value || '...'}
+                    </span>
+                  </>
+                ) : assertion.category === 'performance' ? (
+                  <>
+                    <span className='text-blue-600'>
+                      {inlineFormData.field === 'response_time'
+                        ? 'response_time'
+                        : 'payload_size'}
+                    </span>{' '}
+                    <span className='text-gray-600'>
+                      {getOperatorDisplayLabel(inlineFormData.operator)}
+                    </span>{' '}
+                    <span className='text-blue-600'>
+                      {inlineFormData.value || '...'}
+                      {inlineFormData.field === 'response_time'
+                        ? 'ms'
+                        : ' bytes'}
                     </span>
                   </>
                 ) : (
@@ -1329,7 +1737,12 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
               </Button>
               <Button
                 onClick={() => handleSaveInlineAssertion(assertion.category)}
-                disabled={!inlineFormData.value}
+                disabled={
+                  // For null and boolean, value is not required
+                  inlineFormData.dataType !== 'null' &&
+                  inlineFormData.dataType !== 'boolean' &&
+                  !inlineFormData.value
+                }
               >
                 <Plus className='w-4 h-4 mr-1' />
                 Add Assertion
@@ -1369,6 +1782,74 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
                   equals your expected value
                 </p>
               </div>
+            ) : assertion.category === 'performance' ? (
+              <>
+                <div className='grid grid-cols-1 sm:grid-cols-2 gap-3'>
+                  <div>
+                    <label className='block text-xs font-medium text-gray-700 mb-1'>
+                      Metric Type
+                    </label>
+                    <Input
+                      value={
+                        editFormData.field === 'response_time'
+                          ? 'Response Time'
+                          : 'Payload Size'
+                      }
+                      disabled
+                      className='bg-gray-50'
+                    />
+                  </div>
+
+                  <div>
+                    <label className='block text-xs font-medium text-gray-700 mb-1'>
+                      Operator
+                    </label>
+                    <Select
+                      value={editFormData.operator}
+                      onValueChange={(value: string) =>
+                        setEditFormData({ ...editFormData, operator: value })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value='less_than'>
+                          Less Than (&lt;)
+                        </SelectItem>
+                        <SelectItem value='greater_than'>
+                          Greater Than (&gt;)
+                        </SelectItem>
+                        <SelectItem value='equals'>Equals (=)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className='block text-xs font-medium text-gray-700 mb-1'>
+                    Expected Value{' '}
+                    {editFormData.field === 'response_time'
+                      ? '(milliseconds)'
+                      : '(bytes)'}
+                  </label>
+                  <Input
+                    type='number'
+                    value={editFormData.value}
+                    onChange={(e: any) =>
+                      setEditFormData({
+                        ...editFormData,
+                        value: e.target.value,
+                      })
+                    }
+                    placeholder={
+                      editFormData.field === 'response_time'
+                        ? 'e.g., 500'
+                        : 'e.g., 1024'
+                    }
+                  />
+                </div>
+              </>
             ) : (
               <>
                 <div className='grid grid-cols-1 sm:grid-cols-2 gap-3'>
@@ -1444,21 +1925,25 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
                     </Select>
                   </div>
 
-                  <div>
-                    <label className='block text-xs font-medium text-gray-700 mb-1'>
-                      Expected Value
-                    </label>
-                    <Input
-                      value={editFormData.value}
-                      onChange={(e: any) =>
-                        setEditFormData({
-                          ...editFormData,
-                          value: e.target.value,
-                        })
-                      }
-                      placeholder='Enter expected value'
-                    />
-                  </div>
+                  {/* Only show Expected Value field if NOT null or boolean */}
+                  {editFormData.dataType !== 'null' &&
+                    editFormData.dataType !== 'boolean' && (
+                      <div>
+                        <label className='block text-xs font-medium text-gray-700 mb-1'>
+                          Expected Value
+                        </label>
+                        <Input
+                          value={editFormData.value}
+                          onChange={(e: any) =>
+                            setEditFormData({
+                              ...editFormData,
+                              value: e.target.value,
+                            })
+                          }
+                          placeholder='Enter expected value'
+                        />
+                      </div>
+                    )}
                 </div>
               </>
             )}
@@ -1467,6 +1952,7 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
               <div className='text-xs font-medium text-gray-600 mb-1'>
                 Preview
               </div>
+
               <div className='font-mono text-sm text-gray-900'>
                 {assertion.category === 'status' ? (
                   <>
@@ -1474,6 +1960,21 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
                     <span className='text-gray-600'>=</span>{' '}
                     <span className='text-purple-600'>
                       {editFormData.value || '...'}
+                    </span>
+                  </>
+                ) : assertion.category === 'performance' ? (
+                  <>
+                    <span className='text-purple-600'>
+                      {editFormData.field === 'response_time'
+                        ? 'response_time'
+                        : 'payload_size'}
+                    </span>{' '}
+                    <span className='text-gray-600'>
+                      {getOperatorDisplayLabel(editFormData.operator)}
+                    </span>{' '}
+                    <span className='text-purple-600'>
+                      {editFormData.value || '...'}
+                      {editFormData.field === 'response_time' ? 'ms' : ' bytes'}
                     </span>
                   </>
                 ) : (
@@ -1498,7 +1999,12 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
               </Button>
               <Button
                 onClick={() => handleSaveEdit(assertion.id)}
-                disabled={!editFormData.value}
+                disabled={
+                  // For null and boolean, value is not required
+                  editFormData.dataType !== 'null' &&
+                  editFormData.dataType !== 'boolean' &&
+                  !editFormData.value
+                }
               >
                 <Save className='w-4 h-4 mr-1' />
                 Save Changes
@@ -1557,26 +2063,9 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
             </span>
           </div>
           <div className='flex items-center gap-2'>
-            {appState === 'results' && validationResults && (
-              <AssertionResults
-                results={validationResults.results}
-                summary={validationResults.summary}
-                timestamp={validationResults.timestamp}
-                responseTime={validationResults.responseTime}
-                validationHistory={validationHistory}
-                onBack={handleEditAssertions}
-                onRerunAll={handleRerun}
-                onRerunFailed={() => {
-                  /* implement rerun failed logic */
-                }}
-                onShare={() => {
-                  /* implement share logic */
-                }}
-              />
-            )}
             {appState === 'build' && selectedInCategory > 0 && (
               <div className='bg-blue-600 text-white text-xs px-2 py-1 rounded-full font-medium'>
-                {selectedInCategory} enabled
+                {selectedInCategory} Selected
               </div>
             )}
           </div>
@@ -1665,7 +2154,7 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
   }
 
   return (
-    <div className='space-y-3 ml-2 mt-2'>
+    <div className='space-y-3 ml-2 mt-2 mb-2'>
       <div className='bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-5 md:p-6'>
         <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4'>
           <div>
@@ -1677,12 +2166,58 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
             </p>
           </div>
           <div className='flex items-center gap-3'>
+            {/* Tab Controls */}
+            {validationResults && (
+              <div className='flex items-center bg-gray-100 rounded-xl p-1 w-fit'>
+                <Button
+                  onClick={() => {
+                    setCurrentTab('build');
+                    setAppState('build');
+                  }}
+                  variant='ghost'
+                  size='sm'
+                  className={`flex items-center gap-2 rounded-lg px-4 ${
+                    currentTab === 'build'
+                      ? 'bg-white shadow-sm'
+                      : 'text-gray-500 hover:bg-transparent'
+                  }`}
+                >
+                  <Settings className='w-4 h-4' />
+                  Build
+                </Button>
+
+                <Button
+                  onClick={() => {
+                    setCurrentTab('results');
+                    setAppState('results');
+                  }}
+                  variant='ghost'
+                  size='sm'
+                  className={`flex items-center gap-2 rounded-lg px-4 ${
+                    currentTab === 'results'
+                      ? 'bg-white shadow-sm'
+                      : 'text-gray-500 hover:bg-transparent'
+                  }`}
+                >
+                  <TrendingUp className='w-4 h-4' />
+                  Results
+                  {validationResults && (
+                    <span className='ml-2 text-xs font-semibold bg-red-100 text-red-700 px-2 py-0.5 rounded-full'>
+                      {validationResults.summary.failed}/
+                      {validationResults.summary.passed +
+                        validationResults.summary.failed}
+                    </span>
+                  )}
+                </Button>
+              </div>
+            )}
+
+            {/* Selected Count */}
             <div className='text-right'>
               <div className='text-sm text-gray-600'>
                 {appState === 'results' ? 'Total Selected' : 'Selected'}:{' '}
                 <span className='text-2xl font-bold text-blue-600'>
-                  {' '}
-                  {getSelectedCount()}{' '}
+                  {getSelectedCount()}
                 </span>
               </div>
             </div>
@@ -1703,19 +2238,27 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
           </div>
         )}
 
-        {appState === 'results' && validationResults && (
-          <AssertionResults
-            results={validationResults.results}
-            summary={validationResults.summary}
-            timestamp={validationResults.timestamp}
-            responseTime={validationResults.responseTime}
-            validationHistory={validationHistory}
-            onBack={handleEditAssertions}
-            onRerunAll={handleRerun}
-            onRerunFailed={() => {}}
-            onShare={() => {}}
-          />
-        )}
+        {appState === 'results' &&
+          validationResults &&
+          currentTab === 'results' && (
+            <AssertionResults
+              results={validationResults.results}
+              summary={validationResults.summary}
+              timestamp={validationResults.timestamp}
+              responseTime={validationResults.responseTime}
+              validationHistory={validationHistory}
+              activeTab={currentTab}
+              onTabChange={(tab) => {
+                setCurrentTab(tab);
+                if (tab === 'build') {
+                  setAppState('build');
+                }
+              }}
+              onRerunAll={handleRerun}
+              onRerunFailed={handleRerunFailed}
+              onShare={() => {}}
+            />
+          )}
 
         {appState === 'results' &&
           showHistory &&
@@ -1804,67 +2347,68 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
               </div>
             </div>
           )}
-        <div className='flex flex-col lg:flex-row gap-3'>
-          <div className='lg:w-52'>
-            <Select
-              value={selectedCategory}
-              onValueChange={setSelectedCategory}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {categories.map((cat) => (
-                  <SelectItem key={cat.id} value={cat.id}>
-                    {cat.label} ({cat.count})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+        {(appState === 'build' || currentTab === 'build') && (
+          <div className='flex flex-col lg:flex-row gap-3'>
+            <div className='lg:w-52'>
+              <Select
+                value={selectedCategory}
+                onValueChange={setSelectedCategory}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.id}>
+                      {cat.label} ({cat.count})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-          <div className='relative flex-1 lg:max-w-3xl lg:mx-auto'>
-            <Search className='w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400' />
-            <Input
-              placeholder='Search assertions...'
-              className='pl-10'
-              value={searchQuery}
-              onChange={(e: any) => setSearchQuery(e.target.value)}
-            />
-          </div>
+            <div className='relative flex-1 lg:max-w-3xl lg:mx-auto'>
+              <Search className='w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400' />
+              <Input
+                placeholder='Search assertions...'
+                className='pl-10'
+                value={searchQuery}
+                onChange={(e: any) => setSearchQuery(e.target.value)}
+              />
+            </div>
 
-          <div className='flex gap-2 lg:ml-auto'>
+            <div className='flex gap-2 lg:ml-auto'>
+              <Button
+                variant={selectedView === 'all' ? 'default' : 'outline'}
+                onClick={() => setSelectedView('all')}
+                className='flex-1 lg:flex-none'
+              >
+                All
+              </Button>
+              <Button
+                variant={selectedView === 'selected' ? 'default' : 'outline'}
+                onClick={() => setSelectedView('selected')}
+                className='flex-1 lg:flex-none'
+              >
+                Selected
+              </Button>
+            </div>
+
             <Button
-              variant={selectedView === 'all' ? 'default' : 'outline'}
-              onClick={() => setSelectedView('all')}
-              className='flex-1 lg:flex-none'
+              variant='outline'
+              onClick={removeAllSelected}
+              disabled={getSelectedCount() === 0}
+              className='w-full lg:w-auto bg-transparent'
             >
-              All
-            </Button>
-            <Button
-              variant={selectedView === 'selected' ? 'default' : 'outline'}
-              onClick={() => setSelectedView('selected')}
-              className='flex-1 lg:flex-none'
-            >
-              Selected
+              <Trash2 className='w-4 h-4 mr-2' />
+              Clear All
             </Button>
           </div>
-
-          <Button
-            variant='outline'
-            onClick={removeAllSelected}
-            disabled={getSelectedCount() === 0}
-            className='w-full lg:w-auto bg-transparent'
-          >
-            <Trash2 className='w-4 h-4 mr-2' />
-            Clear All
-          </Button>
-        </div>
+        )}
       </div>
 
       <div>
-        {(appState === 'build' ||
-          (appState === 'results' && resultsViewMode === 'category')) && (
+        {(currentTab === 'build' || appState === 'build') && (
           <div>
             {(selectedCategory === 'all'
               ? Object.keys(groupedAssertions)
@@ -1878,6 +2422,7 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
                   'HeaderGuard™': 'HeaderGuard™ Security',
                   performance: 'Performance Metrics',
                   status: 'Status Code',
+                  'data presence': 'Data Presence',
                 };
                 return renderCategorySection(
                   categoryKey,
@@ -1949,110 +2494,110 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
         </div>
       )}
 
-      <div className='flex flex-col sm:flex-row justify-end gap-3'>
-        {appState === 'build' && (
-          <>
-            <Button
-              onClick={handleVerifyAssertions}
-              disabled={getSelectedCount() === 0}
-              variant='default'
-            >
-              <Play className='w-5 h-5 mr-2' />
-              Verify {getSelectedCount() > 0 && `${getSelectedCount()} `}
-              Assertions
-            </Button>
+      <div className='flex items-center gap-4'>
+        {/* Left text */}
+        {appState === 'build' && getSelectedCount() > 0 && (
+          <div className='text-sm font-medium text-blue-600'>
+            {getSelectedCount()} assertions are selected for validation
+          </div>
+        )}
 
-            <div className='relative' ref={saveMenuRef}>
+        {/* Right controls */}
+        <div className='ml-auto flex items-center gap-3'>
+          {appState === 'build' && (
+            <>
               <Button
-                onClick={() => setShowSaveMenu(!showSaveMenu)}
-                disabled={
-                  getSelectedCount() === 0 || saveAssertionsMutation.isPending
-                }
-                variant='outline'
+                onClick={handleVerifyAssertions}
+                disabled={getSelectedCount() === 0}
+                variant='default'
               >
-                {saveAssertionsMutation.isPending ? (
-                  <Loader2 className='w-5 h-5 mr-2 animate-spin' />
-                ) : (
-                  <Save className='w-5 h-5 mr-2' />
-                )}
-                Save Assertions
-                <ChevronDown className='w-4 h-4 ml-2' />
+                <Play className='w-5 h-5 mr-2' />
+                Verify {getSelectedCount() > 0 && `${getSelectedCount()} `}
+                Assertions
               </Button>
 
-              {showSaveMenu && (
-                <div className='absolute right-0 mt-2 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-10'>
-                  <button
-                    onClick={handleSaveAssertions}
-                    disabled={saveAssertionsMutation.isPending}
-                    className='w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors border-b border-gray-100 flex items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed'
-                  >
-                    {saveAssertionsMutation.isPending ? (
-                      <Loader2 className='w-4 h-4 text-gray-600 animate-spin' />
-                    ) : (
-                      <Save className='w-4 h-4 text-gray-600' />
-                    )}
-                    <div>
-                      <div className='font-medium text-gray-900 text-sm'>
-                        {saveAssertionsMutation.isPending
-                          ? 'Saving...'
-                          : 'Save Only'}
-                      </div>
-                      <div className='text-xs text-gray-500'>
-                        Persist to database
-                      </div>
-                    </div>
-                  </button>
-                  <button
-                    onClick={handleSaveAndVerify}
-                    disabled={saveAssertionsMutation.isPending}
-                    className='w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors rounded-b-lg flex items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed'
-                  >
-                    <div className='flex items-center gap-1'>
+              <div className='relative' ref={saveMenuRef}>
+                <Button
+                  onClick={() => setShowSaveMenu(!showSaveMenu)}
+                  disabled={
+                    getSelectedCount() === 0 || saveAssertionsMutation.isPending
+                  }
+                  variant='outline'
+                  className='
+    border-2 border-blue-500 text-blue-600
+    hover:bg-blue-50 hover:text-blue-700
+
+    shadow-sm
+  '
+                >
+                  {saveAssertionsMutation.isPending ? (
+                    <Loader2 className='w-5 h-5 mr-2 animate-spin' />
+                  ) : (
+                    <Save className='w-5 h-5 mr-2' />
+                  )}
+                  Save Assertions
+                  <ChevronDown className='w-4 h-4 ml-2' />
+                </Button>
+
+                {showSaveMenu && (
+                  <div className='absolute right-0 mt-2 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-10'>
+                    <button
+                      onClick={handleSaveAssertions}
+                      disabled={saveAssertionsMutation.isPending}
+                      className='w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors border-b border-gray-100 flex items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed'
+                    >
                       {saveAssertionsMutation.isPending ? (
                         <Loader2 className='w-4 h-4 text-gray-600 animate-spin' />
                       ) : (
-                        <>
-                          <Save className='w-4 h-4 text-gray-600' />
-                          <Play className='w-3 h-3 text-gray-600' />
-                        </>
+                        <Save className='w-4 h-4 text-gray-600' />
                       )}
-                    </div>
-                    <div>
-                      <div className='font-medium text-gray-900 text-sm'>
-                        Save & Verify
+                      <div>
+                        <div className='font-medium text-gray-900 text-sm'>
+                          {saveAssertionsMutation.isPending
+                            ? 'Saving...'
+                            : 'Save Only'}
+                        </div>
+                        <div className='text-xs text-gray-500'>
+                          Persist to database
+                        </div>
                       </div>
-                      <div className='text-xs text-gray-500'>
-                        Save then run validation
+                    </button>
+
+                    <button
+                      onClick={handleSaveAndVerify}
+                      disabled={saveAssertionsMutation.isPending}
+                      className='w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors rounded-b-lg flex items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed'
+                    >
+                      <div className='flex items-center gap-1'>
+                        {saveAssertionsMutation.isPending ? (
+                          <Loader2 className='w-4 h-4 text-gray-600 animate-spin' />
+                        ) : (
+                          <>
+                            <Save className='w-4 h-4 text-gray-600' />
+                            <Play className='w-3 h-3 text-gray-600' />
+                          </>
+                        )}
                       </div>
-                    </div>
-                  </button>
-                </div>
-              )}
-            </div>
-          </>
-        )}
+                      <div>
+                        <div className='font-medium text-gray-900 text-sm'>
+                          Save & Verify
+                        </div>
+                        <div className='text-xs text-gray-500'>
+                          Save then run validation
+                        </div>
+                      </div>
+                    </button>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
 
-        {appState === 'validating' && (
-          <Button disabled variant='default'>
-            <Loader2 className='w-5 h-5 mr-2 animate-spin' />
-            Validating assertions...
-          </Button>
-        )}
-      </div>
-
-      <div className='bg-white rounded-lg shadow-sm border border-gray-200 p-4'>
-        <div className='flex items-center justify-between'>
-          <div className='text-sm text-gray-600'>
-            Showing{' '}
-            {selectedView === 'all'
-              ? localAssertions.length
-              : getSelectedCount()}{' '}
-            of {localAssertions.length} assertions
-          </div>
-          {getSelectedCount() > 0 && (
-            <div className='text-sm font-medium text-blue-600'>
-              {getSelectedCount()} assertions are enabled for validation
-            </div>
+          {appState === 'validating' && (
+            <Button disabled variant='default'>
+              <Loader2 className='w-5 h-5 mr-2 animate-spin' />
+              Validating assertions...
+            </Button>
           )}
         </div>
       </div>

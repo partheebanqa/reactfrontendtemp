@@ -18,6 +18,7 @@ import {
 interface Variable {
   name: string;
   value: string;
+  type?: 'static' | 'dynamic';
 }
 
 interface SelectedVariable {
@@ -36,7 +37,8 @@ interface JsonVariableSubstitutionProps {
   onVariableSelect?: (variables: SelectedVariable[]) => void;
   onConfirmSubstitution?: (substitutions: PendingSubstitution[]) => void;
   mode?: 'json' | 'raw';
-  variables?: Variable[];
+  staticVariables?: Variable[];
+  dynamicVariables?: Variable[];
   initialVariable?: SelectedVariable[];
   readOnly?: boolean;
   showSubstituteButton?: boolean;
@@ -50,7 +52,8 @@ export const JsonVariableSubstitution: React.FC<
   onVariableSelect,
   onConfirmSubstitution,
   mode = 'json',
-  variables = [],
+  staticVariables = [],
+  dynamicVariables = [],
   initialVariable = [],
   readOnly = false,
   showSubstituteButton = true,
@@ -65,6 +68,8 @@ export const JsonVariableSubstitution: React.FC<
     PendingSubstitution[]
   >([]);
 
+  console.log('staticVariables999:', staticVariables);
+
   const containerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [dropdownAbove, setDropdownAbove] = useState<boolean>(false);
@@ -73,6 +78,15 @@ export const JsonVariableSubstitution: React.FC<
     left: number;
   } | null>(null);
   const buttonRefs = useRef<Map<number, HTMLButtonElement>>(new Map());
+
+  const allVariables = useMemo(() => {
+    return [
+      ...staticVariables.map((v) => ({ ...v, type: 'static' as const })),
+      ...dynamicVariables.map((v) => ({ ...v, type: 'dynamic' as const })),
+    ];
+  }, [staticVariables, dynamicVariables]);
+
+  console.log('allVariables:', allVariables);
 
   const [confirmState, setConfirmState] = useState<
     | { open: true; kind: 'saved' | 'line'; path?: string; lineIndex?: number }
@@ -89,14 +103,16 @@ export const JsonVariableSubstitution: React.FC<
   const textareaHeight = lines.length * 24;
 
   const filteredVariables = useMemo(() => {
-    if (!searchTerm.trim()) return variables;
+    if (!searchTerm.trim()) return allVariables;
     const lower = searchTerm.toLowerCase();
-    return variables.filter(
+    return allVariables.filter(
       (v) =>
         v.name.toLowerCase().includes(lower) ||
         v.value.toLowerCase().includes(lower)
     );
-  }, [searchTerm, variables]);
+  }, [searchTerm, allVariables]);
+
+  console.log('filteredVariables:', filteredVariables);
 
   const extractPathFromLine = (lineIndex: number): string => {
     const line = lines[lineIndex];

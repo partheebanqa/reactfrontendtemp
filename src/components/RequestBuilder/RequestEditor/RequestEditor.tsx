@@ -316,6 +316,28 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
     return formatted;
   }, [variables, dynamicVariables, dynamicVarTrigger]);
 
+  // Separate static and dynamic variables
+  const { staticVars, dynamicVars } = useMemo(() => {
+    const static_vars: Array<{ name: string; value: string }> = [];
+    const dynamic_vars: Array<{ name: string; value: string }> = [];
+
+    formattedVariables.forEach((variable) => {
+      if (variable.name.startsWith('S_')) {
+        static_vars.push(variable);
+      } else if (variable.name.startsWith('D_')) {
+        dynamic_vars.push(variable);
+      }
+    });
+
+    return {
+      staticVars: static_vars,
+      dynamicVars: dynamic_vars,
+    };
+  }, [formattedVariables]);
+
+  console.log('staticVars:', staticVars);
+  console.log('dynamicVars:', dynamicVars);
+
   const extractVariableNames = (text: any) => {
     if (!text) return [];
     const regex = /\{\{([^}]+)\}\}/g;
@@ -330,8 +352,10 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
   const getUsedVariables = () => {
     const usedVarNames = new Set();
 
+    // Extract from URL
     extractVariableNames(url).forEach((name) => usedVarNames.add(name));
 
+    // Extract from params
     params.forEach((param) => {
       if (param.enabled) {
         extractVariableNames(param.key).forEach((name) =>
@@ -343,6 +367,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
       }
     });
 
+    // Extract from headers
     headers.forEach((header) => {
       if (header.enabled) {
         extractVariableNames(header.key).forEach((name) =>
@@ -354,7 +379,15 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
       }
     });
 
+    // Extract from body content ({{variable}} syntax)
     extractVariableNames(bodyContent).forEach((name) => usedVarNames.add(name));
+
+    // IMPORTANT: Also add variables selected through JsonVariableSubstitution
+    selectedVariable.forEach((varItem) => {
+      if (varItem.name) {
+        usedVarNames.add(varItem.name);
+      }
+    });
 
     return {
       staticVars: formattedVariables.filter(
@@ -368,7 +401,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
 
   const usedVariables = useMemo(
     () => getUsedVariables(),
-    [url, params, headers, bodyContent, formattedVariables]
+    [url, params, headers, bodyContent, formattedVariables, selectedVariable]
   );
 
   useEffect(() => {
@@ -1210,7 +1243,11 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
         setExtractedVariables(extracted);
 
         const formattedResponse = formatBackendResponse(normalizedResponse);
-        const generatedAssertions = generateAssertions(formattedResponse);
+        const generatedAssertions = generateAssertions(
+          formattedResponse,
+          usedVariables.staticVars,
+          usedVariables.dynamicVars
+        );
         const existingIds = new Set(assertions.map((a) => a.id));
         const filtered = generatedAssertions.filter(
           (a) => !existingIds.has(a.id)
@@ -2506,7 +2543,8 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
               urlEncodedFields={urlEncodedFields}
               headers={headers}
               method={method}
-              variables={formattedVariables}
+              staticVariables={staticVars}
+              dynamicVariables={dynamicVars}
               initialVariable={selectedVariable}
               showSubstituteButton={true}
               onBodyTypeChange={(newBodyType) => {

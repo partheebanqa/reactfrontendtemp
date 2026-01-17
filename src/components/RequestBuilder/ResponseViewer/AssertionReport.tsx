@@ -12,7 +12,16 @@ import {
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
+  Settings,
 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 interface ValidationResult {
   id: string;
@@ -46,7 +55,8 @@ interface AssertionResultsProps {
   timestamp: string;
   responseTime: string;
   validationHistory?: Record<string, ValidationHistory>;
-  onBack?: () => void;
+  activeTab?: 'build' | 'results';
+  onTabChange?: (tab: 'build' | 'results') => void;
   onRerunAll?: () => void;
   onRerunFailed?: () => void;
   onShare?: () => void;
@@ -58,7 +68,8 @@ const AssertionResults: React.FC<AssertionResultsProps> = ({
   timestamp,
   responseTime,
   validationHistory = {},
-  onBack,
+  activeTab = 'results',
+  onTabChange,
   onRerunAll,
   onRerunFailed,
   onShare,
@@ -158,7 +169,46 @@ const AssertionResults: React.FC<AssertionResultsProps> = ({
     }
 
     if (tableFilterCategory !== 'all') {
-      filtered = filtered.filter((r) => r.category === tableFilterCategory);
+      // ✅ NORMALIZE CATEGORY MATCHING
+      filtered = filtered.filter((r) => {
+        const normalizedCategory = r.category.toLowerCase().trim();
+        const filterValue = tableFilterCategory.toLowerCase();
+
+        // Match various category formats
+        if (filterValue === 'body') {
+          return (
+            normalizedCategory === 'body' ||
+            normalizedCategory === 'request body' ||
+            normalizedCategory === 'request body fields'
+          );
+        }
+        if (filterValue === 'headers') {
+          return (
+            normalizedCategory === 'headers' ||
+            normalizedCategory === 'response headers'
+          );
+        }
+        if (filterValue === 'headerguard™') {
+          return (
+            normalizedCategory === 'headerguard™' ||
+            normalizedCategory === 'security headers guard'
+          );
+        }
+        if (filterValue === 'performance') {
+          return (
+            normalizedCategory === 'performance' ||
+            normalizedCategory === 'performance checks'
+          );
+        }
+        if (filterValue === 'status') {
+          return (
+            normalizedCategory === 'status' ||
+            normalizedCategory === 'status code'
+          );
+        }
+
+        return normalizedCategory === filterValue;
+      });
     }
 
     if (tableSortConfig.key) {
@@ -186,7 +236,7 @@ const AssertionResults: React.FC<AssertionResultsProps> = ({
     <div className='min-h-screen bg-gray-50 p-4 sm:p-6'>
       <div className='max-w-7xl mx-auto space-y-6'>
         <div className='bg-white rounded-lg shadow-sm border border-gray-200 p-6'>
-          <div className='flex items-center justify-between mb-6'>
+          <div className='mb-6 flex items-start justify-between gap-4'>
             <div>
               <h1 className='text-2xl font-bold text-gray-900 mb-1'>
                 Validation Results
@@ -195,15 +245,6 @@ const AssertionResults: React.FC<AssertionResultsProps> = ({
                 Completed on {new Date(timestamp).toLocaleString()}
               </p>
             </div>
-            {onBack && (
-              <button
-                onClick={onBack}
-                className='flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium'
-              >
-                <ChevronLeft className='w-4 h-4' />
-                Back to Build
-              </button>
-            )}
           </div>
 
           <div className='grid grid-cols-2 md:grid-cols-4 gap-4 mb-6'>
@@ -261,66 +302,57 @@ const AssertionResults: React.FC<AssertionResultsProps> = ({
           <div className='flex flex-wrap gap-3 items-center justify-between'>
             <div className='flex flex-wrap gap-3'>
               {onRerunAll && (
-                <button
-                  onClick={onRerunAll}
-                  className='px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center gap-2'
-                >
+                <Button onClick={onRerunAll} variant='default'>
                   <RotateCcw className='w-4 h-4' />
                   Re-run All
-                </button>
+                </Button>
               )}
               {summary.failed > 0 && onRerunFailed && (
-                <button
-                  onClick={onRerunFailed}
-                  className='px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium flex items-center gap-2'
-                >
+                <Button onClick={onRerunFailed} variant='destructive'>
                   <RotateCcw className='w-4 h-4' />
                   Re-run Failed Only
-                </button>
+                </Button>
               )}
-              <button
+              <Button
                 onClick={() => setShowHistory(!showHistory)}
-                className={`px-4 py-2 rounded-lg transition-colors font-medium flex items-center gap-2 ${
-                  showHistory
-                    ? 'bg-blue-100 text-blue-700 border border-blue-300'
-                    : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
-                }`}
+                variant={showHistory ? 'default' : 'outline'}
               >
                 <Clock className='w-4 h-4' />
                 {showHistory ? 'Hide History' : 'Show History'}
-              </button>
-              {onShare && (
-                <button
-                  onClick={onShare}
-                  className='px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium flex items-center gap-2'
-                >
+              </Button>
+              {/* {onShare && (
+                <Button onClick={onShare} variant='outline'>
                   <Share2 className='w-4 h-4' />
                   Share Results
-                </button>
-              )}
+                </Button>
+              )} */}
             </div>
 
             <div className='flex items-center gap-0 bg-gray-100 rounded-lg p-1'>
-              <button
+              <Button
                 onClick={() => setViewMode('table')}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                variant={viewMode === 'table' ? 'secondary' : 'ghost'}
+                size='sm'
+                className={
                   viewMode === 'table'
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
+                    ? 'bg-white shadow-sm'
+                    : 'hover:bg-transparent'
+                }
               >
                 Table View
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={() => setViewMode('category')}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                variant={viewMode === 'category' ? 'secondary' : 'ghost'}
+                size='sm'
+                className={
                   viewMode === 'category'
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
+                    ? 'bg-white shadow-sm'
+                    : 'hover:bg-transparent'
+                }
               >
                 Category View
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -505,6 +537,7 @@ const AssertionResults: React.FC<AssertionResultsProps> = ({
             )}
           </div>
         )}
+
         {viewMode === 'table' && (
           <div className='bg-white rounded-lg shadow-sm border border-gray-200'>
             <div className='p-4 border-b border-gray-200'>
@@ -513,29 +546,38 @@ const AssertionResults: React.FC<AssertionResultsProps> = ({
                   Detailed Results
                 </h3>
                 <div className='flex gap-2'>
-                  <select
+                  <Select
                     value={tableFilterStatus}
-                    onChange={(e) =>
-                      setTableFilterStatus(e.target.value as any)
+                    onValueChange={(value) =>
+                      setTableFilterStatus(value as any)
                     }
-                    className='px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none'
                   >
-                    <option value='all'>All Status</option>
-                    <option value='passed'>Passed Only</option>
-                    <option value='failed'>Failed Only</option>
-                  </select>
-                  <select
+                    <SelectTrigger className='w-[180px]'>
+                      <SelectValue placeholder='Filter by status' />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value='all'>All Status</SelectItem>
+                      <SelectItem value='passed'>Passed Only</SelectItem>
+                      <SelectItem value='failed'>Failed Only</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  <Select
                     value={tableFilterCategory}
-                    onChange={(e) => setTableFilterCategory(e.target.value)}
-                    className='px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none'
+                    onValueChange={(value) => setTableFilterCategory(value)}
                   >
-                    <option value='all'>All Categories</option>
-                    <option value='headers'>Headers</option>
-                    <option value='body'>Request Body</option>
-                    <option value='HeaderGuard™'>Security</option>
-                    <option value='performance'>Performance</option>
-                    <option value='status'>Status</option>
-                  </select>
+                    <SelectTrigger className='w-[180px]'>
+                      <SelectValue placeholder='Filter by category' />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value='all'>All Categories</SelectItem>
+                      <SelectItem value='body'>Request Body</SelectItem>
+                      <SelectItem value='headers'>Response Headers</SelectItem>
+                      <SelectItem value='HeaderGuard™'>Security</SelectItem>
+                      <SelectItem value='performance'>Performance</SelectItem>
+                      <SelectItem value='status'>Status</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
             </div>

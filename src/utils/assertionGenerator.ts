@@ -364,7 +364,11 @@ const isDateString = (value: string): boolean => {
   );
 };
 
-export const generateAssertions = (response: ApiResponse): Assertion[] => {
+export const generateAssertions = (
+  response: ApiResponse,
+  staticVariables?: Array<{ name: string; value: string }>,
+  dynamicVariables?: Array<{ name: string; value: string }>
+): Assertion[] => {
   const assertions: Assertion[] = [];
 
   // Status code assertions
@@ -378,6 +382,38 @@ export const generateAssertions = (response: ApiResponse): Assertion[] => {
     dataType: 'number',
     enabled: false,
   });
+
+  // Data Presence assertions - Static Variables
+  // if (staticVariables && staticVariables.length > 0) {
+  //   staticVariables.forEach((variable) => {
+  //     assertions.push({
+  //       id: `data-presence-static-${variable.name}`,
+  //       category: 'body',
+  //       type: 'contains',
+  //       description: `Static variable ${variable.name} is present`,
+  //       expectedValue: `{{${variable.name}}}`,
+  //       dataType: 'string',
+  //       enabled: false,
+  //       group: 'data_presence',
+  //     });
+  //   });
+  // }
+
+  // // Data Presence assertions - Dynamic Variables
+  // if (dynamicVariables && dynamicVariables.length > 0) {
+  //   dynamicVariables.forEach((variable) => {
+  //     assertions.push({
+  //       id: `data-presence-dynamic-${variable.name}`,
+  //       category: 'body',
+  //       type: 'contains',
+  //       description: `Dynamic variable is present`,
+  //       expectedValue: `{{${variable.name}}}`,
+  //       dataType: 'string',
+  //       enabled: false,
+  //       group: 'data_presence',
+  //     });
+  //   });
+  // }
 
   // Header assertions
   // Generate HeaderGuard™ security assertions

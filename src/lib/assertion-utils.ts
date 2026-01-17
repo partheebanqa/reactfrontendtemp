@@ -82,6 +82,9 @@ export function getOperatorsByDataType(
     null: ['field_null', 'field_not_null'],
 
     object: ['exists', 'field_not_present'],
+
+    // Performance operators for response_time and payload_size
+    performance: ['less_than', 'greater_than', 'equals'],
   };
 
   return operators[dataType] || ['equals', 'field_not_equals'];

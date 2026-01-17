@@ -40,7 +40,8 @@ interface RequestBodyProps {
   bodyContent: string;
   formFields: FormField[];
   urlEncodedFields: KeyValueField[];
-  variables: any[];
+  staticVariables: any[];
+  dynamicVariables: any[];
   initialVariable: any[];
   onBodyTypeChange: (type: BodyType) => void;
   onBodyContentChange: (content: string) => void;
@@ -61,7 +62,8 @@ export default function RequestBody({
   bodyContent,
   formFields,
   urlEncodedFields,
-  variables,
+  staticVariables,
+  dynamicVariables,
   initialVariable,
   onBodyTypeChange,
   onBodyContentChange,
@@ -76,6 +78,8 @@ export default function RequestBody({
   onRemoveUrlEncodedField,
   showSubstituteButton,
 }: RequestBodyProps) {
+  console.log('staticVariables888:', staticVariables);
+
   return (
     <div className='space-y-4'>
       <div className='flex items-center justify-between'>
@@ -171,7 +175,8 @@ export default function RequestBody({
           onVariableSelect={onVariableSelect}
           onConfirmSubstitution={onConfirmSubstitution}
           mode='raw'
-          variables={variables}
+          staticVariables={staticVariables}
+          dynamicVariables={dynamicVariables}
           initialVariable={initialVariable}
           readOnly={false}
           showSubstituteButton={showSubstituteButton}

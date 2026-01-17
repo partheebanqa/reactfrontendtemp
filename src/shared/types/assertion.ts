@@ -16,7 +16,13 @@ export interface ApiResponse {
 
 export interface Assertion {
   id: string;
-  category: 'status' | 'headers' | 'body' | 'performance' | 'HeaderGuard™';
+  category:
+    | 'status'
+    | 'headers'
+    | 'body'
+    | 'performance'
+    | 'HeaderGuard™'
+    | 'data presence';
   type: string;
   description: string;
   field?: string;

@@ -773,7 +773,7 @@ const ResponseViewer = ({
         </div>
 
         <div className='flex items-center space-x-4'>
-          <button className='flex items-center space-x-2 text-sm font-medium text-blue-600'>
+          <button className='flex items-center space-x-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'>
             <CheckCircle className='w-4 h-4' />
             <span>Pretty</span>
           </button>
@@ -1054,7 +1054,7 @@ const ResponseViewer = ({
       {/* API Assertion Interface Modal */}
       {showAssertionUI && (
         <div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4'>
-          <div className='bg-white dark:bg-gray-900 rounded-lg shadow-xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col'>
+          <div className='bg-white dark:bg-gray-900 rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col'>
             {/* Header */}
             <div className='flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700'>
               <h2 className='text-xl font-bold text-gray-900 dark:text-gray-100'>
