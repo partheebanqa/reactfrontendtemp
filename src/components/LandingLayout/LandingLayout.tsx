@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Code } from 'lucide-react';
+import { Code, Facebook, Instagram, Linkedin, Mail, Youtube } from 'lucide-react';
 import { Link } from 'wouter';
 import LogoFull from '../../assests/images/OptraLogo-removebg-preview.png';
 
@@ -12,32 +12,73 @@ const LandingLayout: React.FC<LandingLayoutProps> = ({ children }) => {
   try {
     return (
       <div className='min-h-screen bg-gradient-to-b from-blue-50 to-white'>
-        {/* Header */}
-        <header className='container mx-auto px-4 py-6'>
-          <nav className='flex items-center justify-between'>
-            <Link to='/' className='flex items-center space-x-2'>
-              <img
-                src={LogoFull}
-                alt='Optraflow'
-                className=''
-                style={{ width: '100%', height: '60px' }}
-              />
-            </Link>
+        <div className="sticky top-0 z-50 bg-white">
+          <div className="w-full bg-gradient-to-r from-[#0b1220] to-[#0f1b35] text-white text-sm">
+            <div className="max-w-7xl mx-auto px-4 h-10 flex items-center justify-between">
 
-            <div className='flex items-center space-x-4'>
-              <Button variant='ghost' asChild>
-                <a href='/pricing'>Pricing</a>
-              </Button>
-              <Button variant='ghost' asChild>
-                <a href='/contact-us'>Contact Us</a>
-              </Button>
-              <Button onClick={() => (window.location.href = '/signin')}>
-                Sign In
-              </Button>
+              {/* Left */}
+              <div className="flex items-center gap-2 text-gray-300">
+                <Mail size={14} />
+                <span>sales@contextqa.com</span>
+              </div>
+
+              {/* Right */}
+              <div className="flex items-center gap-6">
+                <p className="text-gray-300 hidden md:block">
+                  Power Up Testing Efficiency by 60% in just 12 weeks.
+                  <Link
+                    to="/pilot-program"
+                    className="ml-1 text-cyan-400 hover:underline font-medium"
+                  >
+                    Join the Pilot Program
+                  </Link>
+                </p>
+
+                {/* Social Icons */}
+                <div className="flex items-center gap-4 text-gray-400">
+                  <a href="#" className="hover:text-white transition">
+                    <Linkedin size={16} />
+                  </a>
+                  <a href="#" className="hover:text-white transition">
+                    <Facebook size={16} />
+                  </a>
+                  <a href="#" className="hover:text-white transition">
+                    <Youtube size={16} />
+                  </a>
+                  <a href="#" className="hover:text-white transition">
+                    <Instagram size={16} />
+                  </a>
+                </div>
+              </div>
             </div>
-          </nav>
-        </header>
+          </div>
+          {/* Header */}
+          <header className='container mx-auto px-2 py-2'>
 
+            <nav className='flex items-center justify-between'>
+              <Link to='/' className='flex items-center space-x-2'>
+                <img
+                  src={LogoFull}
+                  alt='Optraflow'
+                  className=''
+                  style={{ width: '100%', height: '60px' }}
+                />
+              </Link>
+
+              <div className='flex items-center space-x-4'>
+                <Button variant='ghost' asChild>
+                  <Link to='/pricing'>Pricing</Link>
+                </Button>
+                <Button variant='ghost' asChild>
+                  <Link to='/contact-us'>Contact Us</Link>
+                </Button>
+                <Button onClick={() => (window.location.href = '/signin')}>
+                  Sign In
+                </Button>
+              </div>
+            </nav>
+          </header>
+        </div>
         {children}
 
         {/* Footer */}
