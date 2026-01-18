@@ -76,11 +76,11 @@ interface ValidationResult extends Assertion {
   result: 'passed' | 'failed';
   actualValue?: any;
   failureReason?: string;
-  status?: string; // ADD THIS - from API "status" field
-  responseStatus?: number; // ADD THIS
-  responseTime?: number; // ADD THIS
-  responseSize?: number; // ADD THIS
-  errorMessage?: string; // ADD THIS - from API
+  status?: string;
+  responseStatus?: number;
+  responseTime?: number;
+  responseSize?: number;
+  errorMessage?: string;
 }
 
 interface ResponseData {
@@ -126,8 +126,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
   const saveMenuRef = useRef<HTMLDivElement>(null);
   const [localAssertions, setLocalAssertions] =
     useState<Assertion[]>(assertions);
-
-  console.log('Assertionnns:', assertions);
 
   const [selectedView, setSelectedView] = useState<'all' | 'selected'>('all');
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -262,6 +260,17 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
     return grouped;
   }, [localAssertions]);
 
+  const formatFieldDisplay = (field: string): string => {
+    if (
+      field === '*' ||
+      field === 'response' ||
+      field === 'RESPONSE' ||
+      field === 'Response'
+    ) {
+      return 'response(*)';
+    }
+    return field;
+  };
   const categories = useMemo(() => {
     const cats = [
       { id: 'all', label: 'All Assertions', count: localAssertions.length },
@@ -1338,6 +1347,7 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
                   ={' '}
                   <span className='text-blue-600'>
                     {assertion.expectedValue}
+                    {assertion.type === 'response_time' ? ' ms' : ' kb'}
                   </span>
                 </span>
               </>
@@ -1345,11 +1355,10 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
               <>
                 {assertion.field && (
                   <span className='font-medium text-gray-900 font-mono text-sm truncate'>
-                    {assertion.field}
+                    {formatFieldDisplay(assertion.field)}
                   </span>
                 )}
 
-                {/* Check if type indicates no value needed (exists, null checks, boolean checks, etc.) */}
                 {assertion.type === 'field_present' ||
                 assertion.type === 'field_exists' ||
                 assertion.type?.startsWith('header') ||
@@ -1413,20 +1422,29 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
               )}
           </div>
 
-          {/* Right Side Actions */}
           <div className='flex items-center gap-2 flex-shrink-0'>
             {assertion.group === 'custom' && appState === 'build' && (
-              <button
-                onClick={() => handleExpandEditForm(assertion)}
-                className={`p-1 rounded ${
-                  expandedEditForm === assertion.id
-                    ? 'bg-blue-600 text-white'
-                    : 'hover:bg-gray-100 text-gray-500'
-                }`}
-                title='Edit assertion'
-              >
-                <Edit2 className='w-4 h-4' />
-              </button>
+              <>
+                <button
+                  onClick={() => handleExpandEditForm(assertion)}
+                  className={`p-1 rounded ${
+                    expandedEditForm === assertion.id
+                      ? 'bg-blue-600 text-white'
+                      : 'hover:bg-gray-100 text-gray-500'
+                  }`}
+                  title='Edit assertion'
+                >
+                  <Edit2 className='w-4 h-4' />
+                </button>
+
+                <button
+                  onClick={() => removeAssertion(assertion.id)}
+                  className='sm:opacity-0 sm:group-hover:opacity-100 p-1 hover:bg-red-100 rounded transition-opacity'
+                  title='Remove assertion'
+                >
+                  <X className='w-4 h-4 text-red-600' />
+                </button>
+              </>
             )}
 
             {appState === 'build' && (
