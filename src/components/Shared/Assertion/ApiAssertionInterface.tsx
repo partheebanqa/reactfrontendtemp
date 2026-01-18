@@ -54,7 +54,7 @@ import {
 } from '@/services/assertionValidation.service';
 import { useWorkspace } from '@/hooks/useWorkspace';
 import { useDataManagement } from '@/hooks/useDataManagement';
-import AssertionResults from './AssertionReport';
+import AssertionResults from '../../../RequestBuilder/ResponseViewer/AssertionReport';
 
 interface Assertion {
   id: string;

@@ -19,7 +19,7 @@ import {
 import { useRequest } from '@/hooks/useRequest';
 import AssertionModal from './AssertionModal';
 import { getCategoryForAssertionType } from '@/lib/assertion-utils';
-import ApiAssertionInterface from './ApiAssertionInterface';
+import ApiAssertionInterface from '../../Shared/Assertion/ApiAssertionInterface';
 
 interface JsonNode {
   key: string;
