@@ -48,6 +48,7 @@ import {
   AccordionTrigger,
 } from '../ui/accordion';
 import EditTestCaseModal from './EditTestCaseModal';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 
 type TestCase = {
   id?: string;
@@ -823,16 +824,22 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
                                           <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
                                             {test?.expectedResponse?.status}
                                           </span>
-
-                                          <button
-                                            onClick={() => {
-                                              setEditingTest(test?.id ? test : null);
-                                              setIsEditModalOpen(true);
-                                            }}
-                                            className="p-1 hover:bg-blue-50 rounded"
-                                          >
-                                            <Edit2 size={16} color="#136fb0" />
-                                          </button>
+                                          <TooltipProvider>
+                                            <Tooltip>
+                                              <TooltipTrigger asChild>
+                                                <button
+                                                  onClick={() => {
+                                                    setEditingTest(test?.id ? test : null);
+                                                    setIsEditModalOpen(true);
+                                                  }}
+                                                  className="p-1 hover:bg-blue-50 rounded"
+                                                >
+                                                  <Edit2 size={16} color="#136fb0" />
+                                                </button>
+                                              </TooltipTrigger>
+                                              <TooltipContent side='top'>Edit Testcase</TooltipContent>
+                                            </Tooltip>
+                                          </TooltipProvider>
                                           <button
                                             onClick={() =>
                                               setExpandedTestId(
@@ -878,15 +885,16 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
                                   </div>
 
 
-                                  {expandedTestId === test.id && (
-                                    <div className='mt-2 px-6 space-y-2'>
-                                      {test.description && (
-                                        <p className='text-xs text-muted-foreground'>
-                                          {test.description}
-                                        </p>
-                                      )}
+                                  {
+                                    expandedTestId === test.id && (
+                                      <div className='mt-2 px-6 space-y-2'>
+                                        {test.description && (
+                                          <p className='text-xs text-muted-foreground'>
+                                            {test.description}
+                                          </p>
+                                        )}
 
-                                      {/* {test.tags?.length > 0 && (
+                                        {/* {test.tags?.length > 0 && (
                                         <div className="flex space-x-1">
                                           {test.tags.map((tag) => {
                                             const bgColorClass =
@@ -904,67 +912,70 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
                                         </div>
                                       )} */}
 
-                                      <div className='space-y-4 mt-4'>
-                                        <Tabs
-                                          value={activeTab}
-                                          onValueChange={setActiveTab}
-                                        >
-                                          <TabsList className='grid w-full grid-cols-2 mt-4'>
-                                            <TabsTrigger value='request'>
-                                              Request
-                                            </TabsTrigger>
-                                            <TabsTrigger value='assertions'>
-                                              Assertions
-                                            </TabsTrigger>
-                                          </TabsList>
+                                        <div className='space-y-4 mt-4'>
+                                          <Tabs
+                                            value={activeTab}
+                                            onValueChange={setActiveTab}
+                                          >
+                                            <TabsList className='grid w-full grid-cols-2 mt-4'>
+                                              <TabsTrigger value='request'>
+                                                Request
+                                              </TabsTrigger>
+                                              <TabsTrigger value='assertions'>
+                                                Assertions
+                                              </TabsTrigger>
+                                            </TabsList>
 
-                                          <TabsContent value='request'>
-                                            {test && (
-                                              <div className='mt-4 p-3 bg-gray-900 rounded max-h-96 overflow-auto text-xs text-white'>
+                                            <TabsContent value='request'>
+                                              {test && (
+                                                <div className='mt-4 p-3 bg-gray-900 rounded max-h-96 overflow-auto text-xs text-white'>
 
-                                                <JsonView
-                                                  dark
-                                                  enableClipboard
-                                                  onAdd={() => { }}
-                                                  onDelete={() => { }}
-                                                  onEdit={() => { }}
-                                                  src={test}
-                                                  theme='default'
-                                                />
-                                              </div>
-                                            )}
-                                          </TabsContent>
+                                                  <JsonView
+                                                    dark
+                                                    enableClipboard
+                                                    onAdd={() => { }}
+                                                    onDelete={() => { }}
+                                                    onEdit={() => { }}
+                                                    src={test}
+                                                    theme='default'
+                                                  />
+                                                </div>
+                                              )}
+                                            </TabsContent>
 
-                                          <TabsContent value='assertions'>
-                                            {test && (
-                                              <div className='mt-4 p-3 bg-gray-900 rounded max-h-96 overflow-auto text-xs text-white'>
+                                            <TabsContent value='assertions'>
+                                              {test && (
+                                                <div className='mt-4 p-3 bg-gray-900 rounded max-h-96 overflow-auto text-xs text-white'>
 
-                                                <JsonView
-                                                  dark
-                                                  enableClipboard
-                                                  onAdd={() => { }}
-                                                  onDelete={() => { }}
-                                                  onEdit={() => { }}
-                                                  src={test}
-                                                  theme='default'
-                                                />
-                                              </div>
-                                            )}
-                                          </TabsContent>
-                                        </Tabs>
+                                                  <JsonView
+                                                    dark
+                                                    enableClipboard
+                                                    onAdd={() => { }}
+                                                    onDelete={() => { }}
+                                                    onEdit={() => { }}
+                                                    src={test}
+                                                    theme='default'
+                                                  />
+                                                </div>
+                                              )}
+                                            </TabsContent>
+                                          </Tabs>
+                                        </div>
                                       </div>
-                                    </div>
-                                  )}
+                                    )
+                                  }
                                 </div>
                               );
                             })}
                           </div>
-                        )}
+                        )
+                        }
                       </div>
                     );
                   })}
                 </div>
-              )}
+              )
+              }
             </div>
           </div>
         </div>
@@ -1072,6 +1083,6 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
           </div>
         </div>
       </DialogContent>
-    </Dialog>
+    </Dialog >
   );
 };

@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { Link } from "wouter";
 import LandingLayout from "@/components/LandingLayout/LandingLayout";
+import FaqPage from "./FaqPage";
 
 const Landing: React.FC = () => {
   return (
@@ -209,6 +210,8 @@ const Landing: React.FC = () => {
           </div>
         </div>
       </section>
+
+      {/* <FaqPage /> */}
 
       {/* CTA Section */}
       <section className="container mx-auto px-4 py-20 text-center">
