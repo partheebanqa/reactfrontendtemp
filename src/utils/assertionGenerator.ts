@@ -509,16 +509,16 @@ export const generateAssertions = (
     enabled: false,
   });
 
+  const maxBytes = Math.max(response.size * 2, 10000);
+  const maxKb = Math.ceil(maxBytes / 1024);
+
   assertions.push({
     id: 'payload-size',
     category: 'performance',
     type: 'payload_size',
-    description: `Payload size is less than ${Math.max(
-      response.size * 2,
-      10000
-    )} bytes`,
-    expectedValue: String(Math.max(response.size * 2, 10000)),
-    dataType: 'number',
+    description: `Payload size is less than ${maxKb} KB`,
+    expectedValue: String(maxKb),
+    dataType: 'Number',
     enabled: false,
   });
 

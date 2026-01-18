@@ -313,13 +313,13 @@ const AssertionResults: React.FC<AssertionResultsProps> = ({
                   Re-run Failed Only
                 </Button>
               )}
-              <Button
+              {/* <Button
                 onClick={() => setShowHistory(!showHistory)}
                 variant={showHistory ? 'default' : 'outline'}
               >
                 <Clock className='w-4 h-4' />
                 {showHistory ? 'Hide History' : 'Show History'}
-              </Button>
+              </Button> */}
               {/* {onShare && (
                 <Button onClick={onShare} variant='outline'>
                   <Share2 className='w-4 h-4' />
