@@ -25,8 +25,8 @@ export const CustomButton: React.FC<ButtonProps> = ({
 
   const variantClasses = {
     primary: `
-      bg-gradient-to-r from-cyan-400 to-cyan-500 hover:from-cyan-500 hover:to-cyan-600
-      text-purple-900 shadow-lg hover:shadow-xl focus:ring-cyan-400
+       bg-[#136fb0] hover:bg-[#bdeafe]
+      text-white hover:text-[#136fb0] shadow-lg hover:shadow-xl focus:ring-cyan-400
       transform hover:scale-105 active:scale-95
     `,
     secondary: `
@@ -37,8 +37,8 @@ export const CustomButton: React.FC<ButtonProps> = ({
 
   const sizeClasses = {
     sm: 'px-4 py-2 text-sm',
-    md: 'px-6 py-3 text-base',
-    lg: 'px-8 py-4 text-lg'
+    md: 'px-6 py-3 text-md',
+    lg: 'px-8 py-4 text-md'
   };
 
   return (

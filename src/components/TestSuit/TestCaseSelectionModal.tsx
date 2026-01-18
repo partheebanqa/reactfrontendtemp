@@ -25,10 +25,14 @@ import {
   Plus,
   Loader,
   ChevronUp,
+  Pen,
+  Pencil,
+  Edit2,
 } from 'lucide-react';
 import {
   getTestCasesByRequestId,
   saveTestCasesForRequest,
+  updateTestCase,
 } from '@/services/testcase.service';
 import { useToast } from '@/hooks/use-toast';
 import { ApiTestCase } from '@/shared/types/testcase.model';
@@ -43,6 +47,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '../ui/accordion';
+import EditTestCaseModal from './EditTestCaseModal';
 
 type TestCase = {
   id?: string;
@@ -535,6 +540,9 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
   }, [filteredCategoriesPreSubcat]);
 
 
+  const [editingTest, setEditingTest] = useState<TestCase | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
 
 
   return (
@@ -799,57 +807,77 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
                                     <div
                                       style={{ cursor: 'pointer' }}
                                       className='flex-1 min-w-0'
-                                      onClick={() =>
-                                        setExpandedTestId(
-                                          expandedTestId === test?.id
-                                            ? null
-                                            : test.id
-                                        )
-                                      }
+                                    // onClick={() =>
+                                    //   setExpandedTestId(
+                                    //     expandedTestId === test?.id
+                                    //       ? null
+                                    //       : test.id
+                                    //   )
+                                    // }
                                     >
                                       <div className='flex items-center justify-between space-x-2'>
                                         <h4 className='font-medium text-sm'>
                                           {test?.subCategory}:: {test.name}
                                         </h4>
-                                        <button
-                                          onClick={() =>
-                                            setExpandedTestId(
-                                              expandedTestId === test.id
-                                                ? null
-                                                : test.id
-                                            )
-                                          }
-                                          className='flex items-center text-xs text-blue-500 space-x-1'
-                                        >
-                                          {expandedTestId === test.id ? (
-                                            <>
-                                              <ChevronUp
-                                                size={20}
-                                                color='#136fb0'
-                                              />
-                                              <span
-                                                style={{ color: '#136fb0' }}
-                                              >
-                                                Hide Details
-                                              </span>
-                                            </>
-                                          ) : (
-                                            <>
-                                              <ChevronDown
-                                                size={20}
-                                                color='#136fb0'
-                                              />
-                                              <span
-                                                style={{ color: '#136fb0' }}
-                                              >
-                                                Show Details
-                                              </span>
-                                            </>
-                                          )}
-                                        </button>
+                                        <div className='flex items-center space-x-4'>
+                                          <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                                            {test?.expectedResponse?.status}
+                                          </span>
+
+                                          <button
+                                            onClick={() => {
+                                              setEditingTest(test?.id ? test : null);
+                                              setIsEditModalOpen(true);
+                                            }}
+                                            className="p-1 hover:bg-blue-50 rounded"
+                                          >
+                                            <Edit2 size={16} color="#136fb0" />
+                                          </button>
+                                          <button
+                                            onClick={() =>
+                                              setExpandedTestId(
+                                                expandedTestId === test?.id
+                                                  ? null
+                                                  : test?.id
+                                              )
+                                            }
+                                            className='flex items-center text-xs text-blue-500 space-x-1'
+                                          >
+                                            {expandedTestId === test.id ? (
+                                              <>
+                                                <ChevronUp
+                                                  size={20}
+                                                  color='#136fb0'
+                                                />
+                                                <span
+                                                  style={{ color: '#136fb0' }}
+                                                >
+                                                  Hide Details
+                                                </span>
+                                              </>
+                                            ) : (
+                                              <>
+                                                <ChevronDown
+                                                  size={20}
+                                                  color='#136fb0'
+                                                />
+                                                <span
+                                                  style={{ color: '#136fb0' }}
+                                                >
+                                                  Show Details
+                                                </span>
+                                              </>
+                                            )}
+                                          </button>
+
+
+                                        </div>
                                       </div>
                                     </div>
+
                                   </div>
+
+
                                   {expandedTestId === test.id && (
                                     <div className='mt-2 px-6 space-y-2'>
                                       {test.description && (
@@ -940,6 +968,82 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
             </div>
           </div>
         </div>
+
+        {/* {editingTest && (
+          <EditTestCaseModal
+            testCase={editingTest}
+            isOpen={isEditModalOpen}
+            onClose={() => {
+              setIsEditModalOpen(false);
+              setEditingTest(null);
+            }}
+            onSave={async (id, name, expectedResponseCode) => {
+              await updateTestCase(id, {
+                name,
+                expectedStatus: expectedResponseCode,
+              });
+            }}
+            
+
+          />
+        )} */}
+
+
+        {editingTest && (
+          <EditTestCaseModal
+            testCase={editingTest}
+            isOpen={isEditModalOpen}
+            onClose={() => {
+              setIsEditModalOpen(false);
+              setEditingTest(null);
+            }}
+            onSave={async (id, name, expectedResponseCode) => {
+              // 🔥 API call
+              await updateTestCase(id, {
+                name,
+                expectedStatus: expectedResponseCode,
+              });
+
+              // ✅ UPDATE UI STATE (nested update)
+              setTestCaseCategories((prevCategories) =>
+                prevCategories.map((category) => ({
+                  ...category,
+                  tests: category.tests.map((test) =>
+                    test.id === id
+                      ? {
+                        ...test,
+                        name,
+                        expectedResponse: {
+                          ...test.expectedResponse,
+                          status: expectedResponseCode,
+                        },
+                      }
+                      : test
+                  ),
+                }))
+              );
+
+              // ✅ also update currently editing test
+              setEditingTest((prev) =>
+                prev
+                  ? {
+                    ...prev,
+                    name,
+                    expectedResponse: {
+                      ...prev.expectedResponse,
+                      status: expectedResponseCode,
+                    },
+                  }
+                  : prev
+              );
+
+              // ✅ close modal
+              setIsEditModalOpen(false);
+              setEditingTest(null);
+            }}
+          />
+        )}
+
         <div className='flex items-center justify-between p-6 border-t bg-muted/20'>
           <span className='text-sm text-muted-foreground'>
             {selectedTestCases.length} test cases selected
