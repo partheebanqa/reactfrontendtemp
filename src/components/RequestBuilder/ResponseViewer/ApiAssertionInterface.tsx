@@ -1589,29 +1589,14 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
                     <label className='block text-xs font-medium text-gray-700 mb-1'>
                       Data Type
                     </label>
-                    <Select
-                      value={inlineFormData.dataType}
-                      onValueChange={(newDataType: string) => {
-                        setInlineFormData({
-                          ...inlineFormData,
-                          dataType: newDataType,
-                          operator: getOperatorsByDataType(newDataType)[0],
-                        });
-                      }}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value='string'>String</SelectItem>
-                        <SelectItem value='number'>Number</SelectItem>
-                        <SelectItem value='boolean'>Boolean</SelectItem>
-                        <SelectItem value='date'>Date</SelectItem>
-                        <SelectItem value='null'>null</SelectItem>
-                        <SelectItem value='object'>Object</SelectItem>
-                        <SelectItem value='array'>Array</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <Input
+                      value={
+                        inlineFormData.dataType.charAt(0).toUpperCase() +
+                        inlineFormData.dataType.slice(1)
+                      }
+                      disabled
+                      className='bg-gray-50 cursor-not-allowed'
+                    />
                   </div>
                 </div>
 
@@ -1852,29 +1837,14 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
                     <label className='block text-xs font-medium text-gray-700 mb-1'>
                       Data Type
                     </label>
-                    <Select
-                      value={editFormData.dataType}
-                      onValueChange={(newDataType: string) => {
-                        setEditFormData({
-                          ...editFormData,
-                          dataType: newDataType,
-                          operator: getOperatorsByDataType(newDataType)[0],
-                        });
-                      }}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value='string'>String</SelectItem>
-                        <SelectItem value='number'>Number</SelectItem>
-                        <SelectItem value='boolean'>Boolean</SelectItem>
-                        <SelectItem value='date'>Date</SelectItem>
-                        <SelectItem value='object'>Object</SelectItem>
-                        <SelectItem value='null'>null</SelectItem>
-                        <SelectItem value='array'>Array</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <Input
+                      value={
+                        editFormData.dataType.charAt(0).toUpperCase() +
+                        editFormData.dataType.slice(1)
+                      }
+                      disabled
+                      className='bg-gray-50 cursor-not-allowed'
+                    />
                   </div>
                 </div>
 
