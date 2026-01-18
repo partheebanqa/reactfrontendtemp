@@ -1178,3 +1178,34 @@ export const getUsedVariablesForChain = (
 
   return { staticVars, dynamicVars };
 };
+
+export const syncParamsFromUrl = (request: any) => {
+  if (
+    request?.url &&
+    Array.isArray(request.params) &&
+    request.params.length === 0 &&
+    request.url.includes('?')
+  ) {
+    try {
+      const urlObj = new URL(request.url);
+      const extracted = Array.from(urlObj.searchParams.entries()).map(
+        ([key, value]) => ({
+          id: `temp_${Date.now()}_${Math.random()}`,
+          key,
+          value,
+          enabled: true,
+        })
+      );
+
+      return {
+        ...request,
+        url: urlObj.origin + urlObj.pathname,
+        params: extracted,
+      };
+    } catch {
+      return request;
+    }
+  }
+
+  return request;
+};

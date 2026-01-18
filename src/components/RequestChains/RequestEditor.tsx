@@ -1048,6 +1048,31 @@ export function RequestEditor({
       bodyType: bodyType,
     };
 
+    if (
+      safeRequest.url &&
+      Array.isArray(safeRequest.params) &&
+      safeRequest.params.length === 0 &&
+      safeRequest.url.includes('?')
+    ) {
+      try {
+        const urlObj = new URL(safeRequest.url);
+        const extractedParams = Array.from(urlObj.searchParams.entries()).map(
+          ([key, value]) => ({
+            id: `temp_${Date.now()}_${Math.random()}`,
+            key,
+            value,
+            enabled: true,
+          })
+        );
+
+        safeRequest.params = extractedParams;
+
+        safeRequest.url = urlObj.origin + urlObj.pathname;
+      } catch (e) {
+        console.warn('Failed to parse query params from URL', e);
+      }
+    }
+
     if (bodyType === 'form-data') {
       const formDataArray = formFields.map((field) => ({
         key: field.key,
@@ -1602,7 +1627,6 @@ export function RequestEditor({
   };
 
   const handleExtractVariable = (extraction: DataExtraction) => {
-    console.log('extraction222:', extraction);
     const normalizeString = (value?: string) => (value || '').trim();
     const normalizeBool = (value?: boolean) => !!value;
     const currentExtractions = initialRequest.extractVariables || [];
@@ -1683,6 +1707,7 @@ export function RequestEditor({
       description: initialRequest.description,
       order: nextOrder,
     };
+
     const chainIndex = existingChains.findIndex(
       (chain: any) =>
         normalizeString(chain.name) === normalizeString(chainName) &&
@@ -2151,8 +2176,6 @@ export function RequestEditor({
         })),
     };
   }, [initialRequest, storeVariables, dynamicStructured, extractedVariables]);
-
-  console.log('usedRequestVariables111:', usedRequestVariables);
 
   const compactView = (
     <div className='space-y-4'>

@@ -94,6 +94,7 @@ import {
   generateDynamicValueById,
   hasResponseChanged,
   getUsedVariablesForChain,
+  syncParamsFromUrl,
 } from '@/lib/request-utils';
 import { ResponseExplorer } from './ResponseExplorer';
 import BreadCum from '../BreadCum/Breadcum';
@@ -1364,12 +1365,10 @@ export function RequestChainEditor({
       return;
     }
 
-    // ADD: Filter only selected requests
     const selectedRequests = formData.chainRequests.filter(
       (r) => r.isSelected !== false
     );
 
-    // ADD: Check if any requests are selected
     if (selectedRequests.length === 0) {
       toast({
         title: 'No Requests Selected',
@@ -1414,16 +1413,15 @@ export function RequestChainEditor({
     const variablesByRequest: Record<string, Record<string, any>> = {};
 
     try {
-      // UPDATE: Show selected count in toast
       toast({
         title: 'Starting Execution',
         description: `Running ${selectedRequests.length} selected requests sequentially...`,
       });
 
-      // CHANGE: Loop through selectedRequests instead of all requests
       for (let i = 0; i < selectedRequests.length; i++) {
-        const request = selectedRequests[i];
-        // ADD: Find original index for proper variable resolution
+        const rawRequest = selectedRequests[i];
+        const request = syncParamsFromUrl(rawRequest);
+
         const originalIndex = formData.chainRequests.findIndex(
           (r) => r.id === request.id
         );
@@ -1470,7 +1468,6 @@ export function RequestChainEditor({
           if (existingLog) {
             log = existingLog;
           } else {
-            // CHANGE: Use originalIndex instead of i
             const currentAvailableVariables =
               getAllVariablesForRequestAtRuntime(
                 originalIndex,
@@ -1520,7 +1517,6 @@ export function RequestChainEditor({
 
           setExecutionLogs([...allLogs]);
 
-          // CHANGE: Use originalIndex in error message
           toast({
             title: `Request ${originalIndex + 1} Failed`,
             description: errorLog.error || 'Unknown error occurred',
@@ -1604,8 +1600,6 @@ export function RequestChainEditor({
     requestId: string,
     extraction: DataExtraction
   ) => {
-    console.log('extraction111:', extraction);
-
     const request = formData.chainRequests.find((r) => r.id === requestId);
     if (!request) return;
 
