@@ -19,7 +19,7 @@ const LandingLayout: React.FC<LandingLayoutProps> = ({ children }) => {
               {/* Left */}
               <div className="flex items-center gap-2 text-gray-300">
                 <Mail size={14} />
-                <span>sales@contextqa.com</span>
+                <span>sales@optraflow.com</span>
               </div>
 
               {/* Right */}
