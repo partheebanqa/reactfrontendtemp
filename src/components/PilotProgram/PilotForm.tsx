@@ -1,10 +1,11 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import LogoFull from "../../assests/images/OptraLogo-removebg-preview.png";
+import LogoFull from "../../assests/images/OptraLogo-removebg-preview_bg.jpg";
 import { CustomInput } from "../ui/custom-input";
 import { CustomTextarea } from "../ui/custom-textarea";
 import { useMutation } from "@tanstack/react-query";
 import { submitPilotProgram } from "@/services/pilotProgram.service";
+import { Check } from "lucide-react";
 
 interface FormValues {
     fullName: string;
@@ -32,6 +33,8 @@ export default function PilotProgramSignup() {
     });
 
     const [errors, setErrors] = useState<FormErrors>({});
+
+    const [submitted, setSubmitted] = useState(false);
 
     const handleChange = (
         e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -92,6 +95,7 @@ export default function PilotProgramSignup() {
                 phone: "",
                 challenges: "",
             });
+            setSubmitted(true);
             setErrors({});
         },
         onError: (error: any) => {
@@ -120,8 +124,18 @@ export default function PilotProgramSignup() {
             <div className="mx-auto max-w-7xl px-20">
                 <div className="mx-auto max-w-4xl rounded-2xl bg-gradient-to-b from-[#16213e] to-[#0f172a] px-10 py-14 shadow-2xl">
                     {/* Logo */}
-                    <div className="mb-10">
-                        <img src={LogoFull} alt="OptraFlow" className="mx-auto w-1/2" />
+                    <div className="mb-10 flex justify-center">
+                        <img src={LogoFull} alt="OptraFlow" className="mx-auto w-1/4 rounded-md" />
+                        {/* <svg width="300" height="100" viewBox="0 0 300 100" xmlns="http://www.w3.org/2000/svg">
+
+                            <rect width="100%" height="100%" fill="black" />
+
+                            <circle cx="50" cy="50" r="30" stroke="white" stroke-width="4" fill="none" />
+                            <path d="M30,50 C35,40 45,40 50,50 C55,60 65,60 70,50" fill="#007BFF" />
+
+                            <text x="100" y="58" font-family="Arial, sans-serif" font-size="32" fill="white">Optra</text>
+                            <text x="180" y="58" font-family="Arial, sans-serif" font-size="32" fill="#00A859">Flow</text>
+                        </svg> */}
                     </div>
 
                     {/* Headings */}
@@ -130,17 +144,25 @@ export default function PilotProgramSignup() {
                     </h1>
 
                     <p className="mb-3 text-lg text-white max-w-2xl">
-                        Say 60 %, the content above name will be "The pilot program is designed to help teams integrate with optraflow and explore the tool.
+                        "The pilot program is designed to help teams integrate with optraflow and explore the tool."
                     </p>
 
-                    <p className="mb-3 text-sm text-slate-300">
-                        Implement API automation with guidance and confidentially transition to the product.
+                    <div className="space-y-2 mb-10">
+                        <p className="flex items-start gap-2 text-sm text-slate-300">
+                            <Check className="mt-0.5 h-4 w-4 text-emerald-400" />
+                            <span>
+                                Implement API automation with guidance and confidentially transition to the product.
+                            </span>
+                        </p>
 
-                    </p>
-                    <p className="mb-6 text-sm text-slate-300">
-                        Get 1 month trial period to explore the product. No credit card
-                        required.
-                    </p>
+                        <p className="flex items-start gap-2 text-sm text-slate-300">
+                            <Check className="mt-0.5 h-4 w-4 text-emerald-400" />
+                            <span>
+                                Get 1 month trial period to explore the product. No credit card required.
+                            </span>
+                        </p>
+                    </div>
+
 
                     {/* Form */}
                     <form className="space-y-6" onSubmit={handleSubmit}>
@@ -199,12 +221,18 @@ export default function PilotProgramSignup() {
                         <Button
                             type="submit"
                             disabled={mutation.isPending}
-                            className="mt-4 w-full rounded-full bg-sky-500 py-6 text-base font-semibold text-white hover:bg-sky-400 disabled:opacity-60"
+                            className="mt-4 w-full rounded-full bg-[#136fb0] py-6 text-base font-semibold text-white hover:bg-[#136fb0] disabled:opacity-60"
                         >
                             {mutation.isPending ? "Submitting..." : "Join Pilot Program"}
                         </Button>
 
                     </form>
+
+                    {submitted && (
+                        <p className="mt-4 text-center text-sm text-green-400">
+                            "Thank you for joining our pilot program! Our team will get back to you within 5 business days. To speed up your onboarding, you can register and begin setting up your User Profile today."
+                        </p>
+                    )}
                 </div>
             </div>
         </section>

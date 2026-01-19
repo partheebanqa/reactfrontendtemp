@@ -10,23 +10,23 @@ interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement
 export const CustomTextarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
   ({ label, error, required, className = '', ...props }, ref) => {
     const textareaId = `textarea-${label.toLowerCase().replace(/\s+/g, '-')}`;
-    
+
     // Handle input sanitization
     const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
       const { value } = e.target;
-      
+
       // Apply sanitization for security
       e.target.value = sanitizeText(value, 2000);
-      
+
       // Call original onChange if provided
       if (props.onChange) {
         props.onChange(e);
       }
     };
-    
+
     return (
       <div className="space-y-1">
-        <label 
+        <label
           htmlFor={textareaId}
           className="block text-sm font-medium text-cyan-100"
         >
@@ -38,8 +38,8 @@ export const CustomTextarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
           id={textareaId}
           rows={4}
           className={`
-            w-full px-0 py-3 bg-transparent text-white placeholder-purple-300 
-            border-0 border-b-2 border-purple-400 focus:border-cyan-300 
+            w-full px-0 py-3 bg-transparent text-white placeholder-white 
+            border-0 border-b-2 border-white focus:border-cyan-300 
             focus:outline-none focus:ring-0 transition-colors duration-200 resize-none
             ${error ? 'border-red-400' : ''}
             ${className}
@@ -51,7 +51,7 @@ export const CustomTextarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
           {...props}
         />
         {error && (
-          <p 
+          <p
             id={`${textareaId}-error`}
             className="text-red-300 text-sm mt-1"
             role="alert"

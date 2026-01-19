@@ -2,7 +2,7 @@ import React from "react";
 
 export default function HeroPilotProgram() {
     return (
-        <section className="relative w-full overflow-hidden bg-gradient-to-br from-[#062b4a] via-[#0a355c] to-[#061f36]">
+        <section className="relative w-full overflow-hidden bg-gradient-to-br from-[#136fb0] via-[#0a355c] to-[#061f36]">
             {/* Background network effect */}
             <div className="pointer-events-none absolute inset-0 opacity-30">
                 <svg
@@ -43,7 +43,7 @@ export default function HeroPilotProgram() {
                 <div className="grid items-center gap-12 md:grid-cols-2">
                     {/* Left content */}
                     <div className="text-white">
-                        <p className="mb-4 text-sm font-semibold tracking-widest text-sky-300">
+                        <p className="mb-4 text-sm font-semibold tracking-widest text-[#ffffff]">
                             JOIN THE PILOT PROGRAM
                         </p>
                         <h1 className="text-4xl font-bold leading-tight md:text-4xl lg:text-4xl">
