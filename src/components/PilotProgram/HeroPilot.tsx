@@ -1,4 +1,5 @@
 import React from "react";
+import PilotImage from "../../assests/images/PilotHero.png"
 
 export default function HeroPilotProgram() {
     return (
@@ -55,9 +56,9 @@ export default function HeroPilotProgram() {
 
                     {/* Right illustration */}
                     <div className="flex justify-center md:justify-end">
-                        <div className="relative w-full max-w-lg rounded-2xl bg-slate-50 p-2 shadow-2xl">
+                        <div className="relative w-full max-w-lg rounded-2xl bg-slate-50 p-1 shadow-2xl">
                             <img
-                                src="https://www.practitest.com/wp-content/uploads/2025/10/ai-agents-in-test-management-3-1024x683.png"
+                                src={PilotImage}
                                 alt="Testing efficiency illustration"
                                 className="w-full rounded-xl"
                             />
