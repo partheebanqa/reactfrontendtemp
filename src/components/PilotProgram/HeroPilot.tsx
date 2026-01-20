@@ -49,7 +49,7 @@ export default function HeroPilotProgram() {
                         <h1 className="text-4xl font-bold leading-tight md:text-4xl lg:text-4xl">
                             Power Up Testing Efficiency
                             <br />
-                            <span className="text-white">by 60% in just 12 weeks.</span>
+                            <span className="text-white">by 60% in just 4 weeks.</span>
                         </h1>
                     </div>
 

@@ -124,7 +124,7 @@ const Pricing: React.FC = () => {
         'CI/CD pipeline integrations',
         'Custom webhook triggers',
         'Advanced security controls',
-        'SSO & SAML authentication',
+        // 'SSO & SAML authentication',
         'Custom integrations',
         'Dedicated support manager',
         '99.9% uptime SLA',
@@ -210,17 +210,15 @@ const Pricing: React.FC = () => {
           {/* Billing Toggle */}
           <div className='flex items-center justify-center space-x-4 mb-12'>
             <span
-              className={`text-sm ${
-                !isYearly ? 'font-medium' : 'text-muted-foreground'
-              }`}
+              className={`text-sm ${!isYearly ? 'font-medium' : 'text-muted-foreground'
+                }`}
             >
               Monthly
             </span>
             <Switch checked={isYearly} onCheckedChange={setIsYearly} />
             <span
-              className={`text-sm ${
-                isYearly ? 'font-medium' : 'text-muted-foreground'
-              }`}
+              className={`text-sm ${isYearly ? 'font-medium' : 'text-muted-foreground'
+                }`}
             >
               Yearly
             </span>
@@ -236,11 +234,10 @@ const Pricing: React.FC = () => {
             {plans.map((plan, index) => (
               <Card
                 key={plan.name}
-                className={`relative ${
-                  plan.highlighted
-                    ? 'border-primary shadow-xl scale-105'
-                    : 'border-gray-200'
-                }`}
+                className={`relative ${plan.highlighted
+                  ? 'border-primary shadow-xl scale-105'
+                  : 'border-gray-200'
+                  }`}
               >
                 {plan.badge && (
                   <div className='absolute -top-4 left-1/2 transform -translate-x-1/2'>
@@ -253,11 +250,10 @@ const Pricing: React.FC = () => {
                 <CardHeader className='text-center pb-4'>
                   <div className='flex items-center justify-center mb-4'>
                     <div
-                      className={`w-12 h-12 rounded-lg flex items-center justify-center ${
-                        plan.highlighted
-                          ? 'bg-primary text-primary-foreground'
-                          : 'bg-gray-100 text-gray-600'
-                      }`}
+                      className={`w-12 h-12 rounded-lg flex items-center justify-center ${plan.highlighted
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-gray-100 text-gray-600'
+                        }`}
                     >
                       {plan.icon}
                     </div>
@@ -482,7 +478,7 @@ const Pricing: React.FC = () => {
           <div className='text-center bg-primary rounded-2xl p-12 text-primary-foreground'>
             <h2 className='text-3xl font-bold mb-4'>Ready to get started?</h2>
             <p className='text-xl mb-8 text-primary-foreground/90'>
-              Join thousands of developers who trust APIFlow for their API
+              Join thousands of developers who trust OptraFlow for their API
               testing needs
             </p>
             <div className='flex flex-col sm:flex-row gap-4 justify-center'>
@@ -490,9 +486,9 @@ const Pricing: React.FC = () => {
                 size='lg'
                 variant='secondary'
                 onClick={() =>
-                  (window.location.href = isAuthenticated
-                    ? '/request-builder'
-                    : '/signin')
+                (window.location.href = isAuthenticated
+                  ? '/request-builder'
+                  : '/signin')
                 }
               >
                 <Star className='w-5 h-5 mr-2' />

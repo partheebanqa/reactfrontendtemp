@@ -9,6 +9,8 @@ interface LandingLayoutProps {
 }
 
 const LandingLayout: React.FC<LandingLayoutProps> = ({ children }) => {
+
+  const year = new Date()
   try {
     return (
       <div className='min-h-screen bg-gradient-to-b from-blue-50 to-white'>
@@ -22,7 +24,7 @@ const LandingLayout: React.FC<LandingLayoutProps> = ({ children }) => {
               {/* Right */}
               <div className="flex items-center gap-6">
                 <p className="text-gray-300 hidden md:block">
-                  Power Up Testing Efficiency by 60% in just 12 weeks.
+                  Power Up Testing Efficiency by 60% in just 4 weeks.
                   <Link
                     to="/pilot-program"
                     className="ml-1 text-cyan-400 hover:underline font-medium"
@@ -121,7 +123,7 @@ const LandingLayout: React.FC<LandingLayoutProps> = ({ children }) => {
             </div>
 
             <div className='border-t border-gray-700 mt-12 pt-4 text-center text-gray-400'>
-              <p>&copy; 2025 APIFlow. All rights reserved.</p>
+              <p>&copy; {year.getFullYear()} OptraFlow. All rights reserved.</p>
             </div>
           </div>
         </footer>
