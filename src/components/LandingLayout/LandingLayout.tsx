@@ -14,13 +14,10 @@ const LandingLayout: React.FC<LandingLayoutProps> = ({ children }) => {
       <div className='min-h-screen bg-gradient-to-b from-blue-50 to-white'>
         <div className="sticky top-0 z-50 bg-white">
           <div className="w-full bg-gradient-to-r from-[#0b1220] to-[#0f1b35] text-white text-sm">
-            <div className="max-w-7xl mx-auto px-4 h-10 flex items-center justify-between">
+            <div className="max-w-7xl mx-auto px-4 h-10 flex items-center justify-center">
 
               {/* Left */}
-              <div className="flex items-center gap-2 text-gray-300">
-                <Mail size={14} />
-                <span>sales@optraflow.com</span>
-              </div>
+
 
               {/* Right */}
               <div className="flex items-center gap-6">
@@ -34,21 +31,7 @@ const LandingLayout: React.FC<LandingLayoutProps> = ({ children }) => {
                   </Link>
                 </p>
 
-                {/* Social Icons */}
-                <div className="flex items-center gap-4 text-gray-400">
-                  <a href="#" className="hover:text-white transition">
-                    <Linkedin size={16} />
-                  </a>
-                  <a href="#" className="hover:text-white transition">
-                    <Facebook size={16} />
-                  </a>
-                  <a href="#" className="hover:text-white transition">
-                    <Youtube size={16} />
-                  </a>
-                  <a href="#" className="hover:text-white transition">
-                    <Instagram size={16} />
-                  </a>
-                </div>
+
               </div>
             </div>
           </div>
