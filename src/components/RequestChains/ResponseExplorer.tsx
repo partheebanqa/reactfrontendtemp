@@ -24,6 +24,7 @@ import {
   type FieldType,
   type Operator,
 } from '@/lib/operators';
+import ApiAssertionInterface from '../Shared/Assertion/ApiAssertionInterface';
 
 interface ResponseExplorerProps {
   response?: {
@@ -33,6 +34,8 @@ interface ResponseExplorerProps {
     body: any;
     cookies?: Array<{ name: string; value: string }>;
     assertions?: any[];
+    requestId?: string;
+    requestCurl?: any;
   };
   onExtractVariable?: (name: string, value: any, path: string) => void;
   extractedVariables?: Record<string, any>;
@@ -102,6 +105,7 @@ export function ResponseExplorer({
     operators?: Operator[];
     filteredAssertions?: any[];
   } | null>(null);
+  const [showAssertionUI, setShowAssertionUI] = useState(false);
 
   const getValueByPath = (obj: any, path: string): any => {
     if (!obj || !path) return undefined;
@@ -473,7 +477,6 @@ export function ResponseExplorer({
         value: extractionModal.value,
         transform,
       };
-      console.log('inputVariableName:', extractionModal);
 
       onExtractVariable(extraction);
       setExtractionModal(null);
@@ -865,7 +868,7 @@ export function ResponseExplorer({
                   )}
                   <div className='flex-1 min-w-0'>
                     <h4
-                      className={`font-medium ${
+                      className={`font-medium  ${
                         assertion.status === 'passed'
                           ? 'text-green-900'
                           : 'text-red-900'
@@ -1107,6 +1110,13 @@ export function ResponseExplorer({
               );
             })}
           </nav>
+          <button
+            onClick={() => setShowAssertionUI(true)}
+            className='flex items-center space-x-2 text-sm font-medium text-blue-600 hover:text-blue-700 px-4 py-2 hover:bg-blue-50 rounded-lg transition-colors mr-6'
+          >
+            <CheckCircle className='w-4 h-4' />
+            <span>Manage Assertions</span>
+          </button>
         </div>
 
         <div className='p-6 max-h-96 overflow-auto scrollbar-thin'>
@@ -1466,6 +1476,42 @@ export function ResponseExplorer({
             setSelectedAssertion(null);
           }}
         />
+      )}
+
+      {/* API Assertion Interface Modal - Add this before the final closing </div> */}
+      {showAssertionUI && (
+        <div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4'>
+          <div className='bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col'>
+            {/* Header */}
+            <div className='flex items-center justify-between p-4 border-b border-gray-200'>
+              <h2 className='text-xl font-bold text-gray-900'>
+                API Assertions Manager
+              </h2>
+              <button
+                onClick={() => setShowAssertionUI(false)}
+                className='p-2 hover:bg-gray-100 rounded-lg transition-colors'
+              >
+                <X className='w-5 h-5 text-gray-500' />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className='flex-1 overflow-auto'>
+              <ApiAssertionInterface
+                assertions={allAssertions}
+                responseData={response}
+                onUpdateAssertions={onAssertionsUpdate}
+                mode='add'
+                onAddAssertionsToRequest={(assertions) => {
+                  if (onAssertionsUpdate) {
+                    onAssertionsUpdate(assertions);
+                  }
+                  setShowAssertionUI(false);
+                }}
+              />
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

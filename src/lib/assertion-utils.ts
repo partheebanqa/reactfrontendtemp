@@ -364,3 +364,38 @@ function getOperatorDescription(operator: string): string {
 
   return descriptions[operator] || operator;
 }
+
+export const removeDuplicateAssertions = (assertions: any[]): any[] => {
+  const uniqueAssertions = new Map();
+
+  assertions.forEach((assertion) => {
+    const normalizedField = assertion.field
+      ? assertion.field.replace(/^headers\./, '').toLowerCase()
+      : '';
+    const uniqueKey = `${assertion.type}-${normalizedField}-${
+      assertion.description || ''
+    }`.toLowerCase();
+
+    if (!uniqueAssertions.has(uniqueKey)) {
+      uniqueAssertions.set(uniqueKey, assertion);
+    } else {
+      const existing = uniqueAssertions.get(uniqueKey);
+
+      const shouldReplace =
+        (!existing.enabled && assertion.enabled) ||
+        (existing.enabled === assertion.enabled &&
+          assertion.group === 'custom' &&
+          existing.group !== 'custom');
+
+      if (shouldReplace) {
+        uniqueAssertions.set(uniqueKey, assertion);
+      } else {
+        console.warn('Kept existing:', existing.id, 'ignored', assertion.id);
+      }
+    }
+  });
+
+  const result = Array.from(uniqueAssertions.values());
+
+  return result;
+};

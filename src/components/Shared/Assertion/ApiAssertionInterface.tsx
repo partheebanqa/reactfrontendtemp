@@ -111,6 +111,8 @@ interface ApiAssertionInterfaceProps {
   onUpdateAssertions?: (assertions: Assertion[]) => void;
   onVerifyAssertions?: () => Promise<void>;
   onSaveAssertions?: () => Promise<void>;
+  onAddAssertionsToRequest?: (assertions: Assertion[]) => void;
+  mode?: 'save' | 'add';
 }
 
 const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
@@ -119,6 +121,8 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
   onUpdateAssertions,
   onVerifyAssertions,
   onSaveAssertions,
+  onAddAssertionsToRequest,
+  mode = 'save',
 }) => {
   const { activeEnvironment } = useDataManagement();
 
@@ -198,6 +202,16 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
     value: '',
     dataType: 'string',
   });
+  const [availableOperators, setAvailableOperators] = useState<string[]>([
+    'equals',
+    'contains',
+    'field_not_contains',
+    'exists',
+    'field_type',
+    'field_less_than',
+    'field_greater_than',
+    'array_length',
+  ]);
 
   useEffect(() => {
     const selected = localAssertions.filter((a) => a.enabled);
@@ -261,6 +275,8 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
   }, [localAssertions]);
 
   const formatFieldDisplay = (field: string): string => {
+    if (!field) return '';
+
     if (
       field === '*' ||
       field === 'response' ||
@@ -269,6 +285,15 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
     ) {
       return 'response(*)';
     }
+
+    if (field === 'response_time') {
+      return 'responseTime';
+    }
+
+    if (field === 'payload_size') {
+      return 'payloadSize';
+    }
+
     return field;
   };
   const categories = useMemo(() => {
@@ -302,6 +327,60 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
     if (onUpdateAssertions) {
       onUpdateAssertions(updated);
     }
+  };
+
+  const getAvailableOperatorsForField = (field: string): string[] => {
+    if (!field) {
+      // Default: show all operators
+      return [
+        'equals',
+        'contains',
+        'field_not_contains',
+        'exists',
+        'field_type',
+        'field_less_than',
+        'field_greater_than',
+        'array_length',
+      ];
+    }
+
+    const normalizedField = field.trim().toLowerCase();
+
+    // Status - only equals operator
+    if (
+      normalizedField === 'status' ||
+      normalizedField === 'statuscode' ||
+      normalizedField === 'status_code'
+    ) {
+      return ['equals'];
+    }
+
+    // Response time or response - only comparison operators
+    if (normalizedField === 'response_time' || normalizedField === 'response') {
+      return ['field_less_than', 'field_greater_than'];
+    }
+
+    // Payload size or payload - only comparison operators
+    if (normalizedField === 'payload_size' || normalizedField === 'payload') {
+      return ['field_less_than', 'field_greater_than'];
+    }
+
+    // Wildcard (*) - only contains operators
+    if (normalizedField === '*') {
+      return ['contains', 'field_not_contains'];
+    }
+
+    // Regular JSON path - all operators
+    return [
+      'equals',
+      'contains',
+      'field_not_contains',
+      'exists',
+      'field_type',
+      'field_less_than',
+      'field_greater_than',
+      'array_length',
+    ];
   };
 
   const removeAssertion = (id: string) => {
@@ -367,6 +446,155 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
     if (!quickAddData.field || !quickAddData.value) {
       return;
     }
+
+    const field = quickAddData.field.trim().toLowerCase();
+    const value = quickAddData.value.trim();
+
+    // Check for status fields FIRST
+    if (
+      field === 'status' ||
+      field === 'statuscode' ||
+      field === 'status_code'
+    ) {
+      const newAssertion: Assertion = {
+        id: `manual_${Date.now()}`,
+        field: undefined,
+        type: 'status_equals',
+        description: `Status code equals ${value}`,
+        operator: 'equals',
+        expectedValue: value,
+        enabled: true,
+        category: 'status',
+        group: 'custom',
+      };
+
+      const updated = [...localAssertions, newAssertion];
+      setLocalAssertions(updated);
+      setQuickAddData({ field: '', operator: 'equals', value: '' });
+      setHasUnsavedChanges(true);
+
+      setAvailableOperators([
+        'equals',
+        'contains',
+        'field_not_contains',
+        'exists',
+        'field_type',
+        'field_less_than',
+        'field_greater_than',
+        'array_length',
+      ]);
+
+      if (onUpdateAssertions) {
+        onUpdateAssertions(updated);
+      }
+      return;
+    }
+
+    // Check for response time fields
+    if (field === 'response_time' || field === 'response') {
+      // Response time assertion
+      const operatorLabel =
+        quickAddData.operator === 'field_less_than'
+          ? 'less than'
+          : quickAddData.operator === 'field_greater_than'
+          ? 'greater than'
+          : 'less than';
+
+      const finalOperator =
+        quickAddData.operator === 'field_less_than'
+          ? 'less_than'
+          : quickAddData.operator === 'field_greater_than'
+          ? 'greater_than'
+          : 'less_than';
+
+      const newAssertion: Assertion = {
+        id: `manual_${Date.now()}`,
+        field: undefined,
+        type: 'response_time',
+        description: `Response time ${operatorLabel} ${value}ms`,
+        operator: finalOperator,
+        expectedValue: value,
+        enabled: true,
+        category: 'performance',
+        group: 'custom',
+      };
+
+      const updated = [...localAssertions, newAssertion];
+      setLocalAssertions(updated);
+      setQuickAddData({ field: '', operator: 'equals', value: '' });
+      setHasUnsavedChanges(true);
+
+      // Reset available operators to default
+      setAvailableOperators([
+        'equals',
+        'contains',
+        'field_not_contains',
+        'exists',
+        'field_type',
+        'field_less_than',
+        'field_greater_than',
+        'array_length',
+      ]);
+
+      if (onUpdateAssertions) {
+        onUpdateAssertions(updated);
+      }
+      return;
+    }
+
+    // Check for payload size fields
+    if (field === 'payload_size' || field === 'payload') {
+      // Payload size assertion
+      const operatorLabel =
+        quickAddData.operator === 'field_less_than'
+          ? 'less than'
+          : quickAddData.operator === 'field_greater_than'
+          ? 'greater than'
+          : 'less than';
+
+      const finalOperator =
+        quickAddData.operator === 'field_less_than'
+          ? 'less_than'
+          : quickAddData.operator === 'field_greater_than'
+          ? 'greater_than'
+          : 'less_than';
+
+      const newAssertion: Assertion = {
+        id: `manual_${Date.now()}`,
+        field: undefined,
+        type: 'payload_size',
+        description: `Payload size ${operatorLabel} ${value} kb`,
+        operator: finalOperator,
+        expectedValue: value,
+        enabled: true,
+        category: 'performance',
+        group: 'custom',
+      };
+
+      const updated = [...localAssertions, newAssertion];
+      setLocalAssertions(updated);
+      setQuickAddData({ field: '', operator: 'equals', value: '' });
+      setHasUnsavedChanges(true);
+
+      // Reset available operators to default
+      setAvailableOperators([
+        'equals',
+        'contains',
+        'field_not_contains',
+        'exists',
+        'field_type',
+        'field_less_than',
+        'field_greater_than',
+        'array_length',
+      ]);
+
+      if (onUpdateAssertions) {
+        onUpdateAssertions(updated);
+      }
+      return;
+    }
+
+    // Original logic for regular fields (including * wildcard)
     const detectedType = inferDataType(quickAddData.value);
     const config = getFieldAssertionConfig(
       quickAddData.operator,
@@ -386,15 +614,28 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
       category: 'body',
       group: 'custom',
     };
+
     const updated = [...localAssertions, newAssertion];
     setLocalAssertions(updated);
     setQuickAddData({ field: '', operator: 'equals', value: '' });
     setHasUnsavedChanges(true);
+
+    // Reset available operators to default
+    setAvailableOperators([
+      'equals',
+      'contains',
+      'field_not_contains',
+      'exists',
+      'field_type',
+      'field_less_than',
+      'field_greater_than',
+      'array_length',
+    ]);
+
     if (onUpdateAssertions) {
       onUpdateAssertions(updated);
     }
   };
-
   const handleExpandAddForm = (
     assertionId: string,
     field: string,
@@ -520,7 +761,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
   };
 
   const handleSaveInlineAssertion = (category: string) => {
-    // For null and boolean types, value is not required
     const requiresValue =
       inlineFormData.dataType !== 'null' &&
       inlineFormData.dataType !== 'boolean';
@@ -786,6 +1026,20 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
       onUpdateAssertions(updated);
     }
     handleCancelEdit();
+  };
+
+  const handleAddToRequest = () => {
+    if (getSelectedCount() === 0) {
+      return;
+    }
+
+    const selectedAssertionsList = localAssertions.filter((a) => a.enabled);
+
+    if (onAddAssertionsToRequest) {
+      onAddAssertionsToRequest(selectedAssertionsList);
+      setHasUnsavedChanges(false);
+      setSelectedView('selected');
+    }
   };
 
   const validationMutation = useValidateAssertionsMutation({
@@ -1725,7 +1979,7 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
                   !inlineFormData.value
                 }
               >
-                <Plus className='w-4 h-4 mr-1' />
+                <Plus className='w-4 h-4' />
                 Add Assertion
               </Button>
             </div>
@@ -2403,18 +2657,63 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
             <Plus className='w-5 h-5' />
             Quick Add Custom Assertion
           </h3>
-          <p className='text-xs text-gray-500 mb-3'>
-            For status code assertions, use the "+" button in the Status Code
-            section
-          </p>
+
+          {/* Helper text with field options */}
+          <div className='bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4'>
+            <h4 className='text-sm font-semibold text-blue-900 mb-2'>
+              Field Options:
+            </h4>
+            <ul className='text-xs text-blue-800 space-y-1'>
+              <li>
+                • <code className='bg-blue-100 px-1 rounded'>status</code> -
+                Status code (equals only)
+              </li>
+              <li>
+                • <code className='bg-blue-100 px-1 rounded'>*</code> - Full
+                response (contains/not contains only)
+              </li>
+              <li>
+                •{' '}
+                <code className='bg-blue-100 px-1 rounded'>response_time</code>{' '}
+                or <code className='bg-blue-100 px-1 rounded'>response</code> -
+                Time-based (greater/less than only)
+              </li>
+              <li>
+                • <code className='bg-blue-100 px-1 rounded'>payload_size</code>{' '}
+                or <code className='bg-blue-100 px-1 rounded'>payload</code> -
+                Size-based (greater/less than only)
+              </li>
+              <li>
+                •{' '}
+                <code className='bg-blue-100 px-1 rounded'>data.user.name</code>{' '}
+                - JSON path (all operators available)
+              </li>
+            </ul>
+          </div>
+
           <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3'>
             <Input
               placeholder='Field path'
               value={quickAddData.field}
-              onChange={(e: any) =>
-                setQuickAddData({ ...quickAddData, field: e.target.value })
-              }
+              onChange={(e: any) => {
+                const newField = e.target.value;
+                setQuickAddData({ ...quickAddData, field: newField });
+
+                // Update available operators based on field
+                const operators = getAvailableOperatorsForField(newField);
+                setAvailableOperators(operators);
+
+                // Reset operator if current one is not available
+                if (!operators.includes(quickAddData.operator)) {
+                  setQuickAddData({
+                    ...quickAddData,
+                    field: newField,
+                    operator: operators[0] || 'equals',
+                  });
+                }
+              }}
             />
+
             <Select
               value={quickAddData.operator}
               onValueChange={(value: string) =>
@@ -2425,22 +2724,39 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value='equals'>Equals (=)</SelectItem>
-                <SelectItem value='contains'>Contains</SelectItem>
-                <SelectItem value='field_not_contains'>
-                  Not Contains
-                </SelectItem>{' '}
-                <SelectItem value='exists'>Exists</SelectItem>
-                <SelectItem value='field_type'>Type Check</SelectItem>{' '}
-                <SelectItem value='field_less_than'>
-                  Less Than (&lt;)
-                </SelectItem>{' '}
-                <SelectItem value='field_greater_than'>
-                  Greater Than (&gt;)
-                </SelectItem>{' '}
-                <SelectItem value='array_length'>Array Length</SelectItem>{' '}
+                {availableOperators.includes('equals') && (
+                  <SelectItem value='equals'>Equals (=)</SelectItem>
+                )}
+                {availableOperators.includes('contains') && (
+                  <SelectItem value='contains'>Contains</SelectItem>
+                )}
+                {availableOperators.includes('field_not_contains') && (
+                  <SelectItem value='field_not_contains'>
+                    Not Contains
+                  </SelectItem>
+                )}
+                {availableOperators.includes('exists') && (
+                  <SelectItem value='exists'>Exists</SelectItem>
+                )}
+                {availableOperators.includes('field_type') && (
+                  <SelectItem value='field_type'>Type Check</SelectItem>
+                )}
+                {availableOperators.includes('field_less_than') && (
+                  <SelectItem value='field_less_than'>
+                    Less Than (&lt;)
+                  </SelectItem>
+                )}
+                {availableOperators.includes('field_greater_than') && (
+                  <SelectItem value='field_greater_than'>
+                    Greater Than (&gt;)
+                  </SelectItem>
+                )}
+                {availableOperators.includes('array_length') && (
+                  <SelectItem value='array_length'>Array Length</SelectItem>
+                )}
               </SelectContent>
             </Select>
+
             <Input
               placeholder='Expected value'
               value={quickAddData.value}
@@ -2448,16 +2764,57 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
                 setQuickAddData({ ...quickAddData, value: e.target.value })
               }
             />
+
             <Button
               onClick={handleQuickAdd}
               disabled={!quickAddData.field || !quickAddData.value}
             >
+              <Plus className='w-4 h-4' />
               Add Assertion
             </Button>
           </div>
+
+          {/* Dynamic preview */}
+          {quickAddData.field && (
+            <div className='mt-3 bg-gray-50 border border-gray-200 rounded-lg p-3'>
+              <div className='text-xs font-medium text-gray-600 mb-1'>
+                Preview:
+              </div>
+              <div className='font-mono text-sm text-gray-900'>
+                <span className='text-blue-600'>
+                  {quickAddData.field.trim().toLowerCase() === 'status' ||
+                  quickAddData.field.trim().toLowerCase() === 'statuscode' ||
+                  quickAddData.field.trim().toLowerCase() === 'status_code'
+                    ? 'statusCode'
+                    : quickAddData.field.trim().toLowerCase() ===
+                        'response_time' ||
+                      quickAddData.field.trim().toLowerCase() === 'response'
+                    ? 'responseTime'
+                    : quickAddData.field.trim().toLowerCase() ===
+                        'payload_size' ||
+                      quickAddData.field.trim().toLowerCase() === 'payload'
+                    ? 'payloadSize'
+                    : quickAddData.field}
+                </span>
+                <span className='text-gray-600'>
+                  {getOperatorDisplayLabel(quickAddData.operator)}
+                </span>{' '}
+                <span className='text-blue-600'>
+                  {quickAddData.value || '...'}
+                  {(quickAddData.field.trim().toLowerCase() ===
+                    'response_time' ||
+                    quickAddData.field.trim().toLowerCase() === 'response') &&
+                    ' ms'}
+                  {(quickAddData.field.trim().toLowerCase() ===
+                    'payload_size' ||
+                    quickAddData.field.trim().toLowerCase() === 'payload') &&
+                    ' kb'}
+                </span>
+              </div>
+            </div>
+          )}
         </div>
       )}
-
       <div className='flex items-center gap-4'>
         {/* Left text */}
         {appState === 'build' && getSelectedCount() > 0 && (
@@ -2475,85 +2832,42 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
                 disabled={getSelectedCount() === 0}
                 variant='default'
               >
-                <Play className='w-5 h-5 mr-2' />
+                <Play className='w-5 h-5' />
                 Verify {getSelectedCount() > 0 && `${getSelectedCount()} `}
                 Assertions
               </Button>
 
-              <div className='relative' ref={saveMenuRef}>
+              {/* Conditional rendering based on mode */}
+              {mode === 'add' ? (
                 <Button
-                  onClick={() => setShowSaveMenu(!showSaveMenu)}
-                  disabled={
-                    getSelectedCount() === 0 || saveAssertionsMutation.isPending
-                  }
+                  onClick={handleAddToRequest}
+                  disabled={getSelectedCount() === 0}
                   variant='outline'
-                  className='
-    border-2 border-blue-500 text-blue-600
-    hover:bg-blue-50 hover:text-blue-700
-
-    shadow-sm
-  '
+                  className='border-2 border-blue-500 text-blue-600 hover:bg-blue-50 hover:text-blue-700 shadow-sm'
                 >
-                  {saveAssertionsMutation.isPending ? (
-                    <Loader2 className='w-5 h-5 mr-2 animate-spin' />
-                  ) : (
-                    <Save className='w-5 h-5 mr-2' />
-                  )}
-                  Save Assertions
-                  <ChevronDown className='w-4 h-4 ml-2' />
+                  <Plus className='w-5 h-5' />
+                  Add to Request ({getSelectedCount()})
                 </Button>
-
-                {showSaveMenu && (
-                  <div className='absolute right-0 mt-2 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-10'>
-                    <button
-                      onClick={handleSaveAssertions}
-                      disabled={saveAssertionsMutation.isPending}
-                      className='w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors border-b border-gray-100 flex items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed'
-                    >
-                      {saveAssertionsMutation.isPending ? (
-                        <Loader2 className='w-4 h-4 text-gray-600 animate-spin' />
-                      ) : (
-                        <Save className='w-4 h-4 text-gray-600' />
-                      )}
-                      <div>
-                        <div className='font-medium text-gray-900 text-sm'>
-                          {saveAssertionsMutation.isPending
-                            ? 'Saving...'
-                            : 'Save Only'}
-                        </div>
-                        <div className='text-xs text-gray-500'>
-                          Persist to database
-                        </div>
-                      </div>
-                    </button>
-
-                    <button
-                      onClick={handleSaveAndVerify}
-                      disabled={saveAssertionsMutation.isPending}
-                      className='w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors rounded-b-lg flex items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed'
-                    >
-                      <div className='flex items-center gap-1'>
-                        {saveAssertionsMutation.isPending ? (
-                          <Loader2 className='w-4 h-4 text-gray-600 animate-spin' />
-                        ) : (
-                          <>
-                            <Save className='w-4 h-4 text-gray-600' />
-                            <Play className='w-3 h-3 text-gray-600' />
-                          </>
-                        )}
-                      </div>
-                      <div>
-                        <div className='font-medium text-gray-900 text-sm'>
-                          Save & Verify
-                        </div>
-                        <div className='text-xs text-gray-500'>
-                          Save then run validation
-                        </div>
-                      </div>
-                    </button>
-                  </div>
-                )}
-              </div>
+              ) : (
+                <div className='relative' ref={saveMenuRef}>
+                  <Button
+                    onClick={handleSaveAssertions}
+                    disabled={
+                      getSelectedCount() === 0 ||
+                      saveAssertionsMutation.isPending
+                    }
+                    variant='outline'
+                    className='border-2 border-blue-500 text-blue-600 hover:bg-blue-50 hover:text-blue-700 shadow-sm'
+                  >
+                    {saveAssertionsMutation.isPending ? (
+                      <Loader2 className='w-5 h-5 animate-spin' />
+                    ) : (
+                      <Save className='w-5 h-5' />
+                    )}
+                    Save Assertions
+                  </Button>
+                </div>
+              )}
             </>
           )}
 

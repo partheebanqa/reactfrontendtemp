@@ -408,6 +408,7 @@ export function RequestChainEditor({
   );
   const [editingRequestId, setEditingRequestId] = useState<string | null>(null);
   const [executionLogs, setExecutionLogs] = useState<ExecutionLog[]>([]);
+
   const [extractedVariables, setExtractedVariables] = useState<
     Record<string, any>
   >([]);
@@ -1289,6 +1290,7 @@ export function RequestChainEditor({
             : 'error',
         startTime: new Date(startTime).toISOString(),
         endTime: new Date(endTime).toISOString(),
+
         duration: result.metrics.responseTime,
         request: {
           method: actualRequestMethod,
@@ -1303,6 +1305,7 @@ export function RequestChainEditor({
           size: result.metrics.bytesReceived,
           cookies: parseCookies(result.headers?.['set-cookie'] ?? ''),
           assertions: assertionResult,
+          requestCurl: result.requestCurl,
         },
         extractedVariables: extractedData,
       };
@@ -2811,11 +2814,12 @@ export function RequestChainEditor({
                                                   null ||
                                                   executionLog.error) && (
                                                   <div className='border-t border-gray-200 p-2'>
-                                                    {/* All your ResponseExplorer code */}
                                                     <ResponseExplorer
-                                                      response={
-                                                        executionLog.response
-                                                      }
+                                                      response={{
+                                                        ...executionLog.response,
+                                                        requestId:
+                                                          executionLog.requestId,
+                                                      }}
                                                       onExtractVariable={(
                                                         extraction
                                                       ) =>

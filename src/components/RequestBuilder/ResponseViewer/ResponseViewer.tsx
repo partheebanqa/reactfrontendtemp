@@ -18,8 +18,11 @@ import {
 } from 'lucide-react';
 import { useRequest } from '@/hooks/useRequest';
 import AssertionModal from './AssertionModal';
-import { getCategoryForAssertionType } from '@/lib/assertion-utils';
-import ApiAssertionInterface from './ApiAssertionInterface';
+import {
+  getCategoryForAssertionType,
+  removeDuplicateAssertions,
+} from '@/lib/assertion-utils';
+import ApiAssertionInterface from '../../Shared/Assertion/ApiAssertionInterface';
 
 interface JsonNode {
   key: string;
@@ -381,7 +384,8 @@ const ResponseViewer = ({
               field: normalizeFieldPath(activeFieldPath),
             };
 
-      setAssertions([...assertions, newAssertion]);
+      const updatedAssertions = [...assertions, newAssertion];
+      setAssertions(removeDuplicateAssertions(updatedAssertions));
     }
     handleModalClose();
   };
@@ -1072,9 +1076,10 @@ const ResponseViewer = ({
             <div className='flex-1 overflow-auto'>
               <ApiAssertionInterface
                 assertions={assertions}
-                responseData={responseData} // Pass the actual response data
+                responseData={responseData}
                 onUpdateAssertions={setAssertions}
                 onSaveAssertions={onSaveAssertions}
+                mode='save'
               />{' '}
             </div>
           </div>
