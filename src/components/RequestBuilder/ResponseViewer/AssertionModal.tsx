@@ -21,6 +21,7 @@ import { useEffect, useState, useMemo } from 'react';
 import {
   getArrayAssertionConfig,
   getCategoryForAssertionType,
+  removeDuplicateAssertions,
 } from '@/lib/assertion-utils';
 
 interface AssertionModalProps {
@@ -110,30 +111,62 @@ function AssertionModal({
   };
 
   const suggestedAssertions = useMemo(() => {
+    const seenIds = new Set();
+    const uniqueAssertions = new Map();
+
     return allAssertions
       .filter((assertion) => {
+        // Skip if we've already seen this assertion ID
+        if (seenIds.has(assertion.id)) {
+          return false;
+        }
+
         const isHeaderField = fieldPath.startsWith('headers.');
 
         if (isHeaderField) {
           const headerName = normalizeHeaderName(fieldPath);
+          const assertionField = normalizeHeaderName(assertion.field || '');
 
           if (
-            assertion.category === 'HeaderGuard™' ||
-            assertion.category === 'HeaderGuard'
+            (assertion.category === 'HeaderGuard™' ||
+              assertion.category === 'HeaderGuard' ||
+              assertion.category === 'headers') &&
+            assertionField === headerName
           ) {
-            const assertionField = normalizeHeaderName(assertion.field || '');
-            return assertionField === headerName;
-          }
+            // Create a unique key based on type + field + value
+            const uniqueKey = `${assertion.type}-${assertionField}-${
+              assertion.value || ''
+            }-${assertion.operator || ''}`;
 
-          if (assertion.category === 'headers') {
-            const assertionField = normalizeHeaderName(assertion.field || '');
-            return assertionField === headerName;
+            // If we've seen this exact assertion before, skip it
+            if (uniqueAssertions.has(uniqueKey)) {
+              return false;
+            }
+
+            uniqueAssertions.set(uniqueKey, assertion.id);
+            seenIds.add(assertion.id);
+            return true;
           }
 
           return false;
         }
 
-        return assertion.category === 'body' && assertion.field === fieldPath;
+        // For body fields
+        const matches =
+          assertion.category === 'body' && assertion.field === fieldPath;
+        if (matches) {
+          const uniqueKey = `${assertion.type}-${assertion.field}-${
+            assertion.value || ''
+          }-${assertion.operator || ''}`;
+
+          if (uniqueAssertions.has(uniqueKey)) {
+            return false;
+          }
+
+          uniqueAssertions.set(uniqueKey, assertion.id);
+          seenIds.add(assertion.id);
+        }
+        return matches;
       })
       .map((assertion) => {
         let label = '';
@@ -479,18 +512,8 @@ function AssertionModal({
     const newSelected = new Set(selectedSuggestedAssertions);
     if (newSelected.has(assertionItem.id)) {
       newSelected.delete(assertionItem.id);
-      setPendingAssertions(
-        pendingAssertions.filter((a) => a.id !== assertionItem.id)
-      );
     } else {
       newSelected.add(assertionItem.id);
-      const newAssertion = {
-        ...assertionItem.assertion,
-        id: assertionItem.id,
-        enabled: true,
-        source: 'suggested',
-      };
-      setPendingAssertions([...pendingAssertions, newAssertion]);
     }
     setSelectedSuggestedAssertions(newSelected);
   };
@@ -709,7 +732,7 @@ function AssertionModal({
 
     updatedAssertions = [...updatedAssertions, ...pendingAssertions];
 
-    setAssertions(updatedAssertions);
+    setAssertions(removeDuplicateAssertions(updatedAssertions));
 
     setSelectedSuggestedAssertions(new Set());
     setAssertionsToRemove(new Set());

@@ -8,6 +8,7 @@ import {
 } from '@/shared/types/request';
 import { CollectionRequest } from '@/shared/types/collection';
 import { ReactNode } from 'react';
+import { removeDuplicateAssertions } from '@/lib/assertion-utils';
 
 // Define the assertion type
 export interface Assertion {
@@ -81,9 +82,12 @@ export const requestActions = {
 
   // Set assertions
   setAssertions: (assertions: Assertion[]) => {
+    // Remove duplicates before setting
+    const uniqueAssertions = removeDuplicateAssertions(assertions);
+
     requestStore.setState((state) => ({
       ...state,
-      assertions,
+      assertions: uniqueAssertions,
     }));
   },
 

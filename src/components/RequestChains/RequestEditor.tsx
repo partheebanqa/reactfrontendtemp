@@ -184,6 +184,8 @@ export function RequestEditor({
     null
   );
 
+  console.log('executionResult909:', executionResult);
+
   const [showVariablesPopup, setShowVariablesPopup] = useState(false);
   const variablesPopupRef = useRef<HTMLDivElement>(null);
 
@@ -1171,6 +1173,8 @@ export function RequestEditor({
 
       const backendData = await executeRequest(payload);
 
+      console.log('backendData090:', backendData);
+
       const assertionResult = backendData?.data?.assertionResults || [];
       const result = backendData?.data?.responses?.[0];
       if (!result) throw new Error('No response from executor');
@@ -1265,6 +1269,7 @@ export function RequestEditor({
           size: result.metrics.bytesReceived,
           cookies: parseCookies(result.headers?.['set-cookie'] ?? ''),
           assertions: assertionResult,
+          requestCurl: result.requestCurl || '',
         },
         extractedVariables: extractedData,
       };
@@ -2797,7 +2802,10 @@ export function RequestEditor({
         (executionResult.response || executionResult.error) && (
           <div className='border-t border-gray-200 p-2'>
             <ResponseExplorer
-              response={executionResult.response}
+              response={{
+                ...executionResult.response,
+                requestId: executionResult.requestId,
+              }}
               onExtractVariable={handleExtractVariable}
               extractedVariables={extractedVariables}
               existingExtractions={initialRequest.extractVariables}

@@ -157,6 +157,7 @@ export interface ExecutionLog {
     size: number;
     cookies?: Record<string, string>;
     assertions?: any[];
+    requestCurl?: any;
   };
   error?: string;
   extractedVariables?: Record<string, any>;
