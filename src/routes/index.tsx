@@ -44,6 +44,7 @@ import RequestChainCreate from '@/pages/RequestChainCreate';
 import RequestChainEdit from '@/pages/RequestChainEdit';
 import { Loader } from '@/components/Loader';
 import CreateTestSuit from '@/components/TestSuitNew/CreateTestSuit';
+import PilotProgram from '@/components/PilotProgram/PilotProgram';
 
 export default function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -103,9 +104,11 @@ export default function Router() {
       )}
       <Route path='/pricing' component={Pricing} />
       <Route path='/terms' component={TermsPage} />
+      <Route path='/pilot-program' component={PilotProgram} />
       <Route path='/privacy' component={PrivacyPage} />
       <Route path='/contact-us' component={ContactPage} />
       <Route path='*' component={NotFound} />
+
     </Switch>
   );
 }

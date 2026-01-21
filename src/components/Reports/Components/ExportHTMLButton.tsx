@@ -22,8 +22,8 @@ export interface RequestExecution {
   responseStatusCode: number;
   extractedVariables: ExtractedVariable[] | null;
   substitutedVariables:
-    | { name: string; value: string; usedIn: string }[]
-    | null;
+  | { name: string; value: string; usedIn: string }[]
+  | null;
   requestCurl: string;
   response: string;
 }
@@ -397,11 +397,11 @@ export default function ExportHTMLButton({
           <div class="meta-label">Execution Date</div>
           <div class="meta-value">
           ${(() => {
-            const { dateTime, tz } = convertDateStamp(
-              Date.parse(reportData.lastExecutionDate)
-            );
-            return `${dateTime}, ${tz}`;
-          })()}
+        const { dateTime, tz } = convertDateStamp(
+          Date.parse(reportData.lastExecutionDate)
+        );
+        return `${dateTime}, ${tz}`;
+      })()}
          </div>
         </div>
         <div class="meta-item">
@@ -420,27 +420,23 @@ export default function ExportHTMLButton({
       </div>
       <div class="metric-card">
         <div class="metric-label">Successful</div>
-        <div class="metric-value" style="color: #10b981">${
-          reportData.successfulRequests
-        }</div>
+        <div class="metric-value" style="color: #10b981">${reportData.successfulRequests
+      }</div>
       </div>
       <div class="metric-card">
         <div class="metric-label">Failed</div>
-        <div class="metric-value" style="color: #ef4444">${
-          reportData.failedRequests
-        }</div>
+        <div class="metric-value" style="color: #ef4444">${reportData.failedRequests
+      }</div>
       </div>
       <div class="metric-card">
         <div class="metric-label">Skipped</div>
-        <div class="metric-value" style="color: #f59e0b">${
-          reportData.skippedRequests
-        }</div>
+        <div class="metric-value" style="color: #f59e0b">${reportData.skippedRequests
+      }</div>
       </div>
       <div class="metric-card">
         <div class="metric-label">Success Rate</div>
-        <div class="metric-value">${
-          reportData.successRate
-        }<span class="metric-unit">%</span></div>
+        <div class="metric-value">${reportData.successRate
+      }<span class="metric-unit">%</span></div>
       </div>
       <div class="metric-card">
         <div class="metric-label">Avg Response Time</div>
@@ -449,38 +445,37 @@ export default function ExportHTMLButton({
       <div class="metric-card">
         <div class="metric-label">Data Transferred</div>
         <div class="metric-value" style="font-size: 20px">${formatBytes(
-          totalDataTransferred
-        )}</div>
+        totalDataTransferred
+      )}</div>
       </div>
     </div>
 
     <div class="section">
       <h2 class="section-title">Request Execution Timeline</h2>
-      ${reportData.requestExecutions
+      ${reportData?.requestExecutions
         .map(
           (req) => `
         <div class="request-item">
           <div class="request-header">
-            <div class="request-order">${req.order}</div>
-            <div class="request-name">${esc(req.name)}</div>
+            <div class="request-order">${req?.order}</div>
+            <div class="request-name">${esc(req?.name)}</div>
             <span class="method-badge method-${esc(
-              req.method.toLowerCase()
-            )}">${esc(req.method)}</span>
+            req?.method.toLowerCase()
+          )}">${esc(req.method)}</span>
             <span class="status-badge status-${esc(
-              req.status.toLowerCase()
-            )}">${esc(req.status)}</span>
+            req?.status.toLowerCase()
+          )}">${esc(req.status)}</span>
           </div>
           <div class="request-url">${esc(req.url)}</div>
           <div class="request-stats">
-            <span><strong>Status Code:</strong> ${req.responseStatusCode}</span>
-            <span><strong>Duration:</strong> ${req.duration}ms</span>
+            <span><strong>Status Code:</strong> ${req?.responseStatusCode}</span>
+            <span><strong>Duration:</strong> ${req?.duration}ms</span>
             <span><strong>Size:</strong> ${esc(
-              formatBytes(req.responseSize)
-            )}</span>
+            formatBytes(req?.responseSize)
+          )}</span>
           </div>
           
-          ${
-            req.substitutedVariables && req.substitutedVariables.length > 0
+          ${req?.substitutedVariables && req?.substitutedVariables?.length > 0
               ? `
             <div style="margin-top: 16px;">
               <strong style="font-size: 14px; color: #475569;">Variable Substitutions</strong>
@@ -494,30 +489,29 @@ export default function ExportHTMLButton({
                   </tr>
                 </thead>
                 <tbody>
-                  ${req.substitutedVariables
-                    .map(
-                      (v) => `
+                  ${req?.substitutedVariables
+                .map(
+                  (v) => `
                     <tr>
                       <td class="variable-name">${esc(v.name)}</td>
                       <td class="variable-value" style="word-break: break-all;">${esc(
-                        v.value
-                      )}</td>
+                    v.value
+                  )}</td>
                       <td style="font-size: 12px; color: #64748b;">${esc(
-                        v.usedIn
-                      )}</td>
+                    v.usedIn
+                  )}</td>
                     </tr>
                   `
-                    )
-                    .join('')}
+                )
+                .join('')}
                 </tbody>
               </table>
             </div>
           `
               : ''
-          }
+            }
           
-          ${
-            req.extractedVariables && req.extractedVariables.length > 0
+          ${req?.extractedVariables && req.extractedVariables?.length > 0
               ? `
             <div style="margin-top: 16px;">
               <strong style="font-size: 14px; color: #475569;">Extracted Variables</strong>
@@ -531,28 +525,28 @@ export default function ExportHTMLButton({
                   </tr>
                 </thead>
                 <tbody>
-                  ${req.extractedVariables
-                    .map(
-                      (v) => `
+                  ${req?.extractedVariables
+                .map(
+                  (v) => `
                     <tr>
                       <td class="variable-name">${esc(v.name)}</td>
                       <td class="variable-value" style="word-break: break-all;">${esc(
-                        v.value
-                      )}</td>
+                    v.value
+                  )}</td>
                       <td>${esc(v.source || '-')}</td>
                       <td><span class="type-badge type-${esc(
-                        v.status || 'success'
-                      )}">${esc(v.status || 'success')}</span></td>
+                    v.status || 'success'
+                  )}">${esc(v.status || 'success')}</span></td>
                     </tr>
                   `
-                    )
-                    .join('')}
+                )
+                .join('')}
                 </tbody>
               </table>
             </div>
           `
               : ''
-          }
+            }
           
           <div style="margin-top: 16px;">
             <strong style="font-size: 14px; color: #475569;">Request cURL</strong>
@@ -569,8 +563,7 @@ export default function ExportHTMLButton({
         .join('')}
     </div>
 
-    ${
-      reportData.globalVariables.length > 0
+    ${reportData?.globalVariables?.length > 0
         ? `
       <div class="section">
         <h2 class="section-title">Global Variables</h2>
@@ -584,31 +577,30 @@ export default function ExportHTMLButton({
             </tr>
           </thead>
           <tbody>
-            ${reportData.globalVariables
-              .map(
-                (v) => `
+            ${reportData?.globalVariables
+          .map(
+            (v) => `
               <tr>
                 <td class="variable-name">${esc(v.name)}</td>
                 <td class="variable-value" style="word-break: break-all;">${esc(
-                  v?.value || ''
-                )}</td>
+              v?.value || ''
+            )}</td>
                 <td><span class="type-badge type-${esc(v.type)}">${esc(
-                  v.type
-                )}</span></td>
+              v.type
+            )}</span></td>
               
               </tr>
             `
-              )
-              .join('')}
+          )
+          .join('')}
           </tbody>
         </table>
       </div>
     `
         : ''
-    }
+      }
 
-    ${
-      reportData.extractedVariables.length > 0
+    ${reportData?.extractedVariables?.length > 0
         ? `
       <div class="section">
         <h2 class="section-title">Extracted Variables</h2>
@@ -620,24 +612,24 @@ export default function ExportHTMLButton({
             </tr>
           </thead>
           <tbody>
-            ${reportData.extractedVariables
-              .map(
-                (v) => `
+            ${reportData?.extractedVariables
+          .map(
+            (v) => `
               <tr>
                 <td class="variable-name">${esc(v.name)}</td>
                 <td class="variable-value" style="word-break: break-all;">${esc(
-                  v.value
-                )}</td>
+              v.value
+            )}</td>
               </tr>
             `
-              )
-              .join('')}
+          )
+          .join('')}
           </tbody>
         </table>
       </div>
     `
         : ''
-    }
+      }
 
     <div class="footer">
       Generated on ${new Date().toLocaleDateString()} • OptraFlow API Testing Platform

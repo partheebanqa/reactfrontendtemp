@@ -28,7 +28,7 @@ export const CustomSelect = forwardRef<HTMLSelectElement, SelectProps>(
 
             className={`
               w-full px-0 py-3 pr-8 bg-transparent text-white 
-              border-0 border-b-2 border-purple-400 focus:border-cyan-300 
+              border-0 border-b-2 border-white focus:border-cyan-300 
               focus:outline-none focus:ring-0 transition-colors duration-200
               appearance-none cursor-pointer
               ${error ? 'border-red-400' : ''}
