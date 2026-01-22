@@ -118,11 +118,10 @@ export default function Plan() {
           {plans.map((plan, index) => (
             <Card
               key={plan.name}
-              className={`relative transition-all duration-300 hover:scale-105 animate-fade-in ${
-                plan.popular
-                  ? 'border-primary shadow-lg ring-2 ring-primary/20'
-                  : 'border-border hover:border-primary/50'
-              }`}
+              className={`relative transition-all duration-300 hover:scale-105 animate-fade-in ${plan.popular
+                ? 'border-primary shadow-lg ring-2 ring-primary/20'
+                : 'border-border hover:border-primary/50'
+                }`}
               style={{ animationDelay: `${index * 100}ms` }}
             >
               {plan.popular && (
@@ -136,11 +135,19 @@ export default function Plan() {
                   {plan.name}
                 </CardTitle>
                 <div className='mb-4'>
-                  <span className='text-4xl font-bold text-foreground'>
-                    {plan.price}
-                  </span>
-                  {plan.period && (
-                    <span className='text-muted-foreground'>{plan.period}</span>
+                  {plan.name === "ENTERPRISE" ? (
+                    <span className="text-xl font-semibold text-muted-foreground">
+                      Contact us for pricing
+                    </span>
+                  ) : (
+                    <>
+                      <span className="text-4xl font-bold text-foreground">
+                        {plan.price}S
+                      </span>
+                      {plan.period && (
+                        <span className="text-muted-foreground">{plan.period}</span>
+                      )}
+                    </>
                   )}
                 </div>
                 <p className='text-muted-foreground'>{plan.description}</p>
