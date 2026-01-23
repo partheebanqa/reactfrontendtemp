@@ -266,13 +266,34 @@ const Pricing: React.FC = () => {
 
                   <div className='mt-4'>
                     <div className='flex items-baseline justify-center'>
-                      <span className='text-4xl font-bold'>
-                        ${isYearly ? plan.price.yearly : plan.price.monthly}
-                      </span>
-                      {plan.price.monthly > 0 && (
-                        <span className='text-muted-foreground ml-2'>
-                          /{isYearly ? 'year' : 'month'}
-                        </span>
+
+
+                      {plan.name === "Enterprise" ? (
+                        <Button
+                          className='w-full'
+                          variant={plan.buttonVariant}
+                          size='lg'
+                          onClick={() => {
+                            if (plan.name === 'Enterprise') {
+                              window.location.href = 'mailto:sales@optraflow.com';
+                            } else if (!isAuthenticated) {
+                              window.location.href = '/signin';
+                            }
+                          }}
+                        >
+                          Contact us for pricing
+                        </Button>
+                      ) : (
+                        <>
+                          <span className='text-4xl font-bold'>
+                            ${isYearly ? plan.price.yearly : plan.price.monthly}
+                          </span>
+                          {plan.price.monthly > 0 && (
+                            <span className='text-muted-foreground ml-2'>
+                              /{isYearly ? 'year' : 'month'}
+                            </span>
+                          )}
+                        </>
                       )}
                     </div>
                     {isYearly && plan.price.monthly > 0 && (

@@ -41,17 +41,21 @@ export default function PilotProgramSignup() {
     ) => {
         const { name, value } = e.target;
 
+        if (name === "phone" && !/^\d*$/.test(value)) {
+            return;
+        }
+
         setFormValues((prev) => ({
             ...prev,
             [name]: value,
         }));
 
-        // Clear error when user starts typing
         setErrors((prev) => ({
             ...prev,
             [name]: undefined,
         }));
     };
+
 
     const validate = (): boolean => {
         const newErrors: FormErrors = {};
@@ -187,6 +191,20 @@ export default function PilotProgramSignup() {
                             type="email"
                         />
 
+
+                        <CustomInput
+                            label="Phone Number"
+                            name="phone"
+                            type="tel"
+                            inputMode="numeric"
+                            pattern="[0-9]*"
+                            maxLength={10}
+                            value={formValues.phone}
+                            onChange={handleChange}
+                            error={errors.phone}
+                            required
+                            placeholder="Enter your phone number"
+                        />
                         <CustomInput
                             label="Role"
                             name="role"
@@ -197,16 +215,6 @@ export default function PilotProgramSignup() {
                             placeholder="Enter your role"
                         />
 
-                        <CustomInput
-                            label="Phone Number"
-                            name="phone"
-                            type="tel"
-                            value={formValues.phone}
-                            onChange={handleChange}
-                            error={errors.phone}
-                            required
-                            placeholder="Enter your phone number"
-                        />
 
                         <CustomTextarea
                             label="Current Testing Challenges"
