@@ -24,6 +24,7 @@ export interface Assertion {
   dataType?: string;
   operator: string;
   type: string;
+  actualValue?: any;
 }
 
 interface ExtendedRequestState extends RequestState {

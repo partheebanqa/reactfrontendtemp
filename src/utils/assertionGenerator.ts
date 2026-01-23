@@ -371,7 +371,6 @@ export const generateAssertions = (
 ): Assertion[] => {
   const assertions: Assertion[] = [];
 
-  // Status code assertions
   assertions.push({
     id: `status-${response.status}`,
     category: 'status',
@@ -384,39 +383,40 @@ export const generateAssertions = (
   });
 
   // Data Presence assertions - Static Variables
-  // if (staticVariables && staticVariables.length > 0) {
-  //   staticVariables.forEach((variable) => {
-  //     assertions.push({
-  //       id: `data-presence-static-${variable.name}`,
-  //       category: 'body',
-  //       type: 'contains',
-  //       description: `Static variable ${variable.name} is present`,
-  //       expectedValue: `{{${variable.name}}}`,
-  //       dataType: 'string',
-  //       enabled: false,
-  //       group: 'data_presence',
-  //     });
-  //   });
-  // }
+  if (staticVariables && staticVariables.length > 0) {
+    staticVariables.forEach((variable) => {
+      assertions.push({
+        id: `data-presence-static-${variable.name}`,
+        category: 'body',
+        type: 'contains',
+        description: `Static variable ${variable.name} is present`,
+        expectedValue: `{{${variable.name}}}`,
+        actualValue: variable.value,
+        dataType: 'string',
+        enabled: false,
+        group: 'data_presence',
+      });
+    });
+  }
 
   // // Data Presence assertions - Dynamic Variables
-  // if (dynamicVariables && dynamicVariables.length > 0) {
-  //   dynamicVariables.forEach((variable) => {
-  //     assertions.push({
-  //       id: `data-presence-dynamic-${variable.name}`,
-  //       category: 'body',
-  //       type: 'contains',
-  //       description: `Dynamic variable is present`,
-  //       expectedValue: `{{${variable.name}}}`,
-  //       dataType: 'string',
-  //       enabled: false,
-  //       group: 'data_presence',
-  //     });
-  //   });
-  // }
+  if (dynamicVariables && dynamicVariables.length > 0) {
+    dynamicVariables.forEach((variable) => {
+      assertions.push({
+        id: `data-presence-dynamic-${variable.name}`,
+        category: 'body',
+        type: 'contains',
+        description: `Dynamic variable ${variable.name} is present`,
+        expectedValue: `{{${variable.name}}}`,
+        actualValue: variable.value,
+        dataType: 'string',
+        enabled: false,
+        group: 'data_presence',
+      });
+    });
+  }
 
   // Header assertions
-  // Generate HeaderGuard™ security assertions
   Object.entries(SECURITY_HEADERS).forEach(([headerName, config]) => {
     const headerValue = response.headers[headerName.toLowerCase()];
     const isPresent = headerValue !== undefined;
