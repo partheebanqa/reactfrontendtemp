@@ -8,7 +8,7 @@ export const submitContactForm = async (
 ): Promise<SubmissionResponse> => {
   // 1. Rate limiting check
   const clientId = getClientFingerprint();
-  const API_URL = 'https://apibackenddev.onrender.com/v1';
+  const API_URL = import.meta.env.VITE_API_BASE_URL;
 
   if (!formRateLimiter.isAllowed(clientId)) {
     const remainingTime = Math.ceil(

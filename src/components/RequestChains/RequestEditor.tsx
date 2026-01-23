@@ -1212,7 +1212,9 @@ export function RequestEditor({
       };
 
       const allGeneratedAssertions = await generateAssertions(
-        formattedAssertionFormat
+        formattedAssertionFormat,
+        usedRequestVariables.staticVars,
+        usedRequestVariables.dynamicVars
       );
 
       const mergedAssertions = allGeneratedAssertions.map((newAssertion) => {

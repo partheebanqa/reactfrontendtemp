@@ -18,6 +18,7 @@ interface Assertion {
   field?: string;
   dataType?: string;
   type?: string;
+  actualValue?: any;
 }
 
 interface AssertionManagerProps {

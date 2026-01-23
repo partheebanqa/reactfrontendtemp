@@ -33,6 +33,7 @@ export interface Assertion {
   impact?: string;
   group?: string;
   dataType?: string;
+  actualValue?: any;
 }
 
 export interface AssertionResult {

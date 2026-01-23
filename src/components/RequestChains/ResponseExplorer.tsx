@@ -59,6 +59,8 @@ interface ResponseExplorerProps {
   extractedVariablesByRequest?: Record<string, Record<string, any>>;
   chainRequests?: any[];
   requestExtractedVariables?: Record<string, any>;
+  allDynamicVariables?: Array<{ name: string; value: string }>;
+  allStaticVariables?: Array<{ name: string; value: string }>;
 }
 
 interface JsonNode {
@@ -92,10 +94,14 @@ export function ResponseExplorer({
   requestIndex = 0,
   extractedVariablesByRequest = {},
   chainRequests = [],
+  allDynamicVariables,
+  allStaticVariables,
 }: ResponseExplorerProps) {
   const [activeTab, setActiveTab] = useState<
     'body' | 'headers' | 'cookies' | 'actualRequest' | 'assertions'
   >('body');
+
+  console.log('allDynamicVariables888:', allDynamicVariables);
 
   const [assertionModalOpen, setAssertionModalOpen] = useState(false);
   const [selectedAssertion, setSelectedAssertion] = useState<{
@@ -1508,6 +1514,8 @@ export function ResponseExplorer({
                   }
                   setShowAssertionUI(false);
                 }}
+                allDynamicVariables={allDynamicVariables}
+                allStaticVariables={allStaticVariables}
               />
             </div>
           </div>

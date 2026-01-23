@@ -58,6 +58,7 @@ type Assertion = {
   group: string;
   priority: string;
   dataType?: string;
+  actualValue?: any;
 };
 
 interface RequestEditorProps {
@@ -1243,6 +1244,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
         setExtractedVariables(extracted);
 
         const formattedResponse = formatBackendResponse(normalizedResponse);
+        console.log('usedVariables:', usedVariables);
         const generatedAssertions = generateAssertions(
           formattedResponse,
           usedVariables.staticVars,

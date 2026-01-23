@@ -14,6 +14,7 @@ import {
   EllipsisVertical,
   ChartNoAxesCombined,
   CopyPlus,
+  Edit,
 } from 'lucide-react';
 import { useToast } from '@/hooks/useToast';
 import { formatDate } from '@/utils/formatDate';
@@ -169,44 +170,52 @@ const TestSuiteCard: React.FC<TestSuiteCardProps> = ({
               variant='outline'
               className={`
     flex items-center gap-1
-    ${suite?.environment?.name?.toLowerCase().includes('prod')
-                  ? 'bg-green-100 text-green-800 border-green-200'
-                  : ''
-                }
-    ${suite?.environment?.name?.toLowerCase().includes('stage')
-                  ? 'bg-yellow-100 text-yellow-800 border-yellow-200'
-                  : ''
-                }
-    ${suite?.environment?.name?.toLowerCase().includes('dev')
-                  ? 'bg-blue-100 text-blue-800 border-blue-200'
-                  : ''
-                }
-    ${!suite?.environment?.name || suite?.environment?.name === 'No Environment'
-                  ? 'bg-gray-100 text-gray-700 border-gray-200'
-                  : ''
-                }
+    ${
+      suite?.environment?.name?.toLowerCase().includes('prod')
+        ? 'bg-green-100 text-green-800 border-green-200'
+        : ''
+    }
+    ${
+      suite?.environment?.name?.toLowerCase().includes('stage')
+        ? 'bg-yellow-100 text-yellow-800 border-yellow-200'
+        : ''
+    }
+    ${
+      suite?.environment?.name?.toLowerCase().includes('dev')
+        ? 'bg-blue-100 text-blue-800 border-blue-200'
+        : ''
+    }
+    ${
+      !suite?.environment?.name || suite?.environment?.name === 'No Environment'
+        ? 'bg-gray-100 text-gray-700 border-gray-200'
+        : ''
+    }
   `}
             >
               {/* Dot */}
               <span
                 className={`h-2 w-2 rounded-full 
-      ${suite?.environment?.name?.toLowerCase().includes('prod')
-                    ? 'bg-green-600'
-                    : ''
-                  }
-      ${suite?.environment?.name?.toLowerCase().includes('stage')
-                    ? 'bg-yellow-600'
-                    : ''
-                  }
-      ${suite?.environment?.name?.toLowerCase().includes('dev')
-                    ? 'bg-blue-600'
-                    : ''
-                  }
-      ${!suite?.environment?.name ||
-                    suite?.environment?.name === 'No Environment'
-                    ? 'bg-gray-500'
-                    : ''
-                  }
+      ${
+        suite?.environment?.name?.toLowerCase().includes('prod')
+          ? 'bg-green-600'
+          : ''
+      }
+      ${
+        suite?.environment?.name?.toLowerCase().includes('stage')
+          ? 'bg-yellow-600'
+          : ''
+      }
+      ${
+        suite?.environment?.name?.toLowerCase().includes('dev')
+          ? 'bg-blue-600'
+          : ''
+      }
+      ${
+        !suite?.environment?.name ||
+        suite?.environment?.name === 'No Environment'
+          ? 'bg-gray-500'
+          : ''
+      }
     `}
               />
 
@@ -289,7 +298,7 @@ const TestSuiteCard: React.FC<TestSuiteCardProps> = ({
                   className='text-gray-600 hover:text-blue-600'
                   onClick={() => onEdit(suite)}
                 >
-                  <Pencil className='w-4 h-4' />
+                  <Edit className='w-4 h-4' />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>Edit Suite</TooltipContent>

@@ -704,7 +704,7 @@ export function RequestChainsList({
                               <DropdownMenuTrigger asChild>
                                 <Button
                                   variant='ghost'
-                                  size='sm'
+                                  size='icon'
                                   className='h-8 w-8 p-0 text-muted-foreground hover:text-foreground'
                                 >
                                   <EllipsisVertical className='w-4 h-4' />
@@ -713,22 +713,43 @@ export function RequestChainsList({
 
                               <DropdownMenuContent
                                 align='end'
-                                className='bg-white border shadow-lg'
+                                className='
+          bg-white dark:bg-gray-900
+          border border-gray-200 dark:border-gray-700
+          shadow-lg
+          rounded-lg
+          min-w-[180px]
+          py-1
+        '
                               >
+                                {/* Clone */}
                                 <DropdownMenuItem
                                   onClick={() => onCloneChain(chain.id)}
+                                  className='flex items-center px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700'
                                 >
-                                  <CopyPlus className='w-4 h-4 mr-2' /> Clone
+                                  <CopyPlus className='w-4 h-4 mr-2' />{' '}
+                                  Duplicate
                                 </DropdownMenuItem>
+
+                                <div className='border-t border-gray-200 dark:border-gray-700 my-1' />
+
+                                {/* Reports */}
+                                <DropdownMenuItem
+                                  onClick={() => handleClickReport(chain.id)}
+                                  className='flex items-center px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700'
+                                >
+                                  <ChartNoAxesCombined className='w-4 h-4 mr-2' />{' '}
+                                  Reports
+                                </DropdownMenuItem>
+
+                                <div className='border-t border-gray-200 dark:border-gray-700 my-1' />
+
+                                {/* Delete */}
                                 <AlertDialog>
                                   <AlertDialogTrigger asChild>
-                                    <Button
-                                      variant='ghost'
-                                      size='sm'
-                                      className='w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50'
-                                    >
+                                    <button className='flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700'>
                                       <Trash2 className='w-4 h-4 mr-2' /> Delete
-                                    </Button>
+                                    </button>
                                   </AlertDialogTrigger>
 
                                   <AlertDialogContent className='max-w-md'>
@@ -748,21 +769,17 @@ export function RequestChainsList({
                                       </AlertDialogCancel>
                                       <Button
                                         onClick={() => onDeleteChain(chain.id)}
+                                        variant='destructive'
                                       >
                                         Delete
                                       </Button>
                                     </AlertDialogFooter>
                                   </AlertDialogContent>
                                 </AlertDialog>
-                                <DropdownMenuItem
-                                  onClick={() => handleClickReport(chain.id)}
-                                >
-                                  <ChartNoAxesCombined className='w-4 h-4 mr-2' />{' '}
-                                  Reports
-                                </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </TooltipTrigger>
+
                           <TooltipContent>More</TooltipContent>
                         </Tooltip>
                       </TooltipProvider>

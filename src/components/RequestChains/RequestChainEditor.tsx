@@ -133,6 +133,8 @@ export function RequestChainEditor({
     DynamicVariableOverride[]
   >([]);
 
+  console.log('dynamicOverrides:', dynamicOverrides);
+
   const [assertionsByRequest, setAssertionsByRequest] = useState<
     Record<string, any[]>
   >(() => {
@@ -1244,7 +1246,9 @@ export function RequestChainEditor({
         };
 
         const newAssertions = await generateAssertions(
-          formattedAssertionFormat
+          formattedAssertionFormat,
+          usedChainVariables.staticVars,
+          usedChainVariables.dynamicVars
         );
 
         if (responseChanged && existingAssertions.length > 0) {
@@ -2955,6 +2959,12 @@ export function RequestChainEditor({
                                                         }
                                                         return varsUpToThisPoint;
                                                       })()}
+                                                      allDynamicVariables={
+                                                        dynamicOverrides
+                                                      }
+                                                      allStaticVariables={
+                                                        storeVariables
+                                                      }
                                                     />
                                                   </div>
                                                 )}
