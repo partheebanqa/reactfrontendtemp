@@ -129,8 +129,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
   allDynamicVariables = [],
   allStaticVariables = [],
 }) => {
-  console.log('allDynamicVariables:', allDynamicVariables);
-
   const { activeEnvironment } = useDataManagement();
 
   const { currentWorkspace } = useWorkspace();
@@ -149,7 +147,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
     'build'
   );
   const [selectedAssertions, setSelectedAssertions] = useState<Assertion[]>([]);
-  console.log('selectedAssertions:', selectedAssertions);
 
   const [validationResults, setValidationResults] = useState<{
     results: ValidationResult[];

@@ -101,8 +101,6 @@ export function ResponseExplorer({
     'body' | 'headers' | 'cookies' | 'actualRequest' | 'assertions'
   >('body');
 
-  console.log('allDynamicVariables888:', allDynamicVariables);
-
   const [assertionModalOpen, setAssertionModalOpen] = useState(false);
   const [selectedAssertion, setSelectedAssertion] = useState<{
     path: string;

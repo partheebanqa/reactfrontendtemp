@@ -133,8 +133,6 @@ export function RequestChainEditor({
     DynamicVariableOverride[]
   >([]);
 
-  console.log('dynamicOverrides:', dynamicOverrides);
-
   const [assertionsByRequest, setAssertionsByRequest] = useState<
     Record<string, any[]>
   >(() => {
