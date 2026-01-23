@@ -184,8 +184,6 @@ export function RequestEditor({
     null
   );
 
-  console.log('executionResult909:', executionResult);
-
   const [showVariablesPopup, setShowVariablesPopup] = useState(false);
   const variablesPopupRef = useRef<HTMLDivElement>(null);
 
@@ -1172,8 +1170,6 @@ export function RequestEditor({
       payload.assertions = assertions.filter((a) => a.enabled);
 
       const backendData = await executeRequest(payload);
-
-      console.log('backendData090:', backendData);
 
       const assertionResult = backendData?.data?.assertionResults || [];
       const result = backendData?.data?.responses?.[0];
