@@ -43,11 +43,7 @@ export interface TestSuite {
   performanceTests: number;
   securityTests: number;
   status: 'Not Run' | 'Running' | 'Passed' | 'Failed';
-
-  // ✅ fix this
   requests: TestSuiteRequest[];
-
-  // ✅ add this
   stats?: TestSuiteStats;
 }
 

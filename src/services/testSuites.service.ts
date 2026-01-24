@@ -11,7 +11,12 @@ export const getAllTestSuites = async (
   try {
     const response = await apiRequest(
       'GET',
-      `${API_TEST_SUITES}?ws=${workspaceId}`
+      `${API_TEST_SUITES}?ws=${workspaceId}`,
+      {
+        headers: {
+          'x-workspace-id': workspaceId,
+        },
+      }
     );
     const data = await response.json();
     return data.testSuites;
@@ -20,9 +25,16 @@ export const getAllTestSuites = async (
   }
 };
 
-export const getTestSuites = async (id: string): Promise<TestSuite> => {
+export const getTestSuites = async (
+  id: string,
+  workspaceId: string
+): Promise<TestSuite> => {
   try {
-    const response = await apiRequest('GET', `${API_TEST_SUITES}/${id}`);
+    const response = await apiRequest('GET', `${API_TEST_SUITES}/${id}`, {
+      headers: {
+        'x-workspace-id': workspaceId,
+      },
+    });
     return await response.json();
   } catch (error: any) {
     throw new Error(error.message || 'Failed to fetch test suite');

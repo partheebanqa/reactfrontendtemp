@@ -1762,7 +1762,8 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
 
                 {assertion.type === 'field_present' ||
                 assertion.type === 'field_exists' ||
-                assertion.type?.startsWith('header') ||
+                assertion.type === 'header_present' ||
+                assertion.type === 'header_exists' ||
                 assertion.type === 'field_null' ||
                 assertion.type === 'field_not_null' ||
                 assertion.type === 'field_is_true' ||

@@ -26,7 +26,7 @@ const RequestChainEdit = () => {
     error: chainError,
   } = useQuery({
     queryKey: ['requestChain', chainId],
-    queryFn: () => getRequestChainById(chainId!),
+    queryFn: () => getRequestChainById(chainId!, currentWorkspace!.id),
     enabled: !!chainId,
     staleTime: 0, // Always fetch fresh data when editing
   });

@@ -107,7 +107,7 @@ const EditTestSuiteContent: React.FC = () => {
     refetch: refetchRequests,
   } = useQuery({
     queryKey: ['testSuite', id],
-    queryFn: () => getTestSuites(id!),
+    queryFn: () => getTestSuites(id!, currentWorkspace!.id),
     enabled: !!id && !isCreateMode,
   });
 

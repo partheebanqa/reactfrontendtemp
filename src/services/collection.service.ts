@@ -14,7 +14,12 @@ export const fetchCollectionList = async (workspaceId: string) => {
   try {
     const response = await apiRequest(
       'GET',
-      `${API_COLLECTIONS}?ws=${workspaceId}`
+      `${API_COLLECTIONS}?ws=${workspaceId}`,
+      {
+        headers: {
+          'x-workspace-id': workspaceId,
+        },
+      }
     );
     if (!response.ok) {
       throw new Error('Failed to fetch collection data');
