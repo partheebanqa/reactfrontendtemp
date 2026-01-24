@@ -1244,12 +1244,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
         setExtractedVariables(extracted);
 
         const formattedResponse = formatBackendResponse(normalizedResponse);
-        console.log('usedVariables:', usedVariables);
-        const generatedAssertions = generateAssertions(
-          formattedResponse,
-          usedVariables.staticVars,
-          usedVariables.dynamicVars
-        );
+        const generatedAssertions = generateAssertions(formattedResponse);
         const existingIds = new Set(assertions.map((a) => a.id));
         const filtered = generatedAssertions.filter(
           (a) => !existingIds.has(a.id)

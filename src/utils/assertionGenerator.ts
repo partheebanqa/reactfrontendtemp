@@ -367,7 +367,8 @@ const isDateString = (value: string): boolean => {
 export const generateAssertions = (
   response: ApiResponse,
   staticVariables?: Array<{ name: string; value: string }>,
-  dynamicVariables?: Array<{ name: string; value: string }>
+  dynamicVariables?: Array<{ name: string; value: string }>,
+  extractedVariables?: Array<{ name: string; value: string }>
 ): Assertion[] => {
   const assertions: Assertion[] = [];
 
@@ -394,6 +395,7 @@ export const generateAssertions = (
         actualValue: variable.value,
         dataType: 'string',
         enabled: false,
+        field: 'response',
         group: 'data_presence',
       });
     });
@@ -411,6 +413,24 @@ export const generateAssertions = (
         actualValue: variable.value,
         dataType: 'string',
         enabled: false,
+        field: 'response',
+        group: 'data_presence',
+      });
+    });
+  }
+
+  if (extractedVariables && extractedVariables.length > 0) {
+    extractedVariables.forEach((variable) => {
+      assertions.push({
+        id: `data-presence-extracted-${variable.name}`,
+        category: 'body',
+        type: 'contains',
+        description: `Extracted variable ${variable.name} is present`,
+        expectedValue: `{{${variable.name}}}`,
+        actualValue: variable.value,
+        dataType: 'string',
+        enabled: false,
+        field: 'response',
         group: 'data_presence',
       });
     });

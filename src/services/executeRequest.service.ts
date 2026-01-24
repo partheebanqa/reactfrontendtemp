@@ -10,6 +10,54 @@ import {
 } from '@/shared/types/requestChain.model';
 import { apiRequestWithErrorDetails } from '@/lib/queryClientWithErrorDetail';
 
+export interface SecurityScanHistoryItem {
+  id: string;
+  targetUrl: string;
+  scanType: string;
+  status: 'completed' | 'running' | 'failed';
+  startTime: string;
+  endTime?: string;
+  duration: number;
+  totalAlerts: number;
+  highRisk: number;
+  mediumRisk: number;
+  lowRisk: number;
+  infoRisk: number;
+}
+
+export interface SecurityScanHistoryResponse {
+  scans: SecurityScanHistoryItem[];
+  pagination: {
+    page: number;
+    pageSize: number;
+    totalItems: number;
+    totalPages: number;
+  };
+}
+
+export interface Vulnerability {
+  id: string;
+  severity: 'high' | 'medium' | 'low' | 'info';
+  confidence?: 'High' | 'Medium' | 'Low';
+  title: string;
+  description: string;
+  recommendation?: string;
+  cwe?: string;
+  owasp?: string;
+}
+
+export interface ScanResult {
+  scanId: string;
+  completedAt: string;
+  totalIssues: number;
+  highSeverity: number;
+  mediumSeverity: number;
+  lowSeverity: number;
+  informational: number;
+  vulnerabilities: Vulnerability[];
+  passedChecks: number;
+}
+
 export const executeRequest = async (
   payload: ExecuteRequestPayload
 ): Promise<ExecutionResponse> => {
@@ -204,31 +252,6 @@ export const executeCollectionRequest = async (
   }
 };
 
-export const startSecurityScan = async (
-  requestId: string
-): Promise<{ scanId: string }> => {
-  try {
-    const response = await apiRequest(
-      'POST',
-      `${SECURITY_API_BASE}/scan/start`,
-      {
-        body: JSON.stringify({ requestId }),
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      }
-    );
-
-    if (!response.ok) {
-      throw new Error(`Failed to start scan: ${response.statusText}`);
-    }
-
-    return await response.json();
-  } catch (error: any) {
-    throw new Error(error.message || 'Failed to start security scan');
-  }
-};
-
 type SecurityReportStatus = 'running' | 'completed' | 'failed';
 
 interface SecurityReportResponse {
@@ -259,8 +282,9 @@ interface SecurityReportResponse {
   }>;
 }
 
-// Transform API response to match component's ScanResult interface
-const transformSecurityReport = (report: SecurityReportResponse) => {
+const transformSecurityReport = (
+  report: SecurityReportResponse
+): ScanResult => {
   const summary = report.summary || {
     highRisk: 0,
     mediumRisk: 0,
@@ -270,7 +294,6 @@ const transformSecurityReport = (report: SecurityReportResponse) => {
 
   const alerts = report.alerts || [];
 
-  // Map risk levels to severity
   const vulnerabilities = alerts.map((alert) => {
     let severity: 'high' | 'medium' | 'low' | 'info';
 
@@ -314,6 +337,54 @@ const transformSecurityReport = (report: SecurityReportResponse) => {
   };
 };
 
+export const fetchScanHistory = async (
+  workspaceId: string,
+  pageSize: number = 500
+): Promise<SecurityScanHistoryResponse> => {
+  try {
+    const response = await apiRequest(
+      'GET',
+      `${SECURITY_API_BASE}/workspace/${workspaceId}/scans?pageSize=${pageSize}`
+    );
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch scan history: ${response.statusText}`);
+    }
+
+    return await response.json();
+  } catch (error: any) {
+    throw new Error(error.message || 'Failed to fetch scan history');
+  }
+};
+
+/**
+ * Start a new security scan
+ */
+export const startSecurityScan = async (
+  requestId: string
+): Promise<{ scanId: string }> => {
+  try {
+    const response = await apiRequest(
+      'POST',
+      `${SECURITY_API_BASE}/scan/start`,
+      {
+        body: JSON.stringify({ requestId }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Failed to start scan: ${response.statusText}`);
+    }
+
+    return await response.json();
+  } catch (error: any) {
+    throw new Error(error.message || 'Failed to start security scan');
+  }
+};
+
 export const getSecurityScanStatus = async (
   scanId: string,
   signal?: AbortSignal
@@ -326,7 +397,7 @@ export const getSecurityScanStatus = async (
     const response = await apiRequest(
       'GET',
       `${SECURITY_API_BASE}/scan/${scanId}/status`,
-      { signal } // Pass abort signal to fetch
+      { signal }
     );
 
     if (!response.ok) {
@@ -335,7 +406,6 @@ export const getSecurityScanStatus = async (
 
     return await response.json();
   } catch (error: any) {
-    // Re-throw abort errors
     if (error.name === 'AbortError') {
       throw new Error('Scan cancelled');
     }
@@ -360,12 +430,12 @@ export const getSecurityReport = async (
   return response.json();
 };
 
-const pollSecurityReport = async (
+export const pollSecurityReport = async (
   scanId: string,
   signal?: AbortSignal,
   interval = 3000,
   maxDuration = 120000
-) => {
+): Promise<ScanResult> => {
   const startTime = Date.now();
 
   while (true) {
@@ -410,7 +480,7 @@ export const pollSecurityScan = async (
   signal?: AbortSignal,
   interval = 2000,
   maxDuration = 120000
-) => {
+): Promise<ScanResult> => {
   const startTime = Date.now();
 
   await new Promise((resolve, reject) => {
@@ -448,7 +518,6 @@ export const pollSecurityScan = async (
       throw new Error('Security scan failed');
     }
 
-    // Use AbortSignal with setTimeout for cancellable delay
     await new Promise((resolve, reject) => {
       const timeoutId = setTimeout(resolve, interval);
 
@@ -463,5 +532,16 @@ export const pollSecurityScan = async (
         );
       }
     });
+  }
+};
+
+export const loadHistoricalScan = async (
+  scanId: string,
+  signal?: AbortSignal
+): Promise<ScanResult> => {
+  try {
+    return await pollSecurityReport(scanId, signal);
+  } catch (error: any) {
+    throw new Error(error.message || 'Failed to load historical scan');
   }
 };
