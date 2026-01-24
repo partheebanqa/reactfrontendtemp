@@ -15,6 +15,8 @@ import {
   Code,
   Hash,
   Cookie,
+  FlaskConical,
+  Stars,
 } from 'lucide-react';
 import { useRequest } from '@/hooks/useRequest';
 import AssertionModal from './AssertionModal';
@@ -69,6 +71,8 @@ const ResponseViewer = ({
   onSaveAssertions,
 }: ResponseViewerProps) => {
   const { responseData, assertions, setAssertions } = useRequest();
+
+  console.log('responseData:', responseData);
 
   const [activeTab, setActiveTab] = useState<
     | 'body'
@@ -147,15 +151,245 @@ const ResponseViewer = ({
     setTimeout(() => setCopiedItem(''), 2000);
   };
 
-  const downloadResponse = () => {
+  const downloadPostmanCollection = () => {
     if (!responseData) return;
-    const blob = new Blob([JSON.stringify(responseData.body, null, 2)], {
+
+    const assertionLogs = responseData.assertionLogs || [];
+    const passedCount = assertionLogs.filter(
+      (a: any) => a.status === 'passed'
+    ).length;
+    const failedCount = assertionLogs.length - passedCount;
+    const successRate =
+      assertionLogs.length > 0
+        ? Math.round((passedCount / assertionLogs.length) * 100)
+        : 0;
+
+    // Parse URL components
+    let urlComponents = { protocol: 'https', host: [], path: [] };
+    if (responseData.actualRequest?.url) {
+      try {
+        const url = new URL(responseData.actualRequest.url);
+        urlComponents.protocol = url.protocol.replace(':', '');
+        urlComponents.host = url.hostname.split('.');
+        urlComponents.path = url.pathname.split('/').filter((p) => p);
+      } catch (e) {
+        urlComponents.host = ['localhost'];
+        urlComponents.path = ['api'];
+      }
+    }
+
+    // Convert headers to Postman format
+    const convertHeaders = (headers: Record<string, string>) => {
+      return Object.entries(headers || {}).map(([key, value]) => ({
+        key,
+        value,
+        type: 'text',
+      }));
+    };
+
+    // Create request body
+    const createRequestBody = (body: any) => {
+      if (!body) return undefined;
+      const bodyStr =
+        typeof body === 'string' ? body : JSON.stringify(body, null, 2);
+      return {
+        mode: 'raw',
+        raw: bodyStr,
+        options: { raw: { language: 'json' } },
+      };
+    };
+
+    const postmanCollection = {
+      info: {
+        name: 'api result',
+        schema:
+          'https://schema.getpostman.com/json/collection/v2.1.0/collection.json',
+        description: `API Test Results - ${passedCount}/${assertionLogs.length} assertions passed (${successRate}% success rate)`,
+      },
+      item: [
+        {
+          name: `API Test - ${
+            responseData.actualRequest?.url || 'Unknown URL'
+          }`,
+          request: {
+            method: responseData.actualRequest?.method || 'GET',
+            header: convertHeaders(responseData.actualRequest?.headers || {}),
+            url: {
+              raw: responseData.actualRequest?.url || '',
+              protocol: urlComponents.protocol,
+              host: urlComponents.host,
+              path: urlComponents.path,
+            },
+            ...(responseData.actualRequest?.body && {
+              body: createRequestBody(responseData.actualRequest.body),
+            }),
+          },
+          response: [
+            {
+              name: 'Response',
+              originalRequest: {
+                method: responseData.actualRequest?.method || 'GET',
+                header: convertHeaders(
+                  responseData.actualRequest?.headers || {}
+                ),
+                url: responseData.actualRequest?.url || '',
+                ...(responseData.actualRequest?.body && {
+                  body: createRequestBody(responseData.actualRequest.body),
+                }),
+              },
+              status: responseData.status || 200,
+              code: responseData.status || 200,
+              _postman_previewlanguage: 'json',
+              header: convertHeaders(responseData.headers || {}),
+              body:
+                typeof responseData.body === 'string'
+                  ? responseData.body
+                  : JSON.stringify(responseData.body, null, 2),
+            },
+          ],
+          event:
+            assertionLogs.length > 0
+              ? [
+                  {
+                    listen: 'test',
+                    script: {
+                      exec: [
+                        '// Generated API Test Results',
+                        `// Total Assertions: ${assertionLogs.length}`,
+                        `// Passed: ${passedCount}`,
+                        `// Failed: ${failedCount}`,
+                        `// Success Rate: ${successRate}%`,
+                        '',
+                        '// Assertion Results:',
+                        ...assertionLogs.map((log: any, index: number) => {
+                          const status =
+                            log.status === 'passed' ? '✅ PASS' : '❌ FAIL';
+                          return `// ${index + 1}. ${status}: ${
+                            log.description || 'Unknown assertion'
+                          } - ${log.errorMessage || 'Success'}`;
+                        }),
+                      ],
+                      type: 'text/javascript',
+                    },
+                  },
+                ]
+              : [],
+        },
+      ],
+      variable: [
+        {
+          key: 'baseUrl',
+          value: responseData.actualRequest?.url
+            ? new URL(responseData.actualRequest.url).origin
+            : 'https://api.example.com',
+          type: 'string',
+        },
+      ],
+    };
+
+    const blob = new Blob([JSON.stringify(postmanCollection, null, 2)], {
       type: 'application/json',
     });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'response.json';
+    a.download = `api-result-postman-collection-${new Date()
+      .toISOString()
+      .replace(/[:.]/g, '-')}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const downloadResponse = () => {
+    if (!responseData) return;
+
+    const assertionLogs = responseData.assertionLogs || [];
+    const hasAssertions = assertionLogs.length > 0;
+
+    const passedCount = assertionLogs.filter(
+      (a: any) => a.status === 'passed'
+    ).length;
+    const failedCount = assertionLogs.length - passedCount;
+    const successRate =
+      assertionLogs.length > 0
+        ? Math.round((passedCount / assertionLogs.length) * 100)
+        : 0;
+
+    const exportData: any = {
+      metadata: {
+        exportedAt: new Date().toISOString(),
+        ...(hasAssertions && {
+          testSummary: {
+            totalAssertions: assertionLogs.length,
+            passed: passedCount,
+            failed: failedCount,
+            successRate: `${successRate}%`,
+          },
+        }),
+      },
+      request: {
+        curl: responseData.requestCurl || '',
+        details: {
+          method: responseData.actualRequest?.method || 'GET',
+          url: responseData.actualRequest?.url || '',
+          headers: responseData.actualRequest?.headers || {},
+          body: responseData.actualRequest?.body || null,
+        },
+      },
+      response: {
+        status: `${responseData.status || responseData.statusCode} ${
+          responseData.statusText || ''
+        }`.trim(),
+        headers: responseData.headers || {},
+        body: responseData.body || null,
+        performance: {
+          responseTime: responseData.metrics?.responseTime
+            ? `${responseData.metrics.responseTime}ms`
+            : 'N/A',
+          size: responseData.metrics?.bytesReceived
+            ? `${responseData.metrics.bytesReceived} bytes`
+            : 'N/A',
+        },
+      },
+    };
+
+    // Only add assertionResults if assertion logs exist
+    if (hasAssertions) {
+      exportData.assertionResults = assertionLogs.map((log: any) => ({
+        assertion: {
+          category: log.category || 'Unknown',
+          type: log.type || 'Unknown',
+          description: log.description || 'No description',
+          field: log.field || '',
+          operator: log.operator || '',
+          expectedValue: log.expectedValue || '',
+          priority: log.priority || log.severity || 'Medium',
+          impact: log.impact || 'No impact specified',
+          group: log.group || 'general',
+        },
+        result: {
+          passed: log.status === 'passed',
+          actualValue: log.actualValue,
+          message:
+            log.errorMessage ||
+            (log.status === 'passed'
+              ? `${log.description}`
+              : `${log.description} - Failed`),
+        },
+      }));
+    }
+
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], {
+      type: 'application/json',
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `api-test-results-${new Date()
+      .toISOString()
+      .replace(/[:.]/g, '-')}.json`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -776,23 +1010,76 @@ const ResponseViewer = ({
           </div>
         </div>
 
-        <div className='flex items-center space-x-4'>
-          <button className='flex items-center space-x-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'>
-            <CheckCircle className='w-4 h-4' />
-            <span>Pretty</span>
-          </button>
-          <button className='flex items-center space-x-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'>
-            <Code className='w-4 h-4' />
-            <span>Raw</span>
-          </button>
-          {/* ADD THIS NEW BUTTON */}
-          <button
-            onClick={() => setShowAssertionUI(true)}
-            className='flex items-center space-x-2 text-sm font-medium dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 text-blue-600'
-          >
-            <CheckCircle className='w-4 h-4' />
-            <span>Assertions</span>
-          </button>
+        <div className='flex items-center justify-between px-4 py-1'>
+          <div className='flex items-center space-x-4'>
+            <button className='flex items-center space-x-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'>
+              <Stars className='w-4 h-4' />
+              <span>Pretty</span>
+            </button>
+            <button className='flex items-center space-x-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'>
+              <Code className='w-4 h-4' />
+              <span>Raw</span>
+            </button>
+            <button
+              onClick={() => setShowAssertionUI(true)}
+              className='flex items-center space-x-2 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-gray-900 dark:hover:text-gray-200'
+            >
+              <FlaskConical className='w-4 h-4' />
+              <span>Assertions</span>
+            </button>
+          </div>
+
+          <div className='flex items-center space-x-2'>
+            <button
+              onClick={() => setShowSearch(!showSearch)}
+              className='p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400'
+              title='Search in response'
+            >
+              <Search className='h-4 w-4' />
+            </button>
+            <button
+              onClick={() =>
+                handleCopy(
+                  JSON.stringify(responseData.body, null, 2),
+                  'full-response'
+                )
+              }
+              className='p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400'
+              title='Copy response'
+            >
+              {copiedItem === 'full-response' ? (
+                <CheckCircle className='h-4 w-4 text-green-600' />
+              ) : (
+                <Copy className='h-4 w-4' />
+              )}
+            </button>
+            <div className='relative group'>
+              <button
+                className='p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400'
+                title='Download Options'
+              >
+                <Download className='h-4 w-4' />
+              </button>
+
+              {/* Dropdown menu */}
+              <div className='absolute right-0 mt-1 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10'>
+                <button
+                  onClick={downloadResponse}
+                  className='w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 rounded-t-md'
+                >
+                  <Download className='w-4 h-4' />
+                  Export JSON
+                </button>
+                <button
+                  onClick={downloadPostmanCollection}
+                  className='w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 rounded-b-md'
+                >
+                  <Download className='w-4 h-4' />
+                  Export Postman
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
         {showSearch && (
           <div className='px-4 py-2 border-b border-gray-200 dark:border-gray-700'>
