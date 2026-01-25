@@ -116,6 +116,7 @@ interface ApiAssertionInterfaceProps {
   mode?: 'save' | 'add';
   allDynamicVariables?: Array<{ name: string; value: string }>;
   allStaticVariables?: Array<{ name: string; value: string }>;
+  allExtractedVariables?: Array<{ name: string; value: string }>;
 }
 
 const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
@@ -128,6 +129,7 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
   mode = 'save',
   allDynamicVariables = [],
   allStaticVariables = [],
+  allExtractedVariables = [],
 }) => {
   const { activeEnvironment } = useDataManagement();
 
@@ -792,18 +794,34 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
       }
 
       // Combine both static and dynamic variables
-      const allVariables = [...allStaticVariables, ...allDynamicVariables];
+      // Combine all three variable types
+      const allVariables = [
+        ...allStaticVariables,
+        ...allDynamicVariables,
+        ...allExtractedVariables,
+      ];
       const selectedVar = allVariables.find((v) => v.name === selectedVariable);
 
       if (!selectedVar) {
         return;
       }
 
-      // Determine if it's static or dynamic
+      // Determine variable type (Static, Dynamic, or Extracted)
       const isStatic = allStaticVariables.some(
         (v) => v.name === selectedVariable
       );
-      const variableType = isStatic ? 'Static' : 'Dynamic';
+      const isDynamic = allDynamicVariables.some(
+        (v) => v.name === selectedVariable
+      );
+      const isExtracted = allExtractedVariables.some(
+        (v) => v.name === selectedVariable
+      );
+
+      const variableType = isStatic
+        ? 'Static'
+        : isDynamic
+        ? 'Dynamic'
+        : 'Extracted';
 
       const newAssertion: Assertion = {
         id: `custom_data_presence_${Date.now()}`,
@@ -1019,18 +1037,34 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
       }
 
       // Combine both static and dynamic variables
-      const allVariables = [...allStaticVariables, ...allDynamicVariables];
+      // Combine all three variable types
+      const allVariables = [
+        ...allStaticVariables,
+        ...allDynamicVariables,
+        ...allExtractedVariables,
+      ];
       const selectedVar = allVariables.find((v) => v.name === selectedVariable);
 
       if (!selectedVar) {
         return;
       }
 
-      // Determine if it's static or dynamic
+      // Determine variable type (Static, Dynamic, or Extracted)
       const isStatic = allStaticVariables.some(
         (v) => v.name === selectedVariable
       );
-      const variableType = isStatic ? 'Static' : 'Dynamic';
+      const isDynamic = allDynamicVariables.some(
+        (v) => v.name === selectedVariable
+      );
+      const isExtracted = allExtractedVariables.some(
+        (v) => v.name === selectedVariable
+      );
+
+      const variableType = isStatic
+        ? 'Static'
+        : isDynamic
+        ? 'Dynamic'
+        : 'Extracted';
 
       const updated = localAssertions.map((a) =>
         a.id === assertionId
@@ -1728,7 +1762,8 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
 
                 {assertion.type === 'field_present' ||
                 assertion.type === 'field_exists' ||
-                assertion.type?.startsWith('header') ||
+                assertion.type === 'header_present' ||
+                assertion.type === 'header_exists' ||
                 assertion.type === 'field_null' ||
                 assertion.type === 'field_not_null' ||
                 assertion.type === 'field_is_true' ||
@@ -1931,11 +1966,14 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
                               value={variable.name}
                             >
                               <div className='flex items-center gap-2'>
-                                <span className='text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded'>
+                                <span className='text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded flex-shrink-0'>
                                   Static
                                 </span>
-                                <span>
-                                  {variable.name} = {variable.value}
+                                <span className='truncate'>
+                                  {variable.name} ={' '}
+                                  {variable.value.length > 50
+                                    ? `${variable.value.substring(0, 50)}...`
+                                    : variable.value}
                                 </span>
                               </div>
                             </SelectItem>
@@ -1955,11 +1993,14 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
                               value={variable.name}
                             >
                               <div className='flex items-center gap-2'>
-                                <span className='text-xs bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded'>
+                                <span className='text-xs bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded flex-shrink-0'>
                                   Dynamic
                                 </span>
-                                <span>
-                                  {variable.name} = {variable.value}
+                                <span className='truncate'>
+                                  {variable.name} ={' '}
+                                  {variable.value.length > 50
+                                    ? `${variable.value.substring(0, 50)}...`
+                                    : variable.value}
                                 </span>
                               </div>
                             </SelectItem>
@@ -1967,9 +2008,36 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
                         </>
                       )}
 
+                      {/* Extracted Variables Section */}
+                      {allExtractedVariables.length > 0 && (
+                        <>
+                          <div className='px-2 py-1.5 text-xs font-semibold text-gray-500 bg-gray-50'>
+                            Extracted Variables
+                          </div>
+                          {allExtractedVariables.map((variable) => (
+                            <SelectItem
+                              key={`extracted-${variable.name}`}
+                              value={variable.name}
+                            >
+                              <div className='flex items-center gap-2'>
+                                <span className='text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded flex-shrink-0'>
+                                  Extracted
+                                </span>
+                                <span className='truncate'>
+                                  {variable.name} ={' '}
+                                  {variable.value.length > 50
+                                    ? `${variable.value.substring(0, 50)}...`
+                                    : variable.value}
+                                </span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </>
+                      )}
                       {/* No Variables Available */}
                       {allStaticVariables.length === 0 &&
-                        allDynamicVariables.length === 0 && (
+                        allDynamicVariables.length === 0 &&
+                        allExtractedVariables.length === 0 && (
                           <SelectItem value='no-vars' disabled>
                             No variables available
                           </SelectItem>
@@ -2348,10 +2416,34 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
                           ))}
                         </>
                       )}
+                      {/* Extracted Variables Section */}
+                      {allExtractedVariables.length > 0 && (
+                        <>
+                          <div className='px-2 py-1.5 text-xs font-semibold text-gray-500 bg-gray-50'>
+                            Extracted Variables
+                          </div>
+                          {allExtractedVariables.map((variable) => (
+                            <SelectItem
+                              key={`extracted-${variable.name}`}
+                              value={variable.name}
+                            >
+                              <div className='flex items-center gap-2'>
+                                <span className='text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded'>
+                                  Extracted
+                                </span>
+                                <span>
+                                  {variable.name} = {variable.value}
+                                </span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </>
+                      )}
 
                       {/* No Variables Available */}
                       {allStaticVariables.length === 0 &&
-                        allDynamicVariables.length === 0 && (
+                        allDynamicVariables.length === 0 &&
+                        allExtractedVariables.length === 0 && (
                           <SelectItem value='no-vars' disabled>
                             No variables available
                           </SelectItem>

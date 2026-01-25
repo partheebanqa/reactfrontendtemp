@@ -7,8 +7,11 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import { executionService } from '@/services/executionService.service';
 import { formatDistanceToNow } from 'date-fns';
+import { useWorkspace } from '@/hooks/useWorkspace';
 
 export const ExecutionDetailsDialog = ({ open, onClose, execution }: any) => {
+  const { currentWorkspace } = useWorkspace();
+
   // Fetch report data based on execution type
   const { data: reportData, isLoading } = useQuery({
     queryKey: [
@@ -24,12 +27,14 @@ export const ExecutionDetailsDialog = ({ open, onClose, execution }: any) => {
       if (execution.executionType === 'test_suite') {
         return await executionService.getTestSuiteReport(
           execution.entityId,
-          execution.id
+          execution.id,
+          currentWorkspace!.id
         );
       } else {
         return await executionService.getRequestChainReport(
           execution?.entityId,
-          execution.id
+          execution.id,
+          currentWorkspace!.id
         );
       }
     },

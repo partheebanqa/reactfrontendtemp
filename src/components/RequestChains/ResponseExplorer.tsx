@@ -61,6 +61,7 @@ interface ResponseExplorerProps {
   requestExtractedVariables?: Record<string, any>;
   allDynamicVariables?: Array<{ name: string; value: string }>;
   allStaticVariables?: Array<{ name: string; value: string }>;
+  allExtractedVariables?: Array<{ name: string; value: string }>;
 }
 
 interface JsonNode {
@@ -96,6 +97,7 @@ export function ResponseExplorer({
   chainRequests = [],
   allDynamicVariables,
   allStaticVariables,
+  allExtractedVariables,
 }: ResponseExplorerProps) {
   const [activeTab, setActiveTab] = useState<
     'body' | 'headers' | 'cookies' | 'actualRequest' | 'assertions'
@@ -1514,6 +1516,7 @@ export function ResponseExplorer({
                 }}
                 allDynamicVariables={allDynamicVariables}
                 allStaticVariables={allStaticVariables}
+                allExtractedVariables={allExtractedVariables}
               />
             </div>
           </div>

@@ -548,6 +548,13 @@ export function RequestEditor({
   >(parentExtractedVariables);
   const { activeEnvironment } = useDataManagement();
 
+  const extractedVariablesArray = Object.entries(extractedVariables).map(
+    ([name, value]) => ({
+      name,
+      value,
+    })
+  );
+
   const [previewUrl, setPreviewUrl] = useState('');
   const [previousExtractions, setPreviousExtractions] = useState<
     DataExtraction[]
@@ -559,6 +566,8 @@ export function RequestEditor({
 
   const [processedRequest, setProcessedRequest] =
     useState<APIRequest>(initialRequest);
+
+  console.log('extractedVariables00:', extractedVariablesByRequest);
 
   const updateExtractedVariables = (newVars: Record<string, any>) => {
     setExtractedVariables(newVars);
@@ -1207,10 +1216,13 @@ export function RequestEditor({
         size: result?.metrics?.bytesReceived ?? 0,
       };
 
+      console.log('extractedVariablesArray:', extractedVariablesArray);
+
       const allGeneratedAssertions = await generateAssertions(
         formattedAssertionFormat,
         usedRequestVariables.staticVars,
-        usedRequestVariables.dynamicVars
+        usedRequestVariables.dynamicVars,
+        extractedVariablesArray
       );
 
       const mergedAssertions = allGeneratedAssertions.map((newAssertion) => {

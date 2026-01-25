@@ -154,25 +154,41 @@ const fetchExecutionFilterChainHistory = async ({
   return res.json();
 };
 // Report API functions
-const getTestSuiteReport = async (testSuiteId: string, executionId: string) => {
+const getTestSuiteReport = async (
+  testSuiteId: string,
+  executionId: string,
+  workspaceId: string
+) => {
   const response = await apiRequest(
     'GET',
-    `${API_REPORTS}/test-suites/${testSuiteId}?execution_id=${executionId}`
+    `${API_REPORTS}/test-suites/${testSuiteId}?execution_id=${executionId}`,
+    {
+      headers: {
+        'x-workspace-id': workspaceId,
+      },
+    }
   );
 
   if (!response.ok) {
     throw new Error('Failed to fetch test suite report');
   }
+
   return response.json();
 };
 
 const getRequestChainReport = async (
   requestChainId: string,
-  executionId: string
+  executionId: string,
+  workspaceId: string
 ) => {
   const response = await apiRequest(
     'GET',
-    `${API_REPORTS}/request-chains/${requestChainId}?execution_id=${executionId}`
+    `${API_REPORTS}/request-chains/${requestChainId}?execution_id=${executionId}`,
+    {
+      headers: {
+        'x-workspace-id': workspaceId,
+      },
+    }
   );
   if (!response.ok) {
     throw new Error('Failed to fetch request chain report');

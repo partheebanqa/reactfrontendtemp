@@ -61,6 +61,7 @@ import {
   convertTimestamp,
   isValidTimestamp,
 } from '@/utils/exportDate';
+import { useWorkspace } from '@/hooks/useWorkspace';
 
 type RouteParams = {
   type: 'test_suite' | 'request_chain';
@@ -749,6 +750,7 @@ const ExecutionReportPage: React.FC = () => {
   const environment = qs.get('env') || 'Unknown';
   const started = qs.get('started');
   const executionId = qs.get('executionId');
+  const { currentWorkspace } = useWorkspace();
 
   const reportRef = useRef<HTMLDivElement>(null);
 
@@ -757,8 +759,16 @@ const ExecutionReportPage: React.FC = () => {
     queryFn: () => {
       if (!entityId || !type || !executionId) return null;
       return type === 'test_suite'
-        ? executionService?.getTestSuiteReport(entityId, executionId)
-        : executionService?.getRequestChainReport(entityId, executionId);
+        ? executionService?.getTestSuiteReport(
+            entityId,
+            executionId,
+            currentWorkspace!.id
+          )
+        : executionService?.getRequestChainReport(
+            entityId,
+            executionId,
+            currentWorkspace!.id
+          );
     },
     enabled: !!entityId && !!type && !!executionId,
   });

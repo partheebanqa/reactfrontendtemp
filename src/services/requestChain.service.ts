@@ -112,7 +112,12 @@ export const getRequestChains = async (
   try {
     const response = await apiRequest(
       'GET',
-      `${API_REQUEST_CHAIN}/with-chainrequests?ws=${workspaceId}`
+      `${API_REQUEST_CHAIN}/with-chainrequests?ws=${workspaceId}`,
+      {
+        headers: {
+          'x-workspace-id': workspaceId,
+        },
+      }
     );
 
     const data = await response.json();
@@ -203,9 +208,14 @@ export const getRequestChainData = async (chainId: string) => {
 };
 
 export const getRequestChainById = async (
-  chainId: string
+  chainId: string,
+  workspaceId: string
 ): Promise<RequestChain> => {
-  const response = await apiRequest('GET', `${API_REQUEST_CHAIN}/${chainId}`);
+  const response = await apiRequest('GET', `${API_REQUEST_CHAIN}/${chainId}`, {
+    headers: {
+      'x-workspace-id': workspaceId,
+    },
+  });
 
   if (!response.ok) {
     throw new Error(`Failed to fetch request chain with ID: ${chainId}`);

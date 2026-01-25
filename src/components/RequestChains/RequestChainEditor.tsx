@@ -412,8 +412,18 @@ export function RequestChainEditor({
   const [extractedVariables, setExtractedVariables] = useState<
     Record<string, any>
   >([]);
+
+  const extractedVariablesArray = Object.entries(extractedVariables).map(
+    ([name, value]) => ({
+      name,
+      value,
+    })
+  );
+
   const [extractedVariablesByRequest, setExtractedVariablesByRequest] =
     useState<Record<string, Record<string, any>>>({});
+  console.log('extractedVariablesByRequest:', extractedVariablesByRequest);
+
   const [isExecuting, setIsExecuting] = useState(false);
   const [currentRequestIndex, setCurrentRequestIndex] = useState(-1);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
@@ -1243,10 +1253,13 @@ export function RequestChainEditor({
           size: result?.metrics?.bytesReceived ?? 0,
         };
 
+        console.log('extractedVariablesArray11:', extractedVariablesArray);
+
         const newAssertions = await generateAssertions(
           formattedAssertionFormat,
           usedChainVariables.staticVars,
-          usedChainVariables.dynamicVars
+          usedChainVariables.dynamicVars,
+          extractedVariablesArray
         );
 
         if (responseChanged && existingAssertions.length > 0) {
@@ -2962,6 +2975,9 @@ export function RequestChainEditor({
                                                       }
                                                       allStaticVariables={
                                                         storeVariables
+                                                      }
+                                                      allExtractedVariables={
+                                                        extractedVariablesArray
                                                       }
                                                     />
                                                   </div>
