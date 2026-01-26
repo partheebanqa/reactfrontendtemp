@@ -211,7 +211,7 @@ const Landing: React.FC = () => {
         </div>
       </section>
 
-      {/* <FaqPage /> */}
+      <FaqPage />
 
       {/* CTA Section */}
       <section className="container mx-auto px-4 py-20 text-center">
