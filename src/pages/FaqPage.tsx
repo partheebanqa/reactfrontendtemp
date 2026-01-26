@@ -148,8 +148,8 @@ const FaqPage: React.FC = () => {
     };
 
     return (
-        <main className="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8">
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-6">Optraflow FAQ</h1>
+        <main className="max-w-6xl mx-auto p-4 sm:p-6 lg:p-8">
+            <h1 className="text-3xl font-bold mb-6 text-center">FAQ's</h1>
             {faqData.map((cat, idx) => (
                 <section key={idx} className="mb-8">
                     <h2 className="text-2xl font-semibold mb-4">{cat.category}</h2>

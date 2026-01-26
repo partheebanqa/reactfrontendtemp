@@ -14,6 +14,14 @@ export interface ExtractedVarMapped {
     path?: string;
 }
 
+export interface AssertionResultsMapped {
+    name: string;
+    message: string;
+    status?: string;
+    actual?: string;
+    expected?: string;
+}
+
 export interface RequestTimelineItem {
     id: string;
     order: number;
@@ -28,6 +36,7 @@ export interface RequestTimelineItem {
     response: string;
     substitutedVariables?: VariableSubstitution[];
     extractedVariables?: ExtractedVarMapped[];
+    assertionResults?: AssertionResultsMapped[]
 }
 
 interface RequestTimelineProps {
@@ -36,6 +45,8 @@ interface RequestTimelineProps {
 
 export default function RequestTimeline({ requests }: RequestTimelineProps) {
     const sortedRequests = [...requests].sort((a, b) => a.order - b.order);
+
+    console.log(sortedRequests, "requests")
 
     return (
         <>
