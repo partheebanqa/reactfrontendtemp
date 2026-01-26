@@ -150,12 +150,12 @@ const computeOverall = (data: any) => {
   const avgDuration =
     tcs.length > 0
       ? Math.round(
-          tcs.reduce((s: number, t: any) => s + Number(t?.duration || 0), 0) /
-            tcs.length
-        )
+        tcs.reduce((s: number, t: any) => s + Number(t?.duration || 0), 0) /
+        tcs.length
+      )
       : Number.isFinite(data?.duration)
-      ? Number(data.duration)
-      : 0;
+        ? Number(data.duration)
+        : 0;
 
   return { total, passed, failed, skipped, successRate, avgDuration };
 };
@@ -181,8 +181,8 @@ const TestSuiteReport: React.FC<TestSuiteReportProps> = ({ data }) => {
         overall.successRate >= 80
           ? 'text-green-600 bg-green-100'
           : overall.successRate >= 60
-          ? 'text-yellow-600 bg-yellow-100'
-          : 'text-red-600 bg-red-100',
+            ? 'text-yellow-600 bg-yellow-100'
+            : 'text-red-600 bg-red-100',
     },
     {
       title: 'Total Test Cases',
@@ -470,12 +470,19 @@ const RequestChainReport: React.FC<RequestChainReportProps> = ({
       responseSize: `${req.responseSize || 0} bytes`,
       duration: `${req.duration}ms`,
       substitutedVariables: req.substitutedVariables || [],
+      assertionResults: req?.assertionResults?.map((v: any) => ({
+        name: v.name,
+        actual: v.actual,
+        expected: v.expected,
+        message: v.message,
+        status: v.status,
+      })) ?? [],
       status:
         req.status === 'passed'
           ? 'success'
           : req.status === 'failed'
-          ? 'fail'
-          : 'skipped',
+            ? 'fail'
+            : 'skipped',
       extractedVars:
         req.extractedVariables?.map((v: any) => ({
           key: v.name,
@@ -483,6 +490,7 @@ const RequestChainReport: React.FC<RequestChainReportProps> = ({
         })) || [],
       errorMessage: req.status === 'failed' ? 'Request failed' : undefined,
     })) || [];
+
 
   const globalVars = data.globalVariables || {};
   const extractedVars =
@@ -500,8 +508,8 @@ const RequestChainReport: React.FC<RequestChainReportProps> = ({
     overall.successRate >= 80
       ? 'text-green-600 bg-green-100'
       : overall.successRate >= 60
-      ? 'text-yellow-600 bg-yellow-100'
-      : 'text-red-600 bg-red-100';
+        ? 'text-yellow-600 bg-yellow-100'
+        : 'text-red-600 bg-red-100';
 
   const metricCards = [
     {
@@ -760,15 +768,15 @@ const ExecutionReportPage: React.FC = () => {
       if (!entityId || !type || !executionId) return null;
       return type === 'test_suite'
         ? executionService?.getTestSuiteReport(
-            entityId,
-            executionId,
-            currentWorkspace!.id
-          )
+          entityId,
+          executionId,
+          currentWorkspace!.id
+        )
         : executionService?.getRequestChainReport(
-            entityId,
-            executionId,
-            currentWorkspace!.id
-          );
+          entityId,
+          executionId,
+          currentWorkspace!.id
+        );
     },
     enabled: !!entityId && !!type && !!executionId,
   });
