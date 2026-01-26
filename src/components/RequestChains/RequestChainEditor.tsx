@@ -2366,7 +2366,7 @@ export function RequestChainEditor({
                 {variable.name}
               </span>
               {variable.description && (
-                <span className='text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded'>
+                <span className='text-xs  px-2 py-0.5 rounded'>
                   {variable.description}
                 </span>
               )}

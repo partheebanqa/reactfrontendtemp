@@ -2757,9 +2757,9 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
         >
           <div className='flex items-center gap-3'>
             {expandedCategories[categoryKey] ? (
-              <ChevronDown className='w-5 h-5 text-gray-600' />
+              <ChevronDown className='w-4 h-4 text-[rgb(19_111_176)]' />
             ) : (
-              <ChevronRight className='w-5 h-5 text-gray-600' />
+              <ChevronRight className='w-4 h-4 text-[rgb(19_111_176)]' />
             )}
             {getCategoryIcon(categoryKey)}
             <h3 className='font-semibold text-gray-900'>{categoryLabel}</h3>
@@ -2782,46 +2782,53 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
             {categoryKey === 'body' &&
               totalInCategory > 0 &&
               appState === 'build' && (
-                <div className='mb-4 flex items-center gap-2 pb-3 border-b border-gray-200'>
-                  <span className='text-sm font-medium text-gray-700'>
-                    Sort by:
-                  </span>
-                  <div className='flex gap-2'>
-                    <Button
-                      variant={
-                        sortBy[categoryKey] === 'none' || !sortBy[categoryKey]
-                          ? 'default'
-                          : 'outline'
-                      }
-                      size='sm'
-                      onClick={() =>
-                        setSortBy({ ...sortBy, [categoryKey]: 'none' })
-                      }
-                    >
-                      None
-                    </Button>
-                    <Button
-                      variant={
-                        sortBy[categoryKey] === 'field' ? 'default' : 'outline'
-                      }
-                      size='sm'
-                      onClick={() =>
-                        setSortBy({ ...sortBy, [categoryKey]: 'field' })
-                      }
-                    >
-                      Field Name
-                    </Button>
-                    <Button
-                      variant={
-                        sortBy[categoryKey] === 'type' ? 'default' : 'outline'
-                      }
-                      size='sm'
-                      onClick={() =>
-                        setSortBy({ ...sortBy, [categoryKey]: 'type' })
-                      }
-                    >
-                      Assertion Type
-                    </Button>
+                <div className='mb-4 flex items-center pb-3 border-b border-gray-200'>
+                  <div className='flex items-center gap-2 ml-auto'>
+                    <span className='text-sm font-medium text-gray-700'>
+                      Sort by:
+                    </span>
+
+                    <div className='flex gap-2'>
+                      <Button
+                        variant={
+                          sortBy[categoryKey] === 'none' || !sortBy[categoryKey]
+                            ? 'default'
+                            : 'outline'
+                        }
+                        size='sm'
+                        onClick={() =>
+                          setSortBy({ ...sortBy, [categoryKey]: 'none' })
+                        }
+                      >
+                        None
+                      </Button>
+
+                      <Button
+                        variant={
+                          sortBy[categoryKey] === 'field'
+                            ? 'default'
+                            : 'outline'
+                        }
+                        size='sm'
+                        onClick={() =>
+                          setSortBy({ ...sortBy, [categoryKey]: 'field' })
+                        }
+                      >
+                        Field Name
+                      </Button>
+
+                      <Button
+                        variant={
+                          sortBy[categoryKey] === 'type' ? 'default' : 'outline'
+                        }
+                        size='sm'
+                        onClick={() =>
+                          setSortBy({ ...sortBy, [categoryKey]: 'type' })
+                        }
+                      >
+                        Assertion Type
+                      </Button>
+                    </div>
                   </div>
                 </div>
               )}
@@ -3324,8 +3331,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
                 Verify {getSelectedCount() > 0 && `${getSelectedCount()} `}
                 Assertions
               </Button>
-
-              {/* Conditional rendering based on mode */}
               {mode === 'add' ? (
                 <Button
                   onClick={handleAddToRequest}
