@@ -169,12 +169,10 @@ const AssertionResults: React.FC<AssertionResultsProps> = ({
     }
 
     if (tableFilterCategory !== 'all') {
-      // ✅ NORMALIZE CATEGORY MATCHING
       filtered = filtered.filter((r) => {
         const normalizedCategory = r.category.toLowerCase().trim();
         const filterValue = tableFilterCategory.toLowerCase();
 
-        // Match various category formats
         if (filterValue === 'body') {
           return (
             normalizedCategory === 'body' ||
