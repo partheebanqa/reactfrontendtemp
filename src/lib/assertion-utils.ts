@@ -195,23 +195,23 @@ export function getFieldAssertionConfig(
       break;
 
     case 'array':
-      // CRITICAL: For arrays, type should always be 'array_length'
-      // except for 'array_present' which is a different type
       if (operator === 'array_present') {
         config.type = 'array_present';
         config.expectedValue = '';
         config.description = `${fieldPath} array exists`;
       } else {
-        // All other array operators use type 'array_length'
         config.type = 'array_length';
 
-        // Handle special operators
+        if (operator === 'array_length') {
+          config.operator = 'equals';
+        }
+
         if (operator === 'greater_than_zero' || operator === 'not_empty') {
           config.expectedValue = '';
           const arrayEmptyDesc = getOperatorDescription(operator);
           config.description = `${fieldPath} array ${arrayEmptyDesc}`;
         } else if (operator === 'between') {
-          config.expectedValue = String(value); // e.g., "1-5"
+          config.expectedValue = String(value);
           config.description = `${fieldPath} array length is between ${value}`;
         } else {
           config.expectedValue = String(
@@ -257,7 +257,7 @@ export const getArrayAssertionConfig = (
     category: 'body',
     field: fieldPath,
     enabled: true,
-    operator: operator,
+    operator: operator === 'array_length' ? 'equals' : operator,
   };
 
   switch (operator) {

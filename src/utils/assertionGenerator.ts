@@ -556,7 +556,6 @@ const generateBodyAssertions = (data: any, prefix = ''): Assertion[] => {
 
   const processValue = (value: any, path: string) => {
     const dataType = getDataType(value);
-
     // Field presence assertion
     assertions.push({
       id: `field-present-${path}`,
