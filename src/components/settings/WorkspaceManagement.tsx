@@ -379,7 +379,8 @@ export function WorkspaceManagement() {
       {/* Workspaces List */}
       <div className='space-y-4'>
         {(workspaces || []).map((workspace) => {
-          // Add default values for compatibility
+          console.log('workspaces');
+
           const enrichedWorkspace: Workspace = {
             ...workspace,
             role: (workspace as any).role || 'member',
@@ -394,10 +395,6 @@ export function WorkspaceManagement() {
                   <div className='flex flex-col sm:flex-row sm:items-start justify-between gap-3'>
                     <div className='flex items-start gap-3 flex-1 min-w-0'>
                       <Avatar className='h-10 w-10 flex-shrink-0'>
-                        <AvatarImage
-                          src='/api/placeholder/40/40'
-                          alt={enrichedWorkspace.name}
-                        />
                         <AvatarFallback className='text-sm'>
                           {enrichedWorkspace.name
                             ?.split(' ')

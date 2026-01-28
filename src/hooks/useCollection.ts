@@ -19,6 +19,7 @@ import {
   useRenameRequestMutation,
   useDeleteRequestMutation,
   useDuplicateRequestMutation,
+  useMarkAuthRequestMutation,
 } from '@/store/query/collectionQuery';
 
 export function useCollection() {
@@ -221,6 +222,7 @@ export function useCollection() {
   const renameRequestMutation = useRenameRequestMutation();
   const deleteRequestMutation = useDeleteRequestMutation();
   const duplicateRequestMutation = useDuplicateRequestMutation();
+  const markAuthRequestMutation = useMarkAuthRequestMutation();
 
   return {
     activeCollection,
@@ -259,6 +261,7 @@ export function useCollection() {
     updateRequestMutation,
     renameRequestMutation,
     duplicateRequestMutation,
+    markAuthRequestMutation,
     setFavouriteCollectionMutation,
     unsetFavouriteCollectionMutation,
     deleteCollectionMutation,

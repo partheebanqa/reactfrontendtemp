@@ -134,6 +134,7 @@ export const getCollectionRequests = async (collectionId: string) => {
     });
     const normalized = {
       folders: (data?.Folders || data?.folders || []).map(mapFolder),
+      preRequestId: data?.preRequestId,
       requests: (data?.Requests || data?.requests || []).map((r: any) =>
         formatRequest(r)
       ),
@@ -168,12 +169,35 @@ export const renameCollection = async ({
   }
 };
 
+export const markRequestAsAuth = async (
+  requestId: string,
+  collectionId: string
+) => {
+  const response = await apiRequest(
+    'PUT',
+    `${API_COLLECTIONS}/${collectionId}`,
+    {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ preRequestId: requestId }),
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error('Failed to mark request as auth');
+  }
+
+  return await response.json();
+};
+
 export const formatCollection = (collation: any) => {
   return {
     id: collation.Id || collation.id,
     workspaceId: collation.WorkspaceId || collation.workspaceId,
     name: collation.Name || collation.name,
     isImportant: collation.IsImportant || collation.isImportant,
+    preRequestId: collation.PreRequestId || collation.preRequestId,
     variables: collation.Variables || collation.variables,
     createdAt: collation.CreatedAt || collation.created_at,
     updatedAt: collation.UpdatedAt || collation.updated_at,

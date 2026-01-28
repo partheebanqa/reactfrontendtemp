@@ -27,7 +27,7 @@ export default function SignUp() {
     email: '',
     password: '',
     confirmPassword: '',
-    workspaceName: '',
+    organization: '',
     agreedToTerms: false,
   });
   const { toast, error: errorToast } = useToast();
@@ -139,7 +139,7 @@ export default function SignUp() {
     isEmailValid &&
     formData.password &&
     formData.confirmPassword &&
-    formData.workspaceName &&
+    formData.organization &&
     passwordsMatch &&
     formData.agreedToTerms;
 
@@ -241,20 +241,20 @@ export default function SignUp() {
               </div>
 
               <div>
-                <Label htmlFor='workspaceName'>Organization</Label>
+                <Label htmlFor='organization'>Organization</Label>
                 <div className='relative'>
                   <Building className='absolute left-3 top-3 h-4 w-4 text-gray-400' />
                   <Input
-                    id='workspaceName'
+                    id='organization'
                     type='text'
                     required
                     className='pl-10'
                     placeholder='My Organization Name'
-                    value={formData.workspaceName}
+                    value={formData.organization}
                     onChange={(e) =>
                       setFormData({
                         ...formData,
-                        workspaceName: e.target.value,
+                        organization: e.target.value,
                       })
                     }
                   />
