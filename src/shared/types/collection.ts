@@ -133,6 +133,8 @@ export interface Collection {
   id: string;
   workspaceId: string;
   name: string;
+  preRequestId?: string;
+
   isImportant?: boolean;
   variables?: string;
   requests: CollectionRequest[];

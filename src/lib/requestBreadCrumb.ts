@@ -9,6 +9,7 @@ interface Collection {
   id: string;
   name: string;
   folders?: Folder[];
+  preRequestId?: string;
 }
 
 interface Request {

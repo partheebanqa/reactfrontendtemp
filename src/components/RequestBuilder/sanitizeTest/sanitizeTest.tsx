@@ -74,6 +74,7 @@ interface Collection {
   name: string;
   requests?: CollectionRequest[];
   folders?: any[];
+  preRequestId?: string;
 }
 
 interface SortableRequestItemProps {
