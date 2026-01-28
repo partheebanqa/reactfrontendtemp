@@ -1207,7 +1207,32 @@ export function RequestChainEditor({
 
     const currentAssertions =
       assertionsByRequest[request.id] || requestAssertions || [];
-    payload.assertions = currentAssertions.filter((a) => a.enabled);
+
+    const processedAssertions = currentAssertions
+      .filter((a) => a.enabled)
+      .map((assertion) => {
+        const processed = { ...assertion };
+
+        const hasVariablePlaceholder =
+          processed.expectedValue &&
+          typeof processed.expectedValue === 'string' &&
+          /\{\{.*?\}\}/.test(processed.expectedValue);
+
+        if (hasVariablePlaceholder) {
+          if (processed.actualValue) {
+            processed.expectedValue = processed.actualValue;
+          } else {
+            processed.expectedValue = replaceVariables(
+              processed.expectedValue,
+              variables
+            );
+          }
+        }
+
+        return processed;
+      });
+
+    payload.assertions = processedAssertions;
 
     try {
       const backendData = await executeRequest(payload);

@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ChevronDown,
   ChevronRight,
@@ -103,6 +103,43 @@ export function ResponseExplorer({
     'body' | 'headers' | 'cookies' | 'actualRequest' | 'assertions'
   >('body');
 
+  console.log('allAssertions123:', allAssertions);
+
+  // Helper function to generate UUID v4
+  const generateUUID = (): string => {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(
+      /[xy]/g,
+      function (c) {
+        const r = (Math.random() * 16) | 0;
+        const v = c === 'x' ? r : (r & 0x3) | 0x8;
+        return v.toString(16);
+      }
+    );
+  };
+
+  // Helper function to ensure all assertions have unique IDs
+  const ensureAssertionIds = (assertions: any[]): any[] => {
+    if (!assertions || !Array.isArray(assertions)) return [];
+
+    return assertions.map((assertion) => {
+      // If assertion already has a valid UUID format ID, keep it
+      if (
+        assertion.id &&
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+          assertion.id
+        )
+      ) {
+        return assertion;
+      }
+
+      // Otherwise, generate a new UUID
+      return {
+        ...assertion,
+        id: generateUUID(),
+      };
+    });
+  };
+
   const [assertionModalOpen, setAssertionModalOpen] = useState(false);
   const [selectedAssertion, setSelectedAssertion] = useState<{
     path: string;
@@ -112,6 +149,25 @@ export function ResponseExplorer({
     filteredAssertions?: any[];
   } | null>(null);
   const [showAssertionUI, setShowAssertionUI] = useState(false);
+  const [normalizedAssertions, setNormalizedAssertions] = useState<any[]>([]);
+
+  // Ensure all assertions have unique IDs
+  useEffect(() => {
+    if (allAssertions && allAssertions.length > 0) {
+      const assertionsWithIds = ensureAssertionIds(allAssertions);
+      setNormalizedAssertions(assertionsWithIds);
+
+      // Optionally update parent component with normalized assertions
+      if (
+        onAssertionsUpdate &&
+        JSON.stringify(assertionsWithIds) !== JSON.stringify(allAssertions)
+      ) {
+        onAssertionsUpdate(assertionsWithIds);
+      }
+    } else {
+      setNormalizedAssertions([]);
+    }
+  }, [allAssertions]); // Remove onAssertionsUpdate from dependencies to avoid infinite loop
 
   const getValueByPath = (obj: any, path: string): any => {
     if (!obj || !path) return undefined;
@@ -452,7 +508,7 @@ export function ResponseExplorer({
     const operators = getOperatorsForFieldType(fieldType);
 
     const filteredAssertions = filterAssertionsByField(
-      allAssertions,
+      normalizedAssertions,
       path,
       value
     );
@@ -1371,11 +1427,11 @@ export function ResponseExplorer({
           initialField={selectedAssertion.path}
           initialValue={selectedAssertion.value}
           suggestedAssertions={
-            selectedAssertion.filteredAssertions || allAssertions
+            selectedAssertion.filteredAssertions || normalizedAssertions
           }
           availableOperators={selectedAssertion.operators}
           fieldType={selectedAssertion.fieldType}
-          allAssertions={allAssertions}
+          allAssertions={normalizedAssertions}
           setAssertions={onAssertionsUpdate}
           variables={variables}
           dynamicVariables={dynamicVariables}
@@ -1449,7 +1505,7 @@ export function ResponseExplorer({
             };
 
             const baseAssertion = {
-              id: `manual-${Date.now()}`,
+              id: generateUUID(),
               type: finalType,
               displayType: assertionType,
               category: config?.isGeneral
@@ -1473,8 +1529,7 @@ export function ResponseExplorer({
                     field: normalizeFieldPath(selectedAssertion.path),
                   };
 
-            const updatedAssertions = [...allAssertions, newAssertion];
-
+            const updatedAssertions = [...normalizedAssertions, newAssertion];
             if (onAssertionsUpdate) {
               onAssertionsUpdate(updatedAssertions);
             }
@@ -1504,7 +1559,7 @@ export function ResponseExplorer({
             {/* Content */}
             <div className='flex-1 overflow-auto'>
               <ApiAssertionInterface
-                assertions={allAssertions}
+                assertions={normalizedAssertions}
                 responseData={response}
                 onUpdateAssertions={onAssertionsUpdate}
                 mode='add'

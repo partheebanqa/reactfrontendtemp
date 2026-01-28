@@ -133,6 +133,8 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
 }) => {
   const { activeEnvironment } = useDataManagement();
 
+  console.log('assertions909:', assertions);
+
   const { currentWorkspace } = useWorkspace();
   const saveMenuRef = useRef<HTMLDivElement>(null);
   const [localAssertions, setLocalAssertions] =
@@ -2915,8 +2917,19 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
                   <TrendingUp className='w-4 h-4' />
                   Results
                   {validationResults && (
-                    <span className='ml-2 text-xs font-semibold bg-red-100 text-red-700 px-2 py-0.5 rounded-full'>
-                      {validationResults.summary.failed}/
+                    <span
+                      className={`ml-2 text-xs font-semibold px-2 py-0.5 rounded-full ${
+                        validationResults.summary.failed === 0
+                          ? 'bg-green-100 text-green-700'
+                          : validationResults.summary.failed /
+                              (validationResults.summary.passed +
+                                validationResults.summary.failed) >=
+                            0.5
+                          ? 'bg-red-100 text-red-700'
+                          : 'bg-amber-100 text-amber-700'
+                      }`}
+                    >
+                      {validationResults.summary.passed}/
                       {validationResults.summary.passed +
                         validationResults.summary.failed}
                     </span>
