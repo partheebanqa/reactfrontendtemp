@@ -2,7 +2,7 @@
 
 import type React from 'react';
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { Play, Save, FolderPlus, Info } from 'lucide-react';
+import { Play, Save, FolderPlus, Info, Rocket } from 'lucide-react';
 import { useRequest } from '@/hooks/useRequest';
 import { useCollection } from '@/hooks/useCollection';
 import { useWorkspace } from '@/hooks/useWorkspace';
@@ -44,6 +44,12 @@ import { useSchema } from '@/hooks/useSchema';
 import type { CollectionRequest } from '@/shared/types/collection';
 import RequestBody from '@/components/Shared/RequestTabs/RequestBody';
 import { PrePostRequest } from '@/components/Shared/RequestTabs/PrePostRequest';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { Separator } from '@/components/ui/separator';
+import { Checkbox } from '@/components/ui/checkbox';
 
 type Assertion = {
   id: string;
@@ -88,6 +94,43 @@ interface SelectedVariable {
 interface PendingSubstitution {
   lineIndex: number;
   variableName: string;
+}
+
+
+export interface RequestSettings {
+  options: {
+    followRedirects: boolean;
+    stopOnError: boolean;
+    saveResponses: boolean;
+  };
+  timeout?: number; // in milliseconds
+  validateSSL?: boolean;
+  proxy?: {
+    enabled: boolean;
+    url: string;
+  };
+  performanceTest: {
+    numRequests: number;
+    concurrency: number;
+    delay: number; // in milliseconds
+    timeout: number; // in milliseconds
+  };
+  rateLimit: {
+    enabled: boolean;
+    requestsPerPeriod: number;
+    periodInSeconds: number;
+    type: 'fixed' | 'sliding';
+  };
+}
+
+// Request
+export interface Request {
+  id?: string;
+  name?: string;
+  url: string;
+  settings: RequestSettings;
+  description?: string;
+  collectionId?: string;
 }
 
 type BodyType =
@@ -279,11 +322,34 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
     return bodyContent.trim() !== '' ? 1 : 0;
   };
 
-  const [settings, setSettings] = useState({
-    followRedirects: true,
+  const [settings, setSettings] = useState<RequestSettings>({
+    options: {
+      followRedirects: true,
+      stopOnError: false,
+      saveResponses: false,
+    },
     timeout: 30000,
-    sslVerification: true,
+    validateSSL: true,
+    proxy: {
+      enabled: false,
+      url: '',
+    },
+    performanceTest: {
+      numRequests: 1,
+      concurrency: 1,
+      delay: 0,
+      timeout: 1000,
+    },
+    rateLimit: {
+      enabled: false,
+      requestsPerPeriod: 10,
+      periodInSeconds: 60,
+      type: 'fixed',
+    },
   });
+
+
+
 
   const formattedVariables = useMemo(() => {
     const formatted: Array<{ name: string; value: string }> = [];
@@ -598,12 +664,12 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
             activeRequest.method as RequestMethod
           )
             ? [
-                {
-                  key: 'Content-Type',
-                  value: 'application/json',
-                  enabled: true,
-                },
-              ]
+              {
+                key: 'Content-Type',
+                value: 'application/json',
+                enabled: true,
+              },
+            ]
             : [];
 
           const filteredHeaders = formattedHeaders.filter(
@@ -845,7 +911,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
     if (typeof result.body === 'string') {
       try {
         parsedBody = JSON.parse(result.body);
-      } catch {}
+      } catch { }
     }
 
     return {
@@ -1103,17 +1169,17 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
           effectiveAuthType === 'bearer'
             ? { token: authData.token }
             : effectiveAuthType === 'basic'
-            ? {
+              ? {
                 username: authData.username,
                 password: authData.password,
               }
-            : effectiveAuthType === 'apiKey'
-            ? {
-                key: authData.key,
-                value: authData.value,
-                addTo: authData.addTo,
-              }
-            : undefined,
+              : effectiveAuthType === 'apiKey'
+                ? {
+                  key: authData.key,
+                  value: authData.value,
+                  addTo: authData.addTo,
+                }
+                : undefined,
         timeout: settings.timeout,
         retries: 0,
         extractVariables: [],
@@ -1122,14 +1188,14 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
 
       const enabledAssertions = Array.isArray(assertions)
         ? assertions
-            .filter((assertion) => assertion.enabled)
-            .map((a) => ({
-              ...a,
-              expectedValue:
-                a.expectedValue !== undefined && a.expectedValue !== null
-                  ? String(a.expectedValue)
-                  : '',
-            }))
+          .filter((assertion) => assertion.enabled)
+          .map((a) => ({
+            ...a,
+            expectedValue:
+              a.expectedValue !== undefined && a.expectedValue !== null
+                ? String(a.expectedValue)
+                : '',
+          }))
         : [];
 
       const payload = buildRequestPayload(
@@ -1195,7 +1261,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
         if (typeof backendBody === 'string') {
           try {
             parsedBody = JSON.parse(backendBody);
-          } catch {}
+          } catch { }
         }
 
         const actualRequest = {
@@ -1209,12 +1275,12 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
             }, {} as Record<string, string>),
           body: substitutedBodyContent
             ? (() => {
-                try {
-                  return JSON.parse(substitutedBodyContent);
-                } catch {
-                  return substitutedBodyContent;
-                }
-              })()
+              try {
+                return JSON.parse(substitutedBodyContent);
+              } catch {
+                return substitutedBodyContent;
+              }
+            })()
             : null,
         };
 
@@ -1280,12 +1346,12 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
             }, {} as Record<string, string>),
           body: substitutedBodyContent
             ? (() => {
-                try {
-                  return JSON.parse(substitutedBodyContent);
-                } catch {
-                  return substitutedBodyContent;
-                }
-              })()
+              try {
+                return JSON.parse(substitutedBodyContent);
+              } catch {
+                return substitutedBodyContent;
+              }
+            })()
             : null,
         },
         body: backendBody,
@@ -1390,18 +1456,18 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
 
       const selectedAssertions = Array.isArray(assertions)
         ? assertions
-            .filter((assertion) => assertion.enabled)
-            .map((assertion) => ({
-              ...assertion,
-              requestId: activeRequest.id,
-              expectedValue:
-                assertion.expectedValue !== undefined &&
+          .filter((assertion) => assertion.enabled)
+          .map((assertion) => ({
+            ...assertion,
+            requestId: activeRequest.id,
+            expectedValue:
+              assertion.expectedValue !== undefined &&
                 assertion.expectedValue !== null
-                  ? typeof assertion.expectedValue === 'string'
-                    ? assertion.expectedValue
-                    : JSON.stringify(assertion.expectedValue)
-                  : '',
-            }))
+                ? typeof assertion.expectedValue === 'string'
+                  ? assertion.expectedValue
+                  : JSON.stringify(assertion.expectedValue)
+                : '',
+          }))
         : [];
 
       const effectiveFolderId =
@@ -1418,23 +1484,23 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
         bodyFormData:
           bodyType === 'form-data'
             ? formFields
-                .filter((f) => f.enabled)
-                .reduce((acc: Record<string, any>, field) => {
-                  if (field.key) {
-                    if (field.type === 'file' && field.value instanceof File) {
-                      acc[field.key] = field.value;
-                    } else {
-                      acc[field.key] = String(field.value);
-                    }
+              .filter((f) => f.enabled)
+              .reduce((acc: Record<string, any>, field) => {
+                if (field.key) {
+                  if (field.type === 'file' && field.value instanceof File) {
+                    acc[field.key] = field.value;
+                  } else {
+                    acc[field.key] = String(field.value);
                   }
-                  return acc;
-                }, {})
+                }
+                return acc;
+              }, {})
             : [],
         bodyRawContent:
           bodyType === 'raw' || bodyType === 'json'
             ? bodyContent
             : bodyType === 'x-www-form-urlencoded'
-            ? new URLSearchParams(
+              ? new URLSearchParams(
                 urlEncodedFields
                   .filter((f) => f.enabled)
                   .reduce((acc, field) => {
@@ -1442,7 +1508,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
                     return acc;
                   }, {} as Record<string, string>)
               ).toString()
-            : '',
+              : '',
         authorizationType: effectiveAuthType,
         authorization: {
           token: authData.token,
@@ -1454,29 +1520,29 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
           oauth1:
             effectiveAuthType === 'oauth1'
               ? {
-                  consumerKey: authData.oauth1.consumerKey,
-                  consumerSecret: authData.oauth1.consumerSecret,
-                  token: authData.oauth1.token,
-                  tokenSecret: authData.oauth1.tokenSecret,
-                  signatureMethod: authData.oauth1.signatureMethod,
-                  version: '1.0',
-                  realm: authData.oauth1.realm,
-                  nonce: authData.oauth1.nonce,
-                  timestamp: authData.oauth1.timestamp,
-                }
+                consumerKey: authData.oauth1.consumerKey,
+                consumerSecret: authData.oauth1.consumerSecret,
+                token: authData.oauth1.token,
+                tokenSecret: authData.oauth1.tokenSecret,
+                signatureMethod: authData.oauth1.signatureMethod,
+                version: '1.0',
+                realm: authData.oauth1.realm,
+                nonce: authData.oauth1.nonce,
+                timestamp: authData.oauth1.timestamp,
+              }
               : undefined,
           oauth2:
             effectiveAuthType === 'oauth2'
               ? {
-                  clientId: authData.oauth2.clientId,
-                  clientSecret: authData.oauth2.clientSecret,
-                  accessToken: authData.oauth2.accessToken,
-                  tokenType: authData.oauth2.tokenType,
-                  refreshToken: authData.oauth2.refreshToken,
-                  scope: authData.oauth2.scope,
-                  grantType: authData.oauth2.grantType,
-                  redirectUri: authData.oauth2.redirectUri,
-                }
+                clientId: authData.oauth2.clientId,
+                clientSecret: authData.oauth2.clientSecret,
+                accessToken: authData.oauth2.accessToken,
+                tokenType: authData.oauth2.tokenType,
+                refreshToken: authData.oauth2.refreshToken,
+                scope: authData.oauth2.scope,
+                grantType: authData.oauth2.grantType,
+                redirectUri: authData.oauth2.redirectUri,
+              }
               : undefined,
         },
         params,
@@ -1592,23 +1658,23 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
         bodyFormData:
           bodyType === 'form-data'
             ? formFields
-                .filter((f) => f.enabled)
-                .reduce((acc: Record<string, any>, field) => {
-                  if (field.key) {
-                    if (field.type === 'file' && field.value instanceof File) {
-                      acc[field.key] = field.value;
-                    } else {
-                      acc[field.key] = String(field.value);
-                    }
+              .filter((f) => f.enabled)
+              .reduce((acc: Record<string, any>, field) => {
+                if (field.key) {
+                  if (field.type === 'file' && field.value instanceof File) {
+                    acc[field.key] = field.value;
+                  } else {
+                    acc[field.key] = String(field.value);
                   }
-                  return acc;
-                }, {})
+                }
+                return acc;
+              }, {})
             : [],
         bodyRawContent:
           bodyType === 'raw' || bodyType === 'json'
             ? bodyContent
             : bodyType === 'x-www-form-urlencoded'
-            ? new URLSearchParams(
+              ? new URLSearchParams(
                 urlEncodedFields
                   .filter((f) => f.enabled)
                   .reduce((acc, field) => {
@@ -1616,7 +1682,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
                     return acc;
                   }, {} as Record<string, string>)
               ).toString()
-            : '',
+              : '',
         authorizationType: effectiveAuthType,
         authorization: requestDataAuthorization(effectiveAuthType, authData),
         params,
@@ -1716,18 +1782,18 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
 
       const selectedAssertions = Array.isArray(assertions)
         ? assertions
-            .filter((assertion) => assertion.enabled)
-            .map((assertion) => ({
-              ...assertion,
-              requestId: activeRequest.id,
-              expectedValue:
-                assertion.expectedValue !== undefined &&
+          .filter((assertion) => assertion.enabled)
+          .map((assertion) => ({
+            ...assertion,
+            requestId: activeRequest.id,
+            expectedValue:
+              assertion.expectedValue !== undefined &&
                 assertion.expectedValue !== null
-                  ? typeof assertion.expectedValue === 'string'
-                    ? assertion.expectedValue
-                    : JSON.stringify(assertion.expectedValue)
-                  : '',
-            }))
+                ? typeof assertion.expectedValue === 'string'
+                  ? assertion.expectedValue
+                  : JSON.stringify(assertion.expectedValue)
+                : '',
+          }))
         : [];
 
       const effectiveFolderId =
@@ -1744,23 +1810,23 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
         bodyFormData:
           bodyType === 'form-data'
             ? formFields
-                .filter((f) => f.enabled)
-                .reduce((acc: Record<string, any>, field) => {
-                  if (field.key) {
-                    if (field.type === 'file' && field.value instanceof File) {
-                      acc[field.key] = field.value;
-                    } else {
-                      acc[field.key] = String(field.value);
-                    }
+              .filter((f) => f.enabled)
+              .reduce((acc: Record<string, any>, field) => {
+                if (field.key) {
+                  if (field.type === 'file' && field.value instanceof File) {
+                    acc[field.key] = field.value;
+                  } else {
+                    acc[field.key] = String(field.value);
                   }
-                  return acc;
-                }, {})
+                }
+                return acc;
+              }, {})
             : [],
         bodyRawContent:
           bodyType === 'raw' || bodyType === 'json'
             ? bodyContent
             : bodyType === 'x-www-form-urlencoded'
-            ? new URLSearchParams(
+              ? new URLSearchParams(
                 urlEncodedFields
                   .filter((f) => f.enabled)
                   .reduce((acc, field) => {
@@ -1768,7 +1834,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
                     return acc;
                   }, {} as Record<string, string>)
               ).toString()
-            : '',
+              : '',
         authorizationType: effectiveAuthType,
         authorization: {
           token: authData.token,
@@ -1780,29 +1846,29 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
           oauth1:
             effectiveAuthType === 'oauth1'
               ? {
-                  consumerKey: authData.oauth1.consumerKey,
-                  consumerSecret: authData.oauth1.consumerSecret,
-                  token: authData.oauth1.token,
-                  tokenSecret: authData.oauth1.tokenSecret,
-                  signatureMethod: authData.oauth1.signatureMethod,
-                  version: '1.0',
-                  realm: authData.oauth1.realm,
-                  nonce: authData.oauth1.nonce,
-                  timestamp: authData.oauth1.timestamp,
-                }
+                consumerKey: authData.oauth1.consumerKey,
+                consumerSecret: authData.oauth1.consumerSecret,
+                token: authData.oauth1.token,
+                tokenSecret: authData.oauth1.tokenSecret,
+                signatureMethod: authData.oauth1.signatureMethod,
+                version: '1.0',
+                realm: authData.oauth1.realm,
+                nonce: authData.oauth1.nonce,
+                timestamp: authData.oauth1.timestamp,
+              }
               : undefined,
           oauth2:
             effectiveAuthType === 'oauth2'
               ? {
-                  clientId: authData.oauth2.clientId,
-                  clientSecret: authData.oauth2.clientSecret,
-                  accessToken: authData.oauth2.accessToken,
-                  tokenType: authData.oauth2.tokenType,
-                  refreshToken: authData.oauth2.refreshToken,
-                  scope: authData.oauth2.scope,
-                  grantType: authData.oauth2.grantType,
-                  redirectUri: authData.oauth2.redirectUri,
-                }
+                clientId: authData.oauth2.clientId,
+                clientSecret: authData.oauth2.clientSecret,
+                accessToken: authData.oauth2.accessToken,
+                tokenType: authData.oauth2.tokenType,
+                refreshToken: authData.oauth2.refreshToken,
+                scope: authData.oauth2.scope,
+                grantType: authData.oauth2.grantType,
+                redirectUri: authData.oauth2.redirectUri,
+              }
               : undefined,
         },
         params,
@@ -1849,29 +1915,29 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
       oauth1:
         type === 'oauth1'
           ? {
-              consumerKey: authData.oauth1.consumerKey,
-              consumerSecret: authData.oauth1.consumerSecret,
-              token: authData.oauth1.token,
-              tokenSecret: authData.oauth1.tokenSecret,
-              signatureMethod: authData.oauth1.signatureMethod,
-              version: '1.0',
-              realm: authData.oauth1.realm,
-              nonce: authData.oauth1.nonce,
-              timestamp: authData.oauth1.timestamp,
-            }
+            consumerKey: authData.oauth1.consumerKey,
+            consumerSecret: authData.oauth1.consumerSecret,
+            token: authData.oauth1.token,
+            tokenSecret: authData.oauth1.tokenSecret,
+            signatureMethod: authData.oauth1.signatureMethod,
+            version: '1.0',
+            realm: authData.oauth1.realm,
+            nonce: authData.oauth1.nonce,
+            timestamp: authData.oauth1.timestamp,
+          }
           : undefined,
       oauth2:
         type === 'oauth2'
           ? {
-              clientId: authData.oauth2.clientId,
-              clientSecret: authData.oauth2.clientSecret,
-              accessToken: authData.oauth2.accessToken,
-              tokenType: authData.oauth2.tokenType,
-              refreshToken: authData.oauth2.refreshToken,
-              scope: authData.oauth2.scope,
-              grantType: authData.oauth2.grantType,
-              redirectUri: authData.oauth2.redirectUri,
-            }
+            clientId: authData.oauth2.clientId,
+            clientSecret: authData.oauth2.clientSecret,
+            accessToken: authData.oauth2.accessToken,
+            tokenType: authData.oauth2.tokenType,
+            refreshToken: authData.oauth2.refreshToken,
+            scope: authData.oauth2.scope,
+            grantType: authData.oauth2.grantType,
+            redirectUri: authData.oauth2.redirectUri,
+          }
           : undefined,
     };
   }
@@ -2177,6 +2243,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
     return extracted;
   };
 
+
   if (!activeRequest) {
     return (
       <div className='flex-1 flex items-center justify-center bg-gray-50 dark:bg-gray-900 p-4'>
@@ -2413,6 +2480,26 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
                   </button>
                 )}
               </TooltipContainer>
+
+              <TooltipContainer text='Performance Test'>
+                {isNewRequest(activeRequest.id) ? (
+                  <button
+                    // onClick={handleSaveRequest}
+                    className='border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 px-3 py-2 rounded-md'
+                    aria-label='Performance Test'
+                  >
+                    <Rocket className='h-4 w-4 text-[#136fb0]' />
+                  </button>
+                ) : (
+                  <button
+
+                    className='border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 px-3 py-2 rounded-md'
+                    aria-label='Performance Test'
+                  >
+                    <Rocket className='h-4 w-4 text-[#136fb0]' />
+                  </button>
+                )}
+              </TooltipContainer>
             </div>
           </div>
 
@@ -2473,10 +2560,9 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
                 }}
                 className={`
                     pt-4 pb-2 px-2 sm:px-4 border-b-2 font-medium text-sm transition-colors whitespace-nowrap
-                  ${
-                    activeTab === tab.id
-                      ? 'border-[#136fb0] text-[#136fb0]'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  ${activeTab === tab.id
+                    ? 'border-[#136fb0] text-[#136fb0]'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                   }
                 `}
               >
@@ -2667,63 +2753,442 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
           )}
 
           {activeTab === 'settings' && (
-            <div className='space-y-5'>
-              <h4 className='text-base sm:text-lg font-medium text-gray-900 dark:text-white'>
-                Request Settings
-              </h4>
 
-              <div className='space-y-4'>
-                <ToggleSwitch
-                  id='followRedirects'
-                  checked={settings.followRedirects}
-                  onChange={(checked) =>
-                    setSettings({ ...settings, followRedirects: checked })
-                  }
-                  label='Follow Redirects'
-                  description='Automatically follow HTTP redirects'
-                />
-                <div>
-                  <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
-                    Request Timeout (ms)
-                  </label>
-                  <input
-                    type='number'
-                    min='0'
-                    value={settings.timeout}
-                    onChange={(e) =>
-                      setSettings({
-                        ...settings,
-                        timeout: Number.parseInt(e.target.value),
-                      })
+            <>
+              <div className="space-y-6">
+                <Tabs defaultValue="performance">
+                  <TabsList className="mb-4">
+                    <TabsTrigger value="performance">Performance Test</TabsTrigger>
+                    <TabsTrigger value="general">General Settings</TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="performance">
+                    <div className="space-y-6">
+                      {/* Performance Test Settings */}
+                      <div>
+                        <h3 className="font-medium text-gray-800 dark:text-gray-200 mb-2">
+                          Performance Test Settings
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                              Number of Requests
+                            </Label>
+                            <Input
+                              type="number"
+                              min={1}
+                              value={settings.performanceTest.numRequests}
+                              onChange={(e) =>
+                                setSettings((prev) => ({
+                                  ...prev,
+                                  performanceTest: {
+                                    ...prev.performanceTest,
+                                    numRequests: Number(e.target.value) || 1,
+                                  },
+                                }))
+                              }
+                            />
+
+                          </div>
+                          <div>
+                            <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                              Concurrency
+                            </Label>
+                            <Input
+                              type="number"
+                              min={1}
+                              value={settings.performanceTest.concurrency}
+                              onChange={(e) =>
+                                setSettings((prev) => ({
+                                  ...prev,
+                                  performanceTest: {
+                                    ...prev.performanceTest,
+                                    concurrency: Number(e.target.value) || 1,
+                                  },
+                                }))
+                              }
+                            />
+
+                          </div>
+                          <div>
+                            <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                              Delay Between Requests (ms)
+                            </Label>
+                            <Input
+                              type="number"
+                              min={0}
+                              value={settings.performanceTest.delay}
+                              onChange={(e) =>
+                                setSettings((prev) => ({
+                                  ...prev,
+                                  performanceTest: {
+                                    ...prev.performanceTest,
+                                    delay: Number(e.target.value) || 0,
+                                  },
+                                }))
+                              }
+                            />
+
+                          </div>
+                          <div>
+                            <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                              Timeout (ms)
+                            </Label>
+                            <Input
+                              type="number"
+                              min={0}
+                              value={settings.performanceTest.timeout}
+                              onChange={(e) =>
+                                setSettings((prev) => ({
+                                  ...prev,
+                                  performanceTest: {
+                                    ...prev.performanceTest,
+                                    timeout: Number(e.target.value) || 0,
+                                  },
+                                }))
+                              }
+                            />
+
+                          </div>
+                        </div>
+                      </div>
+
+                      <Separator className="my-4" />
+
+                      {/* Rate Limiting Settings */}
+                      <div>
+                        <div className="flex items-center justify-between mb-4">
+                          <h3 className="font-medium text-gray-800 dark:text-gray-200">
+                            Rate Limiting Settings
+                          </h3>
+                          <div className="flex items-center space-x-2">
+                            <Label htmlFor="rate-limit-enabled" className="text-sm text-gray-700 dark:text-gray-300">
+                              Enable Rate Limiting
+                            </Label>
+                            <Switch
+                              id="rate-limit-enabled"
+                              checked={settings.rateLimit.enabled}
+                              onCheckedChange={(checked) =>
+                                setSettings((prev) => ({
+                                  ...prev,
+                                  rateLimit: {
+                                    ...prev.rateLimit,
+                                    enabled: checked,
+                                  },
+                                }))
+                              }
+                            />
+
+                          </div>
+                        </div>
+
+                        {settings.rateLimit.enabled && (
+                          <div className="space-y-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div>
+                                <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                  Requests per Period
+                                </Label>
+                                <Input
+                                  type="number"
+                                  min={1}
+                                  value={settings.rateLimit.requestsPerPeriod}
+                                  onChange={(e) =>
+                                    setSettings((prev) => ({
+                                      ...prev,
+                                      rateLimit: {
+                                        ...prev.rateLimit,
+                                        requestsPerPeriod: Number(e.target.value) || 1,
+                                      },
+                                    }))
+                                  }
+                                />
+
+                              </div>
+                              <div>
+                                <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                  Period (seconds)
+                                </Label>
+                                <Input
+                                  type="number"
+                                  min={1}
+                                  value={settings.rateLimit.periodInSeconds}
+                                  onChange={(e) =>
+                                    setSettings((prev) => ({
+                                      ...prev,
+                                      rateLimit: {
+                                        ...prev.rateLimit,
+                                        periodInSeconds: Number(e.target.value) || 1,
+                                      },
+                                    }))
+                                  }
+                                />
+
+                              </div>
+                            </div>
+
+                            <div>
+                              <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Rate Limit Type
+                              </Label>
+                              <RadioGroup
+                                value={settings.rateLimit.type}
+                                onValueChange={(value) =>
+                                  setSettings((prev) => ({
+                                    ...prev,
+                                    rateLimit: {
+                                      ...prev.rateLimit,
+                                      type: value as 'fixed' | 'sliding',
+                                    },
+                                  }))
+                                }
+                              >
+
+                                <div className="flex items-center space-x-2">
+                                  <RadioGroupItem value="fixed" id="fixed" />
+                                  <Label htmlFor="fixed" className="text-sm">
+                                    Fixed Window (e.g., 10 req/min starting at full minutes)
+                                  </Label>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                  <RadioGroupItem value="sliding" id="sliding" />
+                                  <Label htmlFor="sliding" className="text-sm">
+                                    Sliding Window (e.g., 10 req within any 60s period)
+                                  </Label>
+                                </div>
+                              </RadioGroup>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Current Settings Summary */}
+                      <div className="mt-6 bg-gray-50 dark:bg-dark-300 p-4 rounded-lg border border-gray-200 dark:border-dark-100">
+                        <h3 className="font-medium text-gray-800 dark:text-gray-200 mb-4">
+                          Current Settings Summary
+                        </h3>
+                        <div className="space-y-2 text-sm">
+                          <div className="flex flex-col">
+                            <div className="font-medium">Performance Test:</div>
+                            <ul className="list-disc list-inside ml-4">
+                              <li>Requests: {settings.performanceTest.numRequests}</li>
+                              <li>Concurrency: {settings.performanceTest.concurrency}</li>
+                              <li>Delay: {settings.performanceTest.delay}ms</li>
+                              <li>Timeout: {settings.performanceTest.timeout}ms</li>
+                            </ul>
+
+                          </div>
+
+                          <div className="flex flex-col">
+                            <div className="font-medium">Rate Limiting:</div>
+                            <ul className="list-disc list-inside ml-4 text-gray-600 dark:text-gray-400">
+                              <ul className="list-disc list-inside ml-4">
+                                <li>Enabled: {settings.rateLimit.enabled ? 'Yes' : 'No'}</li>
+                                {settings.rateLimit.enabled && (
+                                  <>
+                                    <li>Requests per period: {settings.rateLimit.requestsPerPeriod}</li>
+                                    <li>Period: {settings.rateLimit.periodInSeconds}s</li>
+                                    <li>Type: {settings.rateLimit.type}</li>
+                                  </>
+                                )}
+                              </ul>
+
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="general">
+                    <div className="space-y-6">
+                      {/* General Options */}
+                      <div>
+                        <h3 className="font-medium text-gray-800 dark:text-gray-200 mb-4">
+                          General Settings
+                        </h3>
+
+                        <div className="space-y-4">
+                          <div className="flex flex-wrap items-center gap-6">
+                            {/* Follow Redirects */}
+                            <div className="flex items-center">
+                              <Checkbox
+                                id="follow-redirects-general"
+                                checked={settings.options.followRedirects}
+                                onCheckedChange={(checked) =>
+                                  setSettings((prev) => ({
+                                    ...prev,
+                                    options: {
+                                      ...prev.options,
+                                      followRedirects: Boolean(checked),
+                                    },
+                                  }))
+                                }
+                                className="rounded border-gray-300 text-primary-600 focus:ring-primary-500 dark:border-dark-100 dark:bg-dark-300"
+                              />
+                              <Label
+                                htmlFor="follow-redirects-general"
+                                className="ml-2 text-sm text-gray-700 dark:text-gray-300"
+                              >
+                                Follow Redirects
+                              </Label>
+                            </div>
+
+                            {/* Stop on Error */}
+                            <div className="flex items-center">
+                              <Checkbox
+                                id="stop-on-error-general"
+                                checked={settings.options.stopOnError}
+                                onCheckedChange={(checked) =>
+                                  setSettings((prev) => ({
+                                    ...prev,
+                                    options: {
+                                      ...prev.options,
+                                      stopOnError: Boolean(checked),
+                                    },
+                                  }))
+                                }
+                                className="rounded border-gray-300 text-primary-600 focus:ring-primary-500 dark:border-dark-100 dark:bg-dark-300"
+                              />
+                              <Label
+                                htmlFor="stop-on-error-general"
+                                className="ml-2 text-sm text-gray-700 dark:text-gray-300"
+                              >
+                                Stop on Error
+                              </Label>
+                            </div>
+
+                            {/* Save Responses */}
+                            <div className="flex items-center">
+                              <Checkbox
+                                id="save-responses-general"
+                                checked={settings.options.saveResponses}
+                                onCheckedChange={(checked) =>
+                                  setSettings((prev) => ({
+                                    ...prev,
+                                    options: {
+                                      ...prev.options,
+                                      saveResponses: Boolean(checked),
+                                    },
+                                  }))
+                                }
+                                className="rounded border-gray-300 text-primary-600 focus:ring-primary-500 dark:border-dark-100 dark:bg-dark-300"
+                              />
+                              <Label
+                                htmlFor="save-responses-general"
+                                className="ml-2 text-sm text-gray-700 dark:text-gray-300"
+                              >
+                                Save All Responses
+                              </Label>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Save Settings Button */}
+                      <div className="mt-6 flex justify-end">
+                        <Button
+                          variant="default"
+                          onClick={() => {
+                            // saveRequest(settings);
+                            toast({
+                              title: "Settings Saved",
+                              description: "Your request settings have been saved successfully.",
+                              duration: 3000,
+                            });
+                          }}
+                          className="flex items-center gap-2"
+                        >
+                          <Save size={16} />
+                          Save Settings
+                        </Button>
+                      </div>
+
+                      {/* Options Summary */}
+                      <div className="mt-6 bg-gray-50 dark:bg-dark-300 p-4 rounded-lg border border-gray-200 dark:border-dark-100">
+                        <h3 className="font-medium text-gray-800 dark:text-gray-200 mb-4">
+                          Options Summary
+                        </h3>
+                        <ul className="list-disc list-inside ml-4 text-gray-600 dark:text-gray-400">
+                          <li>Follow Redirects: {settings.options.followRedirects ? 'Yes' : 'No'}</li>
+                          <li>Stop on Error: {settings.options.stopOnError ? 'Yes' : 'No'}</li>
+                          <li>Save All Responses: {settings.options.saveResponses ? 'Yes' : 'No'}</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </TabsContent>
+
+                </Tabs>
+              </div>
+              <div className='space-y-5'>
+                <h4 className='text-base sm:text-lg font-medium text-gray-900 dark:text-white'>
+                  Request Settings
+                </h4>
+
+                <div className='space-y-4'>
+                  <ToggleSwitch
+                    id="followRedirects"
+                    checked={settings.options.followRedirects}
+                    onChange={(checked) =>
+                      setSettings((prev) => ({
+                        ...prev,
+                        options: {
+                          ...prev.options,
+                          followRedirects: checked,
+                        },
+                      }))
                     }
-                    className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150 bg-white dark:bg-gray-800 text-sm'
+                    label="Follow Redirects"
+                    description="Automatically follow HTTP redirects"
                   />
-                  <p className='text-xs text-gray-500 dark:text-gray-400 mt-1'>
-                    Time in milliseconds to wait for a response before timing
-                    out
+                  <div>
+                    <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
+                      Request Timeout (ms)
+                    </label>
+                    <Input
+                      type="number"
+                      min="0"
+                      value={settings.timeout}
+                      onChange={(e) =>
+                        setSettings((prev) => ({
+                          ...prev,
+                          timeout: Number(e.target.value) || 0,
+                        }))
+                      }
+                      className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2
+             hover:border-blue-400 focus:ring-2 focus:ring-blue-500
+             focus:border-blue-500 focus:outline-none focus:bg-blue-50
+             dark:focus:bg-blue-900/20 transition-all duration-150
+             bg-white dark:bg-gray-800 text-sm"
+                    />
+
+                    <p className='text-xs text-gray-500 dark:text-gray-400 mt-1'>
+                      Time in milliseconds to wait for a response before timing
+                      out
+                    </p>
+                  </div>
+                  {/* <ToggleSwitch
+                    id='sslVerification'
+                    // checked={settings.options?.sslVerification}
+                    // onChange={(checked) =>
+                    //   setSettings({ ...settings, sslVerification: checked })
+                    // }
+                    label='SSL Certificate Verification'
+                    description='Verify SSL certificates when making HTTPS requests'
+                  /> */}
+                </div>
+
+                <div className='mt-6 p-4 bg-yellow-50 dark:bg-yellow-900 rounded-md'>
+                  <h4 className='text-sm font-medium text-yellow-800 dark:text-yellow-200'>
+                    Request Settings Info
+                  </h4>
+                  <p className='text-xs text-yellow-700 dark:text-yellow-300 mt-1'>
+                    These settings only apply to this specific request. Global
+                    settings can be configured in the application settings.
                   </p>
                 </div>
-                <ToggleSwitch
-                  id='sslVerification'
-                  checked={settings.sslVerification}
-                  onChange={(checked) =>
-                    setSettings({ ...settings, sslVerification: checked })
-                  }
-                  label='SSL Certificate Verification'
-                  description='Verify SSL certificates when making HTTPS requests'
-                />
               </div>
-
-              <div className='mt-6 p-4 bg-yellow-50 dark:bg-yellow-900 rounded-md'>
-                <h4 className='text-sm font-medium text-yellow-800 dark:text-yellow-200'>
-                  Request Settings Info
-                </h4>
-                <p className='text-xs text-yellow-700 dark:text-yellow-300 mt-1'>
-                  These settings only apply to this specific request. Global
-                  settings can be configured in the application settings.
-                </p>
-              </div>
-            </div>
+            </>
           )}
 
           {activeTab === 'schemas' && (
