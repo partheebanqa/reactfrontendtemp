@@ -1431,19 +1431,24 @@ const Sidebar: React.FC = () => {
                       <CopyPlus className='h-4 w-4 mr-2' />
                       Duplicate
                     </button>
-
                     <div className='border-t border-gray-200 dark:border-gray-700 my-1'></div>
-                    <button
-                      onClick={() => {
-                        setShowMarkAuthDialog(true);
-                        setShowMenu(null);
-                        setMenuPosition(null);
-                      }}
-                      className='flex items-center w-full px-4 py-1 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
-                    >
-                      <KeyRound className='h-4 w-4 mr-2' />
-                      Mark Auth
-                    </button>
+
+                    {selectedRequest.method === 'POST' && (
+                      <>
+                        <button
+                          onClick={() => {
+                            setShowMarkAuthDialog(true);
+                            setShowMenu(null);
+                            setMenuPosition(null);
+                          }}
+                          className='flex items-center w-full px-4 py-1 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
+                        >
+                          <KeyRound className='h-4 w-4 mr-2' />
+                          Mark Auth
+                        </button>
+                      </>
+                    )}
+
                     <button
                       onClick={() => handleOpenSecurityScan(selectedRequest)}
                       className='flex items-center w-full px-4 py-1 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
@@ -1471,7 +1476,6 @@ const Sidebar: React.FC = () => {
                     </button>
                   </div>
                 )}
-
                 {showMenu.startsWith('folder-') &&
                   selectedFolder &&
                   selectedCollection && (
