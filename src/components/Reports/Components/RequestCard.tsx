@@ -9,6 +9,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import VariableTable from './VariableTable';
 import CodeBlock from '../CodeBlock';
 import { RequestTimelineItem } from './RequestTimeline';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ArrowDown, ArrowUp, ArrowUpDown, Check, TrendingUp, X } from 'lucide-react';
+import { useState } from 'react';
 
 interface RequestCardProps {
   request: RequestTimelineItem;
@@ -32,6 +35,9 @@ export default function RequestCard({ request, index }: RequestCardProps) {
         return 'bg-muted text-muted-foreground';
     }
   };
+
+
+  console.log(request, "request");
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -64,6 +70,113 @@ export default function RequestCard({ request, index }: RequestCardProps) {
     request.substitutedVariables && request.substitutedVariables.length > 0;
   const hasExtracted =
     request.extractedVariables && request.extractedVariables.length > 0;
+
+  const hasAssertion =
+    request.assertionResults && request.assertionResults.length > 0;
+
+  const [tableFilterStatus, setTableFilterStatus] = useState<
+    'all' | 'passed' | 'failed'
+  >('all');
+
+  const [tableFilterCategory, setTableFilterCategory] = useState('all');
+  const [tableSortConfig, setTableSortConfig] = useState<{
+    key: string | null;
+    direction: 'asc' | 'desc';
+  }>({
+    key: null,
+    direction: 'asc',
+  });
+
+  const handleTableSort = (key: string) => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (tableSortConfig.key === key && tableSortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setTableSortConfig({ key, direction });
+  };
+
+  const SortIcon = ({ columnKey }: { columnKey: string }) => {
+    if (tableSortConfig.key !== columnKey) {
+      return <ArrowUpDown className='w-4 h-4 text-gray-400' />;
+    }
+    return tableSortConfig.direction === 'asc' ? (
+      <ArrowUp className='w-4 h-4 text-blue-600' />
+    ) : (
+      <ArrowDown className='w-4 h-4 text-blue-600' />
+    );
+  };
+
+  const getFilteredTableData = () => {
+    let filtered = [...request?.assertionResults || []];
+
+    if (tableFilterStatus !== 'all') {
+      filtered = filtered.filter((r) => r.name === tableFilterStatus);
+    }
+
+    if (tableFilterCategory !== 'all') {
+      // ✅ NORMALIZE CATEGORY MATCHING
+      filtered = filtered.filter((r) => {
+        const normalizedCategory = r.name.toLowerCase().trim();
+        const filterValue = tableFilterCategory.toLowerCase();
+
+        // Match various category formats
+        if (filterValue === 'body') {
+          return (
+            normalizedCategory === 'body' ||
+            normalizedCategory === 'request body' ||
+            normalizedCategory === 'request body fields'
+          );
+        }
+        if (filterValue === 'headers') {
+          return (
+            normalizedCategory === 'headers' ||
+            normalizedCategory === 'response headers'
+          );
+        }
+        if (filterValue === 'headerguard™') {
+          return (
+            normalizedCategory === 'headerguard™' ||
+            normalizedCategory === 'security headers guard'
+          );
+        }
+        if (filterValue === 'performance') {
+          return (
+            normalizedCategory === 'performance' ||
+            normalizedCategory === 'performance checks'
+          );
+        }
+        if (filterValue === 'status') {
+          return (
+            normalizedCategory === 'status' ||
+            normalizedCategory === 'status code'
+          );
+        }
+
+        return normalizedCategory === filterValue;
+      });
+    }
+
+    // if (tableSortConfig.key) {
+    //   filtered.sort((a, b) => {
+    //     let aVal = a[tableSortConfig.key as keyof ValidationResult];
+    //     let bVal = b[tableSortConfig.key as keyof ValidationResult];
+
+    //     if (tableSortConfig.key === 'failureRate') {
+    //       const aHistory = getHistory(a.id);
+    //       const bHistory = getHistory(b.id);
+    //       aVal = aHistory.failureRate as any;
+    //       bVal = bHistory.failureRate as any;
+    //     }
+
+    //     if (aVal < bVal) return tableSortConfig.direction === 'asc' ? -1 : 1;
+    //     if (aVal > bVal) return tableSortConfig.direction === 'asc' ? 1 : -1;
+    //     return 0;
+    //   });
+    // }
+
+    return filtered;
+  };
+
 
   return (
     <div className='relative pl-8' data-testid={`request-card-${index}`}>
@@ -179,6 +292,14 @@ export default function RequestCard({ request, index }: RequestCardProps) {
                       Extracted Variables ({request.extractedVariables!.length})
                     </TabsTrigger>
                   )}
+                  {hasAssertion && (
+                    <TabsTrigger
+                      value='assertions'
+                      data-testid={`tab-assertions-${index}`}
+                    >
+                      Assertion Results({request?.assertionResults?.length})
+                    </TabsTrigger>
+                  )}
                 </TabsList>
 
                 {request.requestCurl && (
@@ -266,6 +387,177 @@ export default function RequestCard({ request, index }: RequestCardProps) {
                       title='Extracted Variables'
                       testId={`table-extracted-${index}`}
                     />
+                  </TabsContent>
+                )}
+
+                {hasAssertion && (
+                  <TabsContent value='assertions' className='mt-4'>
+
+                    <div className='bg-white rounded-lg shadow-sm border border-gray-200'>
+                      <div className='p-4 border-b border-gray-200'>
+                        <div className='flex items-center justify-between mb-1'>
+                          <h3 className='font-semibold text-gray-900 text-lg'>
+                            Detailed Results
+                          </h3>
+                          {/* <div className='flex gap-2'>
+                            <Select
+                              value={tableFilterStatus}
+                              onValueChange={(value) =>
+                                setTableFilterStatus(value as any)
+                              }
+                            >
+                              <SelectTrigger className='w-[180px]'>
+                                <SelectValue placeholder='Filter by status' />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value='all'>All Status</SelectItem>
+                                <SelectItem value='passed'>Passed Only</SelectItem>
+                                <SelectItem value='failed'>Failed Only</SelectItem>
+                              </SelectContent>
+                            </Select>
+
+                            <Select
+                              value={tableFilterCategory}
+                              onValueChange={(value) => setTableFilterCategory(value)}
+                            >
+                              <SelectTrigger className='w-[180px]'>
+                                <SelectValue placeholder='Filter by category' />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value='all'>All Categories</SelectItem>
+                                <SelectItem value='body'>Request Body</SelectItem>
+                                <SelectItem value='headers'>Response Headers</SelectItem>
+                                <SelectItem value='HeaderGuard™'>Security</SelectItem>
+                                <SelectItem value='performance'>Performance</SelectItem>
+                                <SelectItem value='status'>Status</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div> */}
+                        </div>
+                      </div>
+
+                      <div className='overflow-x-auto'>
+                        <table className='w-full'>
+                          <thead className='bg-gray-50 border-b border-gray-200'>
+                            <tr>
+                              <th
+                                className='px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase cursor-pointer hover:bg-gray-100 transition-colors'
+                                onClick={() => handleTableSort('result')}
+                              >
+                                <div className='flex items-center gap-2'>
+                                  Name
+                                  <SortIcon columnKey='result' />
+                                </div>
+                              </th>
+                              <th
+                                className='px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase cursor-pointer hover:bg-gray-100 transition-colors'
+                                onClick={() => handleTableSort('category')}
+                              >
+                                <div className='flex items-center gap-2'>
+                                  Message
+                                  <SortIcon columnKey='category' />
+                                </div>
+                              </th>
+                              <th
+                                className='px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase cursor-pointer hover:bg-gray-100 transition-colors'
+                                onClick={() => handleTableSort('field')}
+                              >
+                                <div className='flex items-center gap-2'>
+                                  Actual
+                                  <SortIcon columnKey='field' />
+                                </div>
+                              </th>
+                              <th
+                                className='px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase cursor-pointer hover:bg-gray-100 transition-colors'
+                                onClick={() => handleTableSort('type')}
+                              >
+                                <div className='flex items-center gap-2'>
+                                  Expected
+                                  <SortIcon columnKey='type' />
+                                </div>
+                              </th>
+
+                              <th
+                                className='px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase cursor-pointer hover:bg-gray-100 transition-colors'
+                                onClick={() => handleTableSort('failureRate')}
+                              >
+                                <div className='flex items-center gap-2'>
+                                  Status
+                                  <SortIcon columnKey='failureRate' />
+                                </div>
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody className='divide-y divide-gray-200'>
+                            {getFilteredTableData().map((result, index) => {
+                              // const history = getHistory(result.index);
+                              // const isResultFlaky = isFlaky(result.index);
+
+                              return (
+                                <tr
+                                  key={index}
+                                  className={`hover:bg-gray-50 transition-colors ${result.status === 'failed' ? 'bg-red-50' : ''
+                                    }`}
+                                >
+                                  <td className='px-4 py-3 whitespace-nowrap'>
+                                    {/* <div
+                                      className={`w-8 h-8 rounded-full flex items-center justify-center ${result.status === 'passed'
+                                        ? 'bg-green-100 text-green-700'
+                                        : 'bg-red-100 text-red-700'
+                                        }`}
+                                    >
+                                      {result.status === 'passed' ? (
+                                        <Check className='w-5 h-5' />
+                                      ) : (
+                                        <X className='w-5 h-5' />
+                                      )}
+                                    
+                                    </div> */}
+                                    <span className='text-sm text-gray-600'>
+                                      {result?.name}
+                                    </span>
+                                  </td>
+                                  <td className='px-4 py-3'>
+                                    <span className='text-sm text-gray-600'>
+                                      {result?.message}
+                                    </span>
+                                  </td>
+                                  <td className='px-4 py-3'>
+                                    <div className='flex items-center gap-2'>
+                                      <span className='text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded'>
+                                        {result?.actual || 'N/A'}
+                                      </span>
+
+                                    </div>
+                                  </td>
+                                  <td className='px-4 py-3'>
+                                    <span className='text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded'>
+                                      {result?.expected || "N/A"}
+                                    </span>
+                                  </td>
+
+                                  <td className='px-4 py-3'>
+                                    <span className={`flex items-center justify-center ${result.status === 'Passed'
+                                      ? 'text-green-700'
+                                      : 'text-red-700'
+                                      }`}>
+                                      {result.status}
+                                    </span>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {getFilteredTableData().length === 0 && (
+                        <div className='p-8 text-center text-gray-500'>
+                          No results match the selected filters
+                        </div>
+                      )}
+                    </div>
+
                   </TabsContent>
                 )}
               </Tabs>

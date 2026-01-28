@@ -211,10 +211,9 @@ const Landing: React.FC = () => {
         </div>
       </section>
 
-      {/* <FaqPage /> */}
 
       {/* CTA Section */}
-      <section className="container mx-auto px-4 py-20 text-center">
+      <section className="bg-white px-4 py-20 text-center">
         <h2 className="text-3xl font-bold mb-4">Ready to Get Started?</h2>
         <p className="text-muted-foreground text-lg mb-8">
           Join thousands of developers who trust Optraflow for their API testing needs
@@ -232,6 +231,9 @@ const Landing: React.FC = () => {
           No credit card required • 15-day free trial
         </p>
       </section>
+
+      <FaqPage />
+
     </LandingLayout>
   );
 };
