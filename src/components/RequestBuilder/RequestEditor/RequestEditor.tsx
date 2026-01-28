@@ -21,7 +21,7 @@ import {
   buildRequestPayload,
 } from '@/services/executeRequest.service';
 import { updateRequest } from '@/services/collection.service';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import {
   Tooltip,
   TooltipContent,
@@ -50,6 +50,8 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
+import { PerformanceTestConfigApi, PerformanceTestConfigDTO, PerformanceTestCreatePayload, PerformanceTestUpdatePayload } from '@/models/performanceTest.model';
+import { getPerformanceConfigsByRequestId, getPerformanceTestConfig, performanceTestCreate, updatePerformanceTestConfig } from '@/services/performance.service';
 
 type Assertion = {
   id: string;
@@ -230,6 +232,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
     | 'pre-request'
     | 'post-response'
     | 'settings'
+    | 'performance'
     | 'schemas'
   >((externalActiveTab as any) ?? 'params');
 
@@ -589,6 +592,234 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
       }
     },
   });
+
+  const [performanceTestId, setPerformanceTestId] = useState<string>("");
+
+  // console.log(performanceTestId, "performanceTestId");
+
+  const performanceTestCreateMutation = useMutation({
+    mutationFn: (payload: any) => performanceTestCreate(payload),
+    onSuccess: (data: any) => {
+      setPerformanceTestId(data?.Id || data?.id || '');
+      toast({ title: 'Created', description: 'Performance test created.', duration: 3000 });
+    },
+    onError: (err: any) => {
+      toast({ title: 'Create failed', description: err?.message || 'Error', duration: 3000 });
+    },
+  });
+
+  const performanceTestUpdateMutation = useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: PerformanceTestUpdatePayload }) =>
+      updatePerformanceTestConfig(id, payload),
+    onSuccess: () => {
+      toast({ title: 'Updated', description: 'Performance config updated.', duration: 3000 });
+    },
+    onError: (err: any) => {
+      toast({ title: 'Update failed', description: err?.message || 'Error', duration: 3000 });
+    },
+  });
+
+
+  const buildPerformancePayload = (): PerformanceTestCreatePayload | null => {
+    if (!activeRequest?.id || activeRequest.id.startsWith("temp-")) {
+      toast({
+        title: "Save Request First",
+        description: "Please save the request before running a performance test.",
+        duration: 3000,
+      });
+      return null;
+    }
+
+    if (!currentWorkspace?.id) {
+      toast({
+        title: "Workspace Missing",
+        description: "Workspace id not found.",
+        duration: 3000,
+      });
+      return null;
+    }
+
+    return {
+      concurrency: settings.performanceTest.concurrency,
+      delay: settings.performanceTest.delay,
+      name: `${activeRequest.name || "Request"} - Performance Test`,
+      numRequests: settings.performanceTest.numRequests,
+
+      rateLimitEnabled: settings.rateLimit.enabled,
+      rateLimitPeriod: settings.rateLimit.periodInSeconds,
+      rateLimitRequests: settings.rateLimit.requestsPerPeriod,
+      rateLimitType: settings.rateLimit.type,
+
+      requestId: activeRequest.id,
+      timeout: settings.performanceTest.timeout,
+      workspaceId: currentWorkspace.id,
+    };
+  };
+
+  const buildPerformanceUpdatePayload = (): PerformanceTestUpdatePayload => ({
+    name: `${activeRequest?.name || "Request"} - Performance Test`,
+
+    numRequests: Number(settings.performanceTest.numRequests) || 0,
+    concurrency: Number(settings.performanceTest.concurrency) || 0,
+    delay: Number(settings.performanceTest.delay) || 0,
+    timeout: Number(settings.performanceTest.timeout) || 0,
+
+    rateLimitEnabled: !!settings.rateLimit.enabled,
+    rateLimitRequests: Number(settings.rateLimit.requestsPerPeriod) || 0,
+    rateLimitPeriod: Number(settings.rateLimit.periodInSeconds) || 0,
+    rateLimitType: settings.rateLimit.type || "fixed",
+  });
+
+
+  const updatePerfConfigMutation = useMutation({
+    mutationFn: (args: { id: string; payload: PerformanceTestUpdatePayload }) =>
+      updatePerformanceTestConfig(args.id, args.payload),
+
+    onSuccess: () => {
+      toast({
+        title: "Updated",
+        description: "Performance config updated successfully.",
+        duration: 3000,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Update failed",
+        description: error?.message || "Unable to update config.",
+        duration: 3000,
+      });
+    },
+  });
+
+  const handleCreatePerformanceTest = () => {
+
+    if (performanceTestId) {
+      const payload = buildPerformanceUpdatePayload();
+      performanceTestUpdateMutation.mutate({ id: performanceTestId, payload });
+      return;
+    }
+
+    // ✅ CREATE if no id
+    const createPayload = {
+      workspaceId: currentWorkspace?.id,
+      requestId: activeRequest?.id,
+      name: `${activeRequest?.name || 'Request'} - Performance Test`,
+
+      numRequests: settings.performanceTest.numRequests,
+      concurrency: settings.performanceTest.concurrency,
+      delay: settings.performanceTest.delay,
+      timeout: settings.performanceTest.timeout,
+
+      rateLimitEnabled: settings.rateLimit.enabled,
+      rateLimitRequests: settings.rateLimit.requestsPerPeriod,
+      rateLimitPeriod: settings.rateLimit.periodInSeconds,
+      rateLimitType: settings.rateLimit.type,
+    };
+
+    performanceTestCreateMutation.mutate(createPayload);
+  };
+
+
+
+
+
+
+
+  const mapPerfConfigToSettings = (
+    api: PerformanceTestConfigApi,
+    prev: RequestSettings
+  ): RequestSettings => {
+    return {
+      ...prev,
+
+      performanceTest: {
+        numRequests: api.NumRequests ?? prev.performanceTest.numRequests,
+        concurrency: api.Concurrency ?? prev.performanceTest.concurrency,
+        delay: api.Delay ?? prev.performanceTest.delay,
+        timeout: api.Timeout ?? prev.performanceTest.timeout,
+      },
+
+      rateLimit: {
+        enabled: api.RateLimitEnabled ?? prev.rateLimit.enabled,
+        requestsPerPeriod: api.RateLimitRequests ?? prev.rateLimit.requestsPerPeriod,
+        periodInSeconds: api.RateLimitPeriod ?? prev.rateLimit.periodInSeconds,
+        type: (api.RateLimitType ?? prev.rateLimit.type) as "fixed" | "sliding",
+      },
+    };
+  };
+
+
+  const mapPerfConfigToSettingsRequest = (
+    cfg: PerformanceTestConfigDTO,
+    prev: RequestSettings
+  ): RequestSettings => ({
+    ...prev,
+    performanceTest: {
+      numRequests: cfg.numRequests ?? prev.performanceTest.numRequests,
+      concurrency: cfg.concurrency ?? prev.performanceTest.concurrency,
+      delay: cfg.delay ?? prev.performanceTest.delay,
+      timeout: cfg.timeout ?? prev.performanceTest.timeout,
+    },
+    rateLimit: {
+      enabled: cfg.rateLimitEnabled ?? prev.rateLimit.enabled,
+      requestsPerPeriod: cfg.rateLimitRequests ?? prev.rateLimit.requestsPerPeriod,
+      periodInSeconds: cfg.rateLimitPeriod ?? prev.rateLimit.periodInSeconds,
+      type: (cfg.rateLimitType ?? prev.rateLimit.type) as any,
+    },
+  });
+
+
+  const perfConfigsQuery = useQuery<PerformanceTestConfigDTO[]>({
+    queryKey: ["performance-configs-by-request", activeRequest?.id],
+    queryFn: () => getPerformanceConfigsByRequestId(activeRequest!.id!),
+    enabled: !!activeRequest?.id && !String(activeRequest.id).startsWith("temp-"),
+    refetchOnWindowFocus: false,
+  });
+
+
+  const perfConfigQuery = useQuery<PerformanceTestConfigApi>({
+    queryKey: ["performance-test-config", performanceTestId],
+    queryFn: () => getPerformanceTestConfig(performanceTestId),
+    enabled: !!performanceTestId,
+    refetchOnWindowFocus: false,
+  });
+
+
+  useEffect(() => {
+    if (!perfConfigQuery.data) return;
+
+    setSettings((prev) => mapPerfConfigToSettings(perfConfigQuery.data!, prev));
+
+    toast({
+      title: "Performance Config Loaded",
+      description: "Performance fields were auto-filled from saved config.",
+      duration: 2500,
+    });
+  }, [perfConfigQuery.data]);
+
+
+  useEffect(() => {
+    setPerformanceTestId("");
+
+    const list = perfConfigsQuery.data;
+    if (!Array.isArray(list) || list.length === 0) return;
+
+    // pick latest (safe) – usually list[0] is fine, but this is better
+    const cfg = [...list].sort((a, b) =>
+      String(b.updatedAt || "").localeCompare(String(a.updatedAt || ""))
+    )[0];
+
+    setPerformanceTestId(cfg.id);
+    setSettings((prev) => mapPerfConfigToSettingsRequest(cfg, prev));
+  }, [activeRequest?.id, perfConfigsQuery.data]);
+
+
+
+
+
+
+
+
 
   const syncCurrentRequestToStore = () => {
     if (activeRequest?.id && !isSaving) {
@@ -2548,6 +2779,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
                 count: Array.isArray(schemas) ? schemas.length : 0,
               },
               { id: 'settings', label: 'Settings' },
+              { id: 'performance', label: 'Performance' },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -2753,7 +2985,80 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
           )}
 
           {activeTab === 'settings' && (
+            <>
 
+              <div className='space-y-5'>
+                <h4 className='text-base sm:text-lg font-medium text-gray-900 dark:text-white'>
+                  Request Settings
+                </h4>
+
+                <div className='space-y-4'>
+                  <ToggleSwitch
+                    id="followRedirects"
+                    checked={settings.options.followRedirects}
+                    onChange={(checked) =>
+                      setSettings((prev) => ({
+                        ...prev,
+                        options: {
+                          ...prev.options,
+                          followRedirects: checked,
+                        },
+                      }))
+                    }
+                    label="Follow Redirects"
+                    description="Automatically follow HTTP redirects"
+                  />
+                  <div>
+                    <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
+                      Request Timeout (ms)
+                    </label>
+                    <Input
+                      type="number"
+                      min="0"
+                      value={settings.timeout}
+                      onChange={(e) =>
+                        setSettings((prev) => ({
+                          ...prev,
+                          timeout: Number(e.target.value) || 0,
+                        }))
+                      }
+                      className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2
+             hover:border-blue-400 focus:ring-2 focus:ring-blue-500
+             focus:border-blue-500 focus:outline-none focus:bg-blue-50
+             dark:focus:bg-blue-900/20 transition-all duration-150
+             bg-white dark:bg-gray-800 text-sm"
+                    />
+
+                    <p className='text-xs text-gray-500 dark:text-gray-400 mt-1'>
+                      Time in milliseconds to wait for a response before timing
+                      out
+                    </p>
+                  </div>
+                  {/* <ToggleSwitch
+                    id='sslVerification'
+                    // checked={settings.options?.sslVerification}
+                    // onChange={(checked) =>
+                    //   setSettings({ ...settings, sslVerification: checked })
+                    // }
+                    label='SSL Certificate Verification'
+                    description='Verify SSL certificates when making HTTPS requests'
+                  /> */}
+                </div>
+
+                <div className='mt-6 p-4 bg-yellow-50 dark:bg-yellow-900 rounded-md'>
+                  <h4 className='text-sm font-medium text-yellow-800 dark:text-yellow-200'>
+                    Request Settings Info
+                  </h4>
+                  <p className='text-xs text-yellow-700 dark:text-yellow-300 mt-1'>
+                    These settings only apply to this specific request. Global
+                    settings can be configured in the application settings.
+                  </p>
+                </div>
+              </div>
+            </>
+          )}
+
+          {activeTab === 'performance' && (
             <>
               <div className="space-y-6">
                 <Tabs defaultValue="performance">
@@ -2997,6 +3302,27 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
                           </div>
                         </div>
                       </div>
+
+                      <div className="mt-6 flex justify-end">
+                        <Button
+                          variant="default"
+                          onClick={handleCreatePerformanceTest}
+                          disabled={
+                            performanceTestCreateMutation.isPending || performanceTestUpdateMutation.isPending
+                          }
+                          className="flex items-center gap-2"
+                        >
+                          <Rocket size={16} />
+                          {performanceTestId
+                            ? performanceTestUpdateMutation.isPending
+                              ? "Updating..."
+                              : "Update Performance Test"
+                            : performanceTestCreateMutation.isPending
+                              ? "Creating..."
+                              : "Create Performance Test"}
+                        </Button>
+
+                      </div>
                     </div>
                   </TabsContent>
 
@@ -3120,77 +3446,9 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
 
                 </Tabs>
               </div>
-              <div className='space-y-5'>
-                <h4 className='text-base sm:text-lg font-medium text-gray-900 dark:text-white'>
-                  Request Settings
-                </h4>
 
-                <div className='space-y-4'>
-                  <ToggleSwitch
-                    id="followRedirects"
-                    checked={settings.options.followRedirects}
-                    onChange={(checked) =>
-                      setSettings((prev) => ({
-                        ...prev,
-                        options: {
-                          ...prev.options,
-                          followRedirects: checked,
-                        },
-                      }))
-                    }
-                    label="Follow Redirects"
-                    description="Automatically follow HTTP redirects"
-                  />
-                  <div>
-                    <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
-                      Request Timeout (ms)
-                    </label>
-                    <Input
-                      type="number"
-                      min="0"
-                      value={settings.timeout}
-                      onChange={(e) =>
-                        setSettings((prev) => ({
-                          ...prev,
-                          timeout: Number(e.target.value) || 0,
-                        }))
-                      }
-                      className="w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2
-             hover:border-blue-400 focus:ring-2 focus:ring-blue-500
-             focus:border-blue-500 focus:outline-none focus:bg-blue-50
-             dark:focus:bg-blue-900/20 transition-all duration-150
-             bg-white dark:bg-gray-800 text-sm"
-                    />
-
-                    <p className='text-xs text-gray-500 dark:text-gray-400 mt-1'>
-                      Time in milliseconds to wait for a response before timing
-                      out
-                    </p>
-                  </div>
-                  {/* <ToggleSwitch
-                    id='sslVerification'
-                    // checked={settings.options?.sslVerification}
-                    // onChange={(checked) =>
-                    //   setSettings({ ...settings, sslVerification: checked })
-                    // }
-                    label='SSL Certificate Verification'
-                    description='Verify SSL certificates when making HTTPS requests'
-                  /> */}
-                </div>
-
-                <div className='mt-6 p-4 bg-yellow-50 dark:bg-yellow-900 rounded-md'>
-                  <h4 className='text-sm font-medium text-yellow-800 dark:text-yellow-200'>
-                    Request Settings Info
-                  </h4>
-                  <p className='text-xs text-yellow-700 dark:text-yellow-300 mt-1'>
-                    These settings only apply to this specific request. Global
-                    settings can be configured in the application settings.
-                  </p>
-                </div>
-              </div>
             </>
           )}
-
           {activeTab === 'schemas' && (
             <div>
               <SchemaPage />
