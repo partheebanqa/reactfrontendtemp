@@ -7,7 +7,7 @@ export const getDashboard = async (workspaceId: string) => {
     `${ENV.API_BASE_URL}/dashboard/${workspaceId}`,
     {
       headers: {
-        'x-workspace-id': workspaceId,
+        'X-Workspace-ID': workspaceId,
       },
     }
   );
