@@ -9,6 +9,7 @@ import {
   fetchCollectionList,
   getCollectionRequests,
   importCollectionFile,
+  markRequestAsAuth,
   // importCollectionJson,
   renameCollection,
   renameRequest,
@@ -240,6 +241,7 @@ export const useAddRequestMutation = () => {
 
 export const useRenameRequestMutation = () => {
   const fetchCollectionRequests = useCollectionRequestsQuery();
+
   return useMutation({
     mutationFn: renameRequest,
     onSuccess: async (data, variables) => {
@@ -252,6 +254,29 @@ export const useRenameRequestMutation = () => {
   });
 };
 
+export const useMarkAuthRequestMutation = () => {
+  const fetchCollectionRequests = useCollectionRequestsQuery();
+
+  return useMutation({
+    mutationFn: async ({
+      requestId,
+      collectionId,
+    }: {
+      requestId: string;
+      collectionId: string;
+    }) => {
+      return await markRequestAsAuth(requestId, collectionId);
+    },
+    onSuccess: async (data, variables) => {
+      fetchCollectionRequests.mutateAsync(variables.collectionId);
+      return data;
+    },
+    onError: (error) => {
+      console.error('Error marking request as auth:', error);
+      throw error;
+    },
+  });
+};
 export const useUpdateRequestMutation = () => {
   return useMutation({
     mutationFn: updateRequest,

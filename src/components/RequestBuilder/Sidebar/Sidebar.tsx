@@ -22,6 +22,7 @@ import {
   Import,
   CopyPlus,
   Shield,
+  KeyRound,
 } from 'lucide-react';
 import { useCollection } from '@/hooks/useCollection';
 import { useWorkspace } from '@/hooks/useWorkspace';
@@ -77,6 +78,7 @@ import { Button } from '@/components/ui/button';
 
 const Sidebar: React.FC = () => {
   const { currentWorkspace } = useWorkspace();
+
   const {
     collections,
     activeRequest,
@@ -90,6 +92,7 @@ const Sidebar: React.FC = () => {
     renameCollectionMutation,
     deleteRequestMutation,
     duplicateRequestMutation,
+    markAuthRequestMutation,
     setFavouriteCollectionMutation,
     unsetFavouriteCollectionMutation,
     renameRequestMutation,
@@ -105,7 +108,7 @@ const Sidebar: React.FC = () => {
   const [showCollectionModal, setShowCollectionModal] = useState(false);
   const [selectedCollection, setSelectedCollection] =
     useState<Collection | null>(null);
-
+  const [showMarkAuthDialog, setShowMarkAuthDialog] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [showMenu, setShowMenu] = useState<string | null>(null);
   const [menuPosition, setMenuPosition] = useState<{
@@ -130,7 +133,6 @@ const Sidebar: React.FC = () => {
   );
 
   const [selectedFolder, setSelectedFolder] = useState<any | null>(null);
-
   const [showMoveModal, setShowMoveModal] = useState(false);
   const [moveItemType, setMoveItemType] = useState<'request' | 'folder'>(
     'request'
@@ -231,6 +233,7 @@ const Sidebar: React.FC = () => {
     if (!over || active.id === over.id) return;
 
     const activeData = active.data.current;
+
     const overData = over.data.current;
 
     if (!activeData) return;
@@ -409,6 +412,52 @@ const Sidebar: React.FC = () => {
       toast({
         title: 'Error',
         description: 'Failed to duplicate the request. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleMarkAuth = async (request: CollectionRequest) => {
+    if (!request.id || !selectedCollection?.id) {
+      toast({
+        title: 'Error',
+        description: 'Invalid request or collection data.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      await markAuthRequestMutation.mutateAsync({
+        requestId: request.id,
+        collectionId: selectedCollection.id,
+      });
+
+      setCollection(
+        collections.map((col) =>
+          col.id === selectedCollection.id
+            ? {
+                ...col,
+                preRequestId: request.id,
+              }
+            : col
+        )
+      );
+
+      toast({
+        title: 'Request marked',
+        description: `"${request.name}" has been marked for authentication`,
+        variant: 'success',
+      });
+
+      setShowMenu(null);
+      setMenuPosition(null);
+      setShowMarkAuthDialog(false);
+    } catch (error) {
+      console.error('Failed to mark auth:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to mark request for auth. Please try again.',
         variant: 'destructive',
       });
     }
@@ -612,6 +661,38 @@ const Sidebar: React.FC = () => {
   };
 
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Add this after your state declarations (around line 150)
+  const isAuthRequest = (requestId: string, collectionId: string) => {
+    const collection = collections.find((c) => c.id === collectionId);
+
+    // Check if the collection has fetched requests data
+    if (!collection?.hasFetchedRequests) {
+      return false;
+    }
+
+    // Check against the stored preRequestId in the collection
+    return collection.preRequestId === requestId;
+  };
+
+  // Update collections with preRequestId when fetchCollectionRequests completes
+  useEffect(() => {
+    const collectionData = fetchCollectionRequests.data;
+
+    if (collectionData && collectionData.id) {
+      setCollection(
+        collections.map((col) =>
+          col.id === collectionData.id
+            ? {
+                ...col,
+                preRequestId: collectionData.preRequestId,
+                hasFetchedRequests: true,
+              }
+            : col
+        )
+      );
+    }
+  }, [fetchCollectionRequests.data]);
   const isSearching = searchQuery.trim().length > 0;
   const isCollectionExpanded = (collectionId: string) =>
     isSearching ? true : expandedCollections.has(collectionId);
@@ -735,6 +816,10 @@ const Sidebar: React.FC = () => {
                         activeRequest?.id === request.id
                           ? 'bg-blue-50 dark:bg-blue-900/20'
                           : ''
+                      } ${
+                        isAuthRequest(request.id, parentCollection.id)
+                          ? 'border-2 border-blue-500 rounded-lg bg-blue-50 dark:bg-blue-900/10'
+                          : ''
                       }`}
                     >
                       <div
@@ -745,6 +830,19 @@ const Sidebar: React.FC = () => {
                           }
                         }}
                       >
+                        {/* Add auth badge before method */}
+                        {isAuthRequest(request.id, parentCollection.id) && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <KeyRound className='h-3 w-3 text-blue-600 flex-shrink-0' />
+                              </TooltipTrigger>
+                              <TooltipContent side='top'>
+                                Auth Request
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
                         <span
                           className={`text-xs font-medium ${getMethodColor(
                             request.method
@@ -1008,6 +1106,13 @@ const Sidebar: React.FC = () => {
                                             activeRequest?.id === request.id
                                               ? 'bg-blue-50 dark:bg-blue-900/20'
                                               : ''
+                                          } ${
+                                            isAuthRequest(
+                                              request.id,
+                                              collection.id
+                                            )
+                                              ? 'border-2 border-blue-500 rounded-lg bg-blue-50 dark:bg-blue-900/10'
+                                              : ''
                                           }`}
                                         >
                                           <div
@@ -1016,6 +1121,22 @@ const Sidebar: React.FC = () => {
                                               selectRequest(request, collection)
                                             }
                                           >
+                                            {/* Add auth badge before method */}
+                                            {isAuthRequest(
+                                              request.id,
+                                              collection.id
+                                            ) && (
+                                              <TooltipProvider>
+                                                <Tooltip>
+                                                  <TooltipTrigger asChild>
+                                                    <KeyRound className='h-3 w-3 text-blue-600 flex-shrink-0' />
+                                                  </TooltipTrigger>
+                                                  <TooltipContent side='top'>
+                                                    Auth Request
+                                                  </TooltipContent>
+                                                </Tooltip>
+                                              </TooltipProvider>
+                                            )}
                                             <span
                                               className={`text-xs font-medium ${getMethodColor(
                                                 request.method
@@ -1310,15 +1431,38 @@ const Sidebar: React.FC = () => {
                       <CopyPlus className='h-4 w-4 mr-2' />
                       Duplicate
                     </button>
-                    {/* <button
-                      onClick={handleOpenMoveRequestModal}
-                      className='flex items-center w-full px-4 py-1 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
-                    >
-                      <Move className='h-4 w-4 mr-2' />
-                      Move to
-                    </button> */}
                     <div className='border-t border-gray-200 dark:border-gray-700 my-1'></div>
 
+                    {selectedRequest.method === 'POST' && (
+                      <>
+                        <button
+                          onClick={() => {
+                            setShowMarkAuthDialog(true);
+                            setShowMenu(null);
+                            setMenuPosition(null);
+                          }}
+                          className='flex items-center w-full px-4 py-1 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
+                        >
+                          <KeyRound className='h-4 w-4 mr-2' />
+                          Mark Auth
+                        </button>
+                      </>
+                    )}
+
+                    <button
+                      onClick={() => handleOpenSecurityScan(selectedRequest)}
+                      className='flex items-center w-full px-4 py-1 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
+                    >
+                      <Shield className='h-4 w-4 mr-2' />
+                      <span>
+                        Security Scan{' '}
+                        <span className='text-xs italic text-gray-500'>
+                          (Beta)
+                        </span>
+                      </span>
+                    </button>
+
+                    <div className='border-t border-gray-200 dark:border-gray-700 my-1'></div>
                     <button
                       onClick={() => {
                         setShowDeleteRequestDialog(true);
@@ -1330,18 +1474,8 @@ const Sidebar: React.FC = () => {
                       <Trash2 className='h-4 w-4 mr-2' />
                       Delete
                     </button>
-                    <div className='border-t border-gray-200 dark:border-gray-700 my-1'></div>
-
-                    <button
-                      onClick={() => handleOpenSecurityScan(selectedRequest)}
-                      className='flex items-center w-full px-4 py-1 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
-                    >
-                      <Shield className='h-4 w-4 mr-2' />
-                      Security Scan (Beta)
-                    </button>
                   </div>
                 )}
-
                 {showMenu.startsWith('folder-') &&
                   selectedFolder &&
                   selectedCollection && (
@@ -1590,6 +1724,36 @@ const Sidebar: React.FC = () => {
                   }}
                 >
                   Delete Request
+                </Button>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+
+          <AlertDialog
+            open={showMarkAuthDialog}
+            onOpenChange={setShowMarkAuthDialog}
+          >
+            <AlertDialogTrigger asChild></AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>
+                  Mark "{selectedRequest?.name}" for Authentication?
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will mark the selected request as the authentication
+                  request for this collection.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <Button
+                  onClick={() => {
+                    if (selectedRequest) {
+                      handleMarkAuth(selectedRequest);
+                    }
+                  }}
+                >
+                  Mark Auth
                 </Button>
               </AlertDialogFooter>
             </AlertDialogContent>

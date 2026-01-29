@@ -1176,7 +1176,23 @@ export function RequestEditor({
 
       const previewUrl = getPreviewUrl(allVariables);
       payload.request.url = previewUrl;
-      payload.assertions = assertions.filter((a) => a.enabled);
+      const processedAssertions = assertions
+        .filter((a) => a.enabled)
+        .map((assertion) => {
+          if (
+            assertion.expectedValue &&
+            typeof assertion.expectedValue === 'string' &&
+            /\{\{.*?\}\}/.test(assertion.expectedValue)
+          ) {
+            return {
+              ...assertion,
+              expectedValue: assertion.actualValue || assertion.expectedValue,
+            };
+          }
+          return assertion;
+        });
+
+      payload.assertions = processedAssertions;
 
       const backendData = await executeRequest(payload);
 

@@ -53,6 +53,8 @@ export interface TransformedCollection {
 export interface Collection {
   collectionId: string;
   collectionName: string;
+  preRequestId?: string;
+
   requests: {
     id: string;
     method: string;

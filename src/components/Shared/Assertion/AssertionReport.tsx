@@ -169,12 +169,10 @@ const AssertionResults: React.FC<AssertionResultsProps> = ({
     }
 
     if (tableFilterCategory !== 'all') {
-      // ✅ NORMALIZE CATEGORY MATCHING
       filtered = filtered.filter((r) => {
         const normalizedCategory = r.category.toLowerCase().trim();
         const filterValue = tableFilterCategory.toLowerCase();
 
-        // Match various category formats
         if (filterValue === 'body') {
           return (
             normalizedCategory === 'body' ||
@@ -293,7 +291,13 @@ const AssertionResults: React.FC<AssertionResultsProps> = ({
             </div>
             <div className='w-full h-3 bg-gray-200 rounded-full overflow-hidden'>
               <div
-                className='h-full bg-gradient-to-r from-green-500 to-green-600 transition-all duration-500'
+                className={`h-full transition-all duration-500 ${
+                  successRate === 100
+                    ? 'bg-gradient-to-r from-green-500 to-green-600'
+                    : successRate >= 50
+                    ? 'bg-gradient-to-r from-amber-500 to-amber-600'
+                    : 'bg-gradient-to-r from-red-500 to-red-600'
+                }`}
                 style={{ width: `${successRate}%` }}
               />
             </div>
