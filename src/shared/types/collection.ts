@@ -154,6 +154,7 @@ export interface CollectionFolder {
 }
 
 export interface CollectionRequest {
+  extractVariables?: boolean;
   assertions: boolean;
   id?: string;
   collectionId?: string;

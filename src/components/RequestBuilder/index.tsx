@@ -45,6 +45,15 @@ const RequestBuilder = () => {
   });
 
   const [activeRequestTab, setActiveRequestTab] = useState<string>('params');
+  const [extractedVariables, setExtractedVariables] = useState<
+    Record<string, string>
+  >({});
+
+  console.log('extractedVariables123:', extractedVariables);
+
+  const [existingExtractions, setExistingExtractions] = useState<
+    Array<{ name: string; path: string; source?: string }>
+  >([]);
 
   const { sanitizeTestRunner, securityScan, collections } =
     useCollectionStore();
@@ -65,6 +74,72 @@ const RequestBuilder = () => {
   );
   const isDraggingRef = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Handler for extracting variables from response
+  const handleExtractVariable = (extraction: {
+    variableName: string;
+    name: string;
+    source: 'response_body' | 'response_header' | 'response_cookie';
+    path: string;
+    value: any;
+    transform?: string;
+  }) => {
+    console.log('=== REQUEST BUILDER - EXTRACTION HANDLER ===');
+    console.log('Received extraction:', extraction);
+
+    // Add to extraction configurations
+    setExistingExtractions((prev) => {
+      const exists = prev.some((e) => e.name === extraction.name);
+      if (exists) {
+        console.log('Updating existing extraction...');
+        return prev.map((e) =>
+          e.name === extraction.name
+            ? {
+                name: extraction.name,
+                path: extraction.path,
+                source: extraction.source,
+              }
+            : e
+        );
+      }
+
+      console.log('Adding new extraction...');
+      return [
+        ...prev,
+        {
+          name: extraction.name,
+          path: extraction.path,
+          source: extraction.source,
+        },
+      ];
+    });
+
+    // Add to extracted values
+    setExtractedVariables((prev) => {
+      console.log('Updating extracted variables...');
+      return {
+        ...prev,
+        [extraction.name]: extraction.value,
+      };
+    });
+
+    console.log('Extraction complete in RequestBuilder!');
+  };
+
+  // Handler for removing extractions
+  const handleRemoveExtraction = (name: string) => {
+    console.log('RequestBuilder - Removing extraction:', name);
+
+    // Remove from configurations
+    setExistingExtractions((prev) => prev.filter((e) => e.name !== name));
+
+    // Remove from values
+    setExtractedVariables((prev) => {
+      const updated = { ...prev };
+      delete updated[name];
+      return updated;
+    });
+  };
 
   const handleResizeStart = useCallback(
     (e: React.MouseEvent) => {
@@ -245,6 +320,10 @@ const RequestBuilder = () => {
                     onRegisterSave={(saveFn) => {
                       saveRequestRef.current = saveFn;
                     }}
+                    onExtractVariable={handleExtractVariable}
+                    extractedVariables={extractedVariables}
+                    existingExtractions={existingExtractions}
+                    onRemoveExtraction={handleRemoveExtraction}
                   />
                 </div>
 
@@ -302,6 +381,10 @@ const RequestBuilder = () => {
                         await saveRequestRef.current();
                       }
                     }}
+                    onExtractVariable={handleExtractVariable}
+                    extractedVariables={extractedVariables}
+                    existingExtractions={existingExtractions}
+                    onRemoveExtraction={handleRemoveExtraction}
                   />
                 </div>
               </>

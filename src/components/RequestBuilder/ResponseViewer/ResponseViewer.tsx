@@ -87,6 +87,9 @@ const ResponseViewer = ({
   onRemoveExtraction,
 }: ResponseViewerProps) => {
   const { responseData, assertions, setAssertions } = useRequest();
+
+  console.log('responseData123:', responseData);
+
   const [activeTab, setActiveTab] = useState<
     | 'body'
     | 'headers'
@@ -171,6 +174,8 @@ const ResponseViewer = ({
     setCopiedItem(itemId);
     setTimeout(() => setCopiedItem(''), 2000);
   };
+
+  console.log('extractedVariables:', extractedVariables);
 
   const downloadPostmanCollection = () => {
     if (!responseData) return;
@@ -704,6 +709,10 @@ const ResponseViewer = ({
   };
 
   const confirmExtraction = (inputVariableName: string, transform?: string) => {
+    console.log('inputVariableName:', inputVariableName);
+    console.log('extractionModal:', extractionModal);
+    console.log('onExtractVariable exists:', !!onExtractVariable);
+
     if (extractionModal && inputVariableName && onExtractVariable) {
       const sanitized = sanitizeVariableName(inputVariableName);
       const finalVariableName = `E_${sanitized}`;
@@ -1456,7 +1465,6 @@ const ResponseViewer = ({
         )}
       </div>
 
-      {/* API Assertion Interface Modal */}
       {showAssertionUI && (
         <div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4'>
           <div className='bg-white dark:bg-gray-900 rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col'>
@@ -1501,7 +1509,6 @@ const ResponseViewer = ({
         onSave={onSaveAssertions}
       />
 
-      {/* Extraction Modal */}
       {extractionModal && (
         <div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50'>
           <div className='bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-full max-w-md'>
