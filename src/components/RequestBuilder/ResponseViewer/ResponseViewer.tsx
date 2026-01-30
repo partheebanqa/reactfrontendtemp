@@ -26,6 +26,7 @@ import {
   removeDuplicateAssertions,
 } from '@/lib/assertion-utils';
 import ApiAssertionInterface from '../../Shared/Assertion/ApiAssertionInterface';
+import { useCollection } from '@/hooks/useCollection';
 
 interface JsonNode {
   key: string;
@@ -87,6 +88,7 @@ const ResponseViewer = ({
   onRemoveExtraction,
 }: ResponseViewerProps) => {
   const { responseData, assertions, setAssertions } = useRequest();
+  const { activeCollection } = useCollection();
 
   console.log('responseData123:', responseData);
 
@@ -190,7 +192,6 @@ const ResponseViewer = ({
         ? Math.round((passedCount / assertionLogs.length) * 100)
         : 0;
 
-    // Parse URL components
     let urlComponents = { protocol: 'https', host: [], path: [] };
     if (responseData.actualRequest?.url) {
       try {
@@ -204,7 +205,6 @@ const ResponseViewer = ({
       }
     }
 
-    // Convert headers to Postman format
     const convertHeaders = (headers: Record<string, string>) => {
       return Object.entries(headers || {}).map(([key, value]) => ({
         key,
@@ -213,7 +213,6 @@ const ResponseViewer = ({
       }));
     };
 
-    // Create request body
     const createRequestBody = (body: any) => {
       if (!body) return undefined;
       const bodyStr =
@@ -381,7 +380,6 @@ const ResponseViewer = ({
       },
     };
 
-    // Only add assertionResults if assertion logs exist
     if (hasAssertions) {
       exportData.assertionResults = assertionLogs.map((log: any) => ({
         assertion: {
@@ -713,6 +711,15 @@ const ResponseViewer = ({
     console.log('extractionModal:', extractionModal);
     console.log('onExtractVariable exists:', !!onExtractVariable);
 
+    if (!activeCollection?.id) {
+      console.error('No active collection for extraction');
+      toast({
+        title: 'Error',
+        description: 'No active collection. Please select a collection first.',
+      });
+      return;
+    }
+
     if (extractionModal && inputVariableName && onExtractVariable) {
       const sanitized = sanitizeVariableName(inputVariableName);
       const finalVariableName = `E_${sanitized}`;
@@ -730,7 +737,6 @@ const ResponseViewer = ({
       setVariableName('');
     }
   };
-
   const renderJsonValue = (node: JsonNode, index: number) => {
     const isExpanded = expandedNodes.has(node.path);
     const hasChildren = node.type === 'object' || node.type === 'array';
@@ -1184,7 +1190,6 @@ const ResponseViewer = ({
                 <Download className='h-4 w-4' />
               </button>
 
-              {/* Dropdown menu */}
               <div className='absolute right-0 mt-1 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10'>
                 <button
                   onClick={downloadResponse}
@@ -1468,7 +1473,6 @@ const ResponseViewer = ({
       {showAssertionUI && (
         <div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4'>
           <div className='bg-white dark:bg-gray-900 rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col'>
-            {/* Header */}
             <div className='flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700'>
               <h2 className='text-xl font-bold text-gray-900 dark:text-gray-100'>
                 API Assertions Manager
@@ -1481,7 +1485,6 @@ const ResponseViewer = ({
               </button>
             </div>
 
-            {/* Content */}
             <div className='flex-1 overflow-auto'>
               <ApiAssertionInterface
                 assertions={assertions}
@@ -1613,6 +1616,22 @@ const ResponseViewer = ({
                 Extract Variable
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {activeCollection && Object.keys(extractedVariables).length > 0 && (
+        <div className='px-4 py-2 bg-blue-50 dark:bg-blue-900/20 border-b border-gray-200 dark:border-gray-700'>
+          <div className='flex items-center gap-2 text-xs'>
+            <span className='text-gray-600 dark:text-gray-400'>
+              Extracted variables for:
+            </span>
+            <span className='font-medium text-blue-600 dark:text-blue-400'>
+              {activeCollection.name}
+            </span>
+            <span className='ml-auto text-gray-500'>
+              {Object.keys(extractedVariables).length} variable(s)
+            </span>
           </div>
         </div>
       )}

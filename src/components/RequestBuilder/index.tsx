@@ -33,8 +33,10 @@ import WelcomeImage from '../../assests/images/Welcome.webp';
 import { SanitizeTestRunner } from '@/components/RequestBuilder/sanitizeTest/sanitizeTest';
 import SecurityScanView from '@/components/RequestBuilder/SecurityScan/SecurityScanView';
 import { useCollectionStore, collectionActions } from '@/store/collectionStore';
+import { useToast } from '@/hooks/use-toast';
 
 const RequestBuilder = () => {
+  const { toast } = useToast();
   const saveRequestRef = useRef<(() => Promise<void>) | null>(null);
   const [usedVariables, setUsedVariables] = useState<{
     staticVars: Array<{ name: string; value: string }>;
@@ -62,6 +64,7 @@ const RequestBuilder = () => {
     refetch: refetchCollection,
     setActiveCollection,
     handleCreateRequest,
+    activeCollection,
   } = useCollection();
   const { setResponseData, setRequestData } = useRequest();
   const isMobile = useIsMobile();
@@ -75,7 +78,22 @@ const RequestBuilder = () => {
   const isDraggingRef = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Handler for extracting variables from response
+  useEffect(() => {
+    if (activeCollection?.id) {
+      const collectionVars = collectionActions.getExtractedVariables(
+        activeCollection.id
+      );
+      console.log(
+        'Loading extracted variables for collection:',
+        activeCollection.id,
+        collectionVars
+      );
+      setExtractedVariables(collectionVars);
+    } else {
+      setExtractedVariables({});
+    }
+  }, [activeCollection?.id]);
+
   const handleExtractVariable = (extraction: {
     variableName: string;
     name: string;
@@ -87,7 +105,18 @@ const RequestBuilder = () => {
     console.log('=== REQUEST BUILDER - EXTRACTION HANDLER ===');
     console.log('Received extraction:', extraction);
 
-    // Add to extraction configurations
+    if (!activeCollection?.id) {
+      console.error('No active collection - cannot extract variable');
+      toast({
+        title: 'Error',
+        description: 'No active collection. Please select a collection first.',
+      });
+      return;
+    }
+
+    const collectionId = activeCollection.id;
+    console.log('Extracting for collection:', collectionId);
+
     setExistingExtractions((prev) => {
       const exists = prev.some((e) => e.name === extraction.name);
       if (exists) {
@@ -114,29 +143,43 @@ const RequestBuilder = () => {
       ];
     });
 
-    // Add to extracted values
     setExtractedVariables((prev) => {
-      console.log('Updating extracted variables...');
-      return {
+      console.log('Updating extracted variables for collection:', collectionId);
+      const updated = {
         ...prev,
         [extraction.name]: extraction.value,
       };
+
+      collectionActions.setExtractedVariable(
+        collectionId,
+        extraction.name,
+        extraction.value
+      );
+
+      return updated;
     });
 
     console.log('Extraction complete in RequestBuilder!');
   };
 
-  // Handler for removing extractions
   const handleRemoveExtraction = (name: string) => {
     console.log('RequestBuilder - Removing extraction:', name);
 
-    // Remove from configurations
+    if (!activeCollection?.id) {
+      console.error('No active collection');
+      return;
+    }
+
+    const collectionId = activeCollection.id;
+
     setExistingExtractions((prev) => prev.filter((e) => e.name !== name));
 
-    // Remove from values
     setExtractedVariables((prev) => {
       const updated = { ...prev };
       delete updated[name];
+
+      collectionActions.removeExtractedVariable(collectionId, name);
+
       return updated;
     });
   };

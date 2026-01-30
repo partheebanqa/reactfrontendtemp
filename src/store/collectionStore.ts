@@ -29,6 +29,7 @@ export interface CollectionState {
   openedRequests: CollectionRequest[];
   unsavedChanges: Set<string>;
   requestResponses: Map<string, RequestResponse>;
+  extractedVariables: Record<string, Record<string, any>>;
   sanitizeTestRunner: {
     isOpen: boolean;
     collectionId: string | null;
@@ -52,6 +53,7 @@ export const initialCollectionState: CollectionState = {
   openedRequests: [],
   unsavedChanges: new Set(),
   requestResponses: new Map(),
+  extractedVariables: {},
   sanitizeTestRunner: {
     isOpen: false,
     collectionId: null,
@@ -520,6 +522,59 @@ export const collectionActions = {
     collectionStore.setState((state) => ({
       ...state,
       requestResponses: new Map(),
+    }));
+  },
+
+  setExtractedVariable: (collectionId: string, name: string, value: any) => {
+    collectionStore.setState((state) => ({
+      ...state,
+      extractedVariables: {
+        ...state.extractedVariables,
+        [collectionId]: {
+          ...(state.extractedVariables[collectionId] || {}),
+          [name]: value,
+        },
+      },
+    }));
+  },
+
+  removeExtractedVariable: (collectionId: string, name: string) => {
+    collectionStore.setState((state) => {
+      const collectionVars = {
+        ...(state.extractedVariables[collectionId] || {}),
+      };
+      delete collectionVars[name];
+
+      return {
+        ...state,
+        extractedVariables: {
+          ...state.extractedVariables,
+          [collectionId]: collectionVars,
+        },
+      };
+    });
+  },
+
+  getExtractedVariables: (collectionId: string): Record<string, any> => {
+    return collectionStore.state.extractedVariables[collectionId] || {};
+  },
+
+  clearCollectionExtractedVariables: (collectionId: string) => {
+    collectionStore.setState((state) => {
+      const newExtractedVariables = { ...state.extractedVariables };
+      delete newExtractedVariables[collectionId];
+
+      return {
+        ...state,
+        extractedVariables: newExtractedVariables,
+      };
+    });
+  },
+
+  clearAllExtractedVariables: () => {
+    collectionStore.setState((state) => ({
+      ...state,
+      extractedVariables: {},
     }));
   },
 };

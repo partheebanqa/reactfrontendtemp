@@ -305,7 +305,6 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
     const isValidVar = (name: string) =>
       name.startsWith('S_') || name.startsWith('D_') || name.startsWith('E_');
 
-    // Add static variables
     if (Array.isArray(variables)) {
       variables.forEach((variable: any) => {
         const name = variable.name || variable.key || '';
@@ -316,7 +315,6 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
       });
     }
 
-    // Add dynamic variables
     if (Array.isArray(dynamicVariables)) {
       dynamicVariables.forEach((variable: any) => {
         const name = variable.name || '';
@@ -341,7 +339,6 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
     return formatted;
   }, [variables, dynamicVariables, dynamicVarTrigger, extractedVariables]);
 
-  // Separate static and dynamic variables
   const { staticVars, dynamicVars, extractedVars } = useMemo(() => {
     const static_vars: Array<{ name: string; value: string }> = [];
     const dynamic_vars: Array<{ name: string; value: string }> = [];
@@ -867,7 +864,6 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
       setPendingSubstitutions([]);
       setResponseData(null);
     }
-    // setResponseData(null);
   }, [activeRequest, isSaving]);
 
   useEffect(() => {
@@ -2236,7 +2232,6 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
 
     return path.split('.').reduce((current, key) => {
       if (current && typeof current === 'object') {
-        // Handle array indices like [0]
         if (key.includes('[') && key.includes(']')) {
           const arrayKey = key.substring(0, key.indexOf('['));
           const index = Number.parseInt(
