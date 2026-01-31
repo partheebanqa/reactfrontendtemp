@@ -109,7 +109,7 @@ export const getScheduleList = async (
     const response = await apiRequest('GET', url, {
       headers: {
         'Content-Type': 'application/json',
-        'x-workspace-id': params.workspaceId,
+        'X-Workspace-ID': params.workspaceId,
       },
     });
 

@@ -16,7 +16,6 @@ import ToggleSwitch from '@/components/ui/ToggleSwitch';
 import Modal from '@/components/ui/Modal';
 import { useDataManagement } from '@/hooks/useDataManagement';
 import {
-  executeCollectionRequest,
   executeRequest,
   buildRequestPayload,
 } from '@/services/executeRequest.service';
@@ -77,6 +76,17 @@ interface RequestEditorProps {
   activeTab?: string;
   onTabChange?: (tab: string) => void;
   onRegisterSave?: (saveFn: () => Promise<void>) => void;
+  onExtractVariable?: (extraction: {
+    variableName: string;
+    name: string;
+    source: 'response_body' | 'response_header' | 'response_cookie';
+    path: string;
+    value: any;
+    transform?: string;
+  }) => void;
+  extractedVariables?: Record<string, any>;
+  existingExtractions?: Array<{ name: string; path: string; source?: string }>;
+  onRemoveExtraction?: (name: string) => void;
 }
 
 interface FormattedResponse {
@@ -181,10 +191,13 @@ const getContentTypeForBodyType = (
 
 const RequestEditor: React.FC<RequestEditorProps> = ({
   onUsedVariablesChange,
-
   activeTab: externalActiveTab,
   onTabChange,
   onRegisterSave,
+  onExtractVariable,
+  extractedVariables = {},
+  existingExtractions = [],
+  onRemoveExtraction,
 }) => {
   const {
     isLoading,
@@ -358,13 +371,13 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
     const formatted: Array<{ name: string; value: string }> = [];
 
     const isValidVar = (name: string) =>
-      name.startsWith('S_') || name.startsWith('D_');
+      name.startsWith('S_') || name.startsWith('D_') || name.startsWith('E_');
 
     if (Array.isArray(variables)) {
       variables.forEach((variable: any) => {
         const name = variable.name || variable.key || '';
         const value = variable.value || variable.initialValue || '';
-        if (name && isValidVar(name)) {
+        if (name && name.startsWith('S_')) {
           formatted.push({ name, value });
         }
       });
@@ -373,7 +386,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
     if (Array.isArray(dynamicVariables)) {
       dynamicVariables.forEach((variable: any) => {
         const name = variable.name || '';
-        if (name && isValidVar(name)) {
+        if (name && name.startsWith('D_')) {
           const generatedValue = generateDynamicValueById(
             variable.generatorId || '',
             variable.parameters || {}
@@ -383,25 +396,36 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
       });
     }
 
-    return formatted;
-  }, [variables, dynamicVariables, dynamicVarTrigger]);
+    if (extractedVariables && typeof extractedVariables === 'object') {
+      Object.entries(extractedVariables).forEach(([name, value]) => {
+        if (name.startsWith('E_')) {
+          formatted.push({ name, value: String(value) });
+        }
+      });
+    }
 
-  // Separate static and dynamic variables
-  const { staticVars, dynamicVars } = useMemo(() => {
+    return formatted;
+  }, [variables, dynamicVariables, dynamicVarTrigger, extractedVariables]);
+
+  const { staticVars, dynamicVars, extractedVars } = useMemo(() => {
     const static_vars: Array<{ name: string; value: string }> = [];
     const dynamic_vars: Array<{ name: string; value: string }> = [];
+    const extracted_vars: Array<{ name: string; value: string }> = [];
 
     formattedVariables.forEach((variable) => {
       if (variable.name.startsWith('S_')) {
         static_vars.push(variable);
       } else if (variable.name.startsWith('D_')) {
         dynamic_vars.push(variable);
+      } else if (variable.name.startsWith('E_')) {
+        extracted_vars.push(variable);
       }
     });
 
     return {
       staticVars: static_vars,
       dynamicVars: dynamic_vars,
+      extractedVars: extracted_vars,
     };
   }, [formattedVariables]);
 
@@ -422,10 +446,8 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
   const getUsedVariables = () => {
     const usedVarNames = new Set();
 
-    // Extract from URL
     extractVariableNames(url).forEach((name) => usedVarNames.add(name));
 
-    // Extract from params
     params.forEach((param) => {
       if (param.enabled) {
         extractVariableNames(param.key).forEach((name) =>
@@ -437,7 +459,6 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
       }
     });
 
-    // Extract from headers
     headers.forEach((header) => {
       if (header.enabled) {
         extractVariableNames(header.key).forEach((name) =>
@@ -449,10 +470,12 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
       }
     });
 
-    // Extract from body content ({{variable}} syntax)
     extractVariableNames(bodyContent).forEach((name) => usedVarNames.add(name));
 
-    // IMPORTANT: Also add variables selected through JsonVariableSubstitution
+    extractVariableNames(authData.token).forEach((name) =>
+      usedVarNames.add(name)
+    );
+
     selectedVariable.forEach((varItem) => {
       if (varItem.name) {
         usedVarNames.add(varItem.name);
@@ -466,12 +489,23 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
       dynamicVars: formattedVariables.filter(
         (v) => v.name.startsWith('D_') && usedVarNames.has(v.name)
       ),
+      extractedVars: formattedVariables.filter(
+        (v) => v.name.startsWith('E_') && usedVarNames.has(v.name)
+      ),
     };
   };
 
   const usedVariables = useMemo(
     () => getUsedVariables(),
-    [url, params, headers, bodyContent, formattedVariables, selectedVariable]
+    [
+      url,
+      params,
+      headers,
+      bodyContent,
+      formattedVariables,
+      selectedVariable,
+      authData.token,
+    ]
   );
 
   useEffect(() => {
@@ -493,9 +527,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
   const [selectedCollectionId, setSelectedCollectionId] = useState<string>('');
   const [isSaving, setIsSaving] = useState(false);
   const [loadedRequestId, setLoadedRequestId] = useState<string | undefined>();
-  const [extractedVariables, setExtractedVariables] = useState<
-    Array<{ name: string; value: string }>
-  >([]);
+  const [preRequestEnabled, setPreRequestEnabled] = useState(false);
 
   const collectionsRef = useRef(collections);
   useEffect(() => {
@@ -1037,7 +1069,24 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
           redirectUri: '',
         },
       });
+      const currentPreReq = collectionActions.getPreRequestAuth();
+      if (
+        currentPreReq.enabled &&
+        currentPreReq.collectionId === activeCollection?.id &&
+        currentPreReq.preRequestId !== activeRequest.id // Don't override the auth source itself
+      ) {
+        // Get the actual token value from extracted variables
+        const extractedVars = collectionActions.getExtractedVariables(
+          activeCollection.id
+        );
+        const actualTokenValue = extractedVars['E_token'] || '{{E_token}}';
 
+        setAuthType('bearer');
+        setAuthData((prev) => ({
+          ...prev,
+          token: actualTokenValue,
+        }));
+      }
       if (
         activeRequest.assertions &&
         Array.isArray(activeRequest.assertions) &&
@@ -1089,6 +1138,38 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
       } else {
         setSelectedVariable([]);
       }
+
+      if (
+        activeRequest?.extractVariables &&
+        Array.isArray(activeRequest?.extractVariables) &&
+        activeRequest.extractVariables.length > 0 &&
+        responseData?.body &&
+        onExtractVariable
+      ) {
+        console.log(
+          'Loading extracted variables:',
+          activeRequest.extractVariables
+        );
+
+        activeRequest.extractVariables.forEach((extraction: any) => {
+          if (extraction.source === 'response_body' && extraction.path) {
+            try {
+              const value = getValueByPath(responseData.body, extraction.path);
+              if (value !== undefined) {
+                onExtractVariable({
+                  variableName: extraction.name,
+                  name: extraction.name,
+                  source: extraction.source,
+                  path: extraction.path,
+                  value: value,
+                });
+              }
+            } catch (error) {
+              console.error('Error extracting variable:', error);
+            }
+          }
+        });
+      }
     } else if (!isSaving && !activeRequest) {
       setLoadedRequestId(undefined);
       setAssertions([]);
@@ -1097,7 +1178,6 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
       setPendingSubstitutions([]);
       setResponseData(null);
     }
-    // setResponseData(null);
   }, [activeRequest, isSaving]);
 
   useEffect(() => {
@@ -1120,6 +1200,40 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
       }
     }
   }, [activeRequest?.id]);
+
+  useEffect(() => {
+    const stored = collectionActions.getPreRequestAuth();
+    if (
+      stored.enabled &&
+      stored.collectionId === activeCollection?.id &&
+      stored.preRequestId === activeRequest?.id
+    ) {
+      setPreRequestEnabled(true);
+    } else {
+      setPreRequestEnabled(false);
+    }
+  }, [activeRequest?.id, activeCollection?.id]);
+
+  const handlePreRequestToggle = (checked: boolean) => {
+    setPreRequestEnabled(checked);
+    if (checked && activeRequest?.id && activeCollection?.id) {
+      collectionActions.setPreRequestAuth(
+        activeCollection.id,
+        activeRequest.id
+      );
+    } else if (activeCollection?.id) {
+      collectionActions.clearPreRequestAuth(activeCollection.id);
+    }
+  };
+
+  const hasPreRequestConfigured = useMemo(() => {
+    if (!activeRequest || !activeCollection) return false;
+    // Only enable the toggle for the request that matches the collection's preRequestId
+    const collectionPreRequestId = (activeCollectionFull as any)?.preRequestId;
+    return !!(
+      collectionPreRequestId && activeRequest.id === collectionPreRequestId
+    );
+  }, [activeRequest, activeCollectionFull]);
 
   const formatBackendResponse = (result: any): FormattedResponse => {
     const importantHeaders = [
@@ -1384,6 +1498,12 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
         }
       }
 
+      let resolvedToken = authData.token;
+      formattedVariables.forEach((v) => {
+        const regex = new RegExp(`\\{\\{${v.name}\\}\\}`, 'g');
+        resolvedToken = resolvedToken.replace(regex, v.value);
+      });
+
       const currentRequest = {
         id: activeRequest.id,
         name: activeRequest.name || 'Untitled Request',
@@ -1454,6 +1574,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
       }
 
       const backendData = await executeRequest(payloadWithAssertions);
+      console.log('backendData11:', backendData);
 
       let backendBody;
       let statusCode;
@@ -1531,6 +1652,47 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
 
         setResponseData(normalizedResponse);
 
+        const currentPreReq = collectionActions.getPreRequestAuth();
+        if (
+          currentPreReq.enabled &&
+          currentPreReq.preRequestId === activeRequest.id &&
+          activeCollection?.id
+        ) {
+          const body = normalizedResponse.body;
+
+          if (existingExtractions && existingExtractions.length > 0) {
+            existingExtractions.forEach((extraction) => {
+              const isResponseBody =
+                !extraction.source || extraction.source === 'response_body';
+
+              if (isResponseBody && extraction.path) {
+                try {
+                  const extractedValue = getValueByPath(body, extraction.path);
+
+                  if (extractedValue !== undefined && onExtractVariable) {
+                    const variableName = extraction.name || 'E_token';
+
+                    onExtractVariable({
+                      variableName: variableName,
+                      name: variableName,
+                      source: 'response_body',
+                      path: extraction.path,
+                      value: String(extractedValue),
+                    });
+
+                    collectionActions.setExtractedVariable(
+                      activeCollection.id,
+                      variableName,
+                      String(extractedValue)
+                    );
+                  }
+                } catch (error) {
+                  console.error('Error extracting variable:', error);
+                }
+              }
+            });
+          }
+        }
         if (activeRequest.id) {
           collectionActions.setRequestResponse(
             activeRequest.id,
@@ -1538,7 +1700,6 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
           );
         }
         const extracted = extractVariablesFromResponse(normalizedResponse);
-        setExtractedVariables(extracted);
 
         const formattedResponse = formatBackendResponse(normalizedResponse);
         const generatedAssertions = generateAssertions(formattedResponse);
@@ -1784,6 +1945,9 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
       if (selectedVariable && selectedVariable.length > 0) {
         requestData.variable = selectedVariable;
       }
+      if (existingExtractions.length > 0) {
+        requestData.extractVariables = existingExtractions;
+      }
       if (!activeRequest.id) {
         showError('Missing ID', 'Cannot update a request without an id.');
         return;
@@ -1922,6 +2086,8 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
         ...(selectedVariable && selectedVariable.length > 0
           ? { variable: selectedVariable }
           : {}),
+        extractVariables:
+          existingExtractions.length > 0 ? existingExtractions : [],
       };
 
       const savedRequestResponse = await addRequestMutation.mutateAsync(
@@ -2105,6 +2271,8 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
         params,
         headers: headers.filter((h) => h.enabled),
         assertions: selectedAssertions,
+        extractVariables:
+          existingExtractions.length > 0 ? existingExtractions : [],
       };
       if (selectedVariable && selectedVariable.length > 0) {
         requestData.variable = selectedVariable;
@@ -2454,24 +2622,48 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
     }
   };
 
-  const extractVariablesFromResponse = (response: any) => {
-    if (!response || !response.body) return [];
+  const getValueByPath = (obj: any, path: string): any => {
+    if (!obj || !path) return undefined;
 
-    const extracted: Array<{ name: string; value: string }> = [];
+    return path.split('.').reduce((current, key) => {
+      if (current && typeof current === 'object') {
+        if (key.includes('[') && key.includes(']')) {
+          const arrayKey = key.substring(0, key.indexOf('['));
+          const index = Number.parseInt(
+            key.substring(key.indexOf('[') + 1, key.indexOf(']'))
+          );
+          if (current[arrayKey] && Array.isArray(current[arrayKey])) {
+            return current[arrayKey][index];
+          }
+          return undefined;
+        }
+        return current[key];
+      }
+      return undefined;
+    }, obj);
+  };
+
+  const extractVariablesFromResponse = (response: any) => {
+    if (!response || !response.body) return;
 
     if (typeof response.body === 'object' && response.body !== null) {
       Object.keys(response.body).forEach((key) => {
         const value = response.body[key];
-        if (typeof value === 'string' || typeof value === 'number') {
-          extracted.push({
-            name: `E_${key}`,
+        if (
+          (typeof value === 'string' || typeof value === 'number') &&
+          onExtractVariable
+        ) {
+          const variableName = `E_${key}`;
+          onExtractVariable({
+            variableName,
+            name: variableName,
+            source: 'response_body',
+            path: key,
             value: String(value),
           });
         }
       });
     }
-
-    return extracted;
   };
 
 
@@ -2555,6 +2747,25 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
                     </Tooltip>
                   </TooltipProvider>
                 </div>
+              </div>
+
+              <div
+                className={`flex items-center gap-1.5 ${
+                  hasPreRequestConfigured
+                    ? ''
+                    : 'opacity-50 pointer-events-none'
+                }`}
+              >
+                <span className='text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap'>
+                  Set as Auth Source
+                </span>
+                <ToggleSwitch
+                  id='preRequestAuth'
+                  checked={preRequestEnabled}
+                  onChange={handlePreRequestToggle}
+                  label=''
+                  description=''
+                />
               </div>
             </div>
           </div>
@@ -2677,7 +2888,6 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
               }}
               placeholder='Enter request URL'
             />
-
             <div className='flex space-x-2'>
               <Button
                 variant='active'
@@ -2981,6 +3191,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
               onSaveAssertions={handleUpdateRequest}
               staticVariables={usedVariables.staticVars}
               dynamicVariables={usedVariables.dynamicVars}
+              extractedVariables={extractedVariables}
             />
           )}
 
@@ -3522,7 +3733,6 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
                     </select>
                   </div>
                 )}
-
                 <button
                   onClick={() => setIsCreatingCollection(true)}
                   className='w-full flex items-center justify-center space-x-2 text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 py-2 border border-dashed border-gray-300 dark:border-gray-600 rounded-md'

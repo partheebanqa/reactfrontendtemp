@@ -559,6 +559,7 @@ export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
           bodyType: finalBodyType,
           bodyFormData: finalBodyType === 'form-data' ? body : undefined,
           bodyRawContent: finalBodyType === 'raw' ? body : undefined,
+          extractVariables: [],
           authorizationType: authType,
           authorization: authToken ? { token: authToken } : undefined,
           headers: headers

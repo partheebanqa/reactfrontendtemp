@@ -19,7 +19,7 @@ export const fetchEnvironments = async (
     `${API_ENVIRONMENT}?ws=${workspaceId}`,
     {
       headers: {
-        'x-workspace-id': workspaceId,
+        'X-Workspace-ID': workspaceId,
       },
     }
   );

@@ -164,7 +164,7 @@ const getTestSuiteReport = async (
     `${API_REPORTS}/test-suites/${testSuiteId}?execution_id=${executionId}`,
     {
       headers: {
-        'x-workspace-id': workspaceId,
+        'X-Workspace-ID': workspaceId,
       },
     }
   );
@@ -186,7 +186,7 @@ const getRequestChainReport = async (
     `${API_REPORTS}/request-chains/${requestChainId}?execution_id=${executionId}`,
     {
       headers: {
-        'x-workspace-id': workspaceId,
+        'X-Workspace-ID': workspaceId,
       },
     }
   );
