@@ -2408,7 +2408,6 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
 
           <div className='border-gray-200 dark:border-gray-700 px-4 pt-3 flex-shrink-0'>
             <div className='flex items-center justify-between'>
-              {/* LEFT SIDE */}
               <div className='flex items-center text-sm space-x-1'>
                 <span className='text-gray-500 dark:text-gray-400'>
                   {activeCollectionFull?.name}
@@ -2452,7 +2451,6 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
                 </div>
               </div>
 
-              {/* RIGHT SIDE — Auth Source Toggle */}
               <div
                 className={`flex items-center gap-1.5 ${
                   hasPreRequestConfigured
@@ -2592,8 +2590,6 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
               }}
               placeholder='Enter request URL'
             />
-            {/* Pre-Request Auth Toggle */}
-
             <div className='flex space-x-2'>
               <Button
                 variant='active'
