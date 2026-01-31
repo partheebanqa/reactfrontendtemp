@@ -115,7 +115,7 @@ export const getRequestChains = async (
       `${API_REQUEST_CHAIN}/with-chainrequests?ws=${workspaceId}`,
       {
         headers: {
-          'X-Workspace-ID': workspaceId,
+          'x-workspace-id': workspaceId,
         },
       }
     );
@@ -213,7 +213,7 @@ export const getRequestChainById = async (
 ): Promise<RequestChain> => {
   const response = await apiRequest('GET', `${API_REQUEST_CHAIN}/${chainId}`, {
     headers: {
-      'X-Workspace-ID': workspaceId,
+      'x-workspace-id': workspaceId,
     },
   });
 

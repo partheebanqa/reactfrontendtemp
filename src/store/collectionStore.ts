@@ -29,7 +29,6 @@ export interface CollectionState {
   openedRequests: CollectionRequest[];
   unsavedChanges: Set<string>;
   requestResponses: Map<string, RequestResponse>;
-  extractedVariables: Record<string, Record<string, any>>;
   sanitizeTestRunner: {
     isOpen: boolean;
     collectionId: string | null;
@@ -43,11 +42,6 @@ export interface CollectionState {
     isOpen: boolean;
     requestId: string | null;
     request: CollectionRequest | null;
-  };
-  preRequestAuth: {
-    collectionId: string | null;
-    preRequestId: string | null;
-    enabled: boolean;
   };
 }
 
@@ -63,7 +57,6 @@ export const initialCollectionState: CollectionState = {
   openedRequests: [],
   unsavedChanges: new Set(),
   requestResponses: new Map(),
-  extractedVariables: {},
   sanitizeTestRunner: {
     isOpen: false,
     collectionId: null,
@@ -77,11 +70,6 @@ export const initialCollectionState: CollectionState = {
     isOpen: false,
     requestId: null,
     request: null,
-  },
-  preRequestAuth: {
-    collectionId: null,
-    preRequestId: null,
-    enabled: false,
   },
 };
 
@@ -489,6 +477,7 @@ export const collectionActions = {
     }));
   },
 
+  // ✅ NEW: Security Scan Actions
   openSecurityScan: (request: CollectionRequest) => {
     collectionStore.setState((state) => ({
       ...state,
@@ -564,85 +553,6 @@ export const collectionActions = {
       ...state,
       requestResponses: new Map(),
     }));
-  },
-
-  setExtractedVariable: (collectionId: string, name: string, value: any) => {
-    collectionStore.setState((state) => ({
-      ...state,
-      extractedVariables: {
-        ...state.extractedVariables,
-        [collectionId]: {
-          ...(state.extractedVariables[collectionId] || {}),
-          [name]: value,
-        },
-      },
-    }));
-  },
-
-  removeExtractedVariable: (collectionId: string, name: string) => {
-    collectionStore.setState((state) => {
-      const collectionVars = {
-        ...(state.extractedVariables[collectionId] || {}),
-      };
-      delete collectionVars[name];
-
-      return {
-        ...state,
-        extractedVariables: {
-          ...state.extractedVariables,
-          [collectionId]: collectionVars,
-        },
-      };
-    });
-  },
-
-  getExtractedVariables: (collectionId: string): Record<string, any> => {
-    return collectionStore.state.extractedVariables[collectionId] || {};
-  },
-
-  clearCollectionExtractedVariables: (collectionId: string) => {
-    collectionStore.setState((state) => {
-      const newExtractedVariables = { ...state.extractedVariables };
-      delete newExtractedVariables[collectionId];
-
-      return {
-        ...state,
-        extractedVariables: newExtractedVariables,
-      };
-    });
-  },
-
-  clearAllExtractedVariables: () => {
-    collectionStore.setState((state) => ({
-      ...state,
-      extractedVariables: {},
-    }));
-  },
-
-  setPreRequestAuth: (collectionId: string, preRequestId: string) => {
-    collectionStore.setState((state) => ({
-      ...state,
-      preRequestAuth: {
-        collectionId,
-        preRequestId,
-        enabled: true,
-      },
-    }));
-  },
-
-  clearPreRequestAuth: (collectionId: string) => {
-    collectionStore.setState((state) => ({
-      ...state,
-      preRequestAuth: {
-        collectionId: null,
-        preRequestId: null,
-        enabled: false,
-      },
-    }));
-  },
-
-  getPreRequestAuth: () => {
-    return collectionStore.state.preRequestAuth;
   },
 };
 

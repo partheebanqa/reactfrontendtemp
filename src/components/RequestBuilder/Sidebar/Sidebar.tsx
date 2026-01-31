@@ -669,26 +669,20 @@ const Sidebar: React.FC = () => {
 
   const [searchQuery, setSearchQuery] = useState('');
 
-  const hasExtractedVariables = (request: CollectionRequest) => {
-    if (!request.id || !request.collectionId) return false;
-
-    const hasRequestExtractions =
-      request.extractVariables &&
-      Array.isArray(request.extractVariables) &&
-      request.extractVariables.length > 0;
-
-    return hasRequestExtractions;
-  };
+  // Add this after your state declarations (around line 150)
   const isAuthRequest = (requestId: string, collectionId: string) => {
     const collection = collections.find((c) => c.id === collectionId);
 
+    // Check if the collection has fetched requests data
     if (!collection?.hasFetchedRequests) {
       return false;
     }
 
+    // Check against the stored preRequestId in the collection
     return collection.preRequestId === requestId;
   };
 
+  // Update collections with preRequestId when fetchCollectionRequests completes
   useEffect(() => {
     const collectionData = fetchCollectionRequests.data;
 
@@ -825,10 +819,10 @@ const Sidebar: React.FC = () => {
                   >
                     <div
                       className={`group flex items-center justify-between p-[6px] rounded-md cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 ${activeRequest?.id === request.id
-                          ? 'bg-blue-50 dark:bg-blue-900/20'
-                          : ''
+                        ? 'bg-blue-50 dark:bg-blue-900/20'
+                        : ''
                         } ${isAuthRequest(request.id, parentCollection.id)
-                          ? 'border-2 border-blue-500 rounded-lg'
+                          ? 'border-2 border-blue-500 rounded-lg bg-blue-50 dark:bg-blue-900/10'
                           : ''
                         }`}
                     >
@@ -982,6 +976,7 @@ const Sidebar: React.FC = () => {
                   {filteredCollections.map((collection) => {
                     const expanded = isCollectionExpanded(collection.id);
 
+                    // Get all sortable IDs for this collection
                     const collectionSortableIds = [
                       ...collection.requests
                         .filter((r: any) => !r.folderId)
@@ -1110,13 +1105,13 @@ const Sidebar: React.FC = () => {
                                       >
                                         <div
                                           className={`flex items-center justify-between p-[6px] rounded-md cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 ${activeRequest?.id === request.id
-                                              ? 'bg-green-50 dark:bg-blue-900/20'
-                                              : ''
+                                            ? 'bg-blue-50 dark:bg-blue-900/20'
+                                            : ''
                                             } ${isAuthRequest(
                                               request.id,
                                               collection.id
                                             )
-                                              ? 'border-2 border-blue-500 rounded-lg'
+                                              ? 'border-2 border-blue-500 rounded-lg bg-blue-50 dark:bg-blue-900/10'
                                               : ''
                                             }`}
                                         >
@@ -1440,47 +1435,17 @@ const Sidebar: React.FC = () => {
 
                     {selectedRequest.method === 'POST' && (
                       <>
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <div>
-                                {' '}
-                                <button
-                                  onClick={() => {
-                                    if (
-                                      hasExtractedVariables(selectedRequest)
-                                    ) {
-                                      setShowMarkAuthDialog(true);
-                                      setShowMenu(null);
-                                      setMenuPosition(null);
-                                    }
-                                  }}
-                                  disabled={
-                                    !hasExtractedVariables(selectedRequest)
-                                  }
-                                  className={`flex items-center w-full px-4 py-1 text-sm text-left ${hasExtractedVariables(selectedRequest)
-                                      ? 'hover:bg-gray-100 dark:hover:bg-gray-700'
-                                      : 'opacity-50 cursor-not-allowed'
-                                    }`}
-                                >
-                                  <KeyRound className='h-4 w-4 mr-2' />
-                                  Mark Auth
-                                </button>
-                              </div>
-                            </TooltipTrigger>
-                            {!hasExtractedVariables(selectedRequest) && (
-                              <TooltipContent side='right'>
-                                <p className='text-xs'>
-                                  No extracted variables found in this
-                                  collection.
-                                  <br />
-                                  Extract variables from a response to enable
-                                  Auth marking.
-                                </p>
-                              </TooltipContent>
-                            )}
-                          </Tooltip>
-                        </TooltipProvider>
+                        <button
+                          onClick={() => {
+                            setShowMarkAuthDialog(true);
+                            setShowMenu(null);
+                            setMenuPosition(null);
+                          }}
+                          className='flex items-center w-full px-4 py-1 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
+                        >
+                          <KeyRound className='h-4 w-4 mr-2' />
+                          Mark Auth
+                        </button>
                       </>
                     )}
 

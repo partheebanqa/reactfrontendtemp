@@ -34,10 +34,8 @@ import { SanitizeTestRunner } from '@/components/RequestBuilder/sanitizeTest/san
 import SecurityScanView from '@/components/RequestBuilder/SecurityScan/SecurityScanView';
 import { useCollectionStore, collectionActions } from '@/store/collectionStore';
 import PerformanceTesting from './PerformanceTesting/PerformanceTesting';
-import { useToast } from '@/hooks/use-toast';
 
 const RequestBuilder = () => {
-  const { toast } = useToast();
   const saveRequestRef = useRef<(() => Promise<void>) | null>(null);
   const [usedVariables, setUsedVariables] = useState<{
     staticVars: Array<{ name: string; value: string }>;
@@ -48,15 +46,6 @@ const RequestBuilder = () => {
   });
 
   const [activeRequestTab, setActiveRequestTab] = useState<string>('params');
-  const [extractedVariables, setExtractedVariables] = useState<
-    Record<string, string>
-  >({});
-
-  console.log('extractedVariables123:', extractedVariables);
-
-  const [existingExtractions, setExistingExtractions] = useState<
-    Array<{ name: string; path: string; source?: string }>
-  >([]);
 
   const { sanitizeTestRunner, securityScan, collections, performanceTest } = useCollectionStore();
   const { currentWorkspace } = useWorkspace();
@@ -64,7 +53,6 @@ const RequestBuilder = () => {
     refetch: refetchCollection,
     setActiveCollection,
     handleCreateRequest,
-    activeCollection,
   } = useCollection();
   const { setResponseData, setRequestData } = useRequest();
   const isMobile = useIsMobile();
@@ -77,112 +65,6 @@ const RequestBuilder = () => {
   );
   const isDraggingRef = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (activeCollection?.id) {
-      const collectionVars = collectionActions.getExtractedVariables(
-        activeCollection.id
-      );
-      console.log(
-        'Loading extracted variables for collection:',
-        activeCollection.id,
-        collectionVars
-      );
-      setExtractedVariables(collectionVars);
-    } else {
-      setExtractedVariables({});
-    }
-  }, [activeCollection?.id]);
-
-  const handleExtractVariable = (extraction: {
-    variableName: string;
-    name: string;
-    source: 'response_body' | 'response_header' | 'response_cookie';
-    path: string;
-    value: any;
-    transform?: string;
-  }) => {
-    console.log('=== REQUEST BUILDER - EXTRACTION HANDLER ===');
-    console.log('Received extraction:', extraction);
-
-    if (!activeCollection?.id) {
-      console.error('No active collection - cannot extract variable');
-      toast({
-        title: 'Error',
-        description: 'No active collection. Please select a collection first.',
-      });
-      return;
-    }
-
-    const collectionId = activeCollection.id;
-    console.log('Extracting for collection:', collectionId);
-
-    setExistingExtractions((prev) => {
-      const exists = prev.some((e) => e.name === extraction.name);
-      if (exists) {
-        console.log('Updating existing extraction...');
-        return prev.map((e) =>
-          e.name === extraction.name
-            ? {
-              name: extraction.name,
-              path: extraction.path,
-              source: extraction.source,
-            }
-            : e
-        );
-      }
-
-      console.log('Adding new extraction...');
-      return [
-        ...prev,
-        {
-          name: extraction.name,
-          path: extraction.path,
-          source: extraction.source,
-        },
-      ];
-    });
-
-    setExtractedVariables((prev) => {
-      console.log('Updating extracted variables for collection:', collectionId);
-      const updated = {
-        ...prev,
-        [extraction.name]: extraction.value,
-      };
-
-      collectionActions.setExtractedVariable(
-        collectionId,
-        extraction.name,
-        extraction.value
-      );
-
-      return updated;
-    });
-
-    console.log('Extraction complete in RequestBuilder!');
-  };
-
-  const handleRemoveExtraction = (name: string) => {
-    console.log('RequestBuilder - Removing extraction:', name);
-
-    if (!activeCollection?.id) {
-      console.error('No active collection');
-      return;
-    }
-
-    const collectionId = activeCollection.id;
-
-    setExistingExtractions((prev) => prev.filter((e) => e.name !== name));
-
-    setExtractedVariables((prev) => {
-      const updated = { ...prev };
-      delete updated[name];
-
-      collectionActions.removeExtractedVariable(collectionId, name);
-
-      return updated;
-    });
-  };
 
   const handleResizeStart = useCallback(
     (e: React.MouseEvent) => {
@@ -430,10 +312,6 @@ const RequestBuilder = () => {
                             await saveRequestRef.current();
                           }
                         }}
-                        onExtractVariable={handleExtractVariable}
-                        extractedVariables={extractedVariables}
-                        existingExtractions={existingExtractions}
-                        onRemoveExtraction={handleRemoveExtraction}
                       />
                     </div>
                   </>
