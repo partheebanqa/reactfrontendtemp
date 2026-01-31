@@ -824,7 +824,7 @@ const Sidebar: React.FC = () => {
                           : ''
                       } ${
                         isAuthRequest(request.id, parentCollection.id)
-                          ? 'border-2 border-blue-500 rounded-lg bg-blue-50 dark:bg-blue-900/10'
+                          ? 'border-2 border-blue-500 rounded-lg'
                           : ''
                       }`}
                     >
@@ -1109,14 +1109,14 @@ const Sidebar: React.FC = () => {
                                         <div
                                           className={`flex items-center justify-between p-[6px] rounded-md cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 ${
                                             activeRequest?.id === request.id
-                                              ? 'bg-blue-50 dark:bg-blue-900/20'
+                                              ? 'bg-green-50 dark:bg-blue-900/20'
                                               : ''
                                           } ${
                                             isAuthRequest(
                                               request.id,
                                               collection.id
                                             )
-                                              ? 'border-2 border-blue-500 rounded-lg bg-blue-50 dark:bg-blue-900/10'
+                                              ? 'border-2 border-blue-500 rounded-lg'
                                               : ''
                                           }`}
                                         >
