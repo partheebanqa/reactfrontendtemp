@@ -751,7 +751,6 @@ export function RequestEditor({
       url: replaceVariables(request.url, variables),
       body: processedBody,
       bodyRawContent: processedBodyRawContent,
-      extractVariables: [],
       headers:
         request.headers?.map((header) => ({
           ...header,
@@ -1722,7 +1721,6 @@ export function RequestEditor({
       requestName: initialRequest.name,
       bodyType: initialRequest.bodyType,
       bodyRawContent: initialRequest.body,
-      extractVariables: [],
       authorizationType: initialRequest.authorizationType,
       authorization: {
         token: initialRequest.authToken,

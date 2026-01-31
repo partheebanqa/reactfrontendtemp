@@ -42,7 +42,6 @@ interface Request {
   description: string;
   bodyType?: string;
   bodyRawContent?: string;
-  extractVariables: any[];
   bodyFormData?: any;
   authorizationType?: string;
   authorization?: any;
@@ -232,7 +231,6 @@ const EditTestSuiteContent: React.FC = () => {
         req.bodyContent ||
         req.body ||
         '',
-      extractVariables: [],
       bodyFormData:
         req.bodyFormData || req.body_form_data || req.formData || null,
 

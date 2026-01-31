@@ -33,10 +33,9 @@ import WelcomeImage from '../../assests/images/Welcome.webp';
 import { SanitizeTestRunner } from '@/components/RequestBuilder/sanitizeTest/sanitizeTest';
 import SecurityScanView from '@/components/RequestBuilder/SecurityScan/SecurityScanView';
 import { useCollectionStore, collectionActions } from '@/store/collectionStore';
-import { useToast } from '@/hooks/use-toast';
+import PerformanceTesting from './PerformanceTesting/PerformanceTesting';
 
 const RequestBuilder = () => {
-  const { toast } = useToast();
   const saveRequestRef = useRef<(() => Promise<void>) | null>(null);
   const [usedVariables, setUsedVariables] = useState<{
     staticVars: Array<{ name: string; value: string }>;
@@ -47,24 +46,13 @@ const RequestBuilder = () => {
   });
 
   const [activeRequestTab, setActiveRequestTab] = useState<string>('params');
-  const [extractedVariables, setExtractedVariables] = useState<
-    Record<string, string>
-  >({});
 
-  console.log('extractedVariables123:', extractedVariables);
-
-  const [existingExtractions, setExistingExtractions] = useState<
-    Array<{ name: string; path: string; source?: string }>
-  >([]);
-
-  const { sanitizeTestRunner, securityScan, collections } =
-    useCollectionStore();
+  const { sanitizeTestRunner, securityScan, collections, performanceTest } = useCollectionStore();
   const { currentWorkspace } = useWorkspace();
   const {
     refetch: refetchCollection,
     setActiveCollection,
     handleCreateRequest,
-    activeCollection,
   } = useCollection();
   const { setResponseData, setRequestData } = useRequest();
   const isMobile = useIsMobile();
@@ -77,112 +65,6 @@ const RequestBuilder = () => {
   );
   const isDraggingRef = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (activeCollection?.id) {
-      const collectionVars = collectionActions.getExtractedVariables(
-        activeCollection.id
-      );
-      console.log(
-        'Loading extracted variables for collection:',
-        activeCollection.id,
-        collectionVars
-      );
-      setExtractedVariables(collectionVars);
-    } else {
-      setExtractedVariables({});
-    }
-  }, [activeCollection?.id]);
-
-  const handleExtractVariable = (extraction: {
-    variableName: string;
-    name: string;
-    source: 'response_body' | 'response_header' | 'response_cookie';
-    path: string;
-    value: any;
-    transform?: string;
-  }) => {
-    console.log('=== REQUEST BUILDER - EXTRACTION HANDLER ===');
-    console.log('Received extraction:', extraction);
-
-    if (!activeCollection?.id) {
-      console.error('No active collection - cannot extract variable');
-      toast({
-        title: 'Error',
-        description: 'No active collection. Please select a collection first.',
-      });
-      return;
-    }
-
-    const collectionId = activeCollection.id;
-    console.log('Extracting for collection:', collectionId);
-
-    setExistingExtractions((prev) => {
-      const exists = prev.some((e) => e.name === extraction.name);
-      if (exists) {
-        console.log('Updating existing extraction...');
-        return prev.map((e) =>
-          e.name === extraction.name
-            ? {
-                name: extraction.name,
-                path: extraction.path,
-                source: extraction.source,
-              }
-            : e
-        );
-      }
-
-      console.log('Adding new extraction...');
-      return [
-        ...prev,
-        {
-          name: extraction.name,
-          path: extraction.path,
-          source: extraction.source,
-        },
-      ];
-    });
-
-    setExtractedVariables((prev) => {
-      console.log('Updating extracted variables for collection:', collectionId);
-      const updated = {
-        ...prev,
-        [extraction.name]: extraction.value,
-      };
-
-      collectionActions.setExtractedVariable(
-        collectionId,
-        extraction.name,
-        extraction.value
-      );
-
-      return updated;
-    });
-
-    console.log('Extraction complete in RequestBuilder!');
-  };
-
-  const handleRemoveExtraction = (name: string) => {
-    console.log('RequestBuilder - Removing extraction:', name);
-
-    if (!activeCollection?.id) {
-      console.error('No active collection');
-      return;
-    }
-
-    const collectionId = activeCollection.id;
-
-    setExistingExtractions((prev) => prev.filter((e) => e.name !== name));
-
-    setExtractedVariables((prev) => {
-      const updated = { ...prev };
-      delete updated[name];
-
-      collectionActions.removeExtractedVariable(collectionId, name);
-
-      return updated;
-    });
-  };
 
   const handleResizeStart = useCallback(
     (e: React.MouseEvent) => {
@@ -322,9 +204,8 @@ const RequestBuilder = () => {
 
           <div
             ref={containerRef}
-            className={`flex-1 flex overflow-hidden ${
-              isBottomLayout ? 'flex-col' : 'flex-row'
-            }`}
+            className={`flex-1 flex overflow-hidden ${isBottomLayout ? 'flex-col' : 'flex-row'
+              }`}
           >
             {/* ✅ If Sanitize Test Runner is open, show it fullscreen */}
             {sanitizeTestRunner.isOpen && sanitizeCollection ? (
@@ -332,106 +213,109 @@ const RequestBuilder = () => {
                 <SanitizeTestRunner collection={sanitizeCollection} />
               </div>
             ) : /* ✅ If Security Scan is open, show it fullscreen */
-            securityScan.isOpen && securityScan.request ? (
-              <div className='flex-1 w-full h-full overflow-auto'>
-                <SecurityScanView
-                  request={{
-                    id: securityScan.request.id || '',
-                    name: securityScan.request.name || 'Untitled Request',
-                    method: securityScan.request.method,
-                    url: securityScan.request.url || '',
-                  }}
-                  onClose={() => collectionActions.closeSecurityScan()}
-                />
-              </div>
-            ) : (
-              <>
-                {/* Request Editor */}
-                <div
-                  className={`flex flex-col min-h-0 overflow-hidden ${
-                    isMobile && activePanel === 'response' ? 'hidden' : ''
-                  }`}
-                  style={{
-                    height: isBottomLayout ? `${resizePosition}%` : undefined,
-                    width: !isBottomLayout ? `${resizePosition}%` : undefined,
-                  }}
-                >
-                  <RequestEditor
-                    onUsedVariablesChange={setUsedVariables}
-                    activeTab={activeRequestTab}
-                    onTabChange={setActiveRequestTab}
-                    onRegisterSave={(saveFn) => {
-                      saveRequestRef.current = saveFn;
+              securityScan.isOpen && securityScan.request ? (
+                <div className='flex-1 w-full h-full overflow-auto'>
+                  <SecurityScanView
+                    request={{
+                      id: securityScan.request.id || '',
+                      name: securityScan.request.name || 'Untitled Request',
+                      method: securityScan.request.method,
+                      url: securityScan.request.url || '',
                     }}
-                    onExtractVariable={handleExtractVariable}
-                    extractedVariables={extractedVariables}
-                    existingExtractions={existingExtractions}
-                    onRemoveExtraction={handleRemoveExtraction}
+                    workspaceId={currentWorkspace?.id || ""}
+                    onClose={() => collectionActions.closeSecurityScan()}
                   />
                 </div>
-
-                {/* Resizer Handle */}
-                {!isMobile ||
-                (isMobile && isBottomLayout && activePanel === 'editor') ? (
-                  <div
-                    className={`flex justify-center items-center ${
-                      isBottomLayout ? 'cursor-row-resize' : 'cursor-col-resize'
-                    } ${
-                      isBottomLayout
-                        ? 'h-[6px] w-full bg-[#136fb0] dark:bg-gray-700 hover:bg-blue-300 dark:hover:bg-blue-800 transition-colors'
-                        : 'w-[6px] h-full bg-[#136fb0] dark:bg-gray-700 hover:bg-blue-300 dark:hover:bg-blue-800 transition-colors'
-                    } ${isMobile ? 'touch-manipulation' : ''}`}
-                    onMouseDown={handleResizeStart}
-                    onTouchStart={(e) => {
-                      e.preventDefault();
-                      const touch = e.touches[0];
-                      const mouseEvent = new MouseEvent('mousedown', {
-                        clientX: touch.clientX,
-                        clientY: touch.clientY,
-                      });
-                      handleResizeStart(mouseEvent as any);
-                    }}
-                  >
-                    {isBottomLayout ? (
-                      <GripHorizontal className='h-3 w-3 text-white' />
-                    ) : (
-                      <GripVertical className='h-3 w-3 text-white' />
-                    )}
+              ) :
+                performanceTest.isOpen && performanceTest?.request ? (
+                  <div className='flex-1 w-full h-full overflow-auto'>
+                    <PerformanceTesting
+                      request={{
+                        id: performanceTest.request.id || '',
+                        name: performanceTest.request.name || 'Untitled Request',
+                        method: performanceTest.request.method,
+                        url: performanceTest.request.url || '',
+                      }}
+                      workspaceId={currentWorkspace?.id || ""}
+                      onClose={() => collectionActions.closePerformanceTesting()}
+                    />
                   </div>
-                ) : null}
+                ) : (
+                  <>
+                    {/* Request Editor */}
+                    <div
+                      className={`flex flex-col min-h-0 overflow-hidden ${isMobile && activePanel === 'response' ? 'hidden' : ''
+                        }`}
+                      style={{
+                        height: isBottomLayout ? `${resizePosition}%` : undefined,
+                        width: !isBottomLayout ? `${resizePosition}%` : undefined,
+                      }}
+                    >
+                      <RequestEditor
+                        onUsedVariablesChange={setUsedVariables}
+                        activeTab={activeRequestTab}
+                        onTabChange={setActiveRequestTab}
+                        onRegisterSave={(saveFn) => {
+                          saveRequestRef.current = saveFn;
+                        }}
+                      />
+                    </div>
 
-                {/* Response Viewer */}
-                <div
-                  className={`flex flex-col min-h-0 overflow-hidden ${
-                    isMobile && activePanel === 'editor' ? 'hidden' : ''
-                  }`}
-                  style={{
-                    height: isBottomLayout
-                      ? `${100 - resizePosition}%`
-                      : undefined,
-                    width: !isBottomLayout
-                      ? `${100 - resizePosition}%`
-                      : undefined,
-                  }}
-                >
-                  <ResponseViewer
-                    isBottomLayout={isBottomLayout}
-                    usedStaticVariables={usedVariables.staticVars}
-                    usedDynamicVariables={usedVariables.dynamicVars}
-                    onRedirectToTab={handleRedirectToTab}
-                    onSaveAssertions={async () => {
-                      if (saveRequestRef.current) {
-                        await saveRequestRef.current();
-                      }
-                    }}
-                    onExtractVariable={handleExtractVariable}
-                    extractedVariables={extractedVariables}
-                    existingExtractions={existingExtractions}
-                    onRemoveExtraction={handleRemoveExtraction}
-                  />
-                </div>
-              </>
-            )}
+                    {/* Resizer Handle */}
+                    {!isMobile ||
+                      (isMobile && isBottomLayout && activePanel === 'editor') ? (
+                      <div
+                        className={`flex justify-center items-center ${isBottomLayout ? 'cursor-row-resize' : 'cursor-col-resize'
+                          } ${isBottomLayout
+                            ? 'h-[6px] w-full bg-[#136fb0] dark:bg-gray-700 hover:bg-blue-300 dark:hover:bg-blue-800 transition-colors'
+                            : 'w-[6px] h-full bg-[#136fb0] dark:bg-gray-700 hover:bg-blue-300 dark:hover:bg-blue-800 transition-colors'
+                          } ${isMobile ? 'touch-manipulation' : ''}`}
+                        onMouseDown={handleResizeStart}
+                        onTouchStart={(e) => {
+                          e.preventDefault();
+                          const touch = e.touches[0];
+                          const mouseEvent = new MouseEvent('mousedown', {
+                            clientX: touch.clientX,
+                            clientY: touch.clientY,
+                          });
+                          handleResizeStart(mouseEvent as any);
+                        }}
+                      >
+                        {isBottomLayout ? (
+                          <GripHorizontal className='h-3 w-3 text-white' />
+                        ) : (
+                          <GripVertical className='h-3 w-3 text-white' />
+                        )}
+                      </div>
+                    ) : null}
+
+                    {/* Response Viewer */}
+                    <div
+                      className={`flex flex-col min-h-0 overflow-hidden ${isMobile && activePanel === 'editor' ? 'hidden' : ''
+                        }`}
+                      style={{
+                        height: isBottomLayout
+                          ? `${100 - resizePosition}%`
+                          : undefined,
+                        width: !isBottomLayout
+                          ? `${100 - resizePosition}%`
+                          : undefined,
+                      }}
+                    >
+                      <ResponseViewer
+                        isBottomLayout={isBottomLayout}
+                        usedStaticVariables={usedVariables.staticVars}
+                        usedDynamicVariables={usedVariables.dynamicVars}
+                        onRedirectToTab={handleRedirectToTab}
+                        onSaveAssertions={async () => {
+                          if (saveRequestRef.current) {
+                            await saveRequestRef.current();
+                          }
+                        }}
+                      />
+                    </div>
+                  </>
+                )}
           </div>
         </div>
 
@@ -439,9 +323,8 @@ const RequestBuilder = () => {
           <button
             onClick={toggleLayout}
             className='fixed bottom-4 right-4 z-10 p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg'
-            title={`Switch to ${
-              isBottomLayout ? 'side-by-side' : 'top-bottom'
-            } layout`}
+            title={`Switch to ${isBottomLayout ? 'side-by-side' : 'top-bottom'
+              } layout`}
           >
             {isBottomLayout ? (
               <svg

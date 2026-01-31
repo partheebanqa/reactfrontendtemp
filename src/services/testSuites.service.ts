@@ -14,7 +14,7 @@ export const getAllTestSuites = async (
       `${API_TEST_SUITES}?ws=${workspaceId}`,
       {
         headers: {
-          'X-Workspace-ID': workspaceId,
+          'x-workspace-id': workspaceId,
         },
       }
     );
@@ -32,7 +32,7 @@ export const getTestSuites = async (
   try {
     const response = await apiRequest('GET', `${API_TEST_SUITES}/${id}`, {
       headers: {
-        'X-Workspace-ID': workspaceId,
+        'x-workspace-id': workspaceId,
       },
     });
     return await response.json();
