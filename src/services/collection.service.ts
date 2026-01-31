@@ -396,6 +396,7 @@ export const updateRequest = async ({
 };
 
 export const formatRequest = (request: any) => {
+  console.log('request000:', request);
   return {
     id: request.Id || request.id,
     collectionId: request.CollectionId || request.collectionId,
@@ -408,6 +409,7 @@ export const formatRequest = (request: any) => {
     bodyType: request.BodyType || request.bodyType || 'none',
     bodyFormData: request.BodyFormData || request.bodyFormData,
     bodyRawContent: request.BodyRawContent || request.bodyRawContent,
+    extractVariables: request.extractVariables,
     authorizationType:
       request.AuthorizationType || request.authorizationType || 'none',
     authorization: request.Authorization || request.authorization || {},

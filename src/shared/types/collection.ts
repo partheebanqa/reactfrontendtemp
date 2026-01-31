@@ -154,7 +154,6 @@ export interface CollectionFolder {
 }
 
 export interface CollectionRequest {
-  extractVariables?: boolean;
   assertions: boolean;
   id?: string;
   collectionId?: string;
@@ -166,6 +165,7 @@ export interface CollectionRequest {
   bodyType: string;
   bodyFormData: string | null;
   bodyRawContent?: string | null;
+  extractVariables?: any[];
   authorizationType: string;
   authorization: {
     token?: string; // bearer

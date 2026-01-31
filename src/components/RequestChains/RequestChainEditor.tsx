@@ -942,6 +942,7 @@ export function RequestChainEditor({
       url: replaceVariables(request.url, variables),
       body: processedBody,
       bodyRawContent: processedBody,
+      extractVariables: [],
       headers:
         request.headers?.map((header) => ({
           ...header,
