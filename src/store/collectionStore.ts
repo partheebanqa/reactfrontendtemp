@@ -39,6 +39,11 @@ export interface CollectionState {
     requestId: string | null;
     request: CollectionRequest | null;
   };
+  preRequestAuth: {
+    collectionId: string | null;
+    preRequestId: string | null;
+    enabled: boolean;
+  };
 }
 
 export const initialCollectionState: CollectionState = {
@@ -62,6 +67,11 @@ export const initialCollectionState: CollectionState = {
     isOpen: false,
     requestId: null,
     request: null,
+  },
+  preRequestAuth: {
+    collectionId: null,
+    preRequestId: null,
+    enabled: false,
   },
 };
 
@@ -469,7 +479,6 @@ export const collectionActions = {
     }));
   },
 
-  // ✅ NEW: Security Scan Actions
   openSecurityScan: (request: CollectionRequest) => {
     collectionStore.setState((state) => ({
       ...state,
@@ -576,6 +585,32 @@ export const collectionActions = {
       ...state,
       extractedVariables: {},
     }));
+  },
+
+  setPreRequestAuth: (collectionId: string, preRequestId: string) => {
+    collectionStore.setState((state) => ({
+      ...state,
+      preRequestAuth: {
+        collectionId,
+        preRequestId,
+        enabled: true,
+      },
+    }));
+  },
+
+  clearPreRequestAuth: (collectionId: string) => {
+    collectionStore.setState((state) => ({
+      ...state,
+      preRequestAuth: {
+        collectionId: null,
+        preRequestId: null,
+        enabled: false,
+      },
+    }));
+  },
+
+  getPreRequestAuth: () => {
+    return collectionStore.state.preRequestAuth;
   },
 };
 

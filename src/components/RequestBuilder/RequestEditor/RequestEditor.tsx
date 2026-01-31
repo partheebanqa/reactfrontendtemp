@@ -16,7 +16,6 @@ import ToggleSwitch from '@/components/ui/ToggleSwitch';
 import Modal from '@/components/ui/Modal';
 import { useDataManagement } from '@/hooks/useDataManagement';
 import {
-  executeCollectionRequest,
   executeRequest,
   buildRequestPayload,
 } from '@/services/executeRequest.service';
@@ -459,6 +458,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
   const [selectedCollectionId, setSelectedCollectionId] = useState<string>('');
   const [isSaving, setIsSaving] = useState(false);
   const [loadedRequestId, setLoadedRequestId] = useState<string | undefined>();
+  const [preRequestEnabled, setPreRequestEnabled] = useState(false);
 
   const collectionsRef = useRef(collections);
   useEffect(() => {
@@ -772,7 +772,24 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
           redirectUri: '',
         },
       });
+      const currentPreReq = collectionActions.getPreRequestAuth();
+      if (
+        currentPreReq.enabled &&
+        currentPreReq.collectionId === activeCollection?.id &&
+        currentPreReq.preRequestId !== activeRequest.id // Don't override the auth source itself
+      ) {
+        // Get the actual token value from extracted variables
+        const extractedVars = collectionActions.getExtractedVariables(
+          activeCollection.id
+        );
+        const actualTokenValue = extractedVars['E_token'] || '{{E_token}}';
 
+        setAuthType('bearer');
+        setAuthData((prev) => ({
+          ...prev,
+          token: actualTokenValue,
+        }));
+      }
       if (
         activeRequest.assertions &&
         Array.isArray(activeRequest.assertions) &&
@@ -886,6 +903,40 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
       }
     }
   }, [activeRequest?.id]);
+
+  useEffect(() => {
+    const stored = collectionActions.getPreRequestAuth();
+    if (
+      stored.enabled &&
+      stored.collectionId === activeCollection?.id &&
+      stored.preRequestId === activeRequest?.id
+    ) {
+      setPreRequestEnabled(true);
+    } else {
+      setPreRequestEnabled(false);
+    }
+  }, [activeRequest?.id, activeCollection?.id]);
+
+  const handlePreRequestToggle = (checked: boolean) => {
+    setPreRequestEnabled(checked);
+    if (checked && activeRequest?.id && activeCollection?.id) {
+      collectionActions.setPreRequestAuth(
+        activeCollection.id,
+        activeRequest.id
+      );
+    } else if (activeCollection?.id) {
+      collectionActions.clearPreRequestAuth(activeCollection.id);
+    }
+  };
+
+  const hasPreRequestConfigured = useMemo(() => {
+    if (!activeRequest || !activeCollection) return false;
+    // Only enable the toggle for the request that matches the collection's preRequestId
+    const collectionPreRequestId = (activeCollectionFull as any)?.preRequestId;
+    return !!(
+      collectionPreRequestId && activeRequest.id === collectionPreRequestId
+    );
+  }, [activeRequest, activeCollectionFull]);
 
   const formatBackendResponse = (result: any): FormattedResponse => {
     const importantHeaders = [
@@ -1150,6 +1201,12 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
         }
       }
 
+      let resolvedToken = authData.token;
+      formattedVariables.forEach((v) => {
+        const regex = new RegExp(`\\{\\{${v.name}\\}\\}`, 'g');
+        resolvedToken = resolvedToken.replace(regex, v.value);
+      });
+
       const currentRequest = {
         id: activeRequest.id,
         name: activeRequest.name || 'Untitled Request',
@@ -1298,6 +1355,47 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
 
         setResponseData(normalizedResponse);
 
+        const currentPreReq = collectionActions.getPreRequestAuth();
+        if (
+          currentPreReq.enabled &&
+          currentPreReq.preRequestId === activeRequest.id &&
+          activeCollection?.id
+        ) {
+          const body = normalizedResponse.body;
+
+          if (existingExtractions && existingExtractions.length > 0) {
+            existingExtractions.forEach((extraction) => {
+              const isResponseBody =
+                !extraction.source || extraction.source === 'response_body';
+
+              if (isResponseBody && extraction.path) {
+                try {
+                  const extractedValue = getValueByPath(body, extraction.path);
+
+                  if (extractedValue !== undefined && onExtractVariable) {
+                    const variableName = extraction.name || 'E_token';
+
+                    onExtractVariable({
+                      variableName: variableName,
+                      name: variableName,
+                      source: 'response_body',
+                      path: extraction.path,
+                      value: String(extractedValue),
+                    });
+
+                    collectionActions.setExtractedVariable(
+                      activeCollection.id,
+                      variableName,
+                      String(extractedValue)
+                    );
+                  }
+                } catch (error) {
+                  console.error('Error extracting variable:', error);
+                }
+              }
+            });
+          }
+        }
         if (activeRequest.id) {
           collectionActions.setRequestResponse(
             activeRequest.id,
@@ -2310,6 +2408,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
 
           <div className='border-gray-200 dark:border-gray-700 px-4 pt-3 flex-shrink-0'>
             <div className='flex items-center justify-between'>
+              {/* LEFT SIDE */}
               <div className='flex items-center text-sm space-x-1'>
                 <span className='text-gray-500 dark:text-gray-400'>
                   {activeCollectionFull?.name}
@@ -2351,6 +2450,26 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
                     </Tooltip>
                   </TooltipProvider>
                 </div>
+              </div>
+
+              {/* RIGHT SIDE — Auth Source Toggle */}
+              <div
+                className={`flex items-center gap-1.5 ${
+                  hasPreRequestConfigured
+                    ? ''
+                    : 'opacity-50 pointer-events-none'
+                }`}
+              >
+                <span className='text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap'>
+                  Set as Auth Source
+                </span>
+                <ToggleSwitch
+                  id='preRequestAuth'
+                  checked={preRequestEnabled}
+                  onChange={handlePreRequestToggle}
+                  label=''
+                  description=''
+                />
               </div>
             </div>
           </div>
@@ -2473,6 +2592,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
               }}
               placeholder='Enter request URL'
             />
+            {/* Pre-Request Auth Toggle */}
 
             <div className='flex space-x-2'>
               <Button
@@ -2894,7 +3014,6 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
                     </select>
                   </div>
                 )}
-
                 <button
                   onClick={() => setIsCreatingCollection(true)}
                   className='w-full flex items-center justify-center space-x-2 text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 py-2 border border-dashed border-gray-300 dark:border-gray-600 rounded-md'

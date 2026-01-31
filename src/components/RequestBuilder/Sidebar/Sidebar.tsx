@@ -663,7 +663,6 @@ const Sidebar: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
 
   const hasExtractedVariables = (request: CollectionRequest) => {
-    console.log('request123:', request);
     if (!request.id || !request.collectionId) return false;
 
     const hasRequestExtractions =

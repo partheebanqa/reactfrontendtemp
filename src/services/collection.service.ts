@@ -396,11 +396,9 @@ export const updateRequest = async ({
 };
 
 export const formatRequest = (request: any) => {
-  console.log('request000:', request);
   return {
     id: request.Id || request.id,
     collectionId: request.CollectionId || request.collectionId,
-    // added folderId support for folder tree
     folderId: request.FolderId || request.folderId || undefined,
     name: request.Name || request.name,
     description: request.Description || request.description || '',
