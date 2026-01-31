@@ -23,6 +23,7 @@ import {
   CopyPlus,
   Shield,
   KeyRound,
+  Rocket,
 } from 'lucide-react';
 import { useCollection } from '@/hooks/useCollection';
 import { useWorkspace } from '@/hooks/useWorkspace';
@@ -163,7 +164,7 @@ const Sidebar: React.FC = () => {
   ) => {
     try {
       setResponseData(null);
-    } catch {}
+    } catch { }
     setActiveCollection(parentCollection);
     setActiveRequest(req);
     collectionActions.openRequest(req);
@@ -310,6 +311,12 @@ const Sidebar: React.FC = () => {
     setShowMenu(null);
     setMenuPosition(null);
   };
+
+  const handleOpenPerformanceTesting = (request: CollectionRequest) => {
+    collectionActions.openPerformanceTesting(request);
+    setShowMenu(null);
+    setMenuPosition(null);
+  };
   const handleCreateCollection = () => {
     setSelectedCollection(null);
     setShowCollectionModal(true);
@@ -437,9 +444,9 @@ const Sidebar: React.FC = () => {
         collections.map((col) =>
           col.id === selectedCollection.id
             ? {
-                ...col,
-                preRequestId: request.id,
-              }
+              ...col,
+              preRequestId: request.id,
+            }
             : col
         )
       );
@@ -626,14 +633,14 @@ const Sidebar: React.FC = () => {
         collections.map((col) =>
           col.id === selectedCollection?.id
             ? {
-                ...col,
-                requests: col.requests,
-                folders: removeRequestAtIndexFromFolderTree(
-                  (col as any).folders || [],
-                  selectedFolder.id,
-                  requestIndex
-                ),
-              }
+              ...col,
+              requests: col.requests,
+              folders: removeRequestAtIndexFromFolderTree(
+                (col as any).folders || [],
+                selectedFolder.id,
+                requestIndex
+              ),
+            }
             : col
         )
       );
@@ -642,11 +649,11 @@ const Sidebar: React.FC = () => {
         collections.map((col) =>
           col.id === selectedCollection.id
             ? {
-                ...col,
-                requests: col.requests.filter(
-                  (_, index) => index !== requestIndex
-                ),
-              }
+              ...col,
+              requests: col.requests.filter(
+                (_, index) => index !== requestIndex
+              ),
+            }
             : col
         )
       );
@@ -684,10 +691,10 @@ const Sidebar: React.FC = () => {
         collections.map((col) =>
           col.id === collectionData.id
             ? {
-                ...col,
-                preRequestId: collectionData.preRequestId,
-                hasFetchedRequests: true,
-              }
+              ...col,
+              preRequestId: collectionData.preRequestId,
+              hasFetchedRequests: true,
+            }
             : col
         )
       );
@@ -794,9 +801,8 @@ const Sidebar: React.FC = () => {
         </SortableFolder>
 
         <div
-          className={`ml-4 transition-all ${
-            isOpen ? 'max-h-[1000px]' : 'max-h-0 overflow-hidden'
-          }`}
+          className={`ml-4 transition-all ${isOpen ? 'max-h-[1000px]' : 'max-h-0 overflow-hidden'
+            }`}
         >
           <SortableContext
             items={sortableIds}
@@ -812,15 +818,13 @@ const Sidebar: React.FC = () => {
                     collectionId={parentCollection.id}
                   >
                     <div
-                      className={`group flex items-center justify-between p-[6px] rounded-md cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 ${
-                        activeRequest?.id === request.id
-                          ? 'bg-blue-50 dark:bg-blue-900/20'
-                          : ''
-                      } ${
-                        isAuthRequest(request.id, parentCollection.id)
+                      className={`group flex items-center justify-between p-[6px] rounded-md cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 ${activeRequest?.id === request.id
+                        ? 'bg-blue-50 dark:bg-blue-900/20'
+                        : ''
+                        } ${isAuthRequest(request.id, parentCollection.id)
                           ? 'border-2 border-blue-500 rounded-lg bg-blue-50 dark:bg-blue-900/10'
                           : ''
-                      }`}
+                        }`}
                     >
                       <div
                         className='flex items-center space-x-2 flex-1 min-w-0'
@@ -1045,11 +1049,10 @@ const Sidebar: React.FC = () => {
                                       }
                                     >
                                       <Star
-                                        className={`h-4 w-4 ${
-                                          collection.isImportant
-                                            ? 'fill-yellow-400 text-yellow-500'
-                                            : ''
-                                        }`}
+                                        className={`h-4 w-4 ${collection.isImportant
+                                          ? 'fill-yellow-400 text-yellow-500'
+                                          : ''
+                                          }`}
                                       />
                                     </button>
                                   }
@@ -1078,13 +1081,12 @@ const Sidebar: React.FC = () => {
                           </div>
 
                           <div
-                            className={`ml-4 sm:ml-6 overflow-hidden ${
-                              expanded
-                                ? isSearching
-                                  ? 'max-h-none'
-                                  : 'max-h-[1000px]'
-                                : 'max-h-0'
-                            }`}
+                            className={`ml-4 sm:ml-6 overflow-hidden ${expanded
+                              ? isSearching
+                                ? 'max-h-none'
+                                : 'max-h-[1000px]'
+                              : 'max-h-0'
+                              }`}
                           >
                             {expanded && (
                               <div className='overflow-y-auto scrollbar-thin max-h-[600px]'>
@@ -1102,18 +1104,16 @@ const Sidebar: React.FC = () => {
                                         collectionId={collection.id}
                                       >
                                         <div
-                                          className={`flex items-center justify-between p-[6px] rounded-md cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 ${
-                                            activeRequest?.id === request.id
-                                              ? 'bg-blue-50 dark:bg-blue-900/20'
-                                              : ''
-                                          } ${
-                                            isAuthRequest(
+                                          className={`flex items-center justify-between p-[6px] rounded-md cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 ${activeRequest?.id === request.id
+                                            ? 'bg-blue-50 dark:bg-blue-900/20'
+                                            : ''
+                                            } ${isAuthRequest(
                                               request.id,
                                               collection.id
                                             )
                                               ? 'border-2 border-blue-500 rounded-lg bg-blue-50 dark:bg-blue-900/10'
                                               : ''
-                                          }`}
+                                            }`}
                                         >
                                           <div
                                             className='flex items-center space-x-2 flex-1 min-w-0'
@@ -1126,17 +1126,17 @@ const Sidebar: React.FC = () => {
                                               request.id,
                                               collection.id
                                             ) && (
-                                              <TooltipProvider>
-                                                <Tooltip>
-                                                  <TooltipTrigger asChild>
-                                                    <KeyRound className='h-3 w-3 text-blue-600 flex-shrink-0' />
-                                                  </TooltipTrigger>
-                                                  <TooltipContent side='top'>
-                                                    Auth Request
-                                                  </TooltipContent>
-                                                </Tooltip>
-                                              </TooltipProvider>
-                                            )}
+                                                <TooltipProvider>
+                                                  <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                      <KeyRound className='h-3 w-3 text-blue-600 flex-shrink-0' />
+                                                    </TooltipTrigger>
+                                                    <TooltipContent side='top'>
+                                                      Auth Request
+                                                    </TooltipContent>
+                                                  </Tooltip>
+                                                </TooltipProvider>
+                                              )}
                                             <span
                                               className={`text-xs font-medium ${getMethodColor(
                                                 request.method
@@ -1460,6 +1460,21 @@ const Sidebar: React.FC = () => {
                           (Beta)
                         </span>
                       </span>
+
+                    </button>
+
+                    <button
+                      onClick={() => handleOpenPerformanceTesting(selectedRequest)}
+                      className='flex items-center w-full px-4 py-1 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
+                    >
+                      <Rocket className='h-4 w-4 mr-2' />
+                      <span>
+                        Performance Testing
+                        <span className='text-xs italic text-gray-500'>
+                          (Beta)
+                        </span>
+                      </span>
+
                     </button>
 
                     <div className='border-t border-gray-200 dark:border-gray-700 my-1'></div>

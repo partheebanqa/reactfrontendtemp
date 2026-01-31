@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { Store, useStore } from '@tanstack/react-store';
-import type { Collection, CollectionRequest } from '@/shared/types/collection';
+import { Store, useStore } from "@tanstack/react-store";
+import type { Collection, CollectionRequest } from "@/shared/types/collection";
 
 export interface RequestResponse {
   status: number;
@@ -18,7 +18,7 @@ export interface RequestResponse {
 }
 
 export interface CollectionState {
-  responseLayout: 'bottom' | 'right';
+  responseLayout: "bottom" | "right";
   activeRequest: CollectionRequest | null;
   activeCollection: Collection | null;
   collections: Collection[];
@@ -38,10 +38,15 @@ export interface CollectionState {
     requestId: string | null;
     request: CollectionRequest | null;
   };
+  performanceTest: {
+    isOpen: boolean;
+    requestId: string | null;
+    request: CollectionRequest | null;
+  };
 }
 
 export const initialCollectionState: CollectionState = {
-  responseLayout: 'bottom',
+  responseLayout: "bottom",
   activeCollection: null,
   activeRequest: null,
   collections: [],
@@ -61,17 +66,22 @@ export const initialCollectionState: CollectionState = {
     requestId: null,
     request: null,
   },
+  performanceTest: {
+    isOpen: false,
+    requestId: null,
+    request: null,
+  },
 };
 
 export const collectionStore = new Store<CollectionState>(
-  initialCollectionState
+  initialCollectionState,
 );
 
 export const collectionActions = {
   replaceRequest: (oldRequestId: string, newRequest: CollectionRequest) => {
     collectionStore.setState((state) => {
       const updatedOpened = state.openedRequests.map((r) =>
-        r.id === oldRequestId ? newRequest : r
+        r.id === oldRequestId ? newRequest : r,
       );
 
       const updatedUnsaved = new Set(state.unsavedChanges);
@@ -93,7 +103,7 @@ export const collectionActions = {
     collectionStore.setState((state) => ({
       ...state,
       openedRequests: state.openedRequests.map((r) =>
-        r.id === updatedRequest.id ? updatedRequest : r
+        r.id === updatedRequest.id ? updatedRequest : r,
       ),
       activeRequest:
         state.activeRequest?.id === updatedRequest.id
@@ -119,7 +129,7 @@ export const collectionActions = {
   openRequest: (request: CollectionRequest) => {
     collectionStore.setState((state) => {
       const isAlreadyOpen = state.openedRequests.some(
-        (r) => r.id === request.id
+        (r) => r.id === request.id,
       );
       return {
         ...state,
@@ -134,7 +144,7 @@ export const collectionActions = {
   closeRequest: (requestId: string) => {
     collectionStore.setState((state) => {
       const updatedOpened = state.openedRequests.filter(
-        (r) => r.id !== requestId
+        (r) => r.id !== requestId,
       );
       const updatedUnsaved = new Set(state.unsavedChanges);
       updatedUnsaved.delete(requestId);
@@ -179,7 +189,7 @@ export const collectionActions = {
 
       const getAllRequests = (
         requests: CollectionRequest[] = [],
-        folders: any[] = []
+        folders: any[] = [],
       ): CollectionRequest[] => {
         let allRequests = [...requests];
         folders.forEach((folder) => {
@@ -198,7 +208,7 @@ export const collectionActions = {
 
       const allRequests = getAllRequests(
         collection.requests || [],
-        (collection as any).folders || []
+        (collection as any).folders || [],
       );
 
       if (allRequests.length === 0) return state;
@@ -278,7 +288,7 @@ export const collectionActions = {
     collectionStore.setState((state) => ({
       ...state,
       collections: state.collections.map((c) =>
-        c.id === updatedCollection.id ? updatedCollection : c
+        c.id === updatedCollection.id ? updatedCollection : c,
       ),
     }));
   },
@@ -287,7 +297,7 @@ export const collectionActions = {
     collectionStore.setState((state) => ({
       ...state,
       collections: state.collections.map((c) =>
-        c.id === id ? { ...c, name } : c
+        c.id === id ? { ...c, name } : c,
       ),
     }));
   },
@@ -296,7 +306,7 @@ export const collectionActions = {
     collectionStore.setState((state) => ({
       ...state,
       collections: state.collections.map((c) =>
-        c.id === id ? { ...c, IsImportant } : c
+        c.id === id ? { ...c, IsImportant } : c,
       ),
     }));
   },
@@ -305,7 +315,7 @@ export const collectionActions = {
     collectionStore.setState((state) => ({
       ...state,
       collections: state.collections.map((c) =>
-        c.id === id ? { ...c, isImportant: false } : c
+        c.id === id ? { ...c, isImportant: false } : c,
       ),
     }));
   },
@@ -372,7 +382,7 @@ export const collectionActions = {
 
   addRequestToCollection: (
     collectionId: string,
-    request: CollectionRequest
+    request: CollectionRequest,
   ) => {
     collectionStore.setState((state) => {
       const updatedCollections = state.collections.map((collection) => {
@@ -483,6 +493,28 @@ export const collectionActions = {
     collectionStore.setState((state) => ({
       ...state,
       securityScan: {
+        isOpen: false,
+        requestId: null,
+        request: null,
+      },
+    }));
+  },
+
+  openPerformanceTesting: (request: CollectionRequest) => {
+    collectionStore.setState((state) => ({
+      ...state,
+      performanceTest: {
+        isOpen: true,
+        requestId: request.id || null,
+        request: request,
+      },
+    }));
+  },
+
+  closePerformanceTesting: () => {
+    collectionStore.setState((state) => ({
+      ...state,
+      performanceTest: {
         isOpen: false,
         requestId: null,
         request: null,

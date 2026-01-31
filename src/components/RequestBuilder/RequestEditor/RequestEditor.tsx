@@ -699,7 +699,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
       return;
     }
 
-    // ✅ CREATE if no id
+
     const createPayload = {
       workspaceId: currentWorkspace?.id,
       requestId: activeRequest?.id,
@@ -1619,7 +1619,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
       if (isTempRequest) {
         collectionActions.renameRequest(
           newName.trim(),
-          activeRequest.id,
+          activeRequest?.id || "",
           currentWorkspace?.id || ''
         );
       } else {
@@ -1705,7 +1705,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
         activeRequest?.folderId || selectedFolderId || undefined;
 
       const requestData: any = {
-        workspaceId: currentWorkspace.id,
+        workspaceId: currentWorkspace?.id,
         description: '',
         name: overrideName || activeRequest.name || 'New Request',
         method,
@@ -1953,7 +1953,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
           headers,
           ...(selectedVariable ? { variable: selectedVariable } : {}),
         };
-        replaceRequest(oldRequestId, updatedRequest);
+        replaceRequest(oldRequestId || "", updatedRequest);
         setActiveRequest(updatedRequest);
 
         await new Promise((resolve) => setTimeout(resolve, 0));
@@ -2031,7 +2031,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
         activeRequest?.folderId || selectedFolderId || undefined;
 
       const requestData: any = {
-        workspaceId: currentWorkspace.id,
+        workspaceId: currentWorkspace?.id,
         description: '',
         name: activeRequest.name || 'New Request',
         method,
@@ -2779,7 +2779,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
                 count: Array.isArray(schemas) ? schemas.length : 0,
               },
               { id: 'settings', label: 'Settings' },
-              { id: 'performance', label: 'Performance' },
+              // { id: 'performance', label: 'Performance' },
             ].map((tab) => (
               <button
                 key={tab.id}
