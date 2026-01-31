@@ -165,6 +165,7 @@ export interface CollectionRequest {
   bodyType: string;
   bodyFormData: string | null;
   bodyRawContent?: string | null;
+  extractVariables?: any[];
   authorizationType: string;
   authorization: {
     token?: string; // bearer

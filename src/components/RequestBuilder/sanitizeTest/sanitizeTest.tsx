@@ -673,6 +673,7 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
             url: finalUrl,
             bodyType: req.bodyType,
             bodyRawContent: req.bodyRawContent || '',
+            extractVariables: [],
             bodyFormData: req.bodyFormData || [],
             authorizationType: req.authorizationType,
             authorization: req.authorization,

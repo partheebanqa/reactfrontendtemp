@@ -17,7 +17,7 @@ export const fetchCollectionList = async (workspaceId: string) => {
       `${API_COLLECTIONS}?ws=${workspaceId}`,
       {
         headers: {
-          'x-workspace-id': workspaceId,
+          'X-Workspace-ID': workspaceId,
         },
       }
     );
@@ -399,7 +399,6 @@ export const formatRequest = (request: any) => {
   return {
     id: request.Id || request.id,
     collectionId: request.CollectionId || request.collectionId,
-    // added folderId support for folder tree
     folderId: request.FolderId || request.folderId || undefined,
     name: request.Name || request.name,
     description: request.Description || request.description || '',
@@ -408,6 +407,7 @@ export const formatRequest = (request: any) => {
     bodyType: request.BodyType || request.bodyType || 'none',
     bodyFormData: request.BodyFormData || request.bodyFormData,
     bodyRawContent: request.BodyRawContent || request.bodyRawContent,
+    extractVariables: request.extractVariables,
     authorizationType:
       request.AuthorizationType || request.authorizationType || 'none',
     authorization: request.Authorization || request.authorization || {},
