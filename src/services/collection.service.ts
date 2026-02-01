@@ -408,6 +408,7 @@ export const formatRequest = (request: any) => {
     bodyType: request.BodyType || request.bodyType || 'none',
     bodyFormData: request.BodyFormData || request.bodyFormData,
     bodyRawContent: request.BodyRawContent || request.bodyRawContent,
+    extractVariables: request.extractVariables,
     authorizationType:
       request.AuthorizationType || request.authorizationType || 'none',
     authorization: request.Authorization || request.authorization || {},

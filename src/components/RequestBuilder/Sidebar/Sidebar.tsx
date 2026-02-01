@@ -76,6 +76,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
+import { executeRequest } from '@/services/executeRequest.service';
 
 const Sidebar: React.FC = () => {
   const { currentWorkspace } = useWorkspace();
@@ -117,6 +118,8 @@ const Sidebar: React.FC = () => {
     left: number;
     anchorTop?: number;
   } | null>(null);
+
+  console.log('fetchCollectionRequests:', collections);
 
   const [selectedRequest, setSelectedRequest] =
     useState<CollectionRequest | null>(null);
@@ -164,7 +167,7 @@ const Sidebar: React.FC = () => {
   ) => {
     try {
       setResponseData(null);
-    } catch { }
+    } catch {}
     setActiveCollection(parentCollection);
     setActiveRequest(req);
     collectionActions.openRequest(req);
@@ -444,9 +447,9 @@ const Sidebar: React.FC = () => {
         collections.map((col) =>
           col.id === selectedCollection.id
             ? {
-              ...col,
-              preRequestId: request.id,
-            }
+                ...col,
+                preRequestId: request.id,
+              }
             : col
         )
       );
@@ -633,14 +636,14 @@ const Sidebar: React.FC = () => {
         collections.map((col) =>
           col.id === selectedCollection?.id
             ? {
-              ...col,
-              requests: col.requests,
-              folders: removeRequestAtIndexFromFolderTree(
-                (col as any).folders || [],
-                selectedFolder.id,
-                requestIndex
-              ),
-            }
+                ...col,
+                requests: col.requests,
+                folders: removeRequestAtIndexFromFolderTree(
+                  (col as any).folders || [],
+                  selectedFolder.id,
+                  requestIndex
+                ),
+              }
             : col
         )
       );
@@ -649,11 +652,11 @@ const Sidebar: React.FC = () => {
         collections.map((col) =>
           col.id === selectedCollection.id
             ? {
-              ...col,
-              requests: col.requests.filter(
-                (_, index) => index !== requestIndex
-              ),
-            }
+                ...col,
+                requests: col.requests.filter(
+                  (_, index) => index !== requestIndex
+                ),
+              }
             : col
         )
       );
@@ -669,37 +672,397 @@ const Sidebar: React.FC = () => {
 
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Add this after your state declarations (around line 150)
+  const hasExtractedVariables = (request: CollectionRequest) => {
+    if (!request.id || !request.collectionId) return false;
+
+    const hasRequestExtractions =
+      request.extractVariables &&
+      Array.isArray(request.extractVariables) &&
+      request.extractVariables.length > 0;
+
+    return hasRequestExtractions;
+  };
   const isAuthRequest = (requestId: string, collectionId: string) => {
     const collection = collections.find((c) => c.id === collectionId);
 
-    // Check if the collection has fetched requests data
     if (!collection?.hasFetchedRequests) {
       return false;
     }
 
-    // Check against the stored preRequestId in the collection
     return collection.preRequestId === requestId;
   };
 
-  // Update collections with preRequestId when fetchCollectionRequests completes
-  useEffect(() => {
-    const collectionData = fetchCollectionRequests.data;
+  const autoRunPreRequest = async (
+    collectionId: string,
+    preRequestId: string,
+    collectionsData: Collection[]
+  ) => {
+    try {
+      console.log('=== Auto-running pre-request ===');
+      console.log('collectionId:', collectionId);
+      console.log('preRequestId:', preRequestId);
 
-    if (collectionData && collectionData.id) {
-      setCollection(
-        collections.map((col) =>
-          col.id === collectionData.id
-            ? {
-              ...col,
-              preRequestId: collectionData.preRequestId,
-              hasFetchedRequests: true,
+      // Find the collection
+      const collection = collectionsData.find((c) => c.id === collectionId);
+      if (!collection) {
+        console.warn('Collection not found:', collectionId);
+        return;
+      }
+
+      // Find the pre-request within the collection
+      const preRequest = collection.requests.find((r) => r.id === preRequestId);
+      if (!preRequest) {
+        console.warn('Pre-request not found:', preRequestId);
+        toast({
+          title: 'Pre-request Not Found',
+          description:
+            'The authentication request could not be found in this collection',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      console.log('Found pre-request:', preRequest.name);
+      console.log('Extract variables config:', preRequest.extractVariables);
+
+      // Build the execution payload
+      const payload = {
+        request: {
+          workspaceId: currentWorkspace?.id || '',
+          name: preRequest.name,
+          order: 0,
+          method: preRequest.method,
+          url: preRequest.url,
+          bodyType: preRequest.bodyType || 'raw',
+          bodyFormData: preRequest.bodyFormData || null,
+          bodyRawContent: preRequest.bodyRawContent || '',
+          authorizationType: preRequest.authorizationType || 'none',
+          headers: preRequest.headers || [],
+          params: preRequest.params || [],
+        },
+        assertions: [],
+      };
+
+      console.log('Executing pre-request with payload:', payload);
+
+      // Execute the request
+      const response = await executeRequest(payload);
+
+      console.log('Pre-request response:', response);
+
+      // Extract variables if configured
+      if (
+        preRequest.extractVariables &&
+        Array.isArray(preRequest.extractVariables) &&
+        preRequest.extractVariables.length > 0
+      ) {
+        // Get the response body (handle different response structures)
+        let rawBody =
+          response?.data?.responses?.[0]?.body ||
+          response?.data?.body ||
+          response?.body;
+
+        console.log('Raw response body (before parsing):', rawBody);
+        console.log('Type of rawBody:', typeof rawBody);
+
+        // IMPORTANT: Parse the body if it's a string
+        let responseBody;
+        if (typeof rawBody === 'string') {
+          try {
+            responseBody = JSON.parse(rawBody);
+            console.log('Parsed response body:', responseBody);
+          } catch (parseError) {
+            console.error('Failed to parse response body as JSON:', parseError);
+            toast({
+              title: 'Parse Error',
+              description: 'Failed to parse authentication response',
+              variant: 'destructive',
+            });
+            return;
+          }
+        } else {
+          responseBody = rawBody;
+        }
+
+        console.log('Response body for extraction:', responseBody);
+
+        // Process each extraction configuration
+        let extractedCount = 0;
+        preRequest.extractVariables.forEach((extraction: any) => {
+          if (extraction.source === 'response_body' && extraction.path) {
+            try {
+              const value = getValueByPath(responseBody, extraction.path);
+
+              if (value !== undefined && value !== null) {
+                const storageKey = `extracted_var_${collectionId}_${extraction.name}`;
+
+                // Store in localStorage for persistence
+                localStorage.setItem(
+                  storageKey,
+                  JSON.stringify({
+                    name: extraction.name,
+                    value: String(value),
+                    timestamp: Date.now(),
+                    collectionId: collectionId,
+                    source: extraction.source,
+                    path: extraction.path,
+                  })
+                );
+
+                console.log(`✓ Stored ${extraction.name} = ${value}`);
+
+                collectionActions.setExtractedVariable(
+                  collectionId,
+                  extraction.name,
+                  String(value)
+                );
+
+                extractedCount++;
+              } else {
+                console.warn(
+                  `Variable ${extraction.name} not found at path: ${extraction.path}`
+                );
+                console.warn(
+                  'Available keys in responseBody:',
+                  Object.keys(responseBody || {})
+                );
+              }
+            } catch (error) {
+              console.error(
+                `Error extracting variable ${extraction.name}:`,
+                error
+              );
             }
-            : col
-        )
-      );
+          }
+        });
+
+        if (extractedCount > 0) {
+          // Mark execution as complete
+          const executionKey = `preRequest_executed_${collectionId}_${preRequestId}`;
+          localStorage.setItem(executionKey, Date.now().toString());
+
+          toast({
+            title: 'Authentication Complete',
+            description: `Pre-request executed and ${extractedCount} variable(s) extracted`,
+            variant: 'success',
+          });
+        } else {
+          toast({
+            title: 'No Variables Extracted',
+            description: 'Pre-request executed but no variables were found',
+            variant: 'destructive',
+          });
+        }
+      } else {
+        console.log('No extractVariables configured for this request');
+      }
+    } catch (error) {
+      console.error('Failed to auto-run pre-request:', error);
+      toast({
+        title: 'Pre-request Failed',
+        description: 'Could not execute authentication request',
+        variant: 'destructive',
+      });
     }
-  }, [fetchCollectionRequests.data]);
+  };
+  // Helper function to extract values from nested objects
+  const getValueByPath = (obj: any, path: string): any => {
+    if (!obj || !path) return undefined;
+
+    return path.split('.').reduce((current, key) => {
+      if (current && typeof current === 'object') {
+        if (key.includes('[') && key.includes(']')) {
+          const arrayKey = key.substring(0, key.indexOf('['));
+          const index = parseInt(
+            key.substring(key.indexOf('[') + 1, key.indexOf(']'))
+          );
+          if (current[arrayKey] && Array.isArray(current[arrayKey])) {
+            return current[arrayKey][index];
+          }
+          return undefined;
+        }
+        return current[key];
+      }
+      return undefined;
+    }, obj);
+  };
+
+  // useEffect(() => {
+  //   console.log('useEfect');
+
+  //   const collectionData = fetchCollectionRequests.data;
+
+  //   console.log('collectionData:', collectionData);
+
+  //   if (collectionData && collectionData.id) {
+  //     // Update collection with preRequestId
+  //     setCollection(
+  //       collections.map((col) =>
+  //         col.id === collectionData.id
+  //           ? {
+  //               ...col,
+  //               preRequestId: collectionData.preRequestId,
+  //               hasFetchedRequests: true,
+  //             }
+  //           : col
+  //       )
+  //     );
+
+  //     // Auto-run pre-request if it exists
+  //     if (collectionData?.preRequestId) {
+  //       autoRunPreRequest(collectionData.id, collectionData.preRequestId);
+  //     }
+  //   }
+  // }, [fetchCollectionRequests.data]);
+
+  useEffect(() => {
+    collections.forEach((collection) => {
+      if (!collection.id) return;
+
+      const storageKeys = Object.keys(localStorage).filter((key) =>
+        key.startsWith(`extracted_var_${collection.id}_`)
+      );
+
+      storageKeys.forEach((key) => {
+        try {
+          const data = JSON.parse(localStorage.getItem(key) || '{}');
+
+          if (data.value && data.name) {
+            collectionActions.setExtractedVariable(
+              collection.id,
+              data.name,
+              data.value
+            );
+
+            console.log(
+              `Restored ${data.name} from localStorage for collection ${collection.id}:`,
+              data.value
+            );
+          }
+        } catch (error) {
+          console.error(
+            'Error loading extracted variable from localStorage:',
+            error
+          );
+        }
+      });
+    });
+  }, [collections.length]);
+
+  const handleCollectionExpand = async (collectionId: string) => {
+    try {
+      console.log('Fetching collection requests for:', collectionId);
+
+      const collectionData = await fetchCollectionRequests.mutateAsync(
+        collectionId
+      );
+
+      console.log('Fetched collectionData:', collectionData);
+
+      if (collectionData) {
+        // First, update the collection with fresh data
+        setCollection(
+          collections.map((col) =>
+            col.id === collectionId
+              ? {
+                  ...col,
+                  preRequestId: collectionData.preRequestId,
+                  hasFetchedRequests: true,
+                  requests: collectionData.requests || col.requests,
+                  folders: collectionData.folders || col.folders,
+                }
+              : col
+          )
+        );
+
+        // IMPORTANT: Check if there are any previously stored extracted variables for this collection
+        // This loads variables that were extracted in previous sessions
+        const storageKeys = Object.keys(localStorage).filter((key) =>
+          key.startsWith(`extracted_var_${collectionId}_`)
+        );
+
+        console.log('Found stored variables:', storageKeys);
+
+        // Restore all previously extracted variables to the collection store
+        storageKeys.forEach((key) => {
+          try {
+            const data = JSON.parse(localStorage.getItem(key) || '{}');
+            if (data.value && data.name) {
+              collectionActions.setExtractedVariable(
+                collectionId,
+                data.name,
+                data.value
+              );
+              console.log(`Restored variable: ${data.name} = ${data.value}`);
+            }
+          } catch (error) {
+            console.error('Error restoring variable from localStorage:', error);
+          }
+        });
+
+        // Now handle pre-request execution
+        if (collectionData.preRequestId) {
+          console.log('PreRequestId found:', collectionData.preRequestId);
+
+          // Check if pre-request was already executed in this session
+          const executionKey = `preRequest_executed_${collectionId}_${collectionData.preRequestId}`;
+          const alreadyExecuted = localStorage.getItem(executionKey);
+
+          // Only auto-run if NOT already executed (or you can remove this check to always run)
+          if (!alreadyExecuted) {
+            // Find the pre-request in the fetched requests
+            const preRequest = collectionData.requests?.find(
+              (r: any) => r.id === collectionData.preRequestId
+            );
+
+            if (
+              preRequest &&
+              preRequest.extractVariables &&
+              preRequest.extractVariables.length > 0
+            ) {
+              console.log(
+                'Pre-request has extractVariables:',
+                preRequest.extractVariables
+              );
+
+              // Create updated collection with fresh data for auto-run
+              const updatedCollection = {
+                id: collectionId,
+                preRequestId: collectionData.preRequestId,
+                requests: collectionData.requests || [],
+                folders: collectionData.folders || [],
+              };
+
+              // Execute the pre-request
+              await autoRunPreRequest(
+                collectionId,
+                collectionData.preRequestId,
+                [updatedCollection]
+              );
+            } else {
+              console.log(
+                'Pre-request has no extractVariables, skipping auto-run'
+              );
+            }
+          } else {
+            console.log(
+              'Pre-request already executed in this session, using stored variables'
+            );
+          }
+        } else {
+          console.log('No preRequestId found for collection:', collectionId);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching collection requests:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load collection requests',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const isSearching = searchQuery.trim().length > 0;
   const isCollectionExpanded = (collectionId: string) =>
     isSearching ? true : expandedCollections.has(collectionId);
@@ -801,8 +1164,9 @@ const Sidebar: React.FC = () => {
         </SortableFolder>
 
         <div
-          className={`ml-4 transition-all ${isOpen ? 'max-h-[1000px]' : 'max-h-0 overflow-hidden'
-            }`}
+          className={`ml-4 transition-all ${
+            isOpen ? 'max-h-[1000px]' : 'max-h-0 overflow-hidden'
+          }`}
         >
           <SortableContext
             items={sortableIds}
@@ -818,13 +1182,15 @@ const Sidebar: React.FC = () => {
                     collectionId={parentCollection.id}
                   >
                     <div
-                      className={`group flex items-center justify-between p-[6px] rounded-md cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 ${activeRequest?.id === request.id
-                        ? 'bg-blue-50 dark:bg-blue-900/20'
-                        : ''
-                        } ${isAuthRequest(request.id, parentCollection.id)
-                          ? 'border-2 border-blue-500 rounded-lg bg-blue-50 dark:bg-blue-900/10'
+                      className={`group flex items-center justify-between p-[6px] rounded-md cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 ${
+                        activeRequest?.id === request.id
+                          ? 'bg-blue-50 dark:bg-blue-900/20'
                           : ''
-                        }`}
+                      } ${
+                        isAuthRequest(request.id, parentCollection.id)
+                          ? 'border-2 border-blue-500 rounded-lg'
+                          : ''
+                      }`}
                     >
                       <div
                         className='flex items-center space-x-2 flex-1 min-w-0'
@@ -976,7 +1342,6 @@ const Sidebar: React.FC = () => {
                   {filteredCollections.map((collection) => {
                     const expanded = isCollectionExpanded(collection.id);
 
-                    // Get all sortable IDs for this collection
                     const collectionSortableIds = [
                       ...collection.requests
                         .filter((r: any) => !r.folderId)
@@ -999,10 +1364,26 @@ const Sidebar: React.FC = () => {
                                 e.preventDefault();
                                 e.stopPropagation();
                               }}
-                              onClick={() => {
+                              onClick={async () => {
                                 if (isSearching) return;
+
                                 setActiveCollection(collection);
-                                void toggleExpandedCollection(collection.id);
+
+                                // Check if collection is being expanded (not collapsed)
+                                const isExpanding = !expandedCollections.has(
+                                  collection.id
+                                );
+
+                                // Toggle the expansion state
+                                await toggleExpandedCollection(collection.id);
+
+                                // If expanding and hasn't been fetched yet, fetch and auto-run
+                                if (
+                                  isExpanding &&
+                                  !collection.hasFetchedRequests
+                                ) {
+                                  await handleCollectionExpand(collection.id);
+                                }
                               }}
                             >
                               <div className='flex items-center space-x-2'>
@@ -1049,10 +1430,11 @@ const Sidebar: React.FC = () => {
                                       }
                                     >
                                       <Star
-                                        className={`h-4 w-4 ${collection.isImportant
-                                          ? 'fill-yellow-400 text-yellow-500'
-                                          : ''
-                                          }`}
+                                        className={`h-4 w-4 ${
+                                          collection.isImportant
+                                            ? 'fill-yellow-400 text-yellow-500'
+                                            : ''
+                                        }`}
                                       />
                                     </button>
                                   }
@@ -1081,12 +1463,13 @@ const Sidebar: React.FC = () => {
                           </div>
 
                           <div
-                            className={`ml-4 sm:ml-6 overflow-hidden ${expanded
-                              ? isSearching
-                                ? 'max-h-none'
-                                : 'max-h-[1000px]'
-                              : 'max-h-0'
-                              }`}
+                            className={`ml-4 sm:ml-6 overflow-hidden ${
+                              expanded
+                                ? isSearching
+                                  ? 'max-h-none'
+                                  : 'max-h-[1000px]'
+                                : 'max-h-0'
+                            }`}
                           >
                             {expanded && (
                               <div className='overflow-y-auto scrollbar-thin max-h-[600px]'>
@@ -1104,16 +1487,18 @@ const Sidebar: React.FC = () => {
                                         collectionId={collection.id}
                                       >
                                         <div
-                                          className={`flex items-center justify-between p-[6px] rounded-md cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 ${activeRequest?.id === request.id
-                                            ? 'bg-blue-50 dark:bg-blue-900/20'
-                                            : ''
-                                            } ${isAuthRequest(
+                                          className={`flex items-center justify-between p-[6px] rounded-md cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 ${
+                                            activeRequest?.id === request.id
+                                              ? 'bg-green-50 dark:bg-blue-900/20'
+                                              : ''
+                                          } ${
+                                            isAuthRequest(
                                               request.id,
                                               collection.id
                                             )
-                                              ? 'border-2 border-blue-500 rounded-lg bg-blue-50 dark:bg-blue-900/10'
+                                              ? 'border-2 border-blue-500 rounded-lg'
                                               : ''
-                                            }`}
+                                          }`}
                                         >
                                           <div
                                             className='flex items-center space-x-2 flex-1 min-w-0'
@@ -1126,17 +1511,17 @@ const Sidebar: React.FC = () => {
                                               request.id,
                                               collection.id
                                             ) && (
-                                                <TooltipProvider>
-                                                  <Tooltip>
-                                                    <TooltipTrigger asChild>
-                                                      <KeyRound className='h-3 w-3 text-blue-600 flex-shrink-0' />
-                                                    </TooltipTrigger>
-                                                    <TooltipContent side='top'>
-                                                      Auth Request
-                                                    </TooltipContent>
-                                                  </Tooltip>
-                                                </TooltipProvider>
-                                              )}
+                                              <TooltipProvider>
+                                                <Tooltip>
+                                                  <TooltipTrigger asChild>
+                                                    <KeyRound className='h-3 w-3 text-blue-600 flex-shrink-0' />
+                                                  </TooltipTrigger>
+                                                  <TooltipContent side='top'>
+                                                    Auth Request
+                                                  </TooltipContent>
+                                                </Tooltip>
+                                              </TooltipProvider>
+                                            )}
                                             <span
                                               className={`text-xs font-medium ${getMethodColor(
                                                 request.method
@@ -1347,9 +1732,10 @@ const Sidebar: React.FC = () => {
                     <button
                       onClick={async () => {
                         if (selectedCollection) {
-                          await fetchCollectionRequests.mutateAsync(
-                            selectedCollection.id
-                          );
+                          // Fetch collection data first
+                          await handleCollectionExpand(selectedCollection.id);
+
+                          // Then open test runner
                           collectionActions.openSanitizeTestRunner(
                             selectedCollection.id
                           );
@@ -1362,7 +1748,6 @@ const Sidebar: React.FC = () => {
                       <Zap className='h-4 w-4 mr-2' />
                       Quick Test
                     </button>
-
                     <div className='border-t border-gray-200 dark:border-gray-700 my-1'></div>
 
                     <button
@@ -1404,6 +1789,37 @@ const Sidebar: React.FC = () => {
                       <FileJson2 className='h-4 w-4 mr-2' />
                       Export
                     </button> */}
+
+                    {selectedCollection.preRequestId && (
+                      <>
+                        <div className='border-t border-gray-200 dark:border-gray-700 my-1'></div>
+                        <button
+                          onClick={async () => {
+                            if (
+                              selectedCollection &&
+                              selectedCollection.preRequestId
+                            ) {
+                              // Clear execution flag to allow re-run
+                              const executionKey = `preRequest_executed_${selectedCollection.id}_${selectedCollection.preRequestId}`;
+                              localStorage.removeItem(executionKey);
+
+                              // Re-run pre-request
+                              await autoRunPreRequest(
+                                selectedCollection.id,
+                                selectedCollection.preRequestId,
+                                collections
+                              );
+                            }
+                            setShowMenu(null);
+                            setMenuPosition(null);
+                          }}
+                          className='flex items-center w-full px-4 py-1 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
+                        >
+                          <KeyRound className='h-4 w-4 mr-2' />
+                          Re-run Auth Request
+                        </button>
+                      </>
+                    )}
                   </div>
                 )}
 
@@ -1435,17 +1851,48 @@ const Sidebar: React.FC = () => {
 
                     {selectedRequest.method === 'POST' && (
                       <>
-                        <button
-                          onClick={() => {
-                            setShowMarkAuthDialog(true);
-                            setShowMenu(null);
-                            setMenuPosition(null);
-                          }}
-                          className='flex items-center w-full px-4 py-1 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
-                        >
-                          <KeyRound className='h-4 w-4 mr-2' />
-                          Mark Auth
-                        </button>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div>
+                                {' '}
+                                <button
+                                  onClick={() => {
+                                    if (
+                                      hasExtractedVariables(selectedRequest)
+                                    ) {
+                                      setShowMarkAuthDialog(true);
+                                      setShowMenu(null);
+                                      setMenuPosition(null);
+                                    }
+                                  }}
+                                  disabled={
+                                    !hasExtractedVariables(selectedRequest)
+                                  }
+                                  className={`flex items-center w-full px-4 py-1 text-sm text-left ${
+                                    hasExtractedVariables(selectedRequest)
+                                      ? 'hover:bg-gray-100 dark:hover:bg-gray-700'
+                                      : 'opacity-50 cursor-not-allowed'
+                                  }`}
+                                >
+                                  <KeyRound className='h-4 w-4 mr-2' />
+                                  Mark Auth
+                                </button>
+                              </div>
+                            </TooltipTrigger>
+                            {!hasExtractedVariables(selectedRequest) && (
+                              <TooltipContent side='right'>
+                                <p className='text-xs'>
+                                  No extracted variables found in this
+                                  collection.
+                                  <br />
+                                  Extract variables from a response to enable
+                                  Auth marking.
+                                </p>
+                              </TooltipContent>
+                            )}
+                          </Tooltip>
+                        </TooltipProvider>
                       </>
                     )}
 
@@ -1460,11 +1907,12 @@ const Sidebar: React.FC = () => {
                           (Beta)
                         </span>
                       </span>
-
                     </button>
 
                     <button
-                      onClick={() => handleOpenPerformanceTesting(selectedRequest)}
+                      onClick={() =>
+                        handleOpenPerformanceTesting(selectedRequest)
+                      }
                       className='flex items-center w-full px-4 py-1 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
                     >
                       <Rocket className='h-4 w-4 mr-2' />
@@ -1474,7 +1922,6 @@ const Sidebar: React.FC = () => {
                           (Beta)
                         </span>
                       </span>
-
                     </button>
 
                     <div className='border-t border-gray-200 dark:border-gray-700 my-1'></div>
