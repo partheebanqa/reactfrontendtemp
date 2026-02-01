@@ -1393,7 +1393,7 @@ const Sidebar: React.FC = () => {
                                                     <KeyRound className='h-3 w-3 text-blue-600 flex-shrink-0' />
                                                   </TooltipTrigger>
                                                   <TooltipContent side='top'>
-                                                    Auth Request
+                                                    Pre-Request Auth
                                                   </TooltipContent>
                                                 </Tooltip>
                                               </TooltipProvider>
@@ -1672,7 +1672,6 @@ const Sidebar: React.FC = () => {
 
                               storageKeys.forEach((key) => {
                                 localStorage.removeItem(key);
-                                console.log(`Cleared old variable: ${key}`);
                               });
 
                               // Re-run pre-request to get fresh tokens
@@ -1748,23 +1747,22 @@ const Sidebar: React.FC = () => {
                                   }`}
                                 >
                                   <KeyRound className='h-4 w-4 mr-2' />
-                                  Mark Auth
+                                  Pre-request Auth
                                 </button>
                               </div>
                             </TooltipTrigger>
                             {!hasExtractedVariables(selectedRequest) && (
                               <TooltipContent side='right'>
                                 <p className='text-xs'>
-                                  No extracted variables found in this
-                                  collection.
+                                  Add Authorization token extraction
                                   <br />
-                                  Extract variables from a response to enable
-                                  Auth marking.
+                                  to set as pre Auth for the collection.
                                 </p>
                               </TooltipContent>
                             )}
                           </Tooltip>
                         </TooltipProvider>
+                        <div className='border-t border-gray-200 dark:border-gray-700 my-1'></div>
                       </>
                     )}
 
@@ -2071,11 +2069,11 @@ const Sidebar: React.FC = () => {
             <AlertDialogContent>
               <AlertDialogHeader>
                 <AlertDialogTitle>
-                  Mark "{selectedRequest?.name}" for Authentication?
+                  Set "{selectedRequest?.name}" as a pre-request API?
                 </AlertDialogTitle>
                 <AlertDialogDescription>
-                  This will mark the selected request as the authentication
-                  request for this collection.
+                  The token extracted from this API will be used for all
+                  requests in this collection.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
@@ -2087,7 +2085,7 @@ const Sidebar: React.FC = () => {
                     }
                   }}
                 >
-                  Mark Auth
+                  Enable Pre-request
                 </Button>
               </AlertDialogFooter>
             </AlertDialogContent>
