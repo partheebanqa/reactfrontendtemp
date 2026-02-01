@@ -3160,7 +3160,6 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
 
                   <TabsContent value='performance'>
                     <div className='space-y-6'>
-                      {/* Performance Test Settings */}
                       <div>
                         <h3 className='font-medium text-gray-800 dark:text-gray-200 mb-2'>
                           Performance Test Settings
@@ -3247,7 +3246,6 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
 
                       <Separator className='my-4' />
 
-                      {/* Rate Limiting Settings */}
                       <div>
                         <div className='flex items-center justify-between mb-4'>
                           <h3 className='font-medium text-gray-800 dark:text-gray-200'>
@@ -3360,7 +3358,6 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
                         )}
                       </div>
 
-                      {/* Current Settings Summary */}
                       <div className='mt-6 bg-gray-50 dark:bg-dark-300 p-4 rounded-lg border border-gray-200 dark:border-dark-100'>
                         <h3 className='font-medium text-gray-800 dark:text-gray-200 mb-4'>
                           Current Settings Summary
@@ -3435,7 +3432,6 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
 
                   <TabsContent value='general'>
                     <div className='space-y-6'>
-                      {/* General Options */}
                       <div>
                         <h3 className='font-medium text-gray-800 dark:text-gray-200 mb-4'>
                           General Settings
@@ -3443,7 +3439,6 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
 
                         <div className='space-y-4'>
                           <div className='flex flex-wrap items-center gap-6'>
-                            {/* Follow Redirects */}
                             <div className='flex items-center'>
                               <Checkbox
                                 id='follow-redirects-general'
@@ -3467,7 +3462,6 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
                               </Label>
                             </div>
 
-                            {/* Stop on Error */}
                             <div className='flex items-center'>
                               <Checkbox
                                 id='stop-on-error-general'
@@ -3491,7 +3485,6 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
                               </Label>
                             </div>
 
-                            {/* Save Responses */}
                             <div className='flex items-center'>
                               <Checkbox
                                 id='save-responses-general'
@@ -3518,12 +3511,10 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
                         </div>
                       </div>
 
-                      {/* Save Settings Button */}
                       <div className='mt-6 flex justify-end'>
                         <Button
                           variant='default'
                           onClick={() => {
-                            // saveRequest(settings);
                             toast({
                               title: 'Settings Saved',
                               description:
@@ -3538,7 +3529,6 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
                         </Button>
                       </div>
 
-                      {/* Options Summary */}
                       <div className='mt-6 bg-gray-50 dark:bg-dark-300 p-4 rounded-lg border border-gray-200 dark:border-dark-100'>
                         <h3 className='font-medium text-gray-800 dark:text-gray-200 mb-4'>
                           Options Summary

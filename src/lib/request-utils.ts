@@ -7,6 +7,7 @@ import type {
   APIRequest,
   ExecutionLog,
 } from '@/shared/types/requestChain.model';
+import { isTokenExpired, isTokenExpiringWithin2Mins } from './jwtValidator';
 
 export const getExtractVariablesByEnvironment = (environmentId?: string) => {
   const readFallbackExtractedVariables = () => {
@@ -1183,4 +1184,58 @@ export const syncParamsFromUrl = (request: any) => {
   }
 
   return request;
+};
+
+export const shouldRefreshExtractedVariables = (
+  collectionId: string,
+  preRequestId: string
+): boolean => {
+  try {
+    const storageKeys = Object.keys(localStorage).filter((key) =>
+      key.startsWith(`extracted_var_${collectionId}_`)
+    );
+
+    if (storageKeys.length === 0) {
+      console.log('No extracted variables found, needs refresh');
+      return true;
+    }
+
+    for (const key of storageKeys) {
+      const data = JSON.parse(localStorage.getItem(key) || '{}');
+
+      if (data.value && typeof data.value === 'string') {
+        const isJWT = data.value.split('.').length === 3;
+
+        if (isJWT) {
+          console.log(`Checking token: ${data.name}`);
+
+          if (isTokenExpired(data.value)) {
+            console.log(`Token ${data.name} is expired, needs refresh`);
+            return true;
+          }
+
+          if (isTokenExpiringWithin2Mins(data.value)) {
+            console.log(`Token ${data.name} is expiring soon, needs refresh`);
+            return true;
+          }
+
+          console.log(`Token ${data.name} is still valid`);
+        }
+      }
+    }
+
+    const executionKey = `preRequest_executed_${collectionId}_${preRequestId}`;
+    const alreadyExecuted = localStorage.getItem(executionKey);
+
+    if (!alreadyExecuted) {
+      console.log('Pre-request never executed, needs refresh');
+      return true;
+    }
+
+    console.log('All tokens are valid, no refresh needed');
+    return false;
+  } catch (error) {
+    console.error('Error checking extracted variables:', error);
+    return true;
+  }
 };
