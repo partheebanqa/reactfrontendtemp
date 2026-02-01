@@ -2646,7 +2646,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
                 }`}
               >
                 <span className='text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap'>
-                  Set as Auth Source
+                  Use pre-request token
                 </span>
                 <ToggleSwitch
                   id='preRequestAuth'
@@ -2812,8 +2812,8 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
                 )}
               </TooltipContainer>
 
-              <TooltipContainer text='Performance Test'>
-                {isNewRequest(activeRequest.id) ? (
+              {/* <TooltipContainer text='Performance Test'>
+                // {isNewRequest(activeRequest.id) ? (
                   <button
                     // onClick={handleSaveRequest}
                     className='border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 px-3 py-2 rounded-md'
@@ -2829,7 +2829,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
                     <Rocket className='h-4 w-4 text-[#136fb0]' />
                   </button>
                 )}
-              </TooltipContainer>
+              </TooltipContainer> */}
             </div>
           </div>
 
