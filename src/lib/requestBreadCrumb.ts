@@ -12,10 +12,40 @@ interface Collection {
   preRequestId?: string;
 }
 
+export interface RequestSettings {
+  options: {
+    followRedirects: boolean;
+    stopOnError: boolean;
+    saveResponses: boolean;
+  };
+  timeout?: number;
+  validateSSL?: boolean;
+  proxy?: {
+    enabled: boolean;
+    url: string;
+  };
+  performanceTest: {
+    numRequests: number;
+    concurrency: number;
+    delay: number;
+    timeout: number;
+  };
+  rateLimit: {
+    enabled: boolean;
+    requestsPerPeriod: number;
+    periodInSeconds: number;
+    type: 'fixed' | 'sliding';
+  };
+}
+
 interface Request {
   id?: string;
-  name: string;
   folderId?: string;
+
+  name?: string;
+  url: string;
+  settings: RequestSettings;
+  description?: string;
   collectionId?: string;
 }
 

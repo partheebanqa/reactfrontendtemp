@@ -52,7 +52,6 @@ import { Checkbox } from '@/components/ui/checkbox';
 import {
   PerformanceTestConfigApi,
   PerformanceTestConfigDTO,
-  PerformanceTestCreatePayload,
   PerformanceTestUpdatePayload,
 } from '@/models/performanceTest.model';
 import {
@@ -61,22 +60,7 @@ import {
   performanceTestCreate,
   updatePerformanceTestConfig,
 } from '@/services/performance.service';
-
-type Assertion = {
-  id: string;
-  category: string;
-  type: string;
-  description: string;
-  field: string;
-  operator: string;
-  expectedValue: any;
-  enabled: boolean;
-  impact: string;
-  group: string;
-  priority: string;
-  dataType?: string;
-  actualValue?: any;
-};
+import { Assertion } from '@/components/Shared/Assertion/ApiAssertionInterface';
 
 interface RequestEditorProps {
   onUsedVariablesChange?: (variables: {
@@ -116,42 +100,6 @@ interface SelectedVariable {
 interface PendingSubstitution {
   lineIndex: number;
   variableName: string;
-}
-
-export interface RequestSettings {
-  options: {
-    followRedirects: boolean;
-    stopOnError: boolean;
-    saveResponses: boolean;
-  };
-  timeout?: number; // in milliseconds
-  validateSSL?: boolean;
-  proxy?: {
-    enabled: boolean;
-    url: string;
-  };
-  performanceTest: {
-    numRequests: number;
-    concurrency: number;
-    delay: number; // in milliseconds
-    timeout: number; // in milliseconds
-  };
-  rateLimit: {
-    enabled: boolean;
-    requestsPerPeriod: number;
-    periodInSeconds: number;
-    type: 'fixed' | 'sliding';
-  };
-}
-
-// Request
-export interface Request {
-  id?: string;
-  name?: string;
-  url: string;
-  settings: RequestSettings;
-  description?: string;
-  collectionId?: string;
 }
 
 type BodyType =
@@ -677,43 +625,6 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
       });
     },
   });
-
-  const buildPerformancePayload = (): PerformanceTestCreatePayload | null => {
-    if (!activeRequest?.id || activeRequest.id.startsWith('temp-')) {
-      toast({
-        title: 'Save Request First',
-        description:
-          'Please save the request before running a performance test.',
-        duration: 3000,
-      });
-      return null;
-    }
-
-    if (!currentWorkspace?.id) {
-      toast({
-        title: 'Workspace Missing',
-        description: 'Workspace id not found.',
-        duration: 3000,
-      });
-      return null;
-    }
-
-    return {
-      concurrency: settings.performanceTest.concurrency,
-      delay: settings.performanceTest.delay,
-      name: `${activeRequest.name || 'Request'} - Performance Test`,
-      numRequests: settings.performanceTest.numRequests,
-
-      rateLimitEnabled: settings.rateLimit.enabled,
-      rateLimitPeriod: settings.rateLimit.periodInSeconds,
-      rateLimitRequests: settings.rateLimit.requestsPerPeriod,
-      rateLimitType: settings.rateLimit.type,
-
-      requestId: activeRequest.id,
-      timeout: settings.performanceTest.timeout,
-      workspaceId: currentWorkspace.id,
-    };
-  };
 
   const buildPerformanceUpdatePayload = (): PerformanceTestUpdatePayload => ({
     name: `${activeRequest?.name || 'Request'} - Performance Test`,
