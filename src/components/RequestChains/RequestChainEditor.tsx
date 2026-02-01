@@ -57,7 +57,6 @@ import type {
   Variable,
   ExecutionLog,
   DataExtraction,
-  DynamicVariableOverride,
 } from '@/shared/types/requestChain.model';
 import { ImportModal } from '@/components/TestSuit/ImportModal';
 import type { ExtendedRequest } from '@/models/collection.model';
@@ -90,7 +89,6 @@ import {
   getUsedDynamicVariablesFromRequests,
   detectAutocompletePrefix,
   calculateAutocompletePosition,
-  type AutocompleteState,
   generateDynamicValueById,
   hasResponseChanged,
   getUsedVariablesForChain,
@@ -104,6 +102,10 @@ import { useDataManagement } from '@/hooks/useDataManagement';
 import { RequestAnalyzer } from './RequestAnalyzer';
 import { AddRequestMenu } from './AddRequestMenu';
 import { SortableRequestItem } from './DragAndDrop';
+import {
+  AutocompleteState,
+  DynamicVariableOverride,
+} from '@/shared/types/request';
 
 interface RequestChainEditorProps {
   chain?: RequestChain;

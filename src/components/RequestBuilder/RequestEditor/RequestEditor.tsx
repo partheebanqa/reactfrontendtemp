@@ -6,7 +6,15 @@ import { Play, Save, FolderPlus, Info, Rocket } from 'lucide-react';
 import { useRequest } from '@/hooks/useRequest';
 import { useCollection } from '@/hooks/useCollection';
 import { useWorkspace } from '@/hooks/useWorkspace';
-import type { Header, Param, RequestMethod } from '@/shared/types/request';
+import type {
+  BodyType,
+  FormattedResponse,
+  Header,
+  Param,
+  PendingSubstitution,
+  RequestMethod,
+  SelectedVariable,
+} from '@/shared/types/request';
 import SchemaPage from '../SchemaPage';
 import { useToast } from '@/hooks/useToast';
 import TooltipContainer from '@/components/ui/tooltip-container';
@@ -61,6 +69,7 @@ import {
   updatePerformanceTestConfig,
 } from '@/services/performance.service';
 import { Assertion } from '@/components/Shared/Assertion/ApiAssertionInterface';
+import { RequestSettings } from '@/lib/requestBreadCrumb';
 
 interface RequestEditorProps {
   onUsedVariablesChange?: (variables: {
@@ -82,33 +91,6 @@ interface RequestEditorProps {
   existingExtractions?: Array<{ name: string; path: string; source?: string }>;
   onRemoveExtraction?: (name: string) => void;
 }
-
-interface FormattedResponse {
-  requestId: string;
-  status: number;
-  statusText: string;
-  headers: Record<string, string>;
-  data: any;
-  responseTime: number;
-  size: number;
-}
-
-interface SelectedVariable {
-  name: string;
-  path?: string;
-}
-interface PendingSubstitution {
-  lineIndex: number;
-  variableName: string;
-}
-
-type BodyType =
-  | 'none'
-  | 'json'
-  | 'form-data'
-  | 'x-www-form-urlencoded'
-  | 'raw'
-  | 'binary';
 
 const methodsWithBody = ['POST', 'PUT', 'PATCH', 'DELETE'];
 const getDefaultHeaders = (method: RequestMethod): Header[] => {
@@ -383,9 +365,6 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
     };
   }, [formattedVariables]);
 
-  console.log('staticVars:', staticVars);
-  console.log('dynamicVars:', dynamicVars);
-
   const extractVariableNames = (text: any) => {
     if (!text) return [];
     const regex = /\{\{([^}]+)\}\}/g;
@@ -580,8 +559,6 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
   });
 
   const [performanceTestId, setPerformanceTestId] = useState<string>('');
-
-  // console.log(performanceTestId, "performanceTestId");
 
   const performanceTestCreateMutation = useMutation({
     mutationFn: (payload: any) => performanceTestCreate(payload),
@@ -1065,11 +1042,6 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
         responseData?.body &&
         onExtractVariable
       ) {
-        console.log(
-          'Loading extracted variables:',
-          activeRequest.extractVariables
-        );
-
         activeRequest.extractVariables.forEach((extraction: any) => {
           if (extraction.source === 'response_body' && extraction.path) {
             try {
@@ -1493,7 +1465,6 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
       }
 
       const backendData = await executeRequest(payloadWithAssertions);
-      console.log('backendData11:', backendData);
 
       let backendBody;
       let statusCode;

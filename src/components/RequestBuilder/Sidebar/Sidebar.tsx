@@ -77,10 +77,11 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { executeRequest } from '@/services/executeRequest.service';
+import { getValueByPath } from '@/lib/request-utils';
+import { CollectionRequestsResponse } from '@/shared/types/request';
 
 const Sidebar: React.FC = () => {
   const { currentWorkspace } = useWorkspace();
-
   const {
     collections,
     activeRequest,
@@ -100,9 +101,6 @@ const Sidebar: React.FC = () => {
     renameRequestMutation,
     deleteCollectionMutation,
     handleCreateRequest,
-    handleOpenAllCollectionRequests,
-    openedRequests,
-    closeRequest,
     updateRequestMutation,
   } = useCollection();
   const { setResponseData } = useRequest();
@@ -118,8 +116,6 @@ const Sidebar: React.FC = () => {
     left: number;
     anchorTop?: number;
   } | null>(null);
-
-  console.log('fetchCollectionRequests:', collections);
 
   const [selectedRequest, setSelectedRequest] =
     useState<CollectionRequest | null>(null);
@@ -698,21 +694,13 @@ const Sidebar: React.FC = () => {
     collectionsData: Collection[]
   ) => {
     try {
-      console.log('=== Auto-running pre-request ===');
-      console.log('collectionId:', collectionId);
-      console.log('preRequestId:', preRequestId);
-
-      // Find the collection
       const collection = collectionsData.find((c) => c.id === collectionId);
       if (!collection) {
-        console.warn('Collection not found:', collectionId);
         return;
       }
 
-      // Find the pre-request within the collection
       const preRequest = collection.requests.find((r) => r.id === preRequestId);
       if (!preRequest) {
-        console.warn('Pre-request not found:', preRequestId);
         toast({
           title: 'Pre-request Not Found',
           description:
@@ -722,10 +710,6 @@ const Sidebar: React.FC = () => {
         return;
       }
 
-      console.log('Found pre-request:', preRequest.name);
-      console.log('Extract variables config:', preRequest.extractVariables);
-
-      // Build the execution payload
       const payload = {
         request: {
           workspaceId: currentWorkspace?.id || '',
@@ -743,34 +727,22 @@ const Sidebar: React.FC = () => {
         assertions: [],
       };
 
-      console.log('Executing pre-request with payload:', payload);
-
-      // Execute the request
       const response = await executeRequest(payload);
 
-      console.log('Pre-request response:', response);
-
-      // Extract variables if configured
       if (
         preRequest.extractVariables &&
         Array.isArray(preRequest.extractVariables) &&
         preRequest.extractVariables.length > 0
       ) {
-        // Get the response body (handle different response structures)
         let rawBody =
           response?.data?.responses?.[0]?.body ||
           response?.data?.body ||
           response?.body;
 
-        console.log('Raw response body (before parsing):', rawBody);
-        console.log('Type of rawBody:', typeof rawBody);
-
-        // IMPORTANT: Parse the body if it's a string
         let responseBody;
         if (typeof rawBody === 'string') {
           try {
             responseBody = JSON.parse(rawBody);
-            console.log('Parsed response body:', responseBody);
           } catch (parseError) {
             console.error('Failed to parse response body as JSON:', parseError);
             toast({
@@ -784,9 +756,6 @@ const Sidebar: React.FC = () => {
           responseBody = rawBody;
         }
 
-        console.log('Response body for extraction:', responseBody);
-
-        // Process each extraction configuration
         let extractedCount = 0;
         preRequest.extractVariables.forEach((extraction: any) => {
           if (extraction.source === 'response_body' && extraction.path) {
@@ -796,7 +765,6 @@ const Sidebar: React.FC = () => {
               if (value !== undefined && value !== null) {
                 const storageKey = `extracted_var_${collectionId}_${extraction.name}`;
 
-                // Store in localStorage for persistence
                 localStorage.setItem(
                   storageKey,
                   JSON.stringify({
@@ -808,9 +776,6 @@ const Sidebar: React.FC = () => {
                     path: extraction.path,
                   })
                 );
-
-                console.log(`✓ Stored ${extraction.name} = ${value}`);
-
                 collectionActions.setExtractedVariable(
                   collectionId,
                   extraction.name,
@@ -818,14 +783,6 @@ const Sidebar: React.FC = () => {
                 );
 
                 extractedCount++;
-              } else {
-                console.warn(
-                  `Variable ${extraction.name} not found at path: ${extraction.path}`
-                );
-                console.warn(
-                  'Available keys in responseBody:',
-                  Object.keys(responseBody || {})
-                );
               }
             } catch (error) {
               console.error(
@@ -837,7 +794,6 @@ const Sidebar: React.FC = () => {
         });
 
         if (extractedCount > 0) {
-          // Mark execution as complete
           const executionKey = `preRequest_executed_${collectionId}_${preRequestId}`;
           localStorage.setItem(executionKey, Date.now().toString());
 
@@ -853,8 +809,6 @@ const Sidebar: React.FC = () => {
             variant: 'destructive',
           });
         }
-      } else {
-        console.log('No extractVariables configured for this request');
       }
     } catch (error) {
       console.error('Failed to auto-run pre-request:', error);
@@ -865,55 +819,6 @@ const Sidebar: React.FC = () => {
       });
     }
   };
-  // Helper function to extract values from nested objects
-  const getValueByPath = (obj: any, path: string): any => {
-    if (!obj || !path) return undefined;
-
-    return path.split('.').reduce((current, key) => {
-      if (current && typeof current === 'object') {
-        if (key.includes('[') && key.includes(']')) {
-          const arrayKey = key.substring(0, key.indexOf('['));
-          const index = parseInt(
-            key.substring(key.indexOf('[') + 1, key.indexOf(']'))
-          );
-          if (current[arrayKey] && Array.isArray(current[arrayKey])) {
-            return current[arrayKey][index];
-          }
-          return undefined;
-        }
-        return current[key];
-      }
-      return undefined;
-    }, obj);
-  };
-
-  // useEffect(() => {
-  //   console.log('useEfect');
-
-  //   const collectionData = fetchCollectionRequests.data;
-
-  //   console.log('collectionData:', collectionData);
-
-  //   if (collectionData && collectionData.id) {
-  //     // Update collection with preRequestId
-  //     setCollection(
-  //       collections.map((col) =>
-  //         col.id === collectionData.id
-  //           ? {
-  //               ...col,
-  //               preRequestId: collectionData.preRequestId,
-  //               hasFetchedRequests: true,
-  //             }
-  //           : col
-  //       )
-  //     );
-
-  //     // Auto-run pre-request if it exists
-  //     if (collectionData?.preRequestId) {
-  //       autoRunPreRequest(collectionData.id, collectionData.preRequestId);
-  //     }
-  //   }
-  // }, [fetchCollectionRequests.data]);
 
   useEffect(() => {
     collections.forEach((collection) => {
@@ -933,11 +838,6 @@ const Sidebar: React.FC = () => {
               data.name,
               data.value
             );
-
-            console.log(
-              `Restored ${data.name} from localStorage for collection ${collection.id}:`,
-              data.value
-            );
           }
         } catch (error) {
           console.error(
@@ -951,22 +851,17 @@ const Sidebar: React.FC = () => {
 
   const handleCollectionExpand = async (collectionId: string) => {
     try {
-      console.log('Fetching collection requests for:', collectionId);
-
-      const collectionData = await fetchCollectionRequests.mutateAsync(
+      const collectionData = (await fetchCollectionRequests.mutateAsync(
         collectionId
-      );
-
-      console.log('Fetched collectionData:', collectionData);
+      )) as CollectionRequestsResponse;
 
       if (collectionData) {
-        // First, update the collection with fresh data
         setCollection(
           collections.map((col) =>
             col.id === collectionId
               ? {
                   ...col,
-                  preRequestId: collectionData.preRequestId,
+                  preRequestId: collectionData?.preRequestId,
                   hasFetchedRequests: true,
                   requests: collectionData.requests || col.requests,
                   folders: collectionData.folders || col.folders,
@@ -975,15 +870,10 @@ const Sidebar: React.FC = () => {
           )
         );
 
-        // IMPORTANT: Check if there are any previously stored extracted variables for this collection
-        // This loads variables that were extracted in previous sessions
         const storageKeys = Object.keys(localStorage).filter((key) =>
           key.startsWith(`extracted_var_${collectionId}_`)
         );
 
-        console.log('Found stored variables:', storageKeys);
-
-        // Restore all previously extracted variables to the collection store
         storageKeys.forEach((key) => {
           try {
             const data = JSON.parse(localStorage.getItem(key) || '{}');
@@ -993,24 +883,17 @@ const Sidebar: React.FC = () => {
                 data.name,
                 data.value
               );
-              console.log(`Restored variable: ${data.name} = ${data.value}`);
             }
           } catch (error) {
             console.error('Error restoring variable from localStorage:', error);
           }
         });
 
-        // Now handle pre-request execution
-        if (collectionData.preRequestId) {
-          console.log('PreRequestId found:', collectionData.preRequestId);
-
-          // Check if pre-request was already executed in this session
+        if (collectionData?.preRequestId) {
           const executionKey = `preRequest_executed_${collectionId}_${collectionData.preRequestId}`;
           const alreadyExecuted = localStorage.getItem(executionKey);
 
-          // Only auto-run if NOT already executed (or you can remove this check to always run)
           if (!alreadyExecuted) {
-            // Find the pre-request in the fetched requests
             const preRequest = collectionData.requests?.find(
               (r: any) => r.id === collectionData.preRequestId
             );
@@ -1020,12 +903,6 @@ const Sidebar: React.FC = () => {
               preRequest.extractVariables &&
               preRequest.extractVariables.length > 0
             ) {
-              console.log(
-                'Pre-request has extractVariables:',
-                preRequest.extractVariables
-              );
-
-              // Create updated collection with fresh data for auto-run
               const updatedCollection = {
                 id: collectionId,
                 preRequestId: collectionData.preRequestId,
@@ -1033,24 +910,13 @@ const Sidebar: React.FC = () => {
                 folders: collectionData.folders || [],
               };
 
-              // Execute the pre-request
               await autoRunPreRequest(
                 collectionId,
-                collectionData.preRequestId,
+                collectionData?.preRequestId,
                 [updatedCollection]
               );
-            } else {
-              console.log(
-                'Pre-request has no extractVariables, skipping auto-run'
-              );
             }
-          } else {
-            console.log(
-              'Pre-request already executed in this session, using stored variables'
-            );
           }
-        } else {
-          console.log('No preRequestId found for collection:', collectionId);
         }
       }
     } catch (error) {
@@ -1369,15 +1235,11 @@ const Sidebar: React.FC = () => {
 
                                 setActiveCollection(collection);
 
-                                // Check if collection is being expanded (not collapsed)
                                 const isExpanding = !expandedCollections.has(
                                   collection.id
                                 );
 
-                                // Toggle the expansion state
                                 await toggleExpandedCollection(collection.id);
-
-                                // If expanding and hasn't been fetched yet, fetch and auto-run
                                 if (
                                   isExpanding &&
                                   !collection.hasFetchedRequests
@@ -1732,10 +1594,8 @@ const Sidebar: React.FC = () => {
                     <button
                       onClick={async () => {
                         if (selectedCollection) {
-                          // Fetch collection data first
                           await handleCollectionExpand(selectedCollection.id);
 
-                          // Then open test runner
                           collectionActions.openSanitizeTestRunner(
                             selectedCollection.id
                           );
@@ -1774,22 +1634,6 @@ const Sidebar: React.FC = () => {
                       <Trash2 className='h-4 w-4 mr-2' />
                       Delete
                     </button>
-
-                    {/* <div className='border-t border-gray-200 dark:border-gray-700 my-1'></div>
-                    <button
-                      className='flex items-center w-full px-4 py-1 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (selectedCollection)
-                          handleExportCollection(selectedCollection);
-                        setShowMenu(null);
-                        setMenuPosition(null);
-                      }}
-                    >
-                      <FileJson2 className='h-4 w-4 mr-2' />
-                      Export
-                    </button> */}
-
                     {selectedCollection.preRequestId && (
                       <>
                         <div className='border-t border-gray-200 dark:border-gray-700 my-1'></div>
@@ -1799,11 +1643,9 @@ const Sidebar: React.FC = () => {
                               selectedCollection &&
                               selectedCollection.preRequestId
                             ) {
-                              // Clear execution flag to allow re-run
                               const executionKey = `preRequest_executed_${selectedCollection.id}_${selectedCollection.preRequestId}`;
                               localStorage.removeItem(executionKey);
 
-                              // Re-run pre-request
                               await autoRunPreRequest(
                                 selectedCollection.id,
                                 selectedCollection.preRequestId,
