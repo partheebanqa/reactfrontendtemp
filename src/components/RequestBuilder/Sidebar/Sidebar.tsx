@@ -77,7 +77,10 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { executeRequest } from '@/services/executeRequest.service';
-import { getValueByPath } from '@/lib/request-utils';
+import {
+  getValueByPath,
+  shouldRefreshExtractedVariables,
+} from '@/lib/request-utils';
 import { CollectionRequestsResponse } from '@/shared/types/request';
 
 const Sidebar: React.FC = () => {
@@ -890,19 +893,28 @@ const Sidebar: React.FC = () => {
         });
 
         if (collectionData?.preRequestId) {
-          const executionKey = `preRequest_executed_${collectionId}_${collectionData.preRequestId}`;
-          const alreadyExecuted = localStorage.getItem(executionKey);
+          console.log('PreRequestId found:', collectionData.preRequestId);
 
-          if (!alreadyExecuted) {
-            const preRequest = collectionData.requests?.find(
-              (r: any) => r.id === collectionData.preRequestId
+          const preRequest = collectionData.requests?.find(
+            (r: any) => r.id === collectionData.preRequestId
+          );
+
+          if (
+            preRequest &&
+            preRequest.extractVariables &&
+            preRequest.extractVariables.length > 0
+          ) {
+            const needsRefresh = shouldRefreshExtractedVariables(
+              collectionId,
+              collectionData.preRequestId
             );
 
-            if (
-              preRequest &&
-              preRequest.extractVariables &&
-              preRequest.extractVariables.length > 0
-            ) {
+            if (needsRefresh) {
+              console.log('⚠️ Tokens expired or missing, refreshing auth...');
+
+              const executionKey = `preRequest_executed_${collectionId}_${collectionData.preRequestId}`;
+              localStorage.removeItem(executionKey);
+
               const updatedCollection = {
                 id: collectionId,
                 preRequestId: collectionData.preRequestId,
@@ -912,9 +924,11 @@ const Sidebar: React.FC = () => {
 
               await autoRunPreRequest(
                 collectionId,
-                collectionData?.preRequestId,
+                collectionData.preRequestId,
                 [updatedCollection]
               );
+            } else {
+              console.log('✓ Using cached tokens (still valid)');
             }
           }
         }
@@ -1643,9 +1657,25 @@ const Sidebar: React.FC = () => {
                               selectedCollection &&
                               selectedCollection.preRequestId
                             ) {
+                              // Clear execution flag to allow re-run
                               const executionKey = `preRequest_executed_${selectedCollection.id}_${selectedCollection.preRequestId}`;
                               localStorage.removeItem(executionKey);
 
+                              // Clear all old extracted variables for this collection
+                              const storageKeys = Object.keys(
+                                localStorage
+                              ).filter((key) =>
+                                key.startsWith(
+                                  `extracted_var_${selectedCollection.id}_`
+                                )
+                              );
+
+                              storageKeys.forEach((key) => {
+                                localStorage.removeItem(key);
+                                console.log(`Cleared old variable: ${key}`);
+                              });
+
+                              // Re-run pre-request to get fresh tokens
                               await autoRunPreRequest(
                                 selectedCollection.id,
                                 selectedCollection.preRequestId,
