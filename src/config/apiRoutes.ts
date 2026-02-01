@@ -31,4 +31,8 @@ export const API_REQUEST_CHAIN = ENV.API_BASE_URL + "/request-chains";
 export const API_REPORTS = ENV.API_BASE_URL + "/reports";
 export const API_SCHEDULER = ENV.API_BASE_URL + "/schedules";
 export const API_WORKSPACE_ROLE = ENV.API_BASE_URL + "/auth/workspace-role";
+export const API_PERFORMANCE_TEST = ENV.API_BASE_URL + "/performance-test";
+export const API_PERFORMANCE = ENV.API_BASE_URL + "/performance-test/config";
+export const API_PERFORMANCE_REQUESTS =
+  ENV.API_BASE_URL + "/performance-test/configs";
 export const API_URL = ENV.API_BASE_URL;
