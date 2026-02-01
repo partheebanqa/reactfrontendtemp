@@ -1,5 +1,3 @@
-import { KeyValuePair } from '@/shared/types/collection';
-
 export function createUrlWithParams(
   url: string,
   params: Record<string, string>

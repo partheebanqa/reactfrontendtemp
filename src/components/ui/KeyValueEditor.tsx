@@ -3,14 +3,7 @@
 import { Plus, Trash2 } from 'lucide-react';
 import type React from 'react';
 import TooltipContainer from './tooltip-container';
-import { Button } from './button';
-
-export interface KeyValuePair {
-  id?: string;
-  key: string;
-  value: string;
-  enabled?: boolean;
-}
+import { KeyValuePair } from '@/shared/types/request';
 
 interface KeyValueEditorProps {
   items: KeyValuePair[];

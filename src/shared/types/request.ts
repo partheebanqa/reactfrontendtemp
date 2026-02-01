@@ -52,8 +52,84 @@ export interface ResponseData {
   statusText: string;
   headers: any;
   data: any;
-  responseTime?: number | string; // Can be a number (in ms) or a formatted string (e.g., "1.23 s")
+  responseTime?: number | string;
   size?: number;
   time?: number;
   body?: any;
+}
+
+export interface Variable {
+  id: string;
+  name: string;
+  value?: string;
+  initialValue?: string;
+  type?: string;
+  isDynamic?: boolean;
+  description?: string;
+  environmentId?: string;
+  currentValue?: string;
+}
+
+export interface DynamicVariableOverride {
+  name: string;
+  value: string;
+}
+
+export interface AutocompleteState {
+  show: boolean;
+  position: { top: number; left: number };
+  suggestions: Variable[];
+  prefix: 'D_' | 'S_' | null;
+  inputRef: HTMLInputElement | HTMLTextAreaElement | null;
+  cursorPosition: number;
+}
+
+export interface CollectionRequestsResponse {
+  folders: any[];
+  requests: any[];
+  preRequestId?: string;
+}
+
+export interface FormattedResponse {
+  requestId: string;
+  status: number;
+  statusText: string;
+  headers: Record<string, string>;
+  data: any;
+  responseTime: number;
+  size: number;
+}
+
+export interface SelectedVariable {
+  name: string;
+  path?: string;
+}
+
+export interface KeyValuePair {
+  id: string;
+  key: string;
+  value: string;
+  enabled: boolean;
+  description?: string;
+}
+
+export interface FormField {
+  id: string;
+  key: string;
+  value: string;
+  type: 'text' | 'file';
+  fileName?: string;
+}
+
+export type BodyType =
+  | 'none'
+  | 'json'
+  | 'form-data'
+  | 'urlencoded'
+  | 'raw'
+  | 'binary';
+
+export interface PendingSubstitution {
+  lineIndex: number;
+  variableName: string;
 }

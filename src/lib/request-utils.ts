@@ -1,7 +1,11 @@
+import {
+  DynamicVariableOverride,
+  KeyValuePair,
+  Variable,
+} from '@/shared/types/request';
 import type {
   APIRequest,
   ExecutionLog,
-  KeyValuePair,
 } from '@/shared/types/requestChain.model';
 
 export const getExtractVariablesByEnvironment = (environmentId?: string) => {
@@ -315,7 +319,6 @@ export const replaceVariablesInText = (
   return result;
 };
 
-// Process entire request with variable substitution
 export const processRequestWithVariables = (
   request: any,
   variables: any[]
@@ -373,30 +376,6 @@ export const processRequestWithVariables = (
   };
 };
 
-export interface Variable {
-  id: string;
-  name: string;
-  value?: string;
-  initialValue?: string;
-  type?: string;
-  isDynamic?: boolean;
-}
-
-export interface DynamicVariableOverride {
-  name: string;
-  value: string;
-}
-
-export interface AutocompleteState {
-  show: boolean;
-  position: { top: number; left: number };
-  suggestions: Variable[];
-  prefix: 'D_' | 'S_' | null;
-  inputRef: HTMLInputElement | HTMLTextAreaElement | null;
-  cursorPosition: number;
-}
-
-// Common function to map dynamic variables to static format
 export const mapDynamicToStatic = (
   dynamicVariables: any[],
   overrides: DynamicVariableOverride[] = []
@@ -426,7 +405,6 @@ export const mapDynamicToStatic = (
   });
 };
 
-// Common function to regenerate dynamic variable values
 export const regenerateDynamicVariable = (dynamicVar: any) => {
   if (!dynamicVar) return '';
   const newValue = generateDynamicValueById(
@@ -436,7 +414,6 @@ export const regenerateDynamicVariable = (dynamicVar: any) => {
   return String(newValue);
 };
 
-// Common function to get variables by prefix (D_ or S_)
 export const getVariablesByPrefix = (
   variables: Variable[],
   prefix: 'D_' | 'S_'
@@ -444,7 +421,6 @@ export const getVariablesByPrefix = (
   return variables.filter((variable) => variable.name.startsWith(prefix));
 };
 
-// Common function to find used dynamic variables in text fields
 export const findUsedVariables = (textFields: string[]): string[] => {
   const allText = textFields.join(' ');
   const variableMatches = allText.match(/\{\{(\w+)\}\}/g) || [];
@@ -455,7 +431,6 @@ export const findUsedVariables = (textFields: string[]): string[] => {
   ];
 };
 
-// Common function to get used dynamic variables from a request
 export const getUsedDynamicVariablesFromRequest = (
   request: any,
   dynamicVariables: Variable[]
