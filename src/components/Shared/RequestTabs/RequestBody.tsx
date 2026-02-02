@@ -12,22 +12,7 @@ import KeyValueEditor from '@/components/ui/KeyValueEditor';
 import KeyValueEditorWithFileUpload, {
   type KeyValuePairWithFile,
 } from '@/components/ui/KeyValueEditorWithFileUpload';
-
-export type BodyType =
-  | 'none'
-  | 'json'
-  | 'form-data'
-  | 'urlencoded'
-  | 'raw'
-  | 'binary';
-
-interface FormField {
-  id: string;
-  key: string;
-  value: string;
-  type: 'text' | 'file';
-  fileName?: string;
-}
+import { BodyType, FormField } from '@/shared/types/request';
 
 interface KeyValueField {
   id: string;

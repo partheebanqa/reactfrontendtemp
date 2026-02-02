@@ -130,6 +130,7 @@ export interface GraphQLValidationResult {
 }
 
 export interface Collection {
+  folders?: any[];
   id: string;
   workspaceId: string;
   name: string;
@@ -150,10 +151,10 @@ export interface CollectionFolder {
   description?: string;
   parentId?: string;
   requests: CollectionRequest[];
-  // folders: CollectionFolder[];
 }
 
 export interface CollectionRequest {
+  extractVariables?: any;
   assertions: boolean;
   id?: string;
   collectionId?: string;
@@ -167,12 +168,12 @@ export interface CollectionRequest {
   bodyRawContent?: string | null;
   authorizationType: string;
   authorization: {
-    token?: string; // bearer
-    username?: string; // basic
-    password?: string; // basic
-    key?: string; // apiKey
-    value?: string; // apiKey
-    addTo?: 'header' | 'query'; // apiKey
+    token?: string;
+    username?: string;
+    password?: string;
+    key?: string;
+    value?: string;
+    addTo?: 'header' | 'query';
   };
   headers?: Header[];
   params?: Param[];

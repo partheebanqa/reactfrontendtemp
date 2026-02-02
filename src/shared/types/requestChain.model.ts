@@ -164,14 +164,6 @@ export interface ExecutionLog {
   assertions?: any[];
 }
 
-export interface KeyValuePair {
-  id?: string;
-  key: string;
-  value: string;
-  enabled: boolean;
-  description?: string;
-}
-
 export interface RequestDetailResponse {
   id: string;
   name: string;

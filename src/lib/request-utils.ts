@@ -1,8 +1,13 @@
+import {
+  DynamicVariableOverride,
+  KeyValuePair,
+  Variable,
+} from '@/shared/types/request';
 import type {
   APIRequest,
   ExecutionLog,
-  KeyValuePair,
 } from '@/shared/types/requestChain.model';
+import { isTokenExpired, isTokenExpiringWithin2Mins } from './jwtValidator';
 
 export const getExtractVariablesByEnvironment = (environmentId?: string) => {
   const readFallbackExtractedVariables = () => {
@@ -315,7 +320,6 @@ export const replaceVariablesInText = (
   return result;
 };
 
-// Process entire request with variable substitution
 export const processRequestWithVariables = (
   request: any,
   variables: any[]
@@ -373,30 +377,6 @@ export const processRequestWithVariables = (
   };
 };
 
-export interface Variable {
-  id: string;
-  name: string;
-  value?: string;
-  initialValue?: string;
-  type?: string;
-  isDynamic?: boolean;
-}
-
-export interface DynamicVariableOverride {
-  name: string;
-  value: string;
-}
-
-export interface AutocompleteState {
-  show: boolean;
-  position: { top: number; left: number };
-  suggestions: Variable[];
-  prefix: 'D_' | 'S_' | null;
-  inputRef: HTMLInputElement | HTMLTextAreaElement | null;
-  cursorPosition: number;
-}
-
-// Common function to map dynamic variables to static format
 export const mapDynamicToStatic = (
   dynamicVariables: any[],
   overrides: DynamicVariableOverride[] = []
@@ -426,7 +406,6 @@ export const mapDynamicToStatic = (
   });
 };
 
-// Common function to regenerate dynamic variable values
 export const regenerateDynamicVariable = (dynamicVar: any) => {
   if (!dynamicVar) return '';
   const newValue = generateDynamicValueById(
@@ -436,7 +415,6 @@ export const regenerateDynamicVariable = (dynamicVar: any) => {
   return String(newValue);
 };
 
-// Common function to get variables by prefix (D_ or S_)
 export const getVariablesByPrefix = (
   variables: Variable[],
   prefix: 'D_' | 'S_'
@@ -444,7 +422,6 @@ export const getVariablesByPrefix = (
   return variables.filter((variable) => variable.name.startsWith(prefix));
 };
 
-// Common function to find used dynamic variables in text fields
 export const findUsedVariables = (textFields: string[]): string[] => {
   const allText = textFields.join(' ');
   const variableMatches = allText.match(/\{\{(\w+)\}\}/g) || [];
@@ -455,7 +432,6 @@ export const findUsedVariables = (textFields: string[]): string[] => {
   ];
 };
 
-// Common function to get used dynamic variables from a request
 export const getUsedDynamicVariablesFromRequest = (
   request: any,
   dynamicVariables: Variable[]
@@ -1208,4 +1184,58 @@ export const syncParamsFromUrl = (request: any) => {
   }
 
   return request;
+};
+
+export const shouldRefreshExtractedVariables = (
+  collectionId: string,
+  preRequestId: string
+): boolean => {
+  try {
+    const storageKeys = Object.keys(localStorage).filter((key) =>
+      key.startsWith(`extracted_var_${collectionId}_`)
+    );
+
+    if (storageKeys.length === 0) {
+      console.log('No extracted variables found, needs refresh');
+      return true;
+    }
+
+    for (const key of storageKeys) {
+      const data = JSON.parse(localStorage.getItem(key) || '{}');
+
+      if (data.value && typeof data.value === 'string') {
+        const isJWT = data.value.split('.').length === 3;
+
+        if (isJWT) {
+          console.log(`Checking token: ${data.name}`);
+
+          if (isTokenExpired(data.value)) {
+            console.log(`Token ${data.name} is expired, needs refresh`);
+            return true;
+          }
+
+          if (isTokenExpiringWithin2Mins(data.value)) {
+            console.log(`Token ${data.name} is expiring soon, needs refresh`);
+            return true;
+          }
+
+          console.log(`Token ${data.name} is still valid`);
+        }
+      }
+    }
+
+    const executionKey = `preRequest_executed_${collectionId}_${preRequestId}`;
+    const alreadyExecuted = localStorage.getItem(executionKey);
+
+    if (!alreadyExecuted) {
+      console.log('Pre-request never executed, needs refresh');
+      return true;
+    }
+
+    console.log('All tokens are valid, no refresh needed');
+    return false;
+  } catch (error) {
+    console.error('Error checking extracted variables:', error);
+    return true;
+  }
 };

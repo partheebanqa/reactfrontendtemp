@@ -14,17 +14,7 @@ import {
   AlertDialogFooter,
   AlertDialogCancel,
 } from '@/components/ui/alert-dialog';
-
-interface Variable {
-  name: string;
-  value: string;
-  type?: 'static' | 'dynamic';
-}
-
-interface SelectedVariable {
-  name: string;
-  path: string;
-}
+import { SelectedVariable, Variable } from '@/shared/types/request';
 
 interface PendingSubstitution {
   lineIndex: number;
@@ -58,7 +48,6 @@ export const JsonVariableSubstitution: React.FC<
   readOnly = false,
   showSubstituteButton = true,
 }) => {
-  const [deleteTargetPath, setDeleteTargetPath] = useState<string | null>(null);
   const [hoveredLine, setHoveredLine] = useState<number | null>(null);
   const [dropdownLine, setDropdownLine] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState('');

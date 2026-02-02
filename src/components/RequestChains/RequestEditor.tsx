@@ -53,8 +53,6 @@ import {
   getVariablesByPrefix,
   detectAutocompletePrefix,
   calculateAutocompletePosition,
-  type DynamicVariableOverride,
-  type AutocompleteState,
   parseUrlParams,
   buildUrlWithParams,
   generateDynamicValueById,
@@ -75,6 +73,13 @@ import { VariableHelpDialog } from './HelpTextDialougs/variablesUseDialogues';
 import RequestBody from '@/components/Shared/RequestTabs/RequestBody';
 import type { KeyValuePairWithFile } from '../ui/KeyValueEditorWithFileUpload';
 import { PrePostRequest } from '../Shared/RequestTabs/PrePostRequest';
+import {
+  AutocompleteState,
+  DynamicVariableOverride,
+  KeyValuePair,
+  SelectedVariable,
+  Variable,
+} from '@/shared/types/request';
 
 type FormField = {
   id: string;
@@ -89,17 +94,6 @@ type KeyValueField = {
   key: string;
   value: string;
 };
-
-interface Variable {
-  id: string;
-  name: string;
-  value: string;
-  initialValue?: string;
-  type: 'string' | 'number' | 'boolean';
-  description?: string;
-  environmentId?: string;
-  currentValue?: string;
-}
 
 interface RequestEditorProps {
   request: Partial<APIRequest>;
@@ -124,19 +118,6 @@ interface RequestEditorProps {
   requestIndex?: number;
   formData?: any;
   extractedVariablesByRequest?: Record<string, Record<string, any>>;
-}
-
-interface KeyValuePair {
-  id: string;
-  key: string;
-  value: string;
-  enabled: boolean;
-  description?: string;
-}
-
-interface SelectedVariable {
-  name: string;
-  path?: string;
 }
 
 export function RequestEditor({

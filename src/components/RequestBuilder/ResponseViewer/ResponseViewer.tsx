@@ -17,6 +17,7 @@ import {
   Cookie,
   FlaskConical,
   Stars,
+  Plus,
 } from 'lucide-react';
 import { useRequest } from '@/hooks/useRequest';
 import AssertionModal from './AssertionModal';
@@ -25,6 +26,7 @@ import {
   removeDuplicateAssertions,
 } from '@/lib/assertion-utils';
 import ApiAssertionInterface from '../../Shared/Assertion/ApiAssertionInterface';
+import { useCollection } from '@/hooks/useCollection';
 
 interface JsonNode {
   key: string;
@@ -61,6 +63,17 @@ interface ResponseViewerProps {
   usedDynamicVariables?: Array<{ name: string; value: string }>;
   onRedirectToTab?: (tabName: string) => void;
   onSaveAssertions?: () => Promise<void>;
+  onExtractVariable?: (extraction: {
+    variableName: string;
+    name: string;
+    source: 'response_body' | 'response_header' | 'response_cookie';
+    path: string;
+    value: any;
+    transform?: string;
+  }) => void;
+  extractedVariables?: Record<string, any>;
+  existingExtractions?: Array<{ name: string; path: string; source?: string }>;
+  onRemoveExtraction?: (name: string) => void;
 }
 
 const ResponseViewer = ({
@@ -69,10 +82,15 @@ const ResponseViewer = ({
   usedDynamicVariables = [],
   onRedirectToTab,
   onSaveAssertions,
+  onExtractVariable,
+  extractedVariables = {},
+  existingExtractions = [],
+  onRemoveExtraction,
 }: ResponseViewerProps) => {
   const { responseData, assertions, setAssertions } = useRequest();
+  const { activeCollection } = useCollection();
 
-  console.log('responseData:', responseData);
+  console.log('responseData123:', responseData);
 
   const [activeTab, setActiveTab] = useState<
     | 'body'
@@ -93,6 +111,14 @@ const ResponseViewer = ({
   const [activeFieldPath, setActiveFieldPath] = useState<string>('');
   const [activeFieldValue, setActiveFieldValue] = useState<any>(null);
   const [showAssertionUI, setShowAssertionUI] = useState(false);
+  const [extractionModal, setExtractionModal] = useState<{
+    isOpen: boolean;
+    source: 'response_body' | 'response_header' | 'response_cookie';
+    path: string;
+    value: any;
+    suggestedName: string;
+  } | null>(null);
+  const [variableName, setVariableName] = useState<string>('');
 
   useEffect(() => {
     if (responseData?.body) {
@@ -151,6 +177,8 @@ const ResponseViewer = ({
     setTimeout(() => setCopiedItem(''), 2000);
   };
 
+  console.log('extractedVariables:', extractedVariables);
+
   const downloadPostmanCollection = () => {
     if (!responseData) return;
 
@@ -164,7 +192,6 @@ const ResponseViewer = ({
         ? Math.round((passedCount / assertionLogs.length) * 100)
         : 0;
 
-    // Parse URL components
     let urlComponents = { protocol: 'https', host: [], path: [] };
     if (responseData.actualRequest?.url) {
       try {
@@ -178,7 +205,6 @@ const ResponseViewer = ({
       }
     }
 
-    // Convert headers to Postman format
     const convertHeaders = (headers: Record<string, string>) => {
       return Object.entries(headers || {}).map(([key, value]) => ({
         key,
@@ -187,7 +213,6 @@ const ResponseViewer = ({
       }));
     };
 
-    // Create request body
     const createRequestBody = (body: any) => {
       if (!body) return undefined;
       const bodyStr =
@@ -355,7 +380,6 @@ const ResponseViewer = ({
       },
     };
 
-    // Only add assertionResults if assertion logs exist
     if (hasAssertions) {
       exportData.assertionResults = assertionLogs.map((log: any) => ({
         assertion: {
@@ -650,6 +674,69 @@ const ResponseViewer = ({
     };
   };
 
+  const sanitizeVariableName = (name: string): string => {
+    return name
+      .replace(/\s+/g, '_')
+      .replace(/[^a-zA-Z0-9_]/g, '')
+      .replace(/^_+|_+$/g, '')
+      .replace(/_+/g, '_');
+  };
+
+  const handleExtractClick = (
+    source: 'response_body' | 'response_header' | 'response_cookie',
+    path: string,
+    value: any,
+    event: React.MouseEvent
+  ) => {
+    event.stopPropagation();
+    const suggestedName =
+      path.split('.').pop()?.replace(/[[\]]/g, '') || 'extractedValue';
+    const sanitizedName = sanitizeVariableName(suggestedName);
+    setVariableName(sanitizedName);
+    setExtractionModal({
+      isOpen: true,
+      source,
+      path,
+      value,
+      suggestedName: sanitizedName,
+    });
+  };
+
+  const handleVariableNameChange = (value: string) => {
+    setVariableName(value);
+  };
+
+  const confirmExtraction = (inputVariableName: string, transform?: string) => {
+    console.log('inputVariableName:', inputVariableName);
+    console.log('extractionModal:', extractionModal);
+    console.log('onExtractVariable exists:', !!onExtractVariable);
+
+    if (!activeCollection?.id) {
+      console.error('No active collection for extraction');
+      toast({
+        title: 'Error',
+        description: 'No active collection. Please select a collection first.',
+      });
+      return;
+    }
+
+    if (extractionModal && inputVariableName && onExtractVariable) {
+      const sanitized = sanitizeVariableName(inputVariableName);
+      const finalVariableName = `E_${sanitized}`;
+      const extraction = {
+        variableName: finalVariableName,
+        name: finalVariableName,
+        source: extractionModal.source,
+        path: extractionModal.path,
+        value: extractionModal.value,
+        transform,
+      };
+
+      onExtractVariable(extraction);
+      setExtractionModal(null);
+      setVariableName('');
+    }
+  };
   const renderJsonValue = (node: JsonNode, index: number) => {
     const isExpanded = expandedNodes.has(node.path);
     const hasChildren = node.type === 'object' || node.type === 'array';
@@ -723,28 +810,51 @@ const ResponseViewer = ({
                   : String(node.value)}
               </span>
             )}
-
             <div className='flex items-center gap-1 ml-2 opacity-0 group-hover:opacity-100 transition-opacity'>
               {!hasChildren && (
-                <button
-                  onClick={() =>
-                    handleCopy(String(node.value), `copy-${node.path}`)
-                  }
-                  className='p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors'
-                  title='Copy value'
-                >
-                  {copiedItem === `copy-${node.path}` ? (
-                    <CheckCircle className='w-3.5 h-3.5 text-green-500' />
+                <>
+                  <button
+                    onClick={() =>
+                      handleCopy(String(node.value), `copy-${node.path}`)
+                    }
+                    className='p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors'
+                    title='Copy value'
+                  >
+                    {copiedItem === `copy-${node.path}` ? (
+                      <CheckCircle className='w-3.5 h-3.5 text-green-500' />
+                    ) : (
+                      <Copy className='w-3.5 h-3.5' />
+                    )}
+                  </button>
+                  {existingExtractions.some((e) => e.path === node.path) ? (
+                    <div className='flex items-center space-x-1 px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded text-xs'>
+                      <CheckCircle className='w-3 h-3' />
+                      <span>Extracted</span>
+                    </div>
                   ) : (
-                    <Copy className='w-3.5 h-3.5' />
+                    <button
+                      onClick={(e) =>
+                        handleExtractClick(
+                          'response_body',
+                          node.path,
+                          node.value,
+                          e
+                        )
+                      }
+                      className='px-2 py-1 bg-[#136fb0] text-white rounded text-xs hover:bg-blue-700 transition-colors'
+                      title='Extract as variable'
+                    >
+                      <Plus className='w-3 h-3 mr-1 inline' />
+                      Extract
+                    </button>
                   )}
-                </button>
+                </>
               )}
               <button
                 onClick={(e) =>
                   handleAddAssertionClick(node.path, node.value, e)
                 }
-                className='px-1.5 py-0.5 text-xs font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors'
+                className='px-1.5 py-0.5 text-xs font-medium text-purple-600 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300 hover:bg-purple-50 dark:hover:bg-purple-900/30 rounded transition-colors'
               >
                 + Assert
               </button>
@@ -896,13 +1006,32 @@ const ResponseViewer = ({
               )}
             </button>
 
+            {existingExtractions.some(
+              (e) => e.source === 'response_header' && e.path === key
+            ) ? (
+              <div className='flex items-center space-x-1 px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded text-xs'>
+                <CheckCircle className='w-3 h-3' />
+                <span>Extracted</span>
+              </div>
+            ) : (
+              <button
+                onClick={(e) =>
+                  handleExtractClick('response_header', key, value, e)
+                }
+                className='px-2 py-1 bg-[#136fb0] text-white rounded text-xs hover:bg-blue-700 transition-colors'
+              >
+                <Plus className='w-3 h-3 mr-1 inline' />
+                Extract
+              </button>
+            )}
+
             <button
               onClick={() => {
                 setActiveFieldPath(`headers.${key}`);
                 setActiveFieldValue(value);
                 setShowAssertionModal(true);
               }}
-              className='px-1.5 py-0.5 text-xs font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors'
+              className='px-1.5 py-0.5 text-xs font-medium text-purple-600 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300 hover:bg-purple-50 dark:hover:bg-purple-900/30 rounded transition-colors'
             >
               + Assert
             </button>
@@ -1061,7 +1190,6 @@ const ResponseViewer = ({
                 <Download className='h-4 w-4' />
               </button>
 
-              {/* Dropdown menu */}
               <div className='absolute right-0 mt-1 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10'>
                 <button
                   onClick={downloadResponse}
@@ -1342,11 +1470,9 @@ const ResponseViewer = ({
         )}
       </div>
 
-      {/* API Assertion Interface Modal */}
       {showAssertionUI && (
         <div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4'>
           <div className='bg-white dark:bg-gray-900 rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col'>
-            {/* Header */}
             <div className='flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700'>
               <h2 className='text-xl font-bold text-gray-900 dark:text-gray-100'>
                 API Assertions Manager
@@ -1359,7 +1485,6 @@ const ResponseViewer = ({
               </button>
             </div>
 
-            {/* Content */}
             <div className='flex-1 overflow-auto'>
               <ApiAssertionInterface
                 assertions={assertions}
@@ -1386,6 +1511,130 @@ const ResponseViewer = ({
         onRedirectToTab={onRedirectToTab}
         onSave={onSaveAssertions}
       />
+
+      {extractionModal && (
+        <div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50'>
+          <div className='bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-full max-w-md'>
+            <div className='p-4 border-b border-gray-200 dark:border-gray-700'>
+              <h3 className='text-lg font-semibold text-gray-900 dark:text-gray-100'>
+                Extract Variable
+              </h3>
+              <p className='text-sm text-gray-500 dark:text-gray-400 mt-1'>
+                Configure how to extract and store this value
+              </p>
+            </div>
+            <div className='p-4 space-y-3'>
+              <div>
+                <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1'>
+                  Variable Name
+                </label>
+                <input
+                  type='text'
+                  value={variableName}
+                  onChange={(e) => handleVariableNameChange(e.target.value)}
+                  className='w-full px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 font-mono text-sm'
+                  placeholder='variable_name'
+                />
+                <p className='text-xs text-gray-500 dark:text-gray-400 mt-1'>
+                  Only letters, numbers, and underscores allowed.
+                </p>
+              </div>
+              <div className='flex items-center space-x-2 w-full'>
+                <label className='text-sm font-medium text-gray-700 dark:text-gray-300 w-16'>
+                  Source
+                </label>
+                <input
+                  type='text'
+                  value={extractionModal.source
+                    .replace('_', ' ')
+                    .replace(/\b\w/g, (l) => l.toUpperCase())}
+                  readOnly
+                  className='flex-1 px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm'
+                />
+              </div>
+              <div className='flex items-center space-x-2 w-full'>
+                <label className='text-sm font-medium text-gray-700 dark:text-gray-300 w-16'>
+                  Path
+                </label>
+                <input
+                  type='text'
+                  value={extractionModal.path}
+                  readOnly
+                  className='flex-1 px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 font-mono text-sm'
+                />
+              </div>
+              <div>
+                <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1'>
+                  Preview Value
+                </label>
+                <div className='p-2 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-600 overflow-x-auto scrollbar-thin'>
+                  <code className='text-sm text-gray-900 dark:text-gray-100 whitespace-nowrap'>
+                    {typeof extractionModal.value === 'object'
+                      ? JSON.stringify(extractionModal.value, null, 2)
+                      : String(extractionModal.value)}
+                  </code>
+                </div>
+              </div>
+              <div>
+                <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1'>
+                  Transform (Optional)
+                </label>
+                <input
+                  type='text'
+                  id='transform'
+                  className='w-full px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 font-mono text-sm'
+                  placeholder='e.g., value.toUpperCase(), parseInt(value)'
+                />
+                <p className='text-xs text-gray-500 dark:text-gray-400 mt-1'>
+                  JavaScript expression to transform the value (use 'value' as
+                  variable)
+                </p>
+              </div>
+            </div>
+            <div className='flex items-center justify-end space-x-3 p-4 border-t border-gray-200 dark:border-gray-700'>
+              <button
+                onClick={() => {
+                  setExtractionModal(null);
+                  setVariableName('');
+                }}
+                className='px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-gray-700 dark:text-gray-300'
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  const transform = (
+                    document.getElementById('transform') as HTMLInputElement
+                  )?.value;
+                  if (variableName) {
+                    confirmExtraction(variableName, transform || undefined);
+                  }
+                }}
+                disabled={!variableName}
+                className='px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
+              >
+                Extract Variable
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeCollection && Object.keys(extractedVariables).length > 0 && (
+        <div className='px-4 py-2 bg-blue-50 dark:bg-blue-900/20 border-b border-gray-200 dark:border-gray-700'>
+          <div className='flex items-center gap-2 text-xs'>
+            <span className='text-gray-600 dark:text-gray-400'>
+              Extracted variables for:
+            </span>
+            <span className='font-medium text-blue-600 dark:text-blue-400'>
+              {activeCollection.name}
+            </span>
+            <span className='ml-auto text-gray-500'>
+              {Object.keys(extractedVariables).length} variable(s)
+            </span>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -10,7 +10,6 @@ import {
   getCollectionRequests,
   importCollectionFile,
   markRequestAsAuth,
-  // importCollectionJson,
   renameCollection,
   renameRequest,
   setFavouriteCollection,

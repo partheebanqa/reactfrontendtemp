@@ -13,11 +13,7 @@ import {
   AlertDialogCancel,
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
-
-interface SelectedVariable {
-  name: string;
-  path: string;
-}
+import { SelectedVariable } from '@/shared/types/request';
 
 interface PrePostRequestProps {
   type: 'pre-request' | 'post-response';

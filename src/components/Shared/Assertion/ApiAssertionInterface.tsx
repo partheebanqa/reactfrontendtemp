@@ -19,12 +19,7 @@ import {
   Edit2,
   Play,
   Save,
-  RotateCcw,
-  Share2,
   Loader2,
-  ArrowUpDown,
-  ArrowUp,
-  ArrowDown,
   Clock,
   TrendingUp,
   Settings,
@@ -56,7 +51,7 @@ import { useWorkspace } from '@/hooks/useWorkspace';
 import { useDataManagement } from '@/hooks/useDataManagement';
 import AssertionResults from './AssertionReport';
 
-interface Assertion {
+export interface Assertion {
   id: string;
   category: string;
   type: string;
@@ -66,7 +61,7 @@ interface Assertion {
   expectedValue?: any;
   enabled: boolean;
   group?: string;
-  priority?: 'Critical' | 'High' | 'Medium' | 'Low';
+  priority?: string;
   impact?: string;
   dataType?: string;
   actualValue?: any;
