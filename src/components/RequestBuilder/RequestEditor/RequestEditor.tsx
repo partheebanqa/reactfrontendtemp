@@ -965,24 +965,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
           redirectUri: '',
         },
       });
-      const currentPreReq = collectionActions.getPreRequestAuth();
-      if (
-        currentPreReq.enabled &&
-        currentPreReq.collectionId === activeCollection?.id &&
-        currentPreReq.preRequestId !== activeRequest.id // Don't override the auth source itself
-      ) {
-        // Get the actual token value from extracted variables
-        const extractedVars = collectionActions.getExtractedVariables(
-          activeCollection.id
-        );
-        const actualTokenValue = extractedVars['E_token'] || '{{E_token}}';
 
-        setAuthType('bearer');
-        setAuthData((prev) => ({
-          ...prev,
-          token: actualTokenValue,
-        }));
-      }
       if (
         activeRequest.assertions &&
         Array.isArray(activeRequest.assertions) &&
@@ -1093,38 +1076,119 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
   }, [activeRequest?.id]);
 
   useEffect(() => {
-    const stored = collectionActions.getPreRequestAuth();
-    if (
-      stored.enabled &&
-      stored.collectionId === activeCollection?.id &&
-      stored.preRequestId === activeRequest?.id
-    ) {
-      setPreRequestEnabled(true);
+    if (activeRequest?.id && activeCollection?.id) {
+      const collection = collections.find((c) => c.id === activeCollection.id);
+
+      const isEnabled = collectionActions.getRequestPreRequestEnabled(
+        activeRequest.id
+      );
+
+      if (collection?.preRequestId && isEnabled === false) {
+        collectionActions.setRequestPreRequestEnabled(activeRequest.id, true);
+        setPreRequestEnabled(true);
+      } else {
+        setPreRequestEnabled(isEnabled);
+      }
     } else {
       setPreRequestEnabled(false);
     }
-  }, [activeRequest?.id, activeCollection?.id]);
+  }, [activeRequest?.id, activeCollection?.id, collections]);
+
+  useEffect(() => {
+    if (preRequestEnabled && activeCollection?.id && activeRequest?.id) {
+      const storageKey = `extracted_var_${activeCollection.id}_E_token`;
+      const storedData = localStorage.getItem(storageKey);
+
+      if (storedData) {
+        try {
+          const parsedData = JSON.parse(storedData);
+          const tokenValue = parsedData.value;
+
+          if (tokenValue) {
+            setAuthType('bearer');
+            setAuthData((prev) => ({
+              ...prev,
+              token: tokenValue,
+            }));
+
+            collectionActions.updateOpenedRequest({
+              ...activeRequest,
+              authorizationType: 'bearer',
+              authorization: {
+                ...activeRequest.authorization,
+                token: tokenValue,
+              },
+            });
+          }
+        } catch (error) {
+          console.error('Error parsing stored token:', error);
+        }
+      } else {
+        console.warn('⚠️ Pre-request token not found in localStorage');
+      }
+    }
+  }, [preRequestEnabled, activeCollection?.id, activeRequest?.id]);
 
   const handlePreRequestToggle = (checked: boolean) => {
     setPreRequestEnabled(checked);
-    if (checked && activeRequest?.id && activeCollection?.id) {
-      collectionActions.setPreRequestAuth(
-        activeCollection.id,
-        activeRequest.id
-      );
-    } else if (activeCollection?.id) {
-      collectionActions.clearPreRequestAuth(activeCollection.id);
+
+    if (activeRequest?.id) {
+      collectionActions.setRequestPreRequestEnabled(activeRequest.id, checked);
+    }
+
+    if (checked && activeCollection?.id) {
+      const storageKey = `extracted_var_${activeCollection.id}_E_token`;
+      const storedData = localStorage.getItem(storageKey);
+
+      if (storedData) {
+        try {
+          const parsedData = JSON.parse(storedData);
+          const tokenValue = parsedData.value;
+
+          if (tokenValue) {
+            // Set the token
+            setAuthType('bearer');
+            setAuthData((prev) => ({
+              ...prev,
+              token: tokenValue,
+            }));
+
+            toast({
+              title: 'Pre-request Token Loaded',
+              description: 'Using token from authentication request',
+              variant: 'success',
+            });
+          }
+        } catch (error) {
+          console.error('Error loading token:', error);
+          toast({
+            title: 'Error',
+            description: 'Failed to load pre-request token',
+            variant: 'destructive',
+          });
+        }
+      } else {
+        toast({
+          title: 'Token Not Found',
+          description: 'Please run the auth request first',
+          variant: 'destructive',
+        });
+      }
+    } else {
+      // Clear the token when disabled
+      setAuthData((prev) => ({
+        ...prev,
+        token: '',
+      }));
     }
   };
 
   const hasPreRequestConfigured = useMemo(() => {
-    if (!activeRequest || !activeCollection) return false;
-    // Only enable the toggle for the request that matches the collection's preRequestId
-    const collectionPreRequestId = (activeCollectionFull as any)?.preRequestId;
-    return !!(
-      collectionPreRequestId && activeRequest.id === collectionPreRequestId
-    );
-  }, [activeRequest, activeCollectionFull]);
+    if (!activeCollection) return false;
+
+    const collection = collections.find((c) => c.id === activeCollection.id);
+    return !!collection?.preRequestId;
+  }, [activeCollection?.id, collections]);
 
   const formatBackendResponse = (result: any): FormattedResponse => {
     const importantHeaders = [
@@ -1542,46 +1606,56 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
 
         setResponseData(normalizedResponse);
 
-        const currentPreReq = collectionActions.getPreRequestAuth();
         if (
-          currentPreReq.enabled &&
-          currentPreReq.preRequestId === activeRequest.id &&
+          existingExtractions &&
+          existingExtractions.length > 0 &&
           activeCollection?.id
         ) {
           const body = normalizedResponse.body;
 
-          if (existingExtractions && existingExtractions.length > 0) {
-            existingExtractions.forEach((extraction) => {
-              const isResponseBody =
-                !extraction.source || extraction.source === 'response_body';
+          existingExtractions.forEach((extraction) => {
+            const isResponseBody =
+              !extraction.source || extraction.source === 'response_body';
 
-              if (isResponseBody && extraction.path) {
-                try {
-                  const extractedValue = getValueByPath(body, extraction.path);
+            if (isResponseBody && extraction.path) {
+              try {
+                const extractedValue = getValueByPath(body, extraction.path);
 
-                  if (extractedValue !== undefined && onExtractVariable) {
-                    const variableName = extraction.name || 'E_token';
+                if (extractedValue !== undefined && onExtractVariable) {
+                  const variableName = extraction.name || 'E_token';
 
-                    onExtractVariable({
-                      variableName: variableName,
+                  onExtractVariable({
+                    variableName: variableName,
+                    name: variableName,
+                    source: 'response_body',
+                    path: extraction.path,
+                    value: String(extractedValue),
+                  });
+
+                  collectionActions.setExtractedVariable(
+                    activeCollection.id,
+                    variableName,
+                    String(extractedValue)
+                  );
+
+                  const storageKey = `extracted_var_${activeCollection.id}_${variableName}`;
+                  localStorage.setItem(
+                    storageKey,
+                    JSON.stringify({
                       name: variableName,
-                      source: 'response_body',
-                      path: extraction.path,
                       value: String(extractedValue),
-                    });
-
-                    collectionActions.setExtractedVariable(
-                      activeCollection.id,
-                      variableName,
-                      String(extractedValue)
-                    );
-                  }
-                } catch (error) {
-                  console.error('Error extracting variable:', error);
+                      timestamp: Date.now(),
+                      collectionId: activeCollection.id,
+                      source: extraction.source,
+                      path: extraction.path,
+                    })
+                  );
                 }
+              } catch (error) {
+                console.error('Error extracting variable:', error);
               }
-            });
-          }
+            }
+          });
         }
         if (activeRequest.id) {
           collectionActions.setRequestResponse(
@@ -2645,15 +2719,27 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
                     : 'opacity-50 pointer-events-none'
                 }`}
               >
-                <span className='text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap'>
-                  Use pre-request token
-                </span>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className='text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap cursor-help'>
+                        Use pre-request token
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {hasPreRequestConfigured
+                        ? 'Toggle to use token from authentication request'
+                        : 'No pre-request configured for this collection'}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
                 <ToggleSwitch
                   id='preRequestAuth'
                   checked={preRequestEnabled}
                   onChange={handlePreRequestToggle}
                   label=''
                   description=''
+                  disabled={!hasPreRequestConfigured}
                 />
               </div>
             </div>
@@ -3029,6 +3115,14 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
               </div>
 
               <div>
+                {/* {preRequestEnabled && (
+                  <div className='mb-2 p-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md'>
+                    <p className='text-xs text-blue-700 dark:text-blue-300'>
+                      ℹ️ Using token from pre-request. Disable "Use pre-request
+                      token" to edit manually.
+                    </p>
+                  </div>
+                )} */}
                 <Input
                   type='text'
                   value={authData.token}
@@ -3039,7 +3133,18 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
                     }
                   }}
                   placeholder='Enter token'
+                  disabled={preRequestEnabled}
+                  className={
+                    preRequestEnabled
+                      ? 'bg-gray-100 dark:bg-gray-800 cursor-not-allowed'
+                      : ''
+                  }
                 />
+                {preRequestEnabled && authData.token && (
+                  <p className='mt-1 text-xs text-gray-500 dark:text-gray-400'>
+                    Token loaded from collection's authentication request
+                  </p>
+                )}
               </div>
             </div>
           )}
