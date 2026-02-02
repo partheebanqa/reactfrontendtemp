@@ -44,6 +44,7 @@ export interface CollectionState {
     preRequestId: string | null;
     enabled: boolean;
   };
+  requestPreRequestEnabled: Map<string, boolean>;
   performanceTest?: {
     isOpen: boolean;
     requestId: string | null;
@@ -78,6 +79,8 @@ export const initialCollectionState: CollectionState = {
     preRequestId: null,
     enabled: false,
   },
+  requestPreRequestEnabled: new Map(),
+
   performanceTest: {
     isOpen: false,
     requestId: null,
@@ -164,6 +167,9 @@ export const collectionActions = {
       const newResponses = new Map(state.requestResponses);
       newResponses.delete(requestId);
 
+      const newPreRequestMap = new Map(state.requestPreRequestEnabled);
+      newPreRequestMap.delete(requestId);
+
       let newActiveRequest = state.activeRequest;
       if (state.activeRequest?.id === requestId) {
         newActiveRequest = updatedOpened[updatedOpened.length - 1] || null;
@@ -175,6 +181,7 @@ export const collectionActions = {
         unsavedChanges: updatedUnsaved,
         activeRequest: newActiveRequest,
         requestResponses: newResponses,
+        requestPreRequestEnabled: newPreRequestMap,
       };
     });
   },
@@ -384,10 +391,14 @@ export const collectionActions = {
       const newActiveRequest =
         state.activeRequest?.id === requestId ? null : state.activeRequest;
 
+      const newPreRequestMap = new Map(state.requestPreRequestEnabled);
+      newPreRequestMap.delete(requestId);
+
       return {
         ...state,
         collections: updatedCollections,
         activeRequest: newActiveRequest,
+        requestPreRequestEnabled: newPreRequestMap,
       };
     });
   },
@@ -618,30 +629,72 @@ export const collectionActions = {
     }));
   },
 
-  setPreRequestAuth: (collectionId: string, preRequestId: string) => {
-    collectionStore.setState((state) => ({
-      ...state,
-      preRequestAuth: {
-        collectionId,
-        preRequestId,
-        enabled: true,
-      },
-    }));
+  setRequestPreRequestEnabled: (requestId: string, enabled: boolean) => {
+    collectionStore.setState((state) => {
+      const newMap = new Map(state.requestPreRequestEnabled);
+      newMap.set(requestId, enabled);
+      return {
+        ...state,
+        requestPreRequestEnabled: newMap,
+      };
+    });
   },
 
-  clearPreRequestAuth: (collectionId: string) => {
-    collectionStore.setState((state) => ({
-      ...state,
-      preRequestAuth: {
-        collectionId: null,
-        preRequestId: null,
-        enabled: false,
-      },
-    }));
+  getRequestPreRequestEnabled: (requestId: string): boolean => {
+    return (
+      collectionStore.state.requestPreRequestEnabled.get(requestId) ?? false
+    );
   },
 
-  getPreRequestAuth: () => {
-    return collectionStore.state.preRequestAuth;
+  clearRequestPreRequestEnabled: (requestId: string) => {
+    collectionStore.setState((state) => {
+      const newMap = new Map(state.requestPreRequestEnabled);
+      newMap.delete(requestId);
+      return {
+        ...state,
+        requestPreRequestEnabled: newMap,
+      };
+    });
+  },
+
+  clearCollectionPreRequestStates: (collectionId: string) => {
+    collectionStore.setState((state) => {
+      const collection = state.collections.find((c) => c.id === collectionId);
+      if (!collection) return state;
+
+      const newMap = new Map(state.requestPreRequestEnabled);
+
+      collection.requests.forEach((req) => {
+        if (req.id) {
+          newMap.delete(req.id);
+        }
+      });
+
+      return {
+        ...state,
+        requestPreRequestEnabled: newMap,
+      };
+    });
+  },
+
+  autoEnableCollectionPreRequest: (collectionId: string) => {
+    collectionStore.setState((state) => {
+      const collection = state.collections.find((c) => c.id === collectionId);
+      if (!collection || !collection.preRequestId) return state;
+
+      const newMap = new Map(state.requestPreRequestEnabled);
+
+      collection.requests.forEach((req) => {
+        if (req.id && req.id !== collection.preRequestId) {
+          newMap.set(req.id, true);
+        }
+      });
+
+      return {
+        ...state,
+        requestPreRequestEnabled: newMap,
+      };
+    });
   },
 };
 
