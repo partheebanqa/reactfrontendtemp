@@ -31,7 +31,7 @@ interface PrePostRequestProps {
   onSaveAssertions?: () => Promise<void>;
   staticVariables?: { name: string; value: string }[];
   dynamicVariables?: { name: string; value: string }[];
-  extractedVariables?: { name: string; value: string }[];
+  extractedVariables?: Record<string, any>;
 }
 
 export function PrePostRequest({
@@ -55,6 +55,8 @@ export function PrePostRequest({
   const [activeSubTab, setActiveSubTab] = useState<'assertions' | 'extracted'>(
     'assertions'
   );
+  const enabledCount = assertions.filter((a) => a.enabled === true).length;
+
   const [deleteTargetPath, setDeleteTargetPath] = useState<string | null>(null);
 
   const handleDeleteVariable = (path: string) => {
@@ -194,6 +196,9 @@ export function PrePostRequest({
               }`}
             >
               Assertions
+              <span className='ml-1 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full px-2 py-0.5 text-xs'>
+                {enabledCount}
+              </span>
             </button>
 
             <button
@@ -205,11 +210,13 @@ export function PrePostRequest({
               }`}
             >
               Extracted Variables
-              {extractedVariables.length > 0 && (
-                <span className='ml-1 bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded-full px-2 py-0.5 text-xs'>
-                  {extractedVariables.length}
-                </span>
-              )}
+              {extractedVariables &&
+                typeof extractedVariables === 'object' &&
+                Object.keys(extractedVariables).length > 0 && (
+                  <span className='ml-1 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full px-2 py-0.5 text-xs'>
+                    {Object.keys(extractedVariables).length}
+                  </span>
+                )}
             </button>
           </div>
 
@@ -257,30 +264,28 @@ export function PrePostRequest({
               <div className='rounded-xl border border-gray-300 dark:border-gray-700 shadow-sm overflow-hidden bg-white dark:bg-gray-900'>
                 <table className='w-full text-sm'>
                   <tbody>
-                    {extractedVariables.length > 0 ? (
+                    {extractedVariables &&
+                    typeof extractedVariables === 'object' &&
+                    Object.keys(extractedVariables).length > 0 ? (
                       <tr>
-                        <td className='px-4 py-3 font-semibold text-gray-900 dark:text-gray-200 w-48 bg-gray-50 dark:bg-gray-800 align-top'>
+                        <td className='px-2 py-3 font-semibold text-gray-900 dark:text-gray-200 w-40 bg-gray-50 dark:bg-gray-800 align-top'>
                           Extracted Variables
                         </td>
                         <td className='px-4 py-3 text-gray-800 dark:text-gray-300'>
                           <div className='flex flex-wrap gap-2'>
-                            {extractedVariables.map((variable, i) => (
-                              <div
-                                key={i}
-                                className='inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 rounded-lg border border-green-300 dark:border-green-700 group hover:bg-green-200 dark:hover:bg-green-800/40 transition-colors'
-                                title={`Value: ${variable.value}`}
-                              >
-                                <code className='text-xs font-mono font-medium'>
-                                  {`{{${variable.name}}}`}
-                                </code>
-                                <span className='text-xs text-green-600 dark:text-green-400 font-medium'>
-                                  ={' '}
-                                  {variable.value.length > 30
-                                    ? `${variable.value.substring(0, 30)}...`
-                                    : variable.value}
-                                </span>
-                              </div>
-                            ))}
+                            {Object.entries(extractedVariables).map(
+                              ([name, value], i) => (
+                                <div
+                                  key={i}
+                                  className='inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded-lg border border-blue-300 dark:border-blue-700 group hover:bg-blue-200 dark:hover:bg-blue-800/40 transition-colors'
+                                  title={`Value: ${String(value)}`}
+                                >
+                                  <code className='text-xs font-mono font-medium'>
+                                    {`{{${name}}}`}
+                                  </code>
+                                </div>
+                              )
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -304,20 +309,22 @@ export function PrePostRequest({
                 </table>
               </div>
 
-              {extractedVariables.length > 0 && (
-                <div className='mt-4 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800'>
-                  <h5 className='text-sm font-medium text-green-800 dark:text-green-200 mb-2'>
-                    Using Extracted Variables
-                  </h5>
-                  <p className='text-xs text-green-700 dark:text-green-300'>
-                    These variables have been extracted from the response and
-                    can be used in subsequent requests. Reference them using the
-                    syntax{' '}
-                    <code className='px-1 py-0.5 bg-green-100 dark:bg-green-900/50 rounded'>{`{{variable_name}}`}</code>{' '}
-                    in your request URL, headers, body, or parameters.
-                  </p>
-                </div>
-              )}
+              {extractedVariables &&
+                typeof extractedVariables === 'object' &&
+                Object.keys(extractedVariables).length > 0 && (
+                  <div className='mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800'>
+                    <h5 className='text-sm font-medium text-blue-800 dark:text-blue-200 mb-2'>
+                      Using Extracted Variables
+                    </h5>
+                    <p className='text-xs text-blue-700 dark:text-blue-300'>
+                      These variables have been extracted from the response and
+                      can be used in subsequent requests. Reference them using
+                      the syntax{' '}
+                      <code className='px-1 py-0.5 bg-blue-100 dark:bg-blue-900/50 rounded'>{`{{variable_name}}`}</code>{' '}
+                      in your request URL, headers, body, or parameters.
+                    </p>
+                  </div>
+                )}
             </div>
           )}
         </div>

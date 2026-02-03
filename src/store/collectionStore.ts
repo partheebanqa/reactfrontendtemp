@@ -30,6 +30,7 @@ export interface CollectionState {
   unsavedChanges: Set<string>;
   requestResponses: Map<string, RequestResponse>;
   extractedVariables: Record<string, Record<string, any>>;
+  extractedVariablesRequest: Record<string, Record<string, any>>;
   sanitizeTestRunner: {
     isOpen: boolean;
     collectionId: string | null;
@@ -65,6 +66,7 @@ export const initialCollectionState: CollectionState = {
   unsavedChanges: new Set(),
   requestResponses: new Map(),
   extractedVariables: {},
+  extractedVariablesRequest: {},
   sanitizeTestRunner: {
     isOpen: false,
     collectionId: null,
@@ -170,6 +172,11 @@ export const collectionActions = {
       const newPreRequestMap = new Map(state.requestPreRequestEnabled);
       newPreRequestMap.delete(requestId);
 
+      const newExtractedVariablesRequest = {
+        ...state.extractedVariablesRequest,
+      };
+      delete newExtractedVariablesRequest[requestId];
+
       let newActiveRequest = state.activeRequest;
       if (state.activeRequest?.id === requestId) {
         newActiveRequest = updatedOpened[updatedOpened.length - 1] || null;
@@ -182,6 +189,7 @@ export const collectionActions = {
         activeRequest: newActiveRequest,
         requestResponses: newResponses,
         requestPreRequestEnabled: newPreRequestMap,
+        extractedVariablesRequest: newExtractedVariablesRequest,
       };
     });
   },
@@ -626,6 +634,92 @@ export const collectionActions = {
     collectionStore.setState((state) => ({
       ...state,
       extractedVariables: {},
+    }));
+  },
+
+  setExtractedVariableRequest: (
+    requestId: string,
+    name: string,
+    value: any
+  ) => {
+    collectionStore.setState((state) => ({
+      ...state,
+      extractedVariablesRequest: {
+        ...state.extractedVariablesRequest,
+        [requestId]: {
+          ...(state.extractedVariablesRequest[requestId] || {}),
+          [name]: value,
+        },
+      },
+    }));
+  },
+
+  // NEW: Remove extracted variable from specific request
+  removeExtractedVariableRequest: (requestId: string, name: string) => {
+    collectionStore.setState((state) => {
+      const requestVars = {
+        ...(state.extractedVariablesRequest[requestId] || {}),
+      };
+      delete requestVars[name];
+
+      return {
+        ...state,
+        extractedVariablesRequest: {
+          ...state.extractedVariablesRequest,
+          [requestId]: requestVars,
+        },
+      };
+    });
+  },
+
+  // NEW: Get all extracted variables for specific request
+  getExtractedVariablesRequest: (requestId: string): Record<string, any> => {
+    return collectionStore.state.extractedVariablesRequest[requestId] || {};
+  },
+
+  // NEW: Clear all extracted variables for specific request
+  clearRequestExtractedVariablesRequest: (requestId: string) => {
+    collectionStore.setState((state) => {
+      const newExtractedVariablesRequest = {
+        ...state.extractedVariablesRequest,
+      };
+      delete newExtractedVariablesRequest[requestId];
+
+      return {
+        ...state,
+        extractedVariablesRequest: newExtractedVariablesRequest,
+      };
+    });
+  },
+
+  // NEW: Clear extracted variables for all requests in a collection
+  clearCollectionRequestsVariablesRequest: (collectionId: string) => {
+    collectionStore.setState((state) => {
+      const collection = state.collections.find((c) => c.id === collectionId);
+      if (!collection) return state;
+
+      const newExtractedVariablesRequest = {
+        ...state.extractedVariablesRequest,
+      };
+
+      collection.requests.forEach((req) => {
+        if (req.id) {
+          delete newExtractedVariablesRequest[req.id];
+        }
+      });
+
+      return {
+        ...state,
+        extractedVariablesRequest: newExtractedVariablesRequest,
+      };
+    });
+  },
+
+  // NEW: Clear all request-specific extracted variables
+  clearAllExtractedVariablesRequest: () => {
+    collectionStore.setState((state) => ({
+      ...state,
+      extractedVariablesRequest: {},
     }));
   },
 

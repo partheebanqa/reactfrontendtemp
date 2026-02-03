@@ -46,7 +46,11 @@ import './whiteorange.css';
 import EditableTextWithoutIcon from '@/components/ui/EditableTextWithoutIcon';
 import { generateDynamicValueById } from '@/lib/request-utils';
 import RequestTabs from './RequestTabs';
-import { collectionActions, useCollectionStore } from '@/store/collectionStore';
+import {
+  collectionActions,
+  useCollectionStore,
+  collectionStore,
+} from '@/store/collectionStore';
 import { useSchema } from '@/hooks/useSchema';
 import type { CollectionRequest } from '@/shared/types/collection';
 import RequestBody from '@/components/Shared/RequestTabs/RequestBody';
@@ -364,6 +368,16 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
       extractedVars: extracted_vars,
     };
   }, [formattedVariables]);
+
+  const requestSpecificExtractedVariables = useMemo(() => {
+    if (!activeRequest?.id) return {};
+    return collectionActions.getExtractedVariablesRequest(activeRequest.id);
+  }, [activeRequest?.id, collectionStore?.state?.extractedVariablesRequest]);
+
+  console.log(
+    'requestSpecificExtractedVariables:',
+    requestSpecificExtractedVariables
+  );
 
   const extractVariableNames = (text: any) => {
     if (!text) return [];
@@ -740,7 +754,6 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
     const list = perfConfigsQuery.data;
     if (!Array.isArray(list) || list.length === 0) return;
 
-    // pick latest (safe) – usually list[0] is fine, but this is better
     const cfg = [...list].sort((a, b) =>
       String(b.updatedAt || '').localeCompare(String(a.updatedAt || ''))
     )[0];
@@ -1018,32 +1031,32 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
         setSelectedVariable([]);
       }
 
-      if (
-        activeRequest?.extractVariables &&
-        Array.isArray(activeRequest?.extractVariables) &&
-        activeRequest.extractVariables.length > 0 &&
-        responseData?.body &&
-        onExtractVariable
-      ) {
-        activeRequest.extractVariables.forEach((extraction: any) => {
-          if (extraction.source === 'response_body' && extraction.path) {
-            try {
-              const value = getValueByPath(responseData.body, extraction.path);
-              if (value !== undefined) {
-                onExtractVariable({
-                  variableName: extraction.name,
-                  name: extraction.name,
-                  source: extraction.source,
-                  path: extraction.path,
-                  value: value,
-                });
-              }
-            } catch (error) {
-              console.error('Error extracting variable:', error);
-            }
-          }
-        });
-      }
+      // if (
+      //   activeRequest?.extractVariables &&
+      //   Array.isArray(activeRequest?.extractVariables) &&
+      //   activeRequest.extractVariables.length > 0 &&
+      //   responseData?.body &&
+      //   onExtractVariable
+      // ) {
+      //   activeRequest.extractVariables.forEach((extraction: any) => {
+      //     if (extraction.source === 'response_body' && extraction.path) {
+      //       try {
+      //         const value = getValueByPath(responseData.body, extraction.path);
+      //         if (value !== undefined) {
+      //           onExtractVariable({
+      //             variableName: extraction.name,
+      //             name: extraction.name,
+      //             source: extraction.source,
+      //             path: extraction.path,
+      //             value: value,
+      //           });
+      //         }
+      //       } catch (error) {
+      //         console.error('Error extracting variable:', error);
+      //       }
+      //     }
+      //   });
+      // }
     } else if (!isSaving && !activeRequest) {
       setLoadedRequestId(undefined);
       setAssertions([]);
@@ -1650,6 +1663,14 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
                       path: extraction.path,
                     })
                   );
+
+                  if (activeRequest?.id) {
+                    collectionActions.setExtractedVariableRequest(
+                      activeRequest.id,
+                      variableName,
+                      String(extractedValue)
+                    );
+                  }
                 }
               } catch (error) {
                 console.error('Error extracting variable:', error);
@@ -1663,7 +1684,6 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
             normalizedResponse
           );
         }
-        const extracted = extractVariablesFromResponse(normalizedResponse);
 
         const formattedResponse = formatBackendResponse(normalizedResponse);
         const generatedAssertions = generateAssertions(formattedResponse);
@@ -2607,29 +2627,6 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
     }, obj);
   };
 
-  const extractVariablesFromResponse = (response: any) => {
-    if (!response || !response.body) return;
-
-    if (typeof response.body === 'object' && response.body !== null) {
-      Object.keys(response.body).forEach((key) => {
-        const value = response.body[key];
-        if (
-          (typeof value === 'string' || typeof value === 'number') &&
-          onExtractVariable
-        ) {
-          const variableName = `E_${key}`;
-          onExtractVariable({
-            variableName,
-            name: variableName,
-            source: 'response_body',
-            path: key,
-            value: String(value),
-          });
-        }
-      });
-    }
-  };
-
   if (!activeRequest) {
     return (
       <div className='flex-1 flex items-center justify-center bg-gray-50 dark:bg-gray-900 p-4'>
@@ -3186,7 +3183,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
               onSaveAssertions={handleUpdateRequest}
               staticVariables={usedVariables.staticVars}
               dynamicVariables={usedVariables.dynamicVars}
-              extractedVariables={extractedVariables}
+              extractedVariables={requestSpecificExtractedVariables}
             />
           )}
 

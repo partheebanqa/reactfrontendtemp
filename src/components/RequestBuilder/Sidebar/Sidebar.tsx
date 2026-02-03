@@ -78,6 +78,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { executeRequest } from '@/services/executeRequest.service';
 import {
+  extractDataFromResponse,
   getValueByPath,
   shouldRefreshExtractedVariables,
 } from '@/lib/request-utils';
@@ -732,11 +733,14 @@ const Sidebar: React.FC = () => {
 
       const response = await executeRequest(payload);
 
+      console.log('response123:', response);
+
       if (
         preRequest.extractVariables &&
         Array.isArray(preRequest.extractVariables) &&
         preRequest.extractVariables.length > 0
       ) {
+        // Get the response data
         let rawBody =
           response?.data?.responses?.[0]?.body ||
           response?.data?.body ||
@@ -760,41 +764,56 @@ const Sidebar: React.FC = () => {
         }
 
         let extractedCount = 0;
-        preRequest.extractVariables.forEach((extraction: any) => {
-          if (extraction.source === 'response_body' && extraction.path) {
-            try {
-              const value = getValueByPath(responseBody, extraction.path);
 
-              if (value !== undefined && value !== null) {
-                const storageKey = `extracted_var_${collectionId}_${extraction.name}`;
+        // Use extractDataFromResponse utility function from request-utils
+        const extractedVariables = extractDataFromResponse(
+          {
+            body: responseBody,
+            headers:
+              response?.data?.responses?.[0]?.headers ||
+              response?.data?.headers ||
+              response?.headers ||
+              {},
+            cookies:
+              response?.data?.responses?.[0]?.cookies ||
+              response?.data?.cookies ||
+              response?.cookies ||
+              {},
+          },
+          preRequest.extractVariables
+        );
 
-                localStorage.setItem(
-                  storageKey,
-                  JSON.stringify({
-                    name: extraction.name,
-                    value: String(value),
-                    timestamp: Date.now(),
-                    collectionId: collectionId,
-                    source: extraction.source,
-                    path: extraction.path,
-                  })
-                );
-                collectionActions.setExtractedVariable(
-                  collectionId,
-                  extraction.name,
-                  String(value)
-                );
+        // Store each extracted variable
+        Object.entries(extractedVariables).forEach(([varName, value]) => {
+          if (value !== undefined && value !== null) {
+            const storageKey = `extracted_var_${collectionId}_${varName}`;
 
-                extractedCount++;
-              }
-            } catch (error) {
-              console.error(
-                `Error extracting variable ${extraction.name}:`,
-                error
-              );
-            }
+            localStorage.setItem(
+              storageKey,
+              JSON.stringify({
+                name: varName,
+                value: String(value),
+                timestamp: Date.now(),
+                collectionId: collectionId,
+                source: 'response_body', // This will be determined by extractDataFromResponse
+                path:
+                  preRequest.extractVariables.find(
+                    (ev: any) => (ev.variableName || ev.name) === varName
+                  )?.path || '',
+              })
+            );
+
+            collectionActions.setExtractedVariable(
+              collectionId,
+              varName,
+              String(value)
+            );
+
+            extractedCount++;
           }
         });
+
+        console.log('extractedCount:', extractedCount);
 
         if (extractedCount > 0) {
           const executionKey = `preRequest_executed_${collectionId}_${preRequestId}`;
@@ -910,8 +929,6 @@ const Sidebar: React.FC = () => {
             );
 
             if (needsRefresh) {
-              console.log('⚠️ Tokens expired or missing, refreshing auth...');
-
               const executionKey = `preRequest_executed_${collectionId}_${collectionData.preRequestId}`;
               localStorage.removeItem(executionKey);
 
@@ -927,8 +944,6 @@ const Sidebar: React.FC = () => {
                 collectionData.preRequestId,
                 [updatedCollection]
               );
-            } else {
-              console.log('✓ Using cached tokens (still valid)');
             }
           }
         }

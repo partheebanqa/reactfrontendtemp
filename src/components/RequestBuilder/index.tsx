@@ -67,6 +67,7 @@ const RequestBuilder = () => {
   } = useCollection();
   const { setResponseData, setRequestData } = useRequest();
   const isMobile = useIsMobile();
+  const { activeRequest } = useCollection();
 
   const [isBottomLayout, setIsBottomLayout] = useState(true);
   const [resizePosition, setResizePosition] = useState(isMobile ? 60 : 50);
@@ -92,6 +93,17 @@ const RequestBuilder = () => {
       setExtractedVariables({});
     }
   }, [activeCollection?.id]);
+
+  useEffect(() => {
+    if (
+      activeRequest?.extractVariables &&
+      Array.isArray(activeRequest.extractVariables)
+    ) {
+      setExistingExtractions(activeRequest.extractVariables);
+    } else {
+      setExistingExtractions([]);
+    }
+  }, [activeRequest?.id, activeRequest?.extractVariables]);
 
   const handleExtractVariable = (extraction: {
     variableName: string;
