@@ -9,7 +9,7 @@ export const getWorkSpaceIntegrations = async (workspaceId: string) => {
     `${ENV.API_BASE_URL}/integrations?ws=${workspaceId}`,
     {
       headers: {
-        'x-workspace-id': workspaceId,
+        'X-Workspace-ID': workspaceId,
       },
     }
   );
