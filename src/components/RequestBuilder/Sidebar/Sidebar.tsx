@@ -78,6 +78,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { executeRequest } from '@/services/executeRequest.service';
 import {
+  extractDataFromResponse,
   getValueByPath,
   shouldRefreshExtractedVariables,
 } from '@/lib/request-utils';
@@ -99,8 +100,7 @@ const Sidebar: React.FC = () => {
     deleteRequestMutation,
     duplicateRequestMutation,
     markAuthRequestMutation,
-    setFavouriteCollectionMutation,
-    unsetFavouriteCollectionMutation,
+
     renameRequestMutation,
     deleteCollectionMutation,
     handleCreateRequest,
@@ -357,22 +357,6 @@ const Sidebar: React.FC = () => {
     if (request.name) setRenameValue(request.name);
     setShowRequestRenameModal(true);
     setShowMenu(null);
-  };
-
-  const handleFavoriteCollection = async (collection: Collection) => {
-    try {
-      if (collection.isImportant) {
-        await unsetFavouriteCollectionMutation.mutateAsync(collection.id);
-      } else {
-        await setFavouriteCollectionMutation.mutateAsync({
-          collectionId: collection.id,
-          IsImportant: true,
-        });
-      }
-    } catch (error) {
-      console.error('Error updating favorite collection:', error);
-      showError('failed to update favorite collection');
-    }
   };
 
   const handleDeleteRequest = async (requestId: string) => {
@@ -732,11 +716,14 @@ const Sidebar: React.FC = () => {
 
       const response = await executeRequest(payload);
 
+      console.log('response123:', response);
+
       if (
         preRequest.extractVariables &&
         Array.isArray(preRequest.extractVariables) &&
         preRequest.extractVariables.length > 0
       ) {
+        // Get the response data
         let rawBody =
           response?.data?.responses?.[0]?.body ||
           response?.data?.body ||
@@ -760,41 +747,54 @@ const Sidebar: React.FC = () => {
         }
 
         let extractedCount = 0;
-        preRequest.extractVariables.forEach((extraction: any) => {
-          if (extraction.source === 'response_body' && extraction.path) {
-            try {
-              const value = getValueByPath(responseBody, extraction.path);
 
-              if (value !== undefined && value !== null) {
-                const storageKey = `extracted_var_${collectionId}_${extraction.name}`;
+        const extractedVariables = extractDataFromResponse(
+          {
+            body: responseBody,
+            headers:
+              response?.data?.responses?.[0]?.headers ||
+              response?.data?.headers ||
+              response?.headers ||
+              {},
+            cookies:
+              response?.data?.responses?.[0]?.cookies ||
+              response?.data?.cookies ||
+              response?.cookies ||
+              {},
+          },
+          preRequest.extractVariables
+        );
 
-                localStorage.setItem(
-                  storageKey,
-                  JSON.stringify({
-                    name: extraction.name,
-                    value: String(value),
-                    timestamp: Date.now(),
-                    collectionId: collectionId,
-                    source: extraction.source,
-                    path: extraction.path,
-                  })
-                );
-                collectionActions.setExtractedVariable(
-                  collectionId,
-                  extraction.name,
-                  String(value)
-                );
+        Object.entries(extractedVariables).forEach(([varName, value]) => {
+          if (value !== undefined && value !== null) {
+            const storageKey = `extracted_var_${collectionId}_${varName}`;
 
-                extractedCount++;
-              }
-            } catch (error) {
-              console.error(
-                `Error extracting variable ${extraction.name}:`,
-                error
-              );
-            }
+            localStorage.setItem(
+              storageKey,
+              JSON.stringify({
+                name: varName,
+                value: String(value),
+                timestamp: Date.now(),
+                collectionId: collectionId,
+                source: 'response_body', // This will be determined by extractDataFromResponse
+                path:
+                  preRequest.extractVariables.find(
+                    (ev: any) => (ev.variableName || ev.name) === varName
+                  )?.path || '',
+              })
+            );
+
+            collectionActions.setExtractedVariable(
+              collectionId,
+              varName,
+              String(value)
+            );
+
+            extractedCount++;
           }
         });
+
+        console.log('extractedCount:', extractedCount);
 
         if (extractedCount > 0) {
           const executionKey = `preRequest_executed_${collectionId}_${preRequestId}`;
@@ -910,8 +910,6 @@ const Sidebar: React.FC = () => {
             );
 
             if (needsRefresh) {
-              console.log('⚠️ Tokens expired or missing, refreshing auth...');
-
               const executionKey = `preRequest_executed_${collectionId}_${collectionData.preRequestId}`;
               localStorage.removeItem(executionKey);
 
@@ -927,8 +925,6 @@ const Sidebar: React.FC = () => {
                 collectionData.preRequestId,
                 [updatedCollection]
               );
-            } else {
-              console.log('✓ Using cached tokens (still valid)');
             }
           }
         }
@@ -1292,29 +1288,13 @@ const Sidebar: React.FC = () => {
                               </div>
 
                               <div className='flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity relative'>
-                                <TooltipContainer
-                                  text={
-                                    collection.isImportant
-                                      ? 'Unfavorite'
-                                      : 'Favorite'
-                                  }
-                                  children={
-                                    <button
-                                      className='p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700'
-                                      onClick={() =>
-                                        handleFavoriteCollection(collection)
-                                      }
-                                    >
-                                      <Star
-                                        className={`h-4 w-4 ${
-                                          collection.isImportant
-                                            ? 'fill-yellow-400 text-yellow-500'
-                                            : ''
-                                        }`}
-                                      />
-                                    </button>
-                                  }
-                                />
+                                {collection.preRequestId && (
+                                  <TooltipContainer text='Pre-Request Auth'>
+                                    <div className='p-1'>
+                                      <KeyRound className='h-4 w-4 text-blue-600' />
+                                    </div>
+                                  </TooltipContainer>
+                                )}
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
