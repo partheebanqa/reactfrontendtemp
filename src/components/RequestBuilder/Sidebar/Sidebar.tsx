@@ -100,8 +100,7 @@ const Sidebar: React.FC = () => {
     deleteRequestMutation,
     duplicateRequestMutation,
     markAuthRequestMutation,
-    setFavouriteCollectionMutation,
-    unsetFavouriteCollectionMutation,
+
     renameRequestMutation,
     deleteCollectionMutation,
     handleCreateRequest,
@@ -358,22 +357,6 @@ const Sidebar: React.FC = () => {
     if (request.name) setRenameValue(request.name);
     setShowRequestRenameModal(true);
     setShowMenu(null);
-  };
-
-  const handleFavoriteCollection = async (collection: Collection) => {
-    try {
-      if (collection.isImportant) {
-        await unsetFavouriteCollectionMutation.mutateAsync(collection.id);
-      } else {
-        await setFavouriteCollectionMutation.mutateAsync({
-          collectionId: collection.id,
-          IsImportant: true,
-        });
-      }
-    } catch (error) {
-      console.error('Error updating favorite collection:', error);
-      showError('failed to update favorite collection');
-    }
   };
 
   const handleDeleteRequest = async (requestId: string) => {
@@ -765,7 +748,6 @@ const Sidebar: React.FC = () => {
 
         let extractedCount = 0;
 
-        // Use extractDataFromResponse utility function from request-utils
         const extractedVariables = extractDataFromResponse(
           {
             body: responseBody,
@@ -783,7 +765,6 @@ const Sidebar: React.FC = () => {
           preRequest.extractVariables
         );
 
-        // Store each extracted variable
         Object.entries(extractedVariables).forEach(([varName, value]) => {
           if (value !== undefined && value !== null) {
             const storageKey = `extracted_var_${collectionId}_${varName}`;
@@ -1307,29 +1288,13 @@ const Sidebar: React.FC = () => {
                               </div>
 
                               <div className='flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity relative'>
-                                <TooltipContainer
-                                  text={
-                                    collection.isImportant
-                                      ? 'Unfavorite'
-                                      : 'Favorite'
-                                  }
-                                  children={
-                                    <button
-                                      className='p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700'
-                                      onClick={() =>
-                                        handleFavoriteCollection(collection)
-                                      }
-                                    >
-                                      <Star
-                                        className={`h-4 w-4 ${
-                                          collection.isImportant
-                                            ? 'fill-yellow-400 text-yellow-500'
-                                            : ''
-                                        }`}
-                                      />
-                                    </button>
-                                  }
-                                />
+                                {collection.preRequestId && (
+                                  <TooltipContainer text='Pre-Request Auth'>
+                                    <div className='p-1'>
+                                      <KeyRound className='h-4 w-4 text-blue-600' />
+                                    </div>
+                                  </TooltipContainer>
+                                )}
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();

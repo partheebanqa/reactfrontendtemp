@@ -1426,15 +1426,51 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
     let substitutedBodyContent = bodyContent;
     try {
       let effectiveAuthType = authType;
+      let effectiveToken = authData.token;
+
+      // Load token from localStorage if pre-request is enabled
+      if (preRequestEnabled && activeCollection?.id) {
+        const possibleTokenKeys = [
+          `extracted_var_${activeCollection.id}_E_token`,
+          `extracted_var_${activeCollection.id}_E_accessToken`,
+          `extracted_var_${activeCollection.id}_E_access_token`,
+        ];
+
+        for (const storageKey of possibleTokenKeys) {
+          const storedData = localStorage.getItem(storageKey);
+          if (storedData) {
+            try {
+              const parsedData = JSON.parse(storedData);
+              if (parsedData.value) {
+                effectiveToken = parsedData.value;
+                effectiveAuthType = 'bearer';
+                console.log(
+                  '✅ Using pre-request token from localStorage:',
+                  storageKey,
+                  effectiveToken
+                );
+                break;
+              }
+            } catch (error) {
+              console.error('Error parsing stored token:', error);
+            }
+          }
+        }
+
+        if (effectiveToken === authData.token) {
+          console.warn('⚠️ Pre-request token not found in localStorage');
+        }
+      }
+
       if (
-        authData?.token &&
-        authData.token.trim() !== '' &&
-        (!authType || authType === 'none')
+        effectiveToken &&
+        effectiveToken.trim() !== '' &&
+        (!effectiveAuthType || effectiveAuthType === 'none')
       ) {
         effectiveAuthType = 'bearer';
       }
 
-      if (!authData?.token || authData.token.trim() === '') {
+      if (!effectiveToken || effectiveToken.trim() === '') {
         effectiveAuthType = 'none';
       }
 
@@ -1466,7 +1502,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
         }
       }
 
-      let resolvedToken = authData.token;
+      let resolvedToken = effectiveToken;
       formattedVariables.forEach((v) => {
         const regex = new RegExp(`\\{\\{${v.name}\\}\\}`, 'g');
         resolvedToken = resolvedToken.replace(regex, v.value);
@@ -1486,7 +1522,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
         authorizationType: effectiveAuthType,
         authorization:
           effectiveAuthType === 'bearer'
-            ? { token: authData.token }
+            ? { token: resolvedToken }
             : effectiveAuthType === 'basic'
             ? {
                 username: authData.username,
