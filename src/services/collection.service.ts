@@ -17,7 +17,7 @@ export const fetchCollectionList = async (workspaceId: string) => {
       `${API_COLLECTIONS}?ws=${workspaceId}`,
       {
         headers: {
-          'x-workspace-id': workspaceId,
+          'X-Workspace-ID': workspaceId,
         },
       }
     );
