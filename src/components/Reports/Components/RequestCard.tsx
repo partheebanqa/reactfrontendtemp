@@ -12,6 +12,7 @@ import { RequestTimelineItem } from './RequestTimeline';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ArrowDown, ArrowUp, ArrowUpDown, Check, TrendingUp, X } from 'lucide-react';
 import { useState } from 'react';
+import { ValidationHistory, ValidationResult } from '@/components/Shared/Assertion/AssertionReport';
 
 interface RequestCardProps {
   request: RequestTimelineItem;
@@ -35,9 +36,6 @@ export default function RequestCard({ request, index }: RequestCardProps) {
         return 'bg-muted text-muted-foreground';
     }
   };
-
-
-  console.log(request, "request");
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -75,10 +73,10 @@ export default function RequestCard({ request, index }: RequestCardProps) {
     request.assertionResults && request.assertionResults.length > 0;
 
   const [tableFilterStatus, setTableFilterStatus] = useState<
-    'all' | 'passed' | 'failed'
-  >('all');
+    'All' | 'Passed' | 'Failed'
+  >('All');
 
-  const [tableFilterCategory, setTableFilterCategory] = useState('all');
+  const [tableFilterCategory, setTableFilterCategory] = useState('All');
   const [tableSortConfig, setTableSortConfig] = useState<{
     key: string | null;
     direction: 'asc' | 'desc';
@@ -106,20 +104,22 @@ export default function RequestCard({ request, index }: RequestCardProps) {
     );
   };
 
+
+
+
   const getFilteredTableData = () => {
     let filtered = [...request?.assertionResults || []];
 
-    if (tableFilterStatus !== 'all') {
-      filtered = filtered.filter((r) => r.name === tableFilterStatus);
+    if (tableFilterStatus !== 'All') {
+      filtered = filtered.filter((r) => r.status === tableFilterStatus);
     }
 
-    if (tableFilterCategory !== 'all') {
+    if (tableFilterCategory !== 'All') {
       // ✅ NORMALIZE CATEGORY MATCHING
       filtered = filtered.filter((r) => {
-        const normalizedCategory = r.name.toLowerCase().trim();
+        const normalizedCategory = r.category.toLowerCase().trim();
         const filterValue = tableFilterCategory.toLowerCase();
 
-        // Match various category formats
         if (filterValue === 'body') {
           return (
             normalizedCategory === 'body' ||
@@ -156,23 +156,23 @@ export default function RequestCard({ request, index }: RequestCardProps) {
       });
     }
 
-    // if (tableSortConfig.key) {
-    //   filtered.sort((a, b) => {
-    //     let aVal = a[tableSortConfig.key as keyof ValidationResult];
-    //     let bVal = b[tableSortConfig.key as keyof ValidationResult];
+    if (tableSortConfig.key) {
+      filtered.sort((a, b) => {
+        let aVal = (a as any)[tableSortConfig.key as string];
+        let bVal = (b as any)[tableSortConfig.key as string];
 
-    //     if (tableSortConfig.key === 'failureRate') {
-    //       const aHistory = getHistory(a.id);
-    //       const bHistory = getHistory(b.id);
-    //       aVal = aHistory.failureRate as any;
-    //       bVal = bHistory.failureRate as any;
-    //     }
+        // if (tableSortConfig.key === 'failureRate') {
+        //   const aHistory = getHistory((a as any).id);
+        //   const bHistory = getHistory((b as any).id);
+        //   aVal = aHistory.failureRate as any;
+        //   bVal = bHistory.failureRate as any;
+        // }
 
-    //     if (aVal < bVal) return tableSortConfig.direction === 'asc' ? -1 : 1;
-    //     if (aVal > bVal) return tableSortConfig.direction === 'asc' ? 1 : -1;
-    //     return 0;
-    //   });
-    // }
+        if (aVal < bVal) return tableSortConfig.direction === 'asc' ? -1 : 1;
+        if (aVal > bVal) return tableSortConfig.direction === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
 
     return filtered;
   };
@@ -399,7 +399,7 @@ export default function RequestCard({ request, index }: RequestCardProps) {
                           <h3 className='font-semibold text-gray-900 text-lg'>
                             Detailed Results
                           </h3>
-                          {/* <div className='flex gap-2'>
+                          <div className='flex gap-2'>
                             <Select
                               value={tableFilterStatus}
                               onValueChange={(value) =>
@@ -410,9 +410,9 @@ export default function RequestCard({ request, index }: RequestCardProps) {
                                 <SelectValue placeholder='Filter by status' />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value='all'>All Status</SelectItem>
-                                <SelectItem value='passed'>Passed Only</SelectItem>
-                                <SelectItem value='failed'>Failed Only</SelectItem>
+                                <SelectItem value='All'>All Status</SelectItem>
+                                <SelectItem value='Passed'>Passed Only</SelectItem>
+                                <SelectItem value='Failed'>Failed Only</SelectItem>
                               </SelectContent>
                             </Select>
 
@@ -424,7 +424,7 @@ export default function RequestCard({ request, index }: RequestCardProps) {
                                 <SelectValue placeholder='Filter by category' />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value='all'>All Categories</SelectItem>
+                                <SelectItem value='All'>All Categories</SelectItem>
                                 <SelectItem value='body'>Request Body</SelectItem>
                                 <SelectItem value='headers'>Response Headers</SelectItem>
                                 <SelectItem value='HeaderGuard™'>Security</SelectItem>
@@ -432,7 +432,7 @@ export default function RequestCard({ request, index }: RequestCardProps) {
                                 <SelectItem value='status'>Status</SelectItem>
                               </SelectContent>
                             </Select>
-                          </div> */}
+                          </div>
                         </div>
                       </div>
 
@@ -445,7 +445,7 @@ export default function RequestCard({ request, index }: RequestCardProps) {
                                 onClick={() => handleTableSort('result')}
                               >
                                 <div className='flex items-center gap-2'>
-                                  Name
+                                  Status
                                   <SortIcon columnKey='result' />
                                 </div>
                               </th>
@@ -454,8 +454,18 @@ export default function RequestCard({ request, index }: RequestCardProps) {
                                 onClick={() => handleTableSort('category')}
                               >
                                 <div className='flex items-center gap-2'>
-                                  Message
+                                  Category
                                   <SortIcon columnKey='category' />
+                                </div>
+                              </th>
+
+                              <th
+                                className='px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase cursor-pointer hover:bg-gray-100 transition-colors'
+                                onClick={() => handleTableSort('field')}
+                              >
+                                <div className='flex items-center gap-2'>
+                                  Field
+                                  <SortIcon columnKey='field' />
                                 </div>
                               </th>
                               <th
@@ -463,29 +473,50 @@ export default function RequestCard({ request, index }: RequestCardProps) {
                                 onClick={() => handleTableSort('field')}
                               >
                                 <div className='flex items-center gap-2'>
-                                  Actual
-                                  <SortIcon columnKey='field' />
-                                </div>
-                              </th>
-                              <th
-                                className='px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase cursor-pointer hover:bg-gray-100 transition-colors'
-                                onClick={() => handleTableSort('type')}
-                              >
-                                <div className='flex items-center gap-2'>
-                                  Expected
+                                  Type
                                   <SortIcon columnKey='type' />
                                 </div>
                               </th>
-
+                              <th className='px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase'>
+                                Actual
+                              </th>
+                              <th className='px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase'>
+                                Expected
+                              </th>
                               <th
+                                onClick={() => handleTableSort('responseStatus')}
+                                className='px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase'>
+                                <div className='flex items-center gap-2'>
+                                  Code
+                                  <SortIcon columnKey='responseStatus' />
+                                </div>
+                              </th>
+                              <th
+                                onClick={() => handleTableSort('responseTime')}
+                                className='px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase'>
+                                <div className='flex items-center gap-2'>
+                                  Time
+                                  <SortIcon columnKey='responseTime' />
+                                </div>
+                              </th>
+                              <th
+                                onClick={() => handleTableSort('responseSize')}
+                                className='px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase'>
+                                <div className='flex items-center gap-2'>
+                                  Size
+                                  <SortIcon columnKey='responseSize' />
+                                </div>
+                              </th>
+
+                              {/* <th
                                 className='px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase cursor-pointer hover:bg-gray-100 transition-colors'
                                 onClick={() => handleTableSort('failureRate')}
                               >
                                 <div className='flex items-center gap-2'>
                                   Status
-                                  <SortIcon columnKey='failureRate' />
+                                  <SortIcon columnKey='' />
                                 </div>
-                              </th>
+                              </th> */}
                             </tr>
                           </thead>
                           <tbody className='divide-y divide-gray-200'>
@@ -500,48 +531,64 @@ export default function RequestCard({ request, index }: RequestCardProps) {
                                     }`}
                                 >
                                   <td className='px-4 py-3 whitespace-nowrap'>
-                                    {/* <div
-                                      className={`w-8 h-8 rounded-full flex items-center justify-center ${result.status === 'passed'
+                                    <div
+                                      className={` w-8 h-8 rounded-full flex items-center justify-center ${result.status === 'Passed'
                                         ? 'bg-green-100 text-green-700'
                                         : 'bg-red-100 text-red-700'
                                         }`}
                                     >
-                                      {result.status === 'passed' ? (
+                                      {result.status === 'Passed' ? (
                                         <Check className='w-5 h-5' />
                                       ) : (
                                         <X className='w-5 h-5' />
                                       )}
-                                    
-                                    </div> */}
-                                    <span className='text-sm text-gray-600'>
-                                      {result?.name}
-                                    </span>
+                                    </div>
+                                    {/* <span className='text-sm text-gray-600'>
+
+                                    </span> */}
                                   </td>
                                   <td className='px-4 py-3'>
                                     <span className='text-sm text-gray-600'>
-                                      {result?.message}
+                                      {result?.category}
                                     </span>
                                   </td>
                                   <td className='px-4 py-3'>
                                     <div className='flex items-center gap-2'>
                                       <span className='text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded'>
-                                        {result?.actual || 'N/A'}
+                                        {result?.field || 'N/A'}
                                       </span>
 
                                     </div>
                                   </td>
                                   <td className='px-4 py-3'>
                                     <span className='text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded'>
-                                      {result?.expected || "N/A"}
+                                      {result.type}
                                     </span>
                                   </td>
 
                                   <td className='px-4 py-3'>
-                                    <span className={`flex items-center justify-center ${result.status === 'Passed'
-                                      ? 'text-green-700'
-                                      : 'text-red-700'
-                                      }`}>
-                                      {result.status}
+                                    <span className="text-sm text-gray-600 w-[150px] line-clamp-1">
+                                      {result.actualValue || "NA"}
+                                    </span>
+                                  </td>
+                                  <td className='px-4 py-3'>
+                                    <span className="text-sm text-gray-600 w-[10px] truncate">
+                                      {result?.expectedValue || "NA"}
+                                    </span>
+                                  </td>
+                                  <td className='px-4 py-3'>
+                                    <span className="text-sm text-gray-600 w-[10px] truncate">
+                                      {result?.responseStatus || "NA"}
+                                    </span>
+                                  </td>
+                                  <td className='px-4 py-3'>
+                                    <span className="text-sm text-gray-600 w-[10px] truncate">
+                                      {result?.responseTime || "NA"}
+                                    </span>
+                                  </td>
+                                  <td className='px-4 py-3'>
+                                    <span className="text-sm text-gray-600 w-[10px] truncate">
+                                      {result?.responseSize || "NA"}
                                     </span>
                                   </td>
                                 </tr>
