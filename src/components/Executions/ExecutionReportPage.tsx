@@ -471,11 +471,18 @@ const RequestChainReport: React.FC<RequestChainReportProps> = ({
       duration: `${req.duration}ms`,
       substitutedVariables: req.substitutedVariables || [],
       assertionResults: req?.assertionResults?.map((v: any) => ({
-        name: v.name,
-        actual: v.actual,
-        expected: v.expected,
-        message: v.message,
         status: v.status,
+        category: v.category,
+        description: v.description,
+        field: v.field,
+        responseSize: v.responseSize,
+        responseStatus: v.responseStatus,
+        responseTime: v.responseTime,
+        type: v.type,
+        actualValue: v.actualValue,
+        operator: v.operator,
+        expectedValue: v.expectedValue,
+
       })) ?? [],
       status:
         req.status === 'passed'

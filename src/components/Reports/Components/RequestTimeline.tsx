@@ -15,11 +15,17 @@ export interface ExtractedVarMapped {
 }
 
 export interface AssertionResultsMapped {
-    name: string;
-    message: string;
-    status?: string;
-    actual?: string;
-    expected?: string;
+    actualValue: string;
+    category: string;
+    description: string;
+    field: string;
+    responseSize: number;
+    responseStatus: number;
+    responseTime: number;
+    type: string;
+    operator: string;
+    status: string;
+    expectedValue: string;
 }
 
 export interface RequestTimelineItem {
@@ -46,7 +52,7 @@ interface RequestTimelineProps {
 export default function RequestTimeline({ requests }: RequestTimelineProps) {
     const sortedRequests = [...requests].sort((a, b) => a.order - b.order);
 
-    console.log(sortedRequests, "requests")
+    // console.log(sortedRequests, "requests")
 
     return (
         <>
