@@ -45,6 +45,9 @@ import RequestChainEdit from '@/pages/RequestChainEdit';
 import { Loader } from '@/components/Loader';
 import CreateTestSuit from '@/components/TestSuitNew/CreateTestSuit';
 import PilotProgram from '@/components/PilotProgram/PilotProgram';
+import { JWTValidator } from '@/pages/JWTValidator';
+import { URLEncoderDecoder } from '@/pages/URLEncoderDecoder';
+import { URLEncoder } from '@/pages/ URLEncoder';
 
 export default function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -104,6 +107,10 @@ export default function Router() {
       )}
       <Route path='/pricing' component={Pricing} />
       <Route path='/terms' component={TermsPage} />
+      <Route path='/pilot-program' component={PilotProgram} />
+      <Route path='/jwt-validator' component={JWTValidator} />
+      <Route path='/url-encoder' component={URLEncoder} />
+      <Route path='/pilot-program' component={PilotProgram} />
       <Route path='/pilot-program' component={PilotProgram} />
       <Route path='/privacy' component={PrivacyPage} />
       <Route path='/contact-us' component={ContactPage} />
