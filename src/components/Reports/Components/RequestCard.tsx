@@ -470,7 +470,7 @@ export default function RequestCard({ request, index }: RequestCardProps) {
                               </th>
                               <th
                                 className='px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase cursor-pointer hover:bg-gray-100 transition-colors'
-                                onClick={() => handleTableSort('field')}
+                                onClick={() => handleTableSort('type')}
                               >
                                 <div className='flex items-center gap-2'>
                                   Type
@@ -483,30 +483,30 @@ export default function RequestCard({ request, index }: RequestCardProps) {
                               <th className='px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase'>
                                 Expected
                               </th>
-                              <th
+                              {/* <th
                                 onClick={() => handleTableSort('responseStatus')}
                                 className='px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase'>
                                 <div className='flex items-center gap-2'>
                                   Code
                                   <SortIcon columnKey='responseStatus' />
                                 </div>
-                              </th>
-                              <th
+                              </th> */}
+                              {/* <th
                                 onClick={() => handleTableSort('responseTime')}
                                 className='px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase'>
                                 <div className='flex items-center gap-2'>
                                   Time
                                   <SortIcon columnKey='responseTime' />
                                 </div>
-                              </th>
-                              <th
+                              </th> */}
+                              {/* <th
                                 onClick={() => handleTableSort('responseSize')}
                                 className='px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase'>
                                 <div className='flex items-center gap-2'>
                                   Size
                                   <SortIcon columnKey='responseSize' />
                                 </div>
-                              </th>
+                              </th> */}
 
                               {/* <th
                                 className='px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase cursor-pointer hover:bg-gray-100 transition-colors'
@@ -576,7 +576,7 @@ export default function RequestCard({ request, index }: RequestCardProps) {
                                       {result?.expectedValue || "NA"}
                                     </span>
                                   </td>
-                                  <td className='px-4 py-3'>
+                                  {/* <td className='px-4 py-3'>
                                     <span className="text-sm text-gray-600 w-[10px] truncate">
                                       {result?.responseStatus || "NA"}
                                     </span>
@@ -590,7 +590,7 @@ export default function RequestCard({ request, index }: RequestCardProps) {
                                     <span className="text-sm text-gray-600 w-[10px] truncate">
                                       {result?.responseSize || "NA"}
                                     </span>
-                                  </td>
+                                  </td> */}
                                 </tr>
                               );
                             })}

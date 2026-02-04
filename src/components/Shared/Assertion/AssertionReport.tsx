@@ -42,7 +42,7 @@ interface ValidationSummary {
   total: number;
 }
 
-interface ValidationHistory {
+export interface ValidationHistory {
   totalRuns: number;
   passes: number;
   failures: number;
@@ -292,10 +292,10 @@ const AssertionResults: React.FC<AssertionResultsProps> = ({
             <div className='w-full h-3 bg-gray-200 rounded-full overflow-hidden'>
               <div
                 className={`h-full transition-all duration-500 ${successRate === 100
-                    ? 'bg-gradient-to-r from-green-500 to-green-600'
-                    : successRate >= 50
-                      ? 'bg-gradient-to-r from-amber-500 to-amber-600'
-                      : 'bg-gradient-to-r from-red-500 to-red-600'
+                  ? 'bg-gradient-to-r from-green-500 to-green-600'
+                  : successRate >= 50
+                    ? 'bg-gradient-to-r from-amber-500 to-amber-600'
+                    : 'bg-gradient-to-r from-red-500 to-red-600'
                   }`}
                 style={{ width: `${successRate}%` }}
               />
@@ -414,15 +414,15 @@ const AssertionResults: React.FC<AssertionResultsProps> = ({
                             <div
                               key={result.id}
                               className={`rounded-lg border p-4 ${result.result === 'passed'
-                                  ? 'bg-green-50 border-green-200'
-                                  : 'bg-red-50 border-red-200'
+                                ? 'bg-green-50 border-green-200'
+                                : 'bg-red-50 border-red-200'
                                 }`}
                             >
                               <div className='flex items-start gap-3'>
                                 <div
                                   className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${result.result === 'passed'
-                                      ? 'bg-green-600 text-white'
-                                      : 'bg-red-600 text-white'
+                                    ? 'bg-green-600 text-white'
+                                    : 'bg-red-600 text-white'
                                     }`}
                                 >
                                   {result.result === 'passed' ? (
@@ -458,8 +458,8 @@ const AssertionResults: React.FC<AssertionResultsProps> = ({
                                     )}
                                     <span
                                       className={`ml-auto text-xs px-2 py-1 rounded font-medium ${result.result === 'passed'
-                                          ? 'bg-green-100 text-green-700'
-                                          : 'bg-red-100 text-red-700'
+                                        ? 'bg-green-100 text-green-700'
+                                        : 'bg-red-100 text-red-700'
                                         }`}
                                     >
                                       {result.result === 'passed'
@@ -495,10 +495,10 @@ const AssertionResults: React.FC<AssertionResultsProps> = ({
                                       {history.failureRate > 0 && (
                                         <div
                                           className={`px-2 py-0.5 rounded ${history.failureRate > 50
-                                              ? 'bg-red-100 text-red-700'
-                                              : history.failureRate > 20
-                                                ? 'bg-amber-100 text-amber-700'
-                                                : 'bg-gray-100 text-gray-600'
+                                            ? 'bg-red-100 text-red-700'
+                                            : history.failureRate > 20
+                                              ? 'bg-amber-100 text-amber-700'
+                                              : 'bg-gray-100 text-gray-600'
                                             }`}
                                         >
                                           {history.failureRate}% failure rate
@@ -652,8 +652,8 @@ const AssertionResults: React.FC<AssertionResultsProps> = ({
                         <td className='px-4 py-3 whitespace-nowrap'>
                           <div
                             className={`w-8 h-8 rounded-full flex items-center justify-center ${result.result === 'passed'
-                                ? 'bg-green-100 text-green-700'
-                                : 'bg-red-100 text-red-700'
+                              ? 'bg-green-100 text-green-700'
+                              : 'bg-red-100 text-red-700'
                               }`}
                           >
                             {result.result === 'passed' ? (
@@ -724,10 +724,10 @@ const AssertionResults: React.FC<AssertionResultsProps> = ({
                               {history.failureRate > 0 && (
                                 <div
                                   className={`${history.failureRate > 50
-                                      ? 'text-red-600'
-                                      : history.failureRate > 20
-                                        ? 'text-amber-600'
-                                        : 'text-gray-500'
+                                    ? 'text-red-600'
+                                    : history.failureRate > 20
+                                      ? 'text-amber-600'
+                                      : 'text-gray-500'
                                     }`}
                                 >
                                   {history.failureRate}% fail rate

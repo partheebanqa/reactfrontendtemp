@@ -89,7 +89,7 @@ const mapStatus = (
 
 export default function RequestChainExecutionFlow({ steps }: Props) {
 
-  console.log(steps, "requests");
+  // console.log(steps, "requests");
   const requests = steps.map((step, index) => {
     return {
       id: String(step.step ?? index + 1),
