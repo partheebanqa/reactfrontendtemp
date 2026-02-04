@@ -9,6 +9,7 @@ import { CurrentPlanProvider } from "./context/CurrentPlanContext";
 function App() {
   try {
     return (
+
       <QueryClientProvider client={queryClient}>
         <HelmetProvider>
           <CurrentPlanProvider>

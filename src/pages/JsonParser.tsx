@@ -102,8 +102,8 @@ const JsonParser: FC = () => {
         type: Array.isArray(parsed)
           ? 'Array'
           : typeof parsed === 'object'
-          ? 'Object'
-          : typeof parsed,
+            ? 'Object'
+            : typeof parsed,
       };
       setValidationInfo(info);
     } catch (err) {
@@ -192,9 +192,8 @@ const JsonParser: FC = () => {
         path: path || 'root',
         leftValue: left,
         rightValue: right,
-        message: `Type changed from ${leftType} to ${rightType} at ${
-          path || 'root'
-        }`,
+        message: `Type changed from ${leftType} to ${rightType} at ${path || 'root'
+          }`,
       });
       return diffs;
     }
@@ -624,11 +623,10 @@ const JsonParser: FC = () => {
           <div className='grid grid-cols-2 md:grid-cols-5 gap-3'>
             <button
               onClick={() => setInputMethod('manual')}
-              className={`flex items-center space-x-2 px-4 py-3 rounded-lg transition-all ${
-                inputMethod === 'manual'
+              className={`flex items-center space-x-2 px-4 py-3 rounded-lg transition-all ${inputMethod === 'manual'
                   ? 'bg-blue-600 text-white shadow-lg'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
+                }`}
             >
               <Code className='w-4 h-4' />
               <span>Manual Input</span>
@@ -636,11 +634,10 @@ const JsonParser: FC = () => {
 
             <button
               onClick={() => setInputMethod('file')}
-              className={`flex items-center space-x-2 px-4 py-3 rounded-lg transition-all ${
-                inputMethod === 'file'
+              className={`flex items-center space-x-2 px-4 py-3 rounded-lg transition-all ${inputMethod === 'file'
                   ? 'bg-blue-600 text-white shadow-lg'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
+                }`}
             >
               <Upload className='w-4 h-4' />
               <span>Upload File</span>
@@ -648,11 +645,10 @@ const JsonParser: FC = () => {
 
             <button
               onClick={() => setInputMethod('curl')}
-              className={`flex items-center space-x-2 px-4 py-3 rounded-lg transition-all ${
-                inputMethod === 'curl'
+              className={`flex items-center space-x-2 px-4 py-3 rounded-lg transition-all ${inputMethod === 'curl'
                   ? 'bg-blue-600 text-white shadow-lg'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
+                }`}
             >
               <Terminal className='w-4 h-4' />
               <span>cURL Command</span>
@@ -660,11 +656,10 @@ const JsonParser: FC = () => {
 
             <button
               onClick={() => setInputMethod('url')}
-              className={`flex items-center space-x-2 px-4 py-3 rounded-lg transition-all ${
-                inputMethod === 'url'
+              className={`flex items-center space-x-2 px-4 py-3 rounded-lg transition-all ${inputMethod === 'url'
                   ? 'bg-blue-600 text-white shadow-lg'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
+                }`}
             >
               <Globe className='w-4 h-4' />
               <span>Fetch from URL</span>
@@ -672,11 +667,10 @@ const JsonParser: FC = () => {
 
             <button
               onClick={() => setInputMethod('compare')}
-              className={`flex items-center space-x-2 px-4 py-3 rounded-lg transition-all ${
-                inputMethod === 'compare'
+              className={`flex items-center space-x-2 px-4 py-3 rounded-lg transition-all ${inputMethod === 'compare'
                   ? 'bg-blue-600 text-white shadow-lg'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
+                }`}
             >
               <GitCompare className='w-4 h-4' />
               <span>Compare JSONs</span>
@@ -718,9 +712,8 @@ const JsonParser: FC = () => {
                 value={inputText}
                 onChange={(e) => handleInputChange(e.target.value)}
                 placeholder='Paste your JSON here...'
-                className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm resize-none transition-all ${
-                  isExpanded ? 'h-96' : 'h-48'
-                }`}
+                className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm resize-none transition-all ${isExpanded ? 'h-96' : 'h-48'
+                  }`}
               />
             </div>
           )}
@@ -912,11 +905,10 @@ const JsonParser: FC = () => {
                 <div className='space-y-4'>
                   {/* Summary */}
                   <div
-                    className={`p-4 rounded-lg border-l-4 ${
-                      comparisonResult.identical
+                    className={`p-4 rounded-lg border-l-4 ${comparisonResult.identical
                         ? 'border-l-green-500 bg-green-50'
                         : 'border-l-yellow-500 bg-yellow-50'
-                    }`}
+                      }`}
                   >
                     <div className='flex items-center justify-between mb-3'>
                       <h4 className='font-medium text-gray-800'>
@@ -995,37 +987,37 @@ const JsonParser: FC = () => {
 
                                 {(diff.leftValue !== undefined ||
                                   diff.rightValue !== undefined) && (
-                                  <div className='grid grid-cols-1 md:grid-cols-2 gap-3 text-xs'>
-                                    {diff.leftValue !== undefined && (
-                                      <div>
-                                        <span className='font-medium text-gray-700'>
-                                          Left (A):
-                                        </span>
-                                        <pre className='mt-1 p-2 bg-red-50 border border-red-200 rounded overflow-x-auto scrollbar-thin'>
-                                          {JSON.stringify(
-                                            diff.leftValue,
-                                            null,
-                                            2
-                                          )}
-                                        </pre>
-                                      </div>
-                                    )}
-                                    {diff.rightValue !== undefined && (
-                                      <div>
-                                        <span className='font-medium text-gray-700'>
-                                          Right (B):
-                                        </span>
-                                        <pre className='mt-1 p-2 bg-green-50 border border-green-200 rounded overflow-x-auto scrollbar-thin'>
-                                          {JSON.stringify(
-                                            diff.rightValue,
-                                            null,
-                                            2
-                                          )}
-                                        </pre>
-                                      </div>
-                                    )}
-                                  </div>
-                                )}
+                                    <div className='grid grid-cols-1 md:grid-cols-2 gap-3 text-xs'>
+                                      {diff.leftValue !== undefined && (
+                                        <div>
+                                          <span className='font-medium text-gray-700'>
+                                            Left (A):
+                                          </span>
+                                          <pre className='mt-1 p-2 bg-red-50 border border-red-200 rounded overflow-x-auto scrollbar-thin'>
+                                            {JSON.stringify(
+                                              diff.leftValue,
+                                              null,
+                                              2
+                                            )}
+                                          </pre>
+                                        </div>
+                                      )}
+                                      {diff.rightValue !== undefined && (
+                                        <div>
+                                          <span className='font-medium text-gray-700'>
+                                            Right (B):
+                                          </span>
+                                          <pre className='mt-1 p-2 bg-green-50 border border-green-200 rounded overflow-x-auto scrollbar-thin'>
+                                            {JSON.stringify(
+                                              diff.rightValue,
+                                              null,
+                                              2
+                                            )}
+                                          </pre>
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
                               </div>
                             </div>
                           </div>
