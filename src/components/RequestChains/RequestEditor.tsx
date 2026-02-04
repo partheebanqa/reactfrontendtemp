@@ -1145,7 +1145,7 @@ export function RequestEditor({
     try {
       const startTime = Date.now();
       (safeRequest as any).headers = (safeRequest.headers ?? []).filter(
-        (h) => h.key?.trim() && h.value?.trim()
+        (h: any) => h.key?.trim() && h.value?.trim()
       );
 
       const processedRequest = processRequestWithVariables(

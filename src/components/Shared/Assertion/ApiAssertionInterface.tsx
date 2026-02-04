@@ -301,10 +301,21 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
 
     return field;
   };
+
   const categories = useMemo(() => {
+    const totalUniqueAssertions = Object.values(groupedAssertions).reduce(
+      (sum, items) => sum + items.length,
+      0
+    );
+
     const cats = [
-      { id: 'all', label: 'All Assertions', count: localAssertions.length },
+      {
+        id: 'all',
+        label: 'All Assertions',
+        count: totalUniqueAssertions,
+      },
     ];
+
     Object.entries(groupedAssertions).forEach(([category, items]) => {
       cats.push({
         id: category,
@@ -318,8 +329,7 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
       });
     });
     return cats;
-  }, [localAssertions, groupedAssertions]);
-
+  }, [groupedAssertions]);
   const toggleAssertion = (id: string) => {
     const updated = localAssertions.map((a) =>
       a.id === id ? { ...a, enabled: !a.enabled } : a
