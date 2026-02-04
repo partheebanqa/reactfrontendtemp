@@ -121,7 +121,7 @@ export function LayoutHeader({ onTrialClick, onBetaClick }: HeaderProps) {
                                     {item.label}
                                 </motion.a>
                             ))}
-                            <button
+                            {/* <button
                                 onClick={() => {
                                     onBetaClick();
                                     setMobileMenuOpen(false);
@@ -129,7 +129,7 @@ export function LayoutHeader({ onTrialClick, onBetaClick }: HeaderProps) {
                                 className="w-full px-4 py-2 text-slate-700 font-medium hover:bg-slate-100 rounded-lg transition-colors text-left"
                             >
                                 Beta Access
-                            </button>
+                            </button> */}
                             <button
                                 onClick={() => {
                                     onTrialClick();
