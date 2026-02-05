@@ -1,3 +1,4 @@
+import { ChevronDown, ChevronUp } from "lucide-react";
 import React, { useState } from "react";
 
 // FAQ data (could be fetched via TanStack Query if you prefer)
@@ -116,19 +117,32 @@ const faqData = [
 // Accordion component
 const AccordionItem: React.FC<{ q: string; a: string }> = ({ q, a }) => {
     const [open, setOpen] = useState(false);
+
     return (
-        <div className="border rounded-lg p-4 bg-white shadow-sm">
+        <div
+            className={`border rounded-lg p-4 shadow-sm transition-colors duration-200
+        ${open ? "bg-blue-50 border-blue-300" : "bg-white"}
+      `}
+        >
             <button
-                className="w-full text-left font-semibold text-lg flex justify-between items-center"
+                className={`w-full text-left font-semibold text-lg flex justify-between items-center
+          ${open ? "text-blue-700" : "text-gray-900"}
+        `}
                 onClick={() => setOpen(!open)}
             >
                 {q}
-                <span>{open ? "−" : "+"}</span>
+                <span>{open ? <ChevronUp /> : <ChevronDown />}</span>
             </button>
-            {open && <p className="mt-2 text-gray-700 whitespace-pre-line">{a}</p>}
+
+            {open && (
+                <p className="mt-3 text-gray-700 whitespace-pre-line">
+                    {a}
+                </p>
+            )}
         </div>
     );
 };
+
 
 const FaqPage: React.FC = () => {
     // Build JSON-LD schema

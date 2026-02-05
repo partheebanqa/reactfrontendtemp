@@ -21,7 +21,7 @@ export function LayoutHeader({ onTrialClick, onBetaClick }: HeaderProps) {
     ];
 
     return (
-        <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200/50 shadow-sm">
+        <header className="bg-white/95 backdrop-blur-md border-b border-slate-200/50 shadow-sm">
             <div className="w-full bg-gradient-to-r from-[#0b1220] to-[#0f1b35] text-white text-sm">
                 <div className="max-w-7xl mx-auto px-4 h-10 flex items-center justify-center">
 

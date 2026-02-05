@@ -60,9 +60,9 @@ export function RoadmapSection({ onBetaClick }: RoadmapSectionProps) {
                         </div>
 
                         <div className="mb-6">
-                            <div className="inline-block px-3 py-1 bg-amber-100 text-amber-700 rounded-full text-sm font-semibold mb-3">
+                            {/* <div className="inline-block px-3 py-1 bg-amber-100 text-amber-700 rounded-full text-sm font-semibold mb-3">
                                 Q2 2024
-                            </div>
+                            </div> */}
                             <h3 className="text-2xl font-bold text-slate-900 mb-2">Next-Gen Performance Engineering</h3>
                         </div>
 
@@ -102,9 +102,9 @@ export function RoadmapSection({ onBetaClick }: RoadmapSectionProps) {
                         </div>
 
                         <div className="mb-6">
-                            <div className="inline-block px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-sm font-semibold mb-3">
+                            {/* <div className="inline-block px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-sm font-semibold mb-3">
                                 Q3 2024 (Beta)
-                            </div>
+                            </div> */}
                             <h3 className="text-2xl font-bold text-slate-900 mb-2">AI-Powered Diagnostics</h3>
                             <p className="text-indigo-700 font-semibold text-sm">Powered by Anthropic Claude</p>
                         </div>

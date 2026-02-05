@@ -26,9 +26,13 @@ import { FeaturesSection } from "@/components/LandingLayout/FeaturesSection";
 const Landing: React.FC = () => {
 
 
-  const hanldeClick = () => {
+  const hanldeClickSingIn = () => {
     navigate('/signin')
   }
+  const hanldeClickSingUp = () => {
+    navigate('/signup')
+  }
+
   return (
     <LandingLayout>
       {/* Hero Section */}
@@ -67,7 +71,7 @@ const Landing: React.FC = () => {
         </div>
       </section> */}
 
-      <HeroSection onCtaClick={hanldeClick} />
+      <HeroSection />
 
       {/* Features Section */}
       {/* <section id="features" className="container mx-auto px-4 py-20">
@@ -149,7 +153,7 @@ const Landing: React.FC = () => {
 
       {/* <FeaturesSection /> */}
 
-      <RoadmapSection onBetaClick={hanldeClick} />
+      <RoadmapSection onBetaClick={hanldeClickSingIn} />
 
       <CollaborationSection />
 

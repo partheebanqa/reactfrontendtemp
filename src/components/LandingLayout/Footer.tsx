@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
-import { Github, Twitter, Linkedin } from 'lucide-react';
-import { Link } from 'wouter';
+import { Github, Twitter, Linkedin, Youtube } from 'lucide-react';
+import { Link, useLocation } from "wouter";
+
 
 interface FooterProps {
     onTalkToExpertClick: () => void;
@@ -8,6 +9,7 @@ interface FooterProps {
 
 export function Footer({ onTalkToExpertClick }: FooterProps) {
     const currentYear = new Date().getFullYear();
+    const [, navigate] = useLocation();
 
     return (
         <footer className="bg-slate-900 text-slate-100 py-16 px-4 sm:px-6 lg:px-8">
@@ -72,13 +74,20 @@ export function Footer({ onTalkToExpertClick }: FooterProps) {
                     <div>
                         <h4 className="font-semibold mb-4">Tools</h4>
                         <ul className="space-y-2 text-sm text-slate-400">
-                            <li><Link href="/features" className="hover:text-slate-100 transition-colors">JSON viewer</Link></li>
-                            <li><Link href="/jwt-validator" className="hover:text-slate-100 transition-colors">JWT validator</Link></li>
-                            <li><Link href="/url-encoder" className="hover:text-slate-100 transition-colors">URL Encoder</Link></li>
-                            <li><Link href="/security" className="hover:text-slate-100 transition-colors">UTF8 Encoder</Link></li>
-                            <li><Link href="/security" className="hover:text-slate-100 transition-colors">UTF8 Decoder</Link></li>
-                            <li><Link href="/security" className="hover:text-slate-100 transition-colors">Base64 Encoder</Link></li>
-                            <li><Link href="/security" className="hover:text-slate-100 transition-colors">Base64 Decoder</Link></li>
+                            <li><a href="/features" className="hover:text-slate-100 transition-colors">JSON viewer</a></li>
+                            <li>
+                                <a
+                                    href='/jwt-validator'
+                                    className="hover:text-slate-100 transition-colors"
+                                >
+                                    JWT validator
+                                </a>
+                            </li>
+                            <li><a href="/url-encoder" className="hover:text-slate-100 transition-colors">URL Encoder</a></li>
+                            <li><a href="/security" className="hover:text-slate-100 transition-colors">UTF8 Encoder</a></li>
+                            <li><a href="/security" className="hover:text-slate-100 transition-colors">UTF8 Decoder</a></li>
+                            <li><a href="/security" className="hover:text-slate-100 transition-colors">Base64 Encoder</a></li>
+                            <li><a href="/security" className="hover:text-slate-100 transition-colors">Base64 Decoder</a></li>
                         </ul>
                     </div>
 
@@ -86,8 +95,8 @@ export function Footer({ onTalkToExpertClick }: FooterProps) {
                     <div>
                         <h4 className="font-semibold mb-4">Company</h4>
                         <ul className="space-y-2 text-sm text-slate-400">
-                            <li><Link href="/about" className="hover:text-slate-100 transition-colors">About</Link></li>
-                            <li><Link href="/contact-us" className="hover:text-slate-100 transition-colors">Contact</Link></li>
+                            <li><a href="/about" className="hover:text-slate-100 transition-colors">About</a></li>
+                            <li><a href="/contact-us" className="hover:text-slate-100 transition-colors">Contact</a></li>
                         </ul>
                     </div>
 
@@ -95,19 +104,16 @@ export function Footer({ onTalkToExpertClick }: FooterProps) {
                     <div>
                         <h4 className="font-semibold mb-4">Connect</h4>
                         <div className="flex gap-4 mb-6">
-                            <a href="#twitter" className="text-slate-400 hover:text-slate-100 transition-colors" aria-label="Twitter">
-                                <Twitter className="w-5 h-5" />
+                            <a href="https://www.youtube.com/@optraflow" target='_blank' className="text-slate-400 hover:text-slate-100 transition-colors" aria-label="GitHub">
+                                <Youtube className="w-5 h-5" />
                             </a>
-                            <a href="#github" className="text-slate-400 hover:text-slate-100 transition-colors" aria-label="GitHub">
-                                <Github className="w-5 h-5" />
-                            </a>
-                            <a href="#linkedin" className="text-slate-400 hover:text-slate-100 transition-colors" aria-label="LinkedIn">
+                            <a href="https://www.linkedin.com/company/optraflow/?viewAsMember=true" target='_blank' className="text-slate-400 hover:text-slate-100 transition-colors" aria-label="LinkedIn">
                                 <Linkedin className="w-5 h-5" />
                             </a>
                         </div>
                         <ul className="space-y-2 text-sm text-slate-400">
-                            <li><Link href="/privacy" className="hover:text-slate-100 transition-colors">Privacy</Link></li>
-                            <li><Link href="/terms" className="hover:text-slate-100 transition-colors">Terms</Link></li>
+                            <li><a href="/privacy" className="hover:text-slate-100 transition-colors">Privacy</a></li>
+                            <li><a href="/terms" className="hover:text-slate-100 transition-colors">Terms</a></li>
                         </ul>
                     </div>
                 </motion.div>
@@ -115,7 +121,7 @@ export function Footer({ onTalkToExpertClick }: FooterProps) {
                 {/* Bottom */}
                 <div className="border-t border-slate-800 pt-8 flex flex-col sm:flex-row justify-between items-center text-sm text-slate-400">
                     <p>&copy; {currentYear} OptraFlow. All rights reserved.</p>
-                    <p>Built with precision. Tested with OptraFlow.</p>
+                    <p>Tested with OptraFlow.</p>
                 </div>
             </div>
         </footer>

@@ -4,12 +4,11 @@ import { motion } from 'framer-motion';
 
 import { cn } from '@/lib/utils';
 import { AnimatedShinyText } from '../ui/magicui/animated-shiny-text';
+import { navigate } from 'wouter/use-browser-location';
 
-interface HeroSectionProps {
-    onCtaClick: () => void;
-}
 
-export function HeroSection({ onCtaClick }: HeroSectionProps) {
+
+export function HeroSection() {
     const containerVariants = {
         hidden: { opacity: 0 },
         visible: {
@@ -85,7 +84,9 @@ export function HeroSection({ onCtaClick }: HeroSectionProps) {
                         className="flex flex-col sm:flex-row gap-4 justify-center items-center"
                     >
                         <button
-                            onClick={onCtaClick}
+                            onClick={() =>
+                                navigate("/singup")
+                            }
                             className="group relative px-8 py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold rounded-lg hover:shadow-2xl hover:shadow-blue-500/50 transition-all duration-300 flex items-center gap-2"
                             aria-label="Start Free Trial"
                         >
@@ -94,7 +95,9 @@ export function HeroSection({ onCtaClick }: HeroSectionProps) {
                         </button>
 
                         <button
-                            onClick={onCtaClick}
+                            onClick={() =>
+                                navigate("/singin")
+                            }
                             className="group relative px-8 py-4 bg-white text-black font-semibold rounded-lg hover:shadow-2xl hover:shadow-blue-500/50 transition-all duration-300 flex items-center gap-2"
                             aria-label="Start Free Trial"
                         >

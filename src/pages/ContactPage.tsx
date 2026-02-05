@@ -3,7 +3,7 @@ import ContactUs from '@/components/ContactUs/ContactUs';
 
 const ContactPage: React.FC = () => {
   return (
-    <div className='mt-20'>
+    <div >
       <ContactUs />
     </div>
   );
