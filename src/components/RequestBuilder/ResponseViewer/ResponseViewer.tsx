@@ -27,6 +27,7 @@ import {
 } from '@/lib/assertion-utils';
 import ApiAssertionInterface from '../../Shared/Assertion/ApiAssertionInterface';
 import { useCollection } from '@/hooks/useCollection';
+import { collectionActions } from '@/store/collectionStore';
 
 interface JsonNode {
   key: string;
@@ -88,7 +89,7 @@ const ResponseViewer = ({
   onRemoveExtraction,
 }: ResponseViewerProps) => {
   const { responseData, assertions, setAssertions } = useRequest();
-  const { activeCollection } = useCollection();
+  const { activeCollection, activeRequest } = useCollection();
 
   console.log('responseData123:', responseData);
 
@@ -103,7 +104,7 @@ const ResponseViewer = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(
-    new Set(['root'])
+    new Set(['root']),
   );
   const [copiedItem, setCopiedItem] = useState<string>('');
   const [hoveredField, setHoveredField] = useState<string | null>(null);
@@ -184,7 +185,7 @@ const ResponseViewer = ({
 
     const assertionLogs = responseData.assertionLogs || [];
     const passedCount = assertionLogs.filter(
-      (a: any) => a.status === 'passed'
+      (a: any) => a.status === 'passed',
     ).length;
     const failedCount = assertionLogs.length - passedCount;
     const successRate =
@@ -255,7 +256,7 @@ const ResponseViewer = ({
               originalRequest: {
                 method: responseData.actualRequest?.method || 'GET',
                 header: convertHeaders(
-                  responseData.actualRequest?.headers || {}
+                  responseData.actualRequest?.headers || {},
                 ),
                 url: responseData.actualRequest?.url || '',
                 ...(responseData.actualRequest?.body && {
@@ -334,7 +335,7 @@ const ResponseViewer = ({
     const hasAssertions = assertionLogs.length > 0;
 
     const passedCount = assertionLogs.filter(
-      (a: any) => a.status === 'passed'
+      (a: any) => a.status === 'passed',
     ).length;
     const failedCount = assertionLogs.length - passedCount;
     const successRate =
@@ -429,7 +430,7 @@ const ResponseViewer = ({
   const parseJsonToNodes = (
     obj: any,
     parentPath = 'root',
-    level = 0
+    level = 0,
   ): JsonNode[] => {
     const nodes: JsonNode[] = [];
     if (obj === null) {
@@ -451,10 +452,10 @@ const ResponseViewer = ({
         const itemType = Array.isArray(item)
           ? 'array'
           : item === null
-          ? 'null'
-          : typeof item === 'object'
-          ? 'object'
-          : typeof item;
+            ? 'null'
+            : typeof item === 'object'
+              ? 'object'
+              : typeof item;
         nodes.push({
           key: `[${index}]`,
           value: item,
@@ -475,10 +476,10 @@ const ResponseViewer = ({
         const valueType = Array.isArray(value)
           ? 'array'
           : value === null
-          ? 'null'
-          : typeof value === 'object'
-          ? 'object'
-          : typeof value;
+            ? 'null'
+            : typeof value === 'object'
+              ? 'object'
+              : typeof value;
         nodes.push({
           key,
           value,
@@ -510,7 +511,7 @@ const ResponseViewer = ({
   const handleAddAssertionClick = (
     fieldPath: string,
     value: any,
-    event: React.MouseEvent
+    event: React.MouseEvent,
   ) => {
     event.stopPropagation();
     setActiveFieldPath(fieldPath);
@@ -532,13 +533,13 @@ const ResponseViewer = ({
       const assertionIds = assertionsToEnable.map((a: any) => a.id);
 
       const updatedAssertions = assertions.map((a: any) =>
-        assertionIds.includes(a.id) ? { ...a, enabled: true } : a
+        assertionIds.includes(a.id) ? { ...a, enabled: true } : a,
       );
       setAssertions(updatedAssertions);
     } else if (assertionType === 'suggested' && config?.assertion) {
       const assertion = config.assertion;
       const updatedAssertions = assertions.map((a: any) =>
-        a.id === assertion.id ? { ...a, enabled: true } : a
+        a.id === assertion.id ? { ...a, enabled: true } : a,
       );
       setAssertions(updatedAssertions);
     } else {
@@ -686,7 +687,7 @@ const ResponseViewer = ({
     source: 'response_body' | 'response_header' | 'response_cookie',
     path: string,
     value: any,
-    event: React.MouseEvent
+    event: React.MouseEvent,
   ) => {
     event.stopPropagation();
     const suggestedName =
@@ -707,10 +708,6 @@ const ResponseViewer = ({
   };
 
   const confirmExtraction = (inputVariableName: string, transform?: string) => {
-    console.log('inputVariableName:', inputVariableName);
-    console.log('extractionModal:', extractionModal);
-    console.log('onExtractVariable exists:', !!onExtractVariable);
-
     if (!activeCollection?.id) {
       console.error('No active collection for extraction');
       toast({
@@ -735,6 +732,10 @@ const ResponseViewer = ({
       onExtractVariable(extraction);
       setExtractionModal(null);
       setVariableName('');
+
+      if (activeRequest?.id) {
+        collectionActions.markUnsaved(activeRequest.id);
+      }
     }
   };
   const renderJsonValue = (node: JsonNode, index: number) => {
@@ -799,10 +800,10 @@ const ResponseViewer = ({
                   node.type === 'string'
                     ? 'text-green-600 dark:text-green-400'
                     : node.type === 'number'
-                    ? 'text-purple-600 dark:text-purple-400'
-                    : node.type === 'boolean'
-                    ? 'text-orange-600 dark:text-orange-400'
-                    : 'text-gray-600 dark:text-gray-400'
+                      ? 'text-purple-600 dark:text-purple-400'
+                      : node.type === 'boolean'
+                        ? 'text-orange-600 dark:text-orange-400'
+                        : 'text-gray-600 dark:text-gray-400'
                 }`}
               >
                 {node.type === 'string'
@@ -838,7 +839,7 @@ const ResponseViewer = ({
                           'response_body',
                           node.path,
                           node.value,
-                          e
+                          e,
                         )
                       }
                       className='px-2 py-1 bg-[#136fb0] text-white rounded text-xs hover:bg-blue-700 transition-colors'
@@ -1007,7 +1008,7 @@ const ResponseViewer = ({
             </button>
 
             {existingExtractions.some(
-              (e) => e.source === 'response_header' && e.path === key
+              (e) => e.source === 'response_header' && e.path === key,
             ) ? (
               <div className='flex items-center space-x-1 px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded text-xs'>
                 <CheckCircle className='w-3 h-3' />
@@ -1170,7 +1171,7 @@ const ResponseViewer = ({
               onClick={() =>
                 handleCopy(
                   JSON.stringify(responseData.body, null, 2),
-                  'full-response'
+                  'full-response',
                 )
               }
               className='p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400'
@@ -1281,7 +1282,7 @@ const ResponseViewer = ({
                         </p>
                       )}
                     </div>
-                  )
+                  ),
                 )
               )}
             </div>
@@ -1350,7 +1351,7 @@ const ResponseViewer = ({
                                   </span>
                                 )}
                             </li>
-                          )
+                          ),
                         )}
                       </ul>
                     </div>
@@ -1426,7 +1427,7 @@ const ResponseViewer = ({
                             {String(value)}
                           </td>
                         </tr>
-                      )
+                      ),
                     )}
                   </tbody>
                 </table>
@@ -1448,7 +1449,7 @@ const ResponseViewer = ({
                     onClick={() =>
                       handleCopy(
                         JSON.stringify(requestDetails.body, null, 2),
-                        'request-body'
+                        'request-body',
                       )
                     }
                     className='absolute top-2 right-2 p-1 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 rounded'

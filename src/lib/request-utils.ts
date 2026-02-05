@@ -54,8 +54,8 @@ export const getExtractVariablesByEnvironment = (environmentId?: string) => {
                 initialValue: v.value || '',
                 type: 'string',
                 value: v.value || '',
-              }))
-            ) || []
+              })),
+            ) || [],
         ) || [];
 
     return envVars.length > 0 ? envVars : readFallbackExtractedVariables();
@@ -73,7 +73,7 @@ export const getValueByPath = (obj: any, path: string): any => {
       if (key.includes('[') && key.includes(']')) {
         const arrayKey = key.substring(0, key.indexOf('['));
         const index = Number.parseInt(
-          key.substring(key.indexOf('[') + 1, key.indexOf(']'))
+          key.substring(key.indexOf('[') + 1, key.indexOf(']')),
         );
         if (current[arrayKey] && Array.isArray(current[arrayKey])) {
           return current[arrayKey][index];
@@ -88,7 +88,7 @@ export const getValueByPath = (obj: any, path: string): any => {
 
 export const extractDataFromResponse = (
   response: any,
-  extractions: APIRequest['extractVariables']
+  extractions: APIRequest['extractVariables'],
 ): Record<string, any> => {
   const extracted: Record<string, any> = {};
 
@@ -104,7 +104,7 @@ export const extractDataFromResponse = (
       if (!variableName || !extraction.path) {
         console.warn(
           'Skipping extraction: missing variable name or path',
-          extraction
+          extraction,
         );
         return;
       }
@@ -129,7 +129,7 @@ export const extractDataFromResponse = (
 
         if (value === undefined) {
           const foundKey = Object.keys(headers).find(
-            (key) => key.toLowerCase() === headerKey
+            (key) => key.toLowerCase() === headerKey,
           );
           if (foundKey) {
             value = headers[foundKey];
@@ -144,13 +144,13 @@ export const extractDataFromResponse = (
           try {
             const transformFunction = new Function(
               'value',
-              `return ${extraction.transform}`
+              `return ${extraction.transform}`,
             );
             value = transformFunction(value);
           } catch (transformError) {
             console.error(
               `Transform error for ${variableName}:`,
-              transformError
+              transformError,
             );
           }
         }
@@ -175,7 +175,7 @@ export const copyToClipboard = async (text: string) => {
 
 export const getExecutionLogForRequest = (
   executionLogs: ExecutionLog[],
-  requestId: string
+  requestId: string,
 ): ExecutionLog | null => {
   const executionLogsreturn =
     executionLogs.find((log) => log.requestId === requestId) || null;
@@ -184,7 +184,7 @@ export const getExecutionLogForRequest = (
 
 export const hasResponseChanged = (
   currentResponse: any,
-  previousResponse: any
+  previousResponse: any,
 ): boolean => {
   if (!previousResponse) return true;
 
@@ -304,7 +304,7 @@ export const transformRequestForSave = (request: APIRequest): APIRequest => {
 
 export const replaceVariablesInText = (
   text: string,
-  variables: any[]
+  variables: any[],
 ): string => {
   if (!text) return text;
   let result = text;
@@ -322,7 +322,7 @@ export const replaceVariablesInText = (
 
 export const processRequestWithVariables = (
   request: any,
-  variables: any[]
+  variables: any[],
 ): any => {
   if (!request || !variables) return request;
 
@@ -332,7 +332,7 @@ export const processRequestWithVariables = (
     body: replaceVariablesInText(request.body || '', variables),
     bodyRawContent: replaceVariablesInText(
       request.bodyRawContent || '',
-      variables
+      variables,
     ),
     headers: (request.headers || []).map((header: any) => ({
       ...header,
@@ -354,23 +354,23 @@ export const processRequestWithVariables = (
           ...request.authorization,
           token: replaceVariablesInText(
             request.authorization.token || '',
-            variables
+            variables,
           ),
           username: replaceVariablesInText(
             request.authorization.username || '',
-            variables
+            variables,
           ),
           password: replaceVariablesInText(
             request.authorization.password || '',
-            variables
+            variables,
           ),
           key: replaceVariablesInText(
             request.authorization.key || '',
-            variables
+            variables,
           ),
           value: replaceVariablesInText(
             request.authorization.value || '',
-            variables
+            variables,
           ),
         }
       : request.authorization,
@@ -379,7 +379,7 @@ export const processRequestWithVariables = (
 
 export const mapDynamicToStatic = (
   dynamicVariables: any[],
-  overrides: DynamicVariableOverride[] = []
+  overrides: DynamicVariableOverride[] = [],
 ) => {
   return dynamicVariables.map((d) => {
     const override = overrides.find((o) => o.name === d.name);
@@ -410,14 +410,14 @@ export const regenerateDynamicVariable = (dynamicVar: any) => {
   if (!dynamicVar) return '';
   const newValue = generateDynamicValueById(
     dynamicVar.generatorId,
-    dynamicVar.parameters
+    dynamicVar.parameters,
   );
   return String(newValue);
 };
 
 export const getVariablesByPrefix = (
   variables: Variable[],
-  prefix: 'D_' | 'S_'
+  prefix: 'D_' | 'S_',
 ): Variable[] => {
   return variables.filter((variable) => variable.name.startsWith(prefix));
 };
@@ -427,14 +427,14 @@ export const findUsedVariables = (textFields: string[]): string[] => {
   const variableMatches = allText.match(/\{\{(\w+)\}\}/g) || [];
   return [
     ...new Set(
-      variableMatches.map((match) => match.replace(/\{\{(\w+)\}\}/, '$1'))
+      variableMatches.map((match) => match.replace(/\{\{(\w+)\}\}/, '$1')),
     ),
   ];
 };
 
 export const getUsedDynamicVariablesFromRequest = (
   request: any,
-  dynamicVariables: Variable[]
+  dynamicVariables: Variable[],
 ): Variable[] => {
   const textFields = [
     request.url || '',
@@ -455,13 +455,13 @@ export const getUsedDynamicVariablesFromRequest = (
 
   const usedVariableNames = findUsedVariables(textFields);
   return dynamicVariables.filter((variable) =>
-    usedVariableNames.includes(variable.name)
+    usedVariableNames.includes(variable.name),
   );
 };
 
 export const getUsedDynamicVariablesFromRequests = (
   requests: any[],
-  dynamicVariables: Variable[]
+  dynamicVariables: Variable[],
 ): Variable[] => {
   const allTextFields: string[] = [];
 
@@ -480,19 +480,19 @@ export const getUsedDynamicVariablesFromRequests = (
       request.authorization?.key || '',
       request.authorization?.value || '',
       ...(request.headers || []).map((h: any) => `${h.key} ${h.value}`),
-      ...(request.params || []).map((p: any) => `${p.key} ${p.value}`)
+      ...(request.params || []).map((p: any) => `${p.key} ${p.value}`),
     );
   });
 
   const usedVariableNames = findUsedVariables(allTextFields);
   return dynamicVariables.filter((variable) =>
-    usedVariableNames.includes(variable.name)
+    usedVariableNames.includes(variable.name),
   );
 };
 
 export const detectAutocompletePrefix = (
   value: string,
-  cursorPosition: number
+  cursorPosition: number,
 ): 'D_' | 'S_' | null => {
   const textBeforeCursor = value.substring(0, cursorPosition);
   const lastTwoChars = textBeforeCursor.slice(-2);
@@ -505,7 +505,7 @@ export const detectAutocompletePrefix = (
 };
 
 export const calculateAutocompletePosition = (
-  input: HTMLInputElement | HTMLTextAreaElement
+  input: HTMLInputElement | HTMLTextAreaElement,
 ) => {
   const rect = input.getBoundingClientRect();
   return {
@@ -530,7 +530,7 @@ export function generateDynamicValueById(id: string, params: any = {}): string {
   const randString = (len: number) =>
     randStringFrom(
       len,
-      'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
+      'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789',
     );
 
   const uuid = () =>
@@ -613,7 +613,7 @@ export function generateDynamicValueById(id: string, params: any = {}): string {
     case 'randomAlphaNumeric':
       return randStringFrom(
         params?.length ?? 10,
-        'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+        'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789',
       );
     case 'password':
       return genPassword(params);
@@ -639,7 +639,7 @@ export function generateDynamicValueById(id: string, params: any = {}): string {
       const start = new Date(2020, 0, 1);
       const end = new Date();
       const d = new Date(
-        start.getTime() + Math.random() * (end.getTime() - start.getTime())
+        start.getTime() + Math.random() * (end.getTime() - start.getTime()),
       );
       if (format === 'YYYY-MM-DD') return dateOnly(d);
       if (format === 'ISO') return d.toISOString();
@@ -652,10 +652,10 @@ export function generateDynamicValueById(id: string, params: any = {}): string {
       const from = new Date(
         now.getFullYear() - years,
         now.getMonth(),
-        now.getDate()
+        now.getDate(),
       );
       const d = new Date(
-        from.getTime() + Math.random() * (now.getTime() - from.getTime())
+        from.getTime() + Math.random() * (now.getTime() - from.getTime()),
       );
       if (format === 'YYYY-MM-DD') return dateOnly(d);
       if (format === 'ISO') return d.toISOString();
@@ -668,10 +668,10 @@ export function generateDynamicValueById(id: string, params: any = {}): string {
       const to = new Date(
         now.getFullYear() + years,
         now.getMonth(),
-        now.getDate()
+        now.getDate(),
       );
       const d = new Date(
-        now.getTime() + Math.random() * (to.getTime() - now.getTime())
+        now.getTime() + Math.random() * (to.getTime() - now.getTime()),
       );
       if (format === 'YYYY-MM-DD') return dateOnly(d);
       if (format === 'ISO') return d.toISOString();
@@ -852,7 +852,7 @@ export function generateDynamicValueById(id: string, params: any = {}): string {
       const start = new Date(2020, 0, 1);
       const end = new Date();
       const d = new Date(
-        start.getTime() + Math.random() * (end.getTime() - start.getTime())
+        start.getTime() + Math.random() * (end.getTime() - start.getTime()),
       );
       return dateOnly(d);
     }
@@ -1016,7 +1016,7 @@ export function generateDynamicValueById(id: string, params: any = {}): string {
         if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
           crypto.getRandomValues(bytes);
           return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join(
-            ''
+            '',
           );
         }
       } catch {}
@@ -1054,7 +1054,7 @@ export function generateDynamicValueById(id: string, params: any = {}): string {
 export const parseUrlParams = (url: string): KeyValuePair[] => {
   try {
     const urlObj = new URL(
-      url.startsWith('http') ? url : `https://example.com${url}`
+      url.startsWith('http') ? url : `https://example.com${url}`,
     );
     const params: KeyValuePair[] = [];
     urlObj.searchParams.forEach((value, key) => {
@@ -1073,7 +1073,7 @@ export const parseUrlParams = (url: string): KeyValuePair[] => {
 
 export const buildUrlWithParams = (
   baseUrl: string,
-  params: KeyValuePair[]
+  params: KeyValuePair[],
 ): string => {
   try {
     const urlParts = baseUrl.split('?');
@@ -1098,7 +1098,7 @@ export const getUsedVariablesForChain = (
   chainRequests: APIRequest[],
   storeVariables: Variable[],
   dynamicStructured: Variable[],
-  extractedVariablesByRequest: Record<string, Record<string, any>>
+  extractedVariablesByRequest: Record<string, Record<string, any>>,
 ): {
   staticVars: Array<{ name: string; value: string }>;
   dynamicVars: Array<{ name: string; value: string }>;
@@ -1129,7 +1129,7 @@ export const getUsedVariablesForChain = (
       Object.keys(extractedVariablesByRequest[request.id]).forEach(
         (varName) => {
           usedVariableNamesSet.add(varName);
-        }
+        },
       );
     }
   });
@@ -1138,7 +1138,7 @@ export const getUsedVariablesForChain = (
 
   const staticVars = storeVariables
     .filter(
-      (v) => usedVariableNames.includes(v.name) && !v.name.startsWith('D_')
+      (v) => usedVariableNames.includes(v.name) && !v.name.startsWith('D_'),
     )
     .map((v) => ({
       name: v.name,
@@ -1170,7 +1170,7 @@ export const syncParamsFromUrl = (request: any) => {
           key,
           value,
           enabled: true,
-        })
+        }),
       );
 
       return {
@@ -1188,11 +1188,11 @@ export const syncParamsFromUrl = (request: any) => {
 
 export const shouldRefreshExtractedVariables = (
   collectionId: string,
-  preRequestId: string
+  preRequestId: string,
 ): boolean => {
   try {
     const storageKeys = Object.keys(localStorage).filter((key) =>
-      key.startsWith(`extracted_var_${collectionId}_`)
+      key.startsWith(`extracted_var_${collectionId}_`),
     );
 
     if (storageKeys.length === 0) {
@@ -1238,4 +1238,24 @@ export const shouldRefreshExtractedVariables = (
     console.error('Error checking extracted variables:', error);
     return true;
   }
+};
+
+export const isBearerToken = (value: any): boolean => {
+  if (!value || typeof value !== 'string') return false;
+
+  const strValue = value.trim();
+
+  if (strValue.startsWith('eyJ')) {
+    return true;
+  }
+
+  if (strValue.length >= 32) {
+    const hasLetters = /[a-zA-Z]/.test(strValue);
+    const hasNumbers = /[0-9]/.test(strValue);
+    const validChars = /^[a-zA-Z0-9._-]+$/.test(strValue);
+
+    return hasLetters && hasNumbers && validChars;
+  }
+
+  return false;
 };
