@@ -87,8 +87,6 @@ export function Footer({ onTalkToExpertClick }: FooterProps) {
                         <h4 className="font-semibold mb-4">Company</h4>
                         <ul className="space-y-2 text-sm text-slate-400">
                             <li><Link href="/about" className="hover:text-slate-100 transition-colors">About</Link></li>
-                            <li><Link href="/blog" className="hover:text-slate-100 transition-colors">Blog</Link></li>
-                            <li><Link href="/careers" className="hover:text-slate-100 transition-colors">Careers</Link></li>
                             <li><Link href="/contact-us" className="hover:text-slate-100 transition-colors">Contact</Link></li>
                         </ul>
                     </div>
