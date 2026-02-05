@@ -16,6 +16,7 @@ import { Eye, EyeOff, Lock, Mail } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
 import { Loader } from '@/components/Loader';
+import LogoFull from '../assests/images/OptraLogo.png';
 
 export default function SignIn() {
   const [, setLocation] = useLocation();
@@ -120,6 +121,11 @@ export default function SignIn() {
         </div>
 
         <Card>
+          <div className='flex justify-center items-center py-4'>
+            <a href='/'>
+              <img src={LogoFull} alt='Optraflow' className='w-32 h-auto' />
+            </a>
+          </div>
           <CardHeader>
             <CardTitle>Welcome back</CardTitle>
             <CardDescription>

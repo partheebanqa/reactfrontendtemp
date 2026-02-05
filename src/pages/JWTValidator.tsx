@@ -139,7 +139,7 @@ export function JWTValidator() {
                             Validate JWT token expiry and check if it's valid for the next 2 minutes
                         </CardDescription>
                     </CardHeader>
-                    <CardContent className="space-y-6">
+                    <CardContent className="space-y-4">
                         <div className="space-y-2">
                             <label htmlFor="jwt-token" className="text-sm font-medium">
                                 JWT Token

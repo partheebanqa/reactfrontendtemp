@@ -85,7 +85,7 @@ export function HeroSection() {
                     >
                         <button
                             onClick={() =>
-                                navigate("/singup")
+                                navigate("/signup")
                             }
                             className="group relative px-8 py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold rounded-lg hover:shadow-2xl hover:shadow-blue-500/50 transition-all duration-300 flex items-center gap-2"
                             aria-label="Start Free Trial"
@@ -96,7 +96,7 @@ export function HeroSection() {
 
                         <button
                             onClick={() =>
-                                navigate("/singin")
+                                navigate("/signin")
                             }
                             className="group relative px-8 py-4 bg-white text-black font-semibold rounded-lg hover:shadow-2xl hover:shadow-blue-500/50 transition-all duration-300 flex items-center gap-2"
                             aria-label="Start Free Trial"
