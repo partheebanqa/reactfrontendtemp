@@ -6,7 +6,7 @@ export const URLEncoder = () => {
     return (
         <LandingLayout>
             <ThemeProvider>
-                <div className="mt-20">
+                <div >
                     <URLEncoderDecoder />
                 </div>
             </ThemeProvider>

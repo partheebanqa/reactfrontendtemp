@@ -4,10 +4,10 @@ import { Link, useLocation } from "wouter";
 
 
 interface FooterProps {
-    onTalkToExpertClick: () => void;
+
 }
 
-export function Footer({ onTalkToExpertClick }: FooterProps) {
+export function Footer() {
     const currentYear = new Date().getFullYear();
     const [, navigate] = useLocation();
 
@@ -29,14 +29,14 @@ export function Footer({ onTalkToExpertClick }: FooterProps) {
                         Join teams at leading companies who are shipping APIs with confidence.
                     </p>
                     <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-                        <button
-                            onClick={onTalkToExpertClick}
+                        <a
+                            href="/contact-us"
                             className="px-8 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold rounded-lg hover:shadow-lg hover:shadow-blue-500/50 transition-all duration-300"
                         >
                             Talk to an Expert
-                        </button>
+                        </a>
                         <a
-                            href="#documentation"
+                            href="/faq"
                             className="px-8 py-3 border border-slate-400 text-slate-100 font-semibold rounded-lg hover:bg-slate-800 transition-colors duration-300"
                         >
                             View Documentation
@@ -50,7 +50,7 @@ export function Footer({ onTalkToExpertClick }: FooterProps) {
                     whileInView={{ opacity: 1 }}
                     transition={{ duration: 0.6, delay: 0.2 }}
                     viewport={{ once: true }}
-                    className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-8 mb-12 border-t border-slate-800 pt-12"
+                    className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-8 mb-12 border-t border-slate-800 pt-12"
                 >
                     {/* Brand */}
                     <div>
@@ -62,12 +62,22 @@ export function Footer({ onTalkToExpertClick }: FooterProps) {
 
                     {/* Product */}
                     <div>
-                        <h4 className="font-semibold mb-4">Product</h4>
+                        <h4 className="font-semibold mb-4">Solutions</h4>
                         <ul className="space-y-2 text-sm text-slate-400">
-                            <li><Link href="/features" className="hover:text-slate-100 transition-colors">Features</Link></li>
-                            <li><Link href="/pricing" className="hover:text-slate-100 transition-colors">Pricing</Link></li>
-                            <li><Link href="/roadmap" className="hover:text-slate-100 transition-colors">Roadmap</Link></li>
-                            <li><Link href="/security" className="hover:text-slate-100 transition-colors">Security</Link></li>
+                            <li><Link href="/features" className="hover:text-slate-100 transition-colors">API Testing</Link></li>
+                            <li><Link href="/pricing" className="hover:text-slate-100 transition-colors">Integration Testing</Link></li>
+                            <li><Link href="/roadmap" className="hover:text-slate-100 transition-colors">E2E Testing</Link></li>
+                            <li><Link href="/security" className="hover:text-slate-100 transition-colors">Browser Extensions</Link></li>
+                        </ul>
+                    </div>
+
+                    <div>
+                        <h4 className="font-semibold mb-4">Resources</h4>
+                        <ul className="space-y-2 text-sm text-slate-400">
+                            <li><Link href="/features" className="hover:text-slate-100 transition-colors">Help Docs</Link></li>
+                            <li><Link href="/pricing" className="hover:text-slate-100 transition-colors">How to videos</Link></li>
+                            <li><Link href="/roadmap" className="hover:text-slate-100 transition-colors">Book a demo</Link></li>
+                            <li><Link href="/security" className="hover:text-slate-100 transition-colors">Integrations</Link></li>
                         </ul>
                     </div>
 

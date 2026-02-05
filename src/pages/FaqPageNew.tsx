@@ -1,3 +1,4 @@
+import LandingLayout from "@/components/LandingLayout/LandingLayout";
 import { motion } from "framer-motion";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import React, { useState } from "react";
@@ -126,8 +127,8 @@ const AccordionItem: React.FC<{ q: string; a: string }> = ({ q, a }) => {
       `}
         >
             <button
-                className={`w-full text-left font-semibold text-md flex justify-between items-center
-          ${open ? "text-blue-700" : "text-[#0f172a]"}
+                className={`w-full text-left font-semibold text-lg flex justify-between items-center
+          ${open ? "text-blue-700" : "text-gray-900"}
         `}
                 onClick={() => setOpen(!open)}
             >
@@ -136,7 +137,7 @@ const AccordionItem: React.FC<{ q: string; a: string }> = ({ q, a }) => {
             </button>
 
             {open && (
-                <p className="mt-3 text-[#475569] whitespace-pre-line">
+                <p className="mt-3 text-gray-700 whitespace-pre-line">
                     {a}
                 </p>
             )}
@@ -145,7 +146,7 @@ const AccordionItem: React.FC<{ q: string; a: string }> = ({ q, a }) => {
 };
 
 
-const FaqPage: React.FC = () => {
+const FaqPageNew: React.FC = () => {
     // Build JSON-LD schema
     const faqSchema = {
         "@context": "https://schema.org",
@@ -163,44 +164,46 @@ const FaqPage: React.FC = () => {
     };
 
     return (
-        <main className="max-w-6xl mx-auto p-4 sm:p-6 lg:p-8">
-            <div className="text-center mb-16">
-                <motion.h2
-                    initial={{ opacity: 0, y: -20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.6 }}
-                    viewport={{ once: true }}
-                    className="text-3xl sm:text-4xl font-bold text-slate-900 mb-4"
-                >
-                    FAQ's
-                </motion.h2>
-                <motion.p
-                    initial={{ opacity: 0 }}
-                    whileInView={{ opacity: 1 }}
-                    transition={{ duration: 0.6, delay: 0.2 }}
-                    viewport={{ once: true }}
-                    className="text-lg text-slate-600"
-                >
-                    Everything you need to know, at a glance
-                </motion.p>
-            </div>
-            {faqData.map((cat, idx) => (
-                <section key={idx} className="mb-8">
-                    <h2 className="text-2xl font-semibold mb-4">{cat.category}</h2>
-                    <div className="space-y-4">
-                        {cat.items.map((faq, i) => (
-                            <AccordionItem key={i} q={faq.question} a={faq.answer} />
-                        ))}
-                    </div>
-                </section>
-            ))}
+        <LandingLayout>
+            <main className="max-w-6xl mx-auto p-4 sm:p-6 lg:p-8">
+                <div className="text-center mb-16">
+                    <motion.h2
+                        initial={{ opacity: 0, y: -20 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.6 }}
+                        viewport={{ once: true }}
+                        className="text-3xl sm:text-4xl font-bold text-slate-900 mb-4"
+                    >
+                        FAQ's
+                    </motion.h2>
+                    <motion.p
+                        initial={{ opacity: 0 }}
+                        whileInView={{ opacity: 1 }}
+                        transition={{ duration: 0.6, delay: 0.2 }}
+                        viewport={{ once: true }}
+                        className="text-lg text-slate-600"
+                    >
+                        Everything you need to know, at a glance
+                    </motion.p>
+                </div>
+                {faqData.map((cat, idx) => (
+                    <section key={idx} className="mb-8">
+                        <h2 className="text-2xl font-semibold mb-4">{cat.category}</h2>
+                        <div className="space-y-4">
+                            {cat.items.map((faq, i) => (
+                                <AccordionItem key={i} q={faq.question} a={faq.answer} />
+                            ))}
+                        </div>
+                    </section>
+                ))}
 
-            {/* Inject FAQ schema markup */}
-            <script type="application/ld+json">
-                {JSON.stringify(faqSchema)}
-            </script>
-        </main>
+                {/* Inject FAQ schema markup */}
+                <script type="application/ld+json">
+                    {JSON.stringify(faqSchema)}
+                </script>
+            </main>
+        </LandingLayout>
     );
 };
 
-export default FaqPage;
+export default FaqPageNew;
