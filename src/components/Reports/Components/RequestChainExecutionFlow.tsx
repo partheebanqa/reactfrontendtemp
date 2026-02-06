@@ -6,11 +6,17 @@ interface ExtractedVariable {
 }
 
 interface AssertionResultsMapped {
-  name: string;
-  message: string;
-  actual: string;
-  expected: string;
+  actualValue: string;
+  category: string;
+  description: string;
+  field: string;
+  responseSize: number;
+  responseStatus: number;
+  responseTime: number;
+  type: string;
+  operator: string;
   status: string;
+  expectedValue: string;
 }
 
 interface RequestStep {
@@ -83,7 +89,7 @@ const mapStatus = (
 
 export default function RequestChainExecutionFlow({ steps }: Props) {
 
-  console.log(steps, "requests");
+  // console.log(steps, "requests");
   const requests = steps.map((step, index) => {
     return {
       id: String(step.step ?? index + 1),
@@ -105,11 +111,18 @@ export default function RequestChainExecutionFlow({ steps }: Props) {
           usedIn: 'response',
         })) ?? [],
       assertionResults: step?.assertionResults?.map((v) => ({
-        name: v.name,
-        actual: v.actual,
-        expected: v.expected,
-        message: v.message,
         status: v.status,
+        category: v.category,
+        description: v.description,
+        field: v.field,
+        responseSize: v.responseSize,
+        responseStatus: v.responseStatus,
+        responseTime: v.responseTime,
+        type: v.type,
+        actualValue: v.actualValue,
+        operator: v.operator,
+        expectedValue: v.expectedValue
+
       })) ?? [],
     };
   });

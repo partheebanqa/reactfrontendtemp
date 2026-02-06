@@ -496,7 +496,7 @@ const Pricing: React.FC = () => {
           </div>
 
           {/* CTA Section */}
-          <div className='text-center bg-primary rounded-2xl p-12 text-primary-foreground'>
+          {/* <div className='text-center bg-primary rounded-2xl p-12 text-primary-foreground'>
             <h2 className='text-3xl font-bold mb-4'>Ready to get started?</h2>
             <p className='text-xl mb-8 text-primary-foreground/90'>
               Join thousands of developers who trust OptraFlow for their API
@@ -526,7 +526,7 @@ const Pricing: React.FC = () => {
                 Contact Sales
               </Button>
             </div>
-          </div>
+          </div> */}
         </div>
       </div>
     </LandingLayout>

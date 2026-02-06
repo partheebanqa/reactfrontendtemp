@@ -5,7 +5,7 @@ import PilotProgramSignup from "./PilotForm";
 const PilotProgram: React.FC = () => {
     return (
         <LandingLayout>
-            <div>
+            <div className="mt-20">
                 <HeroPilotProgram />
                 <PilotProgramSignup />
             </div>

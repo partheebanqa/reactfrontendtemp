@@ -3,7 +3,9 @@ import ContactUs from '@/components/ContactUs/ContactUs';
 
 const ContactPage: React.FC = () => {
   return (
-    <ContactUs />
+    <div >
+      <ContactUs />
+    </div>
   );
 };
 

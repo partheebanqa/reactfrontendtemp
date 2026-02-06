@@ -157,7 +157,9 @@ export default function SignUp() {
 
         <Card>
           <div className='flex justify-center items-center py-4'>
-            <img src={LogoFull} alt='Optraflow' className='w-32 h-auto' />
+            <a href='/'>
+              <img src={LogoFull} alt='Optraflow' className='w-32 h-auto' />
+            </a>
           </div>
 
           <CardHeader>

@@ -1,3 +1,5 @@
+import { motion } from "framer-motion";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import React, { useState } from "react";
 
 // FAQ data (could be fetched via TanStack Query if you prefer)
@@ -116,19 +118,32 @@ const faqData = [
 // Accordion component
 const AccordionItem: React.FC<{ q: string; a: string }> = ({ q, a }) => {
     const [open, setOpen] = useState(false);
+
     return (
-        <div className="border rounded-lg p-4 bg-white shadow-sm">
+        <div
+            className={`border rounded-lg p-4 shadow-sm transition-colors duration-200
+        ${open ? "bg-blue-50 border-blue-300" : "bg-white"}
+      `}
+        >
             <button
-                className="w-full text-left font-semibold text-lg flex justify-between items-center"
+                className={`w-full text-left font-semibold text-md flex justify-between items-center
+          ${open ? "text-blue-700" : "text-[#0f172a]"}
+        `}
                 onClick={() => setOpen(!open)}
             >
                 {q}
-                <span>{open ? "−" : "+"}</span>
+                <span>{open ? <ChevronUp /> : <ChevronDown />}</span>
             </button>
-            {open && <p className="mt-2 text-gray-700 whitespace-pre-line">{a}</p>}
+
+            {open && (
+                <p className="mt-3 text-[#475569] whitespace-pre-line">
+                    {a}
+                </p>
+            )}
         </div>
     );
 };
+
 
 const FaqPage: React.FC = () => {
     // Build JSON-LD schema
@@ -149,7 +164,26 @@ const FaqPage: React.FC = () => {
 
     return (
         <main className="max-w-6xl mx-auto p-4 sm:p-6 lg:p-8">
-            <h1 className="text-3xl font-bold mb-6 text-center">FAQ's</h1>
+            <div className="text-center mb-16">
+                <motion.h2
+                    initial={{ opacity: 0, y: -20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.6 }}
+                    viewport={{ once: true }}
+                    className="text-3xl sm:text-4xl font-bold text-slate-900 mb-4"
+                >
+                    FAQ's
+                </motion.h2>
+                <motion.p
+                    initial={{ opacity: 0 }}
+                    whileInView={{ opacity: 1 }}
+                    transition={{ duration: 0.6, delay: 0.2 }}
+                    viewport={{ once: true }}
+                    className="text-lg text-slate-600"
+                >
+                    Everything you need to know, at a glance
+                </motion.p>
+            </div>
             {faqData.map((cat, idx) => (
                 <section key={idx} className="mb-8">
                     <h2 className="text-2xl font-semibold mb-4">{cat.category}</h2>

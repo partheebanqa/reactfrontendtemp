@@ -3,6 +3,10 @@ import { Button } from '@/components/ui/button';
 import { Code, Facebook, Instagram, InstagramIcon, Linkedin, LinkedinIcon, Mail, Youtube } from 'lucide-react';
 import { Link } from 'wouter';
 import LogoFull from '../../assests/images/OptraLogo-removebg-preview.png';
+import Header from '../Header';
+import { LayoutHeader } from './Header';
+import { navigate } from 'wouter/use-browser-location';
+import { Footer } from './Footer';
 
 interface LandingLayoutProps {
   children: React.ReactNode;
@@ -11,34 +15,17 @@ interface LandingLayoutProps {
 const LandingLayout: React.FC<LandingLayoutProps> = ({ children }) => {
 
   const year = new Date()
+
+  const hanldeClick = () => {
+    navigate('/signin')
+  }
   try {
     return (
       <div className='min-h-screen bg-gradient-to-b from-blue-50 to-white'>
         <div className="sticky top-0 z-50 bg-white">
-          <div className="w-full bg-gradient-to-r from-[#0b1220] to-[#0f1b35] text-white text-sm">
-            <div className="max-w-7xl mx-auto px-4 h-10 flex items-center justify-center">
 
-              {/* Left */}
-
-
-              {/* Right */}
-              <div className="flex items-center gap-6">
-                <p className="text-gray-300 hidden md:block">
-                  Power Up Testing Efficiency by 60% in just 4 weeks.
-                  <Link
-                    to="/pilot-program"
-                    className="ml-1 text-cyan-400 hover:underline font-medium"
-                  >
-                    Join the Pilot Program
-                  </Link>
-                </p>
-
-
-              </div>
-            </div>
-          </div>
           {/* Header */}
-          <header className='container mx-auto px-2 py-2 '>
+          {/* <header className='container mx-auto px-2 py-2 '>
 
             <nav className='flex items-center justify-between'>
               <Link to='/' className='flex items-center space-x-2'>
@@ -62,12 +49,13 @@ const LandingLayout: React.FC<LandingLayoutProps> = ({ children }) => {
                 </Button>
               </div>
             </nav>
-          </header>
+          </header> */}
+          <LayoutHeader onBetaClick={hanldeClick} onTrialClick={hanldeClick} />
         </div>
         {children}
 
         {/* Footer */}
-        <footer className='bg-white text-white py-10 border-t border-gray-200'>
+        {/* <footer className='bg-white text-white py-10 border-t border-gray-200'>
           <div className='container mx-auto px-4'>
             <div className='grid grid-cols-1 md:grid-cols-5 gap-8'>
               <div>
@@ -137,7 +125,9 @@ const LandingLayout: React.FC<LandingLayoutProps> = ({ children }) => {
               <p>Copyright &copy; {year.getFullYear()} OptraFlow Inc.</p>
             </div>
           </div>
-        </footer>
+        </footer> */}
+
+        <Footer onTalkToExpertClick={hanldeClick} />
       </div>
     );
   } catch (error) {

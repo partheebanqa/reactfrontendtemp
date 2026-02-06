@@ -16,12 +16,27 @@ import {
 import { Link } from "wouter";
 import LandingLayout from "@/components/LandingLayout/LandingLayout";
 import FaqPage from "./FaqPage";
+import { HeroSection } from "@/components/LandingLayout/HeroSection";
+import { navigate } from "wouter/use-browser-location";
+import ProductFeatures from "@/components/LandingLayout/ProductFeatures";
+import { CollaborationSection } from "@/components/LandingLayout/CollaborationSection";
+import { RoadmapSection } from "@/components/LandingLayout/RoadmapSection";
+import { FeaturesSection } from "@/components/LandingLayout/FeaturesSection";
 
 const Landing: React.FC = () => {
+
+
+  const hanldeClickSingIn = () => {
+    navigate('/signin')
+  }
+  const hanldeClickSingUp = () => {
+    navigate('/signup')
+  }
+
   return (
     <LandingLayout>
       {/* Hero Section */}
-      <section className="container mx-auto px-4 py-20 text-center">
+      {/* <section className="container mx-auto px-4 py-20 text-center">
         <Badge variant="secondary" className="mb-4">
           No-Code API Testing Platform
         </Badge>
@@ -54,10 +69,12 @@ const Landing: React.FC = () => {
             <ArrowRight className="w-5 h-5 ml-2" />
           </Button>
         </div>
-      </section>
+      </section> */}
+
+      <HeroSection />
 
       {/* Features Section */}
-      <section id="features" className="container mx-auto px-4 py-20">
+      {/* <section id="features" className="container mx-auto px-4 py-20">
         <div className="text-center mb-16">
           <h2 className="text-3xl font-bold mb-4">Everything You Need</h2>
           <p className="text-muted-foreground text-lg">
@@ -126,10 +143,22 @@ const Landing: React.FC = () => {
             </CardHeader>
           </Card>
         </div>
-      </section>
+      </section> */}
+      <ProductFeatures />
+
+
+
+
+
+
+      {/* <FeaturesSection /> */}
+
+      <RoadmapSection onBetaClick={hanldeClickSingIn} />
+
+      <CollaborationSection />
 
       {/* Benefits Section */}
-      <section className="bg-gray-50 py-20">
+      {/* <section className="bg-gray-50 py-20">
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div>
@@ -209,11 +238,11 @@ const Landing: React.FC = () => {
             </div>
           </div>
         </div>
-      </section>
+      </section> */}
 
 
       {/* CTA Section */}
-      <section className="bg-white px-4 py-20 text-center">
+      {/* <section className="bg-white px-4 py-20 text-center">
         <h2 className="text-3xl font-bold mb-4">Ready to Get Started?</h2>
         <p className="text-muted-foreground text-lg mb-8">
           Join thousands of developers who trust Optraflow for their API testing needs
@@ -230,7 +259,7 @@ const Landing: React.FC = () => {
         <p className="text-sm text-muted-foreground mt-4">
           No credit card required • 15-day free trial
         </p>
-      </section>
+      </section> */}
 
       <FaqPage />
 

@@ -5,12 +5,12 @@ export default {
   content: ["./index.html", "./src/**/*.{js,jsx,ts,tsx}"],
   theme: {
     screens: {
-      'xs': '480px',
-      'sm': '640px',
-      'md': '768px',
-      'lg': '1024px',
-      'xl': '1280px',
-      '2xl': '1536px',
+      xs: "480px",
+      sm: "640px",
+      md: "768px",
+      lg: "1024px",
+      xl: "1280px",
+      "2xl": "1536px",
     },
     extend: {
       borderRadius: {
@@ -18,6 +18,7 @@ export default {
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
       },
+
       colors: {
         background: "var(--background)",
         foreground: "var(--foreground)",
@@ -50,9 +51,9 @@ export default {
           foreground: "var(--destructive-foreground)",
         },
         success: {
-					DEFAULT: 'rgb(var(--success))',
-					foreground: 'rgb(var(--success-foreground))'
-				},
+          DEFAULT: "rgb(var(--success))",
+          foreground: "rgb(var(--success-foreground))",
+        },
         border: "var(--border)",
         input: "var(--input)",
         ring: "var(--ring)",
@@ -91,10 +92,15 @@ export default {
             height: "0",
           },
         },
+        shiny: {
+          "0%": { backgroundPosition: "200% 0" },
+          "100%": { backgroundPosition: "-200% 0" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        shiny: "shiny 2s linear infinite",
       },
     },
   },
