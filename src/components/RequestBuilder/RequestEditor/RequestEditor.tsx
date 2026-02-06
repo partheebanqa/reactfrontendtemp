@@ -374,11 +374,6 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
     return collectionActions.getExtractedVariablesRequest(activeRequest.id);
   }, [activeRequest?.id, collectionStore?.state?.extractedVariablesRequest]);
 
-  console.log(
-    'requestSpecificExtractedVariables:',
-    requestSpecificExtractedVariables,
-  );
-
   const extractVariableNames = (text: any) => {
     if (!text) return [];
     const regex = /\{\{([^}]+)\}\}/g;
@@ -480,6 +475,36 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
   useEffect(() => {
     collectionsRef.current = collections;
   }, [collections]);
+
+  useEffect(() => {
+    if (activeRequest?.id && activeCollection?.id) {
+      const collection = collections.find((c) => c.id === activeCollection.id);
+
+      // Check if current request IS the pre-request
+      const isPreRequest = collection?.preRequestId === activeRequest.id;
+
+      const isEnabled = collectionActions.getRequestPreRequestEnabled(
+        activeRequest.id,
+        activeCollection.id,
+      );
+
+      if (collection?.preRequestId && isEnabled === false && !isPreRequest) {
+        collectionActions.setRequestPreRequestEnabled(
+          activeRequest.id,
+          true,
+          activeCollection.id,
+        );
+        setPreRequestEnabled(true);
+      } else if (isPreRequest) {
+        // If this IS the pre-request, force it to be enabled but don't allow toggling
+        setPreRequestEnabled(true);
+      } else {
+        setPreRequestEnabled(isEnabled);
+      }
+    } else {
+      setPreRequestEnabled(false);
+    }
+  }, [activeRequest?.id, activeCollection?.id, collections]);
 
   const activeCollectionFull =
     collections.find((c) => c.id === activeCollection?.id) ||
@@ -1088,31 +1113,41 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
     }
   }, [activeRequest?.id]);
 
-  useEffect(() => {
-    if (activeRequest?.id && activeCollection?.id) {
-      const collection = collections.find((c) => c.id === activeCollection.id);
+  // useEffect(() => {
+  //   if (activeRequest?.id && activeCollection?.id) {
+  //     const collection = collections.find((c) => c.id === activeCollection.id);
 
-      const isEnabled = collectionActions.getRequestPreRequestEnabled(
-        activeRequest.id,
-        activeCollection.id,
-      );
+  //     const isEnabled = collectionActions.getRequestPreRequestEnabled(
+  //       activeRequest.id,
+  //       activeCollection.id,
+  //     );
 
-      if (collection?.preRequestId && isEnabled === false) {
-        collectionActions.setRequestPreRequestEnabled(
-          activeRequest.id,
-          true,
-          activeCollection.id,
-        );
-        setPreRequestEnabled(true);
-      } else {
-        setPreRequestEnabled(isEnabled);
-      }
-    } else {
-      setPreRequestEnabled(false);
-    }
+  //     if (collection?.preRequestId && isEnabled === false) {
+  //       collectionActions.setRequestPreRequestEnabled(
+  //         activeRequest.id,
+  //         true,
+  //         activeCollection.id,
+  //       );
+  //       setPreRequestEnabled(true);
+  //     } else {
+  //       setPreRequestEnabled(isEnabled);
+  //     }
+  //   } else {
+  //     setPreRequestEnabled(false);
+  //   }
+  // }, [activeRequest?.id, activeCollection?.id, collections]);
+  const isCurrentRequestPreRequest = useMemo(() => {
+    if (!activeRequest?.id || !activeCollection?.id) return false;
+    const collection = collections.find((c) => c.id === activeCollection.id);
+    return collection?.preRequestId === activeRequest.id;
   }, [activeRequest?.id, activeCollection?.id, collections]);
 
   useEffect(() => {
+    // Don't load token if this IS the pre-request itself
+    if (isCurrentRequestPreRequest) {
+      return;
+    }
+
     if (preRequestEnabled && activeCollection?.id && activeRequest?.id) {
       const storageKey = `extracted_var_${activeCollection.id}_E_token`;
       const storedData = localStorage.getItem(storageKey);
@@ -1145,12 +1180,30 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
         console.warn('⚠️ Pre-request token not found in localStorage');
       }
     }
-  }, [preRequestEnabled, activeCollection?.id, activeRequest?.id]);
+  }, [
+    preRequestEnabled,
+    activeCollection?.id,
+    activeRequest?.id,
+    isCurrentRequestPreRequest,
+  ]);
 
   const handlePreRequestToggle = (checked: boolean) => {
+    // Prevent toggling if this IS the pre-request
+    if (isCurrentRequestPreRequest) {
+      return;
+    }
+
     setPreRequestEnabled(checked);
 
     if (activeRequest?.id && activeCollection?.id) {
+      collectionActions.setRequestPreRequestEnabled(
+        activeRequest.id,
+        checked,
+        activeCollection.id,
+      );
+    }
+
+    if (checked && activeCollection?.id) {
       collectionActions.setRequestPreRequestEnabled(
         activeRequest.id,
         checked,
@@ -1451,11 +1504,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
               if (parsedData.value) {
                 effectiveToken = parsedData.value;
                 effectiveAuthType = 'bearer';
-                console.log(
-                  '✅ Using pre-request token from localStorage:',
-                  storageKey,
-                  effectiveToken,
-                );
+
                 break;
               }
             } catch (error) {
@@ -2768,7 +2817,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
 
               <div
                 className={`flex items-center gap-1.5 ${
-                  hasPreRequestConfigured
+                  hasPreRequestConfigured && !isCurrentRequestPreRequest
                     ? ''
                     : 'opacity-50 pointer-events-none'
                 }`}
@@ -2781,19 +2830,25 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
                       </span>
                     </TooltipTrigger>
                     <TooltipContent>
-                      {hasPreRequestConfigured
-                        ? 'Toggle to use token from authentication request'
-                        : 'No pre-request configured for this collection'}
+                      {isCurrentRequestPreRequest
+                        ? 'This is the pre-request - token usage is always enabled'
+                        : hasPreRequestConfigured
+                          ? 'Toggle to use token from authentication request'
+                          : 'No pre-request configured for this collection'}
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
                 <ToggleSwitch
                   id='preRequestAuth'
-                  checked={preRequestEnabled}
+                  checked={
+                    isCurrentRequestPreRequest ? true : preRequestEnabled
+                  }
                   onChange={handlePreRequestToggle}
                   label=''
                   description=''
-                  disabled={!hasPreRequestConfigured}
+                  disabled={
+                    !hasPreRequestConfigured || isCurrentRequestPreRequest
+                  }
                 />
               </div>
             </div>
@@ -3169,14 +3224,6 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
               </div>
 
               <div>
-                {/* {preRequestEnabled && (
-                  <div className='mb-2 p-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md'>
-                    <p className='text-xs text-blue-700 dark:text-blue-300'>
-                      ℹ️ Using token from pre-request. Disable "Use pre-request
-                      token" to edit manually.
-                    </p>
-                  </div>
-                )} */}
                 <Input
                   type='text'
                   value={authData.token}
@@ -3187,22 +3234,23 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
                     }
                   }}
                   placeholder='Enter token'
-                  disabled={preRequestEnabled}
+                  disabled={preRequestEnabled && !isCurrentRequestPreRequest}
                   className={
-                    preRequestEnabled
+                    preRequestEnabled && !isCurrentRequestPreRequest
                       ? 'bg-gray-100 dark:bg-gray-800 cursor-not-allowed'
                       : ''
                   }
                 />
-                {preRequestEnabled && authData.token && (
-                  <p className='mt-1 text-xs text-gray-500 dark:text-gray-400'>
-                    Token loaded from collection's authentication request
-                  </p>
-                )}
+                {preRequestEnabled &&
+                  !isCurrentRequestPreRequest &&
+                  authData.token && (
+                    <p className='mt-1 text-xs text-gray-500 dark:text-gray-400'>
+                      Token loaded from collection's authentication request
+                    </p>
+                  )}
               </div>
             </div>
           )}
-
           {activeTab === 'pre-request' && (
             <PrePostRequest
               type='pre-request'

@@ -91,8 +91,6 @@ const ResponseViewer = ({
   const { responseData, assertions, setAssertions } = useRequest();
   const { activeCollection, activeRequest } = useCollection();
 
-  console.log('responseData123:', responseData);
-
   const [activeTab, setActiveTab] = useState<
     | 'body'
     | 'headers'
@@ -177,8 +175,6 @@ const ResponseViewer = ({
     setCopiedItem(itemId);
     setTimeout(() => setCopiedItem(''), 2000);
   };
-
-  console.log('extractedVariables:', extractedVariables);
 
   const downloadPostmanCollection = () => {
     if (!responseData) return;
@@ -1625,10 +1621,10 @@ const ResponseViewer = ({
         <div className='px-4 py-2 bg-blue-50 dark:bg-blue-900/20 border-b border-gray-200 dark:border-gray-700'>
           <div className='flex items-center gap-2 text-xs'>
             <span className='text-gray-600 dark:text-gray-400'>
-              Extracted variables for:
+              Extracted token from:
             </span>
             <span className='font-medium text-blue-600 dark:text-blue-400'>
-              {activeCollection.name}
+              {activeRequest?.name || 'Request'}
             </span>
             <span className='ml-auto text-gray-500'>
               {Object.keys(extractedVariables).length} variable(s)
