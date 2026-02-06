@@ -115,7 +115,7 @@ const getContentTypeForBodyType = (
     | 'form-data'
     | 'x-www-form-urlencoded'
     | 'raw'
-    | 'binary'
+    | 'binary',
 ): string => {
   if (bodyType === 'form-data') {
     return `multipart/form-data; boundary=${generateBoundary()}`;
@@ -213,7 +213,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
 
   const [token, setToken] = useState('');
   const [selectedVariable, setSelectedVariable] = useState<SelectedVariable[]>(
-    []
+    [],
   );
 
   const [dynamicVarTrigger, setDynamicVarTrigger] = useState(0);
@@ -329,7 +329,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
         if (name && name.startsWith('D_')) {
           const generatedValue = generateDynamicValueById(
             variable.generatorId || '',
-            variable.parameters || {}
+            variable.parameters || {},
           );
           formatted.push({ name, value: String(generatedValue) });
         }
@@ -376,7 +376,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
 
   console.log(
     'requestSpecificExtractedVariables:',
-    requestSpecificExtractedVariables
+    requestSpecificExtractedVariables,
   );
 
   const extractVariableNames = (text: any) => {
@@ -398,10 +398,10 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
     params.forEach((param) => {
       if (param.enabled) {
         extractVariableNames(param.key).forEach((name) =>
-          usedVarNames.add(name)
+          usedVarNames.add(name),
         );
         extractVariableNames(param.value).forEach((name) =>
-          usedVarNames.add(name)
+          usedVarNames.add(name),
         );
       }
     });
@@ -409,10 +409,10 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
     headers.forEach((header) => {
       if (header.enabled) {
         extractVariableNames(header.key).forEach((name) =>
-          usedVarNames.add(name)
+          usedVarNames.add(name),
         );
         extractVariableNames(header.value).forEach((name) =>
-          usedVarNames.add(name)
+          usedVarNames.add(name),
         );
       }
     });
@@ -420,7 +420,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
     extractVariableNames(bodyContent).forEach((name) => usedVarNames.add(name));
 
     extractVariableNames(authData.token).forEach((name) =>
-      usedVarNames.add(name)
+      usedVarNames.add(name),
     );
 
     selectedVariable.forEach((varItem) => {
@@ -431,13 +431,13 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
 
     return {
       staticVars: formattedVariables.filter(
-        (v) => v.name.startsWith('S_') && usedVarNames.has(v.name)
+        (v) => v.name.startsWith('S_') && usedVarNames.has(v.name),
       ),
       dynamicVars: formattedVariables.filter(
-        (v) => v.name.startsWith('D_') && usedVarNames.has(v.name)
+        (v) => v.name.startsWith('D_') && usedVarNames.has(v.name),
       ),
       extractedVars: formattedVariables.filter(
-        (v) => v.name.startsWith('E_') && usedVarNames.has(v.name)
+        (v) => v.name.startsWith('E_') && usedVarNames.has(v.name),
       ),
     };
   };
@@ -452,7 +452,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
       formattedVariables,
       selectedVariable,
       authData.token,
-    ]
+    ],
   );
 
   useEffect(() => {
@@ -489,7 +489,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
   function buildFolderOptions(
     folders: any[] = [],
     depth = 0,
-    acc: Array<{ id: string; label: string }> = []
+    acc: Array<{ id: string; label: string }> = [],
   ) {
     for (const f of folders) {
       const name = f?.name || f?.Name || 'Folder';
@@ -527,7 +527,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
       } catch (e) {
       } finally {
         const latest = collectionsRef.current.find(
-          (c) => c.id === selectedCollectionId
+          (c) => c.id === selectedCollectionId,
         );
         const foldersTree = (latest as any)?.folders || [];
         const options = buildFolderOptions(foldersTree);
@@ -679,7 +679,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
 
   const mapPerfConfigToSettings = (
     api: PerformanceTestConfigApi,
-    prev: RequestSettings
+    prev: RequestSettings,
   ): RequestSettings => {
     return {
       ...prev,
@@ -703,7 +703,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
 
   const mapPerfConfigToSettingsRequest = (
     cfg: PerformanceTestConfigDTO,
-    prev: RequestSettings
+    prev: RequestSettings,
   ): RequestSettings => ({
     ...prev,
     performanceTest: {
@@ -755,7 +755,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
     if (!Array.isArray(list) || list.length === 0) return;
 
     const cfg = [...list].sort((a, b) =>
-      String(b.updatedAt || '').localeCompare(String(a.updatedAt || ''))
+      String(b.updatedAt || '').localeCompare(String(a.updatedAt || '')),
     )[0];
 
     setPerformanceTestId(cfg.id);
@@ -797,7 +797,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
     if (enabledParams.length > 0) {
       const queryString = enabledParams
         .map(
-          (p) => `${encodeURIComponent(p.key)}=${encodeURIComponent(p.value)}`
+          (p) => `${encodeURIComponent(p.key)}=${encodeURIComponent(p.value)}`,
         )
         .join('&');
       const newUrl = `${baseUrl}?${queryString}`;
@@ -833,7 +833,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
           });
 
           const defaultHeaders = methodsWithBody.includes(
-            activeRequest.method as RequestMethod
+            activeRequest.method as RequestMethod,
           )
             ? [
                 {
@@ -848,7 +848,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
             (h: Header) =>
               h.key !== 'Postman-Token' &&
               h.key !== 'User-Agent' &&
-              !defaultHeaders.find((dh) => dh.key === h.key)
+              !defaultHeaders.find((dh) => dh.key === h.key),
           );
 
           setHeaders([...defaultHeaders, ...filteredHeaders]);
@@ -887,12 +887,12 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
                 enabled: field.enabled !== undefined ? field.enabled : true,
                 type: (field.type || 'text') as 'text' | 'file',
                 ...(field.fileName ? { fileName: field.fileName } : {}),
-              })
+              }),
             );
             setFormFields(formDataFields);
           } else if (typeof activeRequest.bodyFormData === 'object') {
             const formDataFields = Object.entries(
-              activeRequest.bodyFormData
+              activeRequest.bodyFormData,
             ).map(([key, value]) => ({
               key,
               value: value?.toString() || '',
@@ -1001,7 +1001,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
                 group: assertion.group || 'custom',
                 priority: assertion.priority,
               } as Assertion;
-            }
+            },
           );
 
           setAssertions(existingAssertions);
@@ -1024,7 +1024,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
         activeRequest.variable.length > 0
       ) {
         const filteredVariables = activeRequest.variable.filter(
-          (v: any) => v.path || v.name
+          (v: any) => v.path || v.name,
         );
         setSelectedVariable(filteredVariables);
       } else {
@@ -1078,7 +1078,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
   useEffect(() => {
     if (activeRequest?.id) {
       const storedResponse = collectionActions.getRequestResponse(
-        activeRequest.id
+        activeRequest.id,
       );
       if (storedResponse) {
         setResponseData(storedResponse);
@@ -1093,11 +1093,16 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
       const collection = collections.find((c) => c.id === activeCollection.id);
 
       const isEnabled = collectionActions.getRequestPreRequestEnabled(
-        activeRequest.id
+        activeRequest.id,
+        activeCollection.id,
       );
 
       if (collection?.preRequestId && isEnabled === false) {
-        collectionActions.setRequestPreRequestEnabled(activeRequest.id, true);
+        collectionActions.setRequestPreRequestEnabled(
+          activeRequest.id,
+          true,
+          activeCollection.id,
+        );
         setPreRequestEnabled(true);
       } else {
         setPreRequestEnabled(isEnabled);
@@ -1145,8 +1150,12 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
   const handlePreRequestToggle = (checked: boolean) => {
     setPreRequestEnabled(checked);
 
-    if (activeRequest?.id) {
-      collectionActions.setRequestPreRequestEnabled(activeRequest.id, checked);
+    if (activeRequest?.id && activeCollection?.id) {
+      collectionActions.setRequestPreRequestEnabled(
+        activeRequest.id,
+        checked,
+        activeCollection.id,
+      );
     }
 
     if (checked && activeCollection?.id) {
@@ -1159,7 +1168,6 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
           const tokenValue = parsedData.value;
 
           if (tokenValue) {
-            // Set the token
             setAuthType('bearer');
             setAuthData((prev) => ({
               ...prev,
@@ -1188,7 +1196,6 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
         });
       }
     } else {
-      // Clear the token when disabled
       setAuthData((prev) => ({
         ...prev,
         token: '',
@@ -1378,7 +1385,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
               ...col,
               requests: [...(col.requests || []), newRequest],
             };
-          })
+          }),
         );
       }
 
@@ -1447,7 +1454,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
                 console.log(
                   '✅ Using pre-request token from localStorage:',
                   storageKey,
-                  effectiveToken
+                  effectiveToken,
                 );
                 break;
               }
@@ -1479,7 +1486,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
           const parsedBody = JSON.parse(bodyContent);
           selectedVariable.forEach((varItem) => {
             const variable = formattedVariables.find(
-              (v) => v.name === varItem.name
+              (v) => v.name === varItem.name,
             );
             if (variable && varItem.path) {
               parsedBody[varItem.path] = variable.value;
@@ -1489,13 +1496,13 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
         } catch {
           selectedVariable.forEach((varItem) => {
             const variable = formattedVariables.find(
-              (v) => v.name === varItem.name
+              (v) => v.name === varItem.name,
             );
             if (variable) {
               const regex = new RegExp(`{{${variable.name}}}`, 'g');
               substitutedBodyContent = substitutedBodyContent.replace(
                 regex,
-                variable.value
+                variable.value,
               );
             }
           });
@@ -1524,17 +1531,17 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
           effectiveAuthType === 'bearer'
             ? { token: resolvedToken }
             : effectiveAuthType === 'basic'
-            ? {
-                username: authData.username,
-                password: authData.password,
-              }
-            : effectiveAuthType === 'apiKey'
-            ? {
-                key: authData.key,
-                value: authData.value,
-                addTo: authData.addTo,
-              }
-            : undefined,
+              ? {
+                  username: authData.username,
+                  password: authData.password,
+                }
+              : effectiveAuthType === 'apiKey'
+                ? {
+                    key: authData.key,
+                    value: authData.value,
+                    addTo: authData.addTo,
+                  }
+                : undefined,
         timeout: settings.timeout,
         retries: 0,
         extractVariables: [],
@@ -1561,7 +1568,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
           type: 'string',
           currentValue: v.value,
         })),
-        currentWorkspace?.id
+        currentWorkspace?.id,
       );
 
       const payloadWithAssertions = {
@@ -1570,7 +1577,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
       };
 
       const primarySchema = schemas?.find(
-        (s) => s.requestId === activeRequest.id && s.isPrimary
+        (s) => s.requestId === activeRequest.id && s.isPrimary,
       );
 
       if (primarySchema) {
@@ -1624,10 +1631,13 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
           url: newUrl,
           headers: headers
             .filter((h) => h.enabled)
-            .reduce((acc, h) => {
-              if (h.key) acc[h.key] = h.value;
-              return acc;
-            }, {} as Record<string, string>),
+            .reduce(
+              (acc, h) => {
+                if (h.key) acc[h.key] = h.value;
+                return acc;
+              },
+              {} as Record<string, string>,
+            ),
           body: substitutedBodyContent
             ? (() => {
                 try {
@@ -1684,7 +1694,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
                   collectionActions.setExtractedVariable(
                     activeCollection.id,
                     variableName,
-                    String(extractedValue)
+                    String(extractedValue),
                   );
 
                   const storageKey = `extracted_var_${activeCollection.id}_${variableName}`;
@@ -1697,14 +1707,14 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
                       collectionId: activeCollection.id,
                       source: extraction.source,
                       path: extraction.path,
-                    })
+                    }),
                   );
 
                   if (activeRequest?.id) {
                     collectionActions.setExtractedVariableRequest(
                       activeRequest.id,
                       variableName,
-                      String(extractedValue)
+                      String(extractedValue),
                     );
                   }
                 }
@@ -1717,7 +1727,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
         if (activeRequest.id) {
           collectionActions.setRequestResponse(
             activeRequest.id,
-            normalizedResponse
+            normalizedResponse,
           );
         }
 
@@ -1725,7 +1735,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
         const generatedAssertions = generateAssertions(formattedResponse);
         const existingIds = new Set(assertions.map((a) => a.id));
         const filtered = generatedAssertions.filter(
-          (a) => !existingIds.has(a.id)
+          (a) => !existingIds.has(a.id),
         );
         setAssertions([...assertions, ...filtered]);
       }
@@ -1752,10 +1762,13 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
           url: newUrl,
           headers: headers
             .filter((h) => h.enabled)
-            .reduce((acc, h) => {
-              if (h.key) acc[h.key] = h.value;
-              return acc;
-            }, {} as Record<string, string>),
+            .reduce(
+              (acc, h) => {
+                if (h.key) acc[h.key] = h.value;
+                return acc;
+              },
+              {} as Record<string, string>,
+            ),
           body: substitutedBodyContent
             ? (() => {
                 try {
@@ -1778,7 +1791,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
       if (activeRequest.id) {
         collectionActions.setRequestResponse(
           activeRequest.id,
-          normalizedResponse
+          normalizedResponse,
         );
       }
       toast({
@@ -1801,7 +1814,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
         collectionActions.renameRequest(
           newName.trim(),
           activeRequest?.id || '',
-          currentWorkspace?.id || ''
+          currentWorkspace?.id || '',
         );
       } else {
         await handleUpdateRequest(newName.trim());
@@ -1810,7 +1823,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
       console.error('Error renaming request:', error);
       showError(
         'Rename Failed',
-        'An error occurred while renaming the request.'
+        'An error occurred while renaming the request.',
       );
     }
   };
@@ -1820,7 +1833,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
     if (!url.trim()) {
       showError(
         'URL Required',
-        'Please enter a URL before saving the request.'
+        'Please enter a URL before saving the request.',
       );
       return;
     }
@@ -1835,7 +1848,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
       if (!activeRequest || activeRequest.id?.startsWith('temp-')) {
         showError(
           'Invalid Request',
-          'Cannot update a temporary request. Please save it first.'
+          'Cannot update a temporary request. Please save it first.',
         );
         return;
       }
@@ -1843,7 +1856,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
       if (!url.trim()) {
         showError(
           'URL Required',
-          'Please enter a URL before saving the request.'
+          'Please enter a URL before saving the request.',
         );
         return;
       }
@@ -1912,15 +1925,18 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
           bodyType === 'raw' || bodyType === 'json'
             ? bodyContent
             : bodyType === 'x-www-form-urlencoded'
-            ? new URLSearchParams(
-                urlEncodedFields
-                  .filter((f) => f.enabled)
-                  .reduce((acc, field) => {
-                    if (field.key) acc[field.key] = field.value;
-                    return acc;
-                  }, {} as Record<string, string>)
-              ).toString()
-            : '',
+              ? new URLSearchParams(
+                  urlEncodedFields
+                    .filter((f) => f.enabled)
+                    .reduce(
+                      (acc, field) => {
+                        if (field.key) acc[field.key] = field.value;
+                        return acc;
+                      },
+                      {} as Record<string, string>,
+                    ),
+                ).toString()
+              : '',
         authorizationType: effectiveAuthType,
         authorization: {
           token: authData.token,
@@ -2015,7 +2031,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
       if (!urlAtOpen.trim()) {
         showError(
           'URL Required',
-          'Please enter a URL before saving the request.'
+          'Please enter a URL before saving the request.',
         );
         return;
       }
@@ -2041,7 +2057,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
       ) {
         showError(
           'Collection Required',
-          'Please select or create a collection to save the request.'
+          'Please select or create a collection to save the request.',
         );
         return;
       }
@@ -2089,15 +2105,18 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
           bodyType === 'raw' || bodyType === 'json'
             ? bodyContent
             : bodyType === 'x-www-form-urlencoded'
-            ? new URLSearchParams(
-                urlEncodedFields
-                  .filter((f) => f.enabled)
-                  .reduce((acc, field) => {
-                    if (field.key) acc[field.key] = field.value;
-                    return acc;
-                  }, {} as Record<string, string>)
-              ).toString()
-            : '',
+              ? new URLSearchParams(
+                  urlEncodedFields
+                    .filter((f) => f.enabled)
+                    .reduce(
+                      (acc, field) => {
+                        if (field.key) acc[field.key] = field.value;
+                        return acc;
+                      },
+                      {} as Record<string, string>,
+                    ),
+                ).toString()
+              : '',
         authorizationType: effectiveAuthType,
         authorization: requestDataAuthorization(effectiveAuthType, authData),
         params,
@@ -2110,9 +2129,8 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
           existingExtractions.length > 0 ? existingExtractions : [],
       };
 
-      const savedRequestResponse = await addRequestMutation.mutateAsync(
-        requestData
-      );
+      const savedRequestResponse =
+        await addRequestMutation.mutateAsync(requestData);
 
       if (
         savedRequestResponse &&
@@ -2167,14 +2185,14 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
       if (!activeRequest || activeRequest.id?.startsWith('temp-')) {
         showError(
           'Invalid Request',
-          'Cannot update a temporary request. Please save it first.'
+          'Cannot update a temporary request. Please save it first.',
         );
         return;
       }
       if (!url.trim()) {
         showError(
           'URL Required',
-          'Please enter a URL before saving the request.'
+          'Please enter a URL before saving the request.',
         );
         return;
       }
@@ -2243,15 +2261,18 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
           bodyType === 'raw' || bodyType === 'json'
             ? bodyContent
             : bodyType === 'x-www-form-urlencoded'
-            ? new URLSearchParams(
-                urlEncodedFields
-                  .filter((f) => f.enabled)
-                  .reduce((acc, field) => {
-                    if (field.key) acc[field.key] = field.value;
-                    return acc;
-                  }, {} as Record<string, string>)
-              ).toString()
-            : '',
+              ? new URLSearchParams(
+                  urlEncodedFields
+                    .filter((f) => f.enabled)
+                    .reduce(
+                      (acc, field) => {
+                        if (field.key) acc[field.key] = field.value;
+                        return acc;
+                      },
+                      {} as Record<string, string>,
+                    ),
+                ).toString()
+              : '',
         authorizationType: effectiveAuthType,
         authorization: {
           token: authData.token,
@@ -2418,7 +2439,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
   const updateParam = (
     index: number,
     field: keyof Param,
-    value: string | boolean
+    value: string | boolean,
   ) => {
     const newParams = [...params];
     newParams[index] = { ...newParams[index], [field]: value };
@@ -2446,7 +2467,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
   const updateHeader = (
     index: number,
     field: keyof Header,
-    value: string | boolean
+    value: string | boolean,
   ) => {
     const newHeaders = [...headers];
     newHeaders[index] = { ...newHeaders[index], [field]: value };
@@ -2476,7 +2497,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
   const updateFormField = (
     index: number,
     field: keyof KeyValuePairWithFile,
-    value: string | boolean | File | undefined
+    value: string | boolean | File | undefined,
   ) => {
     const newFormFields = [...formFields];
     newFormFields[index] = { ...newFormFields[index], [field]: value };
@@ -2510,7 +2531,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
   const updateUrlEncodedField = (
     index: number,
     field: keyof Param,
-    value: string | boolean
+    value: string | boolean,
   ) => {
     const newUrlEncodedFields = [...urlEncodedFields];
     newUrlEncodedFields[index] = {
@@ -2562,7 +2583,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
     } catch (error) {
       showError(
         'Invalid JSON',
-        'Unable to format. Please check your JSON syntax.'
+        'Unable to format. Please check your JSON syntax.',
       );
     }
   };
@@ -2605,7 +2626,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
     if (newBodyType !== 'none') {
       const contentTypeValue = getContentTypeForBodyType(newBodyType);
       const contentTypeHeaderIndex = headers.findIndex(
-        (h) => h.key.toLowerCase() === 'content-type'
+        (h) => h.key.toLowerCase() === 'content-type',
       );
 
       if (contentTypeHeaderIndex !== -1) {
@@ -2650,7 +2671,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
         if (key.includes('[') && key.includes(']')) {
           const arrayKey = key.substring(0, key.indexOf('['));
           const index = Number.parseInt(
-            key.substring(key.indexOf('[') + 1, key.indexOf(']'))
+            key.substring(key.indexOf('[') + 1, key.indexOf(']')),
           );
           if (current[arrayKey] && Array.isArray(current[arrayKey])) {
             return current[arrayKey][index];
@@ -2713,7 +2734,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
                     <span className='text-gray-500 dark:text-gray-400'>
                       {findFolderName(
                         activeRequest.folderId,
-                        (activeCollectionFull as any)?.folders || []
+                        (activeCollectionFull as any)?.folders || [],
                       )}
                     </span>
                     <span className='text-gray-500 dark:text-gray-400'>/</span>
@@ -2788,7 +2809,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
                 setMethod(newMethod);
 
                 const hasContentTypeHeader = headers.some(
-                  (h) => h.key === 'Content-Type'
+                  (h) => h.key === 'Content-Type',
                 );
                 if (
                   methodsWithBody.includes(newMethod) &&
@@ -2818,7 +2839,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
                 }
               }}
               className={`w-full sm:w-auto border rounded-md pl-3 pr-0 py-2 text-sm font-medium hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all duration-150 ${getMethodColor(
-                method
+                method,
               )}`}
               style={{
                 appearance: 'auto',
@@ -3088,7 +3109,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
                   const contentTypeValue =
                     getContentTypeForBodyType(newBodyType);
                   const contentTypeHeaderIndex = headers.findIndex(
-                    (h) => h.key.toLowerCase() === 'content-type'
+                    (h) => h.key.toLowerCase() === 'content-type',
                   );
 
                   if (contentTypeHeaderIndex !== -1) {
@@ -3561,8 +3582,8 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
                               ? 'Updating...'
                               : 'Update Performance Test'
                             : performanceTestCreateMutation.isPending
-                            ? 'Creating...'
-                            : 'Create Performance Test'}
+                              ? 'Creating...'
+                              : 'Create Performance Test'}
                         </Button>
                       </div>
                     </div>

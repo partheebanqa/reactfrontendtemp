@@ -91,14 +91,14 @@ export const initialCollectionState: CollectionState = {
 };
 
 export const collectionStore = new Store<CollectionState>(
-  initialCollectionState
+  initialCollectionState,
 );
 
 export const collectionActions = {
   replaceRequest: (oldRequestId: string, newRequest: CollectionRequest) => {
     collectionStore.setState((state) => {
       const updatedOpened = state.openedRequests.map((r) =>
-        r.id === oldRequestId ? newRequest : r
+        r.id === oldRequestId ? newRequest : r,
       );
 
       const updatedUnsaved = new Set(state.unsavedChanges);
@@ -120,7 +120,7 @@ export const collectionActions = {
     collectionStore.setState((state) => ({
       ...state,
       openedRequests: state.openedRequests.map((r) =>
-        r.id === updatedRequest.id ? updatedRequest : r
+        r.id === updatedRequest.id ? updatedRequest : r,
       ),
       activeRequest:
         state.activeRequest?.id === updatedRequest.id
@@ -146,7 +146,7 @@ export const collectionActions = {
   openRequest: (request: CollectionRequest) => {
     collectionStore.setState((state) => {
       const isAlreadyOpen = state.openedRequests.some(
-        (r) => r.id === request.id
+        (r) => r.id === request.id,
       );
       return {
         ...state,
@@ -161,7 +161,7 @@ export const collectionActions = {
   closeRequest: (requestId: string) => {
     collectionStore.setState((state) => {
       const updatedOpened = state.openedRequests.filter(
-        (r) => r.id !== requestId
+        (r) => r.id !== requestId,
       );
       const updatedUnsaved = new Set(state.unsavedChanges);
       updatedUnsaved.delete(requestId);
@@ -170,7 +170,11 @@ export const collectionActions = {
       newResponses.delete(requestId);
 
       const newPreRequestMap = new Map(state.requestPreRequestEnabled);
-      newPreRequestMap.delete(requestId);
+      for (const key of newPreRequestMap.keys()) {
+        if (key.endsWith(`:${requestId}`) || key === requestId) {
+          newPreRequestMap.delete(key);
+        }
+      }
 
       const newExtractedVariablesRequest = {
         ...state.extractedVariablesRequest,
@@ -216,7 +220,7 @@ export const collectionActions = {
 
       const getAllRequests = (
         requests: CollectionRequest[] = [],
-        folders: any[] = []
+        folders: any[] = [],
       ): CollectionRequest[] => {
         let allRequests = [...requests];
         folders.forEach((folder) => {
@@ -235,7 +239,7 @@ export const collectionActions = {
 
       const allRequests = getAllRequests(
         collection.requests || [],
-        (collection as any).folders || []
+        (collection as any).folders || [],
       );
 
       if (allRequests.length === 0) return state;
@@ -315,7 +319,7 @@ export const collectionActions = {
     collectionStore.setState((state) => ({
       ...state,
       collections: state.collections.map((c) =>
-        c.id === updatedCollection.id ? updatedCollection : c
+        c.id === updatedCollection.id ? updatedCollection : c,
       ),
     }));
   },
@@ -324,7 +328,7 @@ export const collectionActions = {
     collectionStore.setState((state) => ({
       ...state,
       collections: state.collections.map((c) =>
-        c.id === id ? { ...c, name } : c
+        c.id === id ? { ...c, name } : c,
       ),
     }));
   },
@@ -333,7 +337,7 @@ export const collectionActions = {
     collectionStore.setState((state) => ({
       ...state,
       collections: state.collections.map((c) =>
-        c.id === id ? { ...c, IsImportant } : c
+        c.id === id ? { ...c, IsImportant } : c,
       ),
     }));
   },
@@ -342,7 +346,7 @@ export const collectionActions = {
     collectionStore.setState((state) => ({
       ...state,
       collections: state.collections.map((c) =>
-        c.id === id ? { ...c, isImportant: false } : c
+        c.id === id ? { ...c, isImportant: false } : c,
       ),
     }));
   },
@@ -413,7 +417,7 @@ export const collectionActions = {
 
   addRequestToCollection: (
     collectionId: string,
-    request: CollectionRequest
+    request: CollectionRequest,
   ) => {
     collectionStore.setState((state) => {
       const updatedCollections = state.collections.map((collection) => {
@@ -640,7 +644,7 @@ export const collectionActions = {
   setExtractedVariableRequest: (
     requestId: string,
     name: string,
-    value: any
+    value: any,
   ) => {
     collectionStore.setState((state) => ({
       ...state,
@@ -723,10 +727,15 @@ export const collectionActions = {
     }));
   },
 
-  setRequestPreRequestEnabled: (requestId: string, enabled: boolean) => {
+  setRequestPreRequestEnabled: (
+    requestId: string,
+    enabled: boolean,
+    collectionId?: string,
+  ) => {
     collectionStore.setState((state) => {
       const newMap = new Map(state.requestPreRequestEnabled);
-      newMap.set(requestId, enabled);
+      const key = collectionId ? `${collectionId}:${requestId}` : requestId;
+      newMap.set(key, enabled);
       return {
         ...state,
         requestPreRequestEnabled: newMap,
@@ -734,16 +743,19 @@ export const collectionActions = {
     });
   },
 
-  getRequestPreRequestEnabled: (requestId: string): boolean => {
-    return (
-      collectionStore.state.requestPreRequestEnabled.get(requestId) ?? false
-    );
+  getRequestPreRequestEnabled: (
+    requestId: string,
+    collectionId?: string,
+  ): boolean => {
+    const key = collectionId ? `${collectionId}:${requestId}` : requestId;
+    return collectionStore.state.requestPreRequestEnabled.get(key) ?? false;
   },
 
-  clearRequestPreRequestEnabled: (requestId: string) => {
+  clearRequestPreRequestEnabled: (requestId: string, collectionId?: string) => {
     collectionStore.setState((state) => {
       const newMap = new Map(state.requestPreRequestEnabled);
-      newMap.delete(requestId);
+      const key = collectionId ? `${collectionId}:${requestId}` : requestId;
+      newMap.delete(key);
       return {
         ...state,
         requestPreRequestEnabled: newMap,
@@ -760,7 +772,8 @@ export const collectionActions = {
 
       collection.requests.forEach((req) => {
         if (req.id) {
-          newMap.delete(req.id);
+          const key = `${collectionId}:${req.id}`;
+          newMap.delete(key);
         }
       });
 
@@ -780,7 +793,8 @@ export const collectionActions = {
 
       collection.requests.forEach((req) => {
         if (req.id && req.id !== collection.preRequestId) {
-          newMap.set(req.id, true);
+          const key = `${collectionId}:${req.id}`;
+          newMap.set(key, true);
         }
       });
 
