@@ -28,7 +28,7 @@ import Subscribers from "../../assests/images/Subscriberss.gif";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
 import CICD from "../../assests/images/cicd.jpeg";
-
+import Integration from "../../assests/images/integration.jpeg";
 
 const features = [
     {
@@ -42,7 +42,7 @@ const features = [
         title: "Integration & Flow Testing",
         subtitle: "Map complex API chains automatically with our Smart Correlation Engine.",
         icon: <TestTubeDiagonal size={25} />,
-        image: Courses,
+        image: Integration,
         to: "/course-management",
     },
     {
