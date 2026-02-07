@@ -36,7 +36,7 @@ export function Footer() {
                             Talk to an Expert
                         </a>
                         <a
-                            href="/faq"
+                            href="/help-support "
                             className="px-8 py-3 border border-slate-400 text-slate-100 font-semibold rounded-lg hover:bg-slate-800 transition-colors duration-300"
                         >
                             View Documentation
@@ -131,7 +131,7 @@ export function Footer() {
                 {/* Bottom */}
                 <div className="border-t border-slate-800 pt-8 flex flex-col sm:flex-row justify-between items-center text-sm text-slate-400">
                     <p>&copy; {currentYear} OptraFlow. All rights reserved.</p>
-                    <p>Tested with OptraFlow.</p>
+                    {/* <p>Tested with OptraFlow.</p> */}
                 </div>
             </div>
         </footer>
