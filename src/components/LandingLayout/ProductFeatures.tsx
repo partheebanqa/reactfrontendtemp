@@ -95,6 +95,8 @@ const ProductFeatures = () => {
         return () => clearTimeout(timeout);
     }, [userInteracted]);
 
+
+
     return (
         <section className="w-full py-10 md:py-20 flex flex-col justify-center items-center md:px-20 px-6">
 
