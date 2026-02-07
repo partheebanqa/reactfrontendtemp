@@ -27,7 +27,7 @@ import Posts from "../../assests/images/Posts.gif";
 import Subscribers from "../../assests/images/Subscriberss.gif";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
-
+import CICD from "../../assests/images/cicd.jpeg";
 
 
 const features = [
@@ -56,7 +56,7 @@ const features = [
         title: "Continuous Execution",
         subtitle: "Plug into GitHub Actions or GitLab CI for fully automated Go/No-Go triggers on every push.",
         icon: <StepForward size={25} />,
-        image: Subscribers,
+        image: CICD,
         to: "/subscription-management",
     },
 
@@ -94,6 +94,8 @@ const ProductFeatures = () => {
         const timeout = setTimeout(() => setUserInteracted(false), 8000);
         return () => clearTimeout(timeout);
     }, [userInteracted]);
+
+
 
     return (
         <section className="w-full py-10 md:py-20 flex flex-col justify-center items-center md:px-20 px-6">
