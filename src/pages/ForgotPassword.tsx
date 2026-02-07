@@ -13,6 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Mail, ArrowLeft, CheckCircle } from 'lucide-react';
 import { useForgotPasswordMutation } from '@/store/query/authQuery';
+import LogoFull from '../assests/images/OptraLogo.png';
 
 export default function ForgotPassword() {
   const [, setLocation] = useLocation();
@@ -36,6 +37,11 @@ export default function ForgotPassword() {
       <div className='min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8'>
         <div className='max-w-md w-full space-y-8'>
           <Card>
+            <div className='flex justify-center items-center py-4'>
+              <a href='/'>
+                <img src={LogoFull} alt='Optraflow' className='w-32 h-auto' />
+              </a>
+            </div>
             <CardHeader className='text-center'>
               <div className='mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 dark:bg-green-900'>
                 <CheckCircle className='h-6 w-6 text-green-600 dark:text-green-400' />
@@ -79,13 +85,18 @@ export default function ForgotPassword() {
             Forgot your password?
           </h2>
           <p className='mt-2 text-sm text-gray-600 dark:text-gray-400'>
-            Enter the email address to receive a reset link
+            Enter the registered email address to receive the reset link
           </p>
         </div>
 
         <Card>
+          <div className='flex justify-center items-center py-4'>
+            <a href='/'>
+              <img src={LogoFull} alt='Optraflow' className='w-32 h-auto' />
+            </a>
+          </div>
           <CardHeader>
-            <CardTitle>Reset password</CardTitle>
+            {/* <CardTitle>Reset password</CardTitle> */}
             <CardDescription>
               We&apos;ll send an email with instructions to reset your password
             </CardDescription>
