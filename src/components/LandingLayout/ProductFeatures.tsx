@@ -98,7 +98,7 @@ const ProductFeatures = () => {
 
 
     return (
-        <section className="w-full py-10 md:py-20 flex flex-col justify-center items-center md:px-20 px-6">
+        <section className="w-full py-10 md:py-20 flex flex-col justify-center items-center md:px-20 px-6  bg-gradient-to-b from-blue-50 to-white">
 
             <div className="text-center mb-16">
                 <motion.h2

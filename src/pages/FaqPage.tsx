@@ -163,7 +163,7 @@ const FaqPage: React.FC = () => {
     };
 
     return (
-        <main className="max-w-6xl mx-auto p-4 sm:p-6 lg:p-8">
+        <main className="mx-auto p-4 sm:p-10 lg:p-10 bg-gradient-to-b from-blue-50 to-white">
             <div className="text-center mb-16">
                 <motion.h2
                     initial={{ opacity: 0, y: -20 }}
