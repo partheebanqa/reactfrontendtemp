@@ -160,9 +160,11 @@ export function RequestEditor({
 
   const [assertions, setAssertions] = useState<any[]>([]);
 
+  console.log('assertions123:', assertions);
+
   const [isExecuting, setIsExecuting] = useState(false);
   const [executionResult, setExecutionResult] = useState<ExecutionLog | null>(
-    null
+    null,
   );
 
   const [showVariablesPopup, setShowVariablesPopup] = useState(false);
@@ -185,13 +187,13 @@ export function RequestEditor({
         (d) => {
           const generated = generateDynamicValueById(
             d.generatorId,
-            d.parameters
+            d.parameters,
           );
           return {
             name: d.name,
             value: String(generated),
           };
-        }
+        },
       );
       setDynamicOverrides(initialOverrides);
     }
@@ -211,21 +213,21 @@ export function RequestEditor({
       prefix: null,
       inputRef: null,
       cursorPosition: 0,
-    }
+    },
   );
 
   const [url, setUrl] = useState(initialRequest.url || '');
   const [body, setBody] = useState(initialRequest.body || '');
 
   const [selectedVariable, setSelectedVariable] = useState<SelectedVariable[]>(
-    []
+    [],
   );
 
   const [headers, setHeaders] = useState<KeyValuePair[]>(
-    initialRequest.headers || []
+    initialRequest.headers || [],
   );
   const [params, setParams] = useState<KeyValuePair[]>(
-    initialRequest.params || []
+    initialRequest.params || [],
   );
   const [auth, setAuth] = useState({
     username: initialRequest.authUsername || '',
@@ -235,7 +237,7 @@ export function RequestEditor({
   });
 
   const [bodyType, setBodyType] = useState<any>(
-    initialRequest.bodyType || 'none'
+    initialRequest.bodyType || 'none',
   );
   const [formFields, setFormFields] = useState<FormField[]>([]);
   const [urlEncodedFields, setUrlEncodedFields] = useState<KeyValueField[]>([]);
@@ -278,7 +280,7 @@ export function RequestEditor({
 
     const requestHeaders = initialRequest.headers || [];
     const hasContentType = requestHeaders.some(
-      (h) => h.key.toLowerCase() === 'content-type'
+      (h) => h.key.toLowerCase() === 'content-type',
     );
 
     if (!hasContentType) {
@@ -314,7 +316,7 @@ export function RequestEditor({
             type: field.type || 'text',
             fileName: field.fileName,
             enabled: field.enabled !== false,
-          }))
+          })),
         );
       } else if (initialRequest.body) {
         try {
@@ -324,7 +326,7 @@ export function RequestEditor({
               parsed.map((field) => ({
                 ...field,
                 id: field.id || `temp_${Date.now()}_${Math.random()}`,
-              }))
+              })),
             );
           } else {
             setFormFields([]);
@@ -332,7 +334,7 @@ export function RequestEditor({
         } catch (e) {
           console.error(
             'Failed to parse form fields from initial request body:',
-            e
+            e,
           );
           setFormFields([]);
         }
@@ -349,7 +351,7 @@ export function RequestEditor({
             id: field.id || `temp_${Date.now()}_${Math.random()}`,
             key: field.key || '',
             value: field.value || '',
-          }))
+          })),
         );
       } else if (initialRequest.body) {
         try {
@@ -359,7 +361,7 @@ export function RequestEditor({
               parsed.map((field) => ({
                 ...field,
                 id: field.id || `temp_${Date.now()}_${Math.random()}`,
-              }))
+              })),
             );
           } else {
             setUrlEncodedFields([]);
@@ -367,7 +369,7 @@ export function RequestEditor({
         } catch (e) {
           console.error(
             'Failed to parse URL-encoded fields from initial request body:',
-            e
+            e,
           );
           setUrlEncodedFields([]);
         }
@@ -396,7 +398,7 @@ export function RequestEditor({
 
   const dynamicStructured = useMemo(
     () => mapDynamicToStatic(dynamicVariables, dynamicOverrides),
-    [dynamicVariables, dynamicOverrides]
+    [dynamicVariables, dynamicOverrides],
   );
 
   useEffect(() => {
@@ -502,12 +504,12 @@ export function RequestEditor({
     const variableMatches = allText.match(/\{\{(\w+)\}\}/g) || [];
     const usedVariableNames = [
       ...new Set(
-        variableMatches.map((match) => match.replace(/\{\{(\w+)\}\}/, '$1'))
+        variableMatches.map((match) => match.replace(/\{\{(\w+)\}\}/, '$1')),
       ),
     ];
 
     return dynamicStructured.filter((variable) =>
-      usedVariableNames.includes(variable.name)
+      usedVariableNames.includes(variable.name),
     );
   }, [
     initialRequest.url,
@@ -533,7 +535,7 @@ export function RequestEditor({
     ([name, value]) => ({
       name,
       value,
-    })
+    }),
   );
 
   const [previewUrl, setPreviewUrl] = useState('');
@@ -563,7 +565,7 @@ export function RequestEditor({
 
   const getAllAvailableVariables = (): Variable[] => {
     const extractedVars = getExtractVariablesByEnvironment(
-      activeEnvironment?.id
+      activeEnvironment?.id,
     );
 
     const parentVars: Variable[] = Object.entries(parentExtractedVariables).map(
@@ -576,23 +578,23 @@ export function RequestEditor({
           typeof value === 'number'
             ? 'number'
             : typeof value === 'boolean'
-            ? 'boolean'
-            : 'string',
+              ? 'boolean'
+              : 'string',
         currentValue: String(value),
-      })
+      }),
     );
 
     const allVariables = [
       ...storeVariables,
       ...dynamicStructured,
       ...extractedVars.filter(
-        (ev) => !parentVars.some((pv) => pv.name === ev.name)
+        (ev) => !parentVars.some((pv) => pv.name === ev.name),
       ),
       ...parentVars,
       ...chainVariables.filter(
         (cv) =>
           !parentVars.some((pv) => pv.name === cv.name) &&
-          !extractedVars.some((ev) => ev.name === cv.name)
+          !extractedVars.some((ev) => ev.name === cv.name),
       ),
     ];
 
@@ -655,7 +657,7 @@ export function RequestEditor({
             JSON.stringify({
               ...JSON.parse(localStorage.getItem('extractedVariables') || '{}'),
               ...saved.extractedVariables,
-            })
+            }),
           );
         }
       } else if (saved && !isRecent) {
@@ -674,7 +676,7 @@ export function RequestEditor({
       const regex = new RegExp(`{{${variable.name}}}`, 'g');
       result = result.replace(
         regex,
-        variable.value ?? variable.initialValue ?? ''
+        variable.value ?? variable.initialValue ?? '',
       );
     });
     return result;
@@ -682,7 +684,7 @@ export function RequestEditor({
 
   const processRequestWithVariables = (
     request: Partial<APIRequest>,
-    variables: Variable[]
+    variables: Variable[],
   ): Partial<APIRequest> => {
     let processedBody = request.body || '';
     let processedBodyRawContent = request.bodyRawContent || '';
@@ -710,11 +712,11 @@ export function RequestEditor({
             const regex = new RegExp(`{{${variable.name}}}`, 'g');
             processedBody = processedBody.replace(
               regex,
-              variable.value || variable.initialValue || ''
+              variable.value || variable.initialValue || '',
             );
             processedBodyRawContent = processedBodyRawContent.replace(
               regex,
-              variable.value || variable.initialValue || ''
+              variable.value || variable.initialValue || '',
             );
           }
         });
@@ -723,7 +725,7 @@ export function RequestEditor({
       processedBody = replaceVariables(processedBody, variables);
       processedBodyRawContent = replaceVariables(
         processedBodyRawContent,
-        variables
+        variables,
       );
     }
 
@@ -754,20 +756,20 @@ export function RequestEditor({
             ...request.authorization,
             token: replaceVariables(
               request.authorization.token || '',
-              variables
+              variables,
             ),
             username: replaceVariables(
               request.authorization.username || '',
-              variables
+              variables,
             ),
             password: replaceVariables(
               request.authorization.password || '',
-              variables
+              variables,
             ),
             key: replaceVariables(request.authorization.key || '', variables),
             value: replaceVariables(
               request.authorization.value || '',
-              variables
+              variables,
             ),
           }
         : request.authorization,
@@ -776,7 +778,7 @@ export function RequestEditor({
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
-    updateState: (value: string) => void
+    updateState: (value: string) => void,
   ) => {
     const input = e.target;
     const value = input.value;
@@ -874,7 +876,7 @@ export function RequestEditor({
   };
 
   const handleAutocomplete = (
-    e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
     const input = e.target as HTMLInputElement | HTMLTextAreaElement;
     const value = input.value;
@@ -943,7 +945,7 @@ export function RequestEditor({
         const existing = prev.find((o) => o.name === name);
         if (existing) {
           return prev.map((o) =>
-            o.name === name ? { name, value: String(value) } : { ...o }
+            o.name === name ? { name, value: String(value) } : { ...o },
           );
         } else {
           return [...prev, { name, value: String(value) }];
@@ -961,7 +963,7 @@ export function RequestEditor({
       if (!dynamicVar) return;
 
       const newValue = String(
-        generateDynamicValueById(dynamicVar.generatorId, dynamicVar.parameters)
+        generateDynamicValueById(dynamicVar.generatorId, dynamicVar.parameters),
       );
       updateDynamicOverride(variableName, newValue);
     }
@@ -973,7 +975,7 @@ export function RequestEditor({
 
     const dynamicVarMatches = previewUrl.match(/\{\{\w+\}\}/g) || [];
     const dynamicVarsInUrl = dynamicVarMatches.map((match) =>
-      match.replace(/\{\{(\w+)\}\}/, '$1')
+      match.replace(/\{\{(\w+)\}\}/, '$1'),
     );
 
     if (dynamicVarsInUrl.length === 0) {
@@ -1052,7 +1054,7 @@ export function RequestEditor({
             key,
             value,
             enabled: true,
-          })
+          }),
         );
 
         safeRequest.params = extractedParams;
@@ -1108,7 +1110,7 @@ export function RequestEditor({
           ? [...safeRequest.headers]
           : [];
         const authIdx = headers.findIndex(
-          (h) => h?.key?.toLowerCase() === 'authorization'
+          (h) => h?.key?.toLowerCase() === 'authorization',
         );
         const value = `Bearer ${token}`;
         if (authIdx >= 0) {
@@ -1145,12 +1147,12 @@ export function RequestEditor({
     try {
       const startTime = Date.now();
       (safeRequest as any).headers = (safeRequest.headers ?? []).filter(
-        (h: any) => h.key?.trim() && h.value?.trim()
+        (h: any) => h.key?.trim() && h.value?.trim(),
       );
 
       const processedRequest = processRequestWithVariables(
         safeRequest,
-        allVariables
+        allVariables,
       );
 
       const payload = buildRequestPayload(processedRequest, allVariables);
@@ -1187,12 +1189,12 @@ export function RequestEditor({
           headers: result.headers,
           cookies: parseCookies(result.headers?.['set-cookie'] ?? ''),
         },
-        safeRequest.extractVariables
+        safeRequest.extractVariables,
       );
       const endTime = Date.now();
 
       const actualRequestHeaders = Object.fromEntries(
-        processedRequest.headers.map((h) => [h.key, h.value])
+        processedRequest.headers.map((h) => [h.key, h.value]),
       );
       const actualRequestUrl = previewUrl;
       const actualRequestBody = processedRequest.body ?? '';
@@ -1219,8 +1221,10 @@ export function RequestEditor({
         formattedAssertionFormat,
         usedRequestVariables.staticVars,
         usedRequestVariables.dynamicVars,
-        extractedVariablesArray
+        extractedVariablesArray,
       );
+
+      console.log('allGeneratedAssertions123:', allGeneratedAssertions);
 
       const mergedAssertions = allGeneratedAssertions.map((newAssertion) => {
         const existingMatch = assertions.find(
@@ -1229,7 +1233,7 @@ export function RequestEditor({
             (existing.type === newAssertion.type &&
               existing.category === newAssertion.category &&
               JSON.stringify(existing.expectedValue) ===
-                JSON.stringify(newAssertion.expectedValue))
+                JSON.stringify(newAssertion.expectedValue)),
         );
 
         return {
@@ -1243,7 +1247,7 @@ export function RequestEditor({
           (merged) =>
             merged.description === existing.description ||
             (merged.type === existing.type &&
-              merged.category === existing.category)
+              merged.category === existing.category),
         );
       });
 
@@ -1311,12 +1315,12 @@ export function RequestEditor({
 
       const processedRequest = processRequestWithVariables(
         safeRequest,
-        allVariables
+        allVariables,
       );
 
       const previewUrl = getPreviewUrl(allVariables);
       const actualRequestHeaders = Object.fromEntries(
-        processedRequest.headers.map((h) => [h.key, h.value])
+        processedRequest.headers.map((h) => [h.key, h.value]),
       );
       const actualRequestBody = processedRequest.body ?? '';
 
@@ -1382,15 +1386,15 @@ export function RequestEditor({
   const updateKeyValuePair = (
     type: 'params' | 'headers',
     id: string,
-    updates: Partial<KeyValuePair>
+    updates: Partial<KeyValuePair>,
   ) => {
     if (type === 'params') {
       setParams((prev) =>
-        prev.map((p) => (p.id === id ? { ...p, ...updates } : p))
+        prev.map((p) => (p.id === id ? { ...p, ...updates } : p)),
       );
     } else {
       setHeaders((prev) =>
-        prev.map((h) => (h.id === id ? { ...h, ...updates } : h))
+        prev.map((h) => (h.id === id ? { ...h, ...updates } : h)),
       );
     }
   };
@@ -1473,10 +1477,10 @@ export function RequestEditor({
 
   const updateParam = (
     index: number,
-    updates: Partial<{ key: string; value: string; enabled: boolean }>
+    updates: Partial<{ key: string; value: string; enabled: boolean }>,
   ) => {
     setParams((prev) =>
-      prev.map((param, i) => (i === index ? { ...param, ...updates } : param))
+      prev.map((param, i) => (i === index ? { ...param, ...updates } : param)),
     );
   };
 
@@ -1557,7 +1561,7 @@ export function RequestEditor({
   const updateFormField = (
     index: number,
     field: keyof KeyValuePairWithFile,
-    value: string | boolean | File | undefined
+    value: string | boolean | File | undefined,
   ) => {
     const newFormFields = [...formFields];
     newFormFields[index] = { ...newFormFields[index], [field]: value };
@@ -1571,7 +1575,7 @@ export function RequestEditor({
   const updateUrlEncodedField = (
     index: number,
     field: keyof KeyValueField,
-    value: string
+    value: string,
   ) => {
     const newUrlEncodedFields = [...urlEncodedFields];
     newUrlEncodedFields[index] = {
@@ -1587,7 +1591,7 @@ export function RequestEditor({
 
   const handleUpdateFormField = (id: string, field: Partial<FormField>) => {
     const updatedFields = formFields.map((f) =>
-      f.id === id ? { ...f, ...field } : f
+      f.id === id ? { ...f, ...field } : f,
     );
     setFormFields(updatedFields);
 
@@ -1627,10 +1631,10 @@ export function RequestEditor({
 
   const handleUpdateUrlEncodedField = (
     id: string,
-    field: Partial<KeyValueField>
+    field: Partial<KeyValueField>,
   ) => {
     setUrlEncodedFields(
-      urlEncodedFields.map((f) => (f.id === id ? { ...f, ...field } : f))
+      urlEncodedFields.map((f) => (f.id === id ? { ...f, ...field } : f)),
     );
   };
 
@@ -1655,7 +1659,7 @@ export function RequestEditor({
     }
 
     const isDuplicate = currentExtractions.some(
-      (existing) => (existing.variableName || existing.name) === variableName
+      (existing) => (existing.variableName || existing.name) === variableName,
     );
 
     if (isDuplicate) {
@@ -1674,7 +1678,7 @@ export function RequestEditor({
     };
 
     const existingChains = JSON.parse(
-      localStorage.getItem('extractionLogs') || '[]'
+      localStorage.getItem('extractionLogs') || '[]',
     );
     let maxOrder = 0;
     for (const chain of existingChains) {
@@ -1726,12 +1730,13 @@ export function RequestEditor({
         normalizeString(chain.description) ===
           normalizeString(chainDescription) &&
         normalizeBool(chain.isImportant) === normalizeBool(chainEnabled) &&
-        chain.environmentId === activeEnvironment?.id
+        chain.environmentId === activeEnvironment?.id,
     );
     if (chainIndex !== -1) {
       const alreadyExists = existingChains[chainIndex].chainRequests.some(
         (req: any) =>
-          req.url === initialRequest.url && req.method === initialRequest.method
+          req.url === initialRequest.url &&
+          req.method === initialRequest.method,
       );
       if (!alreadyExists) {
         existingChains[chainIndex].chainRequests.push(newRequest);
@@ -1752,7 +1757,7 @@ export function RequestEditor({
     if (executionResult?.response) {
       const extracted = extractDataFromResponse(
         executionResult.response,
-        updatedExtractions
+        updatedExtractions,
       );
       setExtractedVariables((prev) => {
         const merged = { ...prev, ...extracted };
@@ -1772,7 +1777,7 @@ export function RequestEditor({
         } catch (e) {
           console.error(
             'Failed to persist variables into lastExecutionByRequest:',
-            e
+            e,
           );
         }
         return merged;
@@ -1782,7 +1787,7 @@ export function RequestEditor({
 
   const handleRemoveExtraction = (variableName: string) => {
     const updatedExtractions = (initialRequest.extractVariables || []).filter(
-      (e) => (e.variableName || e.name) !== variableName
+      (e) => (e.variableName || e.name) !== variableName,
     );
     onUpdate({ extractVariables: updatedExtractions });
     const newExtracted = { ...extractedVariables };
@@ -1820,12 +1825,12 @@ export function RequestEditor({
 
   const updateHeader = (
     index: number,
-    updates: Partial<{ key: string; value: string; enabled: boolean }>
+    updates: Partial<{ key: string; value: string; enabled: boolean }>,
   ) => {
     setHeaders((prev) =>
       prev.map((header, i) =>
-        i === index ? { ...header, ...updates } : header
-      )
+        i === index ? { ...header, ...updates } : header,
+      ),
     );
   };
 
@@ -1958,7 +1963,7 @@ export function RequestEditor({
           <div className='space-y-3'>
             {usedDynamicVariables.map((variable) => {
               const currentOverride = dynamicOverrides.find(
-                (o) => o.name === variable.name
+                (o) => o.name === variable.name,
               );
               const displayValue =
                 currentOverride?.value ?? variable.value ?? '';
@@ -1995,7 +2000,7 @@ export function RequestEditor({
           <div className='flex flex-wrap gap-2'>
             {usedDynamicVariables.map((variable) => {
               const currentOverride = dynamicOverrides.find(
-                (o) => o.name === variable.name
+                (o) => o.name === variable.name,
               );
               const displayValue =
                 currentOverride?.value ?? variable.value ?? '';
@@ -2050,7 +2055,7 @@ export function RequestEditor({
             <span className='text-xs text-gray-400 ml-2'>
               {String(variable.value || variable.initialValue || '').substring(
                 0,
-                20
+                20,
               )}
               {String(variable.value || variable.initialValue || '').length > 20
                 ? '...'
@@ -2367,7 +2372,7 @@ export function RequestEditor({
                           item.name.startsWith('S_')) &&
                         item.name
                           .toLowerCase()
-                          .includes(searchText.toLowerCase())
+                          .includes(searchText.toLowerCase()),
                     )
                     .map((item) => (
                       <div
@@ -3305,7 +3310,7 @@ export function RequestEditor({
                   value={auth.token}
                   onChange={(e) =>
                     handleInputChange(e, (value) =>
-                      setAuth((prev) => ({ ...prev, token: value }))
+                      setAuth((prev) => ({ ...prev, token: value })),
                     )
                   }
                   onKeyUp={(e) => handleAutocomplete(e)}

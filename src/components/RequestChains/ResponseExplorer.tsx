@@ -113,7 +113,7 @@ export function ResponseExplorer({
         const r = (Math.random() * 16) | 0;
         const v = c === 'x' ? r : (r & 0x3) | 0x8;
         return v.toString(16);
-      }
+      },
     );
   };
 
@@ -126,7 +126,7 @@ export function ResponseExplorer({
       if (
         assertion.id &&
         /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
-          assertion.id
+          assertion.id,
         )
       ) {
         return assertion;
@@ -150,6 +150,8 @@ export function ResponseExplorer({
   } | null>(null);
   const [showAssertionUI, setShowAssertionUI] = useState(false);
   const [normalizedAssertions, setNormalizedAssertions] = useState<any[]>([]);
+
+  console.log('normalizedAssertions123:', normalizedAssertions);
 
   // Ensure all assertions have unique IDs
   useEffect(() => {
@@ -177,7 +179,7 @@ export function ResponseExplorer({
         if (key.includes('[') && key.includes(']')) {
           const arrayKey = key.substring(0, key.indexOf('['));
           const index = Number.parseInt(
-            key.substring(key.indexOf('[') + 1, key.indexOf(']'))
+            key.substring(key.indexOf('[') + 1, key.indexOf(']')),
           );
           if (current[arrayKey] && Array.isArray(current[arrayKey])) {
             return current[arrayKey][index];
@@ -222,7 +224,7 @@ export function ResponseExplorer({
               sourceData = JSON.parse(response?.body || '');
             } catch {
               console.warn(
-                'Failed to parse response body for variable extraction'
+                'Failed to parse response body for variable extraction',
               );
               return;
             }
@@ -247,7 +249,7 @@ export function ResponseExplorer({
   const finalExtractedVariables = getAutoExtractedVariables();
 
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(
-    new Set(['root'])
+    new Set(['root']),
   );
   const [extractionModal, setExtractionModal] = useState<{
     isOpen: boolean;
@@ -269,7 +271,7 @@ export function ResponseExplorer({
   const parseJsonToNodes = (
     obj: any,
     parentPath = '',
-    level = 0
+    level = 0,
   ): JsonNode[] => {
     const nodes: JsonNode[] = [];
     if (obj === null) {
@@ -291,10 +293,10 @@ export function ResponseExplorer({
         const itemType = Array.isArray(item)
           ? 'array'
           : item === null
-          ? 'null'
-          : typeof item === 'object'
-          ? 'object'
-          : typeof item;
+            ? 'null'
+            : typeof item === 'object'
+              ? 'object'
+              : typeof item;
         nodes.push({
           key: `[${index}]`,
           value: item,
@@ -312,10 +314,10 @@ export function ResponseExplorer({
         const valueType = Array.isArray(value)
           ? 'array'
           : value === null
-          ? 'null'
-          : typeof value === 'object'
-          ? 'object'
-          : typeof value;
+            ? 'null'
+            : typeof value === 'object'
+              ? 'object'
+              : typeof value;
         nodes.push({
           key,
           value,
@@ -344,7 +346,7 @@ export function ResponseExplorer({
   const handleExtractClick = (
     source: DataExtraction['source'],
     path: string,
-    value: any
+    value: any,
   ) => {
     const suggestedName =
       path.split('.').pop()?.replace(/[[\]]/g, '') || 'extractedValue';
@@ -362,7 +364,7 @@ export function ResponseExplorer({
   const filterAssertionsByField = (
     allAssertions: any[],
     fieldPath: string,
-    fieldValue: any
+    fieldValue: any,
   ): any[] => {
     const normalizedPath = fieldPath.toLowerCase();
     const isHeader = normalizedPath.startsWith('headers.');
@@ -494,7 +496,7 @@ export function ResponseExplorer({
                   value: String(value),
                 });
               }
-            }
+            },
           );
         }
       }
@@ -510,7 +512,7 @@ export function ResponseExplorer({
     const filteredAssertions = filterAssertionsByField(
       normalizedAssertions,
       path,
-      value
+      value,
     );
 
     setSelectedAssertion({
@@ -557,7 +559,7 @@ export function ResponseExplorer({
     const isExpanded = expandedNodes.has(node.path);
     const hasChildren = node.type === 'object' || node.type === 'array';
     const isAlreadyExtracted = existingExtractions.some(
-      (e) => e.path === node.path
+      (e) => e.path === node.path,
     );
 
     return (
@@ -589,10 +591,10 @@ export function ResponseExplorer({
                   node.type === 'string'
                     ? 'text-green-600'
                     : node.type === 'number'
-                    ? 'text-purple-600'
-                    : node.type === 'boolean'
-                    ? 'text-orange-600'
-                    : 'text-gray-600'
+                      ? 'text-purple-600'
+                      : node.type === 'boolean'
+                        ? 'text-orange-600'
+                        : 'text-gray-600'
                 }`}
               >
                 {node.type === 'string'
@@ -728,7 +730,7 @@ export function ResponseExplorer({
                 handleExtractClick(
                   'response_body',
                   'raw_response',
-                  response?.body
+                  response?.body,
                 )
               }
               className='px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 transition-colors'
@@ -748,7 +750,7 @@ export function ResponseExplorer({
         Object.entries(response?.headers).map(([key, value]) => {
           if (!key || value === undefined || value === null) return null;
           const isAlreadyExtracted = existingExtractions.some(
-            (e) => e.source === 'response_header' && e.path === key
+            (e) => e.source === 'response_header' && e.path === key,
           );
           return (
             <div
@@ -822,7 +824,7 @@ export function ResponseExplorer({
           const { name, value } = cookie;
           if (!name || value === undefined || value === null) return null;
           const isAlreadyExtracted = existingExtractions.some(
-            (e) => e.source === 'response_cookie' && e.path === name
+            (e) => e.source === 'response_cookie' && e.path === name,
           );
           return (
             <div
@@ -888,7 +890,7 @@ export function ResponseExplorer({
     }
 
     const passedCount = response.assertions.filter(
-      (a) => a.status === 'passed'
+      (a) => a.status === 'passed',
     ).length;
     const failedCount = response.assertions.length - passedCount;
 
@@ -1006,7 +1008,7 @@ export function ResponseExplorer({
           <div className='flex items-center space-x-3 p-3 bg-gray-50 border border-gray-200 rounded-lg'>
             <span
               className={`px-2 py-1 ${getMethodColor(
-                actualRequestMethod || 'GET'
+                actualRequestMethod || 'GET',
               )} text-xs font-semibold rounded`}
             >
               {actualRequestMethod}
@@ -1079,7 +1081,7 @@ export function ResponseExplorer({
                     navigator.clipboard.writeText(
                       typeof actualRequestBody === 'string'
                         ? actualRequestBody
-                        : JSON.stringify(actualRequestBody, null, 2)
+                        : JSON.stringify(actualRequestBody, null, 2),
                     )
                   }
                   className='p-1 text-gray-400 hover:text-gray-600 rounded'
@@ -1216,12 +1218,12 @@ export function ResponseExplorer({
               {Object.entries(finalExtractedVariables).map(([name, value]) => {
                 if (!name || value === undefined) return null;
                 const extraction = existingExtractions?.find(
-                  (e) => e.name === name
+                  (e) => e.name === name,
                 );
                 const isJwt =
                   typeof value === 'string' &&
                   /[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]+/.test(
-                    value
+                    value,
                   );
 
                 return (
@@ -1511,8 +1513,8 @@ export function ResponseExplorer({
               category: config?.isGeneral
                 ? 'general'
                 : selectedAssertion.path.startsWith('headers.')
-                ? 'headers'
-                : 'body',
+                  ? 'headers'
+                  : 'body',
               description,
               value: selectedAssertion.value,
               expectedValue: config.expectedValue || config.value,
