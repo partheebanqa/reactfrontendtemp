@@ -368,7 +368,7 @@ export const generateAssertions = (
   response: ApiResponse,
   staticVariables?: Array<{ name: string; value: string }>,
   dynamicVariables?: Array<{ name: string; value: string }>,
-  extractedVariables?: Array<{ name: string; value: string }>
+  extractedVariables?: Array<{ name: string; value: string }>,
 ): Assertion[] => {
   const assertions: Assertion[] = [];
 
@@ -522,7 +522,7 @@ export const generateAssertions = (
     type: 'response_time',
     description: `Response time is less than ${Math.max(
       response.responseTime * 2,
-      500
+      500,
     )} ms`,
     expectedValue: String(Math.max(response.responseTime * 2, 500)),
     dataType: 'number',
@@ -687,8 +687,8 @@ const generateBodyAssertions = (data: any, prefix = ''): Assertion[] => {
           category: 'body',
           type: 'field_pattern',
           description: `Field '${path}' matches email pattern`,
-          field: path,
-          operator: 'email_pattern',
+          field: 'email',
+          expectedValue: 'email_pattern',
           dataType: 'string',
           enabled: false,
         });
@@ -727,7 +727,7 @@ const generateBodyAssertions = (data: any, prefix = ''): Assertion[] => {
           type: 'field_range',
           description: `Field '${path}' is greater than ${Math.max(
             0,
-            value - 10
+            value - 10,
           )}`,
           field: path,
           operator: 'greater_than',
