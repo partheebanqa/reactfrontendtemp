@@ -160,8 +160,6 @@ export function RequestEditor({
 
   const [assertions, setAssertions] = useState<any[]>([]);
 
-  console.log('assertions123:', assertions);
-
   const [isExecuting, setIsExecuting] = useState(false);
   const [executionResult, setExecutionResult] = useState<ExecutionLog | null>(
     null,
@@ -432,13 +430,7 @@ export function RequestEditor({
   }, [params]);
 
   const handleAssertionsUpdate = (newAssertions: any[]) => {
-    setAssertions((prev) => {
-      const updated = newAssertions.map((newA) => {
-        const oldA = prev?.find((p) => p.id === newA.id);
-        return oldA ? { ...oldA, ...newA } : newA;
-      });
-      return updated;
-    });
+    setAssertions(newAssertions);
 
     if (initialRequest.id) {
       try {
@@ -450,7 +442,6 @@ export function RequestEditor({
         }
 
         map[initialRequest.id].assertions = newAssertions;
-
         localStorage.setItem('lastExecutionByRequest', JSON.stringify(map));
       } catch (e) {
         console.error('Failed to persist assertions:', e);
@@ -459,28 +450,8 @@ export function RequestEditor({
 
     if (onAssertionsUpdate) {
       onAssertionsUpdate(newAssertions);
-    } else {
-      console.warn('No onAssertionsUpdate callback provided');
     }
   };
-
-  useEffect(() => {
-    if (assertions.length > 0 && initialRequest.id) {
-      try {
-        const raw = localStorage.getItem('lastExecutionByRequest');
-        const map = raw ? JSON.parse(raw) : {};
-
-        if (!map[initialRequest.id]) {
-          map[initialRequest.id] = {};
-        }
-
-        map[initialRequest.id].assertions = assertions;
-        localStorage.setItem('lastExecutionByRequest', JSON.stringify(map));
-      } catch (e) {
-        console.error('Failed to auto-persist assertions:', e);
-      }
-    }
-  }, [assertions, initialRequest.id]);
 
   const usedDynamicVariables = useMemo(() => {
     const allTextFields = [
@@ -549,8 +520,6 @@ export function RequestEditor({
 
   const [processedRequest, setProcessedRequest] =
     useState<APIRequest>(initialRequest);
-
-  console.log('extractedVariables00:', extractedVariablesByRequest);
 
   const updateExtractedVariables = (newVars: Record<string, any>) => {
     setExtractedVariables(newVars);
@@ -1215,7 +1184,14 @@ export function RequestEditor({
         size: result?.metrics?.bytesReceived ?? 0,
       };
 
-      console.log('extractedVariablesArray:', extractedVariablesArray);
+      const assertionsMatch = (assertion1: any, assertion2: any): boolean => {
+        return (
+          assertion1.description === assertion2.description &&
+          assertion1.category === assertion2.category &&
+          assertion1.type === assertion2.type &&
+          assertion1.operator === assertion2.operator
+        );
+      };
 
       const allGeneratedAssertions = await generateAssertions(
         formattedAssertionFormat,
@@ -1224,32 +1200,31 @@ export function RequestEditor({
         extractedVariablesArray,
       );
 
-      console.log('allGeneratedAssertions123:', allGeneratedAssertions);
-
       const mergedAssertions = allGeneratedAssertions.map((newAssertion) => {
-        const existingMatch = assertions.find(
-          (existing) =>
-            existing.description === newAssertion.description ||
-            (existing.type === newAssertion.type &&
-              existing.category === newAssertion.category &&
-              JSON.stringify(existing.expectedValue) ===
-                JSON.stringify(newAssertion.expectedValue)),
+        const matchingExisting = assertions.find((existing) =>
+          assertionsMatch(existing, newAssertion),
         );
 
-        return {
-          ...newAssertion,
-          enabled: existingMatch ? existingMatch.enabled : false,
-        };
+        if (matchingExisting) {
+          return {
+            ...newAssertion,
+            enabled: matchingExisting.enabled ?? true,
+          };
+        } else {
+          return {
+            ...newAssertion,
+            enabled: false,
+          };
+        }
       });
 
-      const customAssertions = assertions.filter((existing) => {
-        return !mergedAssertions.some(
-          (merged) =>
-            merged.description === existing.description ||
-            (merged.type === existing.type &&
-              merged.category === existing.category),
-        );
-      });
+      const customAssertions = assertions.filter(
+        (assertion) =>
+          assertion.isCustom === true &&
+          !mergedAssertions.some((merged) =>
+            assertionsMatch(merged, assertion),
+          ),
+      );
 
       const finalAssertions = [...mergedAssertions, ...customAssertions];
 
@@ -2096,7 +2071,11 @@ export function RequestEditor({
   }, [params]);
 
   useEffect(() => {
-    if (requestAssertions && requestAssertions.length > 0) {
+    if (
+      requestAssertions &&
+      Array.isArray(requestAssertions) &&
+      requestAssertions.length > 0
+    ) {
       setAssertions(requestAssertions);
       return;
     }
@@ -2113,16 +2092,38 @@ export function RequestEditor({
           saved.assertions.length > 0
         ) {
           setAssertions(saved.assertions);
-          if (onAssertionsUpdate) {
-            onAssertionsUpdate(saved.assertions);
-          }
           return;
         }
       }
     } catch (e) {
       console.error('Failed to load assertions from localStorage:', e);
     }
+
+    setAssertions([]);
   }, [requestAssertions, initialRequest.id]);
+
+  useEffect(() => {
+    return () => {
+      if (initialRequest.id) {
+        const currentAssertions = [...assertions];
+        if (currentAssertions.length > 0) {
+          try {
+            const raw = localStorage.getItem('lastExecutionByRequest');
+            const map = raw ? JSON.parse(raw) : {};
+            if (map[initialRequest.id]) {
+              map[initialRequest.id].assertions = currentAssertions;
+              localStorage.setItem(
+                'lastExecutionByRequest',
+                JSON.stringify(map),
+              );
+            }
+          } catch (e) {
+            console.error('Failed to save assertions on cleanup:', e);
+          }
+        }
+      }
+    };
+  }, [initialRequest.id]);
 
   const handleConfirmSubstitutions = () => {
     const allVariables = getAllAvailableVariables();

@@ -149,8 +149,6 @@ export function RequestChainEditor({
     return initial;
   });
 
-  console.log('assertionsByRequest:', assertionsByRequest);
-
   const [selectedEnvironment, setSelectedEnvironment] = useState<string>(
     chain?.environmentId || activeEnvironment?.id || '',
   );
@@ -426,7 +424,6 @@ export function RequestChainEditor({
 
   const [extractedVariablesByRequest, setExtractedVariablesByRequest] =
     useState<Record<string, Record<string, any>>>({});
-  console.log('extractedVariablesByRequest:', extractedVariablesByRequest);
 
   const [isExecuting, setIsExecuting] = useState(false);
   const [currentRequestIndex, setCurrentRequestIndex] = useState(-1);
@@ -1259,7 +1256,6 @@ export function RequestChainEditor({
       const existingAssertions =
         assertionsByRequest[request.id] || requestAssertions || [];
 
-      // Always generate new assertions on every execution
       const formattedAssertionFormat = {
         status: result?.statusCode ?? null,
         statusText: '',
@@ -1275,8 +1271,6 @@ export function RequestChainEditor({
         size: result?.metrics?.bytesReceived ?? 0,
       };
 
-      console.log('extractedVariablesArray11:', extractedVariablesArray);
-
       const newAssertions = await generateAssertions(
         formattedAssertionFormat,
         usedChainVariables.staticVars,
@@ -1284,7 +1278,6 @@ export function RequestChainEditor({
         extractedVariablesArray,
       );
 
-      // Helper function to check if two assertions match
       const assertionsMatch = (assertion1: any, assertion2: any): boolean => {
         return (
           assertion1.description === assertion2.description &&
@@ -1294,21 +1287,17 @@ export function RequestChainEditor({
         );
       };
 
-      // Merge new generated assertions with existing ones
       const mergedAssertions = newAssertions.map((newAssertion) => {
-        // Find matching assertion in existing assertions
         const matchingExisting = existingAssertions.find((existing) =>
           assertionsMatch(existing, newAssertion),
         );
 
         if (matchingExisting) {
-          // If found, preserve its enabled state
           return {
             ...newAssertion,
             enabled: matchingExisting.enabled ?? true,
           };
         } else {
-          // If not found, it's a new assertion - default to disabled
           return {
             ...newAssertion,
             enabled: false,
@@ -1316,7 +1305,6 @@ export function RequestChainEditor({
         }
       });
 
-      // Preserve custom assertions that users manually added
       const customAssertions = existingAssertions.filter(
         (assertion) =>
           assertion.isCustom === true &&
@@ -1325,7 +1313,6 @@ export function RequestChainEditor({
           ),
       );
 
-      // Combine merged assertions with custom ones
       const finalAssertions = [...mergedAssertions, ...customAssertions];
 
       setAssertionsByRequest((prev) => ({
