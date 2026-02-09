@@ -110,7 +110,6 @@ export default function PerformanceReportView({
 
   return (
     <div className='fixed inset-0 bg-white z-50 overflow-auto'>
-      {/* Header */}
       <div className='sticky top-0 bg-white border-b border-gray-200 z-10'>
         <div className='max-w-7xl mx-auto px-6 py-4'>
           <div className='flex items-center justify-between mb-4'>
